@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30413.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1B4B-4D74-84AF-4625B851D52B}"
+	ProjectSection(SolutionItems) = preProject
+		..\readme.md = ..\readme.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCWeb", "TCWeb\TCWeb.csproj", "{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|iPhone = Debug|iPhone
+		Debug|iPhoneSimulator = Debug|iPhoneSimulator
+		Release|Any CPU = Release|Any CPU
+		Release|iPhone = Release|iPhone
+		Release|iPhoneSimulator = Release|iPhoneSimulator
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhone.Build.0 = Release|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}
+	EndGlobalSection
+EndGlobal

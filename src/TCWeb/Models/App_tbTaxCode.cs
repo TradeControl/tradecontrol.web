@@ -1,0 +1,65 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+#nullable disable
+
+namespace TradeControl.Web.Models
+{
+    [Table("tbTaxCode", Schema = "App")]
+    public partial class App_tbTaxCode
+    {
+        public App_tbTaxCode()
+        {
+            TbCodes = new HashSet<Cash_tbCode>();
+            TbEntries = new HashSet<Invoice_tbEntry>();
+            TbItems = new HashSet<Invoice_tbItem>();
+            TbOrgs = new HashSet<Org_tbOrg>();
+            TbPayments = new HashSet<Cash_tbPayment>();
+            TbTasks = new HashSet<Task_tbTask>();
+            TbInvoiceTasks = new HashSet<Invoice_tbTask>();
+        }
+
+        [Key]
+        [StringLength(10)]
+        public string TaxCode { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string TaxDescription { get; set; }
+        public short TaxTypeCode { get; set; }
+        public short RoundingCode { get; set; }
+        [Required]
+        [StringLength(50)]
+        public string UpdatedBy { get; set; }
+        [Column(TypeName = "datetime")]
+        public DateTime UpdatedOn { get; set; }
+        [Required]
+        public byte[] RowVer { get; set; }
+        [Column(TypeName = "decimal(18, 4)")]
+        public decimal TaxRate { get; set; }
+        public short Decimals { get; set; }
+
+        [ForeignKey(nameof(RoundingCode))]
+        [InverseProperty(nameof(App_tbRounding.TbTaxCodes))]
+        public virtual App_tbRounding RoundingCodeNavigation { get; set; }
+        [ForeignKey(nameof(TaxTypeCode))]
+        [InverseProperty(nameof(Cash_tbTaxType.TbTaxCodes))]
+        public virtual Cash_tbTaxType TaxTypeCodeNavigation { get; set; }
+        [InverseProperty(nameof(Cash_tbCode.TaxCodeNavigation))]
+        public virtual ICollection<Cash_tbCode> TbCodes { get; set; }
+        [InverseProperty(nameof(Invoice_tbEntry.TaxCodeNavigation))]
+        public virtual ICollection<Invoice_tbEntry> TbEntries { get; set; }
+        [InverseProperty(nameof(Invoice_tbItem.TaxCodeNavigation))]
+        public virtual ICollection<Invoice_tbItem> TbItems { get; set; }
+        [InverseProperty(nameof(Org_tbOrg.TaxCodeNavigation))]
+        public virtual ICollection<Org_tbOrg> TbOrgs { get; set; }
+        [InverseProperty(nameof(Cash_tbPayment.TaxCodeNavigation))]
+        public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
+        [InverseProperty(nameof(Task_tbTask.TaxCodeNavigation))]
+        public virtual ICollection<Task_tbTask> TbTasks { get; set; }
+        [InverseProperty(nameof(Invoice_tbTask.TaxCodeNavigation))]
+        public virtual ICollection<Invoice_tbTask> TbInvoiceTasks { get; set; }
+    }
+}
