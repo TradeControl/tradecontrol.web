@@ -12,14 +12,14 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class DetailsModel : PageModel
     {
-        private readonly TradeControl.Web.Data.TCNodeContext _context;
+        private readonly TradeControl.Web.Data.NodeContext _context;
 
-        public DetailsModel(TradeControl.Web.Data.TCNodeContext context)
+        public DetailsModel(TradeControl.Web.Data.NodeContext context)
         {
             _context = context;
         }
 
-        public Cash_vwPaymentsUnposted Cash_vwPaymentsUnposted { get; set; }
+        public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
@@ -28,9 +28,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 return NotFound();
             }
 
-            Cash_vwPaymentsUnposted = await _context.VwPaymentsUnposteds.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
 
-            if (Cash_vwPaymentsUnposted == null)
+            if (Cash_PaymentsUnposted == null)
             {
                 return NotFound();
             }

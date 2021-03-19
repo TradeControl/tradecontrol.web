@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+
 
 using TradeControl.Web.Models;
 
@@ -8,12 +11,13 @@ using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Data
 {
-    public partial class TCNodeContext : DbContext
+    public partial class NodeContext : DbContext
     {
-        public static string NodeVersion { get; }  = "3.34.1";
+        public static string NodeVersion { get; }  = "3.34.2";
 
-        public TCNodeContext(DbContextOptions<TCNodeContext> options) : base(options) { }
-        
+        public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
+
+        #region Tables
         public virtual DbSet<Org_tbAccount> Org_tbAccounts { get; set; }
         public virtual DbSet<Org_tbAccountType> Org_tbAccountTypes { get; set; }
         public virtual DbSet<Activity_tbActivity> Activity_tbActivities { get; set; }
@@ -111,159 +115,166 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Usr_tbUser> Usr_tbUsers { get; set; }
         public virtual DbSet<App_tbYear> App_tbYears { get; set; }
         public virtual DbSet<App_tbYearPeriod> App_tbYearPeriods { get; set; }
-        public virtual DbSet<Org_vwAccountLookup> VwAccountLookups { get; set; }
-        public virtual DbSet<Org_vwAccountSource> VwAccountSources { get; set; }
-        public virtual DbSet<Cash_vwAccountStatement> VwAccountStatements { get; set; }
-        public virtual DbSet<Cash_vwAccountStatementListing> VwAccountStatementListings { get; set; }
-        public virtual DbSet<Invoice_vwAccountsMode> VwAccountsModes { get; set; }
-        public virtual DbSet<Task_vwActiveDatum> VwActiveData { get; set; }
-        public virtual DbSet<App_vwActivePeriod> VwActivePeriods { get; set; }
-        public virtual DbSet<Task_vwActiveStatusCode> VwActiveStatusCodes { get; set; }
-        public virtual DbSet<Invoice_vwAgedDebtPurchase> VwAgedDebtPurchases { get; set; }
-        public virtual DbSet<Invoice_vwAgedDebtSale> VwAgedDebtSales { get; set; }
-        public virtual DbSet<Task_vwAllocationSvD> VwAllocationSvDs { get; set; }
-        public virtual DbSet<Org_vwAreaCode> VwAreaCodes { get; set; }
-        public virtual DbSet<Org_vwAssetStatementAudit> VwAssetStatementAudits { get; set; }
-        public virtual DbSet<Task_vwAttributeDescription> VwAttributeDescriptions { get; set; }
-        public virtual DbSet<Task_vwAttributesForOrder> VwAttributesForOrders { get; set; }
-        public virtual DbSet<Task_vwAttributesForQuote> VwAttributesForQuotes { get; set; }
-        public virtual DbSet<Org_vwBalanceSheetAudit> VwBalanceSheetAudits { get; set; }
-        public virtual DbSet<Cash_vwBankCashCode> VwBankCashCodes { get; set; }
-        public virtual DbSet<Cash_vwBudget> VwBudgets { get; set; }
-        public virtual DbSet<Cash_vwBudgetDataEntry> VwBudgetDataEntries { get; set; }
-        public virtual DbSet<Activity_wCandidateCashCode> VwCandidateCashCodes { get; set; }
-        public virtual DbSet<App_vwCandidateCategoryCode> VwCandidateCategoryCodes { get; set; }
-        public virtual DbSet<Invoice_vwCandidateCredit> VwCandidateCredits { get; set; }
-        public virtual DbSet<Invoice_vwCandidateDebit> VwCandidateDebits { get; set; }
-        public virtual DbSet<App_vwCandidateHomeAccount> VwCandidateHomeAccounts { get; set; }
-        public virtual DbSet<Invoice_vwCandidatePurchase> VwCandidatePurchases { get; set; }
-        public virtual DbSet<Invoice_vwCandidateSale> VwCandidateSales { get; set; }
-        public virtual DbSet<Org_vwCashAccountAsset> VwCashAccountAssets { get; set; }
-        public virtual DbSet<Cash_vwCashFlowType> VwCashFlowTypes { get; set; }
-        public virtual DbSet<Cash_vwCategoryBudget> VwCategoryBudgets { get; set; }
-        public virtual DbSet<Cash_vwCategoryTotal> VwCategoryTotals { get; set; }
-        public virtual DbSet<Cash_vwCategoryTotalCandidate> VwCategoryTotalCandidates { get; set; }
-        public virtual DbSet<Cash_vwCategoryTrade> VwCategoryTrades { get; set; }
-        public virtual DbSet<Invoice_vwChangeLog> VwChangeLogs { get; set; }
-        public virtual DbSet<Task_vwChangeLog> VwChangeLogs1 { get; set; }
-        public virtual DbSet<Activity_vwCode> VwCodes { get; set; }
-        public virtual DbSet<Cash_vwCodeLookup> VwCodeLookups { get; set; }
-        public virtual DbSet<Org_vwCompanyHeader> VwCompanyHeaders { get; set; }
-        public virtual DbSet<Org_vwCompanyLogo> VwCompanyLogos { get; set; }
-        public virtual DbSet<Org_vwContact> VwContacts { get; set; }
-        public virtual DbSet<Task_vwCostSet> VwCostSets { get; set; }
-        public virtual DbSet<Invoice_vwCreditNoteSpool> VwCreditNoteSpools { get; set; }
-        public virtual DbSet<Invoice_vwCreditSpoolByItem> VwCreditSpoolByItems { get; set; }
-        public virtual DbSet<Org_vwDatasheet> VwDatasheets { get; set; }
-        public virtual DbSet<Invoice_vwDebitNoteSpool> VwDebitNoteSpools { get; set; }
-        public virtual DbSet<Activity_vwDefaultText> VwDefaultTexts { get; set; }
-        public virtual DbSet<Org_vwDepartment> VwDepartments { get; set; }
-        public virtual DbSet<App_vwDocCreditNote> VwDocCreditNotes { get; set; }
-        public virtual DbSet<App_vwDocDebitNote> VwDocDebitNotes { get; set; }
-        public virtual DbSet<App_vwDocOpenMode> VwDocOpenModes { get; set; }
-        public virtual DbSet<App_vwDocPurchaseEnquiry> VwDocPurchaseEnquiries { get; set; }
-        public virtual DbSet<App_vwDocPurchaseOrder> VwDocPurchaseOrders { get; set; }
-        public virtual DbSet<App_vwDocQuotation> VwDocQuotations { get; set; }
-        public virtual DbSet<App_vwDocSalesInvoice> VwDocSalesInvoices { get; set; }
-        public virtual DbSet<App_vwDocSalesOrder> VwDocSalesOrders { get; set; }
-        public virtual DbSet<App_vwEventLog> VwEventLogs { get; set; }
-        public virtual DbSet<Activity_vwExpenseCashCode> VwExpenseCashCodes { get; set; }
-        public virtual DbSet<Cash_vwExternalCodesLookup> VwExternalCodesLookups { get; set; }
-        public virtual DbSet<Task_vwFlow> VwFlows { get; set; }
-        public virtual DbSet<App_vwGraphBankBalance> VwGraphBankBalances { get; set; }
-        public virtual DbSet<App_vwGraphTaskActivity> VwGraphTaskActivities { get; set; }
-        public virtual DbSet<Invoice_vwHistoryCashCode> VwHistoryCashCodes { get; set; }
-        public virtual DbSet<Invoice_vwHistoryPurchase> VwHistoryPurchases { get; set; }
-        public virtual DbSet<Invoice_vwHistoryPurchaseItem> VwHistoryPurchaseItems { get; set; }
-        public virtual DbSet<Invoice_vwHistorySale> VwHistorySales { get; set; }
-        public virtual DbSet<Invoice_vwHistorySalesItem> VwHistorySalesItems { get; set; }
-        public virtual DbSet<App_vwIdentity> VwIdentities { get; set; }
-        public virtual DbSet<Activity_wIncomeCashCode> VwIncomeCashCodes { get; set; }
-        public virtual DbSet<Org_vwInvoiceItem> VwInvoiceItems { get; set; }
-        public virtual DbSet<Org_vwInvoiceSummary> VwInvoiceSummaries { get; set; }
-        public virtual DbSet<Org_vwInvoiceTask> VwInvoiceTasks { get; set; }
-        public virtual DbSet<Invoice_vwItem> VwItems { get; set; }
-        public virtual DbSet<Org_vwJobTitle> VwJobTitles { get; set; }
-        public virtual DbSet<Org_vwListActive> VwListActives { get; set; }
-        public virtual DbSet<Org_vwListAll> VwListAlls { get; set; }
-        public virtual DbSet<Invoice_vwMirror> VwMirrors { get; set; }
-        public virtual DbSet<Invoice_vwMirrorDetail> VwMirrorDetails { get; set; }
-        public virtual DbSet<Invoice_vwMirrorEvent> VwMirrorEvents { get; set; }
-        public virtual DbSet<Org_vwNameTitle> VwNameTitles { get; set; }
-        public virtual DbSet<Task_vwNetworkAllocation> VwNetworkAllocations { get; set; }
-        public virtual DbSet<Invoice_vwNetworkChangeLog> VwNetworkChangeLogs { get; set; }
-        public virtual DbSet<Task_vwNetworkChangeLog> VwNetworkChangeLogs1 { get; set; }
-        public virtual DbSet<Task_vwNetworkEvent> VwNetworkEvents { get; set; }
-        public virtual DbSet<Task_vwNetworkEventLog> VwNetworkEventLogs { get; set; }
-        public virtual DbSet<Task_vwNetworkQuotation> VwNetworkQuotations { get; set; }
-        public virtual DbSet<Task_vwOp> VwOps { get; set; }
-        public virtual DbSet<Cash_vwPayment> VwPayments { get; set; }
-        public virtual DbSet<Org_vwPaymentTerm> VwPaymentTerms { get; set; }
-        public virtual DbSet<Cash_vwPaymentsListing> VwPaymentsListings { get; set; }
-        public virtual DbSet<Cash_vwPaymentsUnposted> VwPaymentsUnposteds { get; set; }
-        public virtual DbSet<App_vwPeriod> VwPeriods { get; set; }
-        public virtual DbSet<App_vwPeriodEndListing> VwPeriodEndListings { get; set; }
-        public virtual DbSet<Task_vwProfit> VwProfits { get; set; }
-        public virtual DbSet<Task_vwProfitToDate> VwProfitToDates { get; set; }
-        public virtual DbSet<Task_vwPurchase> VwPurchases { get; set; }
-        public virtual DbSet<Task_vwPurchaseEnquiryDeliverySpool> VwPurchaseEnquiryDeliverySpools { get; set; }
-        public virtual DbSet<Task_vwPurchaseEnquirySpool> VwPurchaseEnquirySpools { get; set; }
-        public virtual DbSet<Task_vwPurchaseOrderDeliverySpool> VwPurchaseOrderDeliverySpools { get; set; }
-        public virtual DbSet<Task_vwPurchaseOrderSpool> VwPurchaseOrderSpools { get; set; }
-        public virtual DbSet<Task_vwQuotationSpool> VwQuotationSpools { get; set; }
-        public virtual DbSet<Task_vwQuote> VwQuotes { get; set; }
-        public virtual DbSet<Invoice_vwRegister> VwRegisters { get; set; }
-        public virtual DbSet<Invoice_vwRegisterCashCode> VwRegisterCashCodes { get; set; }
-        public virtual DbSet<Invoice_vwRegisterDetail> VwRegisterDetails { get; set; }
-        public virtual DbSet<Invoice_vwRegisterExpense> VwRegisterExpenses { get; set; }
-        public virtual DbSet<Invoice_vwRegisterItem> VwRegisterItems { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchase> VwRegisterPurchases { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchaseTask> VwRegisterPurchaseTasks { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchasesOverdue> VwRegisterPurchasesOverdues { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSale> VwRegisterSales { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSaleTask> VwRegisterSaleTasks { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSalesOverdue> VwRegisterSalesOverdues { get; set; }
-        public virtual DbSet<Task_vwSale> VwSales { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpool> VwSalesInvoiceSpools { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByActivity> VwSalesInvoiceSpoolByActivities { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByItem> VwSalesInvoiceSpoolByItems { get; set; }
-        public virtual DbSet<Task_vwSalesOrderSpool> VwSalesOrderSpools { get; set; }
-        public virtual DbSet<Cash_vwStatement> VwStatements { get; set; }
-        public virtual DbSet<Org_wStatement> VwStatements1 { get; set; }
-        public virtual DbSet<Org_vwStatementReport> VwStatementReports { get; set; }
-        public virtual DbSet<Cash_vwStatementReserve> VwStatementReserves { get; set; }
-        public virtual DbSet<Cash_vwStatementWhatIf> VwStatementWhatIfs { get; set; }
-        public virtual DbSet<Org_vwStatusReport> VwStatusReports { get; set; }
-        public virtual DbSet<Cash_vwSummary> VwSummaries { get; set; }
-        public virtual DbSet<Invoice_vwSummary> VwSummaries1 { get; set; }
-        public virtual DbSet<Org_vwTask> VwTasks { get; set; }
-        public virtual DbSet<Task_vwTask> VwTasks1 { get; set; }
-        public virtual DbSet<App_vwTaxCode> VwTaxCodes { get; set; }
-        public virtual DbSet<App_vwTaxCodeType> VwTaxCodeTypes { get; set; }
-        public virtual DbSet<Cash_vwTaxCorpAuditAccrual> VwTaxCorpAuditAccruals { get; set; }
-        public virtual DbSet<Cash_vwTaxCorpStatement> VwTaxCorpStatements { get; set; }
-        public virtual DbSet<Cash_vwTaxCorpTotal> VwTaxCorpTotals { get; set; }
-        public virtual DbSet<Invoice_vwTaxSummary> VwTaxSummaries { get; set; }
-        public virtual DbSet<Cash_vwTaxVatAuditAccrual> VwTaxVatAuditAccruals { get; set; }
-        public virtual DbSet<Cash_vwTaxVatAuditInvoice> VwTaxVatAuditInvoices { get; set; }
-        public virtual DbSet<Cash_vwTaxVatDetail> VwTaxVatDetails { get; set; }
-        public virtual DbSet<Cash_vwTaxVatStatement> VwTaxVatStatements { get; set; }
-        public virtual DbSet<Cash_vwTaxVatSummary> VwTaxVatSummaries { get; set; }
-        public virtual DbSet<Cash_vwTaxVatTotal> VwTaxVatTotals { get; set; }
-        public virtual DbSet<Task_vwTitle> VwTitles { get; set; }
-        public virtual DbSet<Cash_vwTransferCodeLookup> VwTransferCodeLookups { get; set; }
-        public virtual DbSet<Cash_vwTransfersUnposted> VwTransfersUnposteds { get; set; }
-        public virtual DbSet<Org_vwTypeLookup> VwTypeLookups { get; set; }
-        public virtual DbSet<Activity_vwUnMirrored> VwUnMirroreds { get; set; }
-        public virtual DbSet<Cash_vwUnMirrored> VwUnMirroreds1 { get; set; }
-        public virtual DbSet<Usr_vwUserMenu> VwUserMenus { get; set; }
-        public virtual DbSet<Usr_vwUserMenuList> VwUserMenuLists { get; set; }
-        public virtual DbSet<Cash_vwVatcode> VwVatcodes { get; set; }
-        public virtual DbSet<App_vwVersion> VwVersions { get; set; }
-        public virtual DbSet<App_vwWarehouseOrg> VwWarehouseOrgs { get; set; }
-        public virtual DbSet<App_vwWarehouseTask> VwWarehouseTasks { get; set; }
-        public virtual DbSet<App_vwYearPeriod> VwYearPeriods { get; set; }
 
+        #endregion
+
+        #region Views
+        public virtual DbSet<Org_vwAccountLookup> Org_AccountLookup { get; set; }
+        public virtual DbSet<Org_vwAccountSource> Org_AccountSources { get; set; }
+        public virtual DbSet<Cash_vwAccountStatement> Cash_AccountStatements { get; set; }
+        public virtual DbSet<Cash_vwAccountStatementListing> Cash_AccountStatementListings { get; set; }
+        public virtual DbSet<Invoice_vwAccountsMode> Invoice_AccountsMode { get; set; }
+        public virtual DbSet<Task_vwActiveDatum> Task_ActiveData { get; set; }
+        public virtual DbSet<App_vwActivePeriod> App_ActivePeriods { get; set; }
+        public virtual DbSet<Task_vwActiveStatusCode> Task_ActiveStatusCodes { get; set; }
+        public virtual DbSet<Invoice_vwAgedDebtPurchase> Invoice_AgedDebtPurchases { get; set; }
+        public virtual DbSet<Invoice_vwAgedDebtSale> Invoice_AgedDebtSales { get; set; }
+        public virtual DbSet<Task_vwAllocationSvD> Task_AllocationSvD { get; set; }
+        public virtual DbSet<Org_vwAreaCode> Org_AreaCodes { get; set; }
+        public virtual DbSet<Org_vwAssetStatementAudit> Org_AssetStatementAudits { get; set; }
+        public virtual DbSet<Task_vwAttributeDescription> Task_AttributeDescriptions { get; set; }
+        public virtual DbSet<Task_vwAttributesForOrder> Task_AttributesForOrders { get; set; }
+        public virtual DbSet<Task_vwAttributesForQuote> Task_AttributesForQuotes { get; set; }
+        public virtual DbSet<Org_vwBalanceSheetAudit> VwBalanceSheetAudits { get; set; }
+        public virtual DbSet<Cash_vwBankCashCode> Cash_BankCashCodes { get; set; }
+        public virtual DbSet<Cash_vwBudget> Cash_Budget { get; set; }
+        public virtual DbSet<Cash_vwBudgetDataEntry> Cash_BudgetDataEntries { get; set; }
+        public virtual DbSet<Activity_wCandidateCashCode> VwCandidateCashCodes { get; set; }
+        public virtual DbSet<App_vwCandidateCategoryCode> App_CandidateCategoryCodes { get; set; }
+        public virtual DbSet<Invoice_vwCandidateCredit> Invoice_CandidateCredits { get; set; }
+        public virtual DbSet<Invoice_vwCandidateDebit> Invoice_CandidateDebits { get; set; }
+        public virtual DbSet<App_vwCandidateHomeAccount> App_CandidateHomeAccounts { get; set; }
+        public virtual DbSet<Invoice_vwCandidatePurchase> Invoice_CandidatePurchases { get; set; }
+        public virtual DbSet<Invoice_vwCandidateSale> Invoice_CandidateSales { get; set; }
+        public virtual DbSet<Org_vwCashAccountAsset> Org_CashAccountAssets { get; set; }
+        public virtual DbSet<Cash_vwCashFlowType> Cash_CashFlowTypes { get; set; }
+        public virtual DbSet<Cash_vwCategoryBudget> Cash_CategoryBudget { get; set; }
+        public virtual DbSet<Cash_vwCategoryTotal> Cash_CategoryTotals { get; set; }
+        public virtual DbSet<Cash_vwCategoryTotalCandidate> Cash_CategoryTotalCandidates { get; set; }
+        public virtual DbSet<Cash_vwCategoryTrade> Cash_CategoryTrades { get; set; }
+        public virtual DbSet<Invoice_vwChangeLog> Invoice_ChangeLog { get; set; }
+        public virtual DbSet<Task_vwChangeLog> Task_ChangeLog { get; set; }
+        public virtual DbSet<Activity_vwCode> Activity_Codes { get; set; }
+        public virtual DbSet<Cash_vwCodeLookup> Cash_CodeLookup { get; set; }
+        public virtual DbSet<Org_vwCompanyHeader> Org_CompanyHeaders { get; set; }
+        public virtual DbSet<Org_vwCompanyLogo> Org_CompanyLogos { get; set; }
+        public virtual DbSet<Org_vwContact> Org_Contacts { get; set; }
+        public virtual DbSet<Task_vwCostSet> Task_CostSet { get; set; }
+        public virtual DbSet<Invoice_vwCreditNoteSpool> Invoice_CreditNoteSpool { get; set; }
+        public virtual DbSet<Invoice_vwCreditSpoolByItem> Invoice_CreditSpoolByItem { get; set; }
+        public virtual DbSet<Org_vwDatasheet> Org_Datasheet { get; set; }
+        public virtual DbSet<Invoice_vwDebitNoteSpool> Invoice_DebitNoteSpool { get; set; }
+        public virtual DbSet<Activity_vwDefaultText> Activity_DefaultText { get; set; }
+        public virtual DbSet<Org_vwDepartment> Org_Departments { get; set; }
+        public virtual DbSet<App_vwDocCreditNote> App_DocCreditNotes { get; set; }
+        public virtual DbSet<App_vwDocDebitNote> App_DocDebitNotes { get; set; }
+        public virtual DbSet<App_vwDocOpenMode> App_DocOpenModes { get; set; }
+        public virtual DbSet<App_vwDocPurchaseEnquiry> App_DocPurchaseEnquiries { get; set; }
+        public virtual DbSet<App_vwDocPurchaseOrder> App_DocPurchaseOrders { get; set; }
+        public virtual DbSet<App_vwDocQuotation> App_DocQuotations { get; set; }
+        public virtual DbSet<App_vwDocSalesInvoice> App_DocSalesInvoices { get; set; }
+        public virtual DbSet<App_vwDocSalesOrder> App_DocSalesOrders { get; set; }
+        public virtual DbSet<App_vwEventLog> App_EventLogs { get; set; }
+        public virtual DbSet<Activity_vwExpenseCashCode> Activity_ExpenseCashCodes { get; set; }
+        public virtual DbSet<Cash_vwExternalCodesLookup> Cash_ExternalCodesLookup { get; set; }
+        public virtual DbSet<Task_vwFlow> Task_Flow { get; set; }
+        public virtual DbSet<App_vwGraphBankBalance> App_GraphBankBalances { get; set; }
+        public virtual DbSet<App_vwGraphTaskActivity> App_GraphTaskActivities { get; set; }
+        public virtual DbSet<Invoice_vwHistoryCashCode> Invoice_HistoryCashCodes { get; set; }
+        public virtual DbSet<Invoice_vwHistoryPurchase> Invoice_HistoryPurchases { get; set; }
+        public virtual DbSet<Invoice_vwHistoryPurchaseItem> Invoice_HistoryPurchaseItems { get; set; }
+        public virtual DbSet<Invoice_vwHistorySale> Invoice_HistorySales { get; set; }
+        public virtual DbSet<Invoice_vwHistorySalesItem> Invoice_HistorySalesItems { get; set; }
+        public virtual DbSet<App_vwIdentity> App_Identities { get; set; }
+        public virtual DbSet<Activity_wIncomeCashCode> VwIncomeCashCodes { get; set; }
+        public virtual DbSet<Org_vwInvoiceItem> Org_InvoiceItems { get; set; }
+        public virtual DbSet<Org_vwInvoiceSummary> Org_InvoiceSummaries { get; set; }
+        public virtual DbSet<Org_vwInvoiceTask> Org_InvoiceTasks { get; set; }
+        public virtual DbSet<Invoice_vwItem> Invoice_Items { get; set; }
+        public virtual DbSet<Org_vwJobTitle> Org_JobTitles { get; set; }
+        public virtual DbSet<Org_vwListActive> Org_ListActive { get; set; }
+        public virtual DbSet<Org_vwListAll> Org_ListAll { get; set; }
+        public virtual DbSet<Invoice_vwMirror> Invoice_Mirrors { get; set; }
+        public virtual DbSet<Invoice_vwMirrorDetail> Invoice_MirrorDetails { get; set; }
+        public virtual DbSet<Invoice_vwMirrorEvent> Invoice_MirrorEvents { get; set; }
+        public virtual DbSet<Org_vwNameTitle> Org_NameTitles { get; set; }
+        public virtual DbSet<Task_vwNetworkAllocation> Task_NetworkAllocations { get; set; }
+        public virtual DbSet<Invoice_vwNetworkChangeLog> Invoice_NetworkChangeLog { get; set; }
+        public virtual DbSet<Task_vwNetworkChangeLog> Task_NetworkChangeLogs { get; set; }
+        public virtual DbSet<Task_vwNetworkEvent> Task_NetworkEvents { get; set; }
+        public virtual DbSet<Task_vwNetworkEventLog> Task_NetworkEventLog { get; set; }
+        public virtual DbSet<Task_vwNetworkQuotation> Task_NetworkQuotations { get; set; }
+        public virtual DbSet<Task_vwOp> Task_Ops { get; set; }
+        public virtual DbSet<Cash_vwPayment> Cash_Payments { get; set; }
+        public virtual DbSet<Org_vwPaymentTerm> Org_PaymentTerms { get; set; }
+        public virtual DbSet<Cash_vwPaymentsListing> Cash_PaymentsListing { get; set; }
+        public virtual DbSet<Cash_vwPaymentsUnposted> Cash_PaymentsUnposted { get; set; }
+        public virtual DbSet<App_vwPeriod> App_Periods { get; set; }
+        public virtual DbSet<App_vwPeriodEndListing> App_PeriodEndListings { get; set; }
+        public virtual DbSet<Task_vwProfit> Task_Profit { get; set; }
+        public virtual DbSet<Task_vwProfitToDate> Task_ProfitToDate { get; set; }
+        public virtual DbSet<Task_vwPurchase> Task_Purchases { get; set; }
+        public virtual DbSet<Task_vwPurchaseEnquiryDeliverySpool> Task_PurchaseEnquiryDeliverySpool { get; set; }
+        public virtual DbSet<Task_vwPurchaseEnquirySpool> Task_PurchaseEnquirySpool { get; set; }
+        public virtual DbSet<Task_vwPurchaseOrderDeliverySpool> Task_PurchaseOrderDeliverySpool { get; set; }
+        public virtual DbSet<Task_vwPurchaseOrderSpool> Task_PurchaseOrderSpool { get; set; }
+        public virtual DbSet<Task_vwQuotationSpool> Task_QuotationSpool { get; set; }
+        public virtual DbSet<Task_vwQuote> Task_Quotes { get; set; }
+        public virtual DbSet<Invoice_vwRegister> Invoice_Register { get; set; }
+        public virtual DbSet<Invoice_vwRegisterCashCode> Invoice_RegisterCashCodes { get; set; }
+        public virtual DbSet<Invoice_vwRegisterDetail> Invoice_RegisterDetails { get; set; }
+        public virtual DbSet<Invoice_vwRegisterExpense> Invoice_RegisterExpenses { get; set; }
+        public virtual DbSet<Invoice_vwRegisterItem> Invoice_RegisterItems { get; set; }
+        public virtual DbSet<Invoice_vwRegisterPurchase> Invoice_RegisterPurchases { get; set; }
+        public virtual DbSet<Invoice_vwRegisterPurchaseTask> Invoice_RegisterPurchaseTasks { get; set; }
+        public virtual DbSet<Invoice_vwRegisterPurchasesOverdue> Invoice_RegisterPurchasesOverdue { get; set; }
+        public virtual DbSet<Invoice_vwRegisterSale> Invoice_RegisterSales { get; set; }
+        public virtual DbSet<Invoice_vwRegisterSaleTask> Invoice_RegisterSaleTasks { get; set; }
+        public virtual DbSet<Invoice_vwRegisterSalesOverdue> Invoice_RegisterSalesOverdues { get; set; }
+        public virtual DbSet<Task_vwSale> Task_Sales { get; set; }
+        public virtual DbSet<Invoice_vwSalesInvoiceSpool> Invoice_SalesInvoiceSpool { get; set; }
+        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByActivity> Invoice_SalesInvoiceSpoolByActivity { get; set; }
+        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByItem> Invoice_SalesInvoiceSpoolByItem { get; set; }
+        public virtual DbSet<Task_vwSalesOrderSpool> Task_SalesOrderSpool { get; set; }
+        public virtual DbSet<Cash_vwStatement> Cash_Statement { get; set; }
+        public virtual DbSet<Org_wStatement> OrgStatements { get; set; }
+        public virtual DbSet<Org_vwStatementReport> Org_StatementReport { get; set; }
+        public virtual DbSet<Cash_vwStatementReserve> Cash_StatementReserves { get; set; }
+        public virtual DbSet<Cash_vwStatementWhatIf> Cash_StatementWhatIf { get; set; }
+        public virtual DbSet<Org_vwStatusReport> Org_StatusReport { get; set; }
+        public virtual DbSet<Cash_vwSummary> Cash_Summary { get; set; }
+        public virtual DbSet<Invoice_vwSummary> Invoice_Summary { get; set; }
+        public virtual DbSet<Org_vwTask> Org_Tasks { get; set; }
+        public virtual DbSet<Task_vwTask> Task_Tasks { get; set; }
+        public virtual DbSet<App_vwTaxCode> App_TaxCodes { get; set; }
+        public virtual DbSet<App_vwTaxCodeType> App_TaxCodeTypes { get; set; }
+        public virtual DbSet<Cash_vwTaxCorpAuditAccrual> Cash_TaxCorpAuditAccruals { get; set; }
+        public virtual DbSet<Cash_vwTaxCorpStatement> Cash_TaxCorpStatement { get; set; }
+        public virtual DbSet<Cash_vwTaxCorpTotal> Cash_TaxCorpTotals { get; set; }
+        public virtual DbSet<Invoice_vwTaxSummary> Invoice_TaxSummary { get; set; }
+        public virtual DbSet<Cash_vwTaxVatAuditAccrual> Cash_TaxVatAuditAccruals { get; set; }
+        public virtual DbSet<Cash_vwTaxVatAuditInvoice> Cash_TaxVatAuditInvoices { get; set; }
+        public virtual DbSet<Cash_vwTaxVatDetail> Cash_TaxVatDetails { get; set; }
+        public virtual DbSet<Cash_vwTaxVatStatement> Cash_TaxVatStatement { get; set; }
+        public virtual DbSet<Cash_vwTaxVatSummary> Cash_TaxVatSummary { get; set; }
+        public virtual DbSet<Cash_vwTaxVatTotal> Cash_TaxVatTotals { get; set; }
+        public virtual DbSet<Task_vwTitle> Task_Titles { get; set; }
+        public virtual DbSet<Cash_vwTransferCodeLookup> Cash_TransferCodeLookup { get; set; }
+        public virtual DbSet<Cash_vwTransfersUnposted> Cash_TransfersUnposted { get; set; }
+        public virtual DbSet<Org_vwTypeLookup> Org_TypeLookup { get; set; }
+        public virtual DbSet<Activity_vwUnMirrored> Activity_UnMirrored { get; set; }
+        public virtual DbSet<Cash_vwUnMirrored> Cash_UnMirrored { get; set; }
+        public virtual DbSet<Usr_vwUserMenu> Usr_UserMenus { get; set; }
+        public virtual DbSet<Usr_vwUserMenuList> Usr_UserMenuLists { get; set; }
+        public virtual DbSet<Cash_vwVatcode> Cash_Vatcodes { get; set; }
+        public virtual DbSet<App_vwVersion> App_Version { get; set; }
+        public virtual DbSet<App_vwWarehouseOrg> App_WarehouseOrgs { get; set; }
+        public virtual DbSet<App_vwWarehouseTask> App_WarehouseTasks { get; set; }
+        public virtual DbSet<App_vwYearPeriod> App_YearPeriods { get; set; }
+        public virtual DbSet<Usr_vwCredential> Usr_Credentials { get; set; }
+        #endregion
+
+        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_CI_AS");
@@ -2425,9 +2436,6 @@ namespace TradeControl.Web.Data
                 entity.HasKey(e => e.UnitOfMeasure)
                     .HasName("PK_App_tbUom");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
             });
 
             modelBuilder.Entity<Usr_tbUser>(entity =>

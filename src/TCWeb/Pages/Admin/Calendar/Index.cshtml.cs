@@ -12,9 +12,9 @@ namespace TradeControl.Web.Pages.Admin.Calendar
 {
     public class IndexModel : PageModel
     {
-        private readonly TradeControl.Web.Data.TCNodeContext _context;
+        private readonly TradeControl.Web.Data.NodeContext _context;
 
-        public IndexModel(TradeControl.Web.Data.TCNodeContext context)
+        public IndexModel(TradeControl.Web.Data.NodeContext context)
         {
             _context = context;
         }

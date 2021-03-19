@@ -1,0 +1,19 @@
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+using TradeControl.Web.Data;
+
+namespace TradeControl.Web.Models
+{
+    [Keyless]
+    public class Activity_proc_WorkFlow
+    {
+        public string ActivityCode { get; set; } = string.Empty;
+        public string TaskStatus { get; set; } = string.Empty;
+        [Column(TypeName = "smallint")]
+        public NodeEnum.CashMode CashModeCode { get; set; } = NodeEnum.CashMode.Neutral;
+        public string UnitOfMeasure { get; set; } = "each";
+        public short OffsetDays { get; set; } = 0;
+        public decimal UsedOnQuantity { get; set; } = 1;
+    }
+}

@@ -13,9 +13,9 @@ namespace TradeControl.Web.Pages.Admin.Calendar
 {
     public class EditModel : PageModel
     {
-        private readonly TradeControl.Web.Data.TCNodeContext _context;
+        private readonly TradeControl.Web.Data.NodeContext _context;
 
-        public EditModel(TradeControl.Web.Data.TCNodeContext context)
+        public EditModel(TradeControl.Web.Data.NodeContext context)
         {
             _context = context;
         }

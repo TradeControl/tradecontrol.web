@@ -35,12 +35,12 @@ namespace TradeControl.Web
             {
                 options.Responsive.DefaultTablet = Device.Desktop;
                 options.Responsive.DefaultMobile = Device.Mobile;
-                options.Responsive.DefaultDesktop = Device.Mobile;
+                options.Responsive.DefaultDesktop = Device.Desktop;
                 options.Responsive.IncludeWebApi = false;
                 options.Responsive.Disable = false;
             });
 
-            services.AddDbContext<TCNodeContext>(options =>
+            services.AddDbContext<NodeContext>(options =>
                     options.UseSqlServer(Configuration.GetConnectionString("TCNodeContext")));
         }
 

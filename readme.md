@@ -6,26 +6,45 @@ Using ASP.NET Core to web enable the [Accounts](https://tradecontrol.github.io/a
 
 Because app functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing payments, organisations and invoicing in [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release.
 
-### Phase 1
+### Phase 1 - Data Models
 
 - [x] Entity Framework Core scaffold
-- [ ] Data logic
-- [x] Mobile/Desktop/Tablet [detection](https://github.com/wangkanai/Detection)
-- [x] Test model
-- [ ] Test data logic
+- [x] Test model - Calendars
 
-### Phase 2
+### Phase 2 - Business Logic
 
-- [ ] Authentication and menus
-- [ ] Accounts interface
+- [x] Asynchronous connection to the [sqlnode](https://github.com/tradecontrol/sqlnode)  
+- [x] Test logic - Payment Entry
 
-### Phase 3
+The implmented EF Core scaffold and business logic support the functionality of sql node version 3.34 for Phases 3-6. 
 
-- [ ] MIS
+### Phase 3 - Web Environment
+
+- [ ] Authentication 
+- [x] [Device Detection](https://github.com/wangkanai/Detection)
+- [ ] Mobile/Desktop Layouts and Navigation
+- [ ] Error reporting
+
+### Phase 4 - Accounts Mode
+
 - [ ] Definitions
-- [ ] Administration
+- [ ] Interface
+- [ ] Documents
 
-### Phase 4
+### Phase 5 - MIS Mode
+
+- [ ] Definitions
+- [ ] Interface
+- [ ] Documents
+- [ ] Supply-Chain Network
+
+### Phase 6 - Full Web Version
+
+- [ ] Administration
+- [ ] Custom Menus
+- [ ] Commercial skin
+
+### Phase 7 - Extensions
 
 - [ ] Company Accounts
 - [ ] Bitcoin Wallet

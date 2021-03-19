@@ -5,56 +5,65 @@
     ViewData["Title"] = "Edit Payment";
 }
 <h1>@ViewData["Title"]</h1>
-<h3>@Html.DisplayFor(model => model.Cash_vwPaymentsUnposted.PaymentCode)</h3>
+<h3>@Html.DisplayFor(model => model.Cash_PaymentsUnposted.PaymentCode)</h3>
 <hr />
 <div class="row">
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.UserId" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.PaymentCode" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.CashAccountCode" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.IsProfitAndLoss" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.InsertedBy" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.InsertedOn" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.UpdatedBy" />
-            <input type="hidden" asp-for="Cash_vwPaymentsUnposted.UpdatedOn" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.UserId" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.PaymentCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.AccountCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.CashAccountCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.IsProfitAndLoss" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.InsertedBy" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.InsertedOn" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedBy" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedOn" />
+
+            <dl class="row">
+                <dt class="col-sm-2">
+                    @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountCode)
+                </dt>
+                <dt class="col-sm-2">
+                    @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
+                </dt>
+            </dl>
 
             <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.PaidOn" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.PaidOn" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.PaidOn" class="text-danger"></span>
+                <label asp-for="Cash_PaymentsUnposted.PaidOn" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaidOn" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaidOn" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.AccountCode" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.AccountCode" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.AccountCode" class="text-danger"></span>
+                <label asp-for="Cash_PaymentsUnposted.PaidInValue" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaidInValue" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaidInValue" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.PaidInValue" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.PaidInValue" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.PaidInValue" class="text-danger"></span>
+                <label asp-for="Cash_PaymentsUnposted.PaidOutValue" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaidOutValue" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaidOutValue" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.PaidOutValue" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.PaidOutValue" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.PaidOutValue" class="text-danger"></span>
+                <label asp-for="Cash_PaymentsUnposted.PaymentReference" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaymentReference" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaymentReference" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.PaymentReference" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.PaymentReference" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.PaymentReference" class="text-danger"></span>
+                <label asp-for="Cash_PaymentsUnposted.CashCode" class="control-label"></label>
+                <p>
+                    <select asp-for="Cash_PaymentsUnposted.CashCode" asp-items="Model.CashCodes" class="form-control"></select>
+                </p>
+                <span asp-validation-for="Cash_PaymentsUnposted.CashCode" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.CashCode" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.CashCode" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.CashCode" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Cash_vwPaymentsUnposted.TaxCode" class="control-label"></label>
-                <input asp-for="Cash_vwPaymentsUnposted.TaxCode" class="form-control" />
-                <span asp-validation-for="Cash_vwPaymentsUnposted.TaxCode" class="text-danger"></span>
+                <label asp-for="Cash_PaymentsUnposted.TaxCode" class="control-label"></label>
+                <p>
+                    <select asp-for="Cash_PaymentsUnposted.TaxCode" asp-items="Model.TaxCodes" class="form-control"></select>
+                </p>
+                <span asp-validation-for="Cash_PaymentsUnposted.TaxCode" class="text-danger"></span>
             </div>
 
             <div class="form-group">

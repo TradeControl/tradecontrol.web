@@ -12,15 +12,15 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class DeleteModel : PageModel
     {
-        private readonly TradeControl.Web.Data.TCNodeContext _context;
+        private readonly TradeControl.Web.Data.NodeContext _context;
 
-        public DeleteModel(TradeControl.Web.Data.TCNodeContext context)
+        public DeleteModel(TradeControl.Web.Data.NodeContext context)
         {
             _context = context;
         }
 
         [BindProperty]
-        public Cash_vwPaymentsUnposted Cash_vwPaymentsUnposted { get; set; }
+        public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
@@ -29,9 +29,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 return NotFound();
             }
 
-            Cash_vwPaymentsUnposted = await _context.VwPaymentsUnposteds.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
 
-            if (Cash_vwPaymentsUnposted == null)
+            if (Cash_PaymentsUnposted == null)
             {
                 return NotFound();
             }
@@ -45,11 +45,11 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 return NotFound();
             }
 
-            Cash_vwPaymentsUnposted = await _context.VwPaymentsUnposteds.FindAsync(id);
+            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FindAsync(id);
 
-            if (Cash_vwPaymentsUnposted != null)
+            if (Cash_PaymentsUnposted != null)
             {
-                _context.VwPaymentsUnposteds.Remove(Cash_vwPaymentsUnposted);
+                _context.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
                 await _context.SaveChangesAsync();
             }
 

@@ -19,8 +19,6 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(15)]
         public string UnitOfMeasure { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
 
         [InverseProperty(nameof(Activity_tbActivity.UnitOfMeasureNavigation))]
         public virtual ICollection<Activity_tbActivity> TbActivities { get; set; }

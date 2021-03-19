@@ -13,27 +13,6 @@
             <th>
                 @Html.DisplayNameFor(model => model.App_tbCalendar[0].CalendarCode)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Monday)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Tuesday)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Wednesday)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Thursday)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Friday)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Saturday)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_tbCalendar[0].Sunday)
-            </th>
             <th></th>
         </tr>
     </thead>
@@ -43,27 +22,6 @@
             <tr>
                 <td>
                     @Html.DisplayFor(modelItem => item.CalendarCode)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Monday)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Tuesday)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Wednesday)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Thursday)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Friday)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Saturday)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Sunday)
                 </td>
                 <td>
                     <a asp-page="./Edit" asp-route-id="@item.CalendarCode">Edit</a> |

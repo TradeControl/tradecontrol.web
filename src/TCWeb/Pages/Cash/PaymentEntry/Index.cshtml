@@ -5,71 +5,87 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create">Create New</a>
+    <a asp-page="Create" asp-route-id="@Model.CashAccount" asp-route-mode="0">Pay Invoices</a> | 
+    <a asp-page="Create" asp-route-id="@Model.CashAccount" asp-route-mode="1">Miscellaneous Payment</a>
 </p>
+
+<form class="form-group">
+    <p>
+        <select asp-for="CashAccount" asp-items="Model.CashAccounts">
+            <option value="">All</option>
+        </select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].CashAccountCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashAccountCode)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].PaidOn)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountCode)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].PaymentReference)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaymentReference)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].PaidInValue)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidInValue)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].PaidOutValue)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOutValue)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].CashCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashCode)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_vwPaymentsUnposted[0].TaxCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].TaxCode)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model.Cash_vwPaymentsUnposted) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashAccountCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaidOn)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.AccountCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaymentReference)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaidInValue)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaidOutValue)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TaxCode)
-            </td>
-            <td>
-                <a asp-page="./Edit" asp-route-id="@item.PaymentCode">Edit</a> |
-                <a asp-page="./Details" asp-route-id="@item.PaymentCode">Details</a> |
-                <a asp-page="./Delete" asp-route-id="@item.PaymentCode">Delete</a>
-            </td>
-        </tr>
-}
+        @foreach (var item in Model.Cash_PaymentsUnposted)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashAccountCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AccountCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaymentReference)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidInValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOutValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxCode)
+                </td>
+                <td>
+                    <a asp-page="./Edit" asp-route-id="@item.PaymentCode">Edit</a> |
+                    <a asp-page="./Details" asp-route-id="@item.PaymentCode">Details</a> |
+                    <a asp-page="./Delete" asp-route-id="@item.PaymentCode">Delete</a>
+                </td>
+            </tr>
+        }
     </tbody>
 </table>
+<form method="post">
+    <p>
+        <input type="submit" value="Post" class="btn btn-primary" />
+    </p>
+</form>
