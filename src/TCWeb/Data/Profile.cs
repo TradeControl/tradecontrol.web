@@ -40,32 +40,46 @@ namespace TradeControl.Web.Data
             }
         });
 
-        public Task<string> UserName => Task.Run(() =>
+        public async Task<string> UserName(string aspnetId)
         {
             try
             {
-                return _context.Usr_Credentials.First().UserName;
+                return await _context.GetUserName(aspnetId);
             }
             catch (Exception e)
             {
                 _context.ErrorLog(e);
                 return string.Empty;
             }
-        });
+        }
 
-        public Task<string> UserId => Task.Run(() =>
+        public async Task<string> UserId(string aspnetId)
         {
             try
             {
-                return _context.Usr_Credentials.First().UserId;
+                return await _context.GetUserId(aspnetId);
             }
             catch (Exception e)
             {
                 _context.ErrorLog(e);
                 return string.Empty;
             }
-        });
+        }
+
+        public async Task<string> AspNetId(string aspnetId)
+        {
+            try
+            {
+                return await _context.GetAspNetId(aspnetId);
+            }
+            catch (Exception e)
+            {
+                _context.ErrorLog(e);
+                return string.Empty;
+            }
+        }
 
         public async Task<string> CompanyName() => await _context.CompanyName;
+
     }
 }

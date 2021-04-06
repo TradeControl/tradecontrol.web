@@ -4,12 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using TradeControl.Web.Areas.Identity.Data;
 
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Data
 {
-    public partial class NodeContext : DbContext
+    public partial class NodeContext : IdentityDbContext<TradeControlWebUser>
     {
         #region Procedure Datasets
         public virtual DbSet<Cash_proc_CodeDefaults> Cash_CodeDefaults { get; set; }
@@ -355,6 +357,154 @@ namespace TradeControl.Web.Data
                     }
                 });
             }
+        }
+
+        public Task<string> GetUserId(string aspnetId)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    var _aspnetId = new SqlParameter()
+                    {
+                        ParameterName = "@Id",
+                        SqlDbType = System.Data.SqlDbType.VarChar,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Size = 450,
+                        Value = aspnetId
+
+                    };
+
+                    var _userId = new SqlParameter()
+                    {
+                        ParameterName = "@UserId",
+                        SqlDbType = System.Data.SqlDbType.VarChar,
+                        Direction = System.Data.ParameterDirection.Output,
+                        Size = 10
+                    };
+
+                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    {
+                        _connection.Open();
+                        using (SqlCommand _command = _connection.CreateCommand())
+                        {
+                            _command.CommandText = "AspNetGetUserId";
+                            _command.CommandType = CommandType.StoredProcedure;
+                            _command.Parameters.Add(_aspnetId);
+                            _command.Parameters.Add(_userId);
+
+                            _command.ExecuteNonQuery();
+                        }
+                        _connection.Close();
+                    }
+
+                    return (string)_userId.Value;
+
+                }
+                catch (Exception e)
+                {
+                    ErrorLog(e);
+                    return string.Empty;
+                }
+            });
+        }
+
+        public Task<string> GetUserName(string aspnetId)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    var _aspnetId = new SqlParameter()
+                    {
+                        ParameterName = "@Id",
+                        SqlDbType = System.Data.SqlDbType.VarChar,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Size = 450,
+                        Value = aspnetId
+                    };
+
+                    var _userName = new SqlParameter()
+                    {
+                        ParameterName = "@UserName",
+                        SqlDbType = System.Data.SqlDbType.VarChar,
+                        Direction = System.Data.ParameterDirection.Output,
+                        Size = 50
+                    };
+
+                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    {
+                        _connection.Open();
+                        using (SqlCommand _command = _connection.CreateCommand())
+                        {
+                            _command.CommandText = "dbo.AspNetGetUserName";
+                            _command.CommandType = CommandType.StoredProcedure;
+                            _command.Parameters.Add(_aspnetId);
+                            _command.Parameters.Add(_userName);
+
+                            _command.ExecuteNonQuery();
+                        }
+                        _connection.Close();
+                    }
+
+                    return (string)_userName.Value;
+
+                }
+                catch (Exception e)
+                {
+                    ErrorLog(e);
+                    return string.Empty;
+                }
+            });
+        }
+
+        public Task<string> GetAspNetId(string userId)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    var _userId = new SqlParameter()
+                    {
+                        ParameterName = "@UserId",
+                        SqlDbType = System.Data.SqlDbType.VarChar,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Size = 10,
+                        Value = userId
+                    };
+
+                    var _aspnetId = new SqlParameter()
+                    {
+                        ParameterName = "@Id",
+                        SqlDbType = System.Data.SqlDbType.VarChar,
+                        Direction = System.Data.ParameterDirection.Output,
+                        Size = 450
+                    };
+
+                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    {
+                        _connection.Open();
+                        using (SqlCommand _command = _connection.CreateCommand())
+                        {
+                            _command.CommandText = "dbo.AspNetGetId";
+                            _command.CommandType = CommandType.StoredProcedure;
+                            _command.Parameters.Add(_userId);
+                            _command.Parameters.Add(_aspnetId);
+
+                            _command.ExecuteNonQuery();
+                        }
+                        _connection.Close();
+                    }
+
+                    return (string)_aspnetId.Value;
+
+                }
+                catch (Exception e)
+                {
+                    ErrorLog(e);
+                    return string.Empty;
+                }
+            });
         }
         #endregion
 
@@ -1005,7 +1155,7 @@ namespace TradeControl.Web.Data
             });
         }
 
-        public Task<string> InvoicePay(string invoiceNumber,DateTime paidOn, bool postPayment)
+        public Task<string> InvoicePay(string invoiceNumber, DateTime paidOn, bool postPayment)
         {
             return Task.Run(() =>
             {
@@ -1263,7 +1413,7 @@ namespace TradeControl.Web.Data
                     }
 
                     return (short)_yearNumber.Value;
-                }               
+                }
                 catch (Exception e)
                 {
                     ErrorLog(e);
@@ -1922,7 +2072,7 @@ namespace TradeControl.Web.Data
                             _command.CommandType = CommandType.StoredProcedure;
                             _command.Parameters.Add(_taskCode);
                             _command.Parameters.Add(_invoiceType);
-  
+
 
                             _command.ExecuteNonQuery();
                         }
@@ -2180,7 +2330,6 @@ namespace TradeControl.Web.Data
         }
 
         #endregion
-
 
     }
 }

@@ -2,25 +2,31 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Admin.Calendar
 {
-    public class CreateModel : PageModel
+    [Authorize(Roles = "Administrators")]
+    public class CreateModel : DI_BasePageModel
     {
-        private readonly TradeControl.Web.Data.NodeContext _context;
-
-        public CreateModel(TradeControl.Web.Data.NodeContext context)
+        public CreateModel(NodeContext context,
+            IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager)
+            : base(context, authorizationService, userManager)
         {
-            _context = context;
         }
 
-        public IActionResult OnGet()
+        public async Task<IActionResult> OnGetAsync()
         {
+            await SetViewData();
             return Page();
         }
 
@@ -32,12 +38,10 @@ namespace TradeControl.Web.Pages.Admin.Calendar
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
-            {
                 return Page();
-            }
 
-            _context.App_tbCalendars.Add(App_tbCalendar);
-            await _context.SaveChangesAsync();
+            NodeContext.App_tbCalendars.Add(App_tbCalendar);
+            await NodeContext.SaveChangesAsync();
 
             return RedirectToPage("./Index");
         }

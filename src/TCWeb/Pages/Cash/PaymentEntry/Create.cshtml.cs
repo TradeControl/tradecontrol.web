@@ -2,27 +2,30 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
-    public class CreateModel : PageModel
+    public class CreateModel : DI_BasePageModel
     {
-        private readonly TradeControl.Web.Data.NodeContext _context;
-
-        public CreateModel(TradeControl.Web.Data.NodeContext context)
+        public CreateModel(NodeContext context,
+            IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager)
+            : base(context, authorizationService, userManager)
         {
-            _context = context;
         }
 
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
+        public int InputMode { get; set; }
 
         public SelectList CashAccountCodes { get; set; }
         public SelectList AccountCodes { get; set; }
@@ -32,14 +35,14 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnGetAsync(string id, string mode)
         {
 
-            var cashAccountCodes = from t in _context.Org_tbAccounts
+            var cashAccountCodes = from t in NodeContext.Org_tbAccounts
                                where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
                                orderby t.CashAccountCode
                                select t.CashAccountCode;
 
             CashAccountCodes = new SelectList(await cashAccountCodes.ToListAsync());
 
-            var accountCodes = from t in _context.Org_AccountLookup
+            var accountCodes = from t in NodeContext.Org_AccountLookup
                               orderby t.AccountCode
                               select t.AccountCode;
 
@@ -47,55 +50,52 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
             if (mode != "0")
             {
-                var cashCodes = from t in _context.Cash_CodeLookup
+                InputMode = 1;
+                var cashCodes = from t in NodeContext.Cash_CodeLookup
                                 where t.CashTypeCode < (short)NodeEnum.CashType.Bank
                                 orderby t.CashCode
                                 select t.CashCode;
 
                 CashCodes = new SelectList(await cashCodes.ToListAsync());
 
-                var taxCodes = from t in _context.App_TaxCodes
+                var taxCodes = from t in NodeContext.App_TaxCodes
                                orderby t.TaxCode
                                select t.TaxCode;
 
                 TaxCodes = new SelectList(await taxCodes.ToListAsync());
             }
+            else
+                InputMode = 0;
 
 
             Cash_PaymentsUnposted = new Cash_vwPaymentsUnposted();
             Cash_PaymentsUnposted.CashAccountCode = id;
             Cash_PaymentsUnposted.PaidOn = DateTime.Today;
 
-            Profile profile = new Profile(_context);
-            Cash_PaymentsUnposted.UserId = await profile.UserId;
-            Cash_PaymentsUnposted.UpdatedBy = await profile.SqlUserName;
+            Profile profile = new Profile(NodeContext);
+            Cash_PaymentsUnposted.UserId = await profile.UserId(UserManager.GetUserId(User));
+            Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
             Cash_PaymentsUnposted.InsertedBy = Cash_PaymentsUnposted.UpdatedBy;
 
             Cash_PaymentsUnposted.IsProfitAndLoss = false;
 
+            await SetViewData();
             return Page();
         }
 
-
-
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://aka.ms/RazorPagesCRUD.
         public async Task<IActionResult> OnPostAsync()
         {
-            CashAccounts cashAccounts = new CashAccounts(_context);
+            CashAccounts cashAccounts = new CashAccounts(NodeContext);
             Cash_PaymentsUnposted.PaymentCode = await cashAccounts.NextPaymentCode();
 
             Cash_PaymentsUnposted.UpdatedOn = DateTime.Now;
             Cash_PaymentsUnposted.InsertedOn = DateTime.Now;
 
             if (!ModelState.IsValid)
-            {
                 return Page();
-            }
 
-
-            _context.Cash_PaymentsUnposted.Add(Cash_PaymentsUnposted);
-            await _context.SaveChangesAsync();
+            NodeContext.Cash_PaymentsUnposted.Add(Cash_PaymentsUnposted);
+            await NodeContext.SaveChangesAsync();
 
             return RedirectToPage("./Index");
         }

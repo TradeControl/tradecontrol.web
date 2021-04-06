@@ -3,15 +3,13 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - TradeControl.Web</title>
+    <title>@ViewData["Title"] - @ViewData["CompanyName"]</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
-    <partial name="_Navigation" />
-    
+    <partial name="_Navigation" />    
     <div class="container">
-        <div>Views/Shared/_Layout.cshtml</div> <p/>
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

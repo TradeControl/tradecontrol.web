@@ -1,3 +1,7 @@
 @using TradeControl.Web
 @namespace TradeControl.Web.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using TradeControl.Web.Authorization;
+@using TradeControl.Web.Models
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService

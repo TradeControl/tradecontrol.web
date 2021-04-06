@@ -3,7 +3,9 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using TradeControl.Web.Areas.Identity.Data;
 
 using TradeControl.Web.Models;
 
@@ -11,7 +13,7 @@ using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Data
 {
-    public partial class NodeContext : DbContext
+    public partial class NodeContext : IdentityDbContext<TradeControlWebUser>
     {
         public static string NodeVersion { get; }  = "3.34.2";
 
@@ -115,6 +117,11 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Usr_tbUser> Usr_tbUsers { get; set; }
         public virtual DbSet<App_tbYear> App_tbYears { get; set; }
         public virtual DbSet<App_tbYearPeriod> App_tbYearPeriods { get; set; }
+
+        #endregion
+
+        #region Asp.Net
+        public virtual DbSet<AspNet_UserRegistration> AspNet_UserRegistrations { get; set; }
 
         #endregion
 
@@ -274,10 +281,20 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Usr_vwCredential> Usr_Credentials { get; set; }
         #endregion
 
-        
+        #region Model Creation
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_CI_AS");
+
+            #region Asp.Net
+            modelBuilder.Entity<AspNet_UserRegistration>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                //entity.ToView("AspNetUserRegistrations");
+            });
+            #endregion
 
             modelBuilder.Entity<Org_tbAccount>(entity =>
             {
@@ -592,7 +609,7 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.BucketTypeCode).ValueGeneratedNever();
             });
 
-
+            /*
             modelBuilder.Entity<App_tbCalendar>(entity =>
             {
 
@@ -610,7 +627,7 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.Wednesday).HasDefaultValueSql("((1))");
 
             });
-
+            */
 
             modelBuilder.Entity<App_tbCalendarHoliday>(entity =>
             {
@@ -908,7 +925,7 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.OnMailingList).HasDefaultValueSql("((1))");
+                //entity.Property(e => e.OnMailingList).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
@@ -1851,7 +1868,7 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.OrganisationTypeCode).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.PayBalance).HasDefaultValueSql("((1))");
+                //entity.Property(e => e.PayBalance).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
@@ -1899,7 +1916,7 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.IsProfitAndLoss).HasDefaultValueSql("((1))");
+                //entity.Property(e => e.IsProfitAndLoss).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.PaidOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
 
@@ -3431,5 +3448,6 @@ namespace TradeControl.Web.Data
         }
 
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+        #endregion
     }
 }

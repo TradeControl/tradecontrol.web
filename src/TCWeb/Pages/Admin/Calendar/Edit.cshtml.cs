@@ -2,22 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Admin.Calendar
 {
-    public class EditModel : PageModel
+    [Authorize(Roles = "Administrators")]
+    public class EditModel : DI_BasePageModel
     {
-        private readonly TradeControl.Web.Data.NodeContext _context;
-
-        public EditModel(TradeControl.Web.Data.NodeContext context)
+        public EditModel(NodeContext context,
+            IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager)
+            : base(context, authorizationService, userManager)
         {
-            _context = context;
         }
 
         [BindProperty]
@@ -30,7 +34,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
                 return NotFound();
             }
 
-            App_tbCalendar = await _context.App_tbCalendars.FirstOrDefaultAsync(m => m.CalendarCode == id);
+            App_tbCalendar = await NodeContext.App_tbCalendars.FirstOrDefaultAsync(m => m.CalendarCode == id);
 
             if (App_tbCalendar == null)
             {
@@ -48,11 +52,11 @@ namespace TradeControl.Web.Pages.Admin.Calendar
                 return Page();
             }
 
-            _context.Attach(App_tbCalendar).State = EntityState.Modified;
+            NodeContext.Attach(App_tbCalendar).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await NodeContext.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -71,7 +75,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
 
         private bool App_tbCalendarExists(string id)
         {
-            return _context.App_tbCalendars.Any(e => e.CalendarCode == id);
+            return NodeContext.App_tbCalendars.Any(e => e.CalendarCode == id);
         }
     }
 }

@@ -14,6 +14,7 @@ namespace TradeControl.Web.Models
         public NodeEnum.CashMode CashModeCode { get; set; } = NodeEnum.CashMode.Neutral;
         public string UnitOfMeasure { get; set; } = "each";
         public short OffsetDays { get; set; } = 0;
+        [Column(TypeName = "decimal(18, 6)")]
         public decimal UsedOnQuantity { get; set; } = 1;
     }
 }

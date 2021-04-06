@@ -2,21 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
-    public class DeleteModel : PageModel
+    public class DeleteModel : DI_BasePageModel
     {
-        private readonly TradeControl.Web.Data.NodeContext _context;
-
-        public DeleteModel(TradeControl.Web.Data.NodeContext context)
+        public DeleteModel(NodeContext context,
+            IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager)
+            : base(context, authorizationService, userManager)
         {
-            _context = context;
         }
 
         [BindProperty]
@@ -25,17 +28,18 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnGetAsync(string id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
-            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
 
             if (Cash_PaymentsUnposted == null)
-            {
                 return NotFound();
+            else
+            {
+                await SetViewData();
+                return Page();
             }
-            return Page();
+            
         }
 
         public async Task<IActionResult> OnPostAsync(string id)
@@ -45,12 +49,12 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 return NotFound();
             }
 
-            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FindAsync(id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(id);
 
             if (Cash_PaymentsUnposted != null)
             {
-                _context.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
-                await _context.SaveChangesAsync();
+                NodeContext.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
+                await NodeContext.SaveChangesAsync();
             }
 
             return RedirectToPage("./Index");

@@ -1,0 +1,60 @@
+﻿
+@page
+@model TradeControl.Web.Pages.Admin.Users.IndexModel
+
+@{
+    ViewData["Title"] = "User Registrations";
+}
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group">
+    <p>
+        <label class="text-body">Confirmed?</label>
+        <select asp-for="ConfirmFilterOption" asp-items="Model.ConfirmFilterOptions">
+            <option value="">All</option>
+        </select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].EmailAddress)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].UserName)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.AspNet_UserRegistration)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.EmailAddress)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.UserName)
+                </td>
+                <td>
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
+                    {
+                        <a asp-page="./Confirm" asp-route-id="@item.Id">Confirm</a>
+                        <text> | </text>
+                    }
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
+                    {
+                        <a asp-page="./Role" asp-route-id="@item.Id">Role</a>
+                        <text> | </text>
+                    }
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Delete)).Succeeded)
+                    {
+                        <a asp-page="./Delete" asp-route-id="@item.Id">Delete</a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

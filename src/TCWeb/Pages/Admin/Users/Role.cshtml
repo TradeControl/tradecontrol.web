@@ -1,0 +1,42 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.Users.RoleModel
+@{ ViewData["Title"] = "Assign Role"; }
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.AspNet_UserRegistration.UserName):
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.AspNet_UserRegistration.UserName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.AspNet_UserRegistration.EmailAddress):
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.AspNet_UserRegistration.EmailAddress)
+        </dd>
+    </dl>
+    
+    <form method="post">
+        <div class="form-group form-check">
+            <label class="form-check-label">
+                <input class="form-check-input" asp-for="AspNet_UserRegistration.IsManager" /> @Html.DisplayNameFor(model => model.AspNet_UserRegistration.IsManager)
+            </label>
+        </div>
+        <div class="form-group form-check">
+            <label class="form-check-label">
+                <input class="form-check-input" asp-for="AspNet_UserRegistration.IsAdministrator" /> @Html.DisplayNameFor(model => model.AspNet_UserRegistration.IsAdministrator)
+            </label>
+        </div>
+        <div class="form-group">
+            <input type="hidden" asp-for="AspNet_UserRegistration.Id" />
+            <input type="submit" value="Assign" class="btn btn-primary" /> |
+            <a asp-page="./Index">Back to List</a>
+        </div>
+    </form>
+        
+    </div>

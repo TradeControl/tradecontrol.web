@@ -2,21 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
-    public class DetailsModel : PageModel
+    public class DetailsModel : DI_BasePageModel
     {
-        private readonly TradeControl.Web.Data.NodeContext _context;
-
-        public DetailsModel(TradeControl.Web.Data.NodeContext context)
+        public DetailsModel(NodeContext context,
+            IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager)
+            : base(context, authorizationService, userManager)
         {
-            _context = context;
         }
 
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
@@ -24,17 +28,17 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnGetAsync(string id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
-            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
 
             if (Cash_PaymentsUnposted == null)
-            {
                 return NotFound();
+            else
+            {
+                await SetViewData();
+                return Page();
             }
-            return Page();
         }
     }
 }

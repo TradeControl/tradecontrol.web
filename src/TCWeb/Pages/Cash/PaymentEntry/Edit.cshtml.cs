@@ -2,22 +2,26 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
-    public class EditModel : PageModel
+    public class EditModel : DI_BasePageModel
     {
-        private readonly TradeControl.Web.Data.NodeContext _context;
 
-        public EditModel(TradeControl.Web.Data.NodeContext context)
+        public EditModel(NodeContext context,
+            IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager)
+            : base(context, authorizationService, userManager)
         {
-            _context = context;
         }
 
         public SelectList CashCodes { get; set; }
@@ -30,11 +34,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnGetAsync(string id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
-            Cash_PaymentsUnposted = await _context.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
 
             if (Cash_PaymentsUnposted == null)
             {
@@ -43,20 +45,21 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
             if (Cash_PaymentsUnposted.CashCode != null)
             {
-                var cashCodes = from t in _context.Cash_CodeLookup
+                var cashCodes = from t in NodeContext.Cash_CodeLookup
                                 where t.CashTypeCode < (short)NodeEnum.CashType.Bank
                                 orderby t.CashCode
                                 select t.CashCode;
 
                 CashCodes = new SelectList(await cashCodes.Distinct().ToListAsync());
 
-                var taxCodes = from t in _context.App_TaxCodes
+                var taxCodes = from t in NodeContext.App_TaxCodes
                                orderby t.TaxCode
                                select t.TaxCode;
 
                 TaxCodes = new SelectList(await taxCodes.Distinct().ToListAsync());
             }
 
+            await SetViewData();
             return Page();
         }
 
@@ -69,11 +72,11 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 return Page();
             }
 
-            _context.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
+            NodeContext.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await NodeContext.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -92,7 +95,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         private bool Cash_vwPaymentsUnpostedExists(string id)
         {
-            return _context.Cash_PaymentsUnposted.Any(e => e.PaymentCode == id);
+            return NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == id);
         }
     }
 }

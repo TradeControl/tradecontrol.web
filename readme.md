@@ -16,14 +16,16 @@ Because app functionality is now fully available from [Office](https://github.co
 - [x] Asynchronous connection to the [sqlnode](https://github.com/tradecontrol/sqlnode)  
 - [x] Test logic - Payment Entry
 
-The implmented EF Core scaffold and business logic support the functionality of sql node version 3.34 for Phases 3-6. 
+The implmented EF Core scaffold and business logic support the functionality of sql node version 3.34.2 for Phases 3-6. 
 
 ### Phase 3 - Web Environment
 
-- [ ] Authentication 
+- [x] Authentication
+- [x] Authorisation - [attributes](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Calendar/Create.cshtml), [views](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Index.cshtml), [handlers](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Authorisation/AspNetAuthorizationHandler.cs), [page base class](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/DI_BasePageModel.cs) and [models](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Confirm.cshtml.cs)
 - [x] [Device Detection](https://github.com/wangkanai/Detection)
-- [ ] Mobile/Desktop Layouts and Navigation
-- [ ] Error reporting
+- [x] Layouts and Navigation
+
+Requires the installation of sql node version 3.34.3 from the web_interface branch to support the AspNetCore.Identity datastore and registration process.
 
 ### Phase 4 - Accounts Mode
 
