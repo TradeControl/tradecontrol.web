@@ -31,17 +31,23 @@ namespace TradeControl.Web.Models
         }
 
         [Key]
+        [Required]
         [StringLength(50)]
+        [Display (Name = "Cash Code")]
         public string CashCode { get; set; }
         [Required]
         [StringLength(100)]
+        [Display(Name = "Description")]
         public string CashDescription { get; set; }
         [Required]
         [StringLength(10)]
+        [Display(Name = "Category Code")]
         public string CategoryCode { get; set; }
         [Required]
         [StringLength(10)]
+        [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }
+        [Display(Name = "Enabled?")]
         public short IsEnabled { get; set; }
         [Required]
         [StringLength(50)]
@@ -53,8 +59,6 @@ namespace TradeControl.Web.Models
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(CategoryCode))]
         [InverseProperty(nameof(Cash_tbCategory.TbCodes))]

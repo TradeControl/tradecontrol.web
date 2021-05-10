@@ -1,0 +1,56 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.TaxCode.CreateModel
+@{ ViewData["Title"] = "Create Tax Code"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="App_tbTaxCode.TaxCode" class="control-label"></label>
+                <input asp-for="App_tbTaxCode.TaxCode" class="form-control" />
+                <span asp-validation-for="App_tbTaxCode.TaxCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbTaxCode.TaxDescription" class="control-label"></label>
+                <input asp-for="App_tbTaxCode.TaxDescription" class="form-control" />
+                <span asp-validation-for="App_tbTaxCode.TaxDescription" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbTaxCode.TaxRate" class="control-label"></label>
+                <input asp-for="App_tbTaxCode.TaxRate" class="form-control" />
+                <span asp-validation-for="App_tbTaxCode.TaxRate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbTaxCode.TaxTypeCode" class="control-label"></label>
+                <p>
+                    <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbTaxCode.RoundingCode" class="control-label"></label>
+                <p>
+                    <select asp-for="Rounding" asp-items="Model.Roundings" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbTaxCode.Decimals" class="control-label"></label>
+                <input asp-for="App_tbTaxCode.Decimals" class="form-control" />
+                <span asp-validation-for="App_tbTaxCode.Decimals" class="text-danger"></span>
+            </div>
+
+            <input type="hidden" asp-for="App_tbTaxCode.UpdatedBy" />
+            <input type="hidden" asp-for="App_tbTaxCode.UpdatedOn" />
+
+            <div class="form-group">
+                <input type="submit" value="CREATE" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -8,19 +8,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    [Keyless]
+    [Table("vwAccountLookup", Schema = "Orgs")]
     public partial class Org_vwAccountLookup
     {
+        [Key]
         [Required]
         [StringLength(10)]
+        [Display(Name = "Account Code")]
         public string AccountCode { get; set; }
         [Required]
         [StringLength(255)]
+        [Display(Name = "Name")]
         public string AccountName { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Type")]
         public string OrganisationType { get; set; }
         [StringLength(10)]
+        [Display(Name = "Cash Mode")]
         public string CashMode { get; set; }
         public short CashModeCode { get; set; }
     }

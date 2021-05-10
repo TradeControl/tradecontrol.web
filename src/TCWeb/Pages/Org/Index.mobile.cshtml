@@ -1,0 +1,46 @@
+﻿@page
+@model TradeControl.Web.Pages.Org.IndexModel
+
+@{ ViewData["Title"] = "Search"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="OrganisationType" asp-items="Model.OrganisationTypes">
+            <option value="">All</option>
+        </select>
+        Name: <input type="text" asp-for="SearchString" />
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_AccountLookup[0].AccountCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_AccountLookup[0].AccountName)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Org_AccountLookup)
+        {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.AccountCode)
+            </td>
+
+            <td>
+                @Html.DisplayFor(modelItem => item.AccountName)
+            </td>
+            <td>
+                <a asp-page="@Model.ReturnUrl" asp-route-account="@item.AccountCode">Select</a>
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>

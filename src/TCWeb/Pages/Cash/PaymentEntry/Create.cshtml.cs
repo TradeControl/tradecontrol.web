@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -20,19 +21,122 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             IAuthorizationService authorizationService,
             UserManager<TradeControlWebUser> userManager)
             : base(context, authorizationService, userManager)
-        {
-        }
+        { }
 
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
-        public int InputMode { get; set; }
 
         public SelectList CashAccountCodes { get; set; }
         public SelectList AccountCodes { get; set; }
         public SelectList CashCodes { get; set; }
         public SelectList TaxCodes { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string id, string mode)
+        #region session data
+        const string SessionKeyLoadMode = "_loadMode";
+        const string SessionKeyCashAccountCode = "_CashAccountCode";
+        const string SessionKeyAccountCode = "_AccountCode";
+        const string SessionKeyCashCode = "_CashCode";
+        const string SessionKeyTaxCode = "_TaxCode";
+
+        public int InputMode 
+        {
+            get
+            {                
+                try
+                {
+                    var mode = HttpContext.Session.GetInt32(SessionKeyLoadMode);
+                    return (int)mode;
+                }
+                catch
+                {
+                    InputMode = 1;
+                    return 1;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetInt32(SessionKeyLoadMode, value);
+            }
+        }
+
+        string CashAccountCode
+        {
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyCashAccountCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyCashAccountCode, value);
+            }
+        }
+
+        string AccountCode
+        {
+            get
+            {
+                try
+                { 
+                    return HttpContext.Session.GetString(SessionKeyAccountCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyAccountCode, value);
+            }
+        }
+
+        string CashCode
+        {
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyCashCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyCashCode, value);
+            }
+        }
+
+        string TaxCode
+        {
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyTaxCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyTaxCode, value);
+            }
+        }
+        #endregion
+
+        public async Task<IActionResult> OnGetAsync(string cashaccount, string mode, string accountcode, string cashcode, string taxcode)
         {
 
             var cashAccountCodes = from t in NodeContext.Org_tbAccounts
@@ -48,9 +152,29 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
             AccountCodes = new SelectList(await accountCodes.ToListAsync());
 
-            if (mode != "0")
+            if (!string.IsNullOrEmpty(cashaccount))
+                CashAccountCode = cashaccount;
+            else if (string.IsNullOrEmpty(CashAccountCode))
             {
-                InputMode = 1;
+                CashAccounts cashAccounts = new CashAccounts(NodeContext);
+                CashAccountCode = await cashAccounts.CurrentAccount();
+            }
+
+            if (!string.IsNullOrEmpty(mode))
+            {
+                InputMode = Int32.Parse(mode);
+                AccountCode = string.Empty;
+                CashCode = string.Empty;
+                TaxCode = string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(accountcode))
+                AccountCode = accountcode;
+            else if (string.IsNullOrEmpty(AccountCode))
+                AccountCode = accountCodes.FirstOrDefault();
+
+            if (InputMode == 1)
+            {
                 var cashCodes = from t in NodeContext.Cash_CodeLookup
                                 where t.CashTypeCode < (short)NodeEnum.CashType.Bank
                                 orderby t.CashCode
@@ -58,28 +182,53 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                 CashCodes = new SelectList(await cashCodes.ToListAsync());
 
+                if (!string.IsNullOrEmpty(cashcode))
+                    CashCode = cashcode;
+                else if (string.IsNullOrEmpty(CashCode))
+                    CashCode = cashCodes.FirstOrDefault();
+
                 var taxCodes = from t in NodeContext.App_TaxCodes
-                               orderby t.TaxCode
-                               select t.TaxCode;
+                            orderby t.TaxCode
+                            select t.TaxCode;
 
                 TaxCodes = new SelectList(await taxCodes.ToListAsync());
+
+                if (!string.IsNullOrEmpty(taxcode))
+                    TaxCode = taxcode;
+                else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
+                {
+                    CashCodes cash = new(NodeContext, CashCode);
+                    TaxCode = cash.TaxCode;
+                }
             }
-            else
-                InputMode = 0;
 
+            Profile profile = new(NodeContext);
 
-            Cash_PaymentsUnposted = new Cash_vwPaymentsUnposted();
-            Cash_PaymentsUnposted.CashAccountCode = id;
-            Cash_PaymentsUnposted.PaidOn = DateTime.Today;
+            Cash_PaymentsUnposted = new Cash_vwPaymentsUnposted
+            {
+                CashAccountCode = CashAccountCode,
+                AccountCode = AccountCode,
+                CashCode = CashCode,
+                TaxCode = TaxCode,
+                PaidOn = DateTime.Today,
+                UserId = await profile.UserId(UserManager.GetUserId(User)),
+                UpdatedBy = await profile.UserName(UserManager.GetUserId(User)),
+                IsProfitAndLoss = false
+            };
 
-            Profile profile = new Profile(NodeContext);
-            Cash_PaymentsUnposted.UserId = await profile.UserId(UserManager.GetUserId(User));
-            Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
             Cash_PaymentsUnposted.InsertedBy = Cash_PaymentsUnposted.UpdatedBy;
 
-            Cash_PaymentsUnposted.IsProfitAndLoss = false;
+            Orgs orgs = new Orgs(NodeContext, AccountCode);
+
+            var balance = await orgs.BalanceOutstanding();
+
+            if (balance < 0)
+                Cash_PaymentsUnposted.PaidOutValue = Math.Abs(balance);
+            else
+                Cash_PaymentsUnposted.PaidInValue = balance;
 
             await SetViewData();
+
             return Page();
         }
 
@@ -99,5 +248,58 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
             return RedirectToPage("./Index");
         }
+
+        public IActionResult OnPostNewAccountCode()
+        {
+            SaveSession();    
+            return LocalRedirect(@"/Org/Edit/Create?returnUrl=/Cash/PaymentEntry/Create");
+        }
+
+        public IActionResult OnPostGetAccountCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Org/Index?returnUrl=/Cash/PaymentEntry/Create");
+        }
+
+        public IActionResult OnPostGetCashCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Cash/CashCode/Index?returnUrl=/Cash/PaymentEntry/Create");
+        }
+
+        public IActionResult OnPostNewCashCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Cash/CashCode/Create?returnUrl=/Cash/PaymentEntry/Create");
+        }
+
+        public IActionResult OnPostGetTaxCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/PaymentEntry/Create");
+        }
+
+        public IActionResult OnPostNewTaxCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/PaymentEntry/Create");
+        }
+
+
+        void SaveSession()
+        {
+            try
+            {
+                CashAccountCode = Cash_PaymentsUnposted?.CashAccountCode;
+                AccountCode = Cash_PaymentsUnposted?.AccountCode;
+                TaxCode = Cash_PaymentsUnposted?.TaxCode;
+                CashCode = Cash_PaymentsUnposted?.CashCode;
+            }
+            catch
+            {
+
+            }
+        }
+
     }
 }

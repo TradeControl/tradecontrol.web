@@ -24,11 +24,15 @@ The implmented EF Core scaffold and business logic support the functionality of 
 - [x] Authorisation - [attributes](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Calendar/Create.cshtml), [views](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Index.cshtml), [handlers](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Authorisation/AspNetAuthorizationHandler.cs), [page base class](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/DI_BasePageModel.cs) and [models](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Confirm.cshtml.cs)
 - [x] [Device Detection](https://github.com/wangkanai/Detection)
 - [x] Layouts and Navigation
+- [x] Session service
 
 Requires the installation of sql node version 3.34.3 from the web_interface branch to support the AspNetCore.Identity datastore and registration process.
 
 ### Phase 4 - Accounts Mode
 
+- [x] Accounts Mode menu
+- [x] Payment Entry - bank accounts and adjustments 
+- [x] Create and lookup organisations, category, tax and cash codes
 - [ ] Definitions
 - [ ] Interface
 - [ ] Documents
@@ -38,7 +42,6 @@ Requires the installation of sql node version 3.34.3 from the web_interface bran
 - [ ] Definitions
 - [ ] Interface
 - [ ] Documents
-- [ ] Supply-Chain Network
 
 ### Phase 6 - Full Web Version
 
@@ -48,7 +51,7 @@ Requires the installation of sql node version 3.34.3 from the web_interface bran
 
 ### Phase 7 - Extensions
 
-- [ ] Company Accounts
+- [ ] Supply-Chain Network
 - [ ] Bitcoin Wallet
 
 ## Versioning

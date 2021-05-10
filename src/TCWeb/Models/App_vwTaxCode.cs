@@ -8,17 +8,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    [Keyless]
+    [Table("vwTaxCode", Schema = "App")]
     public partial class App_vwTaxCode
     {
+        [Key]
         [Required]
         [StringLength(10)]
+        [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Tax")]
         public string TaxDescription { get; set; }
         [Required]
         [StringLength(20)]
+        [Display(Name = "Tax Type")]
         public string TaxType { get; set; }
     }
 }

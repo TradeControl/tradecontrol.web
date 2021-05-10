@@ -1,0 +1,44 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CategoryCode.IndexModel
+@{ ViewData["Title"] = "Categories"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="CashType" asp-items="Model.CashTypes">
+            <option value="">All</option>
+        </select>
+        Description: <input type="text" asp-for="SearchString" />
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Categories[0].CategoryCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Categories[0].Category)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_Categories)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CategoryCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </td>
+                <td>
+                    <a asp-page="@Model.ReturnUrl" asp-route-categorycode="@item.CategoryCode">Select</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,60 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CashCode.CreateModel
+@{ ViewData["Title"] = "New Cash Code"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="CashCodeNew.CashCode" class="control-label"></label>
+                <input asp-for="CashCodeNew.CashCode" class="form-control" />
+                <span asp-validation-for="CashCodeNew.CashCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CashCodeNew.CashDescription" class="control-label"></label>
+                <input asp-for="CashCodeNew.CashDescription" class="form-control" />
+                <span asp-validation-for="CashCodeNew.CashDescription" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CashCodeNew.CategoryCode" class="control-label"></label>
+                <p>
+                    <button type="submit" asp-page-handler="GetCategoryCode" class="pull-right btn btn-info">Select</button>
+                    <button type="submit" asp-page-handler="NewCategoryCode" class="pull-right btn btn-info">New</button>
+                </p>
+                <p>
+                    <select asp-for="CashCodeNew.CategoryCode" asp-items="Model.CategoryCodes" class="form-control"></select>
+                </p>
+                <span asp-validation-for="CashCodeNew.CategoryCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CashCodeNew.TaxCode" class="control-label"></label>
+                <p>
+                    <button type="submit" asp-page-handler="GetTaxCode" class="pull-right btn btn-info">Select</button>
+                    <button type="submit" asp-page-handler="NewTaxCode" class="pull-right btn btn-info">New</button>
+                </p>
+                <p>
+                    <select asp-for="CashCodeNew.TaxCode" asp-items="Model.TaxCodes" class="form-control"></select>
+                </p>
+                <span asp-validation-for="CashCodeNew.TaxCode" class="text-danger"></span>
+            </div>
+
+            <input type="hidden" asp-for="CashCodeNew.IsEnabled" />
+            <input type="hidden" asp-for="CashCodeNew.InsertedBy" />
+            <input type="hidden" asp-for="CashCodeNew.InsertedOn" />
+            <input type="hidden" asp-for="CashCodeNew.UpdatedBy" />
+            <input type="hidden" asp-for="CashCodeNew.UpdatedOn" />
+
+            <div class="form-group">
+                <input type="submit" value="CREATE" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

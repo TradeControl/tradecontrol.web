@@ -24,6 +24,7 @@ namespace TradeControl.Web.Data
         public enum CoinType { MainNet, TestNet, Fiat };
         public enum PaymentStatus { Unposted, Posted, Transfer };
         public enum InterfaceCode { Accounts, MIS };
+        public enum RoundingCode { Round, Truncate };
 
     }
 }

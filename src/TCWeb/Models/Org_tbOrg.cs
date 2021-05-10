@@ -35,68 +35,96 @@ namespace TradeControl.Web.Models
 
         [Key]
         [StringLength(10)]
+        [Display(Name = "Account Code")]
         public string AccountCode { get; set; }
         [Required]
         [StringLength(255)]
+        [Display(Name = "Account Name")]
         public string AccountName { get; set; }
+        [Display(Name = "Type")]
         public short OrganisationTypeCode { get; set; }
+        [Display(Name = "Status")]
         public short OrganisationStatusCode { get; set; }
         [StringLength(10)]
+        [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }
         [StringLength(15)]
+        [Display(Name = "Address Code")]
         public string AddressCode { get; set; }
         [StringLength(50)]
+        [Display(Name = "Area Code")]
         public string AreaCode { get; set; }
         [StringLength(50)]
+        [Display(Name = "Phone Number")]
         public string PhoneNumber { get; set; }
         [StringLength(255)]
+        [Display(Name = "Email Address")]
         public string EmailAddress { get; set; }
         [StringLength(255)]
+        [Display(Name = "Web Site")]
         public string WebSite { get; set; }
         [StringLength(100)]
+        [Display(Name = "Source")]
         public string AccountSource { get; set; }
         [StringLength(100)]
+        [Display(Name = "Payment Terms")]
         public string PaymentTerms { get; set; }
+        [Display(Name = "Expected Days")]
         public short ExpectedDays { get; set; }
+        [Display(Name = "Payment Days")]
         public short PaymentDays { get; set; }
+        [Display(Name = "Days From M/E")]
         public bool PayDaysFromMonthEnd { get; set; }
         [Required]
+        [Display(Name = "Pay Balance?")]
         public bool PayBalance { get; set; }
+        [Display(Name = "Employees")]
         public int NumberOfEmployees { get; set; }
         [StringLength(20)]
+        [Display(Name = "Company Number")]
         public string CompanyNumber { get; set; }
         [StringLength(50)]
+        [Display(Name = "Vat Number")]
         public string VatNumber { get; set; }
         [Column("EUJurisdiction")]
+        [Display(Name = "EU?")]
         public bool Eujurisdiction { get; set; }
         [Column(TypeName = "ntext")]
+        [Display(Name = "Description")]
         public string BusinessDescription { get; set; }
         [Column(TypeName = "image")]
+        [Display(Name = "Logo")]
         public byte[] Logo { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Inserted By")]
         public string InsertedBy { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Inserted")]
         public DateTime InsertedOn { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Updated By")]
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
+        [Display(Name = "Transmit Code")]
         public short TransmitStatusCode { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Opening Balance")]
         public decimal OpeningBalance { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Turnover")]
         public decimal Turnover { get; set; }
+        [Required]
+        public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AddressCode))]
         [InverseProperty(nameof(Org_tbAddress.TbOrgs))]
         public virtual Org_tbAddress AddressCodeNavigation { get; set; }
         [ForeignKey(nameof(OrganisationStatusCode))]
-        [InverseProperty(nameof(Orig_tbStatus.TbOrgs))]
-        public virtual Orig_tbStatus OrganisationStatusCodeNavigation { get; set; }
+        [InverseProperty(nameof(Org_tbStatus.TbOrgs))]
+        public virtual Org_tbStatus OrganisationStatusCodeNavigation { get; set; }
         [ForeignKey(nameof(OrganisationTypeCode))]
         [InverseProperty(nameof(Org_tbType.TbOrgs))]
         public virtual Org_tbType OrganisationTypeCodeNavigation { get; set; }

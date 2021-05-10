@@ -20,7 +20,6 @@ namespace TradeControl.Web.Models
             TbOps = new HashSet<Activity_tbOp>();
             TbTasks = new HashSet<Task_tbTask>();
         }
-
         [Key]
         [StringLength(50)]
         public string ActivityCode { get; set; }

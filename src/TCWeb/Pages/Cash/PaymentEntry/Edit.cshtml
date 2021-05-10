@@ -7,6 +7,22 @@
 <h1>@ViewData["Title"]</h1>
 <h3>@Html.DisplayFor(model => model.Cash_PaymentsUnposted.PaymentCode)</h3>
 <hr />
+
+<dl class="row">
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.AccountCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountCode)
+    </dd>
+</dl>
+
 <div class="row">
     <div class="col-md-4">
         <form method="post">
@@ -21,15 +37,6 @@
             <input type="hidden" asp-for="Cash_PaymentsUnposted.InsertedOn" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedBy" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedOn" />
-
-            <dl class="row">
-                <dt class="col-sm-2">
-                    @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountCode)
-                </dt>
-                <dt class="col-sm-2">
-                    @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
-                </dt>
-            </dl>
 
             <div class="form-group">
                 <label asp-for="Cash_PaymentsUnposted.PaidOn" class="control-label"></label>
@@ -53,6 +60,9 @@
             </div>
             <div class="form-group">
                 <label asp-for="Cash_PaymentsUnposted.CashCode" class="control-label"></label>
+                <label> - </label>
+                <a asp-page="../../Cash/CashCode/Search" asp-route-source="../../Cash/PaymentEntry/Edit">Select</a> |
+                <a asp-page="Index">Add</a>
                 <p>
                     <select asp-for="Cash_PaymentsUnposted.CashCode" asp-items="Model.CashCodes" class="form-control"></select>
                 </p>
@@ -60,6 +70,9 @@
             </div>
             <div class="form-group">
                 <label asp-for="Cash_PaymentsUnposted.TaxCode" class="control-label"></label>
+                <label> - </label>
+                <a asp-page="../../Admin/TaxCode/Search" asp-route-source="../../Cash/PaymentEntry/Edit">Select</a> |
+                <a asp-page="Index">Add</a>
                 <p>
                     <select asp-for="Cash_PaymentsUnposted.TaxCode" asp-items="Model.TaxCodes" class="form-control"></select>
                 </p>

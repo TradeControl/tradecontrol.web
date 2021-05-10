@@ -97,7 +97,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Org_tbSector> Org_tbSectors { get; set; }
         public virtual DbSet<Cash_tbStatus> Cash_tbStatuses { get; set; }
         public virtual DbSet<Invoice_tbStatus> Invoice_tbStatuses { get; set; }
-        public virtual DbSet<Orig_tbStatus> Orig_tbStatuses { get; set; }
+        public virtual DbSet<Org_tbStatus> Org_tbStatuses { get; set; }
         public virtual DbSet<Task_tbStatus> Task_tbStatuses { get; set; }
         public virtual DbSet<Activity_tbSyncType> Activity_tbSyncTypes { get; set; }
         public virtual DbSet<Invoice_tbTask> Invoice_tbTasks { get; set; }
@@ -664,11 +664,11 @@ namespace TradeControl.Web.Data
                 entity.HasIndex(e => new { e.CategoryTypeCode, e.DisplayOrder, e.Category }, "IX_Cash_tbCategory_TypeOrderCategory")
                     .HasFillFactor((byte)90);
 
-                entity.Property(e => e.CashModeCode).HasDefaultValueSql("((1))");
+                //entity.Property(e => e.CashModeCode).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.CashTypeCode).HasDefaultValueSql("((0))");
+                //entity.Property(e => e.CashTypeCode).HasDefaultValueSql("((0))");
 
-                entity.Property(e => e.CategoryTypeCode).HasDefaultValueSql("((1))");
+                //entity.Property(e => e.CategoryTypeCode).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -676,9 +676,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.IsEnabled).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -863,10 +863,6 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
                 entity.Property(e => e.IsEnabled).HasDefaultValueSql("((1))");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -2075,7 +2071,7 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.InvoiceStatusCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Orig_tbStatus>(entity =>
+            modelBuilder.Entity<Org_tbStatus>(entity =>
             {
                 entity.HasKey(e => e.OrganisationStatusCode)
                     .HasName("PK_Org_tbStatus")
@@ -2261,9 +2257,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.Decimals).HasDefaultValueSql("((2))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.TaxTypeCode).HasDefaultValueSql("((2))");
 
@@ -2551,6 +2547,7 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Org_vwAccountLookup>(entity =>
             {
+                entity.HasKey(e => new { e.AccountCode });
                 entity.ToView("vwAccountLookup", "Org");
             });
 
@@ -2760,6 +2757,7 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Cash_vwCodeLookup>(entity =>
             {
+                entity.HasKey(e => new { e.CashCode });
                 entity.ToView("vwCodeLookup", "Cash");
             });
 
@@ -3303,6 +3301,7 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<App_vwTaxCode>(entity =>
             {
+                entity.HasKey(e => new { e.TaxCode });
                 entity.ToView("vwTaxCodes", "App");
             });
 
@@ -3449,5 +3448,7 @@ namespace TradeControl.Web.Data
 
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
         #endregion
+
+
     }
 }

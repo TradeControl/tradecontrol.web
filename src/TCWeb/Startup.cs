@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using Wangkanai.Detection.Models;
+using TradeControl.Web.Data;
 
 namespace TradeControl.Web
 {
@@ -48,6 +49,13 @@ namespace TradeControl.Web
                 options.Responsive.Disable = false;
             });
 
+            services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromSeconds(120);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
             //ServiceTool.Create(services);
         }
 
@@ -72,6 +80,8 @@ namespace TradeControl.Web
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseSession();
 
             app.UseEndpoints(endpoints =>
             {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -30,13 +31,81 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
+        #region session data
+        const string SessionKeyPaymentCode = "_paymentCode";
+        const string SessionKeyCashCode = "_cashCode";
+        const string SessionKeyTaxCode = "_taxCode";
 
-        public async Task<IActionResult> OnGetAsync(string id)
+        string PaymentCode
         {
-            if (id == null)
-                return NotFound();
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyPaymentCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyPaymentCode, value);
+            }
+        }
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
+        string CashCode
+        {
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyCashCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyCashCode, value);
+            }
+        }
+
+        string TaxCode
+        {
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyTaxCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyTaxCode, value);
+            }
+        }
+        #endregion
+
+        public async Task<IActionResult> OnGetAsync(string id, string cashcode, string taxcode)
+        {
+            if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(PaymentCode))
+                return NotFound();
+            else if (!string.IsNullOrEmpty(id))
+            {
+                PaymentCode = id;
+                CashCode = string.Empty;
+                TaxCode = string.Empty;
+            }
+
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == PaymentCode);
 
             if (Cash_PaymentsUnposted == null)
             {
@@ -59,7 +128,20 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 TaxCodes = new SelectList(await taxCodes.Distinct().ToListAsync());
             }
 
+            if (!string.IsNullOrEmpty(cashcode))
+                CashCode = cashcode;
+
+            if (!string.IsNullOrEmpty(taxcode))
+                TaxCode = taxcode;
+
+            if (!string.IsNullOrEmpty(CashCode))
+                Cash_PaymentsUnposted.CashCode = CashCode;
+
+            if (!string.IsNullOrEmpty(TaxCode))
+                Cash_PaymentsUnposted.TaxCode = TaxCode;
+
             await SetViewData();
+
             return Page();
         }
 

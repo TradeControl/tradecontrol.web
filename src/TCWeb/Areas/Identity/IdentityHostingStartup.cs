@@ -54,21 +54,33 @@ namespace TradeControl.Web.Areas.Identity
                     options.Lockout.MaxFailedAccessAttempts = 5;
                     options.Lockout.AllowedForNewUsers = true;
 
-                    options.User.AllowedUserNameCharacters =
-                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+                    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
                     options.User.RequireUniqueEmail = true;
                 });
-
+                
 
                 services.ConfigureApplicationCookie(options =>
                 {
                     options.Cookie.HttpOnly = true;
-                    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
 
                     options.LoginPath = "/Identity/Account/Login";
                     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
                     options.SlidingExpiration = true;
                 });
+
+                services.AddDistributedMemoryCache();
+
+                /*
+                double sessionTimeSpan = double.Parse(context.Configuration.GetSection("Settings")["SessionTimeSpan"]);
+
+                services.AddSession(options =>
+                {
+                    options.IdleTimeout = TimeSpan.FromSeconds(sessionTimeSpan);
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.IsEssential = true;
+                });
+                */
 
             });
         }

@@ -9,9 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbStatus", Schema = "Org")]
-    public partial class Orig_tbStatus
+    public partial class Org_tbStatus
     {
-        public Orig_tbStatus()
+        public Org_tbStatus()
         {
             TbOrgs = new HashSet<Org_tbOrg>();
         }

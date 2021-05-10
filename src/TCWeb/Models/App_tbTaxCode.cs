@@ -24,22 +24,28 @@ namespace TradeControl.Web.Models
 
         [Key]
         [StringLength(10)]
+        [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Description")]
         public string TaxDescription { get; set; }
+        [Display(Name = "Tax Type")]
         public short TaxTypeCode { get; set; }
+        [Display(Name = "Rounding")]
         public short RoundingCode { get; set; }
+        [Column(TypeName = "percent")]
+        [Display(Name = "Tax Rate")]
+        public decimal TaxRate { get; set; }
+        [Display(Name = "Decimals")]
+        public short Decimals { get; set; }
         [Required]
         [StringLength(50)]
+        [Display (Name = "Updated By")]
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
-        [Column(TypeName = "decimal(18, 4)")]
-        public decimal TaxRate { get; set; }
-        public short Decimals { get; set; }
 
         [ForeignKey(nameof(RoundingCode))]
         [InverseProperty(nameof(App_tbRounding.TbTaxCodes))]
