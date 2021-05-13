@@ -70,12 +70,12 @@
             </div>
             <div class="form-group">
                 <label asp-for="OrgEntry.EmailAddress" class="control-label"></label>
-                <input asp-for="OrgEntry.EmailAddress" class="form-control" />
+                <input asp-for="OrgEntry.EmailAddress" class="form-control" inputmode="email" />
                 <span asp-validation-for="OrgEntry.EmailAddress" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="OrgEntry.PhoneNumber" class="control-label"></label>
-                <input asp-for="OrgEntry.PhoneNumber" class="form-control" />
+                <input asp-for="OrgEntry.PhoneNumber" class="form-control" inputmode="tel" />
                 <span asp-validation-for="OrgEntry.PhoneNumber" class="text-danger"></span>
             </div>
             <div class="form-group">

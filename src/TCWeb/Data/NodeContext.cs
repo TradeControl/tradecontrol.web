@@ -2466,9 +2466,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.NextTaskNumber).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 

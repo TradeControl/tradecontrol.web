@@ -21,6 +21,7 @@ The implmented EF Core scaffold and business logic support the functionality of 
 ### Phase 3 - Web Environment
 
 - [x] Authentication
+- [x] Register new users 
 - [x] Authorisation - [attributes](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Calendar/Create.cshtml), [views](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Index.cshtml), [handlers](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Authorisation/AspNetAuthorizationHandler.cs), [page base class](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/DI_BasePageModel.cs) and [models](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Confirm.cshtml.cs)
 - [x] [Device Detection](https://github.com/wangkanai/Detection)
 - [x] Layouts and Navigation

@@ -29,42 +29,55 @@ namespace TradeControl.Web.Models
 
         [Key]
         [StringLength(10)]
+        [Display (Name = "User Id")]
+        [Required]
         public string UserId { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "User Name")]
         public string UserName { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Local Login")]
         public string LogonName { get; set; }
         [StringLength(10)]
+        [Display(Name = "Calendar")]
         public string CalendarCode { get; set; }
         [StringLength(50)]
+        [Display(Name = "Landline")]
         public string PhoneNumber { get; set; }
         [StringLength(50)]
+        [Display(Name = "Mobile")]
         public string MobileNumber { get; set; }
         [StringLength(255)]
+        [Display(Name = "Email")]
         public string EmailAddress { get; set; }
         [Column(TypeName = "ntext")]
+        [Display(Name = "Home Address")]
         public string Address { get; set; }
         [Column(TypeName = "image")]
         public byte[] Avatar { get; set; }
-        [Column(TypeName = "image")]
+        [Column(TypeName = "image")]        
         public byte[] Signature { get; set; }
+        [Display(Name = "Admin?")]
         public bool IsAdministrator { get; set; }
+        [Display(Name = "Enabled?")]
         public short IsEnabled { get; set; }
         public int NextTaskNumber { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Inserted By")]
         public string InsertedBy { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Inserted On")]
         public DateTime InsertedOn { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Updated By")]
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
         public short MenuViewCode { get; set; }
 
         [ForeignKey(nameof(CalendarCode))]

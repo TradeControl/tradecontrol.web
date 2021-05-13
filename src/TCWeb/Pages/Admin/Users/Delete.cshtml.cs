@@ -30,14 +30,13 @@ namespace TradeControl.Web.Pages.Admin.Users
         public async Task<IActionResult> OnGetAsync(string id)
         {
             if (id == null)
-            {
                 return NotFound();
-            }
 
             AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
 
             if (AspNet_UserRegistration == null)
                 return NotFound();
+            else
             {
                 var isAuthorized = await AuthorizationService.AuthorizeAsync(
                                           User, AspNet_UserRegistration,

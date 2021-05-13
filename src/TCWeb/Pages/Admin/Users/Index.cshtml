@@ -62,19 +62,24 @@
                     @Html.DisplayFor(modelItem => item.IsManager)
                 </td>
                 <td>
-                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
-                    {
-                        <a asp-page="./Confirm" asp-route-id="@item.Id">Confirm</a>
-                        <text> | </text>
-                    }
-                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
-                    {
-                        <a asp-page="./Role" asp-route-id="@item.Id">Role</a>
-                        <text> | </text>
-                    }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Delete)).Succeeded)
                     {
                         <a asp-page="./Delete" asp-route-id="@item.Id">Delete</a>
+                    }
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
+                    {
+                        <text> | </text>
+                        <a asp-page="./Confirm" asp-route-id="@item.Id">Confirm</a>
+                    }
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
+                    {
+                        <text> | </text>
+                        <a asp-page="./Role" asp-route-id="@item.Id">Role</a>
+                    }
+                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && !item.IsRegistered)
+                    {
+                        <text> | </text>
+                        <a asp-page="./Create" asp-route-id="@item.Id">Create</a>
                     }
                 </td>
             </tr>
