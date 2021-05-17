@@ -20,8 +20,8 @@
             <div class="form-group">
                 <label asp-for="CashCodeNew.CategoryCode" class="control-label"></label>
                 <p>
-                    <button type="submit" asp-page-handler="GetCategoryCode" class="pull-right btn btn-info">Select</button>
-                    <button type="submit" asp-page-handler="NewCategoryCode" class="pull-right btn btn-info">New</button>
+                    <button type="submit" asp-page-handler="GetCategoryCode" class="btn btn-info">Select</button>
+                    <button type="submit" asp-page-handler="NewCategoryCode" class="btn btn-info">New</button>
                 </p>
                 <p>
                     <select asp-for="CashCodeNew.CategoryCode" asp-items="Model.CategoryCodes" class="form-control"></select>
@@ -31,8 +31,8 @@
             <div class="form-group">
                 <label asp-for="CashCodeNew.TaxCode" class="control-label"></label>
                 <p>
-                    <button type="submit" asp-page-handler="GetTaxCode" class="pull-right btn btn-info">Select</button>
-                    <button type="submit" asp-page-handler="NewTaxCode" class="pull-right btn btn-info">New</button>
+                    <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-info">Select</button>
+                    <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-info">New</button>
                 </p>
                 <p>
                     <select asp-for="CashCodeNew.TaxCode" asp-items="Model.TaxCodes" class="form-control"></select>

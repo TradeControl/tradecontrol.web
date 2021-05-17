@@ -64,20 +64,20 @@
             @Html.DisplayFor(model => model.Cash_PaymentsUnposted.PaymentReference)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.UpdatedBy)
+            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.InsertedBy)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.UpdatedBy)
+            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.InsertedBy)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.UpdatedOn)
+            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.InsertedOn)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.UpdatedOn)
+            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.InsertedOn)
         </dd>
     </dl>
 </div>
 <div>
-    <a asp-page="./Edit" asp-route-id="@Model.Cash_PaymentsUnposted.PaymentCode">Edit</a> |
-    <a asp-page="./Index">Back to List</a>
+    <a asp-page="./Edit" asp-route-paymentCode="@Model.Cash_PaymentsUnposted.PaymentCode" class="btn btn-secondary">Edit</a> 
+    <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">Back to List</a>
 </div>

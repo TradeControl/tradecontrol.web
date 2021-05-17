@@ -5,19 +5,19 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-cashaccount="@Model.CashAccount" asp-route-mode="0">Pay Invoices</a> | 
-    <a asp-page="Create" asp-route-cashaccount="@Model.CashAccount" asp-route-mode="1">Miscellaneous Payment</a>
+    <a asp-page="Create" asp-route-CashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-secondary w-25">Pay Invoices</a>
+    <a asp-page="Create" asp-route-CashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-secondary w-25">Miscellaneous Payment</a>
 </p>
 
 <form class="form-group">
     <p>
-        <select asp-for="CashAccount" asp-items="Model.CashAccounts">
+        <select asp-for="CashAccountCode" asp-items="Model.CashAccounts">
             <option value="">All</option>
         </select>
         <input type="submit" value="Filter" />
     </p>
 </form>
-<table class="table">
+<table class="table  table-striped">
     <thead>
         <tr>
             <th>
@@ -50,37 +50,37 @@
     <tbody>
         @foreach (var item in Model.Cash_PaymentsUnposted)
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashAccountCode)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidOn)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.AccountCode)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaymentReference)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidInValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidOutValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashCode)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.TaxCode)
-                </td>
-                <td>
-                    <a asp-page="./Edit" asp-route-id="@item.PaymentCode">Edit</a> |
-                    <a asp-page="./Details" asp-route-id="@item.PaymentCode">Details</a> |
-                    <a asp-page="./Delete" asp-route-id="@item.PaymentCode">Delete</a>
-                </td>
-            </tr>
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.CashAccountCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PaidOn)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AccountCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PaymentReference)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PaidInValue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PaidOutValue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CashCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TaxCode)
+            </td>
+            <td>
+                <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>
+                <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
+                <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+            </td>
+        </tr>
         }
     </tbody>
 </table>

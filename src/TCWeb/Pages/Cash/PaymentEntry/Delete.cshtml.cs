@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
+using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
@@ -25,31 +27,39 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string id)
+        public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
-            if (id == null)
+            if (paymentCode == null)
                 return NotFound();
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
 
             if (Cash_PaymentsUnposted == null)
                 return NotFound();
             else
             {
+                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                {
+                    var profile = new Profile(NodeContext);
+                    var user = await UserManager.GetUserAsync(User);
+                    if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
+                        return Forbid();
+                }
+
                 await SetViewData();
                 return Page();
             }
-            
+
         }
 
-        public async Task<IActionResult> OnPostAsync(string id)
+        public async Task<IActionResult> OnPostAsync(string paymentCode)
         {
-            if (id == null)
+            if (paymentCode == null)
             {
                 return NotFound();
             }
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
 
             if (Cash_PaymentsUnposted != null)
             {
@@ -57,7 +67,10 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 await NodeContext.SaveChangesAsync();
             }
 
-            return RedirectToPage("./Index");
+            RouteValueDictionary route = new ();
+            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+                
+            return RedirectToPage("./Index", route);
         }
     }
 }

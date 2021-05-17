@@ -14,7 +14,7 @@
     </p>
 </form>
 
-<table class="table">
+<table class="table  table-striped">
     <thead>
         <tr>
             <th>
@@ -49,7 +49,7 @@
                 @Html.DisplayFor(modelItem => item.CashMode)
             </td>
             <td>
-                <a asp-page="@Model.ReturnUrl" asp-route-accountcode="@item.AccountCode">Select</a>
+                <a asp-page="@Model.ReturnUrl" asp-route-AccountCode="@item.AccountCode" class="btn btn-info">Select</a>
             </td>
         </tr>
         }

@@ -5,24 +5,21 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-id="@Model.CashAccount" asp-route-mode="0">Pay Invoices</a> |
-    <a asp-page="Create" asp-route-id="@Model.CashAccount" asp-route-mode="1">Miscellaneous Payment</a>
+    <a asp-page="Create" asp-route-CashAccountCode="@Model.CashAccountCode" asp-route-mode="0">Pay Invoices</a> |
+    <a asp-page="Create" asp-route-CashAccountCode="@Model.CashAccountCode" asp-route-mode="1">Miscellaneous Payment</a>
 </p>
 
 <form class="form-group">
     <p>
-        <select asp-for="CashAccount" asp-items="Model.CashAccounts">
+        <select asp-for="CashAccountCode" asp-items="Model.CashAccounts">
             <option value="">All</option>
         </select>
         <input type="submit" value="Filter" />
     </p>
 </form>
-<table class="table">
+<table class="table  table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashAccountCode)
-            </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
@@ -37,18 +34,15 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashAccountCode)
-                </td>
-                <td>
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.AccountCode)
                 </td>
                 <td>
-                    <a asp-page="./Edit" asp-route-id="@item.PaymentCode">Edit</a> |
-                    <a asp-page="./Details" asp-route-id="@item.PaymentCode">Details</a> |
-                    <a asp-page="./Delete" asp-route-id="@item.PaymentCode">Delete</a>
+                    <a asp-page="./Details" asp-route-PaymentCode="@item.PaymentCode" class="btn btn-info w-25"></a>
+                    <a asp-page="./Edit" asp-route-PaymentCode="@item.PaymentCode" class="btn btn-secondary w-25"></a>
+                    <a asp-page="./Delete" asp-route-PaymentCode="@item.PaymentCode" class="btn btn-danger w-25"></a>
                 </td>
             </tr>
         }

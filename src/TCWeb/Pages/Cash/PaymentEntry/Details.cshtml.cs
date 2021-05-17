@@ -25,12 +25,12 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string id)
+        public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
-            if (id == null)
+            if (paymentCode == null)
                 return NotFound();
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == id);
+            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
 
             if (Cash_PaymentsUnposted == null)
                 return NotFound();

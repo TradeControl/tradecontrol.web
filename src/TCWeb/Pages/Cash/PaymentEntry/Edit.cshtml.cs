@@ -8,8 +8,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
+using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
@@ -17,14 +19,6 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class EditModel : DI_BasePageModel
     {
-
-        public EditModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
-
         public SelectList CashCodes { get; set; }
         public SelectList TaxCodes { get; set; }
 
@@ -94,13 +88,15 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         }
         #endregion
 
-        public async Task<IActionResult> OnGetAsync(string id, string cashcode, string taxcode)
+        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+
+        public async Task<IActionResult> OnGetAsync(string paymentCode, string cashcode, string taxcode)
         {
-            if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(PaymentCode))
+            if (string.IsNullOrEmpty(paymentCode) && string.IsNullOrEmpty(PaymentCode))
                 return NotFound();
-            else if (!string.IsNullOrEmpty(id))
+            else if (!string.IsNullOrEmpty(paymentCode))
             {
-                PaymentCode = id;
+                PaymentCode = paymentCode;
                 CashCode = string.Empty;
                 TaxCode = string.Empty;
             }
@@ -108,8 +104,17 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == PaymentCode);
 
             if (Cash_PaymentsUnposted == null)
-            {
                 return NotFound();
+            else
+            {
+                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                {
+                    var profile = new Profile(NodeContext);
+                    var user = await UserManager.GetUserAsync(User);
+                    if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
+                        return Forbid();
+                }
+
             }
 
             if (Cash_PaymentsUnposted.CashCode != null)
@@ -145,14 +150,13 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             return Page();
         }
 
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for
-        // more details, see https://aka.ms/RazorPagesCRUD.
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
-            {
                 return Page();
-            }
+
+            Profile profile = new(NodeContext);
+            Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
 
             NodeContext.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
 
@@ -172,12 +176,52 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 }
             }
 
-            return RedirectToPage("./Index");
+            RouteValueDictionary route = new ();
+            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+
+            return RedirectToPage("./Index", route);
         }
 
-        private bool Cash_vwPaymentsUnpostedExists(string id)
+        private bool Cash_vwPaymentsUnpostedExists(string paymentCode)
         {
-            return NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == id);
+            return NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == paymentCode);
+        }
+
+        public IActionResult OnPostGetCashCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Cash/CashCode/Index?returnUrl=/Cash/PaymentEntry/Edit");
+        }
+
+        public IActionResult OnPostNewCashCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Cash/CashCode/Create?returnUrl=/Cash/PaymentEntry/Edit");
+        }
+
+        public IActionResult OnPostGetTaxCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/PaymentEntry/Edit");
+        }
+
+        public IActionResult OnPostNewTaxCode()
+        {
+            SaveSession();
+            return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/PaymentEntry/Edit");
+        }
+
+        void SaveSession()
+        {
+            try
+            {
+                TaxCode = Cash_PaymentsUnposted?.TaxCode;
+                CashCode = Cash_PaymentsUnposted?.CashCode;
+            }
+            catch
+            {
+
+            }
         }
     }
 }

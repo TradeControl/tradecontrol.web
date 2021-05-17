@@ -13,7 +13,7 @@
     </p>
 </form>
 
-<table class="table">
+<table class="table table-striped">
     <thead>
         <tr>
             <th>
@@ -61,7 +61,7 @@
                 @Html.DisplayFor(modelItem => item.DisplayOrder)
             </td>
             <td>
-                <a asp-page="@Model.ReturnUrl" asp-route-categorycode="@item.CategoryCode">Select</a>
+                <a asp-page="@Model.ReturnUrl" asp-route-categorycode="@item.CategoryCode" class="btn btn-info">Select</a>
             </td>
         </tr>
         }

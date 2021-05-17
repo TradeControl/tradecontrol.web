@@ -1,0 +1,134 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.Statement.IndexModel
+@{ ViewData["Title"] = "Cash Statements"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="CashAccountName" asp-items="Model.CashAccountNames"></select>
+        <select asp-for="PeriodName" asp-items="Model.PeriodNames">
+            @*<option value="">All</option>*@
+        </select>
+
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].EntryNumber)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].AccountName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaymentReference)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOutValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidInValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidBalance)
+            </th>
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_AccountStatement)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.EntryNumber)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AccountName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaymentReference)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOutValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidInValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidBalance)
+                </td>
+                <td>
+                    @if (item.EntryNumber != 0)
+                    {
+                        <a asp-page="./Details" asp-route-PaymentCode="@item.PaymentCode" class="btn btn-info"></a>
+                        <a asp-page="./Edit" asp-route-PaymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
+                        <a asp-page="./Delete" asp-route-PaymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_CashAccount.OrganisationType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_CashAccount.SortCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountNumber)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_CashAccount.CurrentBalance)
+            </th>
+
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                @Html.DisplayFor(model => model.Org_CashAccount.AccountName)
+            </td>
+            <td>
+                @Html.DisplayFor(model => model.Org_CashAccount.AccountType)
+            </td>
+            <td>
+                @Html.DisplayFor(model => model.Org_CashAccount.OrganisationType)
+            </td>
+            <td>
+                @Html.DisplayFor(model => model.Org_CashAccount.SortCode)
+            </td>
+            <td>
+                @Html.DisplayFor(model => model.Org_CashAccount.AccountNumber)
+            </td>
+            <td>
+                @Html.DisplayFor(model => model.Org_CashAccount.CurrentBalance)
+            </td>
+
+        </tr>
+    </tbody>
+</table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

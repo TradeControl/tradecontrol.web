@@ -1,0 +1,86 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.AssetEntry.EditModel
+@{
+    ViewData["Title"] = "Edit Asset Entry";
+}
+<h1>@ViewData["Title"]</h1>
+<h3>@Html.DisplayFor(model => model.Cash_PaymentsUnposted.PaymentCode)</h3>
+<hr />
+
+<dl class="row">
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.AccountCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountCode)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashCode)
+    </dd>
+</dl>
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.UserId" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.PaymentCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.AccountCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.CashAccountCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.TaxCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.CashCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.InsertedBy" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.InsertedOn" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedBy" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedOn" />
+
+            <div class="form-group">
+                <label asp-for="Cash_PaymentsUnposted.PaidOn" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaidOn" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaidOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_PaymentsUnposted.PaidInValue" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaidInValue" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaidInValue" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_PaymentsUnposted.PaidOutValue" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaidOutValue" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaidOutValue" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_PaymentsUnposted.PaymentReference" class="control-label"></label>
+                <input asp-for="Cash_PaymentsUnposted.PaymentReference" class="form-control" />
+                <span asp-validation-for="Cash_PaymentsUnposted.PaymentReference" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input asp-for="Cash_PaymentsUnposted.IsProfitAndLoss" class="form-check-input" /> @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.IsProfitAndLoss)
+                </label>                
+                <span asp-validation-for="Cash_PaymentsUnposted.IsProfitAndLoss" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+                <a asp-page="./Index" asp-route-CashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

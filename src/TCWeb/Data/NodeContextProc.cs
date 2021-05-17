@@ -141,6 +141,30 @@ namespace TradeControl.Web.Data
             }
         }
 
+        public Task<bool> PostAsset(string paymentCode)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    var entry = Cash_tbPayments.Where(t => t.PaymentCode == paymentCode).FirstOrDefault();
+
+                    if (entry == null)
+                        return false;
+                    else
+                    {
+                        entry.PaymentStatusCode = (short)NodeEnum.PaymentStatus.Posted;
+                        return true;
+                    }
+                                     
+                }
+                catch (Exception e)
+                {
+                    ErrorLog(e);
+                    return false;
+                }
+            });
+        }
         public Task<string> NextPaymentCode()
         {
             return Task.Run(() =>

@@ -154,6 +154,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwCandidatePurchase> Invoice_CandidatePurchases { get; set; }
         public virtual DbSet<Invoice_vwCandidateSale> Invoice_CandidateSales { get; set; }
         public virtual DbSet<Org_vwCashAccountAsset> Org_CashAccountAssets { get; set; }
+        public virtual DbSet<Org_vwCashAccount> Org_CashAccounts { get; set; }
         public virtual DbSet<Cash_vwCashFlowType> Cash_CashFlowTypes { get; set; }
         public virtual DbSet<Cash_vwCategoryBudget> Cash_CategoryBudget { get; set; }
         public virtual DbSet<Cash_vwCategoryTotal> Cash_CategoryTotals { get; set; }
@@ -1916,9 +1917,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.PaidOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -2701,6 +2702,11 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Org_vwCashAccountAsset>(entity =>
             {
                 entity.ToView("vwCashAccountAssets", "Org");
+            });
+
+            modelBuilder.Entity<Org_vwCashAccount>(entity =>
+            {
+                entity.ToView("vwCashAccounts", "Org");
             });
 
             modelBuilder.Entity<Cash_vwCashFlowType>(entity =>

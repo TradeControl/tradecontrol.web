@@ -11,8 +11,7 @@ namespace TradeControl.Web.Data
 {
     public class CashAccounts
     {
-
-        NodeContext _context;
+        readonly NodeContext _context;
 
         public string CashAccountCode { get; } = string.Empty;
 
@@ -29,11 +28,11 @@ namespace TradeControl.Web.Data
         }
 
 
-        public async Task<bool> Post()
+        public async Task<bool> PostPayment(string userId)
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Cash.proc_PaymentPost");
+                int result = await _context.Database.ExecuteSqlRawAsync("Cash.proc_PaymentPostById @p0", parameters: new[] { userId });
 
                 return result != 0;
             }
@@ -59,6 +58,8 @@ namespace TradeControl.Web.Data
                 return false;
             }
         }
+
+
 
         public async Task<bool> RebuildAccount()
         {
@@ -120,6 +121,8 @@ namespace TradeControl.Web.Data
                 return false;
             }
         }
+
+        public async Task<bool> PostAsset(string paymentCode) => await _context.PostAsset(paymentCode);
 
         public async Task<string> NextPaymentCode() => await _context.NextPaymentCode();
 

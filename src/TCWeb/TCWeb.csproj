@@ -40,4 +40,9 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\Cash\Transfer\" />
+    <Folder Include="Pages\Org\CashAccount\" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,56 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.AssetEntry.IndexModel
+@{ ViewData["Title"] = "Unposted Assets"; }
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-page="Create" asp-route-cashaccount="@Model.CashAccountName" class="btn btn-outline-secondary">New Entry</a>
+    <a asp-page="/Cash/Statement/Index" asp-route-CashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-outline-info">Statement</a>
+</p>
+
+<form class="form-group">
+    <p>
+        <select asp-for="CashAccountName" asp-items="Model.CashAccounts">
+        </select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidInValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOutValue)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_AssetsUnposted)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidInValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOutValue)
+                </td>
+                <td>
+                    <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning w-25"></a>
+                    <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary w-25"></a>
+                    <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger w-25"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+

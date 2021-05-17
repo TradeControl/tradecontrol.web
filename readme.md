@@ -4,7 +4,7 @@ Using ASP.NET Core to web enable the [Accounts](https://tradecontrol.github.io/a
 
 ## Implementation Plan
 
-Because app functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing payments, organisations and invoicing in [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release.
+Because app functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing payments, organisations and invoicing in [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release. The second milestone will be a stand-alone browser-based version of that mode.
 
 ### Phase 1 - Data Models
 
@@ -20,6 +20,8 @@ The implmented EF Core scaffold and business logic support the functionality of 
 
 ### Phase 3 - Web Environment
 
+Requires sql node version 3.34.3 to support the AspNetCore.Identity datastore and registration process.
+
 - [x] Authentication
 - [x] Register new users 
 - [x] Authorisation - [attributes](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Calendar/Create.cshtml), [views](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Index.cshtml), [handlers](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Authorisation/AspNetAuthorizationHandler.cs), [page base class](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/DI_BasePageModel.cs) and [models](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Confirm.cshtml.cs)
@@ -27,13 +29,15 @@ The implmented EF Core scaffold and business logic support the functionality of 
 - [x] Layouts and Navigation
 - [x] Session service
 
-Requires the installation of sql node version 3.34.3 from the web_interface branch to support the AspNetCore.Identity datastore and registration process.
-
 ### Phase 4 - Accounts Mode
+
+Apply [web interface script 1](scripts/tc_web_interface_script1.sql) to sql node version 3.34.4
 
 - [x] Accounts Mode menu
 - [x] Payment Entry - bank accounts and adjustments 
 - [x] Create and lookup organisations, category, tax and cash codes
+- [x] Asset Entry - capital accounts for long-term assets and liabilities 
+- [x] Cash Account Statements - reporting and maintenance 
 - [ ] Definitions
 - [ ] Interface
 - [ ] Documents

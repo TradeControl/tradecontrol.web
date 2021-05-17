@@ -13,24 +13,19 @@
             <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
         </li>*@
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Transactions</a>
+                        <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts</a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/PaymentEntry/Index">Payment Entry</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Assets</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/AssetEntry/Index">Asset Entry</a>
                             </li>
-                        </ul>
-                    </li>
-                    <li class="dropdown">
-                        <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts</a>
-                        <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Index">Bank Transfers</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Statements</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Statement/Index">Statements</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Index">Maintenance</a>

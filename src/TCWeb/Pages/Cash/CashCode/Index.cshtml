@@ -61,7 +61,7 @@
                 @Html.DisplayFor(modelItem => item.CashType)
             </td>
             <td>
-                <a asp-page="@Model.ReturnUrl" asp-route-cashcode="@item.CashCode">Select</a>
+                <a asp-page="@Model.ReturnUrl" asp-route-cashcode="@item.CashCode" class="btn btn-info">Select</a>
             </td>
         </tr>
         }

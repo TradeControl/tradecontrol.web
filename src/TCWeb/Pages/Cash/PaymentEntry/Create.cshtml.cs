@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
@@ -136,7 +137,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         }
         #endregion
 
-        public async Task<IActionResult> OnGetAsync(string cashaccount, string mode, string accountcode, string cashcode, string taxcode)
+        public async Task<IActionResult> OnGetAsync(string cashAccountCode, string mode, string accountCode, string cashCode, string taxCode)
         {
 
             var cashAccountCodes = from t in NodeContext.Org_tbAccounts
@@ -152,11 +153,11 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
             AccountCodes = new SelectList(await accountCodes.ToListAsync());
 
-            if (!string.IsNullOrEmpty(cashaccount))
-                CashAccountCode = cashaccount;
+            if (!string.IsNullOrEmpty(cashAccountCode))
+                CashAccountCode = cashAccountCode;
             else if (string.IsNullOrEmpty(CashAccountCode))
             {
-                CashAccounts cashAccounts = new CashAccounts(NodeContext);
+                CashAccounts cashAccounts = new (NodeContext);
                 CashAccountCode = await cashAccounts.CurrentAccount();
             }
 
@@ -168,8 +169,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 TaxCode = string.Empty;
             }
 
-            if (!string.IsNullOrEmpty(accountcode))
-                AccountCode = accountcode;
+            if (!string.IsNullOrEmpty(accountCode))
+                AccountCode = accountCode;
             else if (string.IsNullOrEmpty(AccountCode))
                 AccountCode = accountCodes.FirstOrDefault();
 
@@ -182,8 +183,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                 CashCodes = new SelectList(await cashCodes.ToListAsync());
 
-                if (!string.IsNullOrEmpty(cashcode))
-                    CashCode = cashcode;
+                if (!string.IsNullOrEmpty(cashCode))
+                    CashCode = cashCode;
                 else if (string.IsNullOrEmpty(CashCode))
                     CashCode = cashCodes.FirstOrDefault();
 
@@ -193,8 +194,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                 TaxCodes = new SelectList(await taxCodes.ToListAsync());
 
-                if (!string.IsNullOrEmpty(taxcode))
-                    TaxCode = taxcode;
+                if (!string.IsNullOrEmpty(taxCode))
+                    TaxCode = taxCode;
                 else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
                 {
                     CashCodes cash = new(NodeContext, CashCode);
@@ -218,7 +219,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
             Cash_PaymentsUnposted.InsertedBy = Cash_PaymentsUnposted.UpdatedBy;
 
-            Orgs orgs = new Orgs(NodeContext, AccountCode);
+            Orgs orgs = new (NodeContext, AccountCode);
 
             var balance = await orgs.BalanceOutstanding();
 
@@ -234,19 +235,22 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         public async Task<IActionResult> OnPostAsync()
         {
-            CashAccounts cashAccounts = new CashAccounts(NodeContext);
+            CashAccounts cashAccounts = new (NodeContext);
             Cash_PaymentsUnposted.PaymentCode = await cashAccounts.NextPaymentCode();
 
             Cash_PaymentsUnposted.UpdatedOn = DateTime.Now;
             Cash_PaymentsUnposted.InsertedOn = DateTime.Now;
 
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || (Cash_PaymentsUnposted.PaidInValue + Cash_PaymentsUnposted.PaidOutValue == 0))
                 return Page();
 
             NodeContext.Cash_PaymentsUnposted.Add(Cash_PaymentsUnposted);
             await NodeContext.SaveChangesAsync();
 
-            return RedirectToPage("./Index");
+            RouteValueDictionary route = new ();
+            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+
+            return RedirectToPage("./Index", route);
         }
 
         public IActionResult OnPostNewAccountCode()
