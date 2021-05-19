@@ -77,7 +77,6 @@
     </dl>
     
     <form method="post">
-        <input type="hidden" asp-for="Cash_PaymentsUnposted.PaymentStatusCode" />
         <input type="submit" value="Post" class="btn btn-warning" />
         <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">Back to List</a>
     </form>

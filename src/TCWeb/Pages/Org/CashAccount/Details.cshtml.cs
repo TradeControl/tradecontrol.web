@@ -12,12 +12,12 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Cash.Statement
+namespace TradeControl.Web.Pages.Org.CashAccount
 {
     public class DetailsModel : DI_BasePageModel
     {
         [BindProperty]
-        public Cash_tbPayment Cash_Payment { get; set; }
+        public Org_vwCashAccount Org_CashAccount { get; set; }
 
         public DetailsModel(NodeContext context,
             IAuthorizationService authorizationService,
@@ -26,20 +26,22 @@ namespace TradeControl.Web.Pages.Cash.Statement
         {
         }
 
-        public async Task<IActionResult> OnGetAsync(string paymentCode)
+        public async Task<IActionResult> OnGetAsync(string cashAccountCode)
         {
-            if (paymentCode == null)
+            if (cashAccountCode == null)
                 return NotFound();
 
-            Cash_Payment = await NodeContext.Cash_tbPayments.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+            Org_CashAccount = await NodeContext.Org_CashAccounts.FirstOrDefaultAsync(m => m.CashAccountCode == cashAccountCode);
 
-            if (Cash_Payment == null)
+            if (Org_CashAccount == null)
                 return NotFound();
             else
             {
+
                 await SetViewData();
                 return Page();
             }
+
         }
     }
 }

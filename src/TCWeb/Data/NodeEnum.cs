@@ -7,6 +7,7 @@ namespace TradeControl.Web.Data
 {
     public class NodeEnum
     {
+        public enum CashAccountType { Cash, Dummy, Asset }
         public enum OpStatus { Pending, InProgress, Complete }
         public enum OrgStatus { Pending, Active, Hot, Dead };
         public enum CategoryType { CashCode, CashTotal, Expression };

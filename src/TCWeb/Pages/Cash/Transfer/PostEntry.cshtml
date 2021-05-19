@@ -1,0 +1,77 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.Transfer.PostEntryModel
+@{ ViewData["Title"] = "Post Transfer"; }
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Cash_TransfersUnposted.PaymentCode)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.UserId)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.UserId)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.AccountCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.AccountCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.CashAccountCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.CashAccountCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.CashCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.CashCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.PaidOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.PaidOn)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.PaidInValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.PaidInValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.PaidOutValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.PaidOutValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.PaymentReference)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.PaymentReference)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_TransfersUnposted.InsertedOn)
+        </dd>
+    </dl>
+
+    <form method="post">
+        <input type="submit" value="Post" class="btn btn-warning" />
+        <a asp-page="./Index" class="btn btn-info">Back to List</a>
+    </form>
+</div>

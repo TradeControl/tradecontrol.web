@@ -27,5 +27,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         public string TaxCode { get; set; }
+        [Display(Name = "Closed?")]
+        public bool AccountClosed { get; set; }
     }
 }

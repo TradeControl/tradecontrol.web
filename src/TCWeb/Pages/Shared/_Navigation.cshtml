@@ -9,9 +9,6 @@
             <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
                 <partial name="_LoginPartial" />
                 <ul class="navbar-nav flex-grow-1">
-                    @*<li class="nav-item">
-            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
-        </li>*@
                     <li class="dropdown">
                         <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts</a>
                         <ul class="dropdown-menu">
@@ -22,13 +19,13 @@
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/AssetEntry/Index">Asset Entry</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Bank Transfers</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Transfer/Index">Bank Transfers</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Statement/Index">Statements</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Maintenance</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/CashAccount/Index">Maintenance</a>
                             </li>
                         </ul>
                     </li>

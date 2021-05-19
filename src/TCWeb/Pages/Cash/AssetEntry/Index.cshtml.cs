@@ -32,7 +32,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 
         public async Task OnGetAsync(string cashAccountName, string cashAccountCode)
         {
-            var cashAccounts = NodeContext.Org_CashAccountAssets.OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
+            var cashAccounts = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
 
             CashAccounts = new SelectList(await cashAccounts.ToListAsync());
 

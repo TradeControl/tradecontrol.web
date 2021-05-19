@@ -1,0 +1,68 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.Transfer.CreateModel
+@{ ViewData["Title"] = "New Payment"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <input type="hidden" asp-for="Cash_TransfersUnposted.PaymentCode" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.UserId" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.AccountCode" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.TaxCode" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.InsertedBy" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.InsertedOn" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.UpdatedBy" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.UpdatedOn" />
+
+            <div class="form-group">
+                <label asp-for="Cash_TransfersUnposted.CashAccountCode" class="control-label"></label>
+                <p>
+                    <select asp-for="CashAccountName" asp-items="Model.CashAccounts" class="form-control"></select>
+                </p>
+                <input type="hidden" asp-for="Cash_TransfersUnposted.CashAccountCode" />
+                <span asp-validation-for="Cash_TransfersUnposted.CashAccountCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_TransfersUnposted.CashCode" class="control-label"></label>
+                <p>
+                    <select asp-for="CashDescription" asp-items="Model.CashCodes" class="form-control"></select>
+                </p>
+                <input type="hidden" asp-for="Cash_TransfersUnposted.CashCode" />
+                <span asp-validation-for="Cash_TransfersUnposted.CashCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_TransfersUnposted.PaidOn" class="control-label"></label>
+                <input asp-for="Cash_TransfersUnposted.PaidOn" class="form-control" />
+                <span asp-validation-for="Cash_TransfersUnposted.PaidOn" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Cash_TransfersUnposted.PaymentReference" class="control-label"></label>
+                <input asp-for="Cash_TransfersUnposted.PaymentReference" class="form-control" />
+                <span asp-validation-for="Cash_TransfersUnposted.PaymentReference" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_TransfersUnposted.PaidInValue" class="control-label"></label>
+                <input asp-for="Cash_TransfersUnposted.PaidInValue" class="form-control" />
+                <span asp-validation-for="Cash_TransfersUnposted.PaidInValue" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_TransfersUnposted.PaidOutValue" class="control-label"></label>
+                <input asp-for="Cash_TransfersUnposted.PaidOutValue" class="form-control" />
+                <span asp-validation-for="Cash_TransfersUnposted.PaidOutValue" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="PAY" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

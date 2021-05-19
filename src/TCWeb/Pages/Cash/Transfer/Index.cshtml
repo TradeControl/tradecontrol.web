@@ -1,57 +1,54 @@
 ﻿@page
-@model TradeControl.Web.Pages.Cash.AssetEntry.IndexModel
-@{ ViewData["Title"] = "Unposted Assets"; }
+@model TradeControl.Web.Pages.Cash.Transfer.IndexModel
+@{ ViewData["Title"] = "Bank Transfers"; }
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-CashAccountCode="@Model.CashAccountCode" class="btn btn-outline-primary w-25">Pay Assets In/Out</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-CashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-outline-info w-25">Statement</a>
+    <a asp-page="Create" class="btn btn-outline-primary w-25">New Transfer</a>
 </p>
-
-<form class="form-group">
-    <p>
-        <select asp-for="CashAccountName" asp-items="Model.CashAccounts">
-        </select>
-        <input type="submit" value="Filter" />
-    </p>
-</form>
 
 <table class="table  table-striped">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].UserId)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].CashAccountCode)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOn)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaymentReference)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].AccountCode)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidInValue)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaymentReference)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOutValue)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidInValue)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].CashCode)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidOutValue)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].IsProfitAndLoss)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].CashCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].UserId)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model.Cash_AssetsUnposted)
+        @foreach (var item in Model.Cash_TransfersUnposted)
         {
         <tr>
             <td>
-                @Html.DisplayFor(modelItem => item.UserId)
+                @Html.DisplayFor(modelItem => item.CashAccountCode)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.PaidOn)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AccountCode)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.PaymentReference)
@@ -66,7 +63,7 @@
                 @Html.DisplayFor(modelItem => item.CashCode)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.IsProfitAndLoss)
+                @Html.DisplayFor(modelItem => item.UserId)
             </td>
             <td>
                 <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning"></a>

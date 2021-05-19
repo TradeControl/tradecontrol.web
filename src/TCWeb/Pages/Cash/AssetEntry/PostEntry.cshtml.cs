@@ -57,13 +57,20 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
             if (paymentCode == null)
                 return NotFound();
 
-            if (await NodeContext.PostAsset(paymentCode))
+            CashAccounts cashAccounts = new (NodeContext);
+            if (await cashAccounts.PostAsset(paymentCode))
+            {                
                 await NodeContext.SaveChangesAsync();
 
-            RouteValueDictionary route = new();
-            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+                string cashAccountCode = await NodeContext.Cash_tbPayments.Where(t => t.PaymentCode == paymentCode).Select(t => t.CashAccountCode).FirstAsync();
 
-            return RedirectToPage("./Index", route);
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", cashAccountCode);
+
+                return RedirectToPage("./Index", route);
+            }
+            else
+                throw new Exception("Post failed! Consult logs");
         }
     }
 }

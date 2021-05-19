@@ -13,6 +13,10 @@
     <RepositoryUrl>https://github.com/tradecontrol/tradecontrol.web</RepositoryUrl>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>1701;1702;7022</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="5.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="5.0.4" />
@@ -38,11 +42,6 @@
     <Compile Update="Pages\Admin\TaxCode\Search - Copy.cshtml.cs">
       <DependentUpon>Search.cshtml.cs</DependentUpon>
     </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Pages\Cash\Transfer\" />
-    <Folder Include="Pages\Org\CashAccount\" />
   </ItemGroup>
 
 </Project>

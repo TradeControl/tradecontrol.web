@@ -43,7 +43,7 @@
                 @Html.DisplayFor(modelItem => item.TaxType)
             </td>
             <td>
-                <a asp-page="@Model.ReturnUrl" asp-route-taxcode="@item.TaxCode">Select</a>
+                <a asp-page="@Model.ReturnUrl" asp-route-taxcode="@item.TaxCode" class="btn btn-info">Select</a>
             </td>
         </tr>
         }

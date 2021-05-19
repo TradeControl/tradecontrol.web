@@ -13,11 +13,11 @@ using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Cash.AssetEntry
+namespace TradeControl.Web.Pages.Cash.Transfer
 {
-    public class DeleteModel : DI_BasePageModel
+    public class PostEntryModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context,
+        public PostEntryModel(NodeContext context,
             IAuthorizationService authorizationService,
             UserManager<TradeControlWebUser> userManager)
             : base(context, authorizationService, userManager)
@@ -25,16 +25,16 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         }
 
         [BindProperty]
-        public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
+        public Cash_vwTransfersUnposted Cash_TransfersUnposted { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
             if (paymentCode == null)
                 return NotFound();
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+            Cash_TransfersUnposted = await NodeContext.Cash_TransfersUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
 
-            if (Cash_PaymentsUnposted == null)
+            if (Cash_TransfersUnposted == null)
                 return NotFound();
             else
             {
@@ -42,7 +42,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                 {
                     var profile = new Profile(NodeContext);
                     var user = await UserManager.GetUserAsync(User);
-                    if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
+                    if (Cash_TransfersUnposted.UserId != await profile.UserId(user.Id))
                         return Forbid();
                 }
 
@@ -57,18 +57,11 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
             if (paymentCode == null)
                 return NotFound();
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
-
-            if (Cash_PaymentsUnposted != null)
-            {
-                NodeContext.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
-                await NodeContext.SaveChangesAsync();
-            }
-
-            RouteValueDictionary route = new();
-            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
-
-            return RedirectToPage("./Index", route);
+            CashAccounts cashAccounts = new (NodeContext);
+            if (await cashAccounts.PostTransfer(paymentCode))
+                return RedirectToPage("./Index");
+            else
+                throw new Exception("Transfer failed! Consult logs");
         }
     }
 }

@@ -4,7 +4,7 @@ Using ASP.NET Core to web enable the [Accounts](https://tradecontrol.github.io/a
 
 ## Implementation Plan
 
-Because app functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing payments, organisations and invoicing in [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release. The second milestone will be a stand-alone browser-based version of that mode.
+Because system functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing payments, organisations and invoicing in [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release. The second milestone will be a stand-alone browser-based version of that mode (Phase 4).
 
 ### Phase 1 - Data Models
 
@@ -38,6 +38,8 @@ Apply [web interface script 1](scripts/tc_web_interface_script1.sql) to sql node
 - [x] Create and lookup organisations, category, tax and cash codes
 - [x] Asset Entry - capital accounts for long-term assets and liabilities 
 - [x] Cash Account Statements - reporting and maintenance 
+- [x] Interbank Transfers - accruals and payments
+- [x] Cash Account Maintenance - cash, asset and dummy accounts
 - [ ] Definitions
 - [ ] Interface
 - [ ] Documents

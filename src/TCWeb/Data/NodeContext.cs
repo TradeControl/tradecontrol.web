@@ -276,6 +276,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Usr_vwUserMenuList> Usr_UserMenuLists { get; set; }
         public virtual DbSet<Cash_vwVatcode> Cash_Vatcodes { get; set; }
         public virtual DbSet<App_vwVersion> App_Version { get; set; }
+        public virtual DbSet<App_vwHomeAccount> App_HomeAccount { get; set; }
         public virtual DbSet<App_vwWarehouseOrg> App_WarehouseOrgs { get; set; }
         public virtual DbSet<App_vwWarehouseTask> App_WarehouseTasks { get; set; }
         public virtual DbSet<App_vwYearPeriod> App_YearPeriods { get; set; }
@@ -312,9 +313,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -3378,11 +3379,7 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Cash_vwTransfersUnposted>(entity =>
             {
-                entity.ToView("vwTransfersUnposted", "Cash");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                entity.HasKey(e => e.PaymentCode);
             });
 
             modelBuilder.Entity<Org_vwTypeLookup>(entity =>
@@ -3413,6 +3410,11 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwVatcode>(entity =>
             {
                 entity.ToView("vwVATCodes", "Cash");
+            });
+
+            modelBuilder.Entity<App_vwHomeAccount>(entity =>
+            {
+                entity.ToView("vwHomeAccount", "App");
             });
 
             modelBuilder.Entity<App_vwVersion>(entity =>

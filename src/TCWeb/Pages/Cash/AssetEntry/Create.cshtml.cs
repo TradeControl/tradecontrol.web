@@ -31,7 +31,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 
         public async Task<IActionResult> OnGetAsync(string cashAccountCode)
         {
-            var cashAccountList = NodeContext.Org_CashAccountAssets.OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountCode);
+            var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountCode);
 
             CashAccountCodes = new SelectList(await cashAccountList.ToListAsync());
 
@@ -52,11 +52,11 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                 TaxCode = cashAccount.TaxCode,
                 PaidOn = DateTime.Today,
                 UserId = await profile.UserId(UserManager.GetUserId(User)),
-                UpdatedBy = await profile.UserName(UserManager.GetUserId(User)),
+                InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
                 IsProfitAndLoss = true
             };
 
-            Cash_AssetsUnposted.InsertedBy = Cash_AssetsUnposted.UpdatedBy;
+            Cash_AssetsUnposted.UpdatedBy = Cash_AssetsUnposted.InsertedBy;
 
             await SetViewData();
 

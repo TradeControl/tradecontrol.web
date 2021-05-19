@@ -61,8 +61,8 @@
             <div class="form-group">
                 <label asp-for="Cash_PaymentsUnposted.CashCode" class="control-label"></label>
                 <p>
-                    <button type="submit" asp-page-handler="GetCashCode" class="btn btn-info">Select</button>
-                    <button type="submit" asp-page-handler="NewCashCode" class="btn btn-info">New</button>
+                    <button type="submit" asp-page-handler="GetCashCode" class="btn btn-outline-info">Select</button>
+                    <button type="submit" asp-page-handler="NewCashCode" class="btn btn-outline-primary">New</button>
                 </p>
                 <p>
                     <select asp-for="Cash_PaymentsUnposted.CashCode" asp-items="Model.CashCodes" class="form-control"></select>
@@ -72,8 +72,8 @@
             <div class="form-group">
                 <label asp-for="Cash_PaymentsUnposted.TaxCode" class="control-label"></label>
                 <p>
-                    <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-info">Select</button>
-                    <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-info">New</button>
+                    <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
+                    <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-outline-primary">New</button>
                 </p>
                 <p>
                     <select asp-for="Cash_PaymentsUnposted.TaxCode" asp-items="Model.TaxCodes" class="form-control"></select>

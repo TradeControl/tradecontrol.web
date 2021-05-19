@@ -13,6 +13,7 @@ namespace TradeControl.Web.Models
     public partial class Org_vwCashAccount
     {
         [StringLength(10)]
+        [Display (Name = "Cash A/c")]
         public string CashAccountCode { get; set; }
         [StringLength(10)]
         [Display(Name = "Account Code")]
@@ -27,13 +28,22 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         [Display(Name = "Type")]
         public string OrganisationType { get; set; }
+        [StringLength(50)]
+        [Display(Name = "Cash Code")]
+        public string CashCode { get; set; }
+        [StringLength(100)]
+        [Display(Name = "Cash Desc")]
+        public string CashDescription { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Opening Balance")]
+        [DataType(DataType.Currency)]
         public decimal OpeningBalance { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Current Balance")]
         [DataType(DataType.Currency)]
         public decimal CurrentBalance { get; set; }
+        [Display(Name = "Liquidity")]
+        public short LiquidityLevel { get; set; }
         [StringLength(10)]
         [Display(Name = "Sort Code")]
         public string SortCode { get; set; }
@@ -45,6 +55,11 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         [Display(Name = "Account")]
         public string AccountType { get; set; }
-
+        [Display(Name = "Inserted By")]
+        public string InsertedBy { get; set; }
+        [Column(TypeName = "datetime")]
+        [Display(Name = "Insert On")]
+        [DataType(DataType.Date)]
+        public DateTime InsertedOn { get; set; }
     }
 }

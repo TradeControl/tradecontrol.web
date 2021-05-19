@@ -35,7 +35,7 @@ namespace TradeControl.Web.Data
                             Size = 10
                         };
 
-                        using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                        using (SqlConnection _connection = new (Database.GetConnectionString()))
                         {
                             _connection.Open();
                             using (SqlCommand _command = _connection.CreateCommand())
@@ -76,7 +76,7 @@ namespace TradeControl.Web.Data
                             Size = 10
                         };
 
-                        using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                        using (SqlConnection _connection = new (Database.GetConnectionString()))
                         {
                             _connection.Open();
                             using (SqlCommand _command = _connection.CreateCommand())
@@ -116,7 +116,7 @@ namespace TradeControl.Web.Data
                             Direction = System.Data.ParameterDirection.Output
                         };
 
-                        using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                        using (SqlConnection _connection = new (Database.GetConnectionString()))
                         {
                             _connection.Open();
                             using (SqlCommand _command = _connection.CreateCommand())
@@ -179,7 +179,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -251,7 +251,8 @@ namespace TradeControl.Web.Data
                         SqlDbType = System.Data.SqlDbType.Decimal,
                         Size = 18,
                         Precision = 5,
-                        Direction = System.Data.ParameterDirection.Input
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = toPay
                     };
 
                     var _paymentCode = new SqlParameter()
@@ -262,7 +263,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -315,7 +316,7 @@ namespace TradeControl.Web.Data
                             Precision = 5
                         };
 
-                        using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                        using (SqlConnection _connection = new (Database.GetConnectionString()))
                         {
                             _connection.Open();
                             using (SqlCommand _command = _connection.CreateCommand())
@@ -358,7 +359,7 @@ namespace TradeControl.Web.Data
                             Size = 255
                         };
 
-                        using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                        using (SqlConnection _connection = new (Database.GetConnectionString()))
                         {
                             _connection.Open();
                             using (SqlCommand _command = _connection.CreateCommand())
@@ -407,7 +408,7 @@ namespace TradeControl.Web.Data
                         Size = 10
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -456,7 +457,7 @@ namespace TradeControl.Web.Data
                         Size = 50
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -505,7 +506,7 @@ namespace TradeControl.Web.Data
                         Size = 450
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -555,7 +556,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output,
                         Size = 15
                     };
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -602,7 +603,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output,
                         Size = 10
                     };
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -649,7 +650,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output,
                         Size = 10
                     };
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -697,7 +698,7 @@ namespace TradeControl.Web.Data
                         Size = 255
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -746,7 +747,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -795,7 +796,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -846,7 +847,7 @@ namespace TradeControl.Web.Data
                         Size = 50
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -893,7 +894,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -941,7 +942,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -989,7 +990,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1056,7 +1057,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1114,7 +1115,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1155,7 +1156,7 @@ namespace TradeControl.Web.Data
                         Value = invoiceNumber
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1218,7 +1219,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1267,7 +1268,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1322,7 +1323,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1372,7 +1373,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1421,7 +1422,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1475,7 +1476,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1528,7 +1529,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1578,7 +1579,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1628,7 +1629,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1678,7 +1679,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1728,7 +1729,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1778,7 +1779,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1826,7 +1827,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1874,7 +1875,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1924,7 +1925,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -1981,7 +1982,7 @@ namespace TradeControl.Web.Data
                         Size = 20
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -2039,7 +2040,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output,
                         Size = 10
                     };
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -2087,7 +2088,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -2135,7 +2136,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -2192,7 +2193,7 @@ namespace TradeControl.Web.Data
                     };
 
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -2240,7 +2241,7 @@ namespace TradeControl.Web.Data
                         Direction = System.Data.ParameterDirection.Output
                     };
 
-                    using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                    using (SqlConnection _connection = new (Database.GetConnectionString()))
                     {
                         _connection.Open();
                         using (SqlCommand _command = _connection.CreateCommand())
@@ -2270,7 +2271,7 @@ namespace TradeControl.Web.Data
         #region logs
         public string ErrorLog(Exception e)
         {
-            string ParseString(string message)
+            static string ParseString(string message)
             {
                 char[] source = message.ToCharArray();
                 string target = string.Empty;
@@ -2290,7 +2291,7 @@ namespace TradeControl.Web.Data
 
             try
             {
-                string eventMessage = $"{ParseString(e.Message)},{e.Source},{e.TargetSite.Name.ToString()},{ParseString(e.InnerException != null ? e.InnerException.Message : string.Empty)}";
+                string eventMessage = $"{ParseString(e.Message)},{e.Source},{e.TargetSite.Name},{ParseString(e.InnerException != null ? e.InnerException.Message : string.Empty)}";
                 return EventLog(NodeEnum.EventType.IsError, eventMessage);
             }
             catch //(Exception err)
@@ -2329,7 +2330,7 @@ namespace TradeControl.Web.Data
                     Value = null
                 };
 
-                using (SqlConnection _connection = new SqlConnection(Database.GetConnectionString()))
+                using (SqlConnection _connection = new (Database.GetConnectionString()))
                 {
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
