@@ -166,7 +166,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!Cash_vwPaymentsUnpostedExists(Cash_PaymentsUnposted.PaymentCode))
+                if (!await NodeContext.Cash_PaymentsUnposted.AnyAsync(e => e.PaymentCode == Cash_PaymentsUnposted.PaymentCode))
                 {
                     return NotFound();
                 }
@@ -182,10 +182,6 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             return RedirectToPage("./Index", route);
         }
 
-        private bool Cash_vwPaymentsUnpostedExists(string paymentCode)
-        {
-            return NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == paymentCode);
-        }
 
         public IActionResult OnPostGetCashCode()
         {

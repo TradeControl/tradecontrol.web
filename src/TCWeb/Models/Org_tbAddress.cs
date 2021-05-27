@@ -37,8 +37,8 @@ namespace TradeControl.Web.Models
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
+        //[Required]
+        //public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
         [InverseProperty(nameof(Org_tbOrg.TbAddresses))]

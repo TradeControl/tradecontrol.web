@@ -7,7 +7,7 @@ namespace TradeControl.Web.Data
 {
     public class Orgs
     {
-        NodeContext _context;
+        readonly NodeContext _context;
 
         public string AccountCode { get; } = string.Empty;
 

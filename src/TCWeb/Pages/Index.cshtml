@@ -1,9 +1,45 @@
 ﻿@page
 @model IndexModel
-
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 
 @{
     ViewData["Title"] = "Trade Control";
 }
 
+<div>
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_Identity.WebSite)
+        </dt>
+        <dd class="col-sm-10">
+            <a href="@Html.DisplayFor(model => model.App_Identity.WebSite)">
+                @Html.DisplayFor(model => model.App_Identity.AccountName)
+            </a>
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_Identity.EmailAddress)
+        </dt>
+        <dd class="col-sm-10">
+            <a href="mailto:@Html.DisplayFor(model => model.App_Identity.EmailAddress)?subject=Website Enquiries">
+                @Html.DisplayFor(model => model.App_Identity.EmailAddress)
+            </a>
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_Identity.PhoneNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_Identity.PhoneNumber)
+        </dd>
+        <dt class="col-sm-2">
+            On-line Help
+        </dt>
+        <dd class="col-sm-10">
+            <a href="https://tradecontrol.github.io">Technical Documentation</a>
+        </dd>
+
+    </dl>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

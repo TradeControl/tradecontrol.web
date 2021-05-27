@@ -78,6 +78,10 @@
     </dl>
 </div>
 <div>
-    <a asp-page="./Edit" asp-route-paymentCode="@Model.Cash_PaymentsUnposted.PaymentCode" class="btn btn-secondary">Edit</a> 
+    <a asp-page="./Edit" asp-route-paymentCode="@Model.Cash_PaymentsUnposted.PaymentCode" class="btn btn-secondary">Edit</a>
     <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">Back to List</a>
 </div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

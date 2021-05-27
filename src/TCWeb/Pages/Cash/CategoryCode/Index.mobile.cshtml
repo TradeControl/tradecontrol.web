@@ -36,9 +36,13 @@
                     @Html.DisplayFor(modelItem => item.Category)
                 </td>
                 <td>
-                    <a asp-page="@Model.ReturnUrl" asp-route-categorycode="@item.CategoryCode" class="btn btn-info w-25"></a>
+                    <a asp-page="@Model.ReturnUrl" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info w-25"></a>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

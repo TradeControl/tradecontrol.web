@@ -4,7 +4,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-AccountType="@Model.AccountType" class="btn btn-outline-primary">New Account</a>
+    <a asp-page="Create" asp-route-accountType="@Model.AccountType" class="btn btn-outline-primary">New Account</a>
 </p>
 
 <form class="form-group" method="get">
@@ -37,11 +37,15 @@
                     @Html.DisplayFor(modelItem => item.AccountClosed)
                 </td>
                 <td>
-                    <a asp-page="./Details" asp-route-CashAccountCode="@item.CashAccountCode" class="btn btn-info"></a>
-                    <a asp-page="./Edit" asp-route-CashAccountCode="@item.CashAccountCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-CashAccountCode="@item.CashAccountCode" class="btn btn-danger"></a>
+                    <a asp-page="./Details" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-info"></a>
+                    <a asp-page="./Edit" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-secondary"></a>
+                    <a asp-page="./Delete" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-danger"></a>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

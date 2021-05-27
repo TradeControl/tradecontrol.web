@@ -63,19 +63,14 @@ namespace TradeControl.Web.Pages.Cash.Transfer
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!Cash_vwTransfersUnpostedExists(Cash_TransfersUnposted.PaymentCode))
+                if (!await NodeContext.Cash_TransfersUnposted.AnyAsync(e => e.PaymentCode == Cash_TransfersUnposted.PaymentCode))
                     return NotFound();
                 else
                     throw;
             }
 
-
             return RedirectToPage("./Index");
         }
 
-        private bool Cash_vwTransfersUnpostedExists(string paymentCode)
-        {
-            return NodeContext.Cash_TransfersUnposted.Any(e => e.PaymentCode == paymentCode);
-        }
     }
 }

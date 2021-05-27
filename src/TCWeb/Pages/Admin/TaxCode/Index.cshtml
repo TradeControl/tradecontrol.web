@@ -32,20 +32,25 @@
     <tbody>
         @foreach (var item in Model.App_TaxCodes)
         {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.TaxCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TaxDescription)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TaxType)
-            </td>
-            <td>
-                <a asp-page="@Model.ReturnUrl" asp-route-taxcode="@item.TaxCode" class="btn btn-info">Select</a>
-            </td>
-        </tr>
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxDescription)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxType)
+                </td>
+                <td>
+                    <a asp-page="@Model.ReturnUrl" asp-route-taxcode="@item.TaxCode" class="btn btn-info">Select</a>
+                </td>
+            </tr>
         }
     </tbody>
 </table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -56,17 +58,22 @@ namespace TradeControl.Web.Pages.Org.Edit
             [Required]
             [Display(Name = "Pay Balance?")]
             public bool PayBalance { get; set; } = true;
+            [Display(Name = "Opening Balance")]
+            [DataType(DataType.Currency)]
+            public decimal OpeningBalance { get; set; } = 0;
             [StringLength(100)]
             [Display(Name = "Contact Name")]
             public string ContactName { get; set; }
             [StringLength(255)]
             [Display(Name = "Email Address")]
+            [DataType(DataType.EmailAddress)]
             public string EmailAddress { get; set; }
             [StringLength(255)]
             [Display(Name = "Business Address")]
             public string BusinessAddress { get; set; }
             [StringLength(50)]
             [Display(Name = "Phone Number")]
+            [DataType(DataType.PhoneNumber)]
             public string PhoneNumber { get; set; }
         }
 
@@ -86,7 +93,7 @@ namespace TradeControl.Web.Pages.Org.Edit
         {
         }
 
-        public async Task OnGetAsync(string returnUrl = null)
+        public async Task OnGetAsync(string returnUrl, string organisationType)
         {
             await SetViewData();
 
@@ -96,16 +103,18 @@ namespace TradeControl.Web.Pages.Org.Edit
 
             Orgs orgs = new(NodeContext);
 
+            string organisatonType = string.IsNullOrEmpty(organisationType) ? OrganisationTypes.First().ToString()
+                                    : await NodeContext.Org_tbTypes.Where(t => t.OrganisationType == organisationType).Select(t => t.OrganisationType).FirstOrDefaultAsync();
+
             OrgEntry = new OrgData()
             {
                 AccountName = string.Empty,
-                OrganisationType = OrganisationTypes.First().ToString(),
+                OrganisationType = organisationType,
                 OrganisationStatus = NodeContext.Org_tbStatuses.Where(t => t.OrganisationStatusCode == (short)NodeEnum.OrgStatus.Active).Select(t => t.OrganisationStatus).First(),
                 TaxCode = await orgs.DefaultTaxCode()
             };
-
-            returnUrl ??= Url.Content("~/");
-            ReturnUrl = returnUrl;
+            
+            ReturnUrl = string.IsNullOrEmpty(returnUrl) ? "./Index" : returnUrl;
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -130,6 +139,7 @@ namespace TradeControl.Web.Pages.Org.Edit
                 ExpectedDays = OrgEntry.ExpectedDays,
                 PayDaysFromMonthEnd = OrgEntry.PayDaysFromMonthEnd,
                 PayBalance = OrgEntry.PayBalance,
+                OpeningBalance = OrgEntry.OpeningBalance,
                 EmailAddress = OrgEntry.EmailAddress,
                 PhoneNumber = OrgEntry.PhoneNumber,
                 InsertedBy = userName,
@@ -149,8 +159,10 @@ namespace TradeControl.Web.Pages.Org.Edit
             if (!string.IsNullOrEmpty(OrgEntry.ContactName))
                 await orgs.AddContact(OrgEntry.ContactName);
 
-                                  
-            return LocalRedirect($"{ReturnUrl}?accountcode={accountCode}");
+            RouteValueDictionary route = new();
+            route.Add("AccountCode", orgs.AccountCode);
+
+            return RedirectToPage(ReturnUrl, route);
         }
     }
 }

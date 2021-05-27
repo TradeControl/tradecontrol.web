@@ -85,8 +85,10 @@ namespace TradeControl.Web.Pages.Org.CashAccount
         {
             Org_CashAccount.AccountTypeCode = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstAsync();
             Org_CashAccount.AccountCode = await NodeContext.Org_tbOrgs.Where(t => t.AccountName == OrganisationName).Select(t => t.AccountCode).FirstAsync();
+
             if (!string.IsNullOrEmpty(CashDescription))
                 Org_CashAccount.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
+
             Org_CashAccount.CurrentBalance = Org_CashAccount.OpeningBalance;
 
             if (!ModelState.IsValid)

@@ -75,9 +75,13 @@
             @Html.DisplayFor(model => model.Cash_PaymentsUnposted.InsertedOn)
         </dd>
     </dl>
-    
+
     <form method="post">
         <input type="submit" value="Post" class="btn btn-warning" />
         <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">Back to List</a>
     </form>
 </div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

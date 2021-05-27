@@ -81,7 +81,7 @@ namespace TradeControl.Web.Pages.Org.CashAccount
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!Org_tbAccountExists(Org_CashAccount.CashAccountCode))
+                if (!await NodeContext.Org_tbAccounts.AnyAsync(e => e.CashAccountCode == Org_CashAccount.CashAccountCode))
                 {
                     return NotFound();
                 }
@@ -97,9 +97,5 @@ namespace TradeControl.Web.Pages.Org.CashAccount
             return RedirectToPage("./Index", route);
         }
 
-        private bool Org_tbAccountExists(string cashAccountCode)
-        {
-            return NodeContext.Org_tbAccounts.Any(e => e.CashAccountCode == cashAccountCode);
-        }
     }
 }

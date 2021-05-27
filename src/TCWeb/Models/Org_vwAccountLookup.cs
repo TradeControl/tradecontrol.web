@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    [Table("vwAccountLookup", Schema = "Orgs")]
+    [Table("vwAccountLookup", Schema = "Org")]
     public partial class Org_vwAccountLookup
     {
         [Key]

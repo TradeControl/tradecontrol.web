@@ -173,7 +173,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!Cash_tbPaymentExists(Cash_Payment.PaymentCode))
+                if (!await NodeContext.Cash_tbPayments.AnyAsync(e => e.PaymentCode == Cash_Payment.PaymentCode))
                 {
                     return NotFound();
                 }
@@ -187,11 +187,6 @@ namespace TradeControl.Web.Pages.Cash.Statement
             route.Add("PaymentCode", Cash_Payment.PaymentCode);
 
             return RedirectToPage("./Index", route);
-        }
-
-        private bool Cash_tbPaymentExists(string paymentCode)
-        {
-            return NodeContext.Cash_tbPayments.Any(e => e.PaymentCode == paymentCode);
         }
 
         public IActionResult OnPostGetCashCode()

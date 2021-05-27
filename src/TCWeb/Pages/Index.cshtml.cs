@@ -7,14 +7,20 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+
+
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
+using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages
 {
     [AllowAnonymous]
     public class IndexModel : DI_BasePageModel
     {
+        [BindProperty]
+        public App_vwIdentity App_Identity { get; set; }
+
 
         public IndexModel(
             ILogger<IndexModel> logger,
@@ -27,6 +33,9 @@ namespace TradeControl.Web.Pages
         public async Task OnGetAsync()
         {
             await SetViewData();
+
+            App_Identity = NodeContext.App_Identity.FirstOrDefault();           
         }
+
     }
 }

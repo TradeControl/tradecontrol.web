@@ -1,0 +1,75 @@
+﻿@page
+@model TradeControl.Web.Pages.Org.Enquiry.InvoicesModel
+
+@{ ViewData["Title"] = "Invoices"; }
+
+<h1>@ViewData["Title"]</h1>
+
+<h4>@Html.DisplayFor(model => model.Org_Account.AccountName)</h4>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Org_Account.AccountCode" class="btn btn-info">Back to List</a>
+</p>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Invoices[0].InvoiceNumber)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Invoices[0].InvoiceType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Invoices[0].InvoicedOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Invoices[0].InvoiceValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Invoices[0].TaxValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Invoices[0].InvoiceStatus)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Org_Invoices)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceNumber)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoicedOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceStatus)
+                </td>
+                <td>
+                    <a asp-page="/Invoice/Details" asp-route-InvoiceNumber="@item.InvoiceNumber" asp-route-ReturnUrl="/Org/Enquiry/Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
+                    <a asp-page="/Invoice/Edit" asp-route-InvoiceNumber="@item.InvoiceNumber" asp-route-ReturnUrl="/Org/Enquiry/Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-secondary"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Org_Account.AccountCode" class="btn btn-info">Back to List</a>
+</p>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

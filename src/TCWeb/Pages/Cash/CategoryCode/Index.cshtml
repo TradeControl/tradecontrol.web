@@ -41,29 +41,33 @@
     <tbody>
         @foreach (var item in Model.Cash_Categories)
         {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.CategoryCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Category)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CategoryType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashMode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DisplayOrder)
-            </td>
-            <td>
-                <a asp-page="@Model.ReturnUrl" asp-route-categorycode="@item.CategoryCode" class="btn btn-info">Select</a>
-            </td>
-        </tr>
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CategoryCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CategoryType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashMode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.DisplayOrder)
+                </td>
+                <td>
+                    <a asp-page="@Model.ReturnUrl" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info">Select</a>
+                </td>
+            </tr>
         }
     </tbody>
 </table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

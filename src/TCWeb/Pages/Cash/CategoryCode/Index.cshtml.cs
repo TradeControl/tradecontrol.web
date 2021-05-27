@@ -76,7 +76,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
             CashTypes = new SelectList(await cashTypes.ToListAsync());
 
-            IQueryable<Cash_CategoriesList> categories =    from c in NodeContext.Cash_tbCategories
+            IQueryable<Cash_CategoriesList> categories = from c in NodeContext.Cash_tbCategories
                                 join p in NodeContext.Cash_tbModes on c.CashModeCode equals p.CashModeCode
                                 join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
                                 join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode

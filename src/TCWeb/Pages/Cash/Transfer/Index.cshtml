@@ -40,38 +40,41 @@
     <tbody>
         @foreach (var item in Model.Cash_TransfersUnposted)
         {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashAccountCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaidOn)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.AccountCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaymentReference)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaidInValue)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PaidOutValue)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashCode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UserId)
-            </td>
-            <td>
-                <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning"></a>
-                <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
-                <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
-            </td>
-        </tr>
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashAccountCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AccountCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaymentReference)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidInValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOutValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.UserId)
+                </td>
+                <td>
+                    <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning"></a>
+                    <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
+                    <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+                </td>
+            </tr>
         }
     </tbody>
 </table>
 
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

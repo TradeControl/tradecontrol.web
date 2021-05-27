@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -17,14 +18,14 @@ namespace TradeControl.Web.Pages.Cash.Statement
 {
     public class IndexModel : DI_BasePageModel
     {
-        public SelectList CashAccountNames { get; set; }
-        public SelectList PeriodNames { get; set; }
 
         [BindProperty]
         public string CashAccountName { get; set; }
+        public SelectList CashAccountNames { get; set; }
 
         [BindProperty]
         public string PeriodName { get; set; }
+        public SelectList PeriodNames { get; set; }
 
         [BindProperty]
         public IList<Cash_vwAccountStatement> Cash_AccountStatement { get; set; }

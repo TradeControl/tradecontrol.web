@@ -5,7 +5,7 @@
 
 <p>
     <a asp-page="Create" asp-route-cashaccount="@Model.CashAccountName" class="btn btn-outline-primary">New Entry</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-CashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-outline-info">Statement</a>
+    <a asp-page="/Cash/Statement/Index" asp-route-cashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-outline-info">Statement</a>
 </p>
 
 <form class="form-group">
@@ -54,3 +54,6 @@
     </tbody>
 </table>
 
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

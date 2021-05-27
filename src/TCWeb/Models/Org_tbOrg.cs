@@ -52,16 +52,19 @@ namespace TradeControl.Web.Models
         [Display(Name = "Address Code")]
         public string AddressCode { get; set; }
         [StringLength(50)]
-        [Display(Name = "Area Code")]
+        [Display(Name = "Area")]
         public string AreaCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Phone Number")]
+        [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; }
         [StringLength(255)]
         [Display(Name = "Email Address")]
+        [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
         [StringLength(255)]
         [Display(Name = "Web Site")]
+        //[DataType(DataType.Url)] //office url format incompatible
         public string WebSite { get; set; }
         [StringLength(100)]
         [Display(Name = "Source")]
@@ -112,12 +115,13 @@ namespace TradeControl.Web.Models
         public short TransmitStatusCode { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Opening Balance")]
+        [DataType(DataType.Currency)]
         public decimal OpeningBalance { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Turnover")]
         public decimal Turnover { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
+        //[Required]
+        //public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AddressCode))]
         [InverseProperty(nameof(Org_tbAddress.TbOrgs))]

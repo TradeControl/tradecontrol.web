@@ -127,6 +127,7 @@ namespace TradeControl.Web.Data
 
         #region Views
         public virtual DbSet<Org_vwAccountLookup> Org_AccountLookup { get; set; }
+        public virtual DbSet<Org_vwAccountLookupAll> Org_AccountLookupAll { get; set; }
         public virtual DbSet<Org_vwAccountSource> Org_AccountSources { get; set; }
         public virtual DbSet<Cash_vwAccountStatement> Cash_AccountStatements { get; set; }
         public virtual DbSet<Cash_vwAccountStatementListing> Cash_AccountStatementListings { get; set; }
@@ -142,11 +143,11 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Task_vwAttributeDescription> Task_AttributeDescriptions { get; set; }
         public virtual DbSet<Task_vwAttributesForOrder> Task_AttributesForOrders { get; set; }
         public virtual DbSet<Task_vwAttributesForQuote> Task_AttributesForQuotes { get; set; }
-        public virtual DbSet<Org_vwBalanceSheetAudit> VwBalanceSheetAudits { get; set; }
+        public virtual DbSet<Org_vwBalanceSheetAudit> Org_BalanceSheetAudits { get; set; }
         public virtual DbSet<Cash_vwBankCashCode> Cash_BankCashCodes { get; set; }
         public virtual DbSet<Cash_vwBudget> Cash_Budget { get; set; }
         public virtual DbSet<Cash_vwBudgetDataEntry> Cash_BudgetDataEntries { get; set; }
-        public virtual DbSet<Activity_wCandidateCashCode> VwCandidateCashCodes { get; set; }
+        public virtual DbSet<Activity_wCandidateCashCode> Activity_CandidateCashCodes { get; set; }
         public virtual DbSet<App_vwCandidateCategoryCode> App_CandidateCategoryCodes { get; set; }
         public virtual DbSet<Invoice_vwCandidateCredit> Invoice_CandidateCredits { get; set; }
         public virtual DbSet<Invoice_vwCandidateDebit> Invoice_CandidateDebits { get; set; }
@@ -167,6 +168,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Org_vwCompanyHeader> Org_CompanyHeaders { get; set; }
         public virtual DbSet<Org_vwCompanyLogo> Org_CompanyLogos { get; set; }
         public virtual DbSet<Org_vwContact> Org_Contacts { get; set; }
+        public virtual DbSet<Org_vwAddressList> Org_AddressList { get; set; }
         public virtual DbSet<Task_vwCostSet> Task_CostSet { get; set; }
         public virtual DbSet<Invoice_vwCreditNoteSpool> Invoice_CreditNoteSpool { get; set; }
         public virtual DbSet<Invoice_vwCreditSpoolByItem> Invoice_CreditSpoolByItem { get; set; }
@@ -193,7 +195,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwHistoryPurchaseItem> Invoice_HistoryPurchaseItems { get; set; }
         public virtual DbSet<Invoice_vwHistorySale> Invoice_HistorySales { get; set; }
         public virtual DbSet<Invoice_vwHistorySalesItem> Invoice_HistorySalesItems { get; set; }
-        public virtual DbSet<App_vwIdentity> App_Identities { get; set; }
+        public virtual DbSet<App_vwIdentity> App_Identity { get; set; }
         public virtual DbSet<Activity_wIncomeCashCode> VwIncomeCashCodes { get; set; }
         public virtual DbSet<Org_vwInvoiceItem> Org_InvoiceItems { get; set; }
         public virtual DbSet<Org_vwInvoiceSummary> Org_InvoiceSummaries { get; set; }
@@ -245,7 +247,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwSalesInvoiceSpoolByItem> Invoice_SalesInvoiceSpoolByItem { get; set; }
         public virtual DbSet<Task_vwSalesOrderSpool> Task_SalesOrderSpool { get; set; }
         public virtual DbSet<Cash_vwStatement> Cash_Statement { get; set; }
-        public virtual DbSet<Org_wStatement> OrgStatements { get; set; }
+        public virtual DbSet<Org_vwStatement> Org_Statement { get; set; }
         public virtual DbSet<Org_vwStatementReport> Org_StatementReport { get; set; }
         public virtual DbSet<Cash_vwStatementReserve> Cash_StatementReserves { get; set; }
         public virtual DbSet<Cash_vwStatementWhatIf> Cash_StatementWhatIf { get; set; }
@@ -403,9 +405,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                ////entity.Property(e => e.RowVer)
+                ////    .IsRowVersion()
+                ////    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -925,9 +927,9 @@ namespace TradeControl.Web.Data
 
                 //entity.Property(e => e.OnMailingList).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -1868,9 +1870,9 @@ namespace TradeControl.Web.Data
 
                 //entity.Property(e => e.PayBalance).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -2553,6 +2555,12 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwAccountLookup", "Org");
             });
 
+            modelBuilder.Entity<Org_vwAccountLookupAll>(entity =>
+            {
+                entity.HasKey(e => new { e.AccountCode });
+                entity.ToView("vwAccountLookupAll", "Org");
+            });
+
             modelBuilder.Entity<Org_vwAccountSource>(entity =>
             {
                 entity.ToView("vwAccountSources", "Org");
@@ -2781,6 +2789,11 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Org_vwContact>(entity =>
             {
                 entity.ToView("vwContacts", "Org");
+            });
+
+            modelBuilder.Entity<Org_vwAddressList>(entity =>
+            {
+                entity.ToView("vwAddressList", "Org");
             });
 
             modelBuilder.Entity<Task_vwCostSet>(entity =>
@@ -3257,7 +3270,7 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwStatement", "Cash");
             });
 
-            modelBuilder.Entity<Org_wStatement>(entity =>
+            modelBuilder.Entity<Org_vwStatement>(entity =>
             {
                 entity.ToView("vwStatement", "Org");
             });

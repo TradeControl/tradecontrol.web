@@ -31,7 +31,9 @@ Requires sql node version 3.34.3 to support the AspNetCore.Identity datastore an
 
 ### Phase 4 - Accounts Mode
 
-Apply [web interface script 1](scripts/tc_web_interface_script1.sql) to sql node version 3.34.4
+Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql node version 3.34.4
+
+#### with 365
 
 - [x] Accounts Mode menu
 - [x] Payment Entry - bank accounts and adjustments 
@@ -40,9 +42,25 @@ Apply [web interface script 1](scripts/tc_web_interface_script1.sql) to sql node
 - [x] Cash Account Statements - reporting and maintenance 
 - [x] Interbank Transfers - accruals and payments
 - [x] Cash Account Maintenance - cash, asset and dummy accounts
-- [ ] Definitions
-- [ ] Interface
+- [x] Organisation Maintenance - create, edit and delete organisations, contacts and addresses
+- [x] Organisation Enquiries - details, invoices, payments and SvD statements
+- [x] Debtors and Creditors - current and historical balance sheet audit
+- [x] Basic home page
+- [ ] Raise invoice and credit notes
+- [ ] Email invoices and statements to contacts
+- [ ] Balance Sheets by period
+- [ ] Profit and Loss by period
+
+#### web version
+
+- [ ] Invoice Register - sales and purchases by period
+- [ ] Cash Code invoice summary
+- [ ] Vat Statement and quarterly totals
+- [ ] Company Tax Statement and period totals
 - [ ] Documents
+- [ ] Category, Tax and Cash Code maintenance
+- [ ] Period End maintenance and closedown
+- [ ] Configuration and setup
 
 ### Phase 5 - MIS Mode
 

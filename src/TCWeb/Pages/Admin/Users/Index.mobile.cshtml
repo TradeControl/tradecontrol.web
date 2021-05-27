@@ -44,7 +44,7 @@
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
                     {
-                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-outline-warning" ></a>
+                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-outline-warning"></a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
                     {
@@ -59,3 +59,7 @@
         }
     </tbody>
 </table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

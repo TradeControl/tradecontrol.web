@@ -1,0 +1,55 @@
+﻿@page
+@model TradeControl.Web.Pages.Org.Enquiry.PaymentsModel
+
+@{ ViewData["Title"] = "Payments"; }
+<h1>@ViewData["Title"]</h1>
+
+<h4>@Html.DisplayFor(model => model.Org_Account.AccountName)</h4>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Org_Account.AccountCode" class="btn btn-info">Back to List</a>
+</p>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Payments[0].PaidOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Payments[0].PaidOutValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Org_Payments[0].PaidInValue)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Org_Payments)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidOutValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PaidInValue)
+                </td>
+                <td>
+                    <a asp-page="/Cash/Statement/Index" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Org_Account.AccountCode" class="btn btn-info">Back to List</a>
+</p>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

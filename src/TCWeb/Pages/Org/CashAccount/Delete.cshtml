@@ -85,7 +85,10 @@
     <form method="post">
         <input type="hidden" asp-for="Org_CashAccount.CashAccountCode" />
         <input type="submit" value="Delete" class="btn btn-danger" />
-        <a asp-page="./Index" asp-route-AccountType="@Model.Org_CashAccount.AccountType" class="btn btn-info">Back to List</a>
+        <a asp-page="./Index" asp-route-accountType="@Model.Org_CashAccount.AccountType" class="btn btn-info">Back to List</a>
     </form>
 </div>
 
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

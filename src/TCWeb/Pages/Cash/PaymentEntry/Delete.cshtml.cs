@@ -55,9 +55,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnPostAsync(string paymentCode)
         {
             if (paymentCode == null)
-            {
                 return NotFound();
-            }
 
             Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
 
