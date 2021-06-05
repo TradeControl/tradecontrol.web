@@ -34,44 +34,52 @@ namespace TradeControl.Web.Pages.Org.Reports
 
         public async Task OnGetAsync(string periodName, string assetType)
         {
-            await SetViewData();
-
-            DateTime startOn = DateTime.Today;
-
-            var periodNames = from tb in NodeContext.App_Periods
-                              orderby tb.StartOn descending
-                              select tb.Description;
-
-            PeriodNames = new SelectList(await periodNames.ToListAsync());
-
-            if (string.IsNullOrEmpty(periodName))
+            try
             {
-                Periods periods = new(NodeContext);
-                startOn = periods.ActiveStartOn;
-                PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
+                await SetViewData();
+
+                DateTime startOn = DateTime.Today;
+
+                var periodNames = from tb in NodeContext.App_Periods
+                                  orderby tb.StartOn descending
+                                  select tb.Description;
+
+                PeriodNames = new SelectList(await periodNames.ToListAsync());
+
+                if (string.IsNullOrEmpty(periodName))
+                {
+                    Periods periods = new(NodeContext);
+                    startOn = periods.ActiveStartOn;
+                    PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
+                }
+                else
+                    startOn = await NodeContext.App_Periods.Where(t => t.Description == periodName).Select(t => t.StartOn).FirstOrDefaultAsync();
+
+                var assetTypes = from tb in NodeContext.Cash_tbAssetTypes
+                                 where tb.AssetTypeCode <= (short)NodeEnum.AssetType.Creditors
+                                 orderby tb.AssetTypeCode
+                                 select tb.AssetType;
+
+                AssetTypes = new SelectList(await assetTypes.ToListAsync());
+
+                var audit = from tb in NodeContext.Org_BalanceSheetAudits
+                            where tb.StartOn == startOn
+                            orderby tb.AssetTypeCode, tb.AccountName
+                            select tb;
+
+                if (!string.IsNullOrEmpty(assetType))
+                {
+                    short assetTypeCode = await NodeContext.Cash_tbAssetTypes.Where(t => t.AssetType == assetType).Select(t => t.AssetTypeCode).FirstOrDefaultAsync();
+                    Org_BalanceSheetAudit = await audit.Where(t => t.AssetTypeCode == assetTypeCode).ToListAsync();
+                }
+                else
+                    Org_BalanceSheetAudit = await audit.ToListAsync();
             }
-            else
-                startOn = await NodeContext.App_Periods.Where(t => t.Description == periodName).Select(t => t.StartOn).FirstOrDefaultAsync();
-
-            var assetTypes = from tb in NodeContext.Cash_tbAssetTypes
-                             where tb.AssetTypeCode <= (short)NodeEnum.AssetType.Creditors
-                             orderby tb.AssetTypeCode
-                             select tb.AssetType;
-
-            AssetTypes = new SelectList(await assetTypes.ToListAsync());
-
-            var audit = from tb in NodeContext.Org_BalanceSheetAudits
-                        where tb.StartOn == startOn
-                        orderby tb.AssetTypeCode, tb.AccountName
-                        select tb;
-
-            if (!string.IsNullOrEmpty(assetType))
+            catch (Exception e)
             {
-                short assetTypeCode = await NodeContext.Cash_tbAssetTypes.Where(t => t.AssetType == assetType).Select(t => t.AssetTypeCode).FirstOrDefaultAsync();
-                Org_BalanceSheetAudit = await audit.Where(t => t.AssetTypeCode == assetTypeCode).ToListAsync();
+                NodeContext.ErrorLog(e);
+                throw;
             }
-            else
-                Org_BalanceSheetAudit = await audit.ToListAsync();
         }
     }
 }

@@ -42,21 +42,29 @@ namespace TradeControl.Web.Pages.Org.Contact
 
         public async Task<IActionResult> OnPostAsync(string accountCode, string contactName)
         {
-            if (accountCode == null || contactName == null)
-                return NotFound();
-
-            Org_tbContact tbContact = await NodeContext.Org_tbContacts.Where(c => c.AccountCode == accountCode && c.ContactName == contactName).FirstOrDefaultAsync(); ;
-
-            if (tbContact != null)
+            try
             {
-                NodeContext.Org_tbContacts.Remove(tbContact);
-                await NodeContext.SaveChangesAsync();
+                if (accountCode == null || contactName == null)
+                    return NotFound();
+
+                Org_tbContact tbContact = await NodeContext.Org_tbContacts.Where(c => c.AccountCode == accountCode && c.ContactName == contactName).FirstOrDefaultAsync(); ;
+
+                if (tbContact != null)
+                {
+                    NodeContext.Org_tbContacts.Remove(tbContact);
+                    await NodeContext.SaveChangesAsync();
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("accountCode", accountCode);
+
+                return RedirectToPage("./Index", route);
             }
-
-            RouteValueDictionary route = new();
-            route.Add("accountCode", accountCode);
-
-            return RedirectToPage("./Index", route);
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

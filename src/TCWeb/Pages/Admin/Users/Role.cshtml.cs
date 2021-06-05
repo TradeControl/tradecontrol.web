@@ -29,55 +29,71 @@ namespace TradeControl.Web.Pages.Admin.Users
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
-            if (id == null)
-                return NotFound();
-
-            AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
-
-            if (AspNet_UserRegistration == null)
-                return NotFound();
-            else if (!AspNet_UserRegistration.IsConfirmed)
-                return RedirectToPage("./Index");
-            else
+            try
             {
-                var isAuthorized = await AuthorizationService.AuthorizeAsync(
-                                          User, AspNet_UserRegistration,
-                                          Operations.Update);
-                if (!isAuthorized.Succeeded)
-                    return Forbid();
+                if (id == null)
+                    return NotFound();
 
-                await SetViewData();
+                AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
 
-                return Page();
+                if (AspNet_UserRegistration == null)
+                    return NotFound();
+                else if (!AspNet_UserRegistration.IsConfirmed)
+                    return RedirectToPage("./Index");
+                else
+                {
+                    var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                              User, AspNet_UserRegistration,
+                                              Operations.Update);
+                    if (!isAuthorized.Succeeded)
+                        return Forbid();
+
+                    await SetViewData();
+
+                    return Page();
+                }
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
             }
 
         }
 
         public async Task<IActionResult> OnPostAsync(string id)
         {
-            if (id == null)
-                return NotFound();
-
-            var user = await UserManager.FindByIdAsync(id);
-            
-            if (AspNet_UserRegistration.IsAdministrator)
+            try
             {
-                if (!await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole))
-                    await UserManager.AddToRoleAsync(user, Constants.AdministratorsRole);
-            }
-            else if (await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole) && (User.Identity.Name != user.UserName))
-                await UserManager.RemoveFromRoleAsync(user, Constants.AdministratorsRole);
+                if (id == null)
+                    return NotFound();
 
-            if (AspNet_UserRegistration.IsManager)
+                var user = await UserManager.FindByIdAsync(id);
+
+                if (AspNet_UserRegistration.IsAdministrator)
+                {
+                    if (!await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole))
+                        await UserManager.AddToRoleAsync(user, Constants.AdministratorsRole);
+                }
+                else if (await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole) && (User.Identity.Name != user.UserName))
+                    await UserManager.RemoveFromRoleAsync(user, Constants.AdministratorsRole);
+
+                if (AspNet_UserRegistration.IsManager)
+                {
+                    if (!await UserManager.IsInRoleAsync(user, Constants.ManagersRole))
+                        await UserManager.AddToRoleAsync(user, Constants.ManagersRole);
+                }
+                else if (await UserManager.IsInRoleAsync(user, Constants.ManagersRole))
+                    await UserManager.RemoveFromRoleAsync(user, Constants.ManagersRole);
+
+
+                return RedirectToPage("./Index");
+            }
+            catch (Exception e)
             {
-                if (!await UserManager.IsInRoleAsync(user, Constants.ManagersRole))
-                    await UserManager.AddToRoleAsync(user, Constants.ManagersRole);
+                NodeContext.ErrorLog(e);
+                throw;
             }
-            else if (await UserManager.IsInRoleAsync(user, Constants.ManagersRole))
-                await UserManager.RemoveFromRoleAsync(user, Constants.ManagersRole);
-
-
-            return RedirectToPage("./Index");
         }
     }
 }

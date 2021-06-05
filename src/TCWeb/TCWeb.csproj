@@ -11,6 +11,7 @@
     <Copyright>Copyright © Trade Control 2020-21</Copyright>
     <PackageProjectUrl>https://tradecontrol.github.io</PackageProjectUrl>
     <RepositoryUrl>https://github.com/tradecontrol/tradecontrol.web</RepositoryUrl>
+    <UserSecretsId>80b1d6ff-f6e4-4ee3-aca9-0d0bb63c6992</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

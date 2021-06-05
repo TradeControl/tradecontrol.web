@@ -35,54 +35,70 @@ namespace TradeControl.Web.Pages.Org.Address
 
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {
-            if (string.IsNullOrEmpty(accountCode))
-                return NotFound();
-
-            var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
-
-            if (org == null)
-                return NotFound();
-            else
-                AccountName = org.AccountName;
-
-            Profile profile = new(NodeContext);            
-            Orgs orgs = new (NodeContext, accountCode);
-
-            Org_tbAddress = new()
+            try
             {
-                AccountCode = accountCode,
-                AddressCode = await orgs.NextAddressCode(),
-                InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
-                InsertedOn = DateTime.Now,
-                UpdatedOn = DateTime.Now
-            };
+                if (string.IsNullOrEmpty(accountCode))
+                    return NotFound();
 
-            Org_tbAddress.UpdatedBy = Org_tbAddress.InsertedBy;
+                var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
 
-            IsAdminAddress = !(await NodeContext.Org_tbAddresses.Where(t => t.AccountCode == accountCode).AnyAsync());
+                if (org == null)
+                    return NotFound();
+                else
+                    AccountName = org.AccountName;
 
-            await SetViewData();
-            return Page();
+                Profile profile = new(NodeContext);
+                Orgs orgs = new(NodeContext, accountCode);
+
+                Org_tbAddress = new()
+                {
+                    AccountCode = accountCode,
+                    AddressCode = await orgs.NextAddressCode(),
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
+                    InsertedOn = DateTime.Now,
+                    UpdatedOn = DateTime.Now
+                };
+
+                Org_tbAddress.UpdatedBy = Org_tbAddress.InsertedBy;
+
+                IsAdminAddress = !(await NodeContext.Org_tbAddresses.Where(t => t.AccountCode == accountCode).AnyAsync());
+
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
-        {            
-            if (!ModelState.IsValid)
-                return Page();
-
-            NodeContext.Org_tbAddresses.Add(Org_tbAddress);                        
-            if (IsAdminAddress)
+        {
+            try
             {
-                Org_tbOrg org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == Org_tbAddress.AccountCode);
-                org.AddressCode = Org_tbAddress.AddressCode;
+                if (!ModelState.IsValid)
+                    return Page();
+
+                NodeContext.Org_tbAddresses.Add(Org_tbAddress);
+                if (IsAdminAddress)
+                {
+                    Org_tbOrg org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == Org_tbAddress.AccountCode);
+                    org.AddressCode = Org_tbAddress.AddressCode;
+                }
+
+                await NodeContext.SaveChangesAsync();
+
+                RouteValueDictionary route = new();
+                route.Add("accountCode", Org_tbAddress.AccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-
-            await NodeContext.SaveChangesAsync();
-
-            RouteValueDictionary route = new();
-            route.Add("accountCode", Org_tbAddress.AccountCode);
-
-            return RedirectToPage("./Index", route);
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

@@ -45,26 +45,34 @@ namespace TradeControl.Web.Pages.Cash.CashCode
 
         public async Task OnGetAsync(string returnUrl)
         {
-            await SetViewData();
+            try
+            {
+                await SetViewData();
 
-            if (!string.IsNullOrEmpty(returnUrl))
-                ReturnUrl = returnUrl;
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
 
-            var categories = from tb in NodeContext.Cash_CategoryTrades
-                           orderby tb.Category
-                           select tb.Category;
+                var categories = from tb in NodeContext.Cash_CategoryTrades
+                                 orderby tb.Category
+                                 select tb.Category;
 
-            Categories = new SelectList(await categories.ToListAsync());
+                Categories = new SelectList(await categories.ToListAsync());
 
-            var cashcodes = NodeContext.Cash_CodeLookup.Where(t => t.CashTypeCode < (short)NodeEnum.CashType.Bank);
+                var cashcodes = NodeContext.Cash_CodeLookup.Where(t => t.CashTypeCode < (short)NodeEnum.CashType.Bank);
 
-            if (!string.IsNullOrEmpty(Category))
-                cashcodes = cashcodes.Where(t => t.Category == Category);
+                if (!string.IsNullOrEmpty(Category))
+                    cashcodes = cashcodes.Where(t => t.Category == Category);
 
-            if (!string.IsNullOrEmpty(SearchString))
-                cashcodes = cashcodes.Where(t => t.CashDescription.Contains(SearchString));
-            
-            Cash_CodeLookup = await cashcodes.OrderBy(t => t.CashCode).ToListAsync();
+                if (!string.IsNullOrEmpty(SearchString))
+                    cashcodes = cashcodes.Where(t => t.CashDescription.Contains(SearchString));
+
+                Cash_CodeLookup = await cashcodes.OrderBy(t => t.CashCode).ToListAsync();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

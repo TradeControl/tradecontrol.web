@@ -31,53 +31,69 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 
         public async Task<IActionResult> OnGetAsync(string cashAccountCode)
         {
-            var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountCode);
-
-            CashAccountCodes = new SelectList(await cashAccountList.ToListAsync());
-
-            if (string.IsNullOrEmpty(cashAccountCode))
-                cashAccountCode = await cashAccountList.FirstOrDefaultAsync();
-
-            Profile profile = new(NodeContext);
-            CashAccounts cashAccounts = new(NodeContext);
-
-            var cashAccount = await NodeContext.Org_CashAccountAssets.Where(t => t.CashAccountCode == cashAccountCode).FirstAsync();
-
-            Cash_AssetsUnposted = new Cash_vwPaymentsUnposted
+            try
             {
-                CashAccountCode = cashAccount.CashAccountCode,
-                PaymentCode = await cashAccounts.NextPaymentCode(),
-                AccountCode = cashAccount.AccountCode,
-                CashCode = cashAccount.CashCode,
-                TaxCode = cashAccount.TaxCode,
-                PaidOn = DateTime.Today,
-                UserId = await profile.UserId(UserManager.GetUserId(User)),
-                InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
-                IsProfitAndLoss = true
-            };
+                var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountCode);
 
-            Cash_AssetsUnposted.UpdatedBy = Cash_AssetsUnposted.InsertedBy;
+                CashAccountCodes = new SelectList(await cashAccountList.ToListAsync());
 
-            await SetViewData();
+                if (string.IsNullOrEmpty(cashAccountCode))
+                    cashAccountCode = await cashAccountList.FirstOrDefaultAsync();
 
-            return Page();
+                Profile profile = new(NodeContext);
+                CashAccounts cashAccounts = new(NodeContext);
+
+                var cashAccount = await NodeContext.Org_CashAccountAssets.Where(t => t.CashAccountCode == cashAccountCode).FirstAsync();
+
+                Cash_AssetsUnposted = new Cash_vwPaymentsUnposted
+                {
+                    CashAccountCode = cashAccount.CashAccountCode,
+                    PaymentCode = await cashAccounts.NextPaymentCode(),
+                    AccountCode = cashAccount.AccountCode,
+                    CashCode = cashAccount.CashCode,
+                    TaxCode = cashAccount.TaxCode,
+                    PaidOn = DateTime.Today,
+                    UserId = await profile.UserId(UserManager.GetUserId(User)),
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
+                    IsProfitAndLoss = true
+                };
+
+                Cash_AssetsUnposted.UpdatedBy = Cash_AssetsUnposted.InsertedBy;
+
+                await SetViewData();
+
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            Cash_AssetsUnposted.UpdatedOn = DateTime.Now;
-            Cash_AssetsUnposted.InsertedOn = DateTime.Now;
+            try
+            {
+                Cash_AssetsUnposted.UpdatedOn = DateTime.Now;
+                Cash_AssetsUnposted.InsertedOn = DateTime.Now;
 
-            if (!ModelState.IsValid || (Cash_AssetsUnposted.PaidInValue + Cash_AssetsUnposted.PaidOutValue == 0))
-                return Page();
+                if (!ModelState.IsValid || (Cash_AssetsUnposted.PaidInValue + Cash_AssetsUnposted.PaidOutValue == 0))
+                    return Page();
 
-            NodeContext.Cash_PaymentsUnposted.Add(Cash_AssetsUnposted);
-            await NodeContext.SaveChangesAsync();
+                NodeContext.Cash_PaymentsUnposted.Add(Cash_AssetsUnposted);
+                await NodeContext.SaveChangesAsync();
 
-            RouteValueDictionary route = new();
-            route.Add("CashAccountCode", Cash_AssetsUnposted.CashAccountCode);
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", Cash_AssetsUnposted.CashAccountCode);
 
-            return RedirectToPage("./Index", route);
+                return RedirectToPage("./Index", route);
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

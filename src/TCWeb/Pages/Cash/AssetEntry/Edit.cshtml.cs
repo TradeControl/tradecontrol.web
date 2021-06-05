@@ -26,63 +26,73 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
-            if (string.IsNullOrEmpty(paymentCode))
-                return NotFound();
-
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
-
-            if (Cash_PaymentsUnposted == null)
-                return NotFound();
-            else
+            try
             {
-                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
-                {
-                    var profile = new Profile(NodeContext);
-                    var user = await UserManager.GetUserAsync(User);
-                    if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
-                        return Forbid();
-                }
+                if (string.IsNullOrEmpty(paymentCode))
+                    return NotFound();
 
-                await SetViewData();
-                return Page();
-            };
+                Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+
+                if (Cash_PaymentsUnposted == null)
+                    return NotFound();
+                else
+                {
+                    if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                    {
+                        var profile = new Profile(NodeContext);
+                        var user = await UserManager.GetUserAsync(User);
+                        if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
+                            return Forbid();
+                    }
+
+                    await SetViewData();
+                    return Page();
+                };
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
-
-            Profile profile = new(NodeContext);
-            Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
-
-            NodeContext.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
-
             try
             {
-                await NodeContext.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return Page();
+
+                Profile profile = new(NodeContext);
+                Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
+
+                NodeContext.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
+
+                try
+                {
+                    await NodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == Cash_PaymentsUnposted.PaymentCode))
+                        return NotFound();
+                    else
+                    {
+                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
+                        throw;
+                    }
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception e)
             {
-                if (!Cash_vwPaymentsUnpostedExists(Cash_PaymentsUnposted.PaymentCode))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                NodeContext.ErrorLog(e);
+                throw;
             }
-
-            RouteValueDictionary route = new();
-            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
-
-            return RedirectToPage("./Index", route);
-        }
-
-        private bool Cash_vwPaymentsUnpostedExists(string paymentCode)
-        {
-            return NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == paymentCode);
         }
 
     }

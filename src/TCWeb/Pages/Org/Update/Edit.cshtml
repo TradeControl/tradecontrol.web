@@ -1,5 +1,5 @@
 ﻿@page
-@model TradeControl.Web.Pages.Org.Edit.EditModel
+@model TradeControl.Web.Pages.Org.Update.EditModel
 @{
     ViewData["Title"] = "Edit Organisation";
 }
@@ -14,6 +14,7 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
             <input type="hidden" asp-for="Org_tbOrg.AccountCode" />
+            <input type="hidden" asp-for="Org_tbOrg.AddressCode" />
             <input type="hidden" asp-for="Org_tbOrg.Logo" />
             <input type="hidden" asp-for="Org_tbOrg.InsertedBy" />
             <input type="hidden" asp-for="Org_tbOrg.InsertedOn" />
@@ -92,8 +93,8 @@
             </div>
 
             <div>
-                <input type="submit" value="Save" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-accountCode="@Model.Org_tbOrg.AccountCode" class="btn btn-info">Back to List</a>
+                <input type="submit" value="SAVE" class="btn btn-primary" />
+                <a asp-page="./Index" asp-route-accountCode="@Model.Org_tbOrg.AccountCode" class="btn btn-info">To List</a>
             </div>
             <p />
             <h2>Additional Information</h2>
@@ -143,8 +144,8 @@
                 <span asp-validation-for="Org_tbOrg.BusinessDescription" class="text-danger"></span>
             </div>
             <div>
-                <input type="submit" value="Save" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-accountCode="@Model.Org_tbOrg.AccountCode" class="btn btn-info">Back to List</a>
+                <input type="submit" value="SAVE" class="btn btn-primary" />
+                <a asp-page="./Index" asp-route-accountCode="@Model.Org_tbOrg.AccountCode" class="btn btn-info">To List</a>
             </div>
         </form>
     </div>

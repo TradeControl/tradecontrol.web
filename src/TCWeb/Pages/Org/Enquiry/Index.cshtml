@@ -6,9 +6,7 @@
 
 <form class="form-group" method="get">
     <p>
-        <select asp-for="OrganisationType" asp-items="Model.OrganisationTypes">
-            <option value="">All</option>
-        </select>
+        <select asp-for="OrganisationType" asp-items="Model.OrganisationTypes"></select>
         Name: <input type="text" asp-for="SearchString" />
         <input type="submit" value="Filter" />
     </p>
@@ -40,7 +38,9 @@
                     @Html.DisplayFor(modelItem => item.AccountCode)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Org/Update/Index" asp-route-accountCode="@item.AccountCode">
+                        @Html.DisplayFor(modelItem => item.AccountName)
+                    </a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.OrganisationType)

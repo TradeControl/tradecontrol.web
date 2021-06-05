@@ -46,27 +46,35 @@ namespace TradeControl.Web.Pages.Org
 
         public async Task OnGetAsync(string returnUrl)
         {
-            await SetViewData();
+            try
+            {
+                await SetViewData();
 
-            if (!string.IsNullOrEmpty(returnUrl))
-                ReturnUrl = returnUrl;
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
 
-            var orgTypes = from tb in NodeContext.Org_tbTypes
-                           orderby tb.OrganisationType
-                           select tb.OrganisationType;
+                var orgTypes = from tb in NodeContext.Org_tbTypes
+                               orderby tb.OrganisationType
+                               select tb.OrganisationType;
 
-            OrganisationTypes = new SelectList(await orgTypes.ToListAsync());
+                OrganisationTypes = new SelectList(await orgTypes.ToListAsync());
 
-            var accounts = from tb in NodeContext.Org_AccountLookup
-                           select tb;
+                var accounts = from tb in NodeContext.Org_AccountLookup
+                               select tb;
 
-            if (!string.IsNullOrEmpty(OrganisationType))
-                accounts = accounts.Where(a => a.OrganisationType == OrganisationType);
+                if (!string.IsNullOrEmpty(OrganisationType))
+                    accounts = accounts.Where(a => a.OrganisationType == OrganisationType);
 
-            if (!string.IsNullOrEmpty(SearchString))
-                accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
+                if (!string.IsNullOrEmpty(SearchString))
+                    accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
 
-            Org_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
+                Org_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
     }

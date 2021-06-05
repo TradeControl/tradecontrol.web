@@ -42,22 +42,30 @@ namespace TradeControl.Web.Pages.Org.Address
 
         public async Task<IActionResult> OnPostAsync(string addressCode)
         {
-            if (addressCode == null)
-                return NotFound();
-
-            Org_tbAddress tbAddress = await NodeContext.Org_tbAddresses.FindAsync(addressCode);
-
-            if (tbAddress != null)
+            try
             {
-                
-                NodeContext.Org_tbAddresses.Remove(tbAddress);
-                await NodeContext.SaveChangesAsync();
+                if (addressCode == null)
+                    return NotFound();
+
+                Org_tbAddress tbAddress = await NodeContext.Org_tbAddresses.FindAsync(addressCode);
+
+                if (tbAddress != null)
+                {
+
+                    NodeContext.Org_tbAddresses.Remove(tbAddress);
+                    await NodeContext.SaveChangesAsync();
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("accountCode", tbAddress.AccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-
-            RouteValueDictionary route = new();
-            route.Add("accountCode", tbAddress.AccountCode);
-
-            return RedirectToPage("./Index", route);
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

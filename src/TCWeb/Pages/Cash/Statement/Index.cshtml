@@ -53,7 +53,9 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
+                        @Html.DisplayFor(modelItem => item.AccountName)
+                    </a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.PaymentReference)

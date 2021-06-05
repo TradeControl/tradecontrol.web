@@ -30,22 +30,30 @@ namespace TradeControl.Web.Pages.Org.CashAccount
 
         public async Task OnGetAsync(string accountType, string cashAccountCode)
         {
-            var cashAccounts = from tb in NodeContext.Org_CashAccounts
-                               select tb;           
+            try
+            {
+                var cashAccounts = from tb in NodeContext.Org_CashAccounts
+                                   select tb;
 
-            AccountTypes = new SelectList(await NodeContext.Org_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
+                AccountTypes = new SelectList(await NodeContext.Org_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
 
-            if (!string.IsNullOrEmpty(cashAccountCode))
-                AccountType = await NodeContext.Org_CashAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.AccountType).FirstOrDefaultAsync();
-            else if (string.IsNullOrEmpty(accountType))
-                AccountType = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountTypeCode == (short)NodeEnum.CashAccountType.Cash).Select(t => t.AccountType).FirstAsync();
-            else
-                AccountType = accountType;
+                if (!string.IsNullOrEmpty(cashAccountCode))
+                    AccountType = await NodeContext.Org_CashAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.AccountType).FirstOrDefaultAsync();
+                else if (string.IsNullOrEmpty(accountType))
+                    AccountType = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountTypeCode == (short)NodeEnum.CashAccountType.Cash).Select(t => t.AccountType).FirstAsync();
+                else
+                    AccountType = accountType;
 
-            cashAccounts = cashAccounts.Where(t => t.AccountType == AccountType);
-            Org_CashAccounts = await cashAccounts.ToListAsync();
+                cashAccounts = cashAccounts.Where(t => t.AccountType == AccountType);
+                Org_CashAccounts = await cashAccounts.ToListAsync();
 
-            await SetViewData();
+                await SetViewData();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

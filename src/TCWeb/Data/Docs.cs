@@ -28,5 +28,19 @@ namespace TradeControl.Web.Data
                 return false;
             }
         }
+
+        public async Task<bool> DespoolAll()
+        {
+            try
+            {
+                int result = await _context.Database.ExecuteSqlRawAsync("App.proc_DocDespoolAll");
+                return result != 0;
+            }
+            catch (Exception e)
+            {
+                _context.ErrorLog(e);
+                return false;
+            }
+        }
     }
 }

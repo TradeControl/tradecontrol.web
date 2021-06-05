@@ -29,39 +29,54 @@ namespace TradeControl.Web.Pages.Admin.Users
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
-            if (id == null)
-                return NotFound();
-
-            AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
-
-            if (AspNet_UserRegistration == null)
-                return NotFound();
-            else if (AspNet_UserRegistration.IsConfirmed || !AspNet_UserRegistration.IsRegistered)
-                return RedirectToPage("./Index"); 
-            else
+            try
             {
-                var isAuthorized = await AuthorizationService.AuthorizeAsync(
-                                          User, AspNet_UserRegistration,
-                                          Operations.Approve);
-                if (!isAuthorized.Succeeded)
-                    return Forbid();
+                if (id == null)
+                    return NotFound();
 
-                await SetViewData();
-                return Page();
+                AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
+
+                if (AspNet_UserRegistration == null)
+                    return NotFound();
+                else if (AspNet_UserRegistration.IsConfirmed || !AspNet_UserRegistration.IsRegistered)
+                    return RedirectToPage("./Index");
+                else
+                {
+                    var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                                              User, AspNet_UserRegistration,
+                                              Operations.Approve);
+                    if (!isAuthorized.Succeeded)
+                        return Forbid();
+
+                    await SetViewData();
+                    return Page();
+                }
             }
-
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync(string id)
         {
-            if (id == null)
-                return NotFound();
+            try
+            {
+                if (id == null)
+                    return NotFound();
 
-            var user = await UserManager.FindByIdAsync(id);
-            var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-            await UserManager.ConfirmEmailAsync(user, code);
+                var user = await UserManager.FindByIdAsync(id);
+                var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+                await UserManager.ConfirmEmailAsync(user, code);
 
-            return RedirectToPage("./Index");
+                return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

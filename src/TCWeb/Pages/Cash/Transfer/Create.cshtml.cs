@@ -38,64 +38,80 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 
         public async Task<IActionResult> OnGetAsync()
         {
-            var cashAccountList = from tb in NodeContext.Org_tbAccounts
-                                  where !tb.AccountClosed && tb.AccountTypeCode == (short)NodeEnum.CashAccountType.Cash && tb.CoinTypeCode == (short)NodeEnum.CoinType.Fiat
-                                  select tb.CashAccountName;
-
-            CashAccounts = new SelectList(await cashAccountList.ToListAsync());
-
-            CashAccounts cashAccounts = new(NodeContext);
-            string cashAccountCode = await cashAccounts.CurrentAccount();
-            CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
-
-            var cashCodeList = from tb in NodeContext.Cash_TransferCodeLookup
-                               orderby tb.CashCode
-                               select tb.CashDescription;
-
-            CashCodes = new SelectList(await cashCodeList.ToListAsync());
-            CashDescription = await cashCodeList.FirstOrDefaultAsync();
-
-            Profile profile = new(NodeContext);
-            string cashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstOrDefaultAsync();
-            CashCodes cashCodes = new(NodeContext, cashCode);
-
-            Cash_TransfersUnposted = new Cash_vwTransfersUnposted
+            try
             {
-                CashAccountCode = cashAccountCode,
-                CashCode = cashCodes.CashCode,
-                TaxCode = cashCodes.TaxCode,
-                PaymentCode = await cashAccounts.NextPaymentCode(),
-                AccountCode = await profile.CompanyAccountCode,
-                PaidOn = DateTime.Today,
-                UserId = await profile.UserId(UserManager.GetUserId(User)),
-                InsertedBy = await profile.UserName(UserManager.GetUserId(User))
-            };
+                var cashAccountList = from tb in NodeContext.Org_tbAccounts
+                                      where !tb.AccountClosed && tb.AccountTypeCode == (short)NodeEnum.CashAccountType.Cash && tb.CoinTypeCode == (short)NodeEnum.CoinType.Fiat
+                                      select tb.CashAccountName;
 
-            Cash_TransfersUnposted.UpdatedBy = Cash_TransfersUnposted.InsertedBy;
+                CashAccounts = new SelectList(await cashAccountList.ToListAsync());
 
-            await SetViewData();
+                CashAccounts cashAccounts = new(NodeContext);
+                string cashAccountCode = await cashAccounts.CurrentAccount();
+                CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
 
-            return Page();
+                var cashCodeList = from tb in NodeContext.Cash_TransferCodeLookup
+                                   orderby tb.CashCode
+                                   select tb.CashDescription;
+
+                CashCodes = new SelectList(await cashCodeList.ToListAsync());
+                CashDescription = await cashCodeList.FirstOrDefaultAsync();
+
+                Profile profile = new(NodeContext);
+                string cashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstOrDefaultAsync();
+                CashCodes cashCodes = new(NodeContext, cashCode);
+
+                Cash_TransfersUnposted = new Cash_vwTransfersUnposted
+                {
+                    CashAccountCode = cashAccountCode,
+                    CashCode = cashCodes.CashCode,
+                    TaxCode = cashCodes.TaxCode,
+                    PaymentCode = await cashAccounts.NextPaymentCode(),
+                    AccountCode = await profile.CompanyAccountCode,
+                    PaidOn = DateTime.Today,
+                    UserId = await profile.UserId(UserManager.GetUserId(User)),
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User))
+                };
+
+                Cash_TransfersUnposted.UpdatedBy = Cash_TransfersUnposted.InsertedBy;
+
+                await SetViewData();
+
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            Cash_TransfersUnposted.CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
-            Cash_TransfersUnposted.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstOrDefaultAsync();
+            try
+            {
+                Cash_TransfersUnposted.CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                Cash_TransfersUnposted.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstOrDefaultAsync();
 
-            CashCodes cashCode = new(NodeContext, Cash_TransfersUnposted.CashCode);
-            Cash_TransfersUnposted.TaxCode = cashCode.TaxCode;
-            
-            Cash_TransfersUnposted.UpdatedOn = DateTime.Now;
-            Cash_TransfersUnposted.InsertedOn = DateTime.Now;
+                CashCodes cashCode = new(NodeContext, Cash_TransfersUnposted.CashCode);
+                Cash_TransfersUnposted.TaxCode = cashCode.TaxCode;
 
-            if (!ModelState.IsValid || (Cash_TransfersUnposted.PaidInValue + Cash_TransfersUnposted.PaidOutValue == 0))
-                return Page();
+                Cash_TransfersUnposted.UpdatedOn = DateTime.Now;
+                Cash_TransfersUnposted.InsertedOn = DateTime.Now;
 
-            NodeContext.Cash_TransfersUnposted.Add(Cash_TransfersUnposted);
-            await NodeContext.SaveChangesAsync();
+                if (!ModelState.IsValid || (Cash_TransfersUnposted.PaidInValue + Cash_TransfersUnposted.PaidOutValue == 0))
+                    return Page();
 
-            return RedirectToPage("./Index");
+                NodeContext.Cash_TransfersUnposted.Add(Cash_TransfersUnposted);
+                await NodeContext.SaveChangesAsync();
+
+                return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

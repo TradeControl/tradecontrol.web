@@ -46,54 +46,70 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
         public async Task<IActionResult> OnGetAsync(string returnUrl)
         {
-            await SetViewData();
-
-            if (!string.IsNullOrEmpty(returnUrl))           
-                ReturnUrl = returnUrl;
-
-            var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
-            CashModes = new SelectList(await modes.ToListAsync());
-            CashMode = await modes.FirstOrDefaultAsync();
-
-            var types = NodeContext.Cash_tbTypes.OrderBy(t => t.CashTypeCode).Select(t => t.CashType);
-            CashTypes = new SelectList(await types.ToListAsync());
-            CashType = await types.FirstOrDefaultAsync();             
-
-            Profile profile = new(NodeContext);
-            var userName = await profile.UserName(UserManager.GetUserId(User));
-
-            Cash_tbCategory = new Cash_tbCategory()
+            try
             {
-                CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode,
-                DisplayOrder = 0,
-                IsEnabled = 1,
-                CashModeCode = (short)NodeEnum.CashMode.Expense,
-                CashTypeCode = (short)NodeEnum.CashType.Trade,
-                InsertedBy = userName,
-                InsertedOn = DateTime.Now,
-                UpdatedBy = userName,
-                UpdatedOn = DateTime.Now
-            };
+                await SetViewData();
 
-            return Page();
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
+
+                var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
+                CashModes = new SelectList(await modes.ToListAsync());
+                CashMode = await modes.FirstOrDefaultAsync();
+
+                var types = NodeContext.Cash_tbTypes.OrderBy(t => t.CashTypeCode).Select(t => t.CashType);
+                CashTypes = new SelectList(await types.ToListAsync());
+                CashType = await types.FirstOrDefaultAsync();
+
+                Profile profile = new(NodeContext);
+                var userName = await profile.UserName(UserManager.GetUserId(User));
+
+                Cash_tbCategory = new Cash_tbCategory()
+                {
+                    CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode,
+                    DisplayOrder = 0,
+                    IsEnabled = 1,
+                    CashModeCode = (short)NodeEnum.CashMode.Expense,
+                    CashTypeCode = (short)NodeEnum.CashType.Trade,
+                    InsertedBy = userName,
+                    InsertedOn = DateTime.Now,
+                    UpdatedBy = userName,
+                    UpdatedOn = DateTime.Now
+                };
+
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
+            try
+            {
+                if (!ModelState.IsValid)
+                    return Page();
 
-            Cash_tbCategory.CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode;
-            Cash_tbCategory.CashTypeCode = await NodeContext.Cash_tbTypes.Where(t => t.CashType == CashType).Select(t => t.CashTypeCode).FirstAsync();
-            Cash_tbCategory.CashModeCode = await NodeContext.Cash_tbModes.Where(m => m.CashMode == CashMode).Select(m => m.CashModeCode).FirstAsync();
+                Cash_tbCategory.CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode;
+                Cash_tbCategory.CashTypeCode = await NodeContext.Cash_tbTypes.Where(t => t.CashType == CashType).Select(t => t.CashTypeCode).FirstAsync();
+                Cash_tbCategory.CashModeCode = await NodeContext.Cash_tbModes.Where(m => m.CashMode == CashMode).Select(m => m.CashModeCode).FirstAsync();
 
-            NodeContext.Cash_tbCategories.Add(Cash_tbCategory);
-            await NodeContext.SaveChangesAsync();
+                NodeContext.Cash_tbCategories.Add(Cash_tbCategory);
+                await NodeContext.SaveChangesAsync();
 
-            if (!string.IsNullOrEmpty(ReturnUrl))
-                return LocalRedirect($"{ReturnUrl}?categorycode={Cash_tbCategory.CategoryCode}");
-            else
-                return RedirectToPage("./Index");
+                if (!string.IsNullOrEmpty(ReturnUrl))
+                    return LocalRedirect($"{ReturnUrl}?categorycode={Cash_tbCategory.CategoryCode}");
+                else
+                    return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
     }

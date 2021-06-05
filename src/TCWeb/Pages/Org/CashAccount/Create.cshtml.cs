@@ -41,66 +41,82 @@ namespace TradeControl.Web.Pages.Org.CashAccount
 
         public async Task<IActionResult> OnGetAsync(string accountType)
         {
-            AccountType = accountType;
-            AccountTypes = new SelectList(await NodeContext.Org_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
-
-            var accountNames = from tb in NodeContext.Org_AccountLookup
-                               orderby tb.AccountName
-                               select tb.AccountName;
-
-            OrganisationNames = new SelectList(await accountNames.ToListAsync());
-            OrganisationName = await NodeContext.App_HomeAccount.Select(t => t.AccountName).FirstAsync();
-
-            var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
-                            orderby tb.CashDescription
-                            select tb.CashDescription).ToListAsync();
-
-            cashCodes.Add(string.Empty);
-
-            CashCodes = new SelectList(cashCodes);
-            CashDescription = string.Empty;
-
-
-            Profile profile = new(NodeContext);
-            CashAccounts cashAccounts = new (NodeContext);
-            Settings settings = new (NodeContext);
-
-            Org_CashAccount = new()
+            try
             {
-                AccountCode = await cashAccounts.CurrentAccount(),
-                CoinTypeCode = (short)await settings.CoinType,
-                AccountTypeCode = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstOrDefaultAsync(),
-                LiquidityLevel = 0,
-                OpeningBalance = 0,
-                InsertedBy = await profile.UserName(UserManager.GetUserId(User))
-            };
+                AccountType = accountType;
+                AccountTypes = new SelectList(await NodeContext.Org_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
 
-            Org_CashAccount.UpdatedBy = Org_CashAccount.InsertedBy;
+                var accountNames = from tb in NodeContext.Org_AccountLookup
+                                   orderby tb.AccountName
+                                   select tb.AccountName;
 
-            await SetViewData();
-            return Page();
+                OrganisationNames = new SelectList(await accountNames.ToListAsync());
+                OrganisationName = await NodeContext.App_HomeAccount.Select(t => t.AccountName).FirstAsync();
+
+                var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
+                                       orderby tb.CashDescription
+                                       select tb.CashDescription).ToListAsync();
+
+                cashCodes.Add(string.Empty);
+
+                CashCodes = new SelectList(cashCodes);
+                CashDescription = string.Empty;
+
+
+                Profile profile = new(NodeContext);
+                CashAccounts cashAccounts = new(NodeContext);
+                Settings settings = new(NodeContext);
+
+                Org_CashAccount = new()
+                {
+                    AccountCode = await cashAccounts.CurrentAccount(),
+                    CoinTypeCode = (short)await settings.CoinType,
+                    AccountTypeCode = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstOrDefaultAsync(),
+                    LiquidityLevel = 0,
+                    OpeningBalance = 0,
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User))
+                };
+
+                Org_CashAccount.UpdatedBy = Org_CashAccount.InsertedBy;
+
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            Org_CashAccount.AccountTypeCode = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstAsync();
-            Org_CashAccount.AccountCode = await NodeContext.Org_tbOrgs.Where(t => t.AccountName == OrganisationName).Select(t => t.AccountCode).FirstAsync();
+            try
+            {
+                Org_CashAccount.AccountTypeCode = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstAsync();
+                Org_CashAccount.AccountCode = await NodeContext.Org_tbOrgs.Where(t => t.AccountName == OrganisationName).Select(t => t.AccountCode).FirstAsync();
 
-            if (!string.IsNullOrEmpty(CashDescription))
-                Org_CashAccount.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
+                if (!string.IsNullOrEmpty(CashDescription))
+                    Org_CashAccount.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
 
-            Org_CashAccount.CurrentBalance = Org_CashAccount.OpeningBalance;
+                Org_CashAccount.CurrentBalance = Org_CashAccount.OpeningBalance;
 
-            if (!ModelState.IsValid)
-                return Page();
+                if (!ModelState.IsValid)
+                    return Page();
 
-            NodeContext.Org_tbAccounts.Add(Org_CashAccount);
-            await NodeContext.SaveChangesAsync();
+                NodeContext.Org_tbAccounts.Add(Org_CashAccount);
+                await NodeContext.SaveChangesAsync();
 
-            RouteValueDictionary route = new();
-            route.Add("AccountType", AccountType);
+                RouteValueDictionary route = new();
+                route.Add("AccountType", AccountType);
 
-            return RedirectToPage("./Index", route);
+                return RedirectToPage("./Index", route);
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

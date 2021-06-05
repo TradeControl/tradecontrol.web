@@ -36,65 +36,80 @@ namespace TradeControl.Web.Pages.Org.CashAccount
 
         public async Task<IActionResult> OnGetAsync(string cashAccountCode)
         {
-            if (string.IsNullOrEmpty(cashAccountCode))
-                return NotFound();
+            try
+            {
+                if (string.IsNullOrEmpty(cashAccountCode))
+                    return NotFound();
 
-            Org_CashAccount = await NodeContext.Org_tbAccounts.FirstOrDefaultAsync(t => t.CashAccountCode == cashAccountCode);
+                Org_CashAccount = await NodeContext.Org_tbAccounts.FirstOrDefaultAsync(t => t.CashAccountCode == cashAccountCode);
 
-            if (Org_CashAccount == null)
-                return NotFound();
+                if (Org_CashAccount == null)
+                    return NotFound();
 
-            var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
-                                   orderby tb.CashDescription
-                                   select tb.CashDescription).ToListAsync();
+                var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
+                                       orderby tb.CashDescription
+                                       select tb.CashDescription).ToListAsync();
 
-            cashCodes.Add(string.Empty);
+                cashCodes.Add(string.Empty);
 
-            CashCodes = new SelectList(cashCodes);
-            if (string.IsNullOrEmpty(Org_CashAccount.CashCode))
-                CashDescription = string.Empty;
-            else
-                CashDescription = await NodeContext.Cash_tbCodes.Where(t => t.CashCode == Org_CashAccount.CashCode).Select(t => t.CashDescription).FirstAsync();
+                CashCodes = new SelectList(cashCodes);
+                if (string.IsNullOrEmpty(Org_CashAccount.CashCode))
+                    CashDescription = string.Empty;
+                else
+                    CashDescription = await NodeContext.Cash_tbCodes.Where(t => t.CashCode == Org_CashAccount.CashCode).Select(t => t.CashDescription).FirstAsync();
 
-            AccountType = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountTypeCode == Org_CashAccount.AccountTypeCode).Select(t => t.AccountType).FirstAsync();
-            OrganisationName = await NodeContext.Org_tbOrgs.Where(t => t.AccountCode == Org_CashAccount.AccountCode).Select(t => t.AccountName).FirstAsync();
+                AccountType = await NodeContext.Org_tbAccountTypes.Where(t => t.AccountTypeCode == Org_CashAccount.AccountTypeCode).Select(t => t.AccountType).FirstAsync();
+                OrganisationName = await NodeContext.Org_tbOrgs.Where(t => t.AccountCode == Org_CashAccount.AccountCode).Select(t => t.AccountName).FirstAsync();
 
-            await SetViewData();
-            return Page();
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
-
-            Profile profile = new(NodeContext);
-            Org_CashAccount.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
-            if (!string.IsNullOrEmpty(CashDescription))
-                Org_CashAccount.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
-
-            NodeContext.Attach(Org_CashAccount).State = EntityState.Modified;
-
             try
             {
-                await NodeContext.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return Page();
+
+                Profile profile = new(NodeContext);
+                Org_CashAccount.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
+                if (!string.IsNullOrEmpty(CashDescription))
+                    Org_CashAccount.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
+
+                NodeContext.Attach(Org_CashAccount).State = EntityState.Modified;
+
+                try
+                {
+                    await NodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await NodeContext.Org_tbAccounts.AnyAsync(e => e.CashAccountCode == Org_CashAccount.CashAccountCode))
+                        return NotFound();
+                    else
+                    {
+                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
+                        throw;
+                    }
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", Org_CashAccount.CashAccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception e)
             {
-                if (!await NodeContext.Org_tbAccounts.AnyAsync(e => e.CashAccountCode == Org_CashAccount.CashAccountCode))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                NodeContext.ErrorLog(e);
+                throw;
             }
-
-            RouteValueDictionary route = new();
-            route.Add("CashAccountCode", Org_CashAccount.CashAccountCode);
-
-            return RedirectToPage("./Index", route);
         }
 
     }

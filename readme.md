@@ -4,7 +4,7 @@ Using ASP.NET Core to web enable the [Accounts](https://tradecontrol.github.io/a
 
 ## Implementation Plan
 
-Because system functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing payments, organisations and invoicing in [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release. The second milestone will be a stand-alone browser-based version of that mode (Phase 4).
+Because system functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing the [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release. 
 
 ### Phase 1 - Data Models
 
@@ -33,9 +33,11 @@ Requires sql node version 3.34.3 to support the AspNetCore.Identity datastore an
 
 Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql node version 3.34.4
 
-#### with 365
-
 - [x] Accounts Mode menu
+- [x] Basic home page
+- [x] Error trapping
+- [X] Error Log
+- [X] Submit errors to support
 - [x] Payment Entry - bank accounts and adjustments 
 - [x] Create and lookup organisations, category, tax and cash codes
 - [x] Asset Entry - capital accounts for long-term assets and liabilities 
@@ -45,19 +47,17 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Organisation Maintenance - create, edit and delete organisations, contacts and addresses
 - [x] Organisation Enquiries - details, invoices, payments and SvD statements
 - [x] Debtors and Creditors - current and historical balance sheet audit
-- [x] Basic home page
-- [ ] Raise invoice and credit notes
+- [x] Raise invoices and credit notes
+- [x] Cancel invoices
+- [x] Modify and reshedule invoices
+- [x] Invoice Register - sales and purchases by period
+- [x] Cash Code invoice summary
+- [x] Unpaid income and expense
 - [ ] Email invoices and statements to contacts
-- [ ] Balance Sheets by period
-- [ ] Profit and Loss by period
-
-#### web version
-
-- [ ] Invoice Register - sales and purchases by period
-- [ ] Cash Code invoice summary
 - [ ] Vat Statement and quarterly totals
 - [ ] Company Tax Statement and period totals
-- [ ] Documents
+- [ ] Balance Sheet by period
+- [ ] Profit and Loss by period
 - [ ] Category, Tax and Cash Code maintenance
 - [ ] Period End maintenance and closedown
 - [ ] Configuration and setup

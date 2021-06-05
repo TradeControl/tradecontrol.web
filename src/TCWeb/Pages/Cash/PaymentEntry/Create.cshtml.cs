@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -27,10 +28,21 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
-        public SelectList CashAccountCodes { get; set; }
-        public SelectList AccountCodes { get; set; }
-        public SelectList CashCodes { get; set; }
-        public SelectList TaxCodes { get; set; }
+        public SelectList CashAccountNames { get; set; }
+        [BindProperty]
+        public string CashAccountName { get; set; }
+
+        public SelectList OrganisationNames { get; set; }
+        [BindProperty]
+        public string OrganisationName { get; set; }
+
+        public SelectList CashDescriptions { get; set; }
+        [BindProperty]
+        public string CashDescription { get; set; }
+
+        public SelectList TaxDescriptions { get; set; }
+        [BindProperty]
+        public string TaxDescription { get; set; }
 
         #region session data
         const string SessionKeyLoadMode = "_loadMode";
@@ -139,165 +151,209 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         public async Task<IActionResult> OnGetAsync(string cashAccountCode, string mode, string accountCode, string cashCode, string taxCode)
         {
-
-            var cashAccountCodes = from t in NodeContext.Org_tbAccounts
-                               where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
-                               orderby t.CashAccountCode
-                               select t.CashAccountCode;
-
-            CashAccountCodes = new SelectList(await cashAccountCodes.ToListAsync());
-
-            var accountCodes = from t in NodeContext.Org_AccountLookup
-                              orderby t.AccountCode
-                              select t.AccountCode;
-
-            AccountCodes = new SelectList(await accountCodes.ToListAsync());
-
-            if (!string.IsNullOrEmpty(cashAccountCode))
-                CashAccountCode = cashAccountCode;
-            else if (string.IsNullOrEmpty(CashAccountCode))
+            try
             {
-                CashAccounts cashAccounts = new (NodeContext);
-                CashAccountCode = await cashAccounts.CurrentAccount();
-            }
+                var cashAccountNames = from t in NodeContext.Org_tbAccounts
+                                       where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
+                                       orderby t.CashAccountName
+                                       select t.CashAccountName;
 
-            if (!string.IsNullOrEmpty(mode))
-            {
-                InputMode = Int32.Parse(mode);
-                AccountCode = string.Empty;
-                CashCode = string.Empty;
-                TaxCode = string.Empty;
-            }
+                CashAccountNames = new SelectList(await cashAccountNames.ToListAsync());
 
-            if (!string.IsNullOrEmpty(accountCode))
-                AccountCode = accountCode;
-            else if (string.IsNullOrEmpty(AccountCode))
-                AccountCode = accountCodes.FirstOrDefault();
-
-            if (InputMode == 1)
-            {
-                var cashCodes = from t in NodeContext.Cash_CodeLookup
-                                where t.CashTypeCode < (short)NodeEnum.CashType.Bank
-                                orderby t.CashCode
-                                select t.CashCode;
-
-                CashCodes = new SelectList(await cashCodes.ToListAsync());
-
-                if (!string.IsNullOrEmpty(cashCode))
-                    CashCode = cashCode;
-                else if (string.IsNullOrEmpty(CashCode))
-                    CashCode = cashCodes.FirstOrDefault();
-
-                var taxCodes = from t in NodeContext.App_TaxCodes
-                            orderby t.TaxCode
-                            select t.TaxCode;
-
-                TaxCodes = new SelectList(await taxCodes.ToListAsync());
-
-                if (!string.IsNullOrEmpty(taxCode))
-                    TaxCode = taxCode;
-                else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
+                if (!string.IsNullOrEmpty(cashAccountCode))
+                    CashAccountCode = cashAccountCode;
+                else if (string.IsNullOrEmpty(CashAccountCode))
                 {
-                    CashCodes cash = new(NodeContext, CashCode);
-                    TaxCode = cash.TaxCode;
+                    CashAccounts cashAccounts = new(NodeContext);
+                    CashAccountCode = await cashAccounts.CurrentAccount();
                 }
+
+                CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+
+                if (!string.IsNullOrEmpty(mode))
+                {
+                    InputMode = Int32.Parse(mode);
+                    AccountCode = string.Empty;
+                    CashCode = string.Empty;
+                    TaxCode = string.Empty;
+                }
+
+                var organisationNames = from t in NodeContext.Org_AccountLookup
+                                        orderby t.AccountName
+                                        select t.AccountName;
+
+                OrganisationNames = new SelectList(await organisationNames.ToListAsync());
+
+                var profile = new Profile(NodeContext);
+
+                if (!string.IsNullOrEmpty(accountCode))
+                    AccountCode = accountCode;
+                else if (string.IsNullOrEmpty(AccountCode))
+                    AccountCode = await profile.CompanyAccountCode;
+
+                OrganisationName = await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
+
+
+                if (InputMode == 1)
+                {
+                    var cashDescriptions = from t in NodeContext.Cash_CodeLookup
+                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank
+                                           orderby t.CashDescription
+                                           select t.CashDescription;
+
+                    CashDescriptions = new SelectList(await cashDescriptions.ToListAsync());
+
+                    if (!string.IsNullOrEmpty(cashCode))
+                        CashCode = cashCode;
+                    else if (string.IsNullOrEmpty(CashCode))
+                        CashCode = await NodeContext.Cash_CodeLookup
+                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Bank)
+                                                .OrderBy(c => c.CashCode)
+                                                .Select(c => c.CashCode)
+                                                .FirstAsync();
+
+                    CashDescription = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == CashCode).Select(c => c.CashDescription).FirstOrDefaultAsync();
+
+                    var taxDescriptions = from t in NodeContext.App_TaxCodes
+                                          orderby t.TaxDescription
+                                          select t.TaxDescription;
+
+                    TaxDescriptions = new SelectList(await taxDescriptions.ToListAsync());
+
+                    if (!string.IsNullOrEmpty(taxCode))
+                        TaxCode = taxCode;
+                    else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
+                    {
+                        CashCodes cash = new(NodeContext, CashCode);
+                        TaxCode = cash.TaxCode;
+                    }
+                    else
+                        TaxCode = await NodeContext.App_tbTaxCodes
+                                            .Where(t => t.TaxTypeCode == (short)NodeEnum.TaxType.VAT)
+                                            .OrderBy(t => t.TaxCode)
+                                            .Select(t => t.TaxCode)
+                                            .FirstAsync();
+
+                    TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == TaxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
+                }
+
+                Cash_PaymentsUnposted = new Cash_vwPaymentsUnposted
+                {
+                    CashAccountCode = CashAccountCode,
+                    AccountCode = AccountCode,
+                    CashCode = CashCode,
+                    TaxCode = TaxCode,
+                    PaidOn = DateTime.Today,
+                    UserId = await profile.UserId(UserManager.GetUserId(User)),
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
+                    IsProfitAndLoss = false
+                };
+
+                Cash_PaymentsUnposted.UpdatedBy = Cash_PaymentsUnposted.InsertedBy;
+
+                Orgs orgs = new(NodeContext, AccountCode);
+
+                var balance = await orgs.BalanceOutstanding();
+
+                if (balance < 0)
+                    Cash_PaymentsUnposted.PaidOutValue = Math.Abs(balance);
+                else
+                    Cash_PaymentsUnposted.PaidInValue = balance;
+
+                await SetViewData();
+
+                return Page();
             }
-
-            Profile profile = new(NodeContext);
-
-            Cash_PaymentsUnposted = new Cash_vwPaymentsUnposted
+            catch (Exception e)
             {
-                CashAccountCode = CashAccountCode,
-                AccountCode = AccountCode,
-                CashCode = CashCode,
-                TaxCode = TaxCode,
-                PaidOn = DateTime.Today,
-                UserId = await profile.UserId(UserManager.GetUserId(User)),
-                UpdatedBy = await profile.UserName(UserManager.GetUserId(User)),
-                IsProfitAndLoss = false
-            };
-
-            Cash_PaymentsUnposted.InsertedBy = Cash_PaymentsUnposted.UpdatedBy;
-
-            Orgs orgs = new (NodeContext, AccountCode);
-
-            var balance = await orgs.BalanceOutstanding();
-
-            if (balance < 0)
-                Cash_PaymentsUnposted.PaidOutValue = Math.Abs(balance);
-            else
-                Cash_PaymentsUnposted.PaidInValue = balance;
-
-            await SetViewData();
-
-            return Page();
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            CashAccounts cashAccounts = new (NodeContext);
-            Cash_PaymentsUnposted.PaymentCode = await cashAccounts.NextPaymentCode();
+            try
+            {
+                CashAccounts cashAccounts = new(NodeContext);
 
-            Cash_PaymentsUnposted.UpdatedOn = DateTime.Now;
-            Cash_PaymentsUnposted.InsertedOn = DateTime.Now;
+                Cash_PaymentsUnposted.CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstAsync();
+                Cash_PaymentsUnposted.PaymentCode = await cashAccounts.NextPaymentCode();
+                Cash_PaymentsUnposted.AccountCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountName == OrganisationName).Select(o => o.AccountCode).FirstAsync();
 
-            if (!ModelState.IsValid || (Cash_PaymentsUnposted.PaidInValue + Cash_PaymentsUnposted.PaidOutValue == 0))
-                return Page();
+                if (InputMode == 1)
+                {
+                    Cash_PaymentsUnposted.CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstOrDefaultAsync();
+                    Cash_PaymentsUnposted.TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstOrDefaultAsync();
+                }
 
-            NodeContext.Cash_PaymentsUnposted.Add(Cash_PaymentsUnposted);
-            await NodeContext.SaveChangesAsync();
+                Cash_PaymentsUnposted.UpdatedOn = DateTime.Now;
+                Cash_PaymentsUnposted.InsertedOn = DateTime.Now;
 
-            RouteValueDictionary route = new ();
-            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+                if (!ModelState.IsValid || (Cash_PaymentsUnposted.PaidInValue + Cash_PaymentsUnposted.PaidOutValue == 0)
+                        || (Cash_PaymentsUnposted.PaidInValue != 0 && Cash_PaymentsUnposted.PaidOutValue != 0))
+                    return Page();
 
-            return RedirectToPage("./Index", route);
+                NodeContext.Cash_PaymentsUnposted.Add(Cash_PaymentsUnposted);
+                await NodeContext.SaveChangesAsync();
+
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+
+                return RedirectToPage("./Index", route);
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
-        public IActionResult OnPostNewAccountCode()
+        public async Task<IActionResult> OnPostNewAccountCode()
         {
-            SaveSession();    
-            return LocalRedirect(@"/Org/Edit/Create?returnUrl=/Cash/PaymentEntry/Create");
+            await SaveSession();    
+            return LocalRedirect(@"/Org/Update/Create?returnUrl=/Cash/PaymentEntry/Create");
         }
 
-        public IActionResult OnPostGetAccountCode()
+        public async Task<IActionResult> OnPostGetAccountCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Org/Index?returnUrl=/Cash/PaymentEntry/Create");
         }
 
-        public IActionResult OnPostGetCashCode()
+        public async Task<IActionResult> OnPostGetCashCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Cash/CashCode/Index?returnUrl=/Cash/PaymentEntry/Create");
         }
 
-        public IActionResult OnPostNewCashCode()
+        public async Task<IActionResult> OnPostNewCashCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Cash/CashCode/Create?returnUrl=/Cash/PaymentEntry/Create");
         }
 
-        public IActionResult OnPostGetTaxCode()
+        public async Task<IActionResult> OnPostGetTaxCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/PaymentEntry/Create");
         }
 
-        public IActionResult OnPostNewTaxCode()
+        public async Task<IActionResult> OnPostNewTaxCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/PaymentEntry/Create");
         }
 
 
-        void SaveSession()
+        async Task SaveSession()
         {
             try
             {
                 CashAccountCode = Cash_PaymentsUnposted?.CashAccountCode;
-                AccountCode = Cash_PaymentsUnposted?.AccountCode;
-                TaxCode = Cash_PaymentsUnposted?.TaxCode;
-                CashCode = Cash_PaymentsUnposted?.CashCode;
+                AccountCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountName == OrganisationName).Select(o => o.AccountCode).FirstAsync();
+                CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
+                TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
             }
             catch
             {

@@ -1,0 +1,155 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Update.EditModel
+@{ ViewData["Title"] = "Edit Invoice"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Invoice_Header.AccountName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Header.UserName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Header.UserName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Header.InvoiceNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Header.InvoiceNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Header.InvoiceValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Header.InvoiceValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Header.TaxValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Header.TaxValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Header.PaidValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Header.PaidValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Header.PaidTaxValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Header.PaidTaxValue)
+        </dd>
+    </dl>
+</div>
+
+<h3>Header</h3>
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.InvoiceTypeCode" class="control-label"></label>
+                <p>
+                    <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.InvoiceStatusCode" class="control-label"></label>
+                <p>
+                    <select asp-for="InvoiceStatus" asp-items="Model.InvoiceStatuses" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.InvoicedOn" class="control-label"></label>
+                <input asp-for="Invoice_tbInvoice.InvoicedOn" class="form-control" />
+                <span asp-validation-for="Invoice_tbInvoice.InvoicedOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.DueOn" class="control-label"></label>
+                <input asp-for="Invoice_tbInvoice.DueOn" class="form-control" />
+                <span asp-validation-for="Invoice_tbInvoice.DueOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.ExpectedOn" class="control-label"></label>
+                <input asp-for="Invoice_tbInvoice.ExpectedOn" class="form-control" />
+                <span asp-validation-for="Invoice_tbInvoice.ExpectedOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.PaymentTerms" class="control-label"></label>
+                <textarea rows="2" wrap="soft" asp-for="Invoice_tbInvoice.PaymentTerms" class="form-control"></textarea>
+                <span asp-validation-for="Invoice_tbInvoice.PaymentTerms" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input asp-for="Invoice_tbInvoice.Printed" class="form-check-input" /> @Html.DisplayNameFor(model => model.Invoice_tbInvoice.Printed)
+                </label>
+                <span asp-validation-for="Invoice_tbInvoice.Printed" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Invoice_tbInvoice.Notes" class="control-label"></label>
+                <textarea rows="5" asp-for="Invoice_tbInvoice.Notes" class="form-control"></textarea>
+                <span asp-validation-for="Invoice_tbInvoice.Notes" class="text-danger"></span>
+            </div>
+
+            <input type="hidden" asp-for="Invoice_tbInvoice.UserId" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.InvoiceNumber" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.InvoiceTypeCode" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.InvoiceStatusCode" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.AccountCode" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.Spooled" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.PaidValue" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.PaidTaxValue" />
+
+            <div class="form-group">
+                <input type="submit" value="Save Header" class="btn btn-primary" />
+                <a asp-page="./Index" asp-route-invoiceNumber=@Model.Invoice_tbInvoice.InvoiceNumber class="btn btn-info">To List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h3>Details</h3>
+<p>
+    <a asp-page="./CreateItem" asp-route-invoiceNumber="@Model.Invoice_Header.InvoiceNumber" class="btn btn-outline-primary">New Item</a>
+</p>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Details[0].CashDescription)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Details[0].TotalValue)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Invoice_Details)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashDescription)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalValue)
+                </td>
+                <td>
+                    @{
+                        if (!item.IsTask)
+                        {
+                            <a asp-page="./EditItem" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-cashCode="@item.CashCode" class="btn btn-secondary"></a>
+                            <a asp-page="./DeleteItem" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-cashCode="@item.CashCode" class="btn btn-danger"></a>
+                        }
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+

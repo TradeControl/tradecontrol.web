@@ -65,49 +65,56 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
         public async Task OnGetAsync(string returnUrl, string cashTypeCode)
         {
-            await SetViewData();
-
-            if (!string.IsNullOrEmpty(returnUrl))
-                ReturnUrl = returnUrl;
-
-            var cashTypes = from tb in NodeContext.Cash_tbTypes
-                            orderby tb.CashType
-                            select tb.CashType;
-
-            CashTypes = new SelectList(await cashTypes.ToListAsync());
-
-            IQueryable<Cash_CategoriesList> categories = from c in NodeContext.Cash_tbCategories
-                                join p in NodeContext.Cash_tbModes on c.CashModeCode equals p.CashModeCode
-                                join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
-                                join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
-                                where c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode                              
-                                select new Cash_CategoriesList
-                                {
-                                    CategoryCode = c.CategoryCode,
-                                    Category = c.Category,
-                                    CategoryType = ct.CategoryType,
-                                    DisplayOrder = c.DisplayOrder,
-                                    CashTypeCode = c.CashTypeCode,
-                                    CashMode = p.CashMode,
-                                    CashType = t.CashType
-                                };
-
-            if (!string.IsNullOrEmpty(cashTypeCode))
+            try
             {
-                NodeEnum.CashType cashType = (NodeEnum.CashType)short.Parse(cashTypeCode);
-                categories = from tb in categories
-                             where tb.CashTypeCode == (short)cashType
-                             select tb;
+                await SetViewData();
+
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
+
+                var cashTypes = from tb in NodeContext.Cash_tbTypes
+                                orderby tb.CashType
+                                select tb.CashType;
+
+                CashTypes = new SelectList(await cashTypes.ToListAsync());
+
+                IQueryable<Cash_CategoriesList> categories = from c in NodeContext.Cash_tbCategories
+                                                             join p in NodeContext.Cash_tbModes on c.CashModeCode equals p.CashModeCode
+                                                             join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
+                                                             join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
+                                                             where c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode
+                                                             select new Cash_CategoriesList
+                                                             {
+                                                                 CategoryCode = c.CategoryCode,
+                                                                 Category = c.Category,
+                                                                 CategoryType = ct.CategoryType,
+                                                                 DisplayOrder = c.DisplayOrder,
+                                                                 CashTypeCode = c.CashTypeCode,
+                                                                 CashMode = p.CashMode,
+                                                                 CashType = t.CashType
+                                                             };
+
+                if (!string.IsNullOrEmpty(cashTypeCode))
+                {
+                    NodeEnum.CashType cashType = (NodeEnum.CashType)short.Parse(cashTypeCode);
+                    categories = from tb in categories
+                                 where tb.CashTypeCode == (short)cashType
+                                 select tb;
+                }
+
+                if (!string.IsNullOrEmpty(SearchString))
+                    categories = categories.Where(t => t.Category.Contains(SearchString));
+
+                if (!string.IsNullOrEmpty(CashType))
+                    categories = categories.Where(t => t.CashType == CashType);
+
+                Cash_Categories = await categories.OrderBy(t => t.CashTypeCode).OrderBy(t => t.DisplayOrder).ToListAsync();
             }
-
-            if (!string.IsNullOrEmpty(SearchString))
-                categories = categories.Where(t => t.Category.Contains(SearchString));
-
-            if (!string.IsNullOrEmpty(CashType))
-                categories = categories.Where(t => t.CashType == CashType);           
-
-            Cash_Categories = await categories.OrderBy(t => t.CashTypeCode).OrderBy(t => t.DisplayOrder).ToListAsync();
-
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

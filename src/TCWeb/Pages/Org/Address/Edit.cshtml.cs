@@ -36,62 +36,77 @@ namespace TradeControl.Web.Pages.Org.Address
 
         public async Task<IActionResult> OnGetAsync(string addressCode)
         {
-            if (string.IsNullOrEmpty(addressCode))
-                return NotFound();
+            try
+            {
+                if (string.IsNullOrEmpty(addressCode))
+                    return NotFound();
 
-            Org_tbAddress = await NodeContext.Org_tbAddresses.FirstOrDefaultAsync(t => t.AddressCode == addressCode);
+                Org_tbAddress = await NodeContext.Org_tbAddresses.FirstOrDefaultAsync(t => t.AddressCode == addressCode);
 
-            if (Org_tbAddress == null)
-                return NotFound();
+                if (Org_tbAddress == null)
+                    return NotFound();
 
-            var org = await NodeContext.Org_tbOrgs.FirstAsync(t => t.AccountCode == Org_tbAddress.AccountCode);
-            AccountName = org.AccountName;
-            IsAdminAddress = org.AddressCode == addressCode;
+                var org = await NodeContext.Org_tbOrgs.FirstAsync(t => t.AccountCode == Org_tbAddress.AccountCode);
+                AccountName = org.AccountName;
+                IsAdminAddress = org.AddressCode == addressCode;
 
-            await SetViewData();
-            return Page();
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
-
-            Profile profile = new(NodeContext);
-            Org_tbAddress.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
-
-            NodeContext.Attach(Org_tbAddress).State = EntityState.Modified;
-            
-            if (IsAdminAddress)
-            {
-                Org_tbOrg org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == Org_tbAddress.AccountCode);
-                if (org.AddressCode != Org_tbAddress.AddressCode)
-                {
-                    org.AddressCode = Org_tbAddress.AddressCode;
-                    NodeContext.Attach(org).State = EntityState.Modified;
-                }
-            }
-
             try
             {
-                await NodeContext.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return Page();
+
+                Profile profile = new(NodeContext);
+                Org_tbAddress.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
+
+                NodeContext.Attach(Org_tbAddress).State = EntityState.Modified;
+
+                if (IsAdminAddress)
+                {
+                    Org_tbOrg org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == Org_tbAddress.AccountCode);
+                    if (org.AddressCode != Org_tbAddress.AddressCode)
+                    {
+                        org.AddressCode = Org_tbAddress.AddressCode;
+                        NodeContext.Attach(org).State = EntityState.Modified;
+                    }
+                }
+
+                try
+                {
+                    await NodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await NodeContext.Org_tbAddresses.AnyAsync(e => e.AddressCode == Org_tbAddress.AddressCode))
+                        return NotFound();
+                    else
+                    {
+                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
+                        throw;
+                    }
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("accountCode", Org_tbAddress.AccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception e)
             {
-                if (!await NodeContext.Org_tbAddresses.AnyAsync(e => e.AddressCode == Org_tbAddress.AddressCode))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                NodeContext.ErrorLog(e);
+                throw;
             }
-
-            RouteValueDictionary route = new();
-            route.Add("accountCode", Org_tbAddress.AccountCode);
-
-            return RedirectToPage("./Index", route);
         }
 
     }

@@ -31,56 +31,72 @@ namespace TradeControl.Web.Pages.Admin.Users
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
-            if (id == null)
-                return NotFound();
-            else
+            try
             {
-                var AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
-
-                if (AspNet_UserRegistration == null || AspNet_UserRegistration.IsRegistered)
+                if (id == null)
                     return NotFound();
                 else
                 {
-                    Profile profile = new(NodeContext);
-                    var userName = await profile.UserName(UserManager.GetUserId(User));
+                    var AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.FirstOrDefaultAsync(m => m.Id == id);
 
-                    var calendarCodes = NodeContext.App_tbCalendars.OrderBy(c => c.CalendarCode).Select(c => c.CalendarCode);
-                    CalendarCodes = new SelectList(await calendarCodes.ToListAsync());
-
-                    Usr_tbUser = new()
+                    if (AspNet_UserRegistration == null || AspNet_UserRegistration.IsRegistered)
+                        return NotFound();
+                    else
                     {
-                        CalendarCode = await calendarCodes.FirstOrDefaultAsync(),
-                        EmailAddress = AspNet_UserRegistration.EmailAddress,
-                        LogonName = AspNet_UserRegistration.EmailAddress,
-                        IsEnabled = -1,
-                        InsertedBy = userName,
-                        UpdatedBy = userName,
-                        InsertedOn = DateTime.Now,
-                        UpdatedOn = DateTime.Now
-                    };
-                }
-            }
+                        Profile profile = new(NodeContext);
+                        var userName = await profile.UserName(UserManager.GetUserId(User));
 
-            await SetViewData();
-            return Page();
+                        var calendarCodes = NodeContext.App_tbCalendars.OrderBy(c => c.CalendarCode).Select(c => c.CalendarCode);
+                        CalendarCodes = new SelectList(await calendarCodes.ToListAsync());
+
+                        Usr_tbUser = new()
+                        {
+                            CalendarCode = await calendarCodes.FirstOrDefaultAsync(),
+                            EmailAddress = AspNet_UserRegistration.EmailAddress,
+                            LogonName = AspNet_UserRegistration.EmailAddress,
+                            IsEnabled = -1,
+                            InsertedBy = userName,
+                            UpdatedBy = userName,
+                            InsertedOn = DateTime.Now,
+                            UpdatedOn = DateTime.Now
+                        };
+                    }
+                }
+
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync(string id)
         {
-            if (id == null)
-                return NotFound();
+            try
+            {
+                if (id == null)
+                    return NotFound();
 
-            if (!ModelState.IsValid)
-                return Page();
+                if (!ModelState.IsValid)
+                    return Page();
 
-            NodeContext.Usr_tbUsers.Add(Usr_tbUser);
-            await NodeContext.SaveChangesAsync();
+                NodeContext.Usr_tbUsers.Add(Usr_tbUser);
+                await NodeContext.SaveChangesAsync();
 
-            var user = await UserManager.FindByIdAsync(id);
-            var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-            await UserManager.ConfirmEmailAsync(user, code);
+                var user = await UserManager.FindByIdAsync(id);
+                var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+                await UserManager.ConfirmEmailAsync(user, code);
 
-            return RedirectToPage("./Index");
+                return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

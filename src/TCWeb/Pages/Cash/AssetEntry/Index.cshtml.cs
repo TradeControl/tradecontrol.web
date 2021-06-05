@@ -32,37 +32,45 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 
         public async Task OnGetAsync(string cashAccountName, string cashAccountCode)
         {
-            var cashAccounts = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
-
-            CashAccounts = new SelectList(await cashAccounts.ToListAsync());
-
-            if (!string.IsNullOrEmpty(cashAccountName))
-                CashAccountName = cashAccountName;
-            else if (!string.IsNullOrEmpty(cashAccountCode))
-                CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
-            else if (await cashAccounts.AnyAsync())
-                CashAccountName = await cashAccounts.FirstOrDefaultAsync();
-
-            if (string.IsNullOrEmpty(cashAccountCode))
-                CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
-            else
-                CashAccountCode = cashAccountCode;
-
-            var isAuthorized = User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole);            
-
-            if (!isAuthorized)
+            try
             {
-                var profile = new Profile(NodeContext);
-                var user = await UserManager.GetUserAsync(User);
-                string userId = await profile.UserId(user.Id);
+                var cashAccounts = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
 
-                Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode && t.UserId == userId).ToListAsync();
+                CashAccounts = new SelectList(await cashAccounts.ToListAsync());
+
+                if (!string.IsNullOrEmpty(cashAccountName))
+                    CashAccountName = cashAccountName;
+                else if (!string.IsNullOrEmpty(cashAccountCode))
+                    CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                else if (await cashAccounts.AnyAsync())
+                    CashAccountName = await cashAccounts.FirstOrDefaultAsync();
+
+                if (string.IsNullOrEmpty(cashAccountCode))
+                    CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                else
+                    CashAccountCode = cashAccountCode;
+
+                var isAuthorized = User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole);
+
+                if (!isAuthorized)
+                {
+                    var profile = new Profile(NodeContext);
+                    var user = await UserManager.GetUserAsync(User);
+                    string userId = await profile.UserId(user.Id);
+
+                    Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode && t.UserId == userId).ToListAsync();
+                }
+                else
+                    Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode).ToListAsync();
+
+
+                await SetViewData();
             }
-            else 
-                Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode).ToListAsync();
-
-
-            await SetViewData();
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
 

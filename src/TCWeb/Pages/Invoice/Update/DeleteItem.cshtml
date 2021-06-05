@@ -1,0 +1,59 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Update.DeleteItemModel
+@{ ViewData["Title"] = "Delete Item"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Invoice_Detail.AccountName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.InvoiceNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.InvoiceNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.CashDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.CashDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.ItemReference)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.ItemReference)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.InvoiceValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.InvoiceValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.TaxValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.TaxValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.TaxDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.TaxDescription)
+        </dd>
+    </dl>
+</div>
+
+<form method="post">
+    <input type="hidden" asp-for="Invoice_Detail.InvoiceNumber" />
+    <input type="hidden" asp-for="Invoice_Detail.CashCode" />
+    <input type="submit" value="DELETE" class="btn btn-danger" />
+    <a asp-page="./Edit" asp-route-invoiceNumber="@Model.Invoice_Detail.InvoiceNumber" class="btn btn-info">To Header</a>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

@@ -1,7 +1,7 @@
 ﻿<header>
     <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
         <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index">@ViewData["CompanyName"]</a>
+            <a class="nav-link text-black-50" asp-area="" asp-page="/Index">@ViewData["CompanyName"]</a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                     aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -33,25 +33,27 @@
                         <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Invoicing</a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Raise Invoices and Credits</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Raise/Index">Raise</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Invoice Register</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Register/Index">Register</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Cash Code Summary</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Register/Summary">Summary</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Unpaid Income and Expense</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Register/Unpaid">Unpaid</a>
                             </li>
-
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
+                            </li>
                         </ul>
                     </li>
                     <li class="dropdown">
                         <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Organisations</a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Edit/Index">Maintenance</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Update/Index">Maintenance</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Org/Enquiry/Index">Enquiries</a>
@@ -71,13 +73,7 @@
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Index">Profit and Loss</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Vat Statement</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Vat Totals</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Vat Details</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">VAT</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Index">Company Tax</a>
@@ -96,7 +92,10 @@
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Index">Administration</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">User Registration</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
                             </li>
                         </ul>
                     </li>

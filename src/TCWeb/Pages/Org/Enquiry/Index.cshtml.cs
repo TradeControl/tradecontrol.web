@@ -36,38 +36,45 @@ namespace TradeControl.Web.Pages.Org.Enquiry
 
         public async Task OnGetAsync(string accountCode, string organisationType)
         {
-            await SetViewData();
-
-            var orgTypes = from tb in NodeContext.Org_tbTypes
-                           orderby tb.OrganisationType
-                           select tb.OrganisationType;
-
-            OrganisationTypes = new SelectList(await orgTypes.ToListAsync());
-            if (!string.IsNullOrEmpty(organisationType))
-                OrganisationType = organisationType;
-            else if (string.IsNullOrEmpty(OrganisationType))
-                OrganisationType = orgTypes.First();
-
-            var accounts = from tb in NodeContext.Org_AccountLookup select tb;
-
-            if (!string.IsNullOrEmpty(accountCode))
+            try
             {
-                OrganisationType = await (from org in NodeContext.Org_tbOrgs
-                                          join tp in NodeContext.Org_tbTypes on org.OrganisationTypeCode equals tp.OrganisationTypeCode
-                                          where org.AccountCode == accountCode
-                                          select tp.OrganisationType).FirstOrDefaultAsync();
+                await SetViewData();
 
-                accounts = accounts.Where(a => a.AccountCode == accountCode);
+                var orgTypes = from tb in NodeContext.Org_tbTypes
+                               orderby tb.OrganisationType
+                               select tb.OrganisationType;
+
+                OrganisationTypes = new SelectList(await orgTypes.ToListAsync());
+                if (!string.IsNullOrEmpty(organisationType))
+                    OrganisationType = organisationType;
+                else if (string.IsNullOrEmpty(OrganisationType))
+                    OrganisationType = orgTypes.First();
+
+                var accounts = from tb in NodeContext.Org_AccountLookup select tb;
+
+                if (!string.IsNullOrEmpty(accountCode))
+                {
+                    OrganisationType = await (from org in NodeContext.Org_tbOrgs
+                                              join tp in NodeContext.Org_tbTypes on org.OrganisationTypeCode equals tp.OrganisationTypeCode
+                                              where org.AccountCode == accountCode
+                                              select tp.OrganisationType).FirstOrDefaultAsync();
+
+                    accounts = accounts.Where(a => a.AccountCode == accountCode);
+                }
+                else
+                    accounts = accounts.Where(a => a.OrganisationType == OrganisationType);
+
+                if (!string.IsNullOrEmpty(SearchString))
+                    accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
+
+
+                Org_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
             }
-            else 
-                accounts = accounts.Where(a => a.OrganisationType == OrganisationType);
-
-            if (!string.IsNullOrEmpty(SearchString))
-                accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
-
-
-            Org_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
-
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
     }

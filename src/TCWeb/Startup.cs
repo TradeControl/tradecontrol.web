@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 
 using Wangkanai.Detection.Models;
 using TradeControl.Web.Data;
+using System.Globalization;
 
 namespace TradeControl.Web
 {
@@ -90,6 +91,8 @@ namespace TradeControl.Web
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
             });
+
+
         }
 
 

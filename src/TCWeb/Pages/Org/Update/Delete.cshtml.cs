@@ -13,7 +13,7 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Org.Edit
+namespace TradeControl.Web.Pages.Org.Update
 {
     [Authorize(Roles = "Administrators, Managers")]
     public class DeleteModel : DI_BasePageModel
@@ -47,22 +47,30 @@ namespace TradeControl.Web.Pages.Org.Edit
 
         public async Task<IActionResult> OnPostAsync(string accountCode)
         {
-            if (accountCode == null)
-                return NotFound();
-
-            OrgAccount = await NodeContext.Org_Datasheet.FindAsync(accountCode);
-
-            if (OrgAccount != null)
+            try
             {
-                var tbOrg = await NodeContext.Org_tbOrgs.FindAsync(accountCode);
-                NodeContext.Org_tbOrgs.Remove(tbOrg);
-                await NodeContext.SaveChangesAsync();
+                if (accountCode == null)
+                    return NotFound();
+
+                OrgAccount = await NodeContext.Org_Datasheet.FindAsync(accountCode);
+
+                if (OrgAccount != null)
+                {
+                    var tbOrg = await NodeContext.Org_tbOrgs.FindAsync(accountCode);
+                    NodeContext.Org_tbOrgs.Remove(tbOrg);
+                    await NodeContext.SaveChangesAsync();
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("OrganisationType", OrgAccount.OrganisationType);
+
+                return RedirectToPage("./Index", route);
             }
-
-            RouteValueDictionary route = new();
-            route.Add("OrganisationType", OrgAccount.OrganisationType);
-
-            return RedirectToPage("./Index", route);
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

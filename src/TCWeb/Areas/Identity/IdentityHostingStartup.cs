@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Authorization;
+using System.Globalization;
 
 [assembly: HostingStartup(typeof(TradeControl.Web.Areas.Identity.IdentityHostingStartup))]
 namespace TradeControl.Web.Areas.Identity
@@ -70,6 +71,12 @@ namespace TradeControl.Web.Areas.Identity
                 });
 
                 services.AddDistributedMemoryCache();
+
+                string cultureName = context.Configuration.GetSection("Settings")["CultureName"];
+                var cultureInfo = new CultureInfo(cultureName);
+
+                CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+                CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
                 /*
                 double sessionTimeSpan = double.Parse(context.Configuration.GetSection("Settings")["SessionTimeSpan"]);

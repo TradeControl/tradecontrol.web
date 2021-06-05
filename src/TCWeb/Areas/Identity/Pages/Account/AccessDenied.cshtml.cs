@@ -2,15 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using TradeControl.Web.Areas.Identity.Data;
+using TradeControl.Web.Data;
+using TradeControl.Web.Pages;
 
 namespace TradeControl.Web.Areas.Identity.Pages.Account
 {
-    public class AccessDeniedModel : PageModel
+    public class AccessDeniedModel : DI_BasePageModel
     {
-        public void OnGet()
-        {
+        public AccessDeniedModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
 
+        public async Task OnGetAsync()
+        {
+            await SetViewData();
         }
     }
 }

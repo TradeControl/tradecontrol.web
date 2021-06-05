@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -19,8 +20,13 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class EditModel : DI_BasePageModel
     {
-        public SelectList CashCodes { get; set; }
-        public SelectList TaxCodes { get; set; }
+        public SelectList CashDescriptions { get; set; }
+        [BindProperty]
+        public string CashDescription { get; set; }
+
+        public SelectList TaxDescriptions { get; set; }
+        [BindProperty]
+        public string TaxDescription { get; set; }
 
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
@@ -90,129 +96,159 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
 
-        public async Task<IActionResult> OnGetAsync(string paymentCode, string cashcode, string taxcode)
+        public async Task<IActionResult> OnGetAsync(string paymentCode, string cashCode, string taxCode)
         {
-            if (string.IsNullOrEmpty(paymentCode) && string.IsNullOrEmpty(PaymentCode))
-                return NotFound();
-            else if (!string.IsNullOrEmpty(paymentCode))
+            try
             {
-                PaymentCode = paymentCode;
-                CashCode = string.Empty;
-                TaxCode = string.Empty;
-            }
-
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == PaymentCode);
-
-            if (Cash_PaymentsUnposted == null)
-                return NotFound();
-            else
-            {
-                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                if (string.IsNullOrEmpty(paymentCode) && string.IsNullOrEmpty(PaymentCode))
+                    return NotFound();
+                else if (!string.IsNullOrEmpty(paymentCode))
                 {
-                    var profile = new Profile(NodeContext);
-                    var user = await UserManager.GetUserAsync(User);
-                    if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
-                        return Forbid();
+                    PaymentCode = paymentCode;
+                    CashCode = string.Empty;
+                    TaxCode = string.Empty;
                 }
 
-            }
+                Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == PaymentCode);
 
-            if (Cash_PaymentsUnposted.CashCode != null)
+                if (Cash_PaymentsUnposted == null)
+                    return NotFound();
+                else
+                {
+                    if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                    {
+                        var profile = new Profile(NodeContext);
+                        var user = await UserManager.GetUserAsync(User);
+                        if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
+                            return Forbid();
+                    }
+
+                }
+
+                if (Cash_PaymentsUnposted.CashCode != null)
+                {
+                    var cashDescriptions = from t in NodeContext.Cash_CodeLookup
+                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank
+                                           orderby t.CashDescription
+                                           select t.CashDescription;
+
+                    CashDescriptions = new SelectList(await cashDescriptions.ToListAsync());
+
+                    if (!string.IsNullOrEmpty(cashCode))
+                        CashCode = cashCode;
+                    else if (string.IsNullOrEmpty(CashCode))
+                        CashCode = Cash_PaymentsUnposted.CashCode;
+
+                    CashDescription = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == CashCode).Select(c => c.CashDescription).FirstOrDefaultAsync();
+
+                    var taxDescriptions = from t in NodeContext.App_TaxCodes
+                                          orderby t.TaxDescription
+                                          select t.TaxDescription;
+
+                    TaxDescriptions = new SelectList(await taxDescriptions.ToListAsync());
+
+                    if (!string.IsNullOrEmpty(taxCode))
+                        TaxCode = taxCode;
+                    else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
+                    {
+                        CashCodes cash = new(NodeContext, CashCode);
+                        TaxCode = cash.TaxCode;
+                    }
+                    else
+                        TaxCode = Cash_PaymentsUnposted.TaxCode;
+
+                    TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == TaxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
+                }
+
+                await SetViewData();
+
+                return Page();
+            }
+            catch (Exception e)
             {
-                var cashCodes = from t in NodeContext.Cash_CodeLookup
-                                where t.CashTypeCode < (short)NodeEnum.CashType.Bank
-                                orderby t.CashCode
-                                select t.CashCode;
-
-                CashCodes = new SelectList(await cashCodes.Distinct().ToListAsync());
-
-                var taxCodes = from t in NodeContext.App_TaxCodes
-                               orderby t.TaxCode
-                               select t.TaxCode;
-
-                TaxCodes = new SelectList(await taxCodes.Distinct().ToListAsync());
+                NodeContext.ErrorLog(e);
+                throw;
             }
-
-            if (!string.IsNullOrEmpty(cashcode))
-                CashCode = cashcode;
-
-            if (!string.IsNullOrEmpty(taxcode))
-                TaxCode = taxcode;
-
-            if (!string.IsNullOrEmpty(CashCode))
-                Cash_PaymentsUnposted.CashCode = CashCode;
-
-            if (!string.IsNullOrEmpty(TaxCode))
-                Cash_PaymentsUnposted.TaxCode = TaxCode;
-
-            await SetViewData();
-
-            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
-
-            Profile profile = new(NodeContext);
-            Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
-
-            NodeContext.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
-
             try
             {
-                await NodeContext.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return Page();
+
+                Profile profile = new(NodeContext);
+
+                if (!string.IsNullOrEmpty(Cash_PaymentsUnposted.CashCode))
+                {
+                    Cash_PaymentsUnposted.CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
+                    Cash_PaymentsUnposted.TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
+                }
+
+                Cash_PaymentsUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
+
+                NodeContext.Attach(Cash_PaymentsUnposted).State = EntityState.Modified;
+
+                try
+                {
+                    await NodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await NodeContext.Cash_PaymentsUnposted.AnyAsync(e => e.PaymentCode == Cash_PaymentsUnposted.PaymentCode))
+                        return NotFound();
+                    else
+                    {
+                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
+                        throw;
+                    }
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception e)
+
             {
-                if (!await NodeContext.Cash_PaymentsUnposted.AnyAsync(e => e.PaymentCode == Cash_PaymentsUnposted.PaymentCode))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                NodeContext.ErrorLog(e);
+                throw;
             }
-
-            RouteValueDictionary route = new ();
-            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
-
-            return RedirectToPage("./Index", route);
         }
 
 
-        public IActionResult OnPostGetCashCode()
+        public async Task<IActionResult> OnPostGetCashCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Cash/CashCode/Index?returnUrl=/Cash/PaymentEntry/Edit");
         }
 
-        public IActionResult OnPostNewCashCode()
+        public async Task<IActionResult> OnPostNewCashCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Cash/CashCode/Create?returnUrl=/Cash/PaymentEntry/Edit");
         }
 
-        public IActionResult OnPostGetTaxCode()
+        public async Task<IActionResult> OnPostGetTaxCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/PaymentEntry/Edit");
         }
 
-        public IActionResult OnPostNewTaxCode()
+        public async Task<IActionResult> OnPostNewTaxCode()
         {
-            SaveSession();
+            await SaveSession();
             return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/PaymentEntry/Edit");
         }
 
-        void SaveSession()
+        async Task SaveSession()
         {
             try
             {
-                TaxCode = Cash_PaymentsUnposted?.TaxCode;
-                CashCode = Cash_PaymentsUnposted?.CashCode;
+                CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
+                TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
             }
             catch
             {

@@ -1,0 +1,52 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.EventLog.DeleteModel
+@{ ViewData["Title"] = "Delete Event"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.App_EventLog.LogCode)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_EventLog.LoggedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_EventLog.LoggedOn)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_EventLog.EventType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_EventLog.EventType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_EventLog.EventMessage)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_EventLog.EventMessage)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_EventLog.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_EventLog.InsertedBy)
+        </dd>
+
+
+    </dl>
+</div>
+
+<h3 class="text-danger">Warning</h3>
+<p class="text-danger">
+    All events on or before @Model.App_EventLog.LoggedOn will be deleted.
+</p>
+<form method="post">
+    <input type="hidden" asp-for="App_EventLog.LogCode" />
+    <input type="submit" value="DELETE" class="btn btn-danger" />
+    <a asp-page="./Index" class="btn btn-info">To List</a>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

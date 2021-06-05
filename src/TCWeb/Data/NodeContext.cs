@@ -201,6 +201,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Org_vwInvoiceSummary> Org_InvoiceSummaries { get; set; }
         public virtual DbSet<Org_vwInvoiceTask> Org_InvoiceTasks { get; set; }
         public virtual DbSet<Invoice_vwItem> Invoice_Items { get; set; }
+        public virtual DbSet<Invoice_vwEntry> Invoice_Entries { get; set; }
         public virtual DbSet<Org_vwJobTitle> Org_JobTitles { get; set; }
         public virtual DbSet<Org_vwListActive> Org_ListActive { get; set; }
         public virtual DbSet<Org_vwListAll> Org_ListAll { get; set; }
@@ -238,6 +239,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwRegisterPurchase> Invoice_RegisterPurchases { get; set; }
         public virtual DbSet<Invoice_vwRegisterPurchaseTask> Invoice_RegisterPurchaseTasks { get; set; }
         public virtual DbSet<Invoice_vwRegisterPurchasesOverdue> Invoice_RegisterPurchasesOverdue { get; set; }
+        public virtual DbSet<Invoice_vwRegisterOverdue> Invoice_RegisterOverdue { get; set; }
         public virtual DbSet<Invoice_vwRegisterSale> Invoice_RegisterSales { get; set; }
         public virtual DbSet<Invoice_vwRegisterSaleTask> Invoice_RegisterSaleTasks { get; set; }
         public virtual DbSet<Invoice_vwRegisterSalesOverdue> Invoice_RegisterSalesOverdues { get; set; }
@@ -1092,9 +1094,9 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InvoicedOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.AccountCodeNavigation)
                     .WithMany(p => p.TbEntries)
@@ -1308,10 +1310,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InvoicedOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.HasOne(d => d.AccountCodeNavigation)
                     .WithMany(p => p.TbInvoices)
                     .HasForeignKey(d => d.AccountCode)
@@ -1341,10 +1339,6 @@ namespace TradeControl.Web.Data
             {
                 entity.HasKey(e => new { e.InvoiceNumber, e.CashCode })
                     .HasName("PK_Invoice_tbItem");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbItems)
@@ -2913,9 +2907,6 @@ namespace TradeControl.Web.Data
             {
                 entity.ToView("vwEventLog", "App");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
             });
 
             modelBuilder.Entity<Activity_vwExpenseCashCode>(entity =>
@@ -2996,6 +2987,11 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Invoice_vwItem>(entity =>
             {
                 entity.ToView("vwItems", "Invoice");
+            });
+
+            modelBuilder.Entity<Invoice_vwEntry>(entity =>
+            {
+                entity.ToView("vwEntry", "Invoice");
             });
 
             modelBuilder.Entity<Org_vwJobTitle>(entity =>
@@ -3223,6 +3219,11 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Invoice_vwRegisterPurchasesOverdue>(entity =>
             {
                 entity.ToView("vwRegisterPurchasesOverdue", "Invoice");
+            });
+
+            modelBuilder.Entity<Invoice_vwRegisterOverdue>(entity =>
+            {
+                entity.ToView("vwRegisterOverdue", "Invoice");
             });
 
             modelBuilder.Entity<Invoice_vwRegisterSale>(entity =>

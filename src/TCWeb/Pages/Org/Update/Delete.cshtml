@@ -1,5 +1,5 @@
 ﻿@page
-@model TradeControl.Web.Pages.Org.Edit.DeleteModel
+@model TradeControl.Web.Pages.Org.Update.DeleteModel
 
 @{ ViewData["Title"] = "Delete"; }
 
@@ -39,8 +39,8 @@
 
     <form method="post">
         <input type="hidden" asp-for="OrgAccount.AccountCode" />
-        <input type="submit" value="Delete" class="btn btn-danger" />
-        <a asp-page="./Index" asp-route-organisationType="@Model.OrgAccount.OrganisationType" class="btn btn-info">Back to List</a>
+        <input type="submit" value="DELETE" class="btn btn-danger" />
+        <a asp-page="./Index" asp-route-organisationType="@Model.OrgAccount.OrganisationType" class="btn btn-info">To List</a>
     </form>
 </div>
 

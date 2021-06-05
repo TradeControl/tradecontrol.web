@@ -29,46 +29,62 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
-            if (paymentCode == null)
-                return NotFound();
-
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
-
-            if (Cash_PaymentsUnposted == null)
-                return NotFound();
-            else
+            try
             {
-                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
-                {
-                    var profile = new Profile(NodeContext);
-                    var user = await UserManager.GetUserAsync(User);
-                    if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
-                        return Forbid();
-                }
+                if (paymentCode == null)
+                    return NotFound();
 
-                await SetViewData();
-                return Page();
+                Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+
+                if (Cash_PaymentsUnposted == null)
+                    return NotFound();
+                else
+                {
+                    if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                    {
+                        var profile = new Profile(NodeContext);
+                        var user = await UserManager.GetUserAsync(User);
+                        if (Cash_PaymentsUnposted.UserId != await profile.UserId(user.Id))
+                            return Forbid();
+                    }
+
+                    await SetViewData();
+                    return Page();
+                }
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
             }
 
         }
 
         public async Task<IActionResult> OnPostAsync(string paymentCode)
         {
-            if (paymentCode == null)
-                return NotFound();
-
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
-
-            if (Cash_PaymentsUnposted != null)
+            try
             {
-                NodeContext.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
-                await NodeContext.SaveChangesAsync();
-            }
+                if (paymentCode == null)
+                    return NotFound();
 
-            RouteValueDictionary route = new ();
-            route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
-                
-            return RedirectToPage("./Index", route);
+                Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
+
+                if (Cash_PaymentsUnposted != null)
+                {
+                    NodeContext.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
+                    await NodeContext.SaveChangesAsync();
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+
+                return RedirectToPage("./Index", route);
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

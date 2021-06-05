@@ -70,21 +70,29 @@ namespace TradeControl.Web.Pages.Org.CashAccount
 
         public async Task<IActionResult> OnPostAsync(string cashAccountCode)
         {
-            if (cashAccountCode == null)
-                return NotFound();
-
-            var cashAccount = await NodeContext.Org_tbAccounts.FindAsync(cashAccountCode);
-
-            if (cashAccount != null)
+            try
             {
-                NodeContext.Org_tbAccounts.Remove(cashAccount);
-                await NodeContext.SaveChangesAsync();
+                if (cashAccountCode == null)
+                    return NotFound();
+
+                var cashAccount = await NodeContext.Org_tbAccounts.FindAsync(cashAccountCode);
+
+                if (cashAccount != null)
+                {
+                    NodeContext.Org_tbAccounts.Remove(cashAccount);
+                    await NodeContext.SaveChangesAsync();
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("AccountType", AccountType);
+
+                return RedirectToPage("./Index", route);
             }
-
-            RouteValueDictionary route = new();
-            route.Add("AccountType", AccountType);
-
-            return RedirectToPage("./Index", route);
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

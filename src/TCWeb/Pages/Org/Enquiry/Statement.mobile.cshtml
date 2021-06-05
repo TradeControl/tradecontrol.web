@@ -20,9 +20,6 @@
                 @Html.DisplayNameFor(model => model.Org_Statement[0].Reference)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Org_Statement[0].Charge)
-            </th>
-            <th>
                 @Html.DisplayNameFor(model => model.Org_Statement[0].Balance)
             </th>
         </tr>
@@ -38,9 +35,6 @@
                     @Html.DisplayFor(modelItem => item.Reference)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.Charge)
-                </td>
-                <td>
                     @Html.DisplayFor(modelItem => item.Balance)
                 </td>
             </tr>
@@ -49,7 +43,7 @@
 </table>
 
 <p>
-    <a asp-page="./Index" asp-route-accountCode="@Model.Org_Account.AccountCode" class="btn btn-info">Back to List</a>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Org_Account.AccountCode" class="btn btn-info">To List</a>
 </p>
 
 @section Scripts {

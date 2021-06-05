@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace TradeControl.Web.Pages.Invoice
+namespace TradeControl.Web.Pages.Invoice.Update
 {
-    public class EditModel : PageModel
+    public class EmailConfirmModel : PageModel
     {
-        public void OnGet(string invoiceNumber, string returnUrl, string accountCode)
+        public void OnGet()
         {
         }
     }

@@ -31,44 +31,60 @@ namespace TradeControl.Web.Pages.Org.Contact
 
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {
-            if (string.IsNullOrEmpty(accountCode))
-                return NotFound();
-
-            var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
-
-            if (org == null)
-                return NotFound();
-            else
-                AccountName = org.AccountName;
-
-            Profile profile = new(NodeContext);
-            Org_tbContact = new()
+            try
             {
-                AccountCode = org.AccountCode,
-                InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
-                InsertedOn = DateTime.Now,
-                UpdatedOn = DateTime.Now
-            };
+                if (string.IsNullOrEmpty(accountCode))
+                    return NotFound();
 
-            Org_tbContact.UpdatedBy = Org_tbContact.InsertedBy;
+                var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
 
-            await SetViewData();
-            return Page();
+                if (org == null)
+                    return NotFound();
+                else
+                    AccountName = org.AccountName;
+
+                Profile profile = new(NodeContext);
+                Org_tbContact = new()
+                {
+                    AccountCode = org.AccountCode,
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
+                    InsertedOn = DateTime.Now,
+                    UpdatedOn = DateTime.Now
+                };
+
+                Org_tbContact.UpdatedBy = Org_tbContact.InsertedBy;
+
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
+            try
+            {
+                if (!ModelState.IsValid)
+                    return Page();
 
-            NodeContext.Org_tbContacts.Add(Org_tbContact);
+                NodeContext.Org_tbContacts.Add(Org_tbContact);
 
-            await NodeContext.SaveChangesAsync();
+                await NodeContext.SaveChangesAsync();
 
-            RouteValueDictionary route = new();
-            route.Add("AccountCode", Org_tbContact.AccountCode);
+                RouteValueDictionary route = new();
+                route.Add("AccountCode", Org_tbContact.AccountCode);
 
-            return RedirectToPage("./Index", route);
+                return RedirectToPage("./Index", route);
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

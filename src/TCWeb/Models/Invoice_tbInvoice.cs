@@ -33,29 +33,47 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         public string AccountCode { get; set; }
+        [Display(Name = "Type")]
         public short InvoiceTypeCode { get; set; }
+        [Display(Name = "Status")]
         public short InvoiceStatusCode { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Invoice Date")]
+        [DataType(DataType.Date)]
         public DateTime InvoicedOn { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Expected")]
+        [DataType(DataType.Date)]
         public DateTime ExpectedOn { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Due")]
+        [DataType(DataType.Date)]
         public DateTime DueOn { get; set; }
         [StringLength(100)]
+        [Display(Name = "Terms")]
         public string PaymentTerms { get; set; }
         [Column(TypeName = "ntext")]
+        [Display(Name = "Notes")]
         public string Notes { get; set; }
+        [Display(Name = "Sent?")]
         public bool Printed { get; set; }
+        [Display(Name = "Spooled?")]
         public bool Spooled { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [DataType(DataType.Currency)]
+        [Display(Name = "Invoice Value")]
         public decimal InvoiceValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [DataType(DataType.Currency)]
+        [Display(Name = "Tax Value")]
         public decimal TaxValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [DataType(DataType.Currency)]
+        [Display(Name = "Paid Value")]
         public decimal PaidValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [DataType(DataType.Currency)]
+        [Display(Name = "Paid Tax")]
         public decimal PaidTaxValue { get; set; }
 
         [ForeignKey(nameof(AccountCode))]

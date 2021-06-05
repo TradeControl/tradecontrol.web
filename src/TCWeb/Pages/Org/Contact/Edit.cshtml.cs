@@ -32,57 +32,72 @@ namespace TradeControl.Web.Pages.Org.Contact
 
         public async Task<IActionResult> OnGetAsync(string accountCode, string contactName)
         {
-            if (accountCode == null || contactName == null)
-                return NotFound();
-            
-            var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
-
-            if (org == null)
-                return NotFound();
-            else
-                AccountName = org.AccountName;
-
-            Org_tbContact = await NodeContext.Org_tbContacts.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.ContactName == contactName);
-
-            if (Org_tbContact == null)
-                return NotFound();
-            else
+            try
             {
-                await SetViewData();
-                return Page();
+                if (accountCode == null || contactName == null)
+                    return NotFound();
+
+                var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+
+                if (org == null)
+                    return NotFound();
+                else
+                    AccountName = org.AccountName;
+
+                Org_tbContact = await NodeContext.Org_tbContacts.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.ContactName == contactName);
+
+                if (Org_tbContact == null)
+                    return NotFound();
+                else
+                {
+                    await SetViewData();
+                    return Page();
+                }
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
             }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
-
-            Profile profile = new(NodeContext);
-            Org_tbContact.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
-
-            NodeContext.Attach(Org_tbContact).State = EntityState.Modified;
-
             try
             {
-                await NodeContext.SaveChangesAsync();
+                if (!ModelState.IsValid)
+                    return Page();
+
+                Profile profile = new(NodeContext);
+                Org_tbContact.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
+
+                NodeContext.Attach(Org_tbContact).State = EntityState.Modified;
+
+                try
+                {
+                    await NodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await NodeContext.Org_tbContacts.AnyAsync(e => e.AccountCode == Org_tbContact.AccountCode && e.ContactName == Org_tbContact.ContactName))
+                        return NotFound();
+                    else
+                    {
+                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
+                        throw;
+                    }
+                }
+
+                RouteValueDictionary route = new();
+                route.Add("accountCode", Org_tbContact.AccountCode);
+
+                return RedirectToPage("./Index", route);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception e)
             {
-                if (!await NodeContext.Org_tbContacts.AnyAsync(e => e.AccountCode == Org_tbContact.AccountCode && e.ContactName == Org_tbContact.ContactName))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                NodeContext.ErrorLog(e);
+                throw;
             }
-
-            RouteValueDictionary route = new();
-            route.Add("accountCode", Org_tbContact.AccountCode);
-
-            return RedirectToPage("./Index", route);
         }
 
     }

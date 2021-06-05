@@ -30,24 +30,31 @@ namespace TradeControl.Web.Pages.Org.Enquiry
 
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {
-            if (string.IsNullOrEmpty(accountCode))
-                return NotFound();
+            try
+            {
+                if (string.IsNullOrEmpty(accountCode))
+                    return NotFound();
 
-            Org_Account = await NodeContext.Org_AccountLookup.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                Org_Account = await NodeContext.Org_AccountLookup.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
 
-            if (Org_Account == null)
-                return NotFound();
+                if (Org_Account == null)
+                    return NotFound();
 
-            var invoices = from tb in NodeContext.Invoice_Register
-                           where tb.AccountCode == accountCode
-                           orderby tb.InvoicedOn descending
-                           select tb;
+                var invoices = from tb in NodeContext.Invoice_Register
+                               where tb.AccountCode == accountCode
+                               orderby tb.InvoicedOn descending
+                               select tb;
 
-            Org_Invoices = await invoices.ToListAsync();
+                Org_Invoices = await invoices.ToListAsync();
 
-            await SetViewData();
-            return Page();
-
+                await SetViewData();
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

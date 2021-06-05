@@ -1,12 +1,3 @@
 {
-  "dependencies": {
-    "mssql1": {
-      "type": "mssql.local",
-      "connectionId": "TradeControlWebContextConnection"
-    },
-    "mssql2": {
-      "type": "mssql.local",
-      "connectionId": "TradeControlWebContext"
-    }
-  }
+  "dependencies": {}
 }

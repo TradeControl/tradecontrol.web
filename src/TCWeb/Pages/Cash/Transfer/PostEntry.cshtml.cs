@@ -29,39 +29,54 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
-            if (paymentCode == null)
-                return NotFound();
-
-            Cash_TransfersUnposted = await NodeContext.Cash_TransfersUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
-
-            if (Cash_TransfersUnposted == null)
-                return NotFound();
-            else
+            try
             {
-                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                if (paymentCode == null)
+                    return NotFound();
+
+                Cash_TransfersUnposted = await NodeContext.Cash_TransfersUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+
+                if (Cash_TransfersUnposted == null)
+                    return NotFound();
+                else
                 {
-                    var profile = new Profile(NodeContext);
-                    var user = await UserManager.GetUserAsync(User);
-                    if (Cash_TransfersUnposted.UserId != await profile.UserId(user.Id))
-                        return Forbid();
+                    if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                    {
+                        var profile = new Profile(NodeContext);
+                        var user = await UserManager.GetUserAsync(User);
+                        if (Cash_TransfersUnposted.UserId != await profile.UserId(user.Id))
+                            return Forbid();
+                    }
+
+                    await SetViewData();
+                    return Page();
                 }
-
-                await SetViewData();
-                return Page();
             }
-
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync(string paymentCode)
         {
-            if (paymentCode == null)
-                return NotFound();
+            try
+            {
+                if (paymentCode == null)
+                    return NotFound();
 
-            CashAccounts cashAccounts = new (NodeContext);
-            if (await cashAccounts.PostTransfer(paymentCode))
-                return RedirectToPage("./Index");
-            else
-                throw new Exception("Transfer failed! Consult logs");
+                CashAccounts cashAccounts = new(NodeContext);
+                if (await cashAccounts.PostTransfer(paymentCode))
+                    return RedirectToPage("./Index");
+                else
+                    throw new Exception($"Transfer failed for payment code {paymentCode}!");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

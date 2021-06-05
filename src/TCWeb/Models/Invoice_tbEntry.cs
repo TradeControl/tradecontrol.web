@@ -14,26 +14,38 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(10)]
+        [Display(Name = "UID")]
         public string UserId { get; set; }
         [Key]
         [StringLength(10)]
+        [Display(Name = "A/c")]
         public string AccountCode { get; set; }
         [Key]
         [StringLength(50)]
+        [Display(Name = "Cash Code")]
         public string CashCode { get; set; }
+        [Display(Name = "Type")]
         public short InvoiceTypeCode { get; set; }
         [Column(TypeName = "datetime")]
+        [Display(Name = "Invoiced")]
+        [DataType(DataType.Date)]
         public DateTime InvoicedOn { get; set; }
         [StringLength(10)]
+        [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }
         [Column(TypeName = "ntext")]
+        [Display(Name = "Ref.")]
         public string ItemReference { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Total Value (Inc. VAT)")]
+        [DataType(DataType.Currency)]
         public decimal TotalValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Invoice Value")]
+        [DataType(DataType.Currency)]
         public decimal InvoiceValue { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
+        //[Required]
+        //public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
         [InverseProperty(nameof(Org_tbOrg.TbEntries))]

@@ -1,0 +1,91 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Update.IndexModel
+@{ ViewData["Title"] = "Invoice Management"; }
+<h1>@ViewData["Title"]</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceNumber)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceStatus)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].AccountName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].Printed)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoicedOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceValue)
+            </th>
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Invoice_Headers)
+        {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceNumber)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceStatus)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceType)
+            </td>
+            <td>
+                <a asp-page="./Index" asp-route-accountCode="@item.AccountCode">
+                    @Html.DisplayFor(modelItem => item.AccountName)
+                </a>
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Printed)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoicedOn)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TotalInvoiceValue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TotalPaidValue)
+            </td>
+            <td>
+                <a asp-page="/Org/Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
+                <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
+                @{
+                    if (item.InvoiceStatusCode <= 1)
+                    {
+                        <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger"></a>
+                    }
+                    if (!item.Printed)
+                    {
+                        <a asp-page="./Email" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>
+                    }
+                }
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>
+
+<form method="post">
+    <p>
+        <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary">Mark all as sent</button>
+    </p>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

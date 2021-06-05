@@ -46,48 +46,64 @@ namespace TradeControl.Web.Pages.Admin.TaxCode
 
         public async Task<IActionResult> OnGetAsync(string returnUrl)
         {
-            await SetViewData();
-
-            if (!string.IsNullOrEmpty(returnUrl))
-                ReturnUrl = returnUrl;
-
-            var roundings = NodeContext.App_tbRoundings.OrderBy(r => r.RoundingCode).Select(r => r.Rounding);
-            Roundings = new SelectList(await roundings.ToListAsync());
-            Rounding = await roundings.FirstOrDefaultAsync();
-
-            var taxtypes = NodeContext.App_TaxCodeTypes.OrderBy(t => t.TaxTypeCode).Select(t => t.TaxType);
-            TaxTypes = new SelectList(await taxtypes.ToListAsync());
-            TaxType = await roundings.FirstOrDefaultAsync();
-
-            Profile profile = new(NodeContext);
-            var userName = await profile.UserName(UserManager.GetUserId(User));
-
-            App_tbTaxCode = new App_tbTaxCode()
+            try
             {
-                RoundingCode = (short)NodeEnum.RoundingCode.Round,
-                TaxTypeCode = (short)NodeEnum.TaxType.VAT,
-                UpdatedBy = userName,
-                UpdatedOn = DateTime.Now
-            };
+                await SetViewData();
 
-            return Page();
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
+
+                var roundings = NodeContext.App_tbRoundings.OrderBy(r => r.RoundingCode).Select(r => r.Rounding);
+                Roundings = new SelectList(await roundings.ToListAsync());
+                Rounding = await roundings.FirstOrDefaultAsync();
+
+                var taxtypes = NodeContext.App_TaxCodeTypes.OrderBy(t => t.TaxTypeCode).Select(t => t.TaxType);
+                TaxTypes = new SelectList(await taxtypes.ToListAsync());
+                TaxType = await roundings.FirstOrDefaultAsync();
+
+                Profile profile = new(NodeContext);
+                var userName = await profile.UserName(UserManager.GetUserId(User));
+
+                App_tbTaxCode = new App_tbTaxCode()
+                {
+                    RoundingCode = (short)NodeEnum.RoundingCode.Round,
+                    TaxTypeCode = (short)NodeEnum.TaxType.VAT,
+                    UpdatedBy = userName,
+                    UpdatedOn = DateTime.Now
+                };
+
+                return Page();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
+            try
+            {
+                if (!ModelState.IsValid)
+                    return Page();
 
-            App_tbTaxCode.RoundingCode = await NodeContext.App_tbRoundings.Where(r => r.Rounding == Rounding).Select(r => r.RoundingCode).FirstAsync();
-            App_tbTaxCode.TaxTypeCode = await NodeContext.App_TaxCodeTypes.Where(t => t.TaxType == TaxType).Select(t => t.TaxTypeCode).FirstAsync();
+                App_tbTaxCode.RoundingCode = await NodeContext.App_tbRoundings.Where(r => r.Rounding == Rounding).Select(r => r.RoundingCode).FirstAsync();
+                App_tbTaxCode.TaxTypeCode = await NodeContext.App_TaxCodeTypes.Where(t => t.TaxType == TaxType).Select(t => t.TaxTypeCode).FirstAsync();
 
-            NodeContext.App_tbTaxCodes.Add(App_tbTaxCode);
-            await NodeContext.SaveChangesAsync();
+                NodeContext.App_tbTaxCodes.Add(App_tbTaxCode);
+                await NodeContext.SaveChangesAsync();
 
-            if (!string.IsNullOrEmpty(ReturnUrl))
-                return LocalRedirect($"{ReturnUrl}?taxcode={App_tbTaxCode.TaxCode}");
-            else
-                return RedirectToPage("./Index");
+                if (!string.IsNullOrEmpty(ReturnUrl))
+                    return LocalRedirect($"{ReturnUrl}?taxcode={App_tbTaxCode.TaxCode}");
+                else
+                    return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

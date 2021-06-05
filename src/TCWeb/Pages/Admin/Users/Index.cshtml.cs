@@ -33,17 +33,25 @@ namespace TradeControl.Web.Pages.Admin.Users
 
         public async Task OnGetAsync()
         {
-            await SetViewData();
-
-            ConfirmFilterOptions = new SelectList(new List<string>() { "No", "Yes" });
-
-            if (!string.IsNullOrEmpty(ConfirmFilterOption))
+            try
             {
-                bool IsConfirmed = ConfirmFilterOption == "Yes";
-                AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.Where(u => u.IsConfirmed == IsConfirmed).ToListAsync();
+                await SetViewData();
+
+                ConfirmFilterOptions = new SelectList(new List<string>() { "No", "Yes" });
+
+                if (!string.IsNullOrEmpty(ConfirmFilterOption))
+                {
+                    bool IsConfirmed = ConfirmFilterOption == "Yes";
+                    AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.Where(u => u.IsConfirmed == IsConfirmed).ToListAsync();
+                }
+                else
+                    AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.ToListAsync();
             }
-            else
-                AspNet_UserRegistration = await NodeContext.AspNet_UserRegistrations.ToListAsync();
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
 
         }
     }

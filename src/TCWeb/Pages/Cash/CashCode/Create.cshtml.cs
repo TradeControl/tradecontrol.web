@@ -124,60 +124,75 @@ namespace TradeControl.Web.Pages.Cash.CashCode
 
         public async Task OnGetAsync(string returnUrl, string taxcode, string categorycode)
         {
-            await SetViewData();
-
-            if (!string.IsNullOrEmpty(returnUrl))
+            try
             {
-                TaxCode = string.Empty;
-                CashCode = string.Empty;
-                CategoryCode = string.Empty;
-                CashDescription = string.Empty;
-                ReturnUrl = returnUrl;
+                await SetViewData();
+
+                if (!string.IsNullOrEmpty(returnUrl))
+                {
+                    TaxCode = string.Empty;
+                    CashCode = string.Empty;
+                    CategoryCode = string.Empty;
+                    CashDescription = string.Empty;
+                    ReturnUrl = returnUrl;
+                }
+
+                if (!string.IsNullOrEmpty(taxcode))
+                    TaxCode = taxcode;
+
+                if (!string.IsNullOrEmpty(categorycode))
+                    CategoryCode = categorycode;
+
+                TaxCodes = new SelectList(await NodeContext.App_TaxCodes.OrderBy(t => t.TaxCode).Select(t => t.TaxCode).ToListAsync());
+                CategoryCodes = new SelectList(await NodeContext.Cash_tbCategories
+                                                            .Where(t => t.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode)
+                                                            .OrderBy(t => t.CategoryCode)
+                                                            .Select(t => t.CategoryCode)
+                                                            .ToListAsync());
+                Profile profile = new(NodeContext);
+                var userName = await profile.UserName(UserManager.GetUserId(User));
+
+                CashCodeNew = new Cash_tbCode
+                {
+                    CashCode = CashCode,
+                    CashDescription = CashDescription,
+                    CategoryCode = CategoryCode,
+                    TaxCode = TaxCode,
+                    IsEnabled = -1,
+                    InsertedBy = userName,
+                    UpdatedBy = userName,
+                    InsertedOn = DateTime.Now,
+                    UpdatedOn = DateTime.Now
+                };
             }
-
-            if (!string.IsNullOrEmpty(taxcode))
-                TaxCode = taxcode;
-
-            if (!string.IsNullOrEmpty(categorycode))
-                CategoryCode = categorycode;
-
-            TaxCodes = new SelectList(await NodeContext.App_TaxCodes.OrderBy(t => t.TaxCode).Select(t => t.TaxCode).ToListAsync());
-            CategoryCodes = new SelectList(await NodeContext.Cash_tbCategories
-                                                        .Where(t => t.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode)
-                                                        .OrderBy(t => t.CategoryCode)
-                                                        .Select(t => t.CategoryCode)
-                                                        .ToListAsync());
-            Profile profile = new(NodeContext);
-            var userName = await profile.UserName(UserManager.GetUserId(User));
-
-            CashCodeNew = new Cash_tbCode
+            catch (Exception e)
             {
-                CashCode = CashCode,
-                CashDescription = CashDescription,
-                CategoryCode = CategoryCode,
-                TaxCode = TaxCode,
-                IsEnabled = -1,
-                InsertedBy = userName,
-                UpdatedBy = userName,
-                InsertedOn = DateTime.Now,
-                UpdatedOn = DateTime.Now
-            };
-
+                NodeContext.ErrorLog(e);
+                throw;
+            }
 
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
+            try
+            {
+                if (!ModelState.IsValid)
+                    return Page();
 
-            NodeContext.Cash_tbCodes.Add(CashCodeNew);
-            await NodeContext.SaveChangesAsync();
+                NodeContext.Cash_tbCodes.Add(CashCodeNew);
+                await NodeContext.SaveChangesAsync();
 
-            if (!string.IsNullOrEmpty(ReturnUrl))
-                return LocalRedirect($"{ReturnUrl}?cashcode={CashCodeNew.CashCode}");
-            else
-                return RedirectToPage("./Index");
+                if (!string.IsNullOrEmpty(ReturnUrl))
+                    return LocalRedirect($"{ReturnUrl}?cashcode={CashCodeNew.CashCode}");
+                else
+                    return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public IActionResult OnPostGetCategoryCode()

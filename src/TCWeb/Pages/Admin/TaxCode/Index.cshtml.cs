@@ -44,27 +44,35 @@ namespace TradeControl.Web.Pages.Admin.TaxCode
 
         public async Task OnGetAsync(string returnUrl)
         {
-            await SetViewData();
+            try
+            {
+                await SetViewData();
 
-            if (!string.IsNullOrEmpty(returnUrl))
-                ReturnUrl = returnUrl;
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
 
-            var taxtypes = from tb in NodeContext.App_TaxCodeTypes
-                           orderby tb.TaxType
-                           select tb.TaxType;
+                var taxtypes = from tb in NodeContext.App_TaxCodeTypes
+                               orderby tb.TaxType
+                               select tb.TaxType;
 
-            TaxTypes = new SelectList(await taxtypes.ToListAsync());
+                TaxTypes = new SelectList(await taxtypes.ToListAsync());
 
-            var cashcodes = from tb in NodeContext.App_TaxCodes
-                            select tb;
+                var cashcodes = from tb in NodeContext.App_TaxCodes
+                                select tb;
 
-            if (!string.IsNullOrEmpty(TaxType))
-                cashcodes = cashcodes.Where(t => t.TaxType == TaxType);
+                if (!string.IsNullOrEmpty(TaxType))
+                    cashcodes = cashcodes.Where(t => t.TaxType == TaxType);
 
-            if (!string.IsNullOrEmpty(SearchString))
-                cashcodes = cashcodes.Where(t => t.TaxDescription.Contains(SearchString));
+                if (!string.IsNullOrEmpty(SearchString))
+                    cashcodes = cashcodes.Where(t => t.TaxDescription.Contains(SearchString));
 
-            App_TaxCodes = await cashcodes.ToListAsync();
+                App_TaxCodes = await cashcodes.ToListAsync();
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
     }
 }

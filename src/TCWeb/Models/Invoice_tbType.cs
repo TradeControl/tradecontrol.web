@@ -22,6 +22,7 @@ namespace TradeControl.Web.Models
         public short InvoiceTypeCode { get; set; }
         [Required]
         [StringLength(20)]
+        [Display(Name = "Type")]
         public string InvoiceType { get; set; }
         public short CashModeCode { get; set; }
         public int NextNumber { get; set; }

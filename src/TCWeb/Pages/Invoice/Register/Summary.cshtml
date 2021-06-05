@@ -1,0 +1,102 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Register.SummaryModel
+@{ ViewData["Title"] = "Invoice Summary"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="PeriodName" asp-items="Model.PeriodNames">
+            <option value="">All</option>
+        </select>
+        <select asp-for="CashMode" asp-items="Model.CashModes">
+            <option value="">All</option>
+        </select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            @{ 
+                if (!string.IsNullOrEmpty(Model.CashCode))
+                {
+                    <th>
+                        @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].PeriodName)
+                    </th>
+                }
+             }
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].CashCode)
+            </th>
+            <th>                
+                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].CashDescription)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalInvoiceValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalTaxValue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalValue)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Invoice_CashCodes)
+        {
+        <tr>
+            @{
+                if (!string.IsNullOrEmpty(Model.CashCode))
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PeriodName)
+                    </td>
+                }
+            }
+            <td>
+                @Html.DisplayFor(modelItem => item.CashCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CashDescription)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TotalInvoiceValue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TotalTaxValue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.TotalValue)
+            </td>
+            <td>
+                <a asp-page="/Invoice/Register/Summary" asp-route-cashCode="@item.CashCode" class="btn btn-info"></a>                
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>
+
+<div>
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.TotalInvoiceValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.TotalInvoiceValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.TotalTaxValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.TotalTaxValue)
+        </dd>
+    </dl>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

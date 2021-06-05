@@ -1,0 +1,93 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Raise.CreateModel
+@{ ViewData["Title"] = "Raise Invoice"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.AccountCode" class="control-label"></label>
+                <p>
+                    <button type="submit" asp-page-handler="GetAccountCode" class="btn btn-outline-info">Select</button>
+                    <button type="submit" asp-page-handler="NewAccountCode" class="btn btn-outline-primary">New</button>
+                </p>
+                <p>
+                    <select asp-for="OrganisationName" asp-items="Model.OrganisationNames" class="form-control"></select>
+                </p>
+                <span asp-validation-for="OrganisationNames" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.InvoiceTypeCode" class="control-label"></label>
+                <p>
+                    <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes" class="form-control"></select>
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.CashCode" class="control-label"></label>
+                <p>
+                    <button type="submit" asp-page-handler="GetCashCode" class="btn btn-outline-info">Select</button>
+                    <button type="submit" asp-page-handler="NewCashCode" class="btn btn-outline-primary">New</button>
+                </p>
+                <p>
+                    <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-control"></select>
+                </p>
+                <span asp-validation-for="CashDescription" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.TaxCode" class="control-label"></label>
+                <p>
+                    <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
+                    <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-outline-primary">New</button>
+                </p>
+                <p>
+                    <select asp-for="TaxDescription" asp-items="Model.TaxDescriptions" class="form-control"></select>
+                </p>
+                <span asp-validation-for="TaxDescription" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.InvoicedOn" class="control-label"></label>
+                <input asp-for="Invoice_Entry.InvoicedOn" class="form-control" />
+                <span asp-validation-for="Invoice_Entry.InvoicedOn" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.TotalValue" class="control-label"></label>
+                <input asp-for="Invoice_Entry.TotalValue" class="form-control" />
+                <span asp-validation-for="Invoice_Entry.TotalValue" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.InvoiceValue" class="control-label"></label>
+                <input asp-for="Invoice_Entry.InvoiceValue" class="form-control" />
+                <span asp-validation-for="Invoice_Entry.InvoiceValue" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Invoice_Entry.ItemReference" class="control-label"></label>
+                <input asp-for="Invoice_Entry.ItemReference" class="form-control" />
+                <span asp-validation-for="Invoice_Entry.ItemReference" class="text-danger"></span>
+            </div>
+
+            <input type="hidden" asp-for="Invoice_Entry.UserId" />
+            <input type="hidden" asp-for="Invoice_Entry.AccountCode" />
+            <input type="hidden" asp-for="Invoice_Entry.CashCode" />
+            <input type="hidden" asp-for="Invoice_Entry.TaxCode" />
+            <input type="hidden" asp-for="Invoice_Entry.InvoiceTypeCode" />
+
+            <div class="form-group">
+                <input type="submit" value="RAISE" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

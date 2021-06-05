@@ -17,21 +17,30 @@ namespace TradeControl.Web.Models
     {
         [Key]
         [StringLength(20)]
+        [Display(Name = "Invoice No.")]
         public string InvoiceNumber { get; set; }
         [Key]
         [StringLength(50)]
+        [Display(Name = "Cash Code")]
         public string CashCode { get; set; }
         [StringLength(10)]
+        [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }
         [Column(TypeName = "ntext")]
+        [Display(Name = "Ref.")]
         public string ItemReference { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Total Value")]
+        [DataType(DataType.Currency)]
         public decimal TotalValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Invoice Value")]
+        [DataType(DataType.Currency)]
         public decimal InvoiceValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
+        [Display(Name = "Tax Value")]
+        [DataType(DataType.Currency)]
+
         public decimal TaxValue { get; set; }
 
         [ForeignKey(nameof(CashCode))]

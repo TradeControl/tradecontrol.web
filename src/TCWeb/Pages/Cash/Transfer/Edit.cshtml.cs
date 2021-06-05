@@ -24,52 +24,70 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
-            if (paymentCode == null)
-                return NotFound();
-
-            Cash_TransfersUnposted = await NodeContext.Cash_TransfersUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
-
-            if (Cash_TransfersUnposted == null)
-                return NotFound();
-            else
+            try
             {
-                if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                if (paymentCode == null)
+                    return NotFound();
+
+                Cash_TransfersUnposted = await NodeContext.Cash_TransfersUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+
+                if (Cash_TransfersUnposted == null)
+                    return NotFound();
+                else
                 {
-                    var profile = new Profile(NodeContext);
-                    var user = await UserManager.GetUserAsync(User);
-                    if (Cash_TransfersUnposted.UserId != await profile.UserId(user.Id))
-                        return Forbid();
+                    if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
+                    {
+                        var profile = new Profile(NodeContext);
+                        var user = await UserManager.GetUserAsync(User);
+                        if (Cash_TransfersUnposted.UserId != await profile.UserId(user.Id))
+                            return Forbid();
+                    }
+
+                    await SetViewData();
+                    return Page();
                 }
-
-                await SetViewData();
-                return Page();
             }
-
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            if (!ModelState.IsValid)
-                return Page();
-
-            Profile profile = new(NodeContext);
-            Cash_TransfersUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
-
-            NodeContext.Attach(Cash_TransfersUnposted).State = EntityState.Modified;
-
             try
             {
-                await NodeContext.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await NodeContext.Cash_TransfersUnposted.AnyAsync(e => e.PaymentCode == Cash_TransfersUnposted.PaymentCode))
-                    return NotFound();
-                else
-                    throw;
-            }
+                if (!ModelState.IsValid)
+                    return Page();
 
-            return RedirectToPage("./Index");
+                Profile profile = new(NodeContext);
+                Cash_TransfersUnposted.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
+
+                NodeContext.Attach(Cash_TransfersUnposted).State = EntityState.Modified;
+
+                try
+                {
+                    await NodeContext.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await NodeContext.Cash_TransfersUnposted.AnyAsync(e => e.PaymentCode == Cash_TransfersUnposted.PaymentCode))
+                        return NotFound();
+                    else
+                    {
+                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
+                        throw;
+                    }
+                }
+
+                return RedirectToPage("./Index");
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
     }

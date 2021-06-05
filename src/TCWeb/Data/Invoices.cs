@@ -8,7 +8,7 @@ namespace TradeControl.Web.Data
 {
     public class Invoices
     {
-        NodeContext _context;
+        readonly NodeContext _context;
 
         public string InvoiceNumber { get; private set; } = string.Empty;
 
@@ -93,11 +93,11 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<bool> CancelPending()
+        public async Task<bool> CancelPending(string userId)
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_Cancel");
+                int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_CancelById @p0", userId);
                 return result != 0;
             }
             catch (Exception e)
@@ -117,11 +117,11 @@ namespace TradeControl.Web.Data
             return InvoiceNumber.Length > 0;
         }
 
-        public async Task<bool> Post()
+        public async Task<bool> Post(string userId)
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_PostEntries");
+                int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_PostEntriesById @p0", parameters: new[] { userId });
                 return result != 0;
             }
             catch (Exception e)

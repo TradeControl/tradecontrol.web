@@ -11,7 +11,7 @@
 
 <form class="form-group">
     <p>
-        <select asp-for="CashAccountCode" asp-items="Model.CashAccounts">
+        <select asp-for="CashAccountCode" asp-items="Model.CashAccountNames">
             <option value="">All</option>
         </select>
         <input type="submit" value="Filter" />
@@ -37,7 +37,9 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountCode)
+                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
+                        @Html.DisplayFor(modelItem => item.AccountCode)
+                    </a>
                 </td>
                 <td>
                     <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info w-25"></a>
