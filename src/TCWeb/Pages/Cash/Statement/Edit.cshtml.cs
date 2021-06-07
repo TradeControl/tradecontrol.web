@@ -239,13 +239,13 @@ namespace TradeControl.Web.Pages.Cash.Statement
         public IActionResult OnPostGetTaxCode()
         {
             SaveSession();
-            return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/Statement/Edit");
+            return LocalRedirect(@"/Tax/TaxCode/Search?returnUrl=/Cash/Statement/Edit");
         }
 
         public IActionResult OnPostNewTaxCode()
         {
             SaveSession();
-            return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/Statement/Edit");
+            return LocalRedirect(@"/Tax/TaxCode/Create?returnUrl=/Cash/Statement/Edit");
         }
 
         void SaveSession()

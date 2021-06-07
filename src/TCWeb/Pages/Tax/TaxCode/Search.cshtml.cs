@@ -13,9 +13,9 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Admin.TaxCode
+namespace TradeControl.Web.Pages.Tax.TaxCode
 {
-    public class IndexModel : DI_BasePageModel
+    public class SearchModel : DI_BasePageModel
     {
         const string SessionKeyReturnUrl = "_returnUrlTaxCodeIndex";
 
@@ -33,7 +33,7 @@ namespace TradeControl.Web.Pages.Admin.TaxCode
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public IndexModel(NodeContext context,
+        public SearchModel(NodeContext context,
             IAuthorizationService authorizationService,
             UserManager<TradeControlWebUser> userManager)
             : base(context, authorizationService, userManager)
@@ -57,16 +57,16 @@ namespace TradeControl.Web.Pages.Admin.TaxCode
 
                 TaxTypes = new SelectList(await taxtypes.ToListAsync());
 
-                var cashcodes = from tb in NodeContext.App_TaxCodes
+                var taxCodes = from tb in NodeContext.App_TaxCodes
                                 select tb;
 
                 if (!string.IsNullOrEmpty(TaxType))
-                    cashcodes = cashcodes.Where(t => t.TaxType == TaxType);
+                    taxCodes = taxCodes.Where(t => t.TaxType == TaxType);
 
                 if (!string.IsNullOrEmpty(SearchString))
-                    cashcodes = cashcodes.Where(t => t.TaxDescription.Contains(SearchString));
+                    taxCodes = taxCodes.Where(t => t.TaxDescription.Contains(SearchString));
 
-                App_TaxCodes = await cashcodes.ToListAsync();
+                App_TaxCodes = await taxCodes.ToListAsync();
             }
             catch (Exception e)
             {

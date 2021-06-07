@@ -273,13 +273,13 @@ namespace TradeControl.Web.Pages.Invoice.Raise
         public async Task<IActionResult> OnPostGetTaxCode()
         {
             await SaveSession ();
-            return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Invoice/Raise/Create&TaxType=VAT");
+            return LocalRedirect(@"/Tax/TaxCode/Search?returnUrl=/Invoice/Raise/Create&TaxType=VAT");
         }
 
         public async Task<IActionResult> OnPostNewTaxCode()
         {
             await SaveSession ();
-            return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Invoice/Raise/Create");
+            return LocalRedirect(@"/Tax/TaxCode/Create?returnUrl=/Invoice/Raise/Create");
         }
 
         async Task SaveSession()

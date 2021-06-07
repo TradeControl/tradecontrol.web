@@ -1,0 +1,85 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.Vat.DetailsModel
+@{ ViewData["Title"] = "Vat Period Totals"; }
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Cash_VatTotal.Description)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.Period)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.Period)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.VatDue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.VatDue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.VatAdjustment)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.VatAdjustment)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.HomeSales)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.HomeSales)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.HomePurchases)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.HomePurchases)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.ExportSales)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.ExportSales)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.ExportPurchases)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.ExportPurchases)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.HomeSalesVat)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.HomeSalesVat)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.HomePurchasesVat)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.HomePurchasesVat)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.ExportSalesVat)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.ExportSalesVat)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_VatTotal.ExportPurchasesVat)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_VatTotal.ExportPurchasesVat)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-page="./Index" class="btn btn-info">To List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

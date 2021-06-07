@@ -1,8 +1,11 @@
 ﻿@page
-@model TradeControl.Web.Pages.Admin.TaxCode.IndexModel
-
-@{ ViewData["Title"] = "Search"; }
+@model TradeControl.Web.Pages.Tax.TaxCode.IndexModel
+@{ ViewData["Title"] = "Tax Codes"; }
 <h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-page="Create" class="btn btn-outline-primary" asp-route-taxType="@Model.TaxType">New Tax Code</a>
+</p>
 
 <form class="form-group" method="get">
     <p>
@@ -21,7 +24,7 @@
                 @Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxDescription)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxType)
+                @Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxRate)
             </th>
             <th></th>
         </tr>
@@ -34,11 +37,14 @@
                     @Html.DisplayFor(modelItem => item.TaxDescription)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.TaxType)
+                    @Html.DisplayFor(modelItem => item.TaxRate)
                 </td>
                 <td>
-                    <a asp-page="@Model.ReturnUrl" asp-route-taxcode="@item.TaxCode" class="btn btn-info">Select</a>
+                    <a asp-page="./Details" asp-route-taxCode="@item.TaxCode" class="btn btn-info"></a>
+                    <a asp-page="./Edit" asp-route-taxCode="@item.TaxCode" class="btn btn-secondary"></a>
+                    <a asp-page="./Delete" asp-route-taxCode="@item.TaxCode" class="btn btn-danger"></a>
                 </td>
+
             </tr>
         }
     </tbody>

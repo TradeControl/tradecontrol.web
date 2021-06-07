@@ -34,8 +34,9 @@ namespace TradeControl.Web.Models
         public short TaxTypeCode { get; set; }
         [Display(Name = "Rounding")]
         public short RoundingCode { get; set; }
-        [Column(TypeName = "percent")]
+        [Column(TypeName = "decimal(18, 4)")]
         [Display(Name = "Tax Rate")]
+        [DisplayFormat(DataFormatString = "{2:p}")]
         public decimal TaxRate { get; set; }
         [Display(Name = "Decimals")]
         public short Decimals { get; set; }

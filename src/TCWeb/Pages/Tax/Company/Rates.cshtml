@@ -1,0 +1,33 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.Company.RatesModel
+@{ ViewData["Title"] = "Company Tax Rate"; }
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+
+            <div class="form-group">
+                <label asp-for="StartOn" class="control-label"></label>
+                <input asp-for="StartOn" class="form-control" />
+                <span asp-validation-for="StartOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="EndOn" class="control-label"></label>
+                <input asp-for="EndOn" class="form-control" />
+                <span asp-validation-for="EndOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CorporationTaxRate" class="control-label"></label>
+                <input asp-for="CorporationTaxRate" class="form-control" />
+                <span asp-validation-for="CorporationTaxRate" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <input type="submit" value="SET RATE" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-info">To List</a>
+            </div>
+        </form>
+    </div>
+</div>

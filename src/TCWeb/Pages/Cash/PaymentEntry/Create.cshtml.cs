@@ -336,13 +336,13 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnPostGetTaxCode()
         {
             await SaveSession();
-            return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/PaymentEntry/Create");
+            return LocalRedirect(@"/Tax/TaxCode/Search?returnUrl=/Cash/PaymentEntry/Create");
         }
 
         public async Task<IActionResult> OnPostNewTaxCode()
         {
             await SaveSession();
-            return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/PaymentEntry/Create");
+            return LocalRedirect(@"/Tax/TaxCode/Create?returnUrl=/Cash/PaymentEntry/Create");
         }
 
 

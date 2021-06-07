@@ -1503,6 +1503,120 @@ namespace TradeControl.Web.Data
             });
         }
 
+        public Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, double taxAdjustment)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    var _startOn = new SqlParameter()
+                    {
+                        ParameterName = "@StartOn",
+                        SqlDbType = System.Data.SqlDbType.DateTime,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = startOn
+                    };
+
+                    var _taxTypeCode = new SqlParameter()
+                    {
+                        ParameterName = "@TaxTypeCode",
+                        SqlDbType = System.Data.SqlDbType.SmallInt,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = (short)taxType
+                    };
+
+                    var _taxAdjustment = new SqlParameter()
+                    {
+                        ParameterName = "@TaxAdjustment",
+                        SqlDbType = System.Data.SqlDbType.Decimal,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = taxAdjustment
+                    };
+
+                    using (SqlConnection _connection = new(Database.GetConnectionString()))
+                    {
+                        _connection.Open();
+                        using (SqlCommand _command = _connection.CreateCommand())
+                        {
+                            _command.CommandText = "Cash.proc_TaxAdjustment";
+                            _command.CommandType = CommandType.StoredProcedure;
+                            _command.Parameters.Add(_startOn);
+                            _command.Parameters.Add(_taxTypeCode);
+                            _command.Parameters.Add(_taxAdjustment);
+
+                            _command.ExecuteNonQuery();
+                        }
+                        _connection.Close();
+                    }
+
+                    return true;
+
+                }
+                catch (Exception e)
+                {
+                    ErrorLog(e);
+                    return false;
+                }
+            });
+        }
+
+        public Task<bool> TaxRate(DateTime startOn, DateTime endOn, float taxRate)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    var _startOn = new SqlParameter()
+                    {
+                        ParameterName = "@StartOn",
+                        SqlDbType = System.Data.SqlDbType.DateTime,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = startOn
+                    };
+
+                    var _endOn = new SqlParameter()
+                    {
+                        ParameterName = "@EndOn",
+                        SqlDbType = System.Data.SqlDbType.DateTime,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = endOn
+                    };
+
+                    var _taxRate = new SqlParameter()
+                    {
+                        ParameterName = "@CorporationTaxRate",
+                        SqlDbType = System.Data.SqlDbType.Real,
+                        Direction = System.Data.ParameterDirection.Input,
+                        Value = taxRate
+                    };
+
+                    using (SqlConnection _connection = new(Database.GetConnectionString()))
+                    {
+                        _connection.Open();
+                        using (SqlCommand _command = _connection.CreateCommand())
+                        {
+                            _command.CommandText = "App.proc_TaxRates";
+                            _command.CommandType = CommandType.StoredProcedure;
+                            _command.Parameters.Add(_startOn);
+                            _command.Parameters.Add(_endOn);
+                            _command.Parameters.Add(_taxRate);
+
+                            _command.ExecuteNonQuery();
+                        }
+                        _connection.Close();
+                    }
+
+                    return true;
+
+                }
+                catch (Exception e)
+                {
+                    ErrorLog(e);
+                    return false;
+                }
+            });
+        }
+
         #endregion
 
         #region Tasks

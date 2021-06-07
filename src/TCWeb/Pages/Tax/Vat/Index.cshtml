@@ -1,0 +1,92 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.Vat.IndexModel
+@{ ViewData["Title"] = "Vat Totals"; }
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-page="./Statement" class="btn btn-outline-info w-25">Statement</a>
+    <a asp-page="./Periods/Index" class="btn btn-outline-info w-25">Monthly Details</a>
+    @{ 
+        if (User.IsInRole(Constants.AdministratorsRole))
+        {
+            <a asp-page="/Tax/TaxCode/Index" asp-route-taxTypeCode="1" class="btn btn-outline-primary w-25">Tax Rates</a>
+        }
+    }
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].Description)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].Period)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].VatDue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].VatAdjustment)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].HomeSalesVat)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].ExportSalesVat)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].HomePurchasesVat)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatTotals[0].ExportPurchasesVat)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_VatTotals)
+        {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Description)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Period)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.VatDue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.VatAdjustment)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.HomeSalesVat)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ExportSalesVat)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.HomePurchasesVat)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ExportPurchasesVat)
+            </td>
+            <td>
+                <a asp-page="./Details" asp-route-startOn="@item.StartOn.ToLongDateString()" class="btn btn-info"></a>
+                @{
+                    if (User.IsInRole(Constants.AdministratorsRole) || User.IsInRole(Constants.ManagersRole))
+                    {
+                        <a asp-page="./Adjustment" asp-route-startOn="@item.StartOn.ToLongDateString()" class="btn btn-warning"></a>
+                    }
+                }
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

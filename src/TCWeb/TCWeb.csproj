@@ -39,10 +39,4 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="Pages\Admin\TaxCode\Search - Copy.cshtml.cs">
-      <DependentUpon>Search.cshtml.cs</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
 </Project>

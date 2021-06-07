@@ -34,7 +34,12 @@
                     <label asp-for="Cash_PaymentsUnposted.CashCode" class="control-label"></label>
                     <p>
                         <button type="submit" asp-page-handler="GetCashCode" class="btn btn-outline-info">Select</button>
-                        <button type="submit" asp-page-handler="NewCashCode" class="btn btn-outline-primary">New</button>
+                        @{
+                            if (User.IsInRole(Constants.AdministratorsRole))
+                            {
+                                <button type="submit" asp-page-handler="NewCashCode" class="btn btn-outline-primary">New</button>
+                            }
+                        }
                     </p>
                     <p>
                         <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-control"></select>
@@ -46,7 +51,13 @@
                     <label asp-for="Cash_PaymentsUnposted.TaxCode" class="control-label"></label>
                     <p>
                         <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
-                        <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-outline-primary">New</button>
+                        @{
+                            if (User.IsInRole(Constants.AdministratorsRole))
+                            {
+                                <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-outline-primary">New</button>
+                            }
+                        }
+                        
                     </p>
                     <p>
                         <select asp-for="TaxDescription" asp-items="Model.TaxDescriptions" class="form-control"></select>

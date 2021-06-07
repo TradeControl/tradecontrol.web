@@ -1,0 +1,48 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.TaxCode.DetailsModel
+@{ ViewData["Title"] = "Tax Code Details"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.App_TaxCode.TaxDescription)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxCode.TaxCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxCode.TaxCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxCode.TaxType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxCode.TaxType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxCode.TaxRate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxCode.TaxRate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxCode.Rounding)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxCode.Rounding)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxCode.Decimals)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxCode.Decimals)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-page="./Index" asp-route-taxTypeCode="@Model.App_TaxCode.TaxTypeCode" class="btn btn-info">To List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

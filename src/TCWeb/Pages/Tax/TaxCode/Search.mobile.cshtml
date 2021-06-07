@@ -1,0 +1,50 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.TaxCode.SearchModel
+
+@{ ViewData["Title"] = "Search"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="TaxType" asp-items="Model.TaxTypes">
+            <option value="">All</option>
+        </select>
+        Description: <input type="text" asp-for="SearchString" />
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxDescription)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxType)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.App_TaxCodes)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxDescription)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxType)
+                </td>
+                <td>
+                    <a asp-page="@Model.ReturnUrl" asp-route-taxcode="@item.TaxCode" class="btn btn-info">Select</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

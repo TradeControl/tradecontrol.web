@@ -8,12 +8,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Admin.TaxCode
+namespace TradeControl.Web.Pages.Tax.TaxCode
 {
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
@@ -94,10 +95,13 @@ namespace TradeControl.Web.Pages.Admin.TaxCode
                 NodeContext.App_tbTaxCodes.Add(App_tbTaxCode);
                 await NodeContext.SaveChangesAsync();
 
+                RouteValueDictionary route = new();
+                route.Add("taxCode", App_tbTaxCode.TaxCode);
+                
                 if (!string.IsNullOrEmpty(ReturnUrl))
-                    return LocalRedirect($"{ReturnUrl}?taxcode={App_tbTaxCode.TaxCode}");
+                    return RedirectToPage(ReturnUrl, route);
                 else
-                    return RedirectToPage("./Index");
+                    return RedirectToPage("./Index", route);
             }
             catch (Exception e)
             {

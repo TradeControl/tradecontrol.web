@@ -54,11 +54,12 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Cash Code invoice summary
 - [x] Unpaid income and expense
 - [ ] Email invoices and statements to contacts
-- [ ] Vat Statement and quarterly totals
-- [ ] Company Tax Statement and period totals
+- [x] Vat Statement and quarterly totals
+- [x] Company Tax Statement and period totals
+- [x] Tax rates
 - [ ] Balance Sheet by period
 - [ ] Profit and Loss by period
-- [ ] Category, Tax and Cash Code maintenance
+- [ ] Category and Cash Code maintenance
 - [ ] Period End maintenance and closedown
 - [ ] Configuration and setup
 

@@ -1,0 +1,60 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.Vat.Periods.IndexModel
+@{ ViewData["Title"] = "Period Vat"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="PeriodName" asp-items="Model.PeriodNames"></select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatSummary[0].TaxCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatSummary[0].VatDue)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_VatSummary)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.VatDue)
+                </td>
+                <td>
+                    <a asp-page="./Details" asp-route-startOn="@item.StartOn.ToLongDateString()" asp-route-taxCode="@item.TaxCode" class="btn btn-info"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div>
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.TotalTaxValue)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.TotalTaxValue)
+        </dd>
+    </dl>
+</div>
+
+<p>
+    <a asp-page="../Index" class="btn btn-outline-info">Totals</a>
+</p>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

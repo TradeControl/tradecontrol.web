@@ -5,8 +5,8 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-primary w-25">Pay Invoices</a>
-    <a asp-page="Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-primary w-25">Miscellaneous Payment</a>
+    <a asp-page="./Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-primary w-25">Pay Invoices</a>
+    <a asp-page="./Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-primary w-25">Miscellaneous Payment</a>
     <a asp-page="/Cash/Statement/Index" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-info w-25">Statement</a>
 </p>
 

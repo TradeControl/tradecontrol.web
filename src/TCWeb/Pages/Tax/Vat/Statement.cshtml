@@ -1,0 +1,50 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.Vat.StatementModel
+@{ ViewData["Title"] = "Vat Statement"; }
+<h1>@ViewData["Title"]</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatStatement[0].StartOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatStatement[0].VatDue)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatStatement[0].VatPaid)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_VatStatement[0].Balance)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_VatStatement)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.StartOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.VatDue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.VatPaid)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Balance)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    <a asp-page="./Index" class="btn btn-outline-info">Totals</a>
+</p>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

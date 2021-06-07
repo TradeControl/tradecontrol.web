@@ -63,6 +63,10 @@ namespace TradeControl.Web.Data
 
         public async Task<short> GetYearFromPeriod(DateTime startOn) => await _context.GetYearFromPeriod(startOn);
 
-        public async Task<DateTime> AdjustToCalendar(DateTime sourceDate, short offsetDays) => await AdjustToCalendar(sourceDate, offsetDays);
+        public async Task<DateTime> AdjustToCalendar(DateTime sourceDate, short offsetDays) => await _context.AdjustToCalendar(sourceDate, offsetDays);
+
+        public async Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, double taxAdjustment) => await _context.AdjustTax(startOn, taxType, taxAdjustment);
+
+        public async Task<bool> TaxRate(DateTime startOn, DateTime endOn, float taxRate) => await _context.TaxRate(startOn, endOn, taxRate);
     }
 }

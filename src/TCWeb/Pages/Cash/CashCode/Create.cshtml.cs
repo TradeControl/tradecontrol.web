@@ -211,13 +211,13 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         public IActionResult OnPostGetTaxCode()
         {
             SaveSession();
-            return LocalRedirect(@"/Admin/TaxCode/Index?returnUrl=/Cash/CashCode/Create");
+            return LocalRedirect(@"/Tax/TaxCode/Search?returnUrl=/Cash/CashCode/Create");
         }
 
         public IActionResult OnPostNewTaxCode()
         {
             SaveSession();
-            return LocalRedirect(@"/Admin/TaxCode/Create?returnUrl=/Cash/CashCode/Create");
+            return LocalRedirect(@"/Tax/TaxCode/Create?returnUrl=/Cash/CashCode/Create");
         }
 
         void SaveSession()
