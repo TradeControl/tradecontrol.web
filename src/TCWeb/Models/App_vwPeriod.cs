@@ -12,11 +12,10 @@ namespace TradeControl.Web.Models
     public partial class App_vwPeriod
     {
         public short YearNumber { get; set; }
+        public short MonthNumber { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime StartOn { get; set; }
         [StringLength(21)]
         public string Description { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
     }
 }

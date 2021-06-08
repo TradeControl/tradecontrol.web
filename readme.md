@@ -57,8 +57,8 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Vat Statement and quarterly totals
 - [x] Company Tax Statement and period totals
 - [x] Tax rates
-- [ ] Balance Sheet by period
-- [ ] Profit and Loss by period
+- [x] Balance Sheet by period
+- [x] Profit and Loss by period
 - [ ] Category and Cash Code maintenance
 - [ ] Period End maintenance and closedown
 - [ ] Configuration and setup

@@ -47,7 +47,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
         [Display(Name = "Tax Total")]
         public double TotalTaxValue { get; set; }
 
-        public async Task OnGetAsync(string periodName, string invoiceType, string accountCode, string invoiceNumber)
+        public async Task OnGetAsync(string invoiceType, string accountCode, string invoiceNumber)
         {
             try
             {
@@ -78,14 +78,14 @@ namespace TradeControl.Web.Pages.Invoice.Register
                 {
                     DateTime startOn = DateTime.Today;
 
-                    if (string.IsNullOrEmpty(periodName))
+                    if (string.IsNullOrEmpty(PeriodName))
                     {
                         Periods periods = new(NodeContext);
                         startOn = periods.ActiveStartOn;
                         PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                     }
                     else
-                        startOn = await NodeContext.App_Periods.Where(t => t.Description == periodName).Select(t => t.StartOn).FirstOrDefaultAsync();
+                        startOn = await NodeContext.App_Periods.Where(t => t.Description == PeriodName).Select(t => t.StartOn).FirstOrDefaultAsync();
 
                     invoices = invoices.Where(i => i.StartOn == startOn);
                 }

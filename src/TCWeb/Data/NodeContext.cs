@@ -131,6 +131,9 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Org_vwAccountSource> Org_AccountSources { get; set; }
         public virtual DbSet<Cash_vwAccountStatement> Cash_AccountStatements { get; set; }
         public virtual DbSet<Cash_vwAccountStatementListing> Cash_AccountStatementListings { get; set; }
+        public virtual DbSet<Cash_vwBalanceSheet> Cash_BalanceSheet { get; set; }
+        public virtual DbSet<Cash_vwProfitAndLossByMonth> Cash_ProfitAndLossByMonth { get; set; }
+        public virtual DbSet<Cash_vwProfitAndLossByYear> Cash_ProfitAndLossByYear { get; set; }
         public virtual DbSet<Invoice_vwAccountsMode> Invoice_AccountsMode { get; set; }
         public virtual DbSet<Task_vwActiveDatum> Task_ActiveData { get; set; }
         public virtual DbSet<App_vwActivePeriod> App_ActivePeriods { get; set; }
@@ -2638,6 +2641,16 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwAttributesForQuote", "Task");
             });
 
+            modelBuilder.Entity<Cash_vwProfitAndLossByMonth>(entity =>
+            {
+                entity.ToView("vwProfitAndLossByMonth", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwProfitAndLossByYear>(entity =>
+            {
+                entity.ToView("vwProfitAndLossByYear", "Cash");
+            });
+
             modelBuilder.Entity<Cash_vwBalanceSheet>(entity =>
             {
                 entity.ToView("vwBalanceSheet", "Cash");
@@ -3121,10 +3134,6 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<App_vwPeriod>(entity =>
             {
                 entity.ToView("vwPeriods", "App");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
             });
 
             modelBuilder.Entity<App_vwPeriodEndListing>(entity =>

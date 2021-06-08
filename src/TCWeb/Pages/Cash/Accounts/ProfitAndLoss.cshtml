@@ -1,0 +1,48 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.Accounts.ProfitAndLossModel
+@{ ViewData["Title"] = "Profit and Loss"; }
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-page="./ProfitAndLossByMonth" class="btn btn-outline-info w-25">Monthly Statements</a>
+</p>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="YearName" asp-items="Model.YearNames">
+        </select>
+
+        <input type="submit" value="Generate" />
+    </p>
+</form>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_ProfitAndLoss[0].Category)
+            </th>
+            <th>
+                @Html.DisplayFor(model => model.YearName)
+            </th>
+            <th>
+                @Html.DisplayFor(model => model.YearNamePrevious)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_ProfitAndLoss)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CurrentValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PreviousValue)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
