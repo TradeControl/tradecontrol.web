@@ -50,18 +50,23 @@
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Org_CashAccount.CurrentBalance)
         </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Org_CashAccount.AccountNumber)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Org_CashAccount.AccountNumber)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Org_CashAccount.SortCode)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Org_CashAccount.SortCode)
-        </dd>
+        @{
+            if (Model.Org_CashAccount.AccountTypeCode == 0)
+            {
+                <dt class="col-sm-2">
+                    @Html.DisplayNameFor(model => model.Org_CashAccount.AccountNumber)
+                </dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Org_CashAccount.AccountNumber)
+                </dd>
+                <dt class="col-sm-2">
+                    @Html.DisplayNameFor(model => model.Org_CashAccount.SortCode)
+                </dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Org_CashAccount.SortCode)
+                </dd>
+            }
+        }
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Org_CashAccount.AccountClosed)
         </dt>

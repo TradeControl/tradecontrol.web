@@ -25,34 +25,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             set { HttpContext.Session.SetString(SessionKeyReturnUrl, value); }
         }
 
-        #region local model
-        public class Cash_CategoriesList
-        {
-            [Required]
-            [StringLength(10)]
-            [Display(Name = "Category Code")]
-            public string CategoryCode { get; set; }
-            [StringLength(50)]
-            [Display(Name = "Category")]
-            public string Category { get; set; }
-            [StringLength(20)]
-            [Display(Name = "Cat. Type")]
-            public string CategoryType { get; set; }
-            [Display(Name = "Cash Type Code")]
-            public short CashTypeCode { get; set; }
-            [Display(Name = "Display Order")]
-            public short DisplayOrder { get; set; }
-            [StringLength(25)]
-            [Display(Name = "Cash Type")]
-            public string CashType { get; set; }
-            [StringLength(10)]
-            [Display(Name = "Mode")]
-            public string CashMode { get; set; }
-        }
-
-        public IList<Cash_CategoriesList> Cash_Categories { get; set; }
-
-        #endregion
+        public IList<Cash_Category> Cash_Categories { get; set; }
 
         public SelectList CashTypes { get; set; }
 
@@ -63,7 +36,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
         public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
 
-        public async Task OnGetAsync(string returnUrl, string cashTypeCode)
+        public async Task OnGetAsync(string returnUrl, short? cashTypeCode)
         {
             try
             {
@@ -78,12 +51,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 CashTypes = new SelectList(await cashTypes.ToListAsync());
 
-                IQueryable<Cash_CategoriesList> categories = from c in NodeContext.Cash_tbCategories
+                IQueryable<Cash_Category> categories = from c in NodeContext.Cash_tbCategories
                                                              join p in NodeContext.Cash_tbModes on c.CashModeCode equals p.CashModeCode
                                                              join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
                                                              join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
                                                              where c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode
-                                                             select new Cash_CategoriesList
+                                                             select new Cash_Category
                                                              {
                                                                  CategoryCode = c.CategoryCode,
                                                                  Category = c.Category,
@@ -91,22 +64,24 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                                                                  DisplayOrder = c.DisplayOrder,
                                                                  CashTypeCode = c.CashTypeCode,
                                                                  CashMode = p.CashMode,
-                                                                 CashType = t.CashType
+                                                                 CashType = t.CashType,
+                                                                 IsEnabled = c.IsEnabled == 0 ? false : true
                                                              };
 
-                if (!string.IsNullOrEmpty(cashTypeCode))
+                if (cashTypeCode != null)
                 {
-                    NodeEnum.CashType cashType = (NodeEnum.CashType)short.Parse(cashTypeCode);
+                    NodeEnum.CashType cashType = (NodeEnum.CashType)cashTypeCode;
                     categories = from tb in categories
                                  where tb.CashTypeCode == (short)cashType
                                  select tb;
+                    CashType = await NodeContext.Cash_tbTypes.Where(t => t.CashTypeCode == cashTypeCode).Select(t => t.CashType).FirstOrDefaultAsync();
                 }
+                else if (!string.IsNullOrEmpty(CashType))
+                    categories = categories.Where(t => t.CashType == CashType);
 
                 if (!string.IsNullOrEmpty(SearchString))
                     categories = categories.Where(t => t.Category.Contains(SearchString));
 
-                if (!string.IsNullOrEmpty(CashType))
-                    categories = categories.Where(t => t.CashType == CashType);
 
                 Cash_Categories = await categories.OrderBy(t => t.CashTypeCode).OrderBy(t => t.DisplayOrder).ToListAsync();
             }

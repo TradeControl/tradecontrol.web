@@ -9,10 +9,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
+
 namespace TradeControl.Web.Pages.Cash.CashCode
 {
     [Authorize(Roles = "Administrators")]
@@ -20,9 +22,9 @@ namespace TradeControl.Web.Pages.Cash.CashCode
     {
         #region session
         const string SessionKeyReturnUrl = "_returnUrlCashCodeCreate";
-        const string SessionKeyTaxCode = "_TaxCode";
+        const string SessionKeyTaxCode = "_TaxDescription";
         const string SessionKeyCashCode = "_CashCode";
-        const string SessionKeyCategoryCode = "_CategoryCode";
+        const string SessionKeyCategoryCode = "_Category";
         const string SessionKeyCashDesc = "_CashDesc";
 
 
@@ -70,7 +72,8 @@ namespace TradeControl.Web.Pages.Cash.CashCode
             }
         }
 
-        string CategoryCode
+        [BindProperty]
+        public string Category
         {
             get
             {
@@ -89,7 +92,8 @@ namespace TradeControl.Web.Pages.Cash.CashCode
             }
         }
 
-        string TaxCode
+        [BindProperty]
+        public string TaxDescription
         {
             get
             {
@@ -110,10 +114,11 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         #endregion
 
         [BindProperty]
-        public Cash_tbCode CashCodeNew { get; set; }
+        public Cash_tbCode Cash_tbCode { get; set; }
 
-        public SelectList CategoryCodes { get; set; }
-        public SelectList TaxCodes { get; set; }
+        public SelectList Categories { get; set; }
+        public SelectList TaxDescriptions { get; set; }
+
 
         public CreateModel(NodeContext context,
             IAuthorizationService authorizationService,
@@ -122,7 +127,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         {
         }
 
-        public async Task OnGetAsync(string returnUrl, string taxcode, string categorycode)
+        public async Task OnGetAsync(string returnUrl, string categoryCode, string taxCode)
         {
             try
             {
@@ -130,34 +135,52 @@ namespace TradeControl.Web.Pages.Cash.CashCode
 
                 if (!string.IsNullOrEmpty(returnUrl))
                 {
-                    TaxCode = string.Empty;
+                    TaxDescription = string.Empty;
                     CashCode = string.Empty;
-                    CategoryCode = string.Empty;
+                    Category = string.Empty;
                     CashDescription = string.Empty;
                     ReturnUrl = returnUrl;
                 }
 
-                if (!string.IsNullOrEmpty(taxcode))
-                    TaxCode = taxcode;
-
-                if (!string.IsNullOrEmpty(categorycode))
-                    CategoryCode = categorycode;
-
-                TaxCodes = new SelectList(await NodeContext.App_TaxCodes.OrderBy(t => t.TaxCode).Select(t => t.TaxCode).ToListAsync());
-                CategoryCodes = new SelectList(await NodeContext.Cash_tbCategories
+                TaxDescriptions = new SelectList(await NodeContext.App_TaxCodes.OrderBy(t => t.TaxCode).Select(t => t.TaxDescription).ToListAsync());
+                Categories = new SelectList(await NodeContext.Cash_tbCategories
                                                             .Where(t => t.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode)
-                                                            .OrderBy(t => t.CategoryCode)
-                                                            .Select(t => t.CategoryCode)
+                                                            .OrderBy(t => t.Category)
+                                                            .Select(t => t.Category)
                                                             .ToListAsync());
+
                 Profile profile = new(NodeContext);
+
+                if (!string.IsNullOrEmpty(taxCode))
+                    TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == taxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
+                else if (string.IsNullOrEmpty(TaxDescription))
+                {
+                    Orgs orgs = new(NodeContext, await profile.CompanyAccountCode);
+                    taxCode = await orgs.DefaultTaxCode();
+                    TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == taxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
+                }                
+
+                if (!string.IsNullOrEmpty(categoryCode))
+                    Category = await NodeContext.Cash_tbCategories.Where(c => c.CategoryCode == categoryCode).Select(c => c.Category).FirstOrDefaultAsync();
+                else if (string.IsNullOrEmpty(Category))
+                {
+                    Category = await NodeContext.Cash_tbCategories
+                                        .Where(c => c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode 
+                                                && c.CashModeCode == (short)NodeEnum.CashMode.Income
+                                                && c.CashTypeCode == (short)NodeEnum.CashType.Trade)
+                                        .OrderBy(c => c.CategoryCode)
+                                        .Select(c => c.Category)
+                                        .FirstOrDefaultAsync();                    
+                }
+                
                 var userName = await profile.UserName(UserManager.GetUserId(User));
 
-                CashCodeNew = new Cash_tbCode
+                Cash_tbCode = new Cash_tbCode
                 {
                     CashCode = CashCode,
                     CashDescription = CashDescription,
-                    CategoryCode = CategoryCode,
-                    TaxCode = TaxCode,
+                    CategoryCode = await NodeContext.Cash_tbCategories.Where(c => c.Category == Category).Select(c => c.CategoryCode).FirstAsync(),
+                    TaxCode = await NodeContext.App_tbTaxCodes.Where(t => t.TaxDescription == TaxDescription).Select(t => t.TaxCode).FirstAsync(),
                     IsEnabled = -1,
                     InsertedBy = userName,
                     UpdatedBy = userName,
@@ -180,13 +203,21 @@ namespace TradeControl.Web.Pages.Cash.CashCode
                 if (!ModelState.IsValid)
                     return Page();
 
-                NodeContext.Cash_tbCodes.Add(CashCodeNew);
+                Cash_tbCode.TaxCode = await NodeContext.App_tbTaxCodes.Where(t => t.TaxDescription == TaxDescription).Select(t => t.TaxCode).FirstAsync();
+                Cash_tbCode.CategoryCode = await NodeContext.Cash_tbCategories.Where(c => c.Category == Category).Select(c => c.CategoryCode).FirstAsync();
+
+                NodeContext.Cash_tbCodes.Add(Cash_tbCode);
                 await NodeContext.SaveChangesAsync();
 
                 if (!string.IsNullOrEmpty(ReturnUrl))
-                    return LocalRedirect($"{ReturnUrl}?cashcode={CashCodeNew.CashCode}");
+                    return LocalRedirect($"{ReturnUrl}?cashcode={Cash_tbCode.CashCode}");
                 else
-                    return RedirectToPage("./Index");
+                {
+                    RouteValueDictionary route = new();
+                    route.Add("category", Category);
+
+                    return RedirectToPage("./Index", route);
+                }
             }
             catch (Exception e)
             {
@@ -223,11 +254,9 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         void SaveSession()
         {
             try
-            {
-                TaxCode = CashCodeNew?.TaxCode;
-                CashCode = CashCodeNew?.CashCode;
-                CashDescription = CashCodeNew?.CashDescription;
-                CategoryCode = CashCodeNew?.CategoryCode;
+            {                
+                CashCode = Cash_tbCode?.CashCode;
+                CashDescription = Cash_tbCode?.CashDescription;                
             }
             catch
             {

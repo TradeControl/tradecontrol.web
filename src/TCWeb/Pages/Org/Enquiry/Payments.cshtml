@@ -56,7 +56,7 @@
                     @Html.DisplayFor(modelItem => item.UserName)
                 </td>
                 <td>
-                    <a asp-page="/Cash/Statement/Index" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>
+                    <a asp-page="/Cash/Statement/Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>
                 </td>
             </tr>
         }

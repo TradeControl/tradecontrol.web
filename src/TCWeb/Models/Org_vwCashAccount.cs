@@ -55,6 +55,7 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         [Display(Name = "Account")]
         public string AccountType { get; set; }
+        public short AccountTypeCode { get; set; }
         [Display(Name = "Inserted By")]
         public string InsertedBy { get; set; }
         [Column(TypeName = "datetime")]

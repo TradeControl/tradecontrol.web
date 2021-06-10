@@ -17,8 +17,6 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(10)]
         public string ChildCode { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(ChildCode))]
         [InverseProperty(nameof(Cash_tbCategory.TbCategoryTotalChildCodeNavigations))]

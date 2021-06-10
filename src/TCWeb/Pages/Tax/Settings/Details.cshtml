@@ -1,0 +1,48 @@
+﻿@page
+@model TradeControl.Web.Pages.Tax.Settings.DetailsModel
+@{ ViewData["Title"] = "Tax Setting"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.App_TaxType.TaxType)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxType.CashDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxType.CashDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxType.MonthName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxType.MonthName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxType.Recurrence)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxType.Recurrence)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxType.AccountName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxType.AccountName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.App_TaxType.OffsetDays)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.App_TaxType.OffsetDays)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-page="./Index" class="btn btn-info">To List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

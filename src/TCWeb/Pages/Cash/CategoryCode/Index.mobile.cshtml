@@ -3,6 +3,15 @@
 @{ ViewData["Title"] = "Categories"; }
 <h1>@ViewData["Title"]</h1>
 
+@{
+    if (string.IsNullOrEmpty(Model.ReturnUrl))
+    {
+        <p>
+            <a asp-page="./Create" class="btn btn-outline-primary">Create New</a>
+        </p>
+    }
+}
+
 <form class="form-group" method="get">
     <p>
         <select asp-for="CashType" asp-items="Model.CashTypes">
@@ -36,7 +45,21 @@
                     @Html.DisplayFor(modelItem => item.Category)
                 </td>
                 <td>
-                    <a asp-page="@Model.ReturnUrl" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info w-25"></a>
+                    @{
+                        if (!string.IsNullOrEmpty(Model.ReturnUrl))
+                        {
+                            <a asp-page="@Model.ReturnUrl" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info">Select</a>
+                        }
+                        else
+                        {
+                            <a asp-page="./Details" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info"></a>
+                            if (User.IsInRole(Constants.AdministratorsRole))
+                            {
+                                <a asp-page="./Edit" asp-route-categoryCode="@item.CategoryCode" class="btn btn-secondary"></a>
+                                <a asp-page="./Delete" asp-route-categoryCode="@item.CategoryCode" class="btn btn-danger"></a>
+                            }
+                        }
+                    }
                 </td>
             </tr>
         }

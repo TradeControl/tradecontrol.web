@@ -1,0 +1,58 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CashCode.EditModel
+@{ ViewData["Title"] = "Edit Cash Code"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Cash_tbCode.CashCode" class="control-label"></label>
+                <input asp-for="Cash_tbCode.CashCode" class="form-control" />
+                <span asp-validation-for="Cash_tbCode.CashCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_tbCode.CashDescription" class="control-label"></label>
+                <input asp-for="Cash_tbCode.CashDescription" class="form-control" />
+                <span asp-validation-for="Cash_tbCode.CashDescription" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_tbCode.CategoryCode" class="control-label"></label>
+                <p>
+                    <select asp-for="Category" asp-items="Model.Categories" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="Cash_tbCode.TaxCode" class="control-label"></label>
+                <p>
+                    <select asp-for="TaxDescription" asp-items="Model.TaxDescriptions" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input asp-for="IsEnabled" class="form-check-input" /> @Html.DisplayNameFor(model => model.Cash_tbCode.IsEnabled)
+                </label>
+                <span asp-validation-for="IsEnabled" class="text-danger"></span>
+            </div>
+            <input type="hidden" asp-for="Cash_tbCode.TaxCode" />
+            <input type="hidden" asp-for="Cash_tbCode.CategoryCode" />
+            <input type="hidden" asp-for="Cash_tbCode.IsEnabled" />
+            <input type="hidden" asp-for="Cash_tbCode.InsertedBy" />
+            <input type="hidden" asp-for="Cash_tbCode.InsertedOn" />
+            <input type="hidden" asp-for="Cash_tbCode.UpdatedBy" />
+            <input type="hidden" asp-for="Cash_tbCode.UpdatedOn" />
+
+            <div class="form-group">
+                <input type="submit" value="Update" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+
+

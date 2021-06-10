@@ -59,7 +59,10 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Tax rates
 - [x] Balance Sheet by period
 - [x] Profit and Loss by period
-- [ ] Category and Cash Code maintenance
+- [x] Category and Cash Code maintenance
+- [x] Cash Totals
+- [x] Tax Settings
+- [ ] System settings
 - [ ] Period End maintenance and closedown
 - [ ] Configuration and setup
 

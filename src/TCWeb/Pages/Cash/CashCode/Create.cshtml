@@ -8,43 +8,55 @@
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
-                <label asp-for="CashCodeNew.CashCode" class="control-label"></label>
-                <input asp-for="CashCodeNew.CashCode" class="form-control" />
-                <span asp-validation-for="CashCodeNew.CashCode" class="text-danger"></span>
+                <label asp-for="Cash_tbCode.CashCode" class="control-label"></label>
+                <input asp-for="Cash_tbCode.CashCode" class="form-control" />
+                <span asp-validation-for="Cash_tbCode.CashCode" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="CashCodeNew.CashDescription" class="control-label"></label>
-                <input asp-for="CashCodeNew.CashDescription" class="form-control" />
-                <span asp-validation-for="CashCodeNew.CashDescription" class="text-danger"></span>
+                <label asp-for="Cash_tbCode.CashDescription" class="control-label"></label>
+                <input asp-for="Cash_tbCode.CashDescription" class="form-control" />
+                <span asp-validation-for="Cash_tbCode.CashDescription" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="CashCodeNew.CategoryCode" class="control-label"></label>
+                <label asp-for="Cash_tbCode.CategoryCode" class="control-label"></label>
                 <p>
                     <button type="submit" asp-page-handler="GetCategoryCode" class="btn btn-outline-info">Select</button>
-                    <button type="submit" asp-page-handler="NewCategoryCode" class="btn btn-outline-primary">New</button>
+                    @{
+                        if (User.IsInRole(Constants.AdministratorsRole))
+                        {
+                            <button type="submit" asp-page-handler="NewCategoryCode" class="btn btn-outline-primary">New</button>
+                        }
+                    }
+
                 </p>
                 <p>
-                    <select asp-for="CashCodeNew.CategoryCode" asp-items="Model.CategoryCodes" class="form-control"></select>
+                    <select asp-for="Category" asp-items="Model.Categories" class="form-control"></select>
                 </p>
-                <span asp-validation-for="CashCodeNew.CategoryCode" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="CashCodeNew.TaxCode" class="control-label"></label>
+                <label asp-for="Cash_tbCode.TaxCode" class="control-label"></label>
                 <p>
                     <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
-                    <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-outline-primary">New</button>
+                    @{
+                        if (User.IsInRole(Constants.AdministratorsRole))
+                        {
+                            <button type="submit" asp-page-handler="NewTaxCode" class="btn btn-outline-primary">New</button>
+                        }
+                    }
+
                 </p>
                 <p>
-                    <select asp-for="CashCodeNew.TaxCode" asp-items="Model.TaxCodes" class="form-control"></select>
-                </p>
-                <span asp-validation-for="CashCodeNew.TaxCode" class="text-danger"></span>
+                    <select asp-for="TaxDescription" asp-items="Model.TaxDescriptions" class="form-control"></select>
+                </p>                
             </div>
 
-            <input type="hidden" asp-for="CashCodeNew.IsEnabled" />
-            <input type="hidden" asp-for="CashCodeNew.InsertedBy" />
-            <input type="hidden" asp-for="CashCodeNew.InsertedOn" />
-            <input type="hidden" asp-for="CashCodeNew.UpdatedBy" />
-            <input type="hidden" asp-for="CashCodeNew.UpdatedOn" />
+            <input type="hidden" asp-for="Cash_tbCode.TaxCode" />
+            <input type="hidden" asp-for="Cash_tbCode.CategoryCode" />
+            <input type="hidden" asp-for="Cash_tbCode.IsEnabled" />
+            <input type="hidden" asp-for="Cash_tbCode.InsertedBy" />
+            <input type="hidden" asp-for="Cash_tbCode.InsertedOn" />
+            <input type="hidden" asp-for="Cash_tbCode.UpdatedBy" />
+            <input type="hidden" asp-for="Cash_tbCode.UpdatedOn" />
 
             <div class="form-group">
                 <input type="submit" value="CREATE" class="btn btn-primary" />

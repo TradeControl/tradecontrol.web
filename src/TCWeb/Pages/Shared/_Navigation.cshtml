@@ -47,6 +47,9 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Invoice Settings</a>
+                            </li>
                         </ul>
                     </li>
                     <li class="dropdown">
@@ -61,11 +64,17 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Org/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Types/Index">Organisation Types</a>
+                            </li>
                         </ul>
                     </li>
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Tax</a>
+                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Accounts</a>
                         <ul class="dropdown-menu">
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Periods/Index">Financial Periods</a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Accounts/BalanceSheet">Balance Sheet</a>
                             </li>
@@ -78,7 +87,9 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Company/Index">Company Tax</a>
                             </li>
-
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Settings/Index">Tax Settings</a>
+                            </li>
                         </ul>
                     </li>
 
@@ -86,10 +97,19 @@
                         <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">System</a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Definitions</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Tax/TaxCode/Index">Tax Codes</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Administration</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/CategoryCode/Index">Cash Categories</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/CashCode/Index">Cash Codes</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Totals/Index">Cash Totals</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Settings/Index">System Settings</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>

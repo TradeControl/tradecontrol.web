@@ -1,0 +1,87 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CashCode.DeleteModel
+@{ ViewData["Title"] = "Cash Code Details"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Cash_Code.CashDescription)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.CashCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.CashCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.Category)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.Category)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.CashMode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.CashMode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.TaxDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.TaxDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.CashType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.CashType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.IsCashEnabled)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.IsCashEnabled)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.IsCategoryEnabled)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.IsCategoryEnabled)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.InsertedOn)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.UpdatedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.UpdatedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_Code.UpdatedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_Code.UpdatedOn)
+        </dd>
+    </dl>
+    <form method="post">
+        <input type="hidden" asp-for="@Model.Cash_Code.CashCode" />
+        <input type="submit" value="DELETE" class="btn btn-danger" />
+        <a asp-page="./Index" asp-route-category="@Model.Cash_Code.Category" class="btn btn-info">To List</a>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

@@ -1,0 +1,71 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.Totals.AddTotalModel
+@{ ViewData["Title"] = "Select Total"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Cash_Category.Category)</h4>
+    <hr />
+</div>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="CategoryType" asp-items="Model.CategoryTypes">
+            <option value="">All</option>
+        </select>
+        <select asp-for="CashType" asp-items="Model.CashTypes">
+            <option value="">All</option>
+        </select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CategoryCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Candidates[0].Category)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CategoryType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashMode)
+            </th>
+
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_Candidates)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CategoryCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CategoryType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashMode)
+                </td>
+                <td>
+                    <a asp-page="./Edit" asp-route-categoryCode="@Model.Cash_Category.CategoryCode" asp-route-childCode="@item.CategoryCode" class="btn btn-info"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

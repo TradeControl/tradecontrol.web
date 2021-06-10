@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
@@ -55,11 +56,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
                 CashModes = new SelectList(await modes.ToListAsync());
-                CashMode = await modes.FirstOrDefaultAsync();
+                CashMode = await modes.FirstAsync();
 
                 var types = NodeContext.Cash_tbTypes.OrderBy(t => t.CashTypeCode).Select(t => t.CashType);
                 CashTypes = new SelectList(await types.ToListAsync());
-                CashType = await types.FirstOrDefaultAsync();
+                CashType = await types.FirstAsync();
 
                 Profile profile = new(NodeContext);
                 var userName = await profile.UserName(UserManager.GetUserId(User));
@@ -93,7 +94,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 if (!ModelState.IsValid)
                     return Page();
 
-                Cash_tbCategory.CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode;
                 Cash_tbCategory.CashTypeCode = await NodeContext.Cash_tbTypes.Where(t => t.CashType == CashType).Select(t => t.CashTypeCode).FirstAsync();
                 Cash_tbCategory.CashModeCode = await NodeContext.Cash_tbModes.Where(m => m.CashMode == CashMode).Select(m => m.CashModeCode).FirstAsync();
 
@@ -103,7 +103,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 if (!string.IsNullOrEmpty(ReturnUrl))
                     return LocalRedirect($"{ReturnUrl}?categorycode={Cash_tbCategory.CategoryCode}");
                 else
-                    return RedirectToPage("./Index");
+                {
+                    RouteValueDictionary route = new();
+                    route.Add("cashTypeCode", Cash_tbCategory.CashTypeCode);
+
+                    return RedirectToPage("./Index", route);
+                }
             }
             catch (Exception e)
             {

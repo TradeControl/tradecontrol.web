@@ -32,7 +32,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public IList<Cash_vwCodeLookup> Cash_CodeLookup { get; set; }
+        public IList<Cash_vwCode> Cash_Codes { get; set; }
 
         public IndexModel(NodeContext context,
             IAuthorizationService authorizationService,
@@ -41,24 +41,27 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         {
         }
 
-        public IList<Cash_vwCodeLookup> Cash_vwCodeLookup { get;set; }
-
         public async Task OnGetAsync(string returnUrl)
         {
             try
             {
                 await SetViewData();
 
+                var categories = from tb in NodeContext.Cash_tbCategories
+                                 where tb.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode
+                                 select tb;
+                
+
+                var cashcodes = from tb in NodeContext.Cash_Codes select tb;
+
                 if (!string.IsNullOrEmpty(returnUrl))
+                {
                     ReturnUrl = returnUrl;
+                    cashcodes = cashcodes.Where(t => t.CashTypeCode < (short)NodeEnum.CashType.Bank && t.IsCashEnabled && t.IsCategoryEnabled);
+                    categories = categories.Where(t => t.CashTypeCode == (short)NodeEnum.CashType.Trade);
+                }
 
-                var categories = from tb in NodeContext.Cash_CategoryTrades
-                                 orderby tb.Category
-                                 select tb.Category;
-
-                Categories = new SelectList(await categories.ToListAsync());
-
-                var cashcodes = NodeContext.Cash_CodeLookup.Where(t => t.CashTypeCode < (short)NodeEnum.CashType.Bank);
+                Categories = new SelectList(await categories.OrderBy(t => t.Category).Select(t => t.Category).ToListAsync());
 
                 if (!string.IsNullOrEmpty(Category))
                     cashcodes = cashcodes.Where(t => t.Category == Category);
@@ -66,7 +69,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
                 if (!string.IsNullOrEmpty(SearchString))
                     cashcodes = cashcodes.Where(t => t.CashDescription.Contains(SearchString));
 
-                Cash_CodeLookup = await cashcodes.OrderBy(t => t.CashCode).ToListAsync();
+                Cash_Codes = await cashcodes.OrderBy(t => t.CashCode).ToListAsync();
             }
             catch (Exception e)
             {

@@ -168,6 +168,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Task_vwChangeLog> Task_ChangeLog { get; set; }
         public virtual DbSet<Activity_vwCode> Activity_Codes { get; set; }
         public virtual DbSet<Cash_vwCodeLookup> Cash_CodeLookup { get; set; }
+        public virtual DbSet<Cash_vwCode> Cash_Codes { get; set; }
         public virtual DbSet<Org_vwCompanyHeader> Org_CompanyHeaders { get; set; }
         public virtual DbSet<Org_vwCompanyLogo> Org_CompanyLogos { get; set; }
         public virtual DbSet<Org_vwContact> Org_Contacts { get; set; }
@@ -262,6 +263,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Org_vwTask> Org_Tasks { get; set; }
         public virtual DbSet<Task_vwTask> Task_Tasks { get; set; }
         public virtual DbSet<App_vwTaxCode> App_TaxCodes { get; set; }
+        public virtual DbSet<Cash_vwTaxType> App_TaxTypes { get; set; }
         public virtual DbSet<App_vwTaxCodeType> App_TaxCodeTypes { get; set; }
         public virtual DbSet<Cash_vwTaxCorpAuditAccrual> Cash_TaxCorpAuditAccruals { get; set; }
         public virtual DbSet<Cash_vwTaxCorpStatement> Cash_TaxCorpStatement { get; set; }
@@ -729,10 +731,6 @@ namespace TradeControl.Web.Data
             {
                 entity.HasKey(e => new { e.ParentCode, e.ChildCode })
                     .HasName("PK_Cash_tbCategoryTotal");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.ChildCodeNavigation)
                     .WithMany(p => p.TbCategoryTotalChildCodeNavigations)
@@ -2292,10 +2290,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.RecurrenceCode).HasDefaultValueSql("((1))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.HasOne(d => d.AccountCodeNavigation)
                     .WithMany(p => p.TbTaxTypes)
                     .HasForeignKey(d => d.AccountCode)
@@ -2781,6 +2775,12 @@ namespace TradeControl.Web.Data
             {
                 entity.HasKey(e => new { e.CashCode });
                 entity.ToView("vwCodeLookup", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwCode>(entity =>
+            {
+                entity.HasKey(e => new { e.CashCode });
+                entity.ToView("vwCode", "Cash");
             });
 
             modelBuilder.Entity<Org_vwCompanyHeader>(entity =>
@@ -3333,6 +3333,12 @@ namespace TradeControl.Web.Data
             {
                 entity.HasKey(e => new { e.TaxCode });
                 entity.ToView("vwTaxCodes", "App");
+            });
+
+            modelBuilder.Entity<Cash_vwTaxType>(entity =>
+            {
+                entity.HasKey(e => new { e.TaxTypeCode });
+                entity.ToView("vwTaxTypes", "Cash");
             });
 
             modelBuilder.Entity<App_vwTaxCodeType>(entity =>

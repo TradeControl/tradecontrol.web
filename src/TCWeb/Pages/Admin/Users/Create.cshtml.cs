@@ -41,8 +41,14 @@ namespace TradeControl.Web.Pages.Admin.Users
 
                     if (AspNet_UserRegistration == null || AspNet_UserRegistration.IsRegistered)
                         return NotFound();
-                    else
+                    else 
                     {
+                        var isAuthorized = await AuthorizationService.AuthorizeAsync(
+                          User, AspNet_UserRegistration,
+                          Operations.Approve);
+                        if (!isAuthorized.Succeeded)
+                            return Forbid();
+
                         Profile profile = new(NodeContext);
                         var userName = await profile.UserName(UserManager.GetUserId(User));
 

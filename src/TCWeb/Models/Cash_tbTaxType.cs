@@ -29,8 +29,6 @@ namespace TradeControl.Web.Models
         [StringLength(10)]
         public string AccountCode { get; set; }
         public short OffsetDays { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
         [InverseProperty(nameof(Org_tbOrg.TbTaxTypes))]
