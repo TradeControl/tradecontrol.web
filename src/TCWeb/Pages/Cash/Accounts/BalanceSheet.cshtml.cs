@@ -63,7 +63,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 if (string.IsNullOrEmpty(PeriodName))
                 {
-                    Periods periods = new(NodeContext);
+                    FinancialPeriods periods = new(NodeContext);
                     startOn = periods.ActiveStartOn;
                     PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                 }
@@ -116,8 +116,17 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 foreach (var balance in balance_sheet.Where(b => b.YearNumber == yearNumber))
                 {
-                    var asset = Cash_BalanceSheet.Where(a => a.AssetCode == balance.AssetCode).First();
-                    asset.PreviousBalance = balance.Balance;
+                    var asset = Cash_BalanceSheet.Where(a => a.AssetCode == balance.AssetCode).FirstOrDefault();
+                    if (asset != null)
+                        asset.PreviousBalance = balance.Balance;
+                    else
+                        Cash_BalanceSheet.Add(new BalanceSheets()
+                        {
+                            AssetCode = balance.AssetCode,
+                            AssetName = balance.AssetName,
+                            CurrentBalance = 0,
+                            PreviousBalance = balance.Balance
+                        });
                 }
             }
 

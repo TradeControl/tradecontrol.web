@@ -60,7 +60,7 @@ namespace TradeControl.Web.Pages.Tax.Vat
                 if (!ModelState.IsValid)
                     return Page();
 
-                Data.Periods periods = new(NodeContext);
+                Data.FinancialPeriods periods = new(NodeContext);
                 await periods.AdjustTax(StartOn, NodeEnum.TaxType.VAT, VatAdjustment);
 
                 return RedirectToPage("./Index");

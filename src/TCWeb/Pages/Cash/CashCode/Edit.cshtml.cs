@@ -95,10 +95,8 @@ namespace TradeControl.Web.Pages.Cash.CashCode
                     if (!await NodeContext.Cash_tbCodes.AnyAsync(e => e.CashCode == Cash_tbCode.CashCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 RouteValueDictionary route = new();

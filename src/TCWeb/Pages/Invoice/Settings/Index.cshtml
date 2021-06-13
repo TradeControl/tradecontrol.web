@@ -1,4 +1,52 @@
 ﻿@page
 @model TradeControl.Web.Pages.Invoice.Settings.IndexModel
-@{
+@{ ViewData["Title"] = "Invoice Numbering"; }
+<h1>@ViewData["Title"]</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Types[0].InvoiceType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Types[0].CashMode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Invoice_Types[0].NextNumber)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Invoice_Types)
+        {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.InvoiceType)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CashMode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.NextNumber)
+            </td>
+            <td>
+                @{
+                    if (User.IsInRole(Constants.AdministratorsRole))
+                    {
+                        <a asp-page="./Edit" asp-route-invoiceTypeCode="@item.InvoiceTypeCode" class="btn btn-secondary"></a>
+                    }
+                }
+            </td>
+
+        </tr>
+        }
+    </tbody>
+</table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }
+

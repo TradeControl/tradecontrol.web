@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TradeControl.Web.Pages.Admin.Settings
 {
-    public class IndexModel : PageModel
+    public class MailModel : PageModel
     {
         public void OnGet()
         {

@@ -8,22 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    [Table("tbYear", Schema = "App")]
-    public partial class App_tbYear
+    [Keyless]
+    public class App_vwYear
     {
-        public App_tbYear()
-        {
-            TbYearPeriods = new HashSet<App_tbYearPeriod>();
-        }
-
-        [Key]
-        [Display(Name ="Start Year")]
+        [Display(Name ="Year")]
         public short YearNumber { get; set; }
         [Display(Name = "Start Month")]
-        public short StartMonth { get; set; }
-        [Display(Name = "Status")]
+        public string StartMonth { get; set; }
+        [Display(Name = "Status Code")]
         public short CashStatusCode { get; set; }
-        [Required]
+        [Display(Name = "Status")]
+        public string CashStatus { get; set; }
         [StringLength(10)]
         [Display(Name = "Financial Year")]
         public string Description { get; set; }
@@ -32,13 +27,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Inserted By")]
         public string InsertedBy { get; set; }
         [Column(TypeName = "datetime")]
-        [Display(Name = "Inserted On")]
+        [Display(Name = "Inserted")]
         public DateTime InsertedOn { get; set; }
-
-        [ForeignKey(nameof(StartMonth))]
-        [InverseProperty(nameof(App_tbMonth.TbYears))]
-        public virtual App_tbMonth StartMonthNavigation { get; set; }
-        [InverseProperty(nameof(App_tbYearPeriod.YearNumberNavigation))]
-        public virtual ICollection<App_tbYearPeriod> TbYearPeriods { get; set; }
     }
 }

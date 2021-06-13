@@ -77,10 +77,8 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                     if (!NodeContext.Cash_PaymentsUnposted.Any(e => e.PaymentCode == Cash_PaymentsUnposted.PaymentCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 RouteValueDictionary route = new();

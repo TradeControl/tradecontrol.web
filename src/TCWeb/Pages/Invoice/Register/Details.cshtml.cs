@@ -39,7 +39,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
                 return NotFound();
             else
             {
-                Periods periods = new(NodeContext);
+                FinancialPeriods periods = new(NodeContext);
                 PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == Invoice_Detail.StartOn).Select(t => t.Description).FirstOrDefaultAsync();
 
                 await SetViewData();

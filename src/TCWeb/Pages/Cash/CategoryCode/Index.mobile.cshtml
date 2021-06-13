@@ -4,7 +4,7 @@
 <h1>@ViewData["Title"]</h1>
 
 @{
-    if (string.IsNullOrEmpty(Model.ReturnUrl))
+    if (string.IsNullOrEmpty(Model.ReturnUrl) && User.IsInRole(Constants.AdministratorsRole))
     {
         <p>
             <a asp-page="./Create" class="btn btn-outline-primary">Create New</a>

@@ -12,7 +12,6 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-
 namespace TradeControl.Web.Pages.Tax.TaxCode
 {
     public class DetailsModel : DI_BasePageModel

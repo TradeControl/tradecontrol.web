@@ -100,10 +100,8 @@ namespace TradeControl.Web.Pages.Org.Update
                     if (!await NodeContext.Org_tbOrgs.AnyAsync(e => e.AccountCode == Org_tbOrg.AccountCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 RouteValueDictionary route = new();

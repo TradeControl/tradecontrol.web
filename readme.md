@@ -24,7 +24,7 @@ Requires sql node version 3.34.3 to support the AspNetCore.Identity datastore an
 
 - [x] Authentication
 - [x] Register new users 
-- [x] Authorisation - [attributes](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Calendar/Create.cshtml), [views](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Index.cshtml), [handlers](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Authorisation/AspNetAuthorizationHandler.cs), [page base class](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/DI_BasePageModel.cs) and [models](https://github.com/TradeControl/tradecontrol.web/blob/master/src/TCWeb/Pages/Admin/Users/Confirm.cshtml.cs)
+- [x] Authorisation
 - [x] [Device Detection](https://github.com/wangkanai/Detection)
 - [x] Layouts and Navigation
 - [x] Session service
@@ -36,8 +36,8 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Accounts Mode menu
 - [x] Basic home page
 - [x] Error trapping
-- [X] Error Log
-- [X] Submit errors to support
+- [x] Error Log
+- [x] Submit errors to support
 - [x] Payment Entry - bank accounts and adjustments 
 - [x] Create and lookup organisations, category, tax and cash codes
 - [x] Asset Entry - capital accounts for long-term assets and liabilities 
@@ -62,8 +62,8 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Category and Cash Code maintenance
 - [x] Cash Totals
 - [x] Tax Settings
-- [ ] System settings
-- [ ] Period End maintenance and closedown
+- [x] System settings 
+- [x] Period End maintenance and closedown
 - [ ] Configuration and setup
 
 ### Phase 5 - MIS Mode

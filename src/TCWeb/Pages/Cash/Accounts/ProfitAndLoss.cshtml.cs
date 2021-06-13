@@ -61,7 +61,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 if (string.IsNullOrEmpty(YearName))
                 {
-                    Periods periods = new(NodeContext);
+                    FinancialPeriods periods = new(NodeContext);
                     yearNumber = periods.ActiveYear;
                     YearName = await NodeContext.App_tbYears.Where(t => t.YearNumber == yearNumber).Select(t => t.Description).FirstOrDefaultAsync();
                 }

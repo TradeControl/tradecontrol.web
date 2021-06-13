@@ -1,4 +1,50 @@
 ﻿@page
 @model TradeControl.Web.Pages.Admin.Periods.CreateModel
-@{
+@{ ViewData["Title"] = "New Financial Year"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="App_tbYear.YearNumber" class="control-label"></label>
+                <input asp-for="App_tbYear.YearNumber" class="form-control" />
+                <span asp-validation-for="App_tbYear.YearNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYear.Description" class="control-label"></label>
+                <input asp-for="App_tbYear.Description" class="form-control" />
+                <span asp-validation-for="App_tbYear.Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYear.StartMonth" class="control-label"></label>
+                <p>
+                    <select asp-for="MonthName" asp-items="Model.MonthNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYear.CashStatusCode" class="control-label"></label>
+                <p>
+                    <select asp-for="CashStatus" asp-items="Model.CashStatuses" class="form-control"></select>
+                </p>
+            </div>
+
+            <input type="hidden" asp-for="App_tbYear.CashStatusCode" />
+            <input type="hidden" asp-for="App_tbYear.StartMonth" />
+            <input type="hidden" asp-for="App_tbYear.InsertedBy" />
+            <input type="hidden" asp-for="App_tbYear.InsertedOn" />
+
+            <div class="form-group">
+                <input type="submit" value="CREATE" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-info">To List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }

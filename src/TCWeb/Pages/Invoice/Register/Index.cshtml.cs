@@ -70,7 +70,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
                 {
                     invoices = invoices.Where(i => i.InvoiceNumber == invoiceNumber);
 
-                    Periods periods = new(NodeContext);
+                    FinancialPeriods periods = new(NodeContext);
                     DateTime startOn = await invoices.Select(i => i.StartOn).FirstOrDefaultAsync();
                     PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                 }
@@ -80,7 +80,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
 
                     if (string.IsNullOrEmpty(PeriodName))
                     {
-                        Periods periods = new(NodeContext);
+                        FinancialPeriods periods = new(NodeContext);
                         startOn = periods.ActiveStartOn;
                         PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                     }

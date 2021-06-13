@@ -29,14 +29,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
         [BindProperty]
         public Cash_tbCategory Cash_tbCategory { get; set; }
-
-        public SelectList CashModes { get; set; }
-        public SelectList CashTypes { get; set; }
-
+            
         [BindProperty]       
         public string CashMode { get; set; }
+        public SelectList CashModes { get; set; }
+
         [BindProperty]
         public string CashType { get; set; }
+        public SelectList CashTypes { get; set; }
 
         public CreateModel(NodeContext context,
             IAuthorizationService authorizationService,

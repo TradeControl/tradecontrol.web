@@ -26,8 +26,6 @@ namespace TradeControl.Web.Models
         public string InvoiceType { get; set; }
         public short CashModeCode { get; set; }
         public int NextNumber { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(CashModeCode))]
         [InverseProperty(nameof(Cash_tbMode.TbInvoiceType))]

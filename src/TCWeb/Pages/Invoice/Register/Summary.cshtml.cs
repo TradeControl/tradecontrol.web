@@ -80,7 +80,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
 
                     if (string.IsNullOrEmpty(periodName))
                     {
-                        Periods periods = new(NodeContext);
+                        FinancialPeriods periods = new(NodeContext);
                         startOn = periods.ActiveStartOn;
                     }
                     else

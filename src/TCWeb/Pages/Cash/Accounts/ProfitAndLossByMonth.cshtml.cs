@@ -60,7 +60,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 if (string.IsNullOrEmpty(PeriodName))
                 {
-                    Periods periods = new(NodeContext);
+                    FinancialPeriods periods = new(NodeContext);
                     startOn = periods.ActiveStartOn;
                     PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                 }
@@ -109,8 +109,17 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 foreach (var invoice_value in profit_and_loss.Where(b => b.YearNumber == yearNumber))
                 {
-                    var category = Cash_ProfitAndLoss.Where(a => a.CategoryCode == invoice_value.CategoryCode).First();
-                    category.PreviousValue = invoice_value.InvoiceValue;
+                    var category = Cash_ProfitAndLoss.Where(a => a.CategoryCode == invoice_value.CategoryCode).FirstOrDefault();
+                    if (category != null)
+                        category.PreviousValue = invoice_value.InvoiceValue;
+                    else
+                        Cash_ProfitAndLoss.Add(new ProfitAndLosses()
+                        {
+                            CategoryCode = invoice_value.CategoryCode,
+                            Category = invoice_value.Category,
+                            CurrentValue = 0,
+                            PreviousValue = invoice_value.InvoiceValue
+                        });
                 }
             }
 

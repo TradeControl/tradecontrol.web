@@ -199,10 +199,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                     if (!await NodeContext.Cash_PaymentsUnposted.AnyAsync(e => e.PaymentCode == Cash_PaymentsUnposted.PaymentCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 RouteValueDictionary route = new();

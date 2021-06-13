@@ -17,13 +17,14 @@ namespace TradeControl.Web.Models
         }
 
         [Key]
+        [Display(Name = "Org Type Code")]
         public short OrganisationTypeCode { get; set; }
+        [Display(Name = "Mode")]
         public short CashModeCode { get; set; }
         [Required]
         [StringLength(50)]
+        [Display(Name = "Type")]
         public string OrganisationType { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(CashModeCode))]
         [InverseProperty(nameof(Cash_tbMode.TbOrgType))]

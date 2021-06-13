@@ -75,10 +75,8 @@ namespace TradeControl.Web.Pages.Cash.Transfer
                     if (!await NodeContext.Cash_TransfersUnposted.AnyAsync(e => e.PaymentCode == Cash_TransfersUnposted.PaymentCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 return RedirectToPage("./Index");

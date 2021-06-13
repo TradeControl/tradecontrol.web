@@ -43,7 +43,7 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
         {
             try
             {
-                if (taxCode == null)
+                if (string.IsNullOrEmpty(taxCode))
                     return NotFound();
 
                 var tbTaxCode = await NodeContext.App_tbTaxCodes.FindAsync(taxCode);

@@ -106,10 +106,8 @@ namespace TradeControl.Web.Pages.Tax.Settings
                     if (!await NodeContext.Cash_tbTaxTypes.AnyAsync(e => e.TaxTypeCode == Cash_tbTaxType.TaxTypeCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 return RedirectToPage("./Index");

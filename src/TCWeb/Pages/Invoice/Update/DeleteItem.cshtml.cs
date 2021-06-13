@@ -82,7 +82,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
 
                 var invoiceHeader = await NodeContext.Invoice_tbInvoices.Where(i => i.InvoiceNumber == invoiceNumber).FirstAsync();
 
-                Periods periods = new(NodeContext);
+                FinancialPeriods periods = new(NodeContext);
                 if (invoiceHeader.InvoicedOn < periods.ActiveStartOn)
                     await periods.Generate();
 

@@ -103,7 +103,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
 
                 bool periodRebuild = false;
 
-                Periods periods = new(NodeContext);
+                FinancialPeriods periods = new(NodeContext);
                 DateTime previousInvoicedOn = await NodeContext.Invoice_tbInvoices.Where(i => i.InvoiceNumber == Invoice_tbInvoice.InvoiceNumber)
                                                                                 .Select(i => i.InvoicedOn).FirstAsync();
                 if (previousInvoicedOn != Invoice_tbInvoice.InvoicedOn)
@@ -128,10 +128,8 @@ namespace TradeControl.Web.Pages.Invoice.Update
                     if (!await NodeContext.Invoice_tbInvoices.AnyAsync(e => e.AccountCode == Invoice_tbInvoice.InvoiceNumber))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 Invoices invoices = new(NodeContext, Invoice_tbInvoice.InvoiceNumber);

@@ -83,10 +83,8 @@ namespace TradeControl.Web.Pages.Invoice.Update
                         if (!await NodeContext.Invoice_tbInvoices.AnyAsync(e => e.InvoiceNumber == invoice.InvoiceNumber))
                             return NotFound();
                         else
-                        {
-                            NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                             throw;
-                        }
+
                     }
 
                     Invoices invoices = new(NodeContext);

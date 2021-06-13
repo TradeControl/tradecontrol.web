@@ -91,10 +91,8 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                     if (!await NodeContext.Invoice_Entries.AnyAsync(e => e.AccountCode == Invoice_Entry.AccountCode && e.CashCode == Invoice_Entry.CashCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 return RedirectToPage("./Index");

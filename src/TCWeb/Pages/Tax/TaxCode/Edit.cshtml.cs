@@ -14,7 +14,6 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-
 namespace TradeControl.Web.Pages.Tax.TaxCode
 {
     [Authorize(Roles = "Administrators")]
@@ -87,10 +86,8 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
                     if (!await NodeContext.App_tbTaxCodes.AnyAsync(e => e.TaxCode == App_tbTaxCode.TaxCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 RouteValueDictionary route = new();

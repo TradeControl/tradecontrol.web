@@ -111,11 +111,13 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_tbTxStatus> Cash_tbTxStatuses { get; set; }
         public virtual DbSet<Cash_tbType> Cash_tbTypes { get; set; }
         public virtual DbSet<Invoice_tbType> Invoice_tbTypes { get; set; }
+        public virtual DbSet<Invoice_vwType> Invoice_Types { get; set; }
         public virtual DbSet<Org_tbType> Org_tbTypes { get; set; }
         public virtual DbSet<App_tbUoc> App_tbUocs { get; set; }
         public virtual DbSet<App_tbUom> App_tbUoms { get; set; }
         public virtual DbSet<Usr_tbUser> Usr_tbUsers { get; set; }
         public virtual DbSet<App_tbYear> App_tbYears { get; set; }
+        public virtual DbSet<App_vwYear> App_Years { get; set; }
         public virtual DbSet<App_tbYearPeriod> App_tbYearPeriods { get; set; }
 
         #endregion
@@ -1980,11 +1982,11 @@ namespace TradeControl.Web.Data
                     .HasForeignKey(d => d.CashCode)
                     .HasConstraintName("FK_Cash_tbPeriod_Cash_tbCode");
 
-                entity.HasOne(d => d.StartOnNavigation)
-                    .WithMany(p => p.TbPeriods)
-                    .HasPrincipalKey(p => p.StartOn)
-                    .HasForeignKey(d => d.StartOn)
-                    .HasConstraintName("FK_Cash_tbPeriod_App_tbYearPeriod");
+                //entity.HasOne(d => d.StartOnNavigation)
+                //    .WithMany(p => p.TbPeriods)
+                //    .HasPrincipalKey(p => p.StartOn)
+                //    .HasForeignKey(d => d.StartOn)
+                //    .HasConstraintName("FK_Cash_tbPeriod_App_tbYearPeriod");
             });
 
             modelBuilder.Entity<Task_tbQuote>(entity =>
@@ -2403,9 +2405,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.NextNumber).HasDefaultValueSql("((1000))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.CashModeCodeNavigation)
                     .WithMany(p => p.TbInvoiceType)
@@ -2421,10 +2420,6 @@ namespace TradeControl.Web.Data
                     .IsClustered(false);
 
                 entity.Property(e => e.OrganisationTypeCode).HasDefaultValueSql("((1))");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.CashModeCodeNavigation)
                     .WithMany(p => p.TbOrgType)
@@ -2488,18 +2483,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.YearNumber).ValueGeneratedNever();
 
-                entity.Property(e => e.CashStatusCode).HasDefaultValueSql("((1))");
-
-                entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
-                entity.Property(e => e.StartMonth).HasDefaultValueSql("((1))");
-
                 entity.HasOne(d => d.StartMonthNavigation)
                     .WithMany(p => p.TbYears)
                     .HasForeignKey(d => d.StartMonth)
@@ -2509,18 +2492,9 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<App_tbYearPeriod>(entity =>
             {
-                entity.HasKey(e => new { e.YearNumber, e.StartOn })
-                    .HasName("PK_App_tbYearPeriod");
+                entity.HasKey(e => new { e.YearNumber, e.MonthNumber })
+                    .HasName("IX_App_tbYearPeriod_Year_MonthNumber");
 
-                entity.Property(e => e.CashStatusCode).HasDefaultValueSql("((1))");
-
-                entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.CashStatusCodeNavigation)
                     .WithMany(p => p.TbYearPeriods)
@@ -2557,6 +2531,11 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwAccountSources", "Org");
             });
 
+            modelBuilder.Entity<App_vwYear>(entity =>
+            {
+                entity.ToView("vwYears", "App");
+            });
+
             modelBuilder.Entity<Cash_vwAccountStatement>(entity =>
             {
                 entity.ToView("vwAccountStatement", "Cash");
@@ -2565,6 +2544,12 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwAccountStatementListing>(entity =>
             {
                 entity.ToView("vwAccountStatementListing", "Cash");
+            });
+
+            modelBuilder.Entity<Invoice_vwType>(entity =>
+            {
+                entity.HasKey(e => e.InvoiceTypeCode);
+                entity.ToView("vwTypes", "Invoice");
             });
 
             modelBuilder.Entity<Invoice_vwAccountsMode>(entity =>

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -11,48 +10,44 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-
-namespace TradeControl.Web.Pages.Org.Contact
+namespace TradeControl.Web.Pages.Org.Type
 {
-    [Authorize(Roles = "Administrators, Managers")]
+    [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
         public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
 
         [BindProperty]
-        public Org_tbContact Org_tbContact { get; set; }
+        public Org_tbType Org_tbType { get; set; }
 
         [BindProperty]
-        public string AccountName { get; set; }
+        public string CashMode { get; set; }
+        public SelectList CashModes { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string accountCode, string contactName)
+        public async Task<IActionResult> OnGetAsync(short? organisationTypeCode)
         {
             try
             {
-                if (accountCode == null || contactName == null)
+                if (organisationTypeCode == null)
                     return NotFound();
 
-                var org = await NodeContext.Org_tbOrgs.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                Org_tbType = await NodeContext.Org_tbTypes.FirstOrDefaultAsync(t => t.OrganisationTypeCode == organisationTypeCode);
 
-                if (org == null)
+                if (Org_tbType == null)
                     return NotFound();
-                else
-                    AccountName = org.AccountName;
 
-                Org_tbContact = await NodeContext.Org_tbContacts.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.ContactName == contactName);
+                var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
+                CashModes = new SelectList(await modes.ToListAsync());
+                CashMode = await NodeContext.Cash_tbModes
+                                            .Where(t => t.CashModeCode == Org_tbType.CashModeCode)
+                                            .Select(t => t.CashMode).FirstAsync();
 
-                if (Org_tbContact == null)
-                    return NotFound();
-                else
-                {
-                    await SetViewData();
-                    return Page();
-                }
+                await SetViewData();
+                return Page();
             }
             catch (Exception e)
             {
@@ -68,10 +63,10 @@ namespace TradeControl.Web.Pages.Org.Contact
                 if (!ModelState.IsValid)
                     return Page();
 
-                Profile profile = new(NodeContext);
-                Org_tbContact.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
 
-                NodeContext.Attach(Org_tbContact).State = EntityState.Modified;
+                Org_tbType.CashModeCode = await NodeContext.Cash_tbModes.Where(t => t.CashMode == CashMode).Select(t => t.CashModeCode).FirstAsync();
+
+                NodeContext.Attach(Org_tbType).State = EntityState.Modified;
 
                 try
                 {
@@ -79,17 +74,14 @@ namespace TradeControl.Web.Pages.Org.Contact
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await NodeContext.Org_tbContacts.AnyAsync(e => e.AccountCode == Org_tbContact.AccountCode && e.ContactName == Org_tbContact.ContactName))
+                    if (!await NodeContext.Org_tbTypes.AnyAsync(e => e.OrganisationTypeCode == Org_tbType.OrganisationTypeCode))
                         return NotFound();
                     else
                         throw;
 
                 }
 
-                RouteValueDictionary route = new();
-                route.Add("accountCode", Org_tbContact.AccountCode);
-
-                return RedirectToPage("./Index", route);
+                return RedirectToPage("./Index");
             }
             catch (Exception e)
             {
@@ -97,6 +89,5 @@ namespace TradeControl.Web.Pages.Org.Contact
                 throw;
             }
         }
-
     }
 }

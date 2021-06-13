@@ -23,9 +23,6 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].YearNumber)
-            </th>
-            <th>
                 @Html.DisplayNameFor(model => model.App_Years[0].Description)
             </th>
             <th>
@@ -33,12 +30,6 @@
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.App_Years[0].CashStatus)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].InsertedBy)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].InsertedOn)
             </th>
             <th></th>
         </tr>
@@ -48,9 +39,6 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.YearNumber)
-                </td>
-                <td>
                     @Html.DisplayFor(modelItem => item.Description)
                 </td>
                 <td>
@@ -58,12 +46,6 @@
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.CashStatus)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.InsertedBy)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.InsertedOn)
                 </td>
                 <td>
                     <a asp-page="./Details" asp-route-yearNumber="@item.YearNumber" class="btn btn-info"></a>

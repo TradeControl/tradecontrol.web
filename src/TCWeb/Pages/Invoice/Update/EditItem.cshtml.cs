@@ -87,7 +87,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
 
                 bool orgRebuild = (previousItemValue != Invoice_Item.InvoiceValue + Invoice_Item.TotalValue);
 
-                Periods periods = new(NodeContext);
+                FinancialPeriods periods = new(NodeContext);
                 bool periodRebuild = (invoiceHeader.InvoicedOn < periods.ActiveStartOn);
 
                 NodeContext.Attach(Invoice_Item).State = EntityState.Modified;
@@ -101,10 +101,8 @@ namespace TradeControl.Web.Pages.Invoice.Update
                     if (!await NodeContext.Invoice_tbItems.AnyAsync(e => e.InvoiceNumber == Invoice_Item.InvoiceNumber && e.CashCode == Invoice_Item.CashCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 Invoices invoices = new(NodeContext, Invoice_Item.InvoiceNumber);

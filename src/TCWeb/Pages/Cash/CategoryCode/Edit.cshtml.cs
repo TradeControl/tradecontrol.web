@@ -92,10 +92,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                     if (!await NodeContext.Cash_tbCategories.AnyAsync(e => e.CategoryCode == Cash_tbCategory.CategoryCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
                 }
 
                 RouteValueDictionary route = new();

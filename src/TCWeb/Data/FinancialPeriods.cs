@@ -5,16 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Data
 {
-    public class Periods
+    public class FinancialPeriods
     {
-        NodeContext _context;
+        readonly NodeContext _context;
 
         public short ActiveYear { get; }
         public DateTime ActiveStartOn { get; }
         public string ActiveYearDesc { get; }
         public string ActiveMonthName { get; }
 
-        public Periods(NodeContext context)
+        public FinancialPeriods(NodeContext context)
         {
             try
             {
@@ -38,6 +38,24 @@ namespace TradeControl.Web.Data
             try
             {
                 int result = await _context.Database.ExecuteSqlRawAsync("Cash.proc_GeneratePeriods");
+                return result != 0;
+            }
+            catch (Exception e)
+            {
+                _context.ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<bool> Rebuild()
+        {
+            try
+            {
+                int? timeout = _context.Database.GetCommandTimeout();
+                _context.Database.SetCommandTimeout(360);
+                int result = await _context.Database.ExecuteSqlRawAsync("App.proc_SystemRebuild");
+                _context.Database.SetCommandTimeout(timeout);
+
                 return result != 0;
             }
             catch (Exception e)

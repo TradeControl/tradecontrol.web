@@ -53,7 +53,7 @@ namespace TradeControl.Web.Pages.Tax.Vat.Periods
 
                 if (string.IsNullOrEmpty(periodName))
                 {
-                    Data.Periods periods = new(NodeContext);
+                    Data.FinancialPeriods periods = new(NodeContext);
                     startOn = periods.ActiveStartOn;
                     PeriodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                 }

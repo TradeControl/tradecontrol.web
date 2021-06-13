@@ -49,7 +49,7 @@ namespace TradeControl.Web.Pages.Tax.Company
                 if (!ModelState.IsValid)
                     return Page();
 
-                Data.Periods periods = new(NodeContext);
+                Data.FinancialPeriods periods = new(NodeContext);
                 await periods.TaxRate(StartOn, EndOn, CorporationTaxRate);
 
                 return RedirectToPage("./Index");

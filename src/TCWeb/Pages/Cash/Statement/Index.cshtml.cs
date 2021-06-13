@@ -84,7 +84,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                 if (string.IsNullOrEmpty(periodName))
                 {
-                    Periods periods = new(NodeContext);
+                    FinancialPeriods periods = new(NodeContext);
                     startOn = periods.ActiveStartOn;
                     periodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
                 }

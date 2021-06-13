@@ -1,4 +1,89 @@
 ﻿@page
 @model TradeControl.Web.Pages.Admin.Periods.EditModel
-@{
+@{ ViewData["Title"] = "Edit Financial Year"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="App_tbYear.YearNumber" class="control-label"></label>
+                <input asp-for="App_tbYear.YearNumber" class="form-control" />
+                <span asp-validation-for="App_tbYear.YearNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYear.Description" class="control-label"></label>
+                <input asp-for="App_tbYear.Description" class="form-control" />
+                <span asp-validation-for="App_tbYear.Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYear.StartMonth" class="control-label"></label>
+                <p>
+                    <select asp-for="MonthName" asp-items="Model.MonthNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYear.CashStatusCode" class="control-label"></label>
+                <p>
+                    <select asp-for="CashStatus" asp-items="Model.CashStatuses" class="form-control"></select>
+                </p>
+            </div>
+
+            <input type="hidden" asp-for="App_tbYear.CashStatusCode" />
+            <input type="hidden" asp-for="App_tbYear.StartMonth" />
+            <input type="hidden" asp-for="App_tbYear.InsertedBy" />
+            <input type="hidden" asp-for="App_tbYear.InsertedOn" />
+
+            <div class="form-group">
+                <input type="submit" value="UPDATE" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-info">To List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.App_YearPeriods[0].MonthName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.App_YearPeriods[0].CashStatus)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.App_YearPeriods[0].StartOn)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.App_YearPeriods)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.MonthName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashStatus)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.StartOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashStatus)
+                </td>
+                <td>
+                    <a asp-page="./EditPeriod" asp-route-yearNumber="@item.YearNumber" asp-route-monthNumber="@item.MonthNumber" class="btn btn-secondary"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }
+

@@ -111,10 +111,8 @@ namespace TradeControl.Web.Pages.Cash.Totals
                     if (!await NodeContext.Cash_tbCategories.AnyAsync(e => e.CategoryCode == Cash_tbCategory.CategoryCode))
                         return base.NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 return RedirectToPage("./Index");

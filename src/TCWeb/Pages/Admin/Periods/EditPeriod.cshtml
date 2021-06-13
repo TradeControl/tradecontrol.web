@@ -1,0 +1,48 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.Periods.EditPeriodModel
+@{ ViewData["Title"] = "Edit Period"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<h4>@Model.PeriodDescription</h4>
+<hr />
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="App_tbYearPeriod.StartOn" class="control-label"></label>
+                <input asp-for="App_tbYearPeriod.StartOn" class="form-control" />
+                <span asp-validation-for="App_tbYearPeriod.StartOn" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbYearPeriod.CashStatusCode" class="control-label"></label>
+                <p>
+                    <select asp-for="CashStatus" asp-items="Model.CashStatuses" class="form-control"></select>
+                </p>
+            </div>
+
+            <input type="hidden" asp-for="App_tbYearPeriod.YearNumber" />
+            <input type="hidden" asp-for="App_tbYearPeriod.MonthNumber" />
+            <input type="hidden" asp-for="App_tbYearPeriod.CashStatusCode" />
+            <input type="hidden" asp-for="App_tbYearPeriod.InsertedBy" />
+            <input type="hidden" asp-for="App_tbYearPeriod.InsertedOn" />
+            <input type="hidden" asp-for="App_tbYearPeriod.CorporationTaxRate" />
+            <input type="hidden" asp-for="App_tbYearPeriod.VatAdjustment" />
+            <input type="hidden" asp-for="App_tbYearPeriod.TaxAdjustment" />
+
+            <div class="form-group">
+                <input type="submit" value="UPDATE" class="btn btn-primary" />
+                <a asp-page="./Edit" asp-route-yearNumber="@Model.App_tbYearPeriod.YearNumber" class="btn btn-info">To Year</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+
+

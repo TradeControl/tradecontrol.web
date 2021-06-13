@@ -91,10 +91,8 @@ namespace TradeControl.Web.Pages.Org.Address
                     if (!await NodeContext.Org_tbAddresses.AnyAsync(e => e.AddressCode == Org_tbAddress.AddressCode))
                         return NotFound();
                     else
-                    {
-                        NodeContext.ErrorLog(new DbUpdateConcurrencyException());
                         throw;
-                    }
+
                 }
 
                 RouteValueDictionary route = new();
