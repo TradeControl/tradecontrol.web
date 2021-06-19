@@ -36,5 +36,9 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Invoice_tbInvoice> TbInvoices { get; set; }
         [InverseProperty(nameof(Invoice_tbMirror.InvoiceTypeCodeNavigation))]
         public virtual ICollection<Invoice_tbMirror> TbMirrors { get; set; }
+        [InverseProperty(nameof(Web_tbAttachmentInvoice.InvoiceTypeCodeNavigation))]
+        public virtual ICollection<Web_tbAttachmentInvoice> TbAttachmentInvoices { get; set; }
+        [InverseProperty(nameof(Web_tbTemplateInvoice.InvoiceTypeCodeNavigation))]
+        public virtual ICollection<Web_tbTemplateInvoice> TbTemplateInvoices { get; set; }
     }
 }

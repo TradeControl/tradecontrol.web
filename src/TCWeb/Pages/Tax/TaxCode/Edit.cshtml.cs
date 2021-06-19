@@ -19,8 +19,6 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public App_tbTaxCode App_tbTaxCode { get; set; }
 
@@ -31,6 +29,13 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
 
         public SelectList Roundings { get; set; }
         public SelectList TaxTypes { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string taxCode)
         {

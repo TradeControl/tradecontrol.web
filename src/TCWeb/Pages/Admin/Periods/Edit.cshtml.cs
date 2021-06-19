@@ -18,7 +18,7 @@ namespace TradeControl.Web.Pages.Admin.Periods
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public EditModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public App_tbYear App_tbYear { get; set; }

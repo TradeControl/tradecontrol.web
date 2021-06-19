@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
 {
     public class UnpaidDetailModel : DI_BasePageModel
     {
-        public UnpaidDetailModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public UnpaidDetailModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public Invoice_vwRegisterOverdue Invoice_Detail { get; set; }

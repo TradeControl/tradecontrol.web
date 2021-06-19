@@ -24,7 +24,7 @@ namespace TradeControl.Web.Authorization
 
     public class AspNetIsOwnerAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, AspNet_UserRegistration>
     {
-        UserManager<TradeControlWebUser> _userManager;
+        readonly UserManager<TradeControlWebUser> _userManager;
 
         public AspNetIsOwnerAuthorizationHandler(UserManager<TradeControlWebUser> userManager)
         {

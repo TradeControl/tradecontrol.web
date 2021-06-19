@@ -38,11 +38,11 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
         public SelectList Roundings { get; set; }
         public SelectList TaxTypes { get; set; }
 
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         public async Task<IActionResult> OnGetAsync(string returnUrl)

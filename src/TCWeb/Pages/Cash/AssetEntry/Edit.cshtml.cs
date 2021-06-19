@@ -19,10 +19,15 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 {
     public class EditModel : DI_BasePageModel
     {
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
+
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
-
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {

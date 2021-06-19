@@ -51,7 +51,7 @@
                         }
                         if (item.EventTypeCode == 0)
                         {
-                            <a class="btn btn-warning" href="mailto:office@tradecontrol.co.uk?subject=Error Log Submission&body=@item.LogCode - @item.EventMessage"></a>
+                            <a asp-page="./Submit" asp-route-logCode=@item.LogCode class="btn btn-warning" ></a>
                         }
                     }
                 </td>

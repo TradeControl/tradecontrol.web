@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Invoice.Settings
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public EditModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public Invoice_tbType Invoice_Type { get; set; }

@@ -17,11 +17,13 @@ namespace TradeControl.Web.Pages.Admin.Users
 {
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        IAuthorizationService AuthorizationService { get; }
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public DeleteModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            AuthorizationService = authorizationService;
+            UserManager = userManager;
         }
 
         [BindProperty]

@@ -18,13 +18,8 @@ namespace TradeControl.Web.Pages.Tax.Vat
     [Authorize(Roles = "Administrators, Managers")]
     public class AdjustmentModel : DI_BasePageModel
     {
-        public AdjustmentModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
-      
+        public AdjustmentModel(NodeContext context) : base(context) { }
+
         public Cash_vwTaxVatTotal Cash_VatTotal { get; set; }
 
         [BindProperty]

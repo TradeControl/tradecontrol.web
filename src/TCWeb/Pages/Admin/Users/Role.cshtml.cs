@@ -17,12 +17,11 @@ namespace TradeControl.Web.Pages.Admin.Users
 {
     public class RoleModel : DI_BasePageModel
     {
-        public RoleModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        protected IAuthorizationService AuthorizationService { get; }
+        protected UserManager<TradeControlWebUser> UserManager { get; }
+
+        public RoleModel(NodeContext context, IAuthorizationService authorizationService,
+            UserManager<TradeControlWebUser> userManager) : base(context) { }
 
         [BindProperty]
         public AspNet_UserRegistration AspNet_UserRegistration { get; set; }

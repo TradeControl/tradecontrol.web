@@ -18,12 +18,7 @@ namespace TradeControl.Web.Pages.Admin.Users
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public SelectList ConfirmFilterOptions { get; set; }
         [BindProperty(SupportsGet = true)]

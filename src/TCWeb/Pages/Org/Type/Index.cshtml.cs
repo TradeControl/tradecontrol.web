@@ -5,8 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 using TradeControl.Web.Areas.Identity.Data;
@@ -17,12 +15,7 @@ namespace TradeControl.Web.Pages.Org.Type
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public IList<Org_vwTypeLookup> Org_Types { get; set; }
 
@@ -34,6 +27,8 @@ namespace TradeControl.Web.Pages.Org.Type
             return Page();
 
         }
+
+
     }
 }
 

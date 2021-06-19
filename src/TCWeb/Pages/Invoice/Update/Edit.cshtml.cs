@@ -20,8 +20,6 @@ namespace TradeControl.Web.Pages.Invoice.Update
 {
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public Invoice_vwRegister Invoice_Header { get; set; }
 
@@ -37,6 +35,13 @@ namespace TradeControl.Web.Pages.Invoice.Update
         [BindProperty]
         public string InvoiceStatus { get; set; }
         public SelectList InvoiceStatuses { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string invoiceNumber)
         {

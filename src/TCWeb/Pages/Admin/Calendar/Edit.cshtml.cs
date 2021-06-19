@@ -17,12 +17,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public EditModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public App_tbCalendar App_tbCalendar { get; set; }
@@ -46,9 +41,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
-            {
                 return Page();
-            }
 
             NodeContext.Attach(App_tbCalendar).State = EntityState.Modified;
 

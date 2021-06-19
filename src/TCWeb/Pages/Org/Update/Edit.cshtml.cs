@@ -38,11 +38,11 @@ namespace TradeControl.Web.Pages.Org.Update
         public string TaxDescription { get; set; }
         public SelectList TaxCodes { get; set; }
 
-        public EditModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         public async Task<IActionResult> OnGetAsync(string accountCode)

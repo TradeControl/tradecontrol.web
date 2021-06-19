@@ -20,12 +20,7 @@ namespace TradeControl.Web.Pages.Org.Update
     public class IndexModel : DI_BasePageModel
     {
 
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public SelectList OrganisationTypes { get; set; }
         [BindProperty(SupportsGet = true)]
@@ -73,7 +68,7 @@ namespace TradeControl.Web.Pages.Org.Update
                 if (!string.IsNullOrEmpty(accountCode))
                 {
                     accounts = accounts.Where(a => a.AccountCode == accountCode);
-                    var org = await accounts.FirstOrDefaultAsync();
+                    var org = await accounts.SingleOrDefaultAsync();
                     OrganisationType = org.OrganisationType;
                     OrganisationStatus = org.OrganisationStatus;
                 }

@@ -20,12 +20,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public IList<Invoice_vwRegister> Invoice_Headers { get; set; }
 
@@ -59,7 +54,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
         {
             try
             {
-                Docs docs = new Docs(NodeContext);
+                Docs docs = new(NodeContext);
                 await docs.DespoolAll();
                 RouteValueDictionary route = new();
                 route.Add("Printed", false);

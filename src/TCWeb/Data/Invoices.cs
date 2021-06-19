@@ -130,6 +130,25 @@ namespace TradeControl.Web.Data
                 return false;
             }
         }
+
+        public async Task SetToPrinted()
+        {
+            try
+            {
+                var invoice = await _context.Invoice_tbInvoices.Where(i => i.InvoiceNumber == InvoiceNumber).SingleOrDefaultAsync();
+                if (invoice != null)
+                {
+                    invoice.Spooled = false;
+                    invoice.Printed = false;
+                    _context.Attach(invoice).State = EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                _context.ErrorLog(e);
+            }
+        }
         #endregion
     }
 }

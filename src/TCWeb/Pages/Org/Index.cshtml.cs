@@ -27,12 +27,7 @@ namespace TradeControl.Web.Pages.Org
             set { HttpContext.Session.SetString(SessionKeyReturnUrl, value); }
         }
 
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public SelectList OrganisationTypes { get; set; }
 

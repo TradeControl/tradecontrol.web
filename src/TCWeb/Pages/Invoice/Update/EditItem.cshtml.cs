@@ -29,8 +29,12 @@ namespace TradeControl.Web.Pages.Invoice.Update
         [BindProperty]
         public string TaxDescription { get; set; }
 
+        UserManager<TradeControlWebUser> UserManager { get; }
 
-        public EditItemModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public EditItemModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string invoiceNumber, string cashCode)
         {

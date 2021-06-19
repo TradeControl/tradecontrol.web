@@ -21,7 +21,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 {
     public class BalanceSheetModel : DI_BasePageModel
     {
-        public BalanceSheetModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public BalanceSheetModel(NodeContext context) : base(context) { }
 
         [BindProperty(SupportsGet = true)]
         public string PeriodName { get; set; }

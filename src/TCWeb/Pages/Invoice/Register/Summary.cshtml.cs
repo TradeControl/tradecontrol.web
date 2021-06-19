@@ -20,12 +20,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
 {
     public class SummaryModel : DI_BasePageModel
     {
-        public SummaryModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public SummaryModel(NodeContext context) : base(context) { }
 
         public IList<Invoice_vwRegisterCashCode> Invoice_CashCodes { get; set; }
 

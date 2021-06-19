@@ -19,18 +19,18 @@ namespace TradeControl.Web.Pages.Invoice.Raise
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
-
         public IList<Invoice_vwEntry> Invoice_Entries { get; set; }
 
         [BindProperty]
         public string InvoiceType { get; set; }
         public SelectList InvoiceTypes { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public IndexModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task OnGetAsync(string invoiceType)
         {

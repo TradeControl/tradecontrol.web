@@ -56,6 +56,7 @@ namespace TradeControl.Web.Models
         public decimal InvoiceValue { get; set; }
         [Display(Name = "Value")]
         [DataType(DataType.Currency)]
+        [Column(TypeName = "decimal(18, 5)")]
         public decimal EntryValue { get; set; }
     }
 }

@@ -18,12 +18,7 @@ namespace TradeControl.Web.Pages.Tax.Company
     [Authorize(Roles = "Administrators, Managers")]
     public class AdjustmentModel : DI_BasePageModel
     {
-        public AdjustmentModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public AdjustmentModel(NodeContext context) : base(context) {}
 
         public Cash_vwTaxCorpTotal Cash_CorpTaxTotal { get; set; }
 

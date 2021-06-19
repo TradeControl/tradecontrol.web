@@ -11,8 +11,8 @@ namespace TradeControl.Web.Data
 {
     public class CashCodes
     {
-        NodeContext _context;
-        Cash_proc_CodeDefaults _cashCode = new Cash_proc_CodeDefaults();
+        readonly NodeContext _context;
+        Cash_proc_CodeDefaults _cashCode = new();
 
         public CashCodes(NodeContext context)
         {

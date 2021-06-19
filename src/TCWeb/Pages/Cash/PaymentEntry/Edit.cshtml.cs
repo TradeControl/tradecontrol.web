@@ -20,6 +20,13 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class EditModel : DI_BasePageModel
     {
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
+
         public SelectList CashDescriptions { get; set; }
         [BindProperty]
         public string CashDescription { get; set; }
@@ -93,8 +100,6 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
         }
         #endregion
-
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode, string cashCode, string taxCode)
         {

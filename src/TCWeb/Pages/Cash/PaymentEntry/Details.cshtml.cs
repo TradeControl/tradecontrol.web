@@ -16,12 +16,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class DetailsModel : DI_BasePageModel
     {
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 

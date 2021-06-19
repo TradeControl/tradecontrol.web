@@ -19,14 +19,14 @@ namespace TradeControl.Web.Pages.Cash.Totals
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
     {
+        protected UserManager<TradeControlWebUser> UserManager { get; }
+
         [BindProperty]
         public Cash_tbCategory Cash_tbCategory { get; set; }
 
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context) 
         {
+            UserManager = userManager;
         }
 
         public async Task<IActionResult> OnGetAsync()

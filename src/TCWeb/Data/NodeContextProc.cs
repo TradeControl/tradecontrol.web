@@ -1,12 +1,15 @@
-﻿using System;
+﻿#define DEBUG
+
+using System;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using TradeControl.Web.Areas.Identity.Data;
 
+using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Data
@@ -2405,8 +2408,18 @@ namespace TradeControl.Web.Data
 
             try
             {
-                string eventMessage = $"{ParseString(e.Message)},{e.Source},{e.TargetSite.Name},{ParseString(e.InnerException != null ? e.InnerException.Message : string.Empty)}";
-                return EventLog(NodeEnum.EventType.IsError, eventMessage);
+                StringBuilder eventMessage = new();
+                
+                eventMessage.AppendLine($"Message: {e.Message}");
+#if DEBUG
+                eventMessage.AppendLine($". Code: {e.HResult}");
+                eventMessage.AppendLine($". Source: {e.Source}");
+                eventMessage.AppendLine($". Stack Trace: {e?.StackTrace}");
+                
+                if (e.InnerException != null)
+                    eventMessage.AppendLine($". Inner Exception: {ParseString(e.InnerException.Message)}");
+#endif
+                return EventLog(NodeEnum.EventType.IsError, eventMessage.ToString());
             }
             catch //(Exception err)
             {

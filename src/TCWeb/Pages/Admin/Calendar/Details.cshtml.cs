@@ -15,12 +15,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
 {
     public class DetailsModel : DI_BasePageModel
     {
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         public App_tbCalendar App_tbCalendar { get; set; }
 

@@ -17,13 +17,8 @@ namespace TradeControl.Web.Pages.Admin.Periods
 {
     public class DetailsModel : DI_BasePageModel
     {
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
-        
+        public DetailsModel(NodeContext context) : base(context) { }
+
         public App_vwYear App_Year { get; set; }
 
         public IList<App_vwYearPeriod> App_YearPeriods { get; set; }

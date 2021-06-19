@@ -17,11 +17,13 @@ namespace TradeControl.Web.Pages.Admin.Users
 {
     public class ConfirmModel : DI_BasePageModel
     {
-        public ConfirmModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        IAuthorizationService AuthorizationService { get; }
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public ConfirmModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context) 
         {
+            AuthorizationService = authorizationService;
+            UserManager = userManager;
         }
 
         [BindProperty]

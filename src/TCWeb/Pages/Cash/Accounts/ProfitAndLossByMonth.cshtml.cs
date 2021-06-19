@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 {
     public class ProfitAndLossByMonthModel : DI_BasePageModel
     {
-        public ProfitAndLossByMonthModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public ProfitAndLossByMonthModel(NodeContext context) : base(context) { }
 
         [BindProperty(SupportsGet = true)]
         public string PeriodName { get; set; }

@@ -21,12 +21,15 @@ namespace TradeControl.Web.Models
         public string Address { get; set; }
         [StringLength(50)]
         [Display(Name = "Direct Line")]
+        [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; }
         [StringLength(255)]
         [Display(Name = "Email Address")]
+        [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
         [StringLength(255)]
         [Display(Name = "Website")]
+        [DataType(DataType.Url)]
         public string WebSite { get; set; }
         [Column(TypeName = "image")]
         public byte[] Logo { get; set; }

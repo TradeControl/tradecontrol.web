@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Tax.Company
     [Authorize(Roles = "Administrators")]
     public class RatesModel : DI_BasePageModel
     {
-        public RatesModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
+        public RatesModel(NodeContext context) : base(context) {}
 
         [BindProperty]
         [DataType(DataType.Date)]

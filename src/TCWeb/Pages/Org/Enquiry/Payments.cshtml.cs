@@ -22,12 +22,7 @@ namespace TradeControl.Web.Pages.Org.Enquiry
         [BindProperty]
         public Org_vwAccountLookup Org_Account { get; set; }
 
-        public PaymentsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public PaymentsModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {

@@ -34,15 +34,19 @@ namespace TradeControl.Web.Models
         public int Tasks { get; set; }
         [StringLength(50)]
         [Display(Name = "Direct Line")]
+        [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; }
         [StringLength(50)]
         [Display(Name = "Home Tel")]
+        [DataType(DataType.PhoneNumber)]
         public string HomeNumber { get; set; }
         [StringLength(50)]
         [Display(Name = "Mobile")]
+        [DataType(DataType.PhoneNumber)]
         public string MobileNumber { get; set; }
         [StringLength(255)]
         [Display(Name = "Email")]
+        [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
         [StringLength(25)]
         [Display(Name = "Title")]

@@ -21,8 +21,6 @@ namespace TradeControl.Web.Pages.Admin.Periods
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
     {
-        public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public App_tbYear App_tbYear { get; set; }
 
@@ -33,6 +31,13 @@ namespace TradeControl.Web.Pages.Admin.Periods
         [BindProperty]
         public string CashStatus { get; set; }
         public SelectList CashStatuses { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task OnGetAsync()
         {

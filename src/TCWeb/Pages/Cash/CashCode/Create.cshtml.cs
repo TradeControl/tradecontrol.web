@@ -20,6 +20,13 @@ namespace TradeControl.Web.Pages.Cash.CashCode
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
     {
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
+
         #region session
         const string SessionKeyReturnUrl = "_returnUrlCashCodeCreate";
         const string SessionKeyTaxCode = "_TaxDescription";
@@ -118,14 +125,6 @@ namespace TradeControl.Web.Pages.Cash.CashCode
 
         public SelectList Categories { get; set; }
         public SelectList TaxDescriptions { get; set; }
-
-
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
 
         public async Task OnGetAsync(string returnUrl, string categoryCode, string taxCode)
         {

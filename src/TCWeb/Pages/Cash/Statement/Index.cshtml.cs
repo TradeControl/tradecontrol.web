@@ -33,7 +33,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
         [BindProperty]
         public Org_vwCashAccount Org_CashAccount { get; set; }
 
-        public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync(string cashAccountCode, string cashAccountName, string periodName, string paymentCode, short mode)
         {

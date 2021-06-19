@@ -19,6 +19,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
     {
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
+        
         const string SessionKeyReturnUrl = "_returnUrlCashCodeCreate";
 
         public string ReturnUrl
@@ -37,13 +44,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         [BindProperty]
         public string CashType { get; set; }
         public SelectList CashTypes { get; set; }
-
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
 
         public async Task<IActionResult> OnGetAsync(string returnUrl)
         {

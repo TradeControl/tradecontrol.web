@@ -33,12 +33,7 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public SearchModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public SearchModel(NodeContext context) : base(context) { }
 
         public IList<App_vwTaxCode> App_TaxCodes { get;set; }
 

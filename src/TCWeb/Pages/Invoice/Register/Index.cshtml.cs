@@ -3,16 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
-using TradeControl.Web.Areas.Identity.Data;
-using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
@@ -20,12 +14,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public IList<Invoice_vwRegisterDetail> Invoice_Details { get; set; }
 

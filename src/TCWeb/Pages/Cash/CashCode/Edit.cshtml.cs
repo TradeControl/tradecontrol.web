@@ -20,6 +20,13 @@ namespace TradeControl.Web.Pages.Cash.CashCode
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
+
         [BindProperty]
         public Cash_tbCode Cash_tbCode { get; set; }
 
@@ -33,8 +40,6 @@ namespace TradeControl.Web.Pages.Cash.CashCode
         public SelectList Categories { get; set; }
         public SelectList TaxDescriptions { get; set; }
 
-
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
 
         public async Task<IActionResult> OnGetAsync(string cashCode)
         {

@@ -17,12 +17,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
     [Authorize(Roles = "Administrators")]
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public App_tbCalendar App_tbCalendar { get; set; }

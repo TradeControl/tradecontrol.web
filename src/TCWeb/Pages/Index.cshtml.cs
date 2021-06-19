@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 
@@ -19,22 +21,27 @@ namespace TradeControl.Web.Pages
     public class IndexModel : DI_BasePageModel
     {
         [BindProperty]
-        public App_vwIdentity App_Identity { get; set; }
+        public App_vwIdentity App_Identity { get; set; }        
 
-
-        public IndexModel(
-            ILogger<IndexModel> logger,
-            NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager) : base(logger, context, authorizationService, userManager)
+        public IndexModel(NodeContext context
+            ) : base(context)
         {
         }
 
         public async Task OnGetAsync()
         {
-            await SetViewData();
+            try
+            {
+                await SetViewData();
 
-            App_Identity = NodeContext.App_Identity.FirstOrDefault();           
+                App_Identity = await NodeContext.App_Identity.OrderBy(i => i.UserName).SingleOrDefaultAsync();
+
+            }
+            catch (Exception e)
+            {
+                NodeContext.ErrorLog(e);
+                throw;
+            }
         }
 
     }

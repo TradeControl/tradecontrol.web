@@ -11,7 +11,7 @@ namespace TradeControl.Web.Data
 {
     public class Activities
     {
-        NodeContext _context;
+        readonly NodeContext _context;
 
         public string ActivityCode { get; } = string.Empty;
 

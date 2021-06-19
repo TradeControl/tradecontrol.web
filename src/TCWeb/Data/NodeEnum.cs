@@ -28,6 +28,7 @@ namespace TradeControl.Web.Data
         public enum InterfaceCode { Accounts, MIS };
         public enum RoundingCode { Round, Truncate };
         public enum AssetType { Debtors, Creditors, Bank, Cash, CashAccounts, Capital };
+        public enum ContentType { Documents, Images, Templates, Invalid };
         
     }
 }

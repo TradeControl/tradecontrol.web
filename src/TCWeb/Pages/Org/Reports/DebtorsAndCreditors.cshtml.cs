@@ -30,7 +30,7 @@ namespace TradeControl.Web.Pages.Org.Reports
         [BindProperty]
         public IList<Org_vwBalanceSheetAudit> Org_BalanceSheetAudit { get; set; }
 
-        public DebtorsAndCreditorsModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public DebtorsAndCreditorsModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync(string periodName, string assetType)
         {

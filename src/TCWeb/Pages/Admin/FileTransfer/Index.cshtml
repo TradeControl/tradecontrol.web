@@ -1,0 +1,54 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.FileTransfer.IndexModel
+@{ ViewData["Title"] = "File Transfer"; }
+<h1>@ViewData["Title"]</h1>
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div class="form-group">
+                <input type="hidden" asp-for="@Model.ContentType" />
+                <a asp-page="./Upload" asp-route-contentType="@Model.ContentType" class="btn btn-outline-primary">UPLOAD</a>
+                <button type="submit" asp-page-handler="SyncFiles" class="btn btn-outline-success">SYNC</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="ContentType" asp-items="Model.ContentTypes"></select>
+        <input type="submit" value="SELECT" />
+    </p>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.FileNames)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.FileNames)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item)
+                </td>
+                <td>
+                    <a asp-page-handler="Download" asp-route-fileName="@item"  class="btn btn-secondary"></a>
+                    <a asp-page="./Delete" asp-route-fileName="@item" asp-route-contentType="@Model.ContentType" class="btn btn-danger"></a>
+                </td>
+
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

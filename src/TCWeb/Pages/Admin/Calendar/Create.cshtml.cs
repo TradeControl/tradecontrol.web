@@ -17,12 +17,7 @@ namespace TradeControl.Web.Pages.Admin.Calendar
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
     {
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public CreateModel(NodeContext context) : base(context) {}
 
         public async Task<IActionResult> OnGetAsync()
         {

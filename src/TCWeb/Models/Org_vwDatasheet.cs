@@ -55,12 +55,15 @@ namespace TradeControl.Web.Models
         public string AreaCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Phone No.")]
+        [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; }
         [StringLength(255)]
         [Display(Name = "Email")]
+        [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
         [StringLength(255)]
         [Display(Name = "Website")]
+        [DataType(DataType.Url)]
         public string WebSite { get; set; }
         [StringLength(50)]
         [Display(Name = "Sector")]

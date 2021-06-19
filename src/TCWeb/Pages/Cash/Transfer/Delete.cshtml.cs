@@ -17,10 +17,15 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 {
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
-
         [BindProperty]
         public Cash_vwTransfersUnposted Cash_TransfersUnposted { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public DeleteModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {

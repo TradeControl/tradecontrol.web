@@ -37,7 +37,6 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Basic home page
 - [x] Error trapping
 - [x] Error Log
-- [x] Submit errors to support
 - [x] Payment Entry - bank accounts and adjustments 
 - [x] Create and lookup organisations, category, tax and cash codes
 - [x] Asset Entry - capital accounts for long-term assets and liabilities 
@@ -53,7 +52,14 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Invoice Register - sales and purchases by period
 - [x] Cash Code invoice summary
 - [x] Unpaid income and expense
-- [ ] Email invoices and statements to contacts
+- [x] Host settings
+- [x] [Website email service](https://github.com/jstedfast/MailKit)
+- [x] Html document templates
+- [x] Template manager
+- [x] Configure email document templates (images and attachments)
+- [x] File transfer (upload/download templates)
+- [x] Email invoices to contacts
+- [x] Email preview
 - [x] Vat Statement and quarterly totals
 - [x] Company Tax Statement and period totals
 - [x] Tax rates
@@ -64,7 +70,9 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Tax Settings
 - [x] System settings 
 - [x] Period End maintenance and closedown
-- [ ] Configuration and setup
+- [ ] Error reporting template and support submission
+- [ ] Company initialisation
+- [ ] Tutorials
 
 ### Phase 5 - MIS Mode
 
@@ -76,12 +84,12 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 
 - [ ] Administration
 - [ ] Custom Menus
-- [ ] Commercial skin
+- [ ] Themes
 
 ### Phase 7 - Extensions
 
-- [ ] Supply-Chain Network
-- [ ] Bitcoin Wallet
+- [ ] [Supply-Chain Network](https://github.com/tradecontrol/network)
+- [ ] [Bitcoin Wallet](https://github.com/tradecontrol/bitcoin)
 
 ## Versioning
 

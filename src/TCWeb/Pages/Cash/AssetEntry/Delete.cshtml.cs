@@ -17,11 +17,11 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 {
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public DeleteModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         [BindProperty]

@@ -21,15 +21,37 @@ namespace TradeControl.Web.Pages.Org.Contact
     [Authorize(Roles = "Administrators, Managers")]
     public class CreateModel : DI_BasePageModel
     {
+        #region session
+        const string SessionKeyReturnUrl = "_returnUrlContact";
+        const string SessionKeyInvoiceNumber = "_invoiceNumberContact";
+
+        public string ReturnUrl
+        {
+            get { return HttpContext.Session.GetString(SessionKeyReturnUrl); }
+            set { HttpContext.Session.SetString(SessionKeyReturnUrl, value); }
+        }
+
+        public string InvoiceNumber
+        {
+            get { return HttpContext.Session.GetString(SessionKeyInvoiceNumber); }
+            set { HttpContext.Session.SetString(SessionKeyInvoiceNumber, value); }
+        }
+        #endregion
+
         [BindProperty]
         public Org_tbContact Org_tbContact { get; set; }
 
         [BindProperty]
         public string AccountName { get; set; }
 
-        public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        UserManager<TradeControlWebUser> UserManager { get; }
 
-        public async Task<IActionResult> OnGetAsync(string accountCode)
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
+
+        public async Task<IActionResult> OnGetAsync(string accountCode, string returnUrl, string invoiceNumber)
         {
             try
             {
@@ -54,6 +76,9 @@ namespace TradeControl.Web.Pages.Org.Contact
 
                 Org_tbContact.UpdatedBy = Org_tbContact.InsertedBy;
 
+                ReturnUrl = string.IsNullOrEmpty(returnUrl) ? string.Empty : returnUrl;
+                InvoiceNumber = string.IsNullOrEmpty(invoiceNumber) ? string.Empty : invoiceNumber;
+
                 await SetViewData();
                 return Page();
             }
@@ -76,9 +101,20 @@ namespace TradeControl.Web.Pages.Org.Contact
                 await NodeContext.SaveChangesAsync();
 
                 RouteValueDictionary route = new();
-                route.Add("AccountCode", Org_tbContact.AccountCode);
 
-                return RedirectToPage("./Index", route);
+                if (!string.IsNullOrEmpty(ReturnUrl))
+                {
+                    if (!string.IsNullOrEmpty(InvoiceNumber)) route.Add("InvoiceNumber", InvoiceNumber);
+                    if (!string.IsNullOrEmpty(Org_tbContact.EmailAddress)) route.Add("EmailAddress", Org_tbContact.EmailAddress);
+
+                    return RedirectToPage(string.Concat("/", ReturnUrl), route);
+                }
+                else
+                {
+                    route.Add("AccountCode", Org_tbContact.AccountCode);
+
+                    return RedirectToPage("./Index", route);
+                }
             }
             catch (Exception e)
             {

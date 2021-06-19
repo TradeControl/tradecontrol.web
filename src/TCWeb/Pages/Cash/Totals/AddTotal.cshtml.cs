@@ -35,7 +35,7 @@ namespace TradeControl.Web.Pages.Cash.Totals
             set { HttpContext.Session.SetString(SessionKeyCategoryCode, value); }
         }
 
-        public AddTotalModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public AddTotalModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync(string categoryCode)
         {

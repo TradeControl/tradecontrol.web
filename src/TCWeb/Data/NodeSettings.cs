@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-
+using TradeControl.Web.Mail;
 
 namespace TradeControl.Web.Data
 {
-    public class Settings
+    public class NodeSettings
     {
-        NodeContext _context;
+        readonly NodeContext _context;
 
-        public Settings(NodeContext context)
+        public NodeSettings(NodeContext context)
         {
             _context = context;
         }
@@ -50,7 +50,23 @@ namespace TradeControl.Web.Data
             {
                 try
                 { 
-                    return (_context.App_tbOptions.Count() == 0 || _context.Usr_tbUsers.Count() == 0);
+                    return (!_context.App_tbOptions.Any() || !_context.Usr_tbUsers.Any());
+                }
+                catch (Exception e)
+                {
+                    _context.ErrorLog(e);
+                    return false;
+                }
+            }
+        }
+
+        public bool HasMailHost
+        {
+            get
+            {
+                try
+                {
+                    return (_context.App_Host.Any());
                 }
                 catch (Exception e)
                 {
@@ -78,7 +94,7 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                if (_context.App_ActivePeriods.Count() == 0)
+                if (!_context.App_ActivePeriods.Any())
                     return false;
                 else
                     return _context.App_ActivePeriods.First().EndOn < DateTime.Today;
@@ -103,5 +119,56 @@ namespace TradeControl.Web.Data
             }
 
         });
+
+        public async Task<bool> SetHost(int? hostId)
+        {
+            try
+            {
+                var options = await _context.App_tbOptions.FirstAsync();
+                options.HostId = hostId;
+                _context.Attach(options).State = EntityState.Modified;
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!await _context.App_tbOptions.AnyAsync())
+                        return false;
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                _context.ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<MailSettings> MailHost()
+        {
+            try
+            {
+                var defaultHost = await _context.App_Host.OrderBy(h => h.HostId).SingleOrDefaultAsync();
+
+                if (defaultHost == null)
+                    return null;
+                else
+                    return new()
+                    {
+                        HostName = defaultHost.HostName,
+                        UserName =  defaultHost.EmailAddress,
+                        Password = defaultHost.EmailPassword,
+                        Port = defaultHost.HostPort
+                    };
+            }
+            catch (Exception e)
+            {
+                _context.ErrorLog(e);
+                return null;
+            }
+        }
     }
 }

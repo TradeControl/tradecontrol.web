@@ -21,8 +21,6 @@ namespace TradeControl.Web.Pages.Org.Address
     [Authorize(Roles = "Administrators, Managers")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public Org_tbAddress Org_tbAddress { get; set; }
 
@@ -33,6 +31,12 @@ namespace TradeControl.Web.Pages.Org.Address
         [Display(Name = "Admin Address?")]
         public bool IsAdminAddress { get; set; }
 
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string addressCode)
         {

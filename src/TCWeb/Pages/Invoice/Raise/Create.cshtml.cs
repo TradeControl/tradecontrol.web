@@ -19,12 +19,6 @@ namespace TradeControl.Web.Pages.Invoice.Raise
 {
     public class CreateModel : DI_BasePageModel
     {
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        { }
-
         [BindProperty]
         public Invoice_tbEntry Invoice_Entry { get; set; }
 
@@ -135,6 +129,13 @@ namespace TradeControl.Web.Pages.Invoice.Raise
             }
         }
         #endregion
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string accountCode, string cashCode, string taxCode)
         {

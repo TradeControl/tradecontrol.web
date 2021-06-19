@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Admin.EventLog
 {
     public class DetailsModel : DI_BasePageModel
     {
-        public DetailsModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public App_vwEventLog App_EventLog { get; set; }

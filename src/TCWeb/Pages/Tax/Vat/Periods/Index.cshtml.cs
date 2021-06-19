@@ -20,12 +20,7 @@ namespace TradeControl.Web.Pages.Tax.Vat.Periods
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-             IAuthorizationService authorizationService,
-             UserManager<TradeControlWebUser> userManager)
-             : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public IList<Cash_vwTaxVatSummary> Cash_VatSummary { get; set; }
 

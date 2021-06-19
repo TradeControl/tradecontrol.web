@@ -29,7 +29,7 @@
                 @Html.DisplayFor(modelItem => item.ContactName)
             </td>
             <td>
-                <a href="mailto:@Html.DisplayFor(modelItem => item.EmailAddress)">@Html.DisplayFor(modelItem => item.EmailAddress)</a>
+                @Html.DisplayFor(modelItem => item.EmailAddress)
             </td>
             <td>
                 <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" asp-route-contactName="@item.ContactName" class="btn btn-info"></a>

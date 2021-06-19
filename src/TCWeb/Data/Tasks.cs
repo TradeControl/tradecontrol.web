@@ -8,7 +8,7 @@ namespace TradeControl.Web.Data
 {
     public class Tasks
     {
-        NodeContext _context;
+        readonly NodeContext _context;
 
         public string TaskCode { get; private set; } = string.Empty;
 
@@ -81,7 +81,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<bool> ReconcileCharge(string parentTaskCode)
+        public async Task<bool> ReconcileCharge()
         {
             try
             {

@@ -19,12 +19,7 @@ namespace TradeControl.Web.Pages.Org.CashAccount
         [BindProperty]
         public Org_vwCashAccount Org_CashAccount { get; set; }
 
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync(string cashAccountCode)
         {

@@ -18,10 +18,8 @@ using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Invoice.Update
 {
-    public class EmailModel : DI_BasePageModel
+    public class EmailSubmitModel : DI_BasePageModel
     {
-        public EmailModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public Invoice_vwRegister Invoice_Header { get; set; }
 
@@ -29,6 +27,12 @@ namespace TradeControl.Web.Pages.Invoice.Update
         [BindProperty]
         public string EmailAddress { get; set; }
 
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EmailSubmitModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string invoiceNumber)
         {

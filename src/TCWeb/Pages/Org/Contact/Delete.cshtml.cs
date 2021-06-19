@@ -18,7 +18,7 @@ namespace TradeControl.Web.Pages.Org.Contact
     [Authorize(Roles = "Administrators, Managers")]
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public Org_vwContact Contact { get; set; }

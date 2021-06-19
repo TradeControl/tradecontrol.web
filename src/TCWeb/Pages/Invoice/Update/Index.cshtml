@@ -71,7 +71,7 @@
                     }
                     if (!item.Printed)
                     {
-                        <a asp-page="./Email" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>
+                        <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>
                     }
                 }
             </td>

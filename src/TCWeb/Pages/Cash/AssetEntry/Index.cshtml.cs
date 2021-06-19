@@ -28,7 +28,12 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 
         public IList<Cash_vwPaymentsUnposted> Cash_AssetsUnposted { get; set; }
 
-        public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public IndexModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task OnGetAsync(string cashAccountName, string cashAccountCode)
         {

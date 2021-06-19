@@ -18,7 +18,12 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public IndexModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public IList<Cash_vwTransfersUnposted> Cash_TransfersUnposted { get; set; }
 

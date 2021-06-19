@@ -17,12 +17,7 @@ namespace TradeControl.Web.Pages.Org.Enquiry
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public SelectList OrganisationTypes { get; set; }
 

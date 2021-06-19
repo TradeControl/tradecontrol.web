@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Org.Type
     [Authorize(Roles = "Administrators")]
     public class CreateModel : DI_BasePageModel
     {
-        public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public CreateModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public Org_tbType Org_tbType { get; set; }

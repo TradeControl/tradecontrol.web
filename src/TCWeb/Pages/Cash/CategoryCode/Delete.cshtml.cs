@@ -18,12 +18,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
     [Authorize(Roles = "Administrators")]
     public class DeleteModel : DI_BasePageModel
     {        
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         public Cash_Category Cash_Category { get; set; }
 

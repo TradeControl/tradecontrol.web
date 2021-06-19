@@ -16,12 +16,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 {
     public class DetailsModel : DI_BasePageModel
     {
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         public Cash_Category Cash_Category { get; set; }
 

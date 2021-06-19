@@ -19,12 +19,11 @@ namespace TradeControl.Web.Pages.Cash.Statement
 {
     public class EditModel : DI_BasePageModel
     {
+        UserManager<TradeControlWebUser> UserManager { get; }
 
-        public EditModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         public SelectList CashDescriptions { get; set; }

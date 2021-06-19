@@ -19,7 +19,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         [BindProperty]
         public Cash_tbCategory Cash_tbCategory { get; set; }

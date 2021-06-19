@@ -1,0 +1,67 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Template.IndexModel
+@{ ViewData["Title"] = "Email Templates"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes"></select>
+        <input type="submit" value="SELECT" />
+    </p>
+</form>
+
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Web_TemplateInvoices[0].TemplateFileName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Web_TemplateInvoices[0].LastUsedOn)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Web_TemplateInvoices)
+        {
+        <tr>
+            <td>
+                <a asp-page="./Images" asp-route-templateId="@item.TemplateId" >@Html.DisplayFor(modelItem => item.TemplateFileName)</a>
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.LastUsedOn)
+            </td>
+            <td>
+                <a asp-page="./TemplateRemove" asp-route-invoiceType="@Model.InvoiceType" asp-route-templateId="@item.TemplateId" class="btn btn-danger"></a>
+            </td>
+
+        </tr>
+        }
+    </tbody>
+</table>
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="TemplateFileName" class="control-label"></label>
+                <p>
+                    <select asp-for="TemplateFileName" asp-items="Model.TemplateFileNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="ASSIGN" class="btn btn-primary" />
+                <a asp-page="./Attachments" asp-route-invoiceType="@Model.InvoiceType" class="btn btn-outline-info">File Attachments</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

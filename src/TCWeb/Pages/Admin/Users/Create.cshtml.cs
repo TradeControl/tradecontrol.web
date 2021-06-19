@@ -17,11 +17,12 @@ namespace TradeControl.Web.Pages.Admin.Users
 {
     public class CreateModel : DI_BasePageModel
     {
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        IAuthorizationService AuthorizationService { get; }
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context) 
         {
+            AuthorizationService = authorizationService;
         }
 
         [BindProperty]

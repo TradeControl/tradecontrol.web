@@ -26,7 +26,7 @@ namespace TradeControl.Web.Pages.Org.CashAccount
 
         public SelectList AccountTypes { get; set; }
 
-        public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync(string accountType, string cashAccountCode)
         {

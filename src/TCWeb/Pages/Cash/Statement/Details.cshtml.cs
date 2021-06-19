@@ -19,12 +19,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
         [BindProperty]
         public Cash_tbPayment Cash_Payment { get; set; }
 
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {

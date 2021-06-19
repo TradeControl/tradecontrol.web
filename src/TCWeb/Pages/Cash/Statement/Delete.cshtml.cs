@@ -22,11 +22,11 @@ namespace TradeControl.Web.Pages.Cash.Statement
         [BindProperty]
         public Cash_tbPayment Cash_Payment { get; set; }
 
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public DeleteModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)

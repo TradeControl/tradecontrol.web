@@ -16,12 +16,7 @@ namespace TradeControl.Web.Pages.Tax.Company
 {
     public class StatementModel : DI_BasePageModel
     {
-        public StatementModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public StatementModel(NodeContext context) : base(context) { }
 
         public IList<Cash_vwTaxCorpStatement> Cash_CorpStatement { get; set; }
 

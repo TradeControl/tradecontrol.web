@@ -10,7 +10,7 @@
                 <partial name="_LoginPartial" />
                 <ul class="navbar-nav flex-grow-1">
                     <li class="dropdown">
-                        <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts</a>
+                        <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts<span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/PaymentEntry/Index">Payment Entry</a>
@@ -24,13 +24,18 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Statement/Index">Statements</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/CashAccount/Index">Maintenance</a>
-                            </li>
+                            @{
+                                if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Org/CashAccount/Index">Maintenance</a>
+                                    </li>
+                                }
+                            }
                         </ul>
                     </li>
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Invoicing</a>
+                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Invoicing<span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Raise/Index">Raise</a>
@@ -47,13 +52,21 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Settings/Index">Numbering</a>
-                            </li>
+                            @{
+                                if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Settings/Index">Numbering</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Template/Index">Email Templates</a>
+                                    </li>
+                                }
+                            }
                         </ul>
                     </li>
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Organisations</a>
+                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Organisations<span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Org/Update/Index">Maintenance</a>
@@ -64,13 +77,18 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Org/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Type/Index">Types</a>
-                            </li>
+                            @{
+                                if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Org/Type/Index">Types</a>
+                                    </li>
+                                }
+                            }
                         </ul>
                     </li>
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Accounts</a>
+                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Accounts<span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Periods/Index">Financial Periods</a>
@@ -87,14 +105,19 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Company/Index">Company Tax</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Settings/Index">Tax Settings</a>
-                            </li>
-                        </ul>
+                            @{
+                                if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Settings/Index">Tax Settings</a>
+                                    </li>
+                                }
+                            }
+                            </ul>
                     </li>
 
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">System</a>
+                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">System<span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Tax/TaxCode/Index">Tax Codes</a>
@@ -108,12 +131,20 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Totals/Index">Cash Totals</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Settings/Mail">Mail Settings</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
-                            </li>
+                            @{
+                                if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Host/Index">Mail Settings</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/FileTransfer/Index">File Transfer</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
+                                    </li>
+                                }
+                            }
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
                             </li>

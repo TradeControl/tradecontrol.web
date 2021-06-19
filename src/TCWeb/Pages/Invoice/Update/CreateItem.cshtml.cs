@@ -38,7 +38,12 @@ namespace TradeControl.Web.Pages.Invoice.Update
         [Display(Name = "Tax Code")]
         public string TaxDescription { get; set; }
 
-        public CreateItemModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateItemModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string invoiceNumber)
         {

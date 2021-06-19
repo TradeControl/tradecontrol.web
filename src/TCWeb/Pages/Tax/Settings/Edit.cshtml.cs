@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Tax.Settings
     [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public EditModel(NodeContext context) : base(context) { }
 
         [BindProperty]
         public Cash_tbTaxType Cash_tbTaxType { get; set; }

@@ -25,12 +25,7 @@ namespace TradeControl.Web.Pages.Org.Enquiry
         [BindProperty]
         public IList<Org_tbContact> Org_Contacts { get; set; }
 
-        public DetailsModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DetailsModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {

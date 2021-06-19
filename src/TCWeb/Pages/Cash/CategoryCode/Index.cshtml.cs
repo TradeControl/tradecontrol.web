@@ -34,7 +34,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
+        public IndexModel(NodeContext context) : base(context) {}
 
         public async Task OnGetAsync(string returnUrl, short? cashTypeCode)
         {

@@ -119,6 +119,13 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbYear> App_tbYears { get; set; }
         public virtual DbSet<App_vwYear> App_Years { get; set; }
         public virtual DbSet<App_tbYearPeriod> App_tbYearPeriods { get; set; }
+        public virtual DbSet<Web_tbTemplate> Web_tbTemplates { get; set; }
+        public virtual DbSet<Web_tbTemplateImage> Web_tbTemplateImages { get; set; }
+        public virtual DbSet<Web_tbTemplateInvoice> Web_tbTemplateInvoices { get; set; }
+        public virtual DbSet<Web_tbImage> Web_tbImages { get; set; }
+        public virtual DbSet<Web_tbAttachment> Web_tbAttachments { get; set; }
+        public virtual DbSet<Web_tbAttachmentInvoice> Web_tbAttachmentInvoices { get; set; }
+
 
         #endregion
 
@@ -130,6 +137,7 @@ namespace TradeControl.Web.Data
         #region Views
         public virtual DbSet<Org_vwAccountLookup> Org_AccountLookup { get; set; }
         public virtual DbSet<Org_vwAccountLookupAll> Org_AccountLookupAll { get; set; }
+        public virtual DbSet<Org_vwEmailAddress> Org_EmailAddresses { get; set; }
         public virtual DbSet<Org_vwAccountSource> Org_AccountSources { get; set; }
         public virtual DbSet<Cash_vwAccountStatement> Cash_AccountStatements { get; set; }
         public virtual DbSet<Cash_vwAccountStatementListing> Cash_AccountStatementListings { get; set; }
@@ -137,6 +145,8 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwProfitAndLossByMonth> Cash_ProfitAndLossByMonth { get; set; }
         public virtual DbSet<Cash_vwProfitAndLossByYear> Cash_ProfitAndLossByYear { get; set; }
         public virtual DbSet<Invoice_vwAccountsMode> Invoice_AccountsMode { get; set; }
+        public virtual DbSet<App_vwHost> App_Host { get; set; }
+        public virtual DbSet<App_tbHost> App_tbHosts { get; set; }
         public virtual DbSet<Task_vwActiveDatum> Task_ActiveData { get; set; }
         public virtual DbSet<App_vwActivePeriod> App_ActivePeriods { get; set; }
         public virtual DbSet<Task_vwActiveStatusCode> Task_ActiveStatusCodes { get; set; }
@@ -182,6 +192,9 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwDebitNoteSpool> Invoice_DebitNoteSpool { get; set; }
         public virtual DbSet<Activity_vwDefaultText> Activity_DefaultText { get; set; }
         public virtual DbSet<Org_vwDepartment> Org_Departments { get; set; }
+        public virtual DbSet<Usr_vwDoc> Usr_Doc { get; set; }
+        public virtual DbSet<Invoice_vwDoc> Invoice_Doc { get; set; }
+        public virtual DbSet<Invoice_vwDocDetail> Invoice_DocDetails { get; set; }
         public virtual DbSet<App_vwDocCreditNote> App_DocCreditNotes { get; set; }
         public virtual DbSet<App_vwDocDebitNote> App_DocDebitNotes { get; set; }
         public virtual DbSet<App_vwDocOpenMode> App_DocOpenModes { get; set; }
@@ -292,6 +305,9 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_vwWarehouseTask> App_WarehouseTasks { get; set; }
         public virtual DbSet<App_vwYearPeriod> App_YearPeriods { get; set; }
         public virtual DbSet<Usr_vwCredential> Usr_Credentials { get; set; }
+        public virtual DbSet<Web_vwAttachmentInvoice> Web_AttachmentInvoices { get; set; }
+        public virtual DbSet<Web_vwTemplateImage> Web_TemplateImages { get; set; }
+        public virtual DbSet<Web_vwTemplateInvoice> Web_TemplateInvoices { get; set; }
         #endregion
 
         #region Model Creation
@@ -1767,10 +1783,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.Property(e => e.TaxHorizon).HasDefaultValueSql("((90))");
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
@@ -1826,6 +1838,11 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbOptions)
                     .HasForeignKey(d => d.UnitOfCharge)
                     .HasConstraintName("FK_App_tbUoc_UnitOfCharge");
+
+                entity.HasOne(d => d.HostIdNavigation)
+                    .WithMany(p => p.TbOptions)
+                    .HasForeignKey(d => d.HostId)
+                    .HasConstraintName("FK_App_tbOptions_App_tbHost");
             });
 
             modelBuilder.Entity<Org_tbOrg>(entity =>
@@ -2514,6 +2531,72 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_App_tbYearPeriod_App_tbYear");
             });
 
+            modelBuilder.Entity<Web_tbTemplate>(entity =>
+            {
+                entity.HasKey(e => e.TemplateId)
+                    .HasName("PK_Web_tbTemplate");
+            });
+
+            modelBuilder.Entity<Web_tbAttachment>(entity =>
+            {
+                entity.HasKey(e => e.AttachmentId)
+                    .HasName("PK_Web_tbAttachment");
+            });
+
+            modelBuilder.Entity<Web_tbTemplateImage>(entity =>
+            {
+                entity.HasKey(e => new { e.TemplateId, e.ImageTag });
+
+                entity.HasOne(d => d.ImageTagNavigation)
+                    .WithMany(p => p.tbTemplateImages)
+                    .HasForeignKey(d => d.ImageTag)
+                    .HasConstraintName("FK_tbTemplateImage_tbImage");
+
+                entity.HasOne(d => d.Template)
+                    .WithMany(p => p.tbTemplateImages)
+                    .HasForeignKey(d => d.TemplateId)
+                    .HasConstraintName("FK_tbTemplateImage_tbTemplate");
+            });
+
+            modelBuilder.Entity<Web_tbTemplateInvoice>(entity =>
+            {
+                entity.HasKey(e => new { e.InvoiceTypeCode, e.TemplateId });
+
+                entity.HasOne(d => d.InvoiceTypeCodeNavigation)
+                    .WithMany(p => p.TbTemplateInvoices)
+                    .HasForeignKey(d => d.InvoiceTypeCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_tbTemplateInvoice_tbType");
+
+                entity.HasOne(d => d.Template)
+                    .WithMany(p => p.tbTemplateInvoices)
+                    .HasForeignKey(d => d.TemplateId)
+                    .HasConstraintName("FK_tbTemplateInvoice_tbTemplate");
+            });
+
+            modelBuilder.Entity<Web_tbImage>(entity =>
+            {
+                entity.HasKey(e => e.ImageTag)
+                    .HasName("PK_Web_tbImage");
+            });
+
+            modelBuilder.Entity<Web_tbAttachmentInvoice>(entity =>
+            {
+                entity.HasKey(e => new { e.InvoiceTypeCode, e.AttachmentId })
+                    .HasName("PK_tbInvoiceAttachment");
+
+                entity.HasOne(d => d.Attachment)
+                    .WithMany(p => p.TbAttachmentInvoices)
+                    .HasForeignKey(d => d.AttachmentId)
+                    .HasConstraintName("FK_tbAttachmentInvoice_tbAttachment");
+
+                entity.HasOne(d => d.InvoiceTypeCodeNavigation)
+                    .WithMany(p => p.TbAttachmentInvoices)
+                    .HasForeignKey(d => d.InvoiceTypeCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_tbAttachmentInvoice_tbType");
+            });
+
             modelBuilder.Entity<Org_vwAccountLookup>(entity =>
             {
                 entity.HasKey(e => new { e.AccountCode });
@@ -2524,6 +2607,11 @@ namespace TradeControl.Web.Data
             {
                 entity.HasKey(e => new { e.AccountCode });
                 entity.ToView("vwAccountLookupAll", "Org");
+            });
+
+            modelBuilder.Entity<Org_vwEmailAddress>(entity =>
+            {
+                entity.ToView("vwEmailAddresses", "Org");
             });
 
             modelBuilder.Entity<Org_vwAccountSource>(entity =>
@@ -2578,6 +2666,17 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Task_vwActiveStatusCode>(entity =>
             {
                 entity.ToView("vwActiveStatusCodes", "Task");
+            });
+
+            modelBuilder.Entity<App_vwHost>(entity =>
+            {
+                entity.ToView("vwHost", "App");
+            });
+
+            modelBuilder.Entity<App_tbHost>(entity =>
+            {
+                entity.HasKey(e => e.HostId)
+                    .HasName("PK_App_tbHost");
             });
 
             modelBuilder.Entity<Invoice_vwAgedDebtPurchase>(entity =>
@@ -2831,6 +2930,21 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Org_vwDepartment>(entity =>
             {
                 entity.ToView("vwDepartments", "Org");
+            });
+
+            modelBuilder.Entity<Invoice_vwDoc>(entity =>
+            {
+                entity.ToView("vwDoc", "Invoice");
+            });
+
+            modelBuilder.Entity<Invoice_vwDocDetail>(entity =>
+            {
+                entity.ToView("vwDocDetails", "Invoice");
+            });
+
+            modelBuilder.Entity<Usr_vwDoc>(entity =>
+            {
+                entity.ToView("vwDoc", "Usr");
             });
 
             modelBuilder.Entity<App_vwDocCreditNote>(entity =>
@@ -3463,6 +3577,21 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
+            });
+
+            modelBuilder.Entity<Web_vwAttachmentInvoice>(entity =>
+            {
+                entity.ToView("vwAttachmentInvoices", "Web");
+            });
+
+            modelBuilder.Entity<Web_vwTemplateImage>(entity =>
+            {
+                entity.ToView("vwTemplateImages", "Web");
+            });
+
+            modelBuilder.Entity<Web_vwTemplateInvoice>(entity =>
+            {
+                entity.ToView("vwTemplateInvoices", "Web");
             });
 
             OnModelCreatingPartial(modelBuilder);

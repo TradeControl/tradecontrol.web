@@ -43,12 +43,7 @@ namespace TradeControl.Web.Pages.Org.CashAccount
             }
         }
 
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync(string cashAccountCode)
         {

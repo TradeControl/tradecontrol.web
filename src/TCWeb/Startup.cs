@@ -14,6 +14,7 @@ using Microsoft.Extensions.Hosting;
 using Wangkanai.Detection.Models;
 using TradeControl.Web.Data;
 using System.Globalization;
+using Microsoft.Extensions.FileProviders;
 
 namespace TradeControl.Web
 {
@@ -30,9 +31,12 @@ namespace TradeControl.Web
 
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        private readonly IWebHostEnvironment _env;
+
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
+            _env = env;
         }
 
         public IConfiguration Configuration { get; }
@@ -56,6 +60,8 @@ namespace TradeControl.Web
                 options.Cookie.HttpOnly = true;
                 options.Cookie.IsEssential = true;
             });
+
+            services.AddSingleton<IFileProvider>(new PhysicalFileProvider(_env.WebRootPath));
 
             //ServiceTool.Create(services);
         }
@@ -90,13 +96,7 @@ namespace TradeControl.Web
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
-            });
-
-
+            });            
         }
-
-
-
-
     }
 }

@@ -1,0 +1,31 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.FileTransfer.DeleteModel
+@{ ViewData["Title"] = $"Delete from {Model.ContentType}"; }
+<h1>@ViewData["Title"]</h1>
+
+<dl>
+    <dt>
+        Name
+    </dt>
+    <dd>
+        @Model.RemoveFile.Name
+    </dd>
+    <dt>
+        Physical Path
+    </dt>
+    <dd>
+        @Model.RemoveFile.PhysicalPath
+    </dd>
+    <dt>
+        Size (bytes)
+    </dt>
+    <dd>
+        @Model.RemoveFile.Length.ToString("N1")
+    </dd>
+</dl>
+
+<form method="post">
+    <input type="hidden" asp-for="@Model.ContentType" />
+    <input type="hidden" asp-for="RemoveFile.Name" />
+    <input type="submit" value="Delete" class="btn btn-danger" />
+</form>

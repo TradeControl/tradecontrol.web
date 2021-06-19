@@ -30,6 +30,13 @@ namespace TradeControl.Web.Models
         public string VatCategoryCode { get; set; }
         public short TaxHorizon { get; set; }
         public bool IsAutoOffsetDays { get; set; }
+        public string UnitOfCharge { get; set; }
+        [StringLength(50)]
+        public string MinerFeeCode { get; set; }
+        [StringLength(10)]
+        public string MinerAccountCode { get; set; }
+        public short CoinTypeCode { get; set; }
+        public int? HostId { get; set; }
         [Required]
         [StringLength(50)]
         public string InsertedBy { get; set; }
@@ -40,16 +47,7 @@ namespace TradeControl.Web.Models
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
-        [Required]
-        public byte[] RowVer { get; set; }
         [StringLength(5)]
-        public string UnitOfCharge { get; set; }
-        [StringLength(50)]
-        public string MinerFeeCode { get; set; }
-        [StringLength(10)]
-        public string MinerAccountCode { get; set; }
-        public short CoinTypeCode { get; set; }
-
         [ForeignKey(nameof(AccountCode))]
         [InverseProperty(nameof(Org_tbOrg.TbOptionAccountCodeNavigations))]
         public virtual Org_tbOrg AccountCodeNavigation { get; set; }
@@ -77,5 +75,8 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(UnitOfCharge))]
         [InverseProperty(nameof(App_tbUoc.TbOptions))]
         public virtual App_tbUoc UnitOfChargeNavigation { get; set; }
+        [ForeignKey(nameof(HostId))]
+        [InverseProperty(nameof(App_tbHost.TbOptions))]
+        public virtual App_tbHost HostIdNavigation { get; set; }
     }
 }

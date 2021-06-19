@@ -1,0 +1,58 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Template.ImagesModel
+@{ ViewData["Title"] = "Template Images"; }
+<h1>@ViewData["Title"]</h1>
+<h4>@Model.TemplateFileName</h4>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Web_TemplateImages[0].ImageFileName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Web_TemplateImages[0].ImageTag)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Web_TemplateImages)
+        {
+            <tr>
+                <td>
+                    <a asp-page="./ImageEdit" asp-route-templateId="@item.TemplateId" asp-route-imageTag="@item.ImageTag">@Html.DisplayFor(modelItem => item.ImageFileName)</a>
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ImageTag)
+                </td>
+                <td>
+                    <a asp-page="./ImageRemove" asp-route-imageTag="@item.ImageTag" asp-route-templateId="@item.TemplateId" class="btn btn-danger"></a>
+                </td>
+
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="ImageFileName" class="control-label"></label>
+                <p>
+                    <select asp-for="ImageFileName" asp-items="Model.ImageFileNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="ASSIGN" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-outline-info">Templates</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

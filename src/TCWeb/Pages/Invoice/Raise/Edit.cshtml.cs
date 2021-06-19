@@ -29,8 +29,12 @@ namespace TradeControl.Web.Pages.Invoice.Raise
         [BindProperty]
         public string TaxDescription { get; set; }
 
+        UserManager<TradeControlWebUser> UserManager { get; }
 
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string accountCode, string cashCode)
         {

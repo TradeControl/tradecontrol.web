@@ -13,7 +13,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
 {
     public class AccessDeniedModel : DI_BasePageModel
     {
-        public AccessDeniedModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public AccessDeniedModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync()
         {

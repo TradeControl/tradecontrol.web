@@ -17,10 +17,15 @@ namespace TradeControl.Web.Pages.Invoice.Raise
 {
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public Invoice_vwEntry Entry { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public DeleteModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string accountCode, string cashCode)
         {

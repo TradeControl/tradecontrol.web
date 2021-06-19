@@ -34,12 +34,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
 
         public IList<Cash_vwCode> Cash_Codes { get; set; }
 
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync(string returnUrl)
         {

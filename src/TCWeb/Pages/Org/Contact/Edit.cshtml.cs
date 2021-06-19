@@ -22,13 +22,18 @@ namespace TradeControl.Web.Pages.Org.Contact
     [Authorize(Roles = "Administrators, Managers")]
     public class EditModel : DI_BasePageModel
     {
-        public EditModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public Org_tbContact Org_tbContact { get; set; }
 
         [BindProperty]
         public string AccountName { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string accountCode, string contactName)
         {

@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1B4B-4D74-84AF-4625B851D52B}"
 	ProjectSection(SolutionItems) = preProject
 		..\readme.md = ..\readme.md
+		..\docs\template_tags.md = ..\docs\template_tags.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCWeb", "TCWeb\TCWeb.csproj", "{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}"

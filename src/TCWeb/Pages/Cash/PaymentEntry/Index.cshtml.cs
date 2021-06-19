@@ -18,11 +18,11 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public IndexModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         public SelectList CashAccountNames { get; set; }

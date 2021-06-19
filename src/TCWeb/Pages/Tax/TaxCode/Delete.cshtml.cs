@@ -1,25 +1,19 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
-
 
 namespace TradeControl.Web.Pages.Tax.TaxCode
 {
     [Authorize(Roles = "Administrators")]
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         public App_vwTaxCode App_TaxCode { get; set; }
 

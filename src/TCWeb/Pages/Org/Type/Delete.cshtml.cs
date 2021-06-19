@@ -18,7 +18,7 @@ namespace TradeControl.Web.Pages.Org.Type
     [Authorize(Roles = "Administrators")]
     public class DeleteModel : DI_BasePageModel
     {
-        public DeleteModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         public Org_vwTypeLookup Org_Type { get; set; }
 

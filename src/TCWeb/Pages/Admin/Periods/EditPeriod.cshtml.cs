@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Admin.Periods
     [Authorize(Roles = "Administrators")]
     public class EditPeriodModel : DI_BasePageModel
     {
-        public EditPeriodModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public EditPeriodModel(NodeContext context) : base(context) { }
 
         public string PeriodDescription { get; set; }
 

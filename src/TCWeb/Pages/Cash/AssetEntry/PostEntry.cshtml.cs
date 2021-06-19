@@ -17,11 +17,11 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
 {
     public class PostEntryModel : DI_BasePageModel
     {
-        public PostEntryModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public PostEntryModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
+            UserManager = userManager;
         }
 
         [BindProperty]

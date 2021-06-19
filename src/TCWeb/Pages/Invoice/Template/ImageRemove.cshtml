@@ -1,0 +1,41 @@
+﻿@page
+@model TradeControl.Web.Pages.Invoice.Template.ImageRemoveModel
+@{ ViewData["Title"] = "Unassign Image"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Web_TemplateImage.TemplateFileName)</h4>
+    <hr />
+    <form method="post">
+        <dl class="row">
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Web_TemplateImage.ImageTag)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Web_TemplateImage.ImageTag)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.Web_TemplateImage.ImageFileName)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.Web_TemplateImage.ImageFileName)
+            </dd>
+        </dl>
+
+        <input type="hidden" asp-for="Web_TemplateImage.ImageTag" />
+        <input type="hidden" asp-for="Web_TemplateImage.ImageFileName" />
+        <input type="hidden" asp-for="Web_TemplateImage.TemplateId" />
+        <input type="hidden" asp-for="Web_TemplateImage.TemplateFileName" />
+
+
+        <div class="form-group">
+            <input type="submit" value="DELETE" class="btn btn-danger" />
+            <a asp-page="./Images" asp-route-templateId="@Model.Web_TemplateImage.TemplateId" class="btn btn-info">To List</a>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

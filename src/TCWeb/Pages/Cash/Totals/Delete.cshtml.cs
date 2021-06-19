@@ -18,12 +18,7 @@ namespace TradeControl.Web.Pages.Cash.Totals
     [Authorize(Roles = "Administrators")]
     public class DeleteModel : DI_BasePageModel
     {        
-        public DeleteModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public DeleteModel(NodeContext context) : base(context) { }
 
         public Cash_Total Cash_Total { get; set; }
         public IList<string> Child_Categories { get; set; }

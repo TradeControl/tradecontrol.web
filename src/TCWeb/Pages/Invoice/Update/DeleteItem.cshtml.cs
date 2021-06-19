@@ -18,10 +18,15 @@ namespace TradeControl.Web.Pages.Invoice.Update
 {
     public class DeleteItemModel : DI_BasePageModel
     {
-        public DeleteItemModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
-
         [BindProperty]
         public Invoice_vwRegisterDetail Invoice_Detail { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public DeleteItemModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string invoiceNumber, string cashCode)
         {

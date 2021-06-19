@@ -17,15 +17,15 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 {
     public class PostEntryModel : DI_BasePageModel
     {
-        public PostEntryModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
-
         [BindProperty]
         public Cash_vwTransfersUnposted Cash_TransfersUnposted { get; set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public PostEntryModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {

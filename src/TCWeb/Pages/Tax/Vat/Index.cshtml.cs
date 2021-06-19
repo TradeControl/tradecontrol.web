@@ -15,12 +15,7 @@ namespace TradeControl.Web.Pages.Tax.Vat
 {
     public class IndexModel : DI_BasePageModel
     {
-        public IndexModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        {
-        }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public IList<Cash_vwTaxVatTotal> Cash_VatTotals { get; set; }
 

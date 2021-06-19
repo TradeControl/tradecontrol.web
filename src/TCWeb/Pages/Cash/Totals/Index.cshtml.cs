@@ -16,7 +16,7 @@ namespace TradeControl.Web.Pages.Cash.Totals
     {
         public IList<Cash_Total> Cash_Totals { get; set; }
 
-        public IndexModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        public IndexModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync()
         {

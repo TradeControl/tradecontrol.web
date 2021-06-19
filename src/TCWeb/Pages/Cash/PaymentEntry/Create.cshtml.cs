@@ -19,11 +19,12 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class CreateModel : DI_BasePageModel
     {
-        public CreateModel(NodeContext context,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager)
-            : base(context, authorizationService, userManager)
-        { }
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }

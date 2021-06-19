@@ -31,7 +31,12 @@ namespace TradeControl.Web.Pages.Org.Address
         [Display(Name = "Admin Address?")]
         public bool IsAdminAddress { get; set; }
 
-        public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) { }
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {

@@ -3,6 +3,10 @@
 @{ ViewData["Title"] = "P&L By Month"; }
 <h1>@ViewData["Title"]</h1>
 
+<p>
+    <a asp-page="./ProfitAndLoss" class="btn btn-outline-info">Annual Accounts</a>
+</p>
+
 <form class="form-group" method="get">
     <p>
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
@@ -11,6 +15,7 @@
         <input type="submit" value="Generate" />
     </p>
 </form>
+
 <table class="table table-striped">
     <thead>
         <tr>

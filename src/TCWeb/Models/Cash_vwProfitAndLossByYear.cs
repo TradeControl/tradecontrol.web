@@ -22,6 +22,7 @@ namespace TradeControl.Web.Models
         public string Category { get; set; }
         [Display(Name = "Total Value")]
         [DataType(DataType.Currency)]
+        [Column(TypeName = "decimal(18, 5)")]
         public decimal InvoiceValue { get; set; }
     }
 }

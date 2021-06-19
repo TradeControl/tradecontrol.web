@@ -12,33 +12,17 @@ namespace TradeControl.Web.Pages
     public class DI_BasePageModel : PageModel
     {
         protected NodeContext NodeContext { get; }
-        protected IAuthorizationService AuthorizationService { get; }
-        protected UserManager<TradeControlWebUser> UserManager { get; }
 
-        private readonly ILogger<IndexModel> _logger = null;
-
-        public DI_BasePageModel(
-            NodeContext nodeContext,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager) : base()
+        public DI_BasePageModel(NodeContext nodeContext) : base()
         {
             NodeContext = nodeContext;
-            UserManager = userManager;
-            AuthorizationService = authorizationService;            
         }
 
-        public DI_BasePageModel(
-            ILogger<IndexModel> logger,
-            NodeContext nodeContext,
-            IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager) : base()
-        {
-            _logger = logger;
-            NodeContext = nodeContext;
-            UserManager = userManager;
-            AuthorizationService = authorizationService;
-        }
+/*
 
+
+
+*/
         protected async Task SetViewData()
         {
             if (!ViewData.ContainsKey("CompanyName"))

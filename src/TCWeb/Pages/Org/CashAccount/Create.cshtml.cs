@@ -36,8 +36,12 @@ namespace TradeControl.Web.Pages.Org.CashAccount
         public string AccountType { get; set; }
         public SelectList AccountTypes { get; set; }
 
+        UserManager<TradeControlWebUser> UserManager { get; }
 
-        public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context, authorizationService, userManager) {}
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task<IActionResult> OnGetAsync(string accountType)
         {
@@ -65,7 +69,7 @@ namespace TradeControl.Web.Pages.Org.CashAccount
 
                 Profile profile = new(NodeContext);
                 CashAccounts cashAccounts = new(NodeContext);
-                Settings settings = new(NodeContext);
+                NodeSettings settings = new(NodeContext);
 
                 Org_CashAccount = new()
                 {

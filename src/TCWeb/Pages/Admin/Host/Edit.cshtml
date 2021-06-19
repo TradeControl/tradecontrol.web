@@ -1,0 +1,49 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.Host.EditModel
+@{ ViewData["Title"] = "Edit Host"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+
+
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="App_tbHost.HostDescription" class="control-label"></label>
+                <input asp-for="App_tbHost.HostDescription" class="form-control" />
+                <span asp-validation-for="App_tbHost.HostDescription" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbHost.EmailAddress" class="control-label"></label>
+                <input asp-for="App_tbHost.EmailAddress" class="form-control" />
+                <span asp-validation-for="App_tbHost.EmailAddress" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbHost.EmailPassword" class="control-label"></label>
+                <input asp-for="App_tbHost.EmailPassword" class="form-control" />
+                <span asp-validation-for="App_tbHost.EmailPassword" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbHost.HostName" class="control-label"></label>
+                <input asp-for="App_tbHost.HostName" class="form-control" />
+                <span asp-validation-for="App_tbHost.HostName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_tbHost.HostPort" class="control-label"></label>
+                <input asp-for="App_tbHost.HostPort" class="form-control" />
+                <span asp-validation-for="App_tbHost.HostPort" class="text-danger"></span>
+            </div>
+            <input type="hidden" asp-for="App_tbHost.HostId" />
+            <input type="hidden" asp-for="App_tbHost.InsertedBy" />
+            <input type="hidden" asp-for="App_tbHost.InsertedOn" />
+
+            <div class="form-group">
+                <input type="submit" value="UPDATE" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-info">To List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
