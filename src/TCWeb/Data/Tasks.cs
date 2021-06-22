@@ -29,18 +29,18 @@ namespace TradeControl.Web.Data
         public async Task<bool> IsProject() => await _context.IsTaskProject(TaskCode);
         public async Task<bool> IsFullyInvoiced() => await _context.IsTaskFullyInvoiced(TaskCode);
 
-        public Task<bool> Exists => Task.Run(() =>
+        public async Task<bool> Exists()
         {
             try
             {
-                return _context.Task_tbTasks.Where(t => t.TaskCode == TaskCode).Any();
+                return await _context.Task_tbTasks.Where(t => t.TaskCode == TaskCode).AnyAsync();
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
-        });
+        }
 
         public async Task<short> NextAttributeOrder() => await _context.GetTaskAtttributeOrder(TaskCode);
 
@@ -76,7 +76,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -91,7 +91,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -106,7 +106,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -121,7 +121,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -144,7 +144,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -166,7 +166,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }

@@ -10,7 +10,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
@@ -22,10 +23,21 @@ namespace TradeControl.Web.Pages.Admin.EventLog
     [Authorize(Roles = "Administrators, Managers")]
     public class SubmitModel : DI_BasePageModel
     {
-        public SubmitModel(NodeContext context) : base(context) { }
-
         [BindProperty]
         public App_vwEventLog App_EventLog { get; set; }
+
+        [BindProperty]
+        [Display(Name = "Additional Info.")]
+        public string Note { get; set; } = string.Empty;
+
+        private IConfiguration Configuration { get; }
+        private IFileProvider FileProvider { get; }
+
+        public SubmitModel(NodeContext context, IConfiguration configuration, IFileProvider fileProvider) : base(context)
+        {
+            Configuration = configuration;
+            FileProvider = fileProvider;
+        }
 
         public async Task<IActionResult> OnGetAsync(string logCode)
         {
@@ -48,36 +60,28 @@ namespace TradeControl.Web.Pages.Admin.EventLog
             }
         }
 
-        public async Task<IActionResult> OnPostAsync(string logCode)
+        public async Task<IActionResult> OnPostAsync()
         {
             try
             {
-                if (logCode == null)
-                    return NotFound();
-                
-                var log = await NodeContext.App_EventLogs.FirstOrDefaultAsync(e => e.LogCode == logCode);
+                TemplateManager templateManager = new(NodeContext, FileProvider);
 
-                TemplateManager templateManager = new(NodeContext);
+                string templateFileName = Configuration.GetSection("Settings")["SupportRequestTemplate"];
+                string emailAddress = Configuration.GetSection("Settings")["SupportEmailAddress"];
 
-                MailText mailText = await templateManager.GetText
-                (
-                    name: "Support",
-                    emailTo: SupportRequest.SupportAddress,
-                    subject: "trade control support",
-                    body: $"{log.LogCode} {log.LoggedOn} {log.EventMessage}"
-                );
+                MailDocument doc = await templateManager.GetSupportRequest(templateFileName);
+                MailSupport mailSupport = new(NodeContext, doc, App_EventLog.LogCode);
 
-                if (mailText != null)
-                {
-                    SupportRequest supportRequest = new(NodeContext, mailText);
-                    await supportRequest.Send();
-                }
+                if (!string.IsNullOrEmpty(Note))
+                    await mailSupport.Send(emailAddress, Note);
+                else
+                    await mailSupport.Send(emailAddress);
 
                 return RedirectToPage("./Index");
             }
             catch (Exception e)
             {                
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
 

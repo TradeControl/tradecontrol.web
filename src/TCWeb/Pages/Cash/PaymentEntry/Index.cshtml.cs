@@ -53,7 +53,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 else if (!string.IsNullOrEmpty(cashAccountCode))
                     CashAccountCode = cashAccountCode;
                 else if (CashAccountCode == null)
-                    CashAccountCode = await NodeContext.CurrentAccount;
+                    CashAccountCode = await NodeContext.CurrentAccount();
 
                 if (string.IsNullOrEmpty(CashAccountName))
                     CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
@@ -80,7 +80,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -105,7 +105,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

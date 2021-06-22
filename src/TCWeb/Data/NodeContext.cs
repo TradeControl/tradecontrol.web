@@ -104,6 +104,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Task_tbTask> Task_tbTasks { get; set; }
         public virtual DbSet<App_tbTaxCode> App_tbTaxCodes { get; set; }
         public virtual DbSet<Cash_tbTaxType> Cash_tbTaxTypes { get; set; }
+        public virtual DbSet<App_tbTemplate> App_tbTemplates { get; set; }
         public virtual DbSet<App_tbText> App_tbTexts { get; set; }
         public virtual DbSet<Org_tbTransmitStatus> Org_tbTransmitStatuses { get; set; }
         public virtual DbSet<Cash_tbTx> Cash_tbTxs { get; set; }
@@ -184,6 +185,8 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Org_vwCompanyHeader> Org_CompanyHeaders { get; set; }
         public virtual DbSet<Org_vwCompanyLogo> Org_CompanyLogos { get; set; }
         public virtual DbSet<Org_vwContact> Org_Contacts { get; set; }
+        public virtual DbSet<Org_vwCurrentAccount> Org_CurrentAccounts { get; set; }
+
         public virtual DbSet<Org_vwAddressList> Org_AddressList { get; set; }
         public virtual DbSet<Task_vwCostSet> Task_CostSet { get; set; }
         public virtual DbSet<Invoice_vwCreditNoteSpool> Invoice_CreditNoteSpool { get; set; }
@@ -262,6 +265,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwRegisterSale> Invoice_RegisterSales { get; set; }
         public virtual DbSet<Invoice_vwRegisterSaleTask> Invoice_RegisterSaleTasks { get; set; }
         public virtual DbSet<Invoice_vwRegisterSalesOverdue> Invoice_RegisterSalesOverdues { get; set; }
+        public virtual DbSet<Org_vwReserveAccount> Org_ReserveAccounts { get; set; }
         public virtual DbSet<Task_vwSale> Task_Sales { get; set; }
         public virtual DbSet<Invoice_vwSalesInvoiceSpool> Invoice_SalesInvoiceSpool { get; set; }
         public virtual DbSet<Invoice_vwSalesInvoiceSpoolByActivity> Invoice_SalesInvoiceSpoolByActivity { get; set; }
@@ -2344,6 +2348,12 @@ namespace TradeControl.Web.Data
                     .IsConcurrencyToken();
             });
 
+            modelBuilder.Entity<App_tbTemplate>(entity =>
+            {
+                entity.HasKey(e => e.TemplateName)
+                    .HasName("PK_App_tbTemplateName");
+            });
+
             modelBuilder.Entity<Org_tbTransmitStatus>(entity =>
             {
                 entity.HasKey(e => e.TransmitStatusCode)
@@ -3347,6 +3357,16 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Invoice_vwRegisterSalesOverdue>(entity =>
             {
                 entity.ToView("vwRegisterSalesOverdue", "Invoice");
+            });
+
+            modelBuilder.Entity<Org_vwReserveAccount>(entity =>
+            {
+                entity.ToView("vwReserveAccount", "Cash");
+            });
+
+            modelBuilder.Entity<Org_vwCurrentAccount>(entity =>
+            {
+                entity.ToView("vwCurrentAccount", "Cash");
             });
 
             modelBuilder.Entity<Task_vwSale>(entity =>

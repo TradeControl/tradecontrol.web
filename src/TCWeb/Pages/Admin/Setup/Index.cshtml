@@ -1,0 +1,7 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.Setup.IndexModel
+@{ ViewData["Title"] = "Business Initialisation"; }
+<h1>@ViewData["Title"]</h1>
+<h2 class="text-danger">Warning</h2>
+<p class="text-danger">This process wipes out all existing organisations and transactions.</p>
+<a asp-page="./Config" class="btn btn-danger">Okay to Proceed?</a>

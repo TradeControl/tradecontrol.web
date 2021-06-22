@@ -77,7 +77,7 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -105,7 +105,7 @@ namespace TradeControl.Web.Pages.Tax.TaxCode
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

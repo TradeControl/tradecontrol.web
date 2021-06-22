@@ -41,7 +41,7 @@ namespace TradeControl.Web.Pages.Invoice.Settings
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -72,7 +72,7 @@ namespace TradeControl.Web.Pages.Invoice.Settings
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

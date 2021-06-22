@@ -85,7 +85,7 @@ namespace TradeControl.Web.Pages.Org.CashAccount
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

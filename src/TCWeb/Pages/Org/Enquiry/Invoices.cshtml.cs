@@ -47,7 +47,7 @@ namespace TradeControl.Web.Pages.Org.Enquiry
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

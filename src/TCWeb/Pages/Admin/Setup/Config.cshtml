@@ -1,0 +1,130 @@
+﻿@page
+@model TradeControl.Web.Pages.Admin.Setup.ConfigModel
+@{ ViewData["Title"] = "Business Setup"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.TemplateName" class="control-label"></label>
+                <p>
+                    <select asp-for="App_Initialisation.TemplateName" asp-items="Model.TemplateNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.AccountCode" class="control-label"></label>
+                <input asp-for="App_Initialisation.AccountCode" class="form-control" />
+                <span asp-validation-for="App_Initialisation.AccountCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.AccountName" class="control-label"></label>
+                <input asp-for="App_Initialisation.AccountName" class="form-control" />
+                <span asp-validation-for="App_Initialisation.AccountName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.BusinessAddress" class="control-label"></label>
+                <textarea rows="5" asp-for="App_Initialisation.BusinessAddress" class="form-control"></textarea>
+                <span asp-validation-for="App_Initialisation.BusinessAddress" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.UserName" class="control-label"></label>
+                <input asp-for="App_Initialisation.UserName" class="form-control" />
+                <span asp-validation-for="App_Initialisation.UserName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.PhoneNumber" class="control-label"></label>
+                <input asp-for="App_Initialisation.PhoneNumber" class="form-control" />
+                <span asp-validation-for="App_Initialisation.PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.EmailAddress" class="control-label"></label>
+                <input asp-for="App_Initialisation.EmailAddress" class="form-control" />
+                <span asp-validation-for="App_Initialisation.EmailAddress" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.WebSite" class="control-label"></label>
+                <input asp-for="App_Initialisation.WebSite" class="form-control" />
+                <span asp-validation-for="App_Initialisation.WebSite" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.CompanyNumber" class="control-label"></label>
+                <input asp-for="App_Initialisation.CompanyNumber" class="form-control" />
+                <span asp-validation-for="App_Initialisation.CompanyNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.VatNumber" class="control-label"></label>
+                <input asp-for="App_Initialisation.VatNumber" class="form-control" />
+                <span asp-validation-for="App_Initialisation.VatNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.Government" class="control-label"></label>
+                <input asp-for="App_Initialisation.Government" class="form-control" />
+                <span asp-validation-for="App_Initialisation.Government" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.UocName" class="control-label"></label>
+                <p>
+                    <select asp-for="App_Initialisation.UocName" asp-items="Model.UocNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.MonthName" class="control-label"></label>
+                <p>
+                    <select asp-for="App_Initialisation.MonthName" asp-items="Model.MonthNames" class="form-control"></select>
+                </p>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.BankName" class="control-label"></label>
+                <input asp-for="App_Initialisation.BankName" class="form-control" />
+                <span asp-validation-for="App_Initialisation.BankName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.BankAddress" class="control-label"></label>
+                <textarea rows="5" asp-for="App_Initialisation.BankAddress" class="form-control"></textarea>
+                <span asp-validation-for="App_Initialisation.BankAddress" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.CurrentAccountName" class="control-label"></label>
+                <input asp-for="App_Initialisation.CurrentAccountName" class="form-control" />
+                <span asp-validation-for="App_Initialisation.CurrentAccountName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.CAAccountNumber" class="control-label"></label>
+                <input asp-for="App_Initialisation.CAAccountNumber" class="form-control" />
+                <span asp-validation-for="App_Initialisation.CAAccountNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.CASortCode" class="control-label"></label>
+                <input asp-for="App_Initialisation.CASortCode" class="form-control" />
+                <span asp-validation-for="App_Initialisation.CASortCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.ReserveAccountName" class="control-label"></label>
+                <input asp-for="App_Initialisation.ReserveAccountName" class="form-control" />
+                <span asp-validation-for="App_Initialisation.ReserveAccountName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.RAAccountNumber" class="control-label"></label>
+                <input asp-for="App_Initialisation.RAAccountNumber" class="form-control" />
+                <span asp-validation-for="App_Initialisation.RAAccountNumber" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="App_Initialisation.RASortCode" class="control-label"></label>
+                <input asp-for="App_Initialisation.RASortCode" class="form-control" />
+                <span asp-validation-for="App_Initialisation.RASortCode" class="text-danger"></span>
+            </div>
+            <input asp-for="App_Initialisation.CalendarCode" type="hidden" />
+            <div class="form-group">
+                <input type="submit" value="Initialise" class="btn btn-primary" />
+                <a asp-page="/Index" class="btn btn-info">Back</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

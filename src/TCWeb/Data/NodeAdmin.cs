@@ -27,7 +27,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }

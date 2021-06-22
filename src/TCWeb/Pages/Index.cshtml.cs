@@ -28,7 +28,7 @@ namespace TradeControl.Web.Pages
         {
         }
 
-        public async Task OnGetAsync()
+        public async Task<IActionResult> OnGetAsync()
         {
             try
             {
@@ -36,10 +36,22 @@ namespace TradeControl.Web.Pages
 
                 App_Identity = await NodeContext.App_Identity.OrderBy(i => i.UserName).SingleOrDefaultAsync();
 
+                if (App_Identity == null)
+                {
+                    NodeSettings nodeSettings = new NodeSettings(NodeContext);
+
+                    if (nodeSettings.IsFirstUse || ! nodeSettings.IsInitialised)
+                        return RedirectToPage("/Admin/Setup/Config");
+                    else
+                        throw new Exception("Initialisation error");
+                }
+                else
+                    return Page();
+
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

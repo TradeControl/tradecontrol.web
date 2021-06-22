@@ -131,6 +131,9 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Totals/Index">Cash Totals</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
+                            </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
@@ -143,11 +146,11 @@
                                     <li class="nav-item">
                                         <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Setup/Index">Initialisation</a>
+                                    </li>
                                 }
                             }
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
-                            </li>
                         </ul>
                     </li>
                 </ul>

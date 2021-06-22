@@ -142,7 +142,8 @@ namespace TradeControl.Web.Mail
             var template = await NodeContext.Web_tbTemplates.FirstOrDefaultAsync(t => t.TemplateId == templateId);
             return FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, template.TemplateFileName));
         }
-        
+
+
         IList<IFileInfo> GetImages()
         {
             return GetFiles(ImagesSubFolder);
@@ -326,6 +327,46 @@ namespace TradeControl.Web.Mail
             };
 
             return mailText;
+        }
+
+        public async Task<MailDocument> GetSupportRequest(string templateFileName)
+        {
+            NodeSettings nodeSettings = new(NodeContext);
+
+            if (!nodeSettings.HasMailHost)
+                throw new Exception("Mail host needs configuring");
+            else if (FileProvider == null)
+                throw new Exception("FileProvider not specified");
+
+            int templateId = await NodeContext.Web_tbTemplates
+                                                .Where(t => templateFileName == t.TemplateFileName)
+                                                .Select(t => t.TemplateId)
+                                                .SingleAsync();
+
+            var templateFile = await GetTemplateFromId(templateId);
+
+            MailDocument mailDocument = new() { TemplateFileName = templateFile.PhysicalPath };
+            mailDocument.Settings = await nodeSettings.MailHost();
+
+            var images = await NodeContext.Web_tbTemplateImages
+                        .Where(t => t.TemplateId == templateId)
+                        .Select(t => t.ImageTag).ToListAsync();
+
+            foreach (string imageTag in images)
+            {
+                var fileInfo = await GetImageFromTag(imageTag);
+
+                MailImage mailImage = new()
+                {
+                    Tag = imageTag,
+                    FileName = fileInfo.PhysicalPath
+                };
+
+                mailDocument.Images.Add(mailImage);
+            }
+
+            return mailDocument;
+
         }
         #endregion
 

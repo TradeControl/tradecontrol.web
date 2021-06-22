@@ -72,7 +72,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
             ReturnUrl = returnUrl;
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (!ViewData.ContainsKey("CompanyName"))
-                ViewData.Add("CompanyName", await _nodeContext.CompanyName);
+                ViewData.Add("CompanyName", await _nodeContext.CompanyName());
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
@@ -120,7 +120,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
             }
             catch (Exception e)
             {
-                _nodeContext.ErrorLog(e);
+                await _nodeContext.ErrorLog(e);
                 throw;
             }
         }

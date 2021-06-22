@@ -62,7 +62,7 @@ namespace TradeControl.Web.Pages.Org.Contact
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

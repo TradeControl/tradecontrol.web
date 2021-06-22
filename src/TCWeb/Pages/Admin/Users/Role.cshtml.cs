@@ -20,8 +20,11 @@ namespace TradeControl.Web.Pages.Admin.Users
         protected IAuthorizationService AuthorizationService { get; }
         protected UserManager<TradeControlWebUser> UserManager { get; }
 
-        public RoleModel(NodeContext context, IAuthorizationService authorizationService,
-            UserManager<TradeControlWebUser> userManager) : base(context) { }
+        public RoleModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context) 
+        {
+            AuthorizationService = authorizationService;
+            UserManager = userManager;
+        }
 
         [BindProperty]
         public AspNet_UserRegistration AspNet_UserRegistration { get; set; }
@@ -54,7 +57,7 @@ namespace TradeControl.Web.Pages.Admin.Users
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
 
@@ -90,7 +93,7 @@ namespace TradeControl.Web.Pages.Admin.Users
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

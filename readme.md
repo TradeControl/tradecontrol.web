@@ -4,8 +4,6 @@ Using ASP.NET Core to web enable the [Accounts](https://tradecontrol.github.io/a
 
 ## Implementation Plan
 
-Because system functionality is now fully available from [Office](https://github.com/tradecontrol/office), the web interface can be complimentary and we do not have to implement everything in one go. Implementing the [Accounts Mode](https://tradecontrol.github.io/tutorials/cash-book) will be a milestone for the first release. 
-
 ### Phase 1 - Data Models
 
 - [x] Entity Framework Core scaffold
@@ -31,7 +29,7 @@ Requires sql node version 3.34.3 to support the AspNetCore.Identity datastore an
 
 ### Phase 4 - Accounts Mode
 
-Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql node version 3.34.4
+Requires [sql node 3.34.6](https://github.com/tradecontrol/sqlnode) or higher.
 
 - [x] Accounts Mode menu
 - [x] Basic home page
@@ -70,9 +68,9 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [x] Tax Settings
 - [x] System settings 
 - [x] Period End maintenance and closedown
-- [ ] Error reporting template and support submission
-- [ ] Company initialisation
-- [ ] Tutorials
+- [x] Error reporting template and support submission
+- [x] Company initialisation
+- [x] [sql node](https://github.com/tradecontrol/sqlnode) release
 
 ### Phase 5 - MIS Mode
 
@@ -80,13 +78,7 @@ Apply [web interface script 1](src/scripts/tc_web_interface_script1.sql) to sql 
 - [ ] Interface
 - [ ] Documents
 
-### Phase 6 - Full Web Version
-
-- [ ] Administration
-- [ ] Custom Menus
-- [ ] Themes
-
-### Phase 7 - Extensions
+### Phase 6 - Extensions
 
 - [ ] [Supply-Chain Network](https://github.com/tradecontrol/network)
 - [ ] [Bitcoin Wallet](https://github.com/tradecontrol/bitcoin)

@@ -54,7 +54,7 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

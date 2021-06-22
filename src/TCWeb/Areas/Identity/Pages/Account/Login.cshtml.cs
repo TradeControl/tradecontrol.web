@@ -74,13 +74,13 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
                 ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
                 if (!ViewData.ContainsKey("CompanyName"))
-                    ViewData.Add("CompanyName", await _nodeContext.CompanyName);
+                    ViewData.Add("CompanyName", await _nodeContext.CompanyName());
 
                 ReturnUrl = returnUrl;
             }
             catch (Exception e)
             {
-                _nodeContext.ErrorLog(e);
+                await _nodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -124,7 +124,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
             }
             catch (Exception e)
             {
-                _nodeContext.ErrorLog(e);
+                await _nodeContext.ErrorLog(e);
                 throw;
             }
         }

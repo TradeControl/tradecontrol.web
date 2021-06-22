@@ -26,7 +26,7 @@ namespace TradeControl.Web.Pages
         protected async Task SetViewData()
         {
             if (!ViewData.ContainsKey("CompanyName"))
-                ViewData.Add("CompanyName", await NodeContext.CompanyName);
+                ViewData.Add("CompanyName", await NodeContext.CompanyName());
         }
     }
 }

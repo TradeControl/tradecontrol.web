@@ -23,18 +23,18 @@ namespace TradeControl.Web.Data
         }
 
         #region properties
-        public Task<string> AddressCode => Task.Run(() =>
+        public async Task<string> AddressCode()
         {
             try
             {
-                return _context.Org_tbOrgs.Where(o => o.AccountCode == AccountCode).Select(o => o.AddressCode).ToString();
+                return await _context.Org_tbOrgs.Where(o => o.AccountCode == AccountCode).Select(o => o.AddressCode).FirstOrDefaultAsync();
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return string.Empty;
             }
-        });
+        }
 
         public async Task<decimal> BalanceOutstanding() => await _context.BalanceOutstanding(AccountCode);
 
@@ -51,7 +51,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
 
@@ -64,7 +64,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
             }
         }
 
@@ -76,7 +76,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
             }
         }
 

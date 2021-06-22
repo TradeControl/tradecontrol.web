@@ -51,7 +51,7 @@ namespace TradeControl.Web.Pages.Org.Type
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -85,7 +85,7 @@ namespace TradeControl.Web.Pages.Org.Type
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Mail;
 
@@ -27,7 +28,7 @@ namespace TradeControl.Web.Data
                 }
                 catch (Exception e)
                 {
-                    _context.ErrorLog(e);
+                    _ = _context.ErrorLog(e);
                     return false;
                 }
             }
@@ -39,7 +40,7 @@ namespace TradeControl.Web.Data
                 }
                 catch (Exception e)
                 {
-                    _context.ErrorLog(e);
+                    _ = _context.ErrorLog(e);
                 }
             }
         }
@@ -54,7 +55,7 @@ namespace TradeControl.Web.Data
                 }
                 catch (Exception e)
                 {
-                    _context.ErrorLog(e);
+                    _ = _context.ErrorLog(e);
                     return false;
                 }
             }
@@ -70,7 +71,7 @@ namespace TradeControl.Web.Data
                 }
                 catch (Exception e)
                 {
-                    _context.ErrorLog(e);
+                    _ = _context.ErrorLog(e);
                     return false;
                 }
             }
@@ -85,7 +86,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                _ = _context.ErrorLog(e);
                 return 0;
             }
         });
@@ -101,7 +102,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                _ = _context.ErrorLog(e);
                 return false;
             }
         });
@@ -114,7 +115,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                _ = _context.ErrorLog(e);
                 return NodeEnum.CoinType.Fiat;
             }
 
@@ -142,7 +143,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -166,9 +167,14 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return null;
             }
+        }
+
+        public void InitialiseNode()
+        {
+
         }
     }
 }

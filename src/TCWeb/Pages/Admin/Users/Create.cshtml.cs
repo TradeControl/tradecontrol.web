@@ -1,3 +1,4 @@
+
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,7 @@ namespace TradeControl.Web.Pages.Admin.Users
         public CreateModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context) 
         {
             AuthorizationService = authorizationService;
+            UserManager = userManager;
         }
 
         [BindProperty]
@@ -44,9 +46,8 @@ namespace TradeControl.Web.Pages.Admin.Users
                         return NotFound();
                     else 
                     {
-                        var isAuthorized = await AuthorizationService.AuthorizeAsync(
-                          User, AspNet_UserRegistration,
-                          Operations.Approve);
+                        var isAuthorized = await AuthorizationService.AuthorizeAsync(User, AspNet_UserRegistration,Operations.Approve);
+
                         if (!isAuthorized.Succeeded)
                             return Forbid();
 
@@ -75,7 +76,7 @@ namespace TradeControl.Web.Pages.Admin.Users
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -97,11 +98,14 @@ namespace TradeControl.Web.Pages.Admin.Users
                 var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
                 await UserManager.ConfirmEmailAsync(user, code);
 
+                if (Usr_tbUser.IsAdministrator && !await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole))
+                    await UserManager.AddToRoleAsync(user, Constants.AdministratorsRole);                
+                
                 return RedirectToPage("./Index");
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

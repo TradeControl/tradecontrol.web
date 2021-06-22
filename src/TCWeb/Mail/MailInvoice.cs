@@ -1,11 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -42,15 +37,15 @@ namespace TradeControl.Web.Mail
                                     select new
                                     {
                                         Name = c.ContactName,
-                                        EmaiTo = c.EmailAddress
+                                        EmailTo = c.EmailAddress
                                     };
 
-                var emailInfo = await invoiceHeader.OrderBy(i => i.EmaiTo).SingleOrDefaultAsync();
+                var emailInfo = await invoiceHeader.OrderBy(i => i.EmailTo).SingleOrDefaultAsync();
 
                 if (emailInfo != null)
                 {
                     Document.Name = emailInfo.Name;
-                    Document.EmailTo = emailInfo.EmaiTo;
+                    Document.EmailTo = emailInfo.EmailTo;
 
                     await SendInvoice();
 
@@ -63,7 +58,7 @@ namespace TradeControl.Web.Mail
             }
             catch(Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -86,7 +81,7 @@ namespace TradeControl.Web.Mail
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

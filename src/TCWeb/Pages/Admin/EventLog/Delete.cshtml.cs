@@ -59,7 +59,7 @@ namespace TradeControl.Web.Pages.Admin.EventLog
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

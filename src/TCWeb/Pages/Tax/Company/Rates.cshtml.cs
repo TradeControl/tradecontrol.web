@@ -56,7 +56,7 @@ namespace TradeControl.Web.Pages.Tax.Company
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

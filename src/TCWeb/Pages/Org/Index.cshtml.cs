@@ -67,7 +67,7 @@ namespace TradeControl.Web.Pages.Org
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,31 +15,31 @@ namespace TradeControl.Web.Data
             _context = context;
         }
 
-        public Task<string> CompanyAccountCode => Task.Run(() =>
+        public async Task<string> CompanyAccountCode()
         {
             try
             {
-                return _context.App_tbOptions.First().AccountCode;
+                return await _context.App_tbOptions.Select(o => o.AccountCode).FirstOrDefaultAsync();
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return string.Empty;
             }
-        });
+        }
 
-        public Task<string> SqlUserName => Task.Run(() =>
+        public async Task<string> SqlUserName()
         {
             try
             {
-                return _context.Usr_Credentials.First().LogonName;
+                return await _context.Usr_Credentials.Select(u => u.LogonName).FirstAsync();
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return string.Empty;
             }
-        });
+        }
 
         public async Task<string> UserName(string aspnetId)
         {
@@ -48,7 +49,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return string.Empty;
             }
         }
@@ -61,7 +62,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return string.Empty;
             }
         }
@@ -74,12 +75,12 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return string.Empty;
             }
         }
 
-        public async Task<string> CompanyName() => await _context.CompanyName;
+        public async Task<string> CompanyName() => await _context.CompanyName();
 
     }
 }

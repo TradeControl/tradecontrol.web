@@ -54,7 +54,7 @@ namespace TradeControl.Web.Data
                 }
                 catch (Exception e)
                 {
-                    _context.ErrorLog(e);
+                    _ = _context.ErrorLog(e);
                 }
                 
             }
@@ -103,7 +103,7 @@ namespace TradeControl.Web.Data
                 }
                 catch (Exception e)
                 {
-                    _context.ErrorLog(e);
+                    _ = _context.ErrorLog(e);
                     return string.Empty;
                 }
             });
@@ -116,7 +116,7 @@ namespace TradeControl.Web.Data
             get { return CashTypeCode == NodeEnum.CashType.Bank; }
         }
 
-        public async Task<decimal> GetVatBalance() => await _context.VatBalance;
+        public async Task<decimal> GetVatBalance() => await _context.VatBalance();
         #endregion
 
         #region actions
@@ -130,7 +130,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }

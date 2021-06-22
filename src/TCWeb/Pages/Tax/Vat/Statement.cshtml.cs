@@ -30,7 +30,7 @@ namespace TradeControl.Web.Pages.Tax.Vat
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

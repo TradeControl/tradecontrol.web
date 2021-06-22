@@ -35,6 +35,11 @@
 </div>
 
 <form method="post">
+    <div class="form-group">
+        <label asp-for="Note" class="control-label"></label>
+        <textarea rows="5" asp-for="Note" class="form-control"></textarea>
+        <span asp-validation-for="Note" class="text-danger"></span>
+    </div>
     <input type="hidden" asp-for="App_EventLog.LogCode" />
     <input type="submit" value="SEND" class="btn btn-warning" />
     <a asp-page="./Index" class="btn btn-info">To List</a>

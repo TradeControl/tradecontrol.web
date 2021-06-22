@@ -47,7 +47,16 @@
                     @Html.DisplayFor(modelItem => item.EmailAddress)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.UserName)
+                    @{
+                        if (item.IsConfirmed && item.IsRegistered)
+                        {                                                                                                
+                            <a asp-page="./Edit" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.UserName)</a>
+                        }
+                        else
+                        {
+                            @Html.DisplayFor(modelItem => item.UserName)
+                        }
+                    }
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.IsConfirmed)
@@ -64,19 +73,19 @@
                 <td>
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Delete)).Succeeded)
                     {
-                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">Delete</a>
+                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-danger">Delete</a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
                     {
-                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-outline-warning">Confirm</a>
+                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-warning">Confirm</a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
                     {
-                        <a asp-page="./Role" asp-route-id="@item.Id" class="btn btn-outline-secondary">Role</a>
+                        <a asp-page="./Role" asp-route-id="@item.Id" class="btn btn-secondary">Role</a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && !item.IsRegistered)
                     {
-                        <a asp-page="./Create" asp-route-id="@item.Id" class="btn btn-outline-primary">Create</a>
+                        <a asp-page="./Create" asp-route-id="@item.Id" class="btn btn-primary">Create</a>
                     }
                 </td>
             </tr>

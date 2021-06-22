@@ -171,7 +171,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -216,7 +216,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             catch (Exception e)
 
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

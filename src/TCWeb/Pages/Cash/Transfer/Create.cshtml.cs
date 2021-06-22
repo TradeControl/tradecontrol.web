@@ -68,7 +68,7 @@ namespace TradeControl.Web.Pages.Cash.Transfer
                     CashCode = cashCodes.CashCode,
                     TaxCode = cashCodes.TaxCode,
                     PaymentCode = await cashAccounts.NextPaymentCode(),
-                    AccountCode = await profile.CompanyAccountCode,
+                    AccountCode = await profile.CompanyAccountCode(),
                     PaidOn = DateTime.Today,
                     UserId = await profile.UserId(UserManager.GetUserId(User)),
                     InsertedBy = await profile.UserName(UserManager.GetUserId(User))
@@ -82,7 +82,7 @@ namespace TradeControl.Web.Pages.Cash.Transfer
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -110,7 +110,7 @@ namespace TradeControl.Web.Pages.Cash.Transfer
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

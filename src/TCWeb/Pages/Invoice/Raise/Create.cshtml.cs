@@ -152,7 +152,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (!string.IsNullOrEmpty(accountCode))
                     AccountCode = accountCode;
                 else if (string.IsNullOrEmpty(AccountCode))
-                    AccountCode = await profile.CompanyAccountCode;
+                    AccountCode = await profile.CompanyAccountCode();
 
                 OrganisationName = await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
 
@@ -214,7 +214,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }
@@ -242,7 +242,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
             }
             catch (Exception e)
             {
-                NodeContext.ErrorLog(e);
+                await NodeContext.ErrorLog(e);
                 throw;
             }
         }

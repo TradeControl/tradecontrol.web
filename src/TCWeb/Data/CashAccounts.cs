@@ -38,7 +38,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
             
@@ -54,7 +54,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -71,7 +71,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -86,7 +86,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -102,7 +102,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -117,7 +117,7 @@ namespace TradeControl.Web.Data
             }
             catch (Exception e)
             {
-                _context.ErrorLog(e);
+                await _context.ErrorLog(e);
                 return false;
             }
         }
@@ -129,11 +129,11 @@ namespace TradeControl.Web.Data
         public async Task<string> AddPayment(string accountCode, string cashCode, DateTime paidOn, decimal toPay) => await _context.AddPayment(CashAccountCode, accountCode, cashCode, paidOn, toPay);
 
 
-        public async Task<string> CurrentAccount() => await _context.CurrentAccount;
+        public async Task<string> CurrentAccount() => await _context.CurrentAccount();
 
-        public async Task<string> ReserveAccount() => await _context.ReserveAccount;
+        public async Task<string> ReserveAccount() => await _context.ReserveAccount();
 
-        public async Task<NodeEnum.CoinType> CoinType() => await _context.CoinType;
+        public async Task<NodeEnum.CoinType> CoinType() => await _context.CoinType();
 
     }
 }
