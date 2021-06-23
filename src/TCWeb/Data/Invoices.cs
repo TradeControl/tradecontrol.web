@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Data
@@ -123,6 +125,108 @@ namespace TradeControl.Web.Data
             {
                 int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_PostEntriesById @p0", parameters: new[] { userId });
                 return result != 0;
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<bool> PostByEntry(string userId, string accountCode, string cashCode)
+        {
+            try
+            {
+                var _userId = new SqlParameter()
+                {
+                    ParameterName = "@UserId",
+                    SqlDbType = System.Data.SqlDbType.VarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 10,
+                    Value = userId
+                };
+
+                var _accountCode = new SqlParameter()
+                {
+                    ParameterName = "@AccountCode",
+                    SqlDbType = System.Data.SqlDbType.VarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 10,
+                    Value = accountCode
+                };
+
+                var _cashCode = new SqlParameter()
+                {
+                    ParameterName = "@CashCode",
+                    SqlDbType = System.Data.SqlDbType.VarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 50,
+                    Value = cashCode
+                };
+
+                using (SqlConnection _connection = new(_context.Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Invoice.proc_PostEntryById";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_userId); 
+                        _command.Parameters.Add(_accountCode);
+                        _command.Parameters.Add(_cashCode);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<bool> PostByAccount(string userId, string accountCode)
+        {
+            try
+            {
+                var _userId = new SqlParameter()
+                {
+                    ParameterName = "@UserId",
+                    SqlDbType = System.Data.SqlDbType.VarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 10,
+                    Value = userId
+                };
+
+                var _accountCode = new SqlParameter()
+                {
+                    ParameterName = "@AccountCode",
+                    SqlDbType = System.Data.SqlDbType.VarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 10,
+                    Value = accountCode
+                };
+
+                using (SqlConnection _connection = new(_context.Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Invoice.proc_PostAccountById";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_userId);
+                        _command.Parameters.Add(_accountCode);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return true;
             }
             catch (Exception e)
             {

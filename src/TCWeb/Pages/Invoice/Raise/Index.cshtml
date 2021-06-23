@@ -72,6 +72,7 @@
                 <td>
                     <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-info"></a>
                     <a asp-page="./Edit" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-secondary"></a>
+                    <a asp-page="./Post" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-warning"></a>
                     <a asp-page="./Delete" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-danger"></a>
                 </td>
             </tr>
@@ -80,7 +81,7 @@
 </table>
 <form method="post">
     <p>
-        <input type="submit" value="Post" class="btn btn-primary" />
+        <input type="submit" value="Post All" class="btn btn-primary" />
     </p>
 </form>
 
