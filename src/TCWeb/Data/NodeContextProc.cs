@@ -2339,86 +2339,84 @@ namespace TradeControl.Web.Data
             {
                 string unitOfCharge = await App_tbUocs.Where(u => u.UocName == uocName).Select(u => u.UnitOfCharge).SingleAsync();
 
-                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                using SqlConnection _connection = new(Database.GetConnectionString());
+                _connection.Open();
+
+                using (SqlCommand command = _connection.CreateCommand())
                 {
-                    _connection.Open();
+                    command.CommandText = "App.proc_NodeInitialisation";
+                    command.CommandType = CommandType.StoredProcedure;
 
-                    using (SqlCommand command = _connection.CreateCommand())
-                    {
-                        command.CommandText = "App.proc_NodeInitialisation";
-                        command.CommandType = CommandType.StoredProcedure;
+                    SqlParameter p1 = command.CreateParameter();
+                    p1.DbType = DbType.String;
+                    p1.ParameterName = "@AccountCode";
+                    p1.Value = accountCode;
+                    command.Parameters.Add(p1);
 
-                        SqlParameter p1 = command.CreateParameter();
-                        p1.DbType = DbType.String;
-                        p1.ParameterName = "@AccountCode";
-                        p1.Value = accountCode;
-                        command.Parameters.Add(p1);
+                    SqlParameter p2 = command.CreateParameter();
+                    p2.DbType = DbType.String;
+                    p2.ParameterName = "@BusinessName";
+                    p2.Value = businessName;
+                    command.Parameters.Add(p2);
 
-                        SqlParameter p2 = command.CreateParameter();
-                        p2.DbType = DbType.String;
-                        p2.ParameterName = "@BusinessName";
-                        p2.Value = businessName;
-                        command.Parameters.Add(p2);
+                    SqlParameter p3 = command.CreateParameter();
+                    p3.DbType = DbType.String;
+                    p3.ParameterName = "@FullName";
+                    p3.Value = fullName;
+                    command.Parameters.Add(p3);
 
-                        SqlParameter p3 = command.CreateParameter();
-                        p3.DbType = DbType.String;
-                        p3.ParameterName = "@FullName";
-                        p3.Value = fullName;
-                        command.Parameters.Add(p3);
+                    SqlParameter p4 = command.CreateParameter();
+                    p4.DbType = DbType.String;
+                    p4.ParameterName = "@BusinessAddress";
+                    p4.Value = businessAddress;
+                    command.Parameters.Add(p4);
 
-                        SqlParameter p4 = command.CreateParameter();
-                        p4.DbType = DbType.String;
-                        p4.ParameterName = "@BusinessAddress";
-                        p4.Value = businessAddress;
-                        command.Parameters.Add(p4);
+                    SqlParameter p5 = command.CreateParameter();
+                    p5.DbType = DbType.String;
+                    p5.ParameterName = "@BusinessEmailAddress";
+                    p5.Value = businessEmailAddress;
+                    command.Parameters.Add(p5);
 
-                        SqlParameter p5 = command.CreateParameter();
-                        p5.DbType = DbType.String;
-                        p5.ParameterName = "@BusinessEmailAddress";
-                        p5.Value = businessEmailAddress;
-                        command.Parameters.Add(p5);
+                    SqlParameter p6 = command.CreateParameter();
+                    p6.DbType = DbType.String;
+                    p6.ParameterName = "@UserEmailAddress";
+                    p6.Value = userEmailAddress;
+                    command.Parameters.Add(p6);
 
-                        SqlParameter p6 = command.CreateParameter();
-                        p6.DbType = DbType.String;
-                        p6.ParameterName = "@UserEmailAddress";
-                        p6.Value = userEmailAddress;
-                        command.Parameters.Add(p6);
+                    SqlParameter p7 = command.CreateParameter();
+                    p7.DbType = DbType.String;
+                    p7.ParameterName = "@PhoneNumber";
+                    p7.Value = phoneNumber;
+                    command.Parameters.Add(p7);
 
-                        SqlParameter p7 = command.CreateParameter();
-                        p7.DbType = DbType.String;
-                        p7.ParameterName = "@PhoneNumber";
-                        p7.Value = phoneNumber;
-                        command.Parameters.Add(p7);
+                    SqlParameter p8 = command.CreateParameter();
+                    p8.DbType = DbType.String;
+                    p8.ParameterName = "@CompanyNumber";
+                    p8.Value = companyNumber;
+                    command.Parameters.Add(p8);
 
-                        SqlParameter p8 = command.CreateParameter();
-                        p8.DbType = DbType.String;
-                        p8.ParameterName = "@CompanyNumber";
-                        p8.Value = companyNumber;
-                        command.Parameters.Add(p8);
+                    SqlParameter p9 = command.CreateParameter();
+                    p9.DbType = DbType.String;
+                    p9.ParameterName = "@VatNumber";
+                    p9.Value = vatNumber;
+                    command.Parameters.Add(p9);
 
-                        SqlParameter p9 = command.CreateParameter();
-                        p9.DbType = DbType.String;
-                        p9.ParameterName = "@VatNumber";
-                        p9.Value = vatNumber;
-                        command.Parameters.Add(p9);
+                    SqlParameter p10 = command.CreateParameter();
+                    p10.DbType = DbType.String;
+                    p10.ParameterName = "@CalendarCode";
+                    p10.Value = calendarCode;
+                    command.Parameters.Add(p10);
 
-                        SqlParameter p10 = command.CreateParameter();
-                        p10.DbType = DbType.String;
-                        p10.ParameterName = "@CalendarCode";
-                        p10.Value = calendarCode;
-                        command.Parameters.Add(p10);
+                    SqlParameter p11 = command.CreateParameter();
+                    p11.DbType = DbType.String;
+                    p11.ParameterName = "@UnitOfCharge";
+                    p11.Value = unitOfCharge;
+                    command.Parameters.Add(p11);
 
-                        SqlParameter p11 = command.CreateParameter();
-                        p11.DbType = DbType.String;
-                        p11.ParameterName = "@UnitOfCharge";
-                        p11.Value = unitOfCharge;
-                        command.Parameters.Add(p11);
+                    await command.ExecuteNonQueryAsync();
 
-                        await command.ExecuteNonQueryAsync();
-
-                    }
-                    _connection.Close();
-                }    
+                }
+                _connection.Close();
             }
             catch (Exception e)
             {
@@ -2444,96 +2442,94 @@ namespace TradeControl.Web.Data
             {
                 NodeEnum.CoinType coinType = NodeEnum.CoinType.Fiat;
 
-                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                using SqlConnection _connection = new(Database.GetConnectionString());
+                _connection.Open();
+                using (SqlCommand command = _connection.CreateCommand())
                 {
-                    _connection.Open();
-                    using (SqlCommand command = _connection.CreateCommand())
-                    {
-                        command.CommandText = "App.proc_BasicSetup";
-                        command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "App.proc_BasicSetup";
+                    command.CommandType = CommandType.StoredProcedure;
 
-                        SqlParameter pk = command.CreateParameter();
-                        pk.DbType = DbType.String;
-                        pk.ParameterName = "@TemplateName";
-                        pk.Value = templateName;
-                        command.Parameters.Add(pk);
+                    SqlParameter pk = command.CreateParameter();
+                    pk.DbType = DbType.String;
+                    pk.ParameterName = "@TemplateName";
+                    pk.Value = templateName;
+                    command.Parameters.Add(pk);
 
-                        SqlParameter p0 = command.CreateParameter();
-                        p0.DbType = DbType.Int16;
-                        p0.ParameterName = "@FinancialMonth";
-                        p0.Value = financialMonth;
-                        command.Parameters.Add(p0);
+                    SqlParameter p0 = command.CreateParameter();
+                    p0.DbType = DbType.Int16;
+                    p0.ParameterName = "@FinancialMonth";
+                    p0.Value = financialMonth;
+                    command.Parameters.Add(p0);
 
-                        SqlParameter p1 = command.CreateParameter();
-                        p1.DbType = DbType.Int16;
-                        p1.ParameterName = "@CoinTypeCode";
-                        p1.Value = (short)coinType;
-                        command.Parameters.Add(p1);
+                    SqlParameter p1 = command.CreateParameter();
+                    p1.DbType = DbType.Int16;
+                    p1.ParameterName = "@CoinTypeCode";
+                    p1.Value = (short)coinType;
+                    command.Parameters.Add(p1);
 
-                        SqlParameter p2 = command.CreateParameter();
-                        p2.DbType = DbType.String;
-                        p2.ParameterName = "@GovAccountName";
-                        p2.Value = govAccountName;
-                        command.Parameters.Add(p2);
+                    SqlParameter p2 = command.CreateParameter();
+                    p2.DbType = DbType.String;
+                    p2.ParameterName = "@GovAccountName";
+                    p2.Value = govAccountName;
+                    command.Parameters.Add(p2);
 
-                        SqlParameter p3 = command.CreateParameter();
-                        p3.DbType = DbType.String;
-                        p3.ParameterName = "@BankName";
-                        p3.Value = bankName;
-                        command.Parameters.Add(p3);
+                    SqlParameter p3 = command.CreateParameter();
+                    p3.DbType = DbType.String;
+                    p3.ParameterName = "@BankName";
+                    p3.Value = bankName;
+                    command.Parameters.Add(p3);
 
-                        SqlParameter p4 = command.CreateParameter();
-                        p4.DbType = DbType.String;
-                        p4.ParameterName = "@BankAddress";
-                        p4.Value = bankAddress;
-                        command.Parameters.Add(p4);
+                    SqlParameter p4 = command.CreateParameter();
+                    p4.DbType = DbType.String;
+                    p4.ParameterName = "@BankAddress";
+                    p4.Value = bankAddress;
+                    command.Parameters.Add(p4);
 
-                        SqlParameter p5 = command.CreateParameter();
-                        p5.DbType = DbType.String;
-                        p5.ParameterName = "@DummyAccount";
-                        p5.Value = dummyAccount;
-                        command.Parameters.Add(p5);
+                    SqlParameter p5 = command.CreateParameter();
+                    p5.DbType = DbType.String;
+                    p5.ParameterName = "@DummyAccount";
+                    p5.Value = dummyAccount;
+                    command.Parameters.Add(p5);
 
-                        SqlParameter p6 = command.CreateParameter();
-                        p6.DbType = DbType.String;
-                        p6.ParameterName = "@CurrentAccount";
-                        p6.Value = currentAccount;
-                        command.Parameters.Add(p6);
+                    SqlParameter p6 = command.CreateParameter();
+                    p6.DbType = DbType.String;
+                    p6.ParameterName = "@CurrentAccount";
+                    p6.Value = currentAccount;
+                    command.Parameters.Add(p6);
 
-                        SqlParameter p7 = command.CreateParameter();
-                        p7.DbType = DbType.String;
-                        p7.ParameterName = "@CA_SortCode";
-                        p7.Value = ca_SortCode;
-                        command.Parameters.Add(p7);
+                    SqlParameter p7 = command.CreateParameter();
+                    p7.DbType = DbType.String;
+                    p7.ParameterName = "@CA_SortCode";
+                    p7.Value = ca_SortCode;
+                    command.Parameters.Add(p7);
 
-                        SqlParameter p8 = command.CreateParameter();
-                        p8.DbType = DbType.String;
-                        p8.ParameterName = "@CA_AccountNumber";
-                        p8.Value = ca_AccountNumber;
-                        command.Parameters.Add(p8);
+                    SqlParameter p8 = command.CreateParameter();
+                    p8.DbType = DbType.String;
+                    p8.ParameterName = "@CA_AccountNumber";
+                    p8.Value = ca_AccountNumber;
+                    command.Parameters.Add(p8);
 
-                        SqlParameter p9 = command.CreateParameter();
-                        p9.DbType = DbType.String;
-                        p9.ParameterName = "@ReserveAccount";
-                        p9.Value = reserveAccount;
-                        command.Parameters.Add(p9);
+                    SqlParameter p9 = command.CreateParameter();
+                    p9.DbType = DbType.String;
+                    p9.ParameterName = "@ReserveAccount";
+                    p9.Value = reserveAccount;
+                    command.Parameters.Add(p9);
 
-                        SqlParameter p10 = command.CreateParameter();
-                        p10.DbType = DbType.String;
-                        p10.ParameterName = "@RA_SortCode";
-                        p10.Value = ra_SortCode;
-                        command.Parameters.Add(p10);
+                    SqlParameter p10 = command.CreateParameter();
+                    p10.DbType = DbType.String;
+                    p10.ParameterName = "@RA_SortCode";
+                    p10.Value = ra_SortCode;
+                    command.Parameters.Add(p10);
 
-                        SqlParameter p11 = command.CreateParameter();
-                        p11.DbType = DbType.String;
-                        p11.ParameterName = "@RA_AccountNumber";
-                        p11.Value = ra_AccountNumber;
-                        command.Parameters.Add(p11);
+                    SqlParameter p11 = command.CreateParameter();
+                    p11.DbType = DbType.String;
+                    p11.ParameterName = "@RA_AccountNumber";
+                    p11.Value = ra_AccountNumber;
+                    command.Parameters.Add(p11);
 
-                        await command.ExecuteNonQueryAsync();
-                    }
-                    _connection.Close();
+                    await command.ExecuteNonQueryAsync();
                 }
+                _connection.Close();
             }
             catch (Exception e)
             {

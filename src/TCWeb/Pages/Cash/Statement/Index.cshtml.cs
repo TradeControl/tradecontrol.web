@@ -51,6 +51,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 CashAccountNames = new SelectList(await accounts.ToListAsync());
 
                 var periodNames = from tb in NodeContext.App_Periods
+                                  where tb.CashStatusCode == (short)NodeEnum.CashStatus.Current || tb.CashStatusCode == (short)NodeEnum.CashStatus.Closed
                                   orderby tb.StartOn descending
                                   select tb.Description;
 

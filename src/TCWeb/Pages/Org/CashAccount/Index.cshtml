@@ -24,7 +24,7 @@
                 @Html.DisplayNameFor(model => model.Org_CashAccounts[0].AccountName)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccounts[0].AccountType)
+                @Html.DisplayNameFor(model => model.Org_CashAccounts[0].CashDescription)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Org_CashAccounts[0].OpeningBalance)
@@ -41,31 +41,31 @@
     <tbody>
         @foreach (var item in Model.Org_CashAccounts)
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashAccountName)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.AccountName)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.AccountType)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.OpeningBalance)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.LiquidityLevel)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.AccountClosed)
-                </td>
-                <td>
-                    <a asp-page="./Details" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-info"></a>
-                    <a asp-page="./Edit" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-danger"></a>
-                </td>
-            </tr>
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.CashAccountName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AccountName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CashDescription)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.OpeningBalance)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.LiquidityLevel)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AccountClosed)
+            </td>
+            <td>
+                <a asp-page="./Details" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-info"></a>
+                <a asp-page="./Edit" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-secondary"></a>
+                <a asp-page="./Delete" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-danger"></a>
+            </td>
+        </tr>
         }
     </tbody>
 </table>

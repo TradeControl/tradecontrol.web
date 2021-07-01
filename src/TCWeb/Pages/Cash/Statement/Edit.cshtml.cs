@@ -37,6 +37,13 @@ namespace TradeControl.Web.Pages.Cash.Statement
         [BindProperty]
         public Cash_tbPayment Cash_Payment { get; set; }
 
+        [BindProperty]
+        public bool CashCodeIsEditable 
+        {
+            get { return !string.IsNullOrEmpty(CashCode); }
+        }
+
+
         #region session data
         const string SessionKeyPaymentCode = "_paymentCode";
         const string SessionKeyCashCode = "_cashCode";
@@ -107,11 +114,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 if (string.IsNullOrEmpty(paymentCode) && string.IsNullOrEmpty(PaymentCode))
                     return NotFound();
                 else if (!string.IsNullOrEmpty(paymentCode))
-                {
                     PaymentCode = paymentCode;
-                    CashCode = string.Empty;
-                    TaxCode = string.Empty;
-                }
 
                 Cash_Payment = await NodeContext.Cash_tbPayments.FirstOrDefaultAsync(m => m.PaymentCode == PaymentCode);
 
@@ -128,19 +131,26 @@ namespace TradeControl.Web.Pages.Cash.Statement
                     }
                 }
 
-                if (Cash_Payment.CashCode != null)
+
+                NodeEnum.CashAccountType cashAccountType = (NodeEnum.CashAccountType)await
+                                                            (from p in NodeContext.Cash_tbPayments
+                                                             join a in NodeContext.Org_tbAccounts
+                                                                 on p.CashAccountCode equals a.CashAccountCode
+                                                             where p.PaymentCode == paymentCode
+                                                             select a.AccountTypeCode).SingleAsync();
+
+                if (Cash_Payment.CashCode != null && cashAccountType != NodeEnum.CashAccountType.Asset)
                 {
                     var cashDescriptions = from t in NodeContext.Cash_CodeLookup
-                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank
                                            orderby t.CashDescription
                                            select t.CashDescription;
 
                     CashDescriptions = new SelectList(await cashDescriptions.ToListAsync());
 
-                    if (!string.IsNullOrEmpty(cashCode))
-                        CashCode = cashCode;
-                    else if (string.IsNullOrEmpty(CashCode))
+                    if (!string.IsNullOrEmpty(paymentCode))
                         CashCode = Cash_Payment.CashCode;
+                    else if (!string.IsNullOrEmpty(cashCode))
+                        CashCode = cashCode;                       
 
                     CashDescription = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == CashCode).Select(c => c.CashDescription).FirstOrDefaultAsync();
 
@@ -150,16 +160,11 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                     TaxDescriptions = new SelectList(await taxDescriptions.ToListAsync());
 
-                    if (!string.IsNullOrEmpty(taxCode))
-                        TaxCode = taxCode;
-                    else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
-                    {
-                        CashCodes cash = new(NodeContext, CashCode);
-                        TaxCode = cash.TaxCode;
-                    }
-                    else
+                    if (!string.IsNullOrEmpty(paymentCode))
                         TaxCode = Cash_Payment.TaxCode;
-
+                    else if (!string.IsNullOrEmpty(taxCode))
+                        TaxCode = taxCode;
+                                            
                     TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == TaxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
                 }
 
@@ -185,7 +190,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 Profile profile = new(NodeContext);
                 Cash_Payment.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));
 
-                if (!string.IsNullOrEmpty(Cash_Payment.CashCode))
+                if (CashCodeIsEditable)
                 {
                     Cash_Payment.CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
                     Cash_Payment.TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();

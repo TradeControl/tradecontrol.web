@@ -18,14 +18,14 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
     {
         public DetailsModel(NodeContext context) : base(context) { }
 
-        public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
+        public Cash_vwPayment Cash_PaymentsUnposted { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
             if (paymentCode == null)
                 return NotFound();
 
-            Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+            Cash_PaymentsUnposted = await NodeContext.Cash_Payments.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
 
             if (Cash_PaymentsUnposted == null)
                 return NotFound();

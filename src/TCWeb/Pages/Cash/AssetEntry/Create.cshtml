@@ -22,9 +22,8 @@
             <div class="form-group">
                 <label asp-for="Cash_AssetsUnposted.CashAccountCode" class="control-label"></label>
                 <p>
-                    <select asp-for="Cash_AssetsUnposted.CashAccountCode" asp-items="Model.CashAccountCodes" class="form-control"></select>
-                </p>
-                <span asp-validation-for="Cash_AssetsUnposted.CashAccountCode" class="text-danger"></span>
+                    <select asp-for="CashAccountName" asp-items="Model.CashAccountNames" class="form-control"></select>
+                </p>                
             </div>
 
             <div class="form-group">
@@ -55,6 +54,8 @@
                 </label>
                 <span asp-validation-for="Cash_AssetsUnposted.IsProfitAndLoss" class="text-danger"></span>
             </div>
+
+            <input type="hidden" asp-for="Cash_AssetsUnposted.CashAccountCode" />
 
             <div class="form-group">
                 <input type="submit" value="ADD ENTRY" class="btn btn-primary" />

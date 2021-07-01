@@ -24,7 +24,7 @@
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountName)
             </th>
             <th></th>
         </tr>
@@ -38,7 +38,7 @@
                 </td>
                 <td>
                     <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountCode)
+                        @Html.DisplayFor(modelItem => item.AccountName)
                     </a>
                 </td>
                 <td>

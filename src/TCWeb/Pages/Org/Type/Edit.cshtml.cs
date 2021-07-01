@@ -35,7 +35,7 @@ namespace TradeControl.Web.Pages.Org.Type
                 if (organisationTypeCode == null)
                     return NotFound();
 
-                Org_tbType = await NodeContext.Org_tbTypes.FirstOrDefaultAsync(t => t.OrganisationTypeCode == organisationTypeCode);
+                Org_tbType = await NodeContext.Org_tbTypes.SingleOrDefaultAsync(t => t.OrganisationTypeCode == organisationTypeCode);
 
                 if (Org_tbType == null)
                     return NotFound();
@@ -63,10 +63,11 @@ namespace TradeControl.Web.Pages.Org.Type
                 if (!ModelState.IsValid)
                     return Page();
 
+                var orgType = await NodeContext.Org_tbTypes.SingleOrDefaultAsync(t => t.OrganisationTypeCode == Org_tbType.OrganisationTypeCode);
+                orgType.CashModeCode = await NodeContext.Cash_tbModes.Where(t => t.CashMode == CashMode).Select(t => t.CashModeCode).SingleAsync();
+                orgType.OrganisationType = Org_tbType.OrganisationType;
 
-                Org_tbType.CashModeCode = await NodeContext.Cash_tbModes.Where(t => t.CashMode == CashMode).Select(t => t.CashModeCode).FirstAsync();
-
-                NodeContext.Attach(Org_tbType).State = EntityState.Modified;
+                NodeContext.Attach(orgType).State = EntityState.Modified;
 
                 try
                 {

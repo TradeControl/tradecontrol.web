@@ -25,7 +25,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         }
 
         [BindProperty]
-        public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
+        public Cash_vwPayment Cash_PaymentsUnposted { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string paymentCode)
         {
@@ -34,7 +34,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (paymentCode == null)
                     return NotFound();
 
-                Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
+                Cash_PaymentsUnposted = await NodeContext.Cash_Payments.FirstOrDefaultAsync(m => m.PaymentCode == paymentCode);
 
                 if (Cash_PaymentsUnposted == null)
                     return NotFound();
@@ -67,16 +67,16 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (paymentCode == null)
                     return NotFound();
 
-                Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
+                var payment = await NodeContext.Cash_PaymentsUnposted.FindAsync(paymentCode);
 
-                if (Cash_PaymentsUnposted != null)
+                if (payment != null)
                 {
-                    NodeContext.Cash_PaymentsUnposted.Remove(Cash_PaymentsUnposted);
+                    NodeContext.Cash_PaymentsUnposted.Remove(payment);
                     await NodeContext.SaveChangesAsync();
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+                route.Add("CashAccountCode", payment.CashAccountCode);
 
                 return RedirectToPage("./Index", route);
             }

@@ -60,7 +60,7 @@
                 <input asp-for="Cash_Payment.PaymentReference" class="form-control" />
                 <span asp-validation-for="Cash_Payment.PaymentReference" class="text-danger"></span>
             </div>
-            @if (Model.Cash_Payment.CashCode != null)
+            @if (Model.CashCodeIsEditable)
             {
                 <div class="form-group">
                     <label asp-for="Cash_Payment.CashCode" class="control-label"></label>

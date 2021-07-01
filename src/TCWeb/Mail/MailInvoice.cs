@@ -49,7 +49,7 @@ namespace TradeControl.Web.Mail
 
                     await SendInvoice();
 
-                    Invoices invoices = new Invoices(NodeContext, InvoiceNumber);
+                    Invoices invoices = new (NodeContext, InvoiceNumber);
                     await invoices.SetToPrinted();
 
                 }

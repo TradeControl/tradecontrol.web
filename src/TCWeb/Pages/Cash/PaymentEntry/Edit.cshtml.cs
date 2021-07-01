@@ -108,11 +108,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (string.IsNullOrEmpty(paymentCode) && string.IsNullOrEmpty(PaymentCode))
                     return NotFound();
                 else if (!string.IsNullOrEmpty(paymentCode))
-                {
                     PaymentCode = paymentCode;
-                    CashCode = string.Empty;
-                    TaxCode = string.Empty;
-                }
 
                 Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.FirstOrDefaultAsync(m => m.PaymentCode == PaymentCode);
 
@@ -139,10 +135,10 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                     CashDescriptions = new SelectList(await cashDescriptions.ToListAsync());
 
-                    if (!string.IsNullOrEmpty(cashCode))
-                        CashCode = cashCode;
-                    else if (string.IsNullOrEmpty(CashCode))
+                    if (!string.IsNullOrEmpty(paymentCode))
                         CashCode = Cash_PaymentsUnposted.CashCode;
+                    else if (!string.IsNullOrEmpty(cashCode))
+                        CashCode = cashCode;
 
                     CashDescription = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == CashCode).Select(c => c.CashDescription).FirstOrDefaultAsync();
 
@@ -152,15 +148,10 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                     TaxDescriptions = new SelectList(await taxDescriptions.ToListAsync());
 
+                    if (!string.IsNullOrEmpty(paymentCode))
+                        TaxCode = Cash_PaymentsUnposted.TaxCode;
                     if (!string.IsNullOrEmpty(taxCode))
                         TaxCode = taxCode;
-                    else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
-                    {
-                        CashCodes cash = new(NodeContext, CashCode);
-                        TaxCode = cash.TaxCode;
-                    }
-                    else
-                        TaxCode = Cash_PaymentsUnposted.TaxCode;
 
                     TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == TaxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
                 }

@@ -20,13 +20,10 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashAccountCode)
-            </th>
-            <th>
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaymentReference)
@@ -38,10 +35,10 @@
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOutValue)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashDescription)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].TaxCode)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].TaxDescription)
             </th>
             <th></th>
         </tr>
@@ -51,14 +48,11 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashAccountCode)
-                </td>
-                <td>
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
                     <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountCode)
+                        @Html.DisplayFor(modelItem => item.AccountName)
                     </a>
                 </td>
                 <td>
@@ -71,10 +65,10 @@
                     @Html.DisplayFor(modelItem => item.PaidOutValue)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashCode)
+                    @Html.DisplayFor(modelItem => item.CashDescription)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.TaxCode)
+                    @Html.DisplayFor(modelItem => item.TaxDescription)
                 </td>
                 <td>
                     <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>

@@ -38,8 +38,14 @@ namespace TradeControl.Web.Models
         public string VatNumber { get; set; }
         //[Column(TypeName = "image")]
         //public byte[] Logo { get; set; }
-        [StringLength(306)]
+        [StringLength(255)]
         [Display(Name = "Bank Name")]
+        public string BankName { get; set; }
+        [StringLength(50)]
+        [Display(Name = "Current Account")]
+        public string CurrentAccountName { get; set; }
+        [StringLength(306)]
+        [Display(Name = "Bank Account")]
         public string BankAccount { get; set; }
         [StringLength(20)]
         [Display(Name = "Bank A/c No")]

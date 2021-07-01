@@ -51,6 +51,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         const string SessionKeyAccountCode = "_AccountCode";
         const string SessionKeyCashCode = "_CashCode";
         const string SessionKeyTaxCode = "_TaxCode";
+        const string SessionKeyReturnUrl = "_returnUrl";
 
         public int InputMode 
         {
@@ -148,12 +149,34 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 HttpContext.Session.SetString(SessionKeyTaxCode, value);
             }
         }
+
+        string ReturnUrl
+        {
+            get
+            {
+                try
+                {
+                    return HttpContext.Session.GetString(SessionKeyReturnUrl);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeyReturnUrl, value);
+            }
+        }
         #endregion
 
-        public async Task<IActionResult> OnGetAsync(string cashAccountCode, string mode, string accountCode, string cashCode, string taxCode)
+        public async Task<IActionResult> OnGetAsync(string cashAccountCode, string mode, string accountCode, string cashCode, string taxCode, string returnUrl)
         {
             try
             {
+                if (!string.IsNullOrEmpty(returnUrl))
+                    ReturnUrl = returnUrl;
+
                 var cashAccountNames = from t in NodeContext.Org_tbAccounts
                                        where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
                                        orderby t.CashAccountName
@@ -223,6 +246,10 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                     if (!string.IsNullOrEmpty(taxCode))
                         TaxCode = taxCode;
+                    else if (!string.IsNullOrEmpty(accountCode) && await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleOrDefaultAsync() != null)
+                        TaxCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleAsync();
+                    else if (!string.IsNullOrEmpty(cashCode))
+                        TaxCode = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == cashCode).Select(c => c.TaxCode).SingleOrDefaultAsync();
                     else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
                     {
                         CashCodes cash = new(NodeContext, CashCode);
@@ -298,10 +325,15 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 NodeContext.Cash_PaymentsUnposted.Add(Cash_PaymentsUnposted);
                 await NodeContext.SaveChangesAsync();
 
-                RouteValueDictionary route = new();
-                route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+                if (!string.IsNullOrEmpty(ReturnUrl))
+                    return RedirectToPage(ReturnUrl);
+                else
+                {
+                    RouteValueDictionary route = new();
+                    route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
 
-                return RedirectToPage("./Index", route);
+                    return RedirectToPage("./Index", route);
+                }
             }
             catch (Exception e)
             {

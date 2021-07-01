@@ -70,7 +70,8 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         WebSite = company.CompanyWebsite,
                         CompanyNumber = company.CompanyNumber,
                         VatNumber = company.VatNumber,
-                        CurrentAccountName = company.BankAccount,
+                        BankName = company.BankName,
+                        CurrentAccountName = company.CurrentAccountName,
                         CAAccountNumber = company.BankAccountNumber,
                         CASortCode = company.BankSortCode,
                         CalendarCode = await NodeContext.App_tbCalendars.OrderBy(c => c.CalendarCode).Select(c => c.CalendarCode).SingleOrDefaultAsync(),
@@ -78,18 +79,12 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == options.UnitOfCharge).Select(u => u.UocName).SingleOrDefaultAsync()
                     };
 
-                    var currentAccount = await NodeContext.Org_CurrentAccounts.OrderBy(r => r.CashAccountCode).FirstOrDefaultAsync();
+                    var bankAddr = await (  from ca in NodeContext.Org_CurrentAccounts
+                                            join addr in NodeContext.Org_tbAddresses
+                                            on ca.AccountCode equals addr.AccountCode
+                                            select addr.Address).FirstOrDefaultAsync();
 
-                    if (currentAccount != null)
-                    {
-                        App_Initialisation.BankName = currentAccount.AccountName;
-                        var bankAddr = await (  from ca in NodeContext.Org_CurrentAccounts
-                                                join addr in NodeContext.Org_tbAddresses
-                                                on ca.AccountCode equals addr.AccountCode
-                                                select addr.Address).FirstOrDefaultAsync();
-
-                        App_Initialisation.BankAddress = bankAddr != null ? bankAddr : string.Empty;
-                    }
+                    App_Initialisation.BankAddress = bankAddr != null ? bankAddr : string.Empty;
 
                     var reserveAccount = await NodeContext.Org_ReserveAccounts.OrderBy(r => r.CashAccountCode).FirstOrDefaultAsync();
 

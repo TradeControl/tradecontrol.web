@@ -4,7 +4,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="./ProfitAndLossByMonth" class="btn btn-outline-info">Monthly Statements</a>
+    <a asp-page="./ProfitAndLossByPeriod" class="btn btn-outline-info">Monthly Statements</a>
 </p>
 
 <form class="form-group" method="get">
@@ -19,6 +19,9 @@
     <thead>
         <tr>
             <th>
+                @Html.DisplayNameFor(model => model.Cash_ProfitAndLoss[0].CategoryCode)
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.Cash_ProfitAndLoss[0].Category)
             </th>
             <th>
@@ -32,17 +35,35 @@
     <tbody>
         @foreach (var item in Model.Cash_ProfitAndLoss)
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Category)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CurrentValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PreviousValue)
-                </td>
-            </tr>
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.CategoryCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Category)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CurrentValue)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PreviousValue)
+            </td>
+        </tr>
         }
     </tbody>
 </table>
+
+@Html.Raw(Model.DetailsHtml)
+
+@{ 
+    if (string.IsNullOrEmpty(Model.DetailsHtml))
+    {
+        <div>
+            <a asp-page="./ProfitAndLoss" asp-route-mode="0" asp-route-YearName="@Model.YearName" class="btn btn-info">Show Details</a>
+        </div>
+    }
+}
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -143,7 +143,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwAccountStatement> Cash_AccountStatements { get; set; }
         public virtual DbSet<Cash_vwAccountStatementListing> Cash_AccountStatementListings { get; set; }
         public virtual DbSet<Cash_vwBalanceSheet> Cash_BalanceSheet { get; set; }
-        public virtual DbSet<Cash_vwProfitAndLossByMonth> Cash_ProfitAndLossByMonth { get; set; }
+        public virtual DbSet<Cash_vwProfitAndLossByPeriod> Cash_ProfitAndLossByMonth { get; set; }
         public virtual DbSet<Cash_vwProfitAndLossByYear> Cash_ProfitAndLossByYear { get; set; }
         public virtual DbSet<Invoice_vwAccountsMode> Invoice_AccountsMode { get; set; }
         public virtual DbSet<App_vwHost> App_Host { get; set; }
@@ -172,7 +172,10 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwCandidateSale> Invoice_CandidateSales { get; set; }
         public virtual DbSet<Org_vwCashAccountAsset> Org_CashAccountAssets { get; set; }
         public virtual DbSet<Org_vwCashAccount> Org_CashAccounts { get; set; }
-        public virtual DbSet<Cash_vwCashFlowType> Cash_CashFlowTypes { get; set; }
+        public virtual DbSet<Cash_vwCashFlowType> Cash_FlowTypes { get; set; }
+        public virtual DbSet<Cash_vwFlowCategory> Cash_FlowCategories { get; set; }
+        public virtual DbSet<Cash_vwFlowCategoryByPeriod> Cash_FlowCategoryByPeriods { get; set; }
+        public virtual DbSet<Cash_vwFlowCategoryByYear> Cash_FlowCategoryByYears { get; set; }
         public virtual DbSet<Cash_vwCategoryBudget> Cash_CategoryBudget { get; set; }
         public virtual DbSet<Cash_vwCategoryTotal> Cash_CategoryTotals { get; set; }
         public virtual DbSet<Cash_vwCategoryTotalCandidate> Cash_CategoryTotalCandidates { get; set; }
@@ -1878,24 +1881,6 @@ namespace TradeControl.Web.Data
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
-                entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                entity.Property(e => e.OrganisationStatusCode).HasDefaultValueSql("((1))");
-
-                entity.Property(e => e.OrganisationTypeCode).HasDefaultValueSql("((1))");
-
-                //entity.Property(e => e.PayBalance).HasDefaultValueSql("((1))");
-
-                //entity.Property(e => e.RowVer)
-                //    .IsRowVersion()
-                //    .IsConcurrencyToken();
-
-                entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
-
                 entity.HasOne(d => d.AddressCodeNavigation)
                     .WithMany(p => p.TbOrgs)
                     .HasForeignKey(d => d.AddressCode)
@@ -2729,9 +2714,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwAttributesForQuote", "Task");
             });
 
-            modelBuilder.Entity<Cash_vwProfitAndLossByMonth>(entity =>
+            modelBuilder.Entity<Cash_vwProfitAndLossByPeriod>(entity =>
             {
-                entity.ToView("vwProfitAndLossByMonth", "Cash");
+                entity.ToView("vwProfitAndLossByPeriod", "Cash");
             });
 
             modelBuilder.Entity<Cash_vwProfitAndLossByYear>(entity =>
@@ -2816,6 +2801,21 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwCashFlowType>(entity =>
             {
                 entity.ToView("vwCashFlowTypes", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwFlowCategory>(entity =>
+            {
+                entity.ToView("vwFlowCategories", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwFlowCategoryByPeriod>(entity =>
+            {
+                entity.ToView("vwFlowCategoryByPeriod", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwFlowCategoryByYear>(entity =>
+            {
+                entity.ToView("vwFlowCategoryByYear", "Cash");
             });
 
             modelBuilder.Entity<Cash_vwCategoryBudget>(entity =>

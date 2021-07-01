@@ -9,8 +9,7 @@
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
             @*<option value="">All</option>*@
         </select>
-
-        <input type="submit" value="Filter" />
+        <input type="submit" value="Filter" />         
     </p>
 </form>
 
@@ -82,6 +81,10 @@
         </tr>
     </tbody>
 </table>
+
+<div>
+    <a asp-page="./Index" asp-route-cashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-info">Show All</a>
+</div>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}

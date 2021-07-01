@@ -27,24 +27,25 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_AssetsUnposted { get; set; }
 
-        public SelectList CashAccountCodes { get; set; }
+        public SelectList CashAccountNames { get; set; }
+        [BindProperty] 
+        public string CashAccountName { get; set; }
 
-
-        public async Task<IActionResult> OnGetAsync(string cashAccountCode)
+        public async Task<IActionResult> OnGetAsync(string cashAccountName)
         {
             try
             {
-                var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountCode);
+                var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
 
-                CashAccountCodes = new SelectList(await cashAccountList.ToListAsync());
+                CashAccountNames = new SelectList(await cashAccountList.ToListAsync());
 
-                if (string.IsNullOrEmpty(cashAccountCode))
-                    cashAccountCode = await cashAccountList.FirstOrDefaultAsync();
+                if (string.IsNullOrEmpty(cashAccountName))
+                    cashAccountName = await cashAccountList.FirstOrDefaultAsync();
 
                 Profile profile = new(NodeContext);
                 CashAccounts cashAccounts = new(NodeContext);
 
-                var cashAccount = await NodeContext.Org_CashAccountAssets.Where(t => t.CashAccountCode == cashAccountCode).FirstAsync();
+                var cashAccount = await NodeContext.Org_CashAccountAssets.Where(t => t.CashAccountName == cashAccountName).FirstAsync();
 
                 Cash_AssetsUnposted = new Cash_vwPaymentsUnposted
                 {
@@ -76,6 +77,11 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         {
             try
             {
+                Cash_AssetsUnposted.CashAccountCode = await NodeContext.Org_CashAccountAssets
+                                                    .Where(t => t.CashAccountName == CashAccountName)
+                                                    .Select(t => t.CashAccountCode)
+                                                    .SingleAsync();
+
                 Cash_AssetsUnposted.UpdatedOn = DateTime.Now;
                 Cash_AssetsUnposted.InsertedOn = DateTime.Now;
 

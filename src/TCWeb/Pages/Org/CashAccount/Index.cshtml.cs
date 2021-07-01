@@ -32,8 +32,6 @@ namespace TradeControl.Web.Pages.Org.CashAccount
         {
             try
             {
-                var cashAccounts = from tb in NodeContext.Org_CashAccounts
-                                   select tb;
 
                 AccountTypes = new SelectList(await NodeContext.Org_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
 
@@ -44,7 +42,11 @@ namespace TradeControl.Web.Pages.Org.CashAccount
                 else
                     AccountType = accountType;
 
-                cashAccounts = cashAccounts.Where(t => t.AccountType == AccountType);
+                var cashAccounts = from tb in NodeContext.Org_CashAccounts
+                                   where tb.AccountType == AccountType
+                                   orderby tb.AccountTypeCode, tb.LiquidityLevel
+                                   select tb;
+
                 Org_CashAccounts = await cashAccounts.ToListAsync();
 
                 await SetViewData();

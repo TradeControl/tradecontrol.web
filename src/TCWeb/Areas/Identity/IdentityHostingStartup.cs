@@ -78,7 +78,6 @@ namespace TradeControl.Web.Areas.Identity
                 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
                 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-                /*
                 double sessionTimeSpan = double.Parse(context.Configuration.GetSection("Settings")["SessionTimeSpan"]);
 
                 services.AddSession(options =>
@@ -87,7 +86,6 @@ namespace TradeControl.Web.Areas.Identity
                     options.Cookie.HttpOnly = true;
                     options.Cookie.IsEssential = true;
                 });
-                */
 
             });
         }

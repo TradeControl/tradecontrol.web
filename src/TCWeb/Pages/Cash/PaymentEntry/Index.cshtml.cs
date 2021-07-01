@@ -18,13 +18,6 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 {
     public class IndexModel : DI_BasePageModel
     {
-        UserManager<TradeControlWebUser> UserManager { get; }
-
-        public IndexModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
-        {
-            UserManager = userManager;
-        }
-
         public SelectList CashAccountNames { get; set; }
         [BindProperty(SupportsGet = true)]
         public string CashAccountName { get; set; }
@@ -32,7 +25,14 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         [BindProperty]
         public string CashAccountCode { get; set; }
 
-        public IList<Cash_vwPaymentsUnposted> Cash_PaymentsUnposted { get;set; }
+        public IList<Cash_vwPayment> Cash_PaymentsUnposted { get;set; }
+
+        UserManager<TradeControlWebUser> UserManager { get; }
+
+        public IndexModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        {
+            UserManager = userManager;
+        }
 
         public async Task OnGetAsync(string cashAccountCode, string cashAccountName)
         {
@@ -67,14 +67,22 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                     string userId = await profile.UserId(user.Id);
 
                     if (!string.IsNullOrEmpty(CashAccountCode))
-                        Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode && t.UserId == userId).ToListAsync();
+                        Cash_PaymentsUnposted = await NodeContext.Cash_Payments
+                                    .Where(t => t.CashAccountCode == CashAccountCode && t.UserId == userId && t.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted)
+                                    .ToListAsync();
                     else
-                        Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.UserId == userId).Select(t => t).ToListAsync();
+                        Cash_PaymentsUnposted = await NodeContext.Cash_Payments
+                                    .Where(t => t.UserId == userId && t.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted)
+                                    .ToListAsync();
                 }
                 else if (!string.IsNullOrEmpty(CashAccountCode))
-                    Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode).ToListAsync();
+                    Cash_PaymentsUnposted = await NodeContext.Cash_Payments
+                                    .Where(t => t.CashAccountCode == CashAccountCode && t.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted)
+                                    .ToListAsync();
                 else
-                    Cash_PaymentsUnposted = await NodeContext.Cash_PaymentsUnposted.Select(t => t).ToListAsync();
+                    Cash_PaymentsUnposted = await NodeContext.Cash_Payments
+                                    .Where(t => t.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted)
+                                    .ToListAsync();
 
                 await SetViewData();
             }

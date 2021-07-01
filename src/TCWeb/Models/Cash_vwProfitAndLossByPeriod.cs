@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public class Cash_vwProfitAndLossByMonth
+    public class Cash_vwProfitAndLossByPeriod
     {
         [Display(Name = "Category Code")]
         public string CategoryCode { get; set; }

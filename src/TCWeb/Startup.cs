@@ -1,4 +1,19 @@
-﻿using System;
+﻿/**************************************************************************************
+Trade Control
+ASP.NET Core Web Interface
+
+Dates: 1 July 2019
+Author: IAM
+
+Trade Control by Trade Control Ltd is licensed under GNU General Public License v3.0. 
+
+You may obtain a copy of the License at
+
+	https://www.gnu.org/licenses/gpl-3.0.en.html
+
+***********************************************************************************/
+
+using System;
 
 using System.Collections.Generic;
 using System.Linq;

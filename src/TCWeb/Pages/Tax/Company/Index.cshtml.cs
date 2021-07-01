@@ -25,7 +25,7 @@ namespace TradeControl.Web.Pages.Tax.Company
             {
                 await SetViewData();
 
-                Cash_CorpTaxTotals = await NodeContext.Cash_TaxCorpTotals.OrderByDescending(t => t.StartOn).ToListAsync();
+                Cash_CorpTaxTotals = await NodeContext.Cash_TaxCorpTotals.Where(t => t.StartOn <= DateTime.Today).OrderByDescending(t => t.StartOn).ToListAsync();
             }
             catch (Exception e)
             {
