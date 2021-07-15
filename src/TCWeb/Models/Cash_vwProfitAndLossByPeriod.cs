@@ -14,6 +14,9 @@ namespace TradeControl.Web.Models
         public string CategoryCode { get; set; }
         [Display(Name = "Category")] 
         public string Category { get; set; }
+        [Display(Name = "Cash Type")]
+        public short CashTypeCode { get; set; }
+
         [Display(Name = "Year No.")]
         public short YearNumber { get; set; }
         [Display(Name = "Month No.")]

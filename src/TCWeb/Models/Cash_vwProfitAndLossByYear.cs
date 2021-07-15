@@ -20,6 +20,8 @@ namespace TradeControl.Web.Models
         public string CategoryCode { get; set; }
         [Display(Name = "Category")]
         public string Category { get; set; }
+        [Display(Name ="Cash Type")]
+        public short CashTypeCode { get; set; }
         [Display(Name = "Total Value")]
         [DataType(DataType.Currency)]
         [Column(TypeName = "decimal(18, 5)")]

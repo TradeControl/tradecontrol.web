@@ -7,6 +7,7 @@
 <p>
     <a asp-page="Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-primary">Pay Invoices</a>
     <a asp-page="Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-primary">Miscellaneous Payment</a>
+    <a asp-page="/Cash/Statement/Index" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-info">Statement</a>
 </p>
 
 <form class="form-group">

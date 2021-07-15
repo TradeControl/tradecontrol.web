@@ -34,6 +34,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
         public string PeriodNamePrevious { get; set; }
 
         public IList<ProfitAndLosses> Cash_ProfitAndLoss { get; set; }
+        public IList<ProfitAndLosses> Cash_TaxTotals { get; set; }
 
         public ProfitAndLossByPeriodModel(NodeContext context) : base(context) { }
 
@@ -49,6 +50,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 PeriodNames = new SelectList(await periodNames.ToListAsync());
                 Cash_ProfitAndLoss = new List<ProfitAndLosses>();
+                Cash_TaxTotals = new List<ProfitAndLosses>();
 
                 DateTime startOn = DateTime.Today;
 
@@ -80,7 +82,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
             var period = await NodeContext.App_tbYearPeriods.Where(t => t.StartOn == startOn).FirstAsync();
 
             var profit_and_loss = await (from tb in NodeContext.Cash_ProfitAndLossByMonth
-                                       where tb.MonthNumber == period.MonthNumber && tb.StartOn <= startOn
+                                       where tb.MonthNumber == period.MonthNumber && tb.StartOn <= startOn && tb.CashTypeCode == (short)NodeEnum.CashType.Trade
                                        orderby tb.YearNumber descending, tb.DisplayOrder
                                        select tb
                                         ).ToListAsync();
@@ -117,6 +119,33 @@ namespace TradeControl.Web.Pages.Cash.Accounts
                             CurrentValue = 0,
                             PreviousValue = invoice_value.InvoiceValue
                         });
+                }
+            }
+
+            var tax_totals = await (from tb in NodeContext.Cash_ProfitAndLossByMonth
+                                      where tb.MonthNumber == period.MonthNumber && tb.StartOn <= startOn && tb.CashTypeCode == (short)NodeEnum.CashType.Tax
+                                      orderby tb.YearNumber descending, tb.DisplayOrder
+                                      select tb
+                                        ).ToListAsync();
+
+            foreach (var invoice_value in tax_totals.Where(b => b.YearNumber == period.YearNumber))
+            {
+                Cash_TaxTotals.Add(new ProfitAndLosses()
+                {
+                    CategoryCode = invoice_value.CategoryCode,
+                    Category = invoice_value.Category,
+                    CurrentValue = invoice_value.InvoiceValue
+                });
+            }
+
+            if (tax_totals.Where(b => b.YearNumber < period.YearNumber).Any())
+            {
+                short yearNumber = tax_totals.Where(b => b.YearNumber < period.YearNumber).Max(b => b.YearNumber);
+
+                foreach (var invoice_value in tax_totals.Where(b => b.YearNumber == yearNumber))
+                {
+                    var category = Cash_TaxTotals.Where(a => a.CategoryCode == invoice_value.CategoryCode).First();
+                    category.PreviousValue = invoice_value.InvoiceValue;
                 }
             }
         }

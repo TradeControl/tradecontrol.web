@@ -289,6 +289,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_vwTaxCodeType> App_TaxCodeTypes { get; set; }
         public virtual DbSet<Cash_vwTaxCorpAuditAccrual> Cash_TaxCorpAuditAccruals { get; set; }
         public virtual DbSet<Cash_vwTaxCorpStatement> Cash_TaxCorpStatement { get; set; }
+        public virtual DbSet<Cash_vwTaxLossesCarriedForward> Cash_TaxLossesCarriedForward { get; set; }
         public virtual DbSet<Cash_vwTaxCorpTotal> Cash_TaxCorpTotals { get; set; }
         public virtual DbSet<Invoice_vwTaxSummary> Invoice_TaxSummary { get; set; }
         public virtual DbSet<Cash_vwTaxVatAuditAccrual> Cash_TaxVatAuditAccruals { get; set; }
@@ -3478,6 +3479,11 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwTaxCorpTotal>(entity =>
             {
                 entity.ToView("vwTaxCorpTotals", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwTaxLossesCarriedForward>(entity =>
+            {
+                entity.ToView("vwTaxLossesCarriedForward", "Cash");
             });
 
             modelBuilder.Entity<Invoice_vwTaxSummary>(entity =>

@@ -49,6 +49,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
         public string YearNamePrevious { get; set; }
 
         public IList<ProfitAndLosses> Cash_ProfitAndLoss { get; set; }
+        public IList<ProfitAndLosses> Cash_TaxTotals { get; set; }
 
         public async Task OnGetAsync(int? mode)
         {
@@ -61,6 +62,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 YearNames = new SelectList(await yearNames.ToListAsync());
                 Cash_ProfitAndLoss = new List<ProfitAndLosses>();
+                Cash_TaxTotals = new List<ProfitAndLosses>();
 
                 short yearNumber;
 
@@ -90,8 +92,9 @@ namespace TradeControl.Web.Pages.Cash.Accounts
         private async Task GenerateProfitAndLoss(short yearNumber)
         {
             var profit_and_loss = await (from tb in NodeContext.Cash_ProfitAndLossByYear
-                                       orderby tb.YearNumber descending, tb.DisplayOrder
-                                       select tb
+                                         where tb.CashTypeCode == (short)NodeEnum.CashType.Trade
+                                        orderby tb.YearNumber descending, tb.DisplayOrder
+                                        select tb
                                         ).ToListAsync();
 
             foreach (var invoice_value in profit_and_loss.Where(b => b.YearNumber == yearNumber))
@@ -118,6 +121,34 @@ namespace TradeControl.Web.Pages.Cash.Accounts
                     category.PreviousValue = invoice_value.InvoiceValue;
                 }
             }
+
+            var tax_totals = await (from tb in NodeContext.Cash_ProfitAndLossByYear
+                                         where tb.CashTypeCode == (short)NodeEnum.CashType.Tax
+                                         orderby tb.YearNumber descending, tb.DisplayOrder
+                                         select tb
+                                        ).ToListAsync();
+
+            foreach (var invoice_value in tax_totals.Where(b => b.YearNumber == yearNumber))
+            {
+                Cash_TaxTotals.Add(new ProfitAndLosses()
+                {
+                    CategoryCode = invoice_value.CategoryCode,
+                    Category = invoice_value.Category,
+                    CurrentValue = invoice_value.InvoiceValue
+                });
+            }
+
+            if (tax_totals.Where(b => b.YearNumber < yearNumber).Any())
+            {
+                yearNumber = tax_totals.Where(b => b.YearNumber < yearNumber).Max(b => b.YearNumber);
+
+                foreach (var invoice_value in tax_totals.Where(b => b.YearNumber == yearNumber))
+                {
+                    var category = Cash_TaxTotals.Where(a => a.CategoryCode == invoice_value.CategoryCode).First();
+                    category.PreviousValue = invoice_value.InvoiceValue;
+                }
+            }
+
         }
 
         private async Task GenerateProfitAndLossDetails(short yearNumber)
@@ -161,7 +192,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
 
                 }
 
-                details.AppendLine($"<tr><td><strong>{category.CategoryCode}</strong></td><td></td>");
+                details.AppendLine($"<tr><td></td><td></td>");
                 details.AppendLine($"<td><strong>{currentYearTotal:C2}</strong></td><td><strong>{lastYearTotal:C2}</strong></td>");
                 details.AppendLine("</tr>");
 

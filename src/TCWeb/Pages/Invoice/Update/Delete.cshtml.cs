@@ -38,8 +38,6 @@ namespace TradeControl.Web.Pages.Invoice.Update
 
                 if (Invoice_Header == null)
                     return NotFound();
-                else if (Invoice_Header.InvoiceStatusCode > (short)NodeEnum.InvoiceStatus.Invoiced)
-                    return Forbid();
                 else
                 {
                     var isAuthorized = User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole);
@@ -72,25 +70,12 @@ namespace TradeControl.Web.Pages.Invoice.Update
                 if (invoiceNumber == null)
                     return NotFound();
 
-                var invoice = await NodeContext.Invoice_tbInvoices.Where(t => t.InvoiceNumber == invoiceNumber).FirstAsync();
+                var invoice = await NodeContext.Invoice_tbInvoices.FindAsync(invoiceNumber);
 
                 if (invoice != null)
                 {
-                    invoice.InvoiceStatusCode = (short)NodeEnum.InvoiceStatus.Pending;
-                    NodeContext.Attach(invoice).State = EntityState.Modified;
-
-                    try
-                    {
-                        await NodeContext.SaveChangesAsync();
-                    }
-                    catch (DbUpdateConcurrencyException)
-                    {
-                        if (!await NodeContext.Invoice_tbInvoices.AnyAsync(e => e.InvoiceNumber == invoice.InvoiceNumber))
-                            return NotFound();
-                        else
-                            throw;
-
-                    }
+                    NodeContext.Invoice_tbInvoices.Remove(invoice);
+                    await NodeContext.SaveChangesAsync();
 
                     Invoices invoices = new(NodeContext);
                     if (await invoices.CancelPending(invoice.UserId))

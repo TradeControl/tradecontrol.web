@@ -16,6 +16,8 @@
     </p>
 </form>
 
+<h3>Accounts</h3>
+
 <table class="table table-striped">
     <thead>
         <tr>
@@ -54,6 +56,45 @@
     </tbody>
 </table>
 
+<h3>Tax Totals</h3>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_TaxTotals[0].CategoryCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Cash_TaxTotals[0].Category)
+            </th>
+            <th>
+                @Html.DisplayFor(model => model.PeriodName)
+            </th>
+            <th>
+                @Html.DisplayFor(model => model.PeriodNamePrevious)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Cash_TaxTotals)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CategoryCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CurrentValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PreviousValue)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
 
 @Html.Raw(Model.DetailsHtml)
 
