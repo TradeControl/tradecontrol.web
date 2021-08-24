@@ -27,7 +27,6 @@
                 </td>
                 <td>
                     <a asp-page="./Details" asp-route-logCode="@item.LogCode" class="btn btn-info"></a>
-                    <a asp-page="./Delete" asp-route-logCode="@item.LogCode" class="btn btn-danger"></a>
                     @{
                         if (User.IsInRole(Constants.AdministratorsRole))
                         {
