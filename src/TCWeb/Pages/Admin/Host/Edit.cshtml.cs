@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
+using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Admin.Host
@@ -59,6 +60,9 @@ namespace TradeControl.Web.Pages.Admin.Host
                 Profile profile = new(NodeContext);
                 App_tbHost.InsertedBy = await profile.UserName(UserManager.GetUserId(User));
                 App_tbHost.InsertedOn = DateTime.Now;
+                
+                Encrypt encrypt = new(NodeSettings.SymmetricKey, NodeSettings.SymmetricVector);
+                App_tbHost.EmailPassword = encrypt.EncryptString(App_tbHost.EmailPassword);
 
                 NodeContext.Attach(App_tbHost).State = EntityState.Modified;
 

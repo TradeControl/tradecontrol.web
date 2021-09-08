@@ -243,7 +243,7 @@ namespace TradeControl.Web.Data
                 if (invoice != null)
                 {
                     invoice.Spooled = false;
-                    invoice.Printed = false;
+                    invoice.Printed = true;
                     _context.Attach(invoice).State = EntityState.Modified;
                     await _context.SaveChangesAsync();
                 }

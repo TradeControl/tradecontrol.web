@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
+using TradeControl.Web.Mail;
 
 namespace TradeControl.Web.Pages.Admin.Host
 {
@@ -61,7 +62,11 @@ namespace TradeControl.Web.Pages.Admin.Host
                 if (!ModelState.IsValid)
                     return Page();
 
+                Encrypt encrypt = new(NodeSettings.SymmetricKey, NodeSettings.SymmetricVector);
+                App_tbHost.EmailPassword = encrypt.EncryptString(App_tbHost.EmailPassword);
+
                 NodeContext.App_tbHosts.Add(App_tbHost);
+
                 await NodeContext.SaveChangesAsync();
                 
                 if (await NodeContext.App_tbHosts.AnyAsync())
