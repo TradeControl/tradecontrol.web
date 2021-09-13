@@ -342,7 +342,8 @@ namespace TradeControl.Web.Data
                     _connection.Close();
                 }
 
-                return (string)_accountName.Value;
+                return _accountName.Value != DBNull.Value ? (string)_accountName.Value : string.Empty;
+                
             }
             catch (Exception e)
             {
