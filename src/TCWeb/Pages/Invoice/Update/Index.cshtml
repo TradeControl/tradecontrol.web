@@ -62,7 +62,7 @@
                 @Html.DisplayFor(modelItem => item.TotalPaidValue)
             </td>
             <td>
-                <a asp-page="/Org/Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
+                <a asp-page="/Subject/Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
                 <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
                 <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger"></a>
                 <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>

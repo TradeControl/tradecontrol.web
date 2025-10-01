@@ -54,8 +54,8 @@ namespace TradeControl.Web.Models
         public string PaymentAddress { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbInvoiceMirror))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbInvoiceMirror))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(InvoiceStatusCode))]
         [InverseProperty(nameof(Invoice_tbStatus.TbMirror))]
         public virtual Invoice_tbStatus InvoiceStatusCodeNavigation { get; set; }

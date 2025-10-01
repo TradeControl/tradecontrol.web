@@ -48,8 +48,8 @@ namespace TradeControl.Web.Models
         //public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbEntries))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbEntries))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbEntries))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

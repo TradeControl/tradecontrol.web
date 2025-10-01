@@ -35,8 +35,8 @@ namespace TradeControl.Web.Models
         public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AttributeTypeCode))]
-        [InverseProperty(nameof(Activity_tbAttributeType.TbAttribute1s))]
-        public virtual Activity_tbAttributeType AttributeTypeCodeNavigation { get; set; }
+        [InverseProperty(nameof(Object_tbAttributeType.TbAttribute1s))]
+        public virtual Object_tbAttributeType AttributeTypeCodeNavigation { get; set; }
         [ForeignKey(nameof(TaskCode))]
         [InverseProperty(nameof(Task_tbTask.TbAttribute1s))]
         public virtual Task_tbTask TaskCodeNavigation { get; set; }

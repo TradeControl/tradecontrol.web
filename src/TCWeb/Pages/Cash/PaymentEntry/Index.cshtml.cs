@@ -38,7 +38,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         {
             try
             {
-                var cashAccountNames = from t in NodeContext.Org_tbAccounts
+                var cashAccountNames = from t in NodeContext.Subject_tbAccounts
                                        where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
                                        orderby t.CashAccountName
                                        select t.CashAccountName;
@@ -48,7 +48,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (!string.IsNullOrEmpty(cashAccountName))
                 {
                     CashAccountName = cashAccountName;
-                    CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == cashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                    CashAccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountName == cashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
                 }
                 else if (!string.IsNullOrEmpty(cashAccountCode))
                     CashAccountCode = cashAccountCode;
@@ -56,7 +56,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                     CashAccountCode = await NodeContext.CurrentAccount();
 
                 if (string.IsNullOrEmpty(CashAccountName))
-                    CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                    CashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
 
                 var isAuthorized = User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole);
 

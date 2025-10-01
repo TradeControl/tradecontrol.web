@@ -31,8 +31,8 @@ namespace TradeControl.Web.Models
         public short OffsetDays { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbTaxTypes))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbTaxTypes))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbTaxTypes))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

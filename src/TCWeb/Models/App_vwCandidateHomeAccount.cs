@@ -19,7 +19,7 @@ namespace TradeControl.Web.Models
         public string AccountName { get; set; }
         [Required]
         [StringLength(50)]
-        public string OrganisationType { get; set; }
+        public string SubjectType { get; set; }
         [StringLength(10)]
         public string CashMode { get; set; }
     }

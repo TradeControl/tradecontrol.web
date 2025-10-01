@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [StringLength(100)]
         public string TaskTitle { get; set; }
     }

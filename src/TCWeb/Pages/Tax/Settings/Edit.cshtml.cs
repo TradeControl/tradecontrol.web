@@ -69,9 +69,9 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 Recurrences = new SelectList(await recurrences.ToListAsync());
                 Recurrence = await NodeContext.App_tbRecurrences.Where(t => t.RecurrenceCode == Cash_tbTaxType.RecurrenceCode).Select(t => t.Recurrence).FirstAsync();
 
-                var accounts = NodeContext.Org_AccountLookup.OrderBy(t => t.AccountName).Select(t => t.AccountName);
+                var accounts = NodeContext.Subject_AccountLookup.OrderBy(t => t.AccountName).Select(t => t.AccountName);
                 AccountNames = new SelectList(await accounts.ToListAsync());
-                AccountName = await NodeContext.Org_tbOrgs.Where(t => t.AccountCode == Cash_tbTaxType.AccountCode).Select(t => t.AccountName).FirstAsync();
+                AccountName = await NodeContext.Subject_tbSubjects.Where(t => t.AccountCode == Cash_tbTaxType.AccountCode).Select(t => t.AccountName).FirstAsync();
 
                 await SetViewData();
                 return Page();
@@ -93,7 +93,7 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 Cash_tbTaxType.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
                 Cash_tbTaxType.MonthNumber = await NodeContext.App_tbMonths.Where(t => t.MonthName == MonthName).Select(t => t.MonthNumber).FirstAsync();
                 Cash_tbTaxType.RecurrenceCode = await NodeContext.App_tbRecurrences.Where(t => t.Recurrence == Recurrence).Select(t => t.RecurrenceCode).FirstAsync();
-                Cash_tbTaxType.AccountCode = await NodeContext.Org_tbOrgs.Where(t => t.AccountName == AccountName).Select(t => t.AccountCode).FirstAsync();
+                Cash_tbTaxType.AccountCode = await NodeContext.Subject_tbSubjects.Where(t => t.AccountName == AccountName).Select(t => t.AccountCode).FirstAsync();
 
                 NodeContext.Attach(Cash_tbTaxType).State = EntityState.Modified;
 

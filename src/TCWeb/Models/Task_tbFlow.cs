@@ -42,7 +42,7 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Task_tbTask.TbFlowParentTaskCodeNavigations))]
         public virtual Task_tbTask ParentTaskCodeNavigation { get; set; }
         [ForeignKey(nameof(SyncTypeCode))]
-        [InverseProperty(nameof(Activity_tbSyncType.TbTaskFlows))]
-        public virtual Activity_tbSyncType SyncTypeCodeNavigation { get; set; }
+        [InverseProperty(nameof(Object_tbSyncType.TbTaskFlows))]
+        public virtual Object_tbSyncType SyncTypeCodeNavigation { get; set; }
     }
 }

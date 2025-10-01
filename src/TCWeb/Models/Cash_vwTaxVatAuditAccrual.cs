@@ -32,7 +32,7 @@ namespace TradeControl.Web.Models
         public string CashDescription { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [Required]
         [StringLength(100)]
         public string TaskStatus { get; set; }

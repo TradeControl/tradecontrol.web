@@ -21,7 +21,7 @@ namespace TradeControl.Web.Models
         public string ContactName { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime ActionOn { get; set; }
         [Column(TypeName = "datetime")]

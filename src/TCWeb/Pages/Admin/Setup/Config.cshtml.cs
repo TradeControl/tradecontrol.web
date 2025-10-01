@@ -79,14 +79,14 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == options.UnitOfCharge).Select(u => u.UocName).SingleOrDefaultAsync()
                     };
 
-                    var bankAddr = await (  from ca in NodeContext.Org_CurrentAccounts
-                                            join addr in NodeContext.Org_tbAddresses
+                    var bankAddr = await (  from ca in NodeContext.Subject_CurrentAccounts
+                                            join addr in NodeContext.Subject_tbAddresses
                                             on ca.AccountCode equals addr.AccountCode
                                             select addr.Address).FirstOrDefaultAsync();
 
                     App_Initialisation.BankAddress = bankAddr != null ? bankAddr : string.Empty;
 
-                    var reserveAccount = await NodeContext.Org_ReserveAccounts.OrderBy(r => r.CashAccountCode).FirstOrDefaultAsync();
+                    var reserveAccount = await NodeContext.Subject_ReserveAccounts.OrderBy(r => r.CashAccountCode).FirstOrDefaultAsync();
 
                     if (reserveAccount != null)
                     {
@@ -96,7 +96,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
                     }
 
                     var gov = await (from t in NodeContext.Cash_tbTaxTypes
-                                     join o in NodeContext.Org_tbOrgs
+                                     join o in NodeContext.Subject_tbSubjects
                                        on t.AccountCode equals o.AccountCode
                                      orderby t.AccountCode
                                      select o.AccountName).FirstOrDefaultAsync();

@@ -84,11 +84,11 @@ namespace TradeControl.Web.Models
         public DateTime UpdatedOn { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbPayments))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbPayments))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashAccountCode))]
-        [InverseProperty(nameof(Org_tbAccount.TbPayments))]
-        public virtual Org_tbAccount CashAccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbAccount.TbPayments))]
+        public virtual Subject_tbAccount CashAccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbPayments))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

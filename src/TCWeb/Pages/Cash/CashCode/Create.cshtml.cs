@@ -154,7 +154,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
                     TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == taxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
                 else if (string.IsNullOrEmpty(TaxDescription))
                 {
-                    Orgs orgs = new(NodeContext, await profile.CompanyAccountCode());
+                    Subjects orgs = new(NodeContext, await profile.CompanyAccountCode());
                     taxCode = await orgs.DefaultTaxCode();
                     TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == taxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
                 }                

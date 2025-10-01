@@ -27,7 +27,7 @@ namespace TradeControl.Web.Models
         public string AccountCode { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         public short TaskStatusCode { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime ActionOn { get; set; }
@@ -46,7 +46,7 @@ namespace TradeControl.Web.Models
         public decimal UnitCharge { get; set; }
 
         [ForeignKey(nameof(TransmitStatusCode))]
-        [InverseProperty(nameof(Org_tbTransmitStatus.TbTaskChangeLogs))]
-        public virtual Org_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbTransmitStatus.TbTaskChangeLogs))]
+        public virtual Subject_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
     }
 }

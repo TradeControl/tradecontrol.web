@@ -49,8 +49,8 @@ namespace TradeControl.Web.Models
         public DateTime UpdatedOn { get; set; }
         [StringLength(5)]
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbOptionAccountCodeNavigations))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbOptionAccountCodeNavigations))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(BucketIntervalCode))]
         [InverseProperty(nameof(App_tbBucketInterval.TbOptions))]
         public virtual App_tbBucketInterval BucketIntervalCodeNavigation { get; set; }
@@ -61,8 +61,8 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Cash_tbCoinType.TbOptions))]
         public virtual Cash_tbCoinType CoinTypeCodeNavigation { get; set; }
         [ForeignKey(nameof(MinerAccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbOptionMinerAccountCodeNavigations))]
-        public virtual Org_tbOrg MinerAccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbOptionMinerAccountCodeNavigations))]
+        public virtual Subject_tbSubject MinerAccountCodeNavigation { get; set; }
         [ForeignKey(nameof(MinerFeeCode))]
         [InverseProperty(nameof(Cash_tbCode.TbOptions))]
         public virtual Cash_tbCode MinerFeeCodeNavigation { get; set; }

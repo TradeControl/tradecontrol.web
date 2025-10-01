@@ -13,7 +13,7 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
-//select * from Org.vwCashAccountAssets order by LiquidityLevel;
+//select * from Subject.vwCashAccountAssets order by LiquidityLevel;
 namespace TradeControl.Web.Pages.Cash.AssetEntry
 {
     public class IndexModel : DI_BasePageModel
@@ -39,19 +39,19 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         {
             try
             {
-                var cashAccounts = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
+                var cashAccounts = NodeContext.Subject_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
 
                 CashAccounts = new SelectList(await cashAccounts.ToListAsync());
 
                 if (!string.IsNullOrEmpty(cashAccountName))
                     CashAccountName = cashAccountName;
                 else if (!string.IsNullOrEmpty(cashAccountCode))
-                    CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                    CashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
                 else if (await cashAccounts.AnyAsync())
                     CashAccountName = await cashAccounts.FirstOrDefaultAsync();
 
                 if (string.IsNullOrEmpty(cashAccountCode))
-                    CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                    CashAccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
                 else
                     CashAccountCode = cashAccountCode;
 

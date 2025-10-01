@@ -22,7 +22,7 @@
                 <input type="hidden" asp-for="@Model.Invoice_Header.InvoiceNumber" />
                 <button type="submit" asp-page-handler="PreviewDocument" class="btn btn-success">PREVIEW</button>
                 <button type="submit" asp-page-handler="SubmitDocument" class="btn btn-danger">SUBMIT</button>
-                <a asp-page="/Org/Contact/Create" asp-route-accountCode="@Model.Invoice_Header.AccountCode" asp-route-returnUrl="Invoice/Update/EmailConfirm" asp-route-invoiceNumber="@Model.Invoice_Header.InvoiceNumber" class="btn btn-info">Contacts</a>
+                <a asp-page="/Subject/Contact/Create" asp-route-accountCode="@Model.Invoice_Header.AccountCode" asp-route-returnUrl="Invoice/Update/EmailConfirm" asp-route-invoiceNumber="@Model.Invoice_Header.InvoiceNumber" class="btn btn-info">Contacts</a>
                 <a asp-page="./Index" class="btn btn-info">To List</a>
             </div>
         </form>

@@ -45,7 +45,7 @@ namespace TradeControl.Web.Models
         public string ContactName { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         public short TaskStatusCode { get; set; }
         [Required]
         [StringLength(10)]
@@ -88,20 +88,20 @@ namespace TradeControl.Web.Models
         public decimal UnitCharge { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbTasks))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbTasks))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(ActionById))]
         [InverseProperty(nameof(Usr_tbUser.TbTaskActionBys))]
         public virtual Usr_tbUser ActionBy { get; set; }
-        [ForeignKey(nameof(ActivityCode))]
-        [InverseProperty(nameof(Activity_tbActivity.TbTasks))]
-        public virtual Activity_tbActivity ActivityCodeNavigation { get; set; }
+        [ForeignKey(nameof(ObjectCode))]
+        [InverseProperty(nameof(Object_tbObject.TbTasks))]
+        public virtual Object_tbObject ObjectCodeNavigation { get; set; }
         [ForeignKey(nameof(AddressCodeFrom))]
-        [InverseProperty(nameof(Org_tbAddress.TbTaskAddressCodeFromNavigations))]
-        public virtual Org_tbAddress AddressCodeFromNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbAddress.TbTaskAddressCodeFromNavigations))]
+        public virtual Subject_tbAddress AddressCodeFromNavigation { get; set; }
         [ForeignKey(nameof(AddressCodeTo))]
-        [InverseProperty(nameof(Org_tbAddress.TbTaskAddressCodeToNavigations))]
-        public virtual Org_tbAddress AddressCodeToNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbAddress.TbTaskAddressCodeToNavigations))]
+        public virtual Subject_tbAddress AddressCodeToNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbTasks))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

@@ -74,23 +74,27 @@ namespace TradeControl.Web.Mail
                 ASCIIEncoding textConverter = new();
                 byte[] encrypted = ToByte(_encrypted.ToCharArray());
 
-                RijndaelManaged RMCrypto = new();
-                byte[] fromEncrypt;
+                using Aes aes = Aes.Create();
+                aes.Key = Key;
+                aes.IV = IV;
 
-                ICryptoTransform decryptor = RMCrypto.CreateDecryptor(Key, IV);
+                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
 
-                MemoryStream msDecrypt = new(encrypted);
-                CryptoStream csDecrypt = new(msDecrypt, decryptor, CryptoStreamMode.Read);
+                using MemoryStream msDecrypt = new(encrypted);
+                using CryptoStream csDecrypt = new(msDecrypt, decryptor, CryptoStreamMode.Read);
 
-                fromEncrypt = new byte[encrypted.Length];
+                byte[] fromEncrypt = new byte[encrypted.Length];
+                int bytesRead = 0, read;
+                while (bytesRead < fromEncrypt.Length &&
+                       (read = csDecrypt.Read(fromEncrypt, bytesRead, fromEncrypt.Length - bytesRead)) > 0)
+                {
+                    bytesRead += read;
+                }
 
-                csDecrypt.Read(fromEncrypt, 0, fromEncrypt.Length);
-
-                decrypt = textConverter.GetString(fromEncrypt).Trim(new char[] { ' ', '\0' });
+                decrypt = textConverter.GetString(fromEncrypt, 0, bytesRead).Trim(new char[] { ' ', '\0' });
             }
             catch
             {
-                
                 decrypt = string.Empty;
             }
 
@@ -102,23 +106,23 @@ namespace TradeControl.Web.Mail
             try
             {
                 ASCIIEncoding textConverter = new();
-                RijndaelManaged RMCrypto = new();
+                using Aes aes = Aes.Create();
+                aes.Key = Key;
+                aes.IV = IV;
 
-                byte[] toEncrypt;
+                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
 
-                ICryptoTransform encryptor = RMCrypto.CreateEncryptor(Key, IV);
+                using MemoryStream msEncrypt = new();
+                using CryptoStream csEncrypt = new(msEncrypt, encryptor, CryptoStreamMode.Write);
 
-                MemoryStream msEncrypt = new();
-                CryptoStream csEncrypt = new(msEncrypt, encryptor, CryptoStreamMode.Write);
-
-                toEncrypt = textConverter.GetBytes(_decrypted);
+                byte[] toEncrypt = textConverter.GetBytes(_decrypted);
 
                 csEncrypt.Write(toEncrypt, 0, toEncrypt.Length);
                 csEncrypt.FlushFinalBlock();
 
                 byte[] encrypted = msEncrypt.ToArray();
 
-                return ByteToString(encrypted) ;
+                return ByteToString(encrypted);
             }
             catch
             {

@@ -18,7 +18,7 @@ namespace TradeControl.Web.Models
         public DateTime ActionOn { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [Required]
         [StringLength(10)]
         public string ActionById { get; set; }

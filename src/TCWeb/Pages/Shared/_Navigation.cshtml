@@ -28,7 +28,7 @@
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
                                     <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Org/CashAccount/Index">Maintenance</a>
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Subject/CashAccount/Index">Maintenance</a>
                                     </li>
                                 }
                             }
@@ -66,22 +66,22 @@
                         </ul>
                     </li>
                     <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Organisations<span class="caret"></span></a>
+                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Subjects<span class="caret"></span></a>
                         <ul class="dropdown-menu">
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Update/Index">Maintenance</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Subject/Update/Index">Maintenance</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Enquiry/Index">Enquiries</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Subject/Enquiry/Index">Enquiries</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Subject/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
                             </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
                                     <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Org/Type/Index">Types</a>
+                                        <a class="nav-link text-dark" asp-area="" asp-page="/Subject/Type/Index">Types</a>
                                     </li>
                                 }
                             }

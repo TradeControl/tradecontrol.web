@@ -27,7 +27,7 @@
         {
             <tr>
                 <td>
-                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
                         @Html.DisplayFor(modelItem => item.AccountCode)
                     </a>
                 </td>
@@ -41,7 +41,7 @@
                     @Html.DisplayFor(modelItem => item.InvoiceValue)
                 </td>
                 <td>
-                    <a asp-page="/Org/Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
+                    <a asp-page="/Subject/Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
                     <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
                     <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger"></a>
                     <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>

@@ -19,9 +19,9 @@ namespace TradeControl.Web.Models
         public string AccountName { get; set; }
         [Required]
         [StringLength(50)]
-        public string OrganisationType { get; set; }
+        public string SubjectType { get; set; }
         [StringLength(255)]
-        public string OrganisationStatus { get; set; }
+        public string SubjectStatus { get; set; }
         [Required]
         [StringLength(20)]
         public string PaymentCode { get; set; }

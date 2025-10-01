@@ -37,13 +37,13 @@ namespace TradeControl.Web.Models
         public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbCashMirror))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbCashMirror))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbMirrors))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }
         [ForeignKey(nameof(TransmitStatusCode))]
-        [InverseProperty(nameof(Org_tbTransmitStatus.TbCashMirrors))]
-        public virtual Org_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbTransmitStatus.TbCashMirrors))]
+        public virtual Subject_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
     }
 }

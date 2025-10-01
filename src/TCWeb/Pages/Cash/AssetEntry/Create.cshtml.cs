@@ -35,7 +35,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         {
             try
             {
-                var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
+                var cashAccountList = NodeContext.Subject_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
 
                 CashAccountNames = new SelectList(await cashAccountList.ToListAsync());
 
@@ -45,7 +45,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                 Profile profile = new(NodeContext);
                 CashAccounts cashAccounts = new(NodeContext);
 
-                var cashAccount = await NodeContext.Org_CashAccountAssets.Where(t => t.CashAccountName == cashAccountName).FirstAsync();
+                var cashAccount = await NodeContext.Subject_CashAccountAssets.Where(t => t.CashAccountName == cashAccountName).FirstAsync();
 
                 Cash_AssetsUnposted = new Cash_vwPaymentsUnposted
                 {
@@ -77,7 +77,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         {
             try
             {
-                Cash_AssetsUnposted.CashAccountCode = await NodeContext.Org_CashAccountAssets
+                Cash_AssetsUnposted.CashAccountCode = await NodeContext.Subject_CashAccountAssets
                                                     .Where(t => t.CashAccountName == CashAccountName)
                                                     .Select(t => t.CashAccountCode)
                                                     .SingleAsync();

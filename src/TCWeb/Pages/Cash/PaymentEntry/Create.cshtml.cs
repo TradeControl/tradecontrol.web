@@ -33,9 +33,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         [BindProperty]
         public string CashAccountName { get; set; }
 
-        public SelectList OrganisationNames { get; set; }
+        public SelectList SubjectNames { get; set; }
         [BindProperty]
-        public string OrganisationName { get; set; }
+        public string SubjectName { get; set; }
 
         public SelectList CashDescriptions { get; set; }
         [BindProperty]
@@ -177,7 +177,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (!string.IsNullOrEmpty(returnUrl))
                     ReturnUrl = returnUrl;
 
-                var cashAccountNames = from t in NodeContext.Org_tbAccounts
+                var cashAccountNames = from t in NodeContext.Subject_tbAccounts
                                        where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
                                        orderby t.CashAccountName
                                        select t.CashAccountName;
@@ -192,7 +192,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                     CashAccountCode = await cashAccounts.CurrentAccount();
                 }
 
-                CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                CashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
 
                 if (!string.IsNullOrEmpty(mode))
                 {
@@ -202,11 +202,11 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                     TaxCode = string.Empty;
                 }
 
-                var organisationNames = from t in NodeContext.Org_AccountLookup
+                var organisationNames = from t in NodeContext.Subject_AccountLookup
                                         orderby t.AccountName
                                         select t.AccountName;
 
-                OrganisationNames = new SelectList(await organisationNames.ToListAsync());
+                SubjectNames = new SelectList(await organisationNames.ToListAsync());
 
                 var profile = new Profile(NodeContext);
 
@@ -215,7 +215,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 else if (string.IsNullOrEmpty(AccountCode))
                     AccountCode = await profile.CompanyAccountCode();
 
-                OrganisationName = await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
+                SubjectName = await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
 
 
                 if (InputMode == 1)
@@ -246,8 +246,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                     if (!string.IsNullOrEmpty(taxCode))
                         TaxCode = taxCode;
-                    else if (!string.IsNullOrEmpty(accountCode) && await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleOrDefaultAsync() != null)
-                        TaxCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleAsync();
+                    else if (!string.IsNullOrEmpty(accountCode) && await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleOrDefaultAsync() != null)
+                        TaxCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleAsync();
                     else if (!string.IsNullOrEmpty(cashCode))
                         TaxCode = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == cashCode).Select(c => c.TaxCode).SingleOrDefaultAsync();
                     else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
@@ -279,7 +279,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                 Cash_PaymentsUnposted.UpdatedBy = Cash_PaymentsUnposted.InsertedBy;
 
-                Orgs orgs = new(NodeContext, AccountCode);
+                Subjects orgs = new(NodeContext, AccountCode);
 
                 var balance = await orgs.BalanceOutstanding();
 
@@ -305,9 +305,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             {
                 CashAccounts cashAccounts = new(NodeContext);
 
-                Cash_PaymentsUnposted.CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstAsync();
+                Cash_PaymentsUnposted.CashAccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstAsync();
                 Cash_PaymentsUnposted.PaymentCode = await cashAccounts.NextPaymentCode();
-                Cash_PaymentsUnposted.AccountCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountName == OrganisationName).Select(o => o.AccountCode).FirstAsync();
+                Cash_PaymentsUnposted.AccountCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountName == SubjectName).Select(o => o.AccountCode).FirstAsync();
 
                 if (InputMode == 1)
                 {
@@ -345,13 +345,13 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         public async Task<IActionResult> OnPostNewAccountCode()
         {
             await SaveSession();    
-            return LocalRedirect(@"/Org/Update/Create?returnUrl=/Cash/PaymentEntry/Create");
+            return LocalRedirect(@"/Subject/Update/Create?returnUrl=/Cash/PaymentEntry/Create");
         }
 
         public async Task<IActionResult> OnPostGetAccountCode()
         {
             await SaveSession();
-            return LocalRedirect(@"/Org/Index?returnUrl=/Cash/PaymentEntry/Create");
+            return LocalRedirect(@"/Subject/Index?returnUrl=/Cash/PaymentEntry/Create");
         }
 
         public async Task<IActionResult> OnPostGetCashCode()
@@ -384,7 +384,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             try
             {
                 CashAccountCode = Cash_PaymentsUnposted?.CashAccountCode;
-                AccountCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountName == OrganisationName).Select(o => o.AccountCode).FirstAsync();
+                AccountCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountName == SubjectName).Select(o => o.AccountCode).FirstAsync();
                 CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
                 TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
             }

@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         public App_tbRegister()
         {
-            TbActivities = new HashSet<Activity_tbActivity>();
+            TbActivities = new HashSet<Object_tbObject>();
             TbOptions = new HashSet<App_tbOption>();
         }
 
@@ -24,8 +24,8 @@ namespace TradeControl.Web.Models
         [Required]
         public byte[] RowVer { get; set; }
 
-        [InverseProperty(nameof(Activity_tbActivity.RegisterNameNavigation))]
-        public virtual ICollection<Activity_tbActivity> TbActivities { get; set; }
+        [InverseProperty(nameof(Object_tbObject.RegisterNameNavigation))]
+        public virtual ICollection<Object_tbObject> TbActivities { get; set; }
         [InverseProperty(nameof(App_tbOption.RegisterNameNavigation))]
         public virtual ICollection<App_tbOption> TbOptions { get; set; }
     }

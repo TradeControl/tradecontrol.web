@@ -50,8 +50,8 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Task_tbOpStatus.TbOps))]
         public virtual Task_tbOpStatus OpStatusCodeNavigation { get; set; }
         [ForeignKey(nameof(SyncTypeCode))]
-        [InverseProperty(nameof(Activity_tbSyncType.TbTaskOps))]
-        public virtual Activity_tbSyncType SyncTypeCodeNavigation { get; set; }
+        [InverseProperty(nameof(Object_tbSyncType.TbTaskOps))]
+        public virtual Object_tbSyncType SyncTypeCodeNavigation { get; set; }
         [ForeignKey(nameof(TaskCode))]
         [InverseProperty(nameof(Task_tbTask.TbOps))]
         public virtual Task_tbTask TaskCodeNavigation { get; set; }

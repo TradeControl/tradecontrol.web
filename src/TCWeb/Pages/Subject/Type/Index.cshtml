@@ -1,0 +1,56 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Type.IndexModel
+@{ ViewData["Title"] = "Organisation Types"; }
+<h1>@ViewData["Title"]</h1>
+
+@{
+    if (User.IsInRole(Constants.AdministratorsRole))
+    {
+        <p>
+            <a asp-page="./Create" class="btn btn-outline-primary">New Type</a>
+        </p>
+    }
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Types[0].SubjectType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Types[0].CashMode)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Types)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.SubjectType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashMode)
+                </td>
+                <td>
+                    @{
+                        if (User.IsInRole(Constants.AdministratorsRole))
+                        {
+
+                            <a asp-page="./Edit" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-secondary"></a>
+                            <a asp-page="./Delete" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-danger"></a>
+                        }
+                    }
+                </td>
+
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

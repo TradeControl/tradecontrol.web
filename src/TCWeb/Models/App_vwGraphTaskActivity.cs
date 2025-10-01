@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class App_vwGraphTaskActivity
+    public partial class App_vwGraphTaskObject
     {
         [Required]
         [StringLength(111)]

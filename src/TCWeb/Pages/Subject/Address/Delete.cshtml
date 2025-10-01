@@ -1,0 +1,53 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Address.DeleteModel
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Address.AccountName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address.Address)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address.Address)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address.IsAdminAddress)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address.IsAdminAddress)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address.SubjectStatus)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address.SubjectStatus)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address.SubjectType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address.SubjectType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address.InsertedOn)
+        </dd>
+    </dl>
+    <form method="post">
+        <input type="hidden" asp-for="Address.AddressCode" />
+        <input type="submit" value="DELETE" class="btn btn-danger" />
+        <a asp-page="./Index" asp-route-accountCode="@Model.Address.AccountCode" class="btn btn-info">To List</a>
+    </form>
+
+</div>
+
+

@@ -16,7 +16,7 @@ namespace TradeControl.Web.Models
             TbAllocations = new HashSet<Task_tbAllocation>();
             TbCategories = new HashSet<Cash_tbCategory>();
             TbInvoiceType = new HashSet<Invoice_tbType>();
-            TbOrgType = new HashSet<Org_tbType>();
+            TbSubjectType = new HashSet<Subject_tbType>();
         }
 
         [Key]
@@ -30,7 +30,7 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Cash_tbCategory> TbCategories { get; set; }
         [InverseProperty(nameof(Invoice_tbType.CashModeCodeNavigation))]
         public virtual ICollection<Invoice_tbType> TbInvoiceType { get; set; }
-        [InverseProperty(nameof(Org_tbType.CashModeCodeNavigation))]
-        public virtual ICollection<Org_tbType> TbOrgType { get; set; }
+        [InverseProperty(nameof(Subject_tbType.CashModeCodeNavigation))]
+        public virtual ICollection<Subject_tbType> TbSubjectType { get; set; }
     }
 }

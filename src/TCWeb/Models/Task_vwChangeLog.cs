@@ -29,7 +29,7 @@ namespace TradeControl.Web.Models
         public string AccountName { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         public short TaskStatusCode { get; set; }
         [Required]
         [StringLength(100)]

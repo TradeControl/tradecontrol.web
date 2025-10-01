@@ -43,7 +43,7 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Invoice_tbInvoice.TbChangeLogs))]
         public virtual Invoice_tbInvoice InvoiceNumberNavigation { get; set; }
         [ForeignKey(nameof(TransmitStatusCode))]
-        [InverseProperty(nameof(Org_tbTransmitStatus.TbInvoiceChangeLogs))]
-        public virtual Org_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbTransmitStatus.TbInvoiceChangeLogs))]
+        public virtual Subject_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
     }
 }

@@ -37,7 +37,7 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
                         @Html.DisplayFor(modelItem => item.AccountCode)
                     </a>
                 </td>
@@ -61,10 +61,10 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountName)
+                @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountName)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.CurrentBalance)
+                @Html.DisplayNameFor(model => model.Subject_CashAccount.CurrentBalance)
             </th>
 
         </tr>
@@ -72,10 +72,10 @@
     <tbody>
         <tr>
             <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.AccountName)
+                @Html.DisplayFor(model => model.Subject_CashAccount.AccountName)
             </td>
             <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.CurrentBalance)
+                @Html.DisplayFor(model => model.Subject_CashAccount.CurrentBalance)
             </td>
 
         </tr>

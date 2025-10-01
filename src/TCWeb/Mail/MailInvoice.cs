@@ -32,7 +32,7 @@ namespace TradeControl.Web.Mail
                                         .Select(i => i.AccountCode)
                                         .FirstAsync();
 
-                var invoiceHeader = from c in NodeContext.Org_EmailAddresses
+                var invoiceHeader = from c in NodeContext.Subject_EmailAddresses
                                     where c.AccountCode == accountCode && c.EmailAddress == emailAddress
                                     select new
                                     {

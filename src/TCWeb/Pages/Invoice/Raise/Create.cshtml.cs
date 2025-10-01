@@ -22,11 +22,11 @@ namespace TradeControl.Web.Pages.Invoice.Raise
         [BindProperty]
         public Invoice_tbEntry Invoice_Entry { get; set; }
 
-        public SelectList OrganisationNames { get; set; }
+        public SelectList SubjectNames { get; set; }
         [BindProperty]
         [Required]
-        [Display(Name = "Organisation")]
-        public string OrganisationName { get; set; }
+        [Display(Name = "Subject")]
+        public string SubjectName { get; set; }
 
         public SelectList CashDescriptions { get; set; }
         [BindProperty]
@@ -141,11 +141,11 @@ namespace TradeControl.Web.Pages.Invoice.Raise
         {
             try
             {
-                var organisationNames = from t in NodeContext.Org_AccountLookup
+                var organisationNames = from t in NodeContext.Subject_AccountLookup
                                         orderby t.AccountName
                                         select t.AccountName;
 
-                OrganisationNames = new SelectList(await organisationNames.ToListAsync());
+                SubjectNames = new SelectList(await organisationNames.ToListAsync());
 
                 var profile = new Profile(NodeContext);
 
@@ -154,7 +154,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 else if (string.IsNullOrEmpty(AccountCode))
                     AccountCode = await profile.CompanyAccountCode();
 
-                OrganisationName = await NodeContext.Org_tbOrgs.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
+                SubjectName = await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
 
                 var cashDescriptions = from t in NodeContext.Cash_CodeLookup
                                        where t.CashTypeCode < (short)NodeEnum.CashType.Bank
@@ -231,7 +231,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (Invoice_Entry.TotalValue != 0 && Invoice_Entry.InvoiceValue != 0)
                     Invoice_Entry.InvoiceValue = 0;
 
-                Invoice_Entry.AccountCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountName == OrganisationName).Select(o => o.AccountCode).FirstAsync();
+                Invoice_Entry.AccountCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountName == SubjectName).Select(o => o.AccountCode).FirstAsync();
                 Invoice_Entry.CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
                 Invoice_Entry.TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
 
@@ -250,13 +250,13 @@ namespace TradeControl.Web.Pages.Invoice.Raise
         public async Task<IActionResult> OnPostNewAccountCode()
         {
             await SaveSession();
-            return LocalRedirect(@"/Org/Update/Create?returnUrl=/Invoice/Raise/Create");
+            return LocalRedirect(@"/Subject/Update/Create?returnUrl=/Invoice/Raise/Create");
         }
 
         public async Task<IActionResult> OnPostGetAccountCode()
         {
             await SaveSession();
-            return LocalRedirect(@"/Org/Index?returnUrl=/Invoice/Raise/Create");
+            return LocalRedirect(@"/Subject/Index?returnUrl=/Invoice/Raise/Create");
         }
 
         public async Task<IActionResult> OnPostGetCashCode()
@@ -288,7 +288,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
             try
             {
                 InvoiceTypeCode = (NodeEnum.InvoiceType)await NodeContext.Invoice_tbTypes.Where(t => t.InvoiceType == InvoiceType).Select(t => t.InvoiceTypeCode).FirstAsync();
-                AccountCode = await NodeContext.Org_tbOrgs.Where(o => o.AccountName == OrganisationName).Select(o => o.AccountCode).FirstAsync(); 
+                AccountCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountName == SubjectName).Select(o => o.AccountCode).FirstAsync(); 
                 CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
                 TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
             }

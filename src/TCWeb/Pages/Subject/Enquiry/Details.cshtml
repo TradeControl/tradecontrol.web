@@ -1,0 +1,236 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Enquiry.DetailsModel
+
+@{ ViewData["Title"] = "Organisation Details"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Subject_Account.AccountName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.AccountCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.AccountCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.SubjectType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.SubjectType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.SubjectStatus)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.SubjectStatus)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PhoneNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PhoneNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.EmailAddress)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.EmailAddress)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.WebSite)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.WebSite)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.Address)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.Address)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.TaxDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.TaxDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PaymentTerms)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PaymentTerms)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PaymentDays)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PaymentDays)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.ExpectedDays)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.ExpectedDays)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PayDaysFromMonthEnd)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PayDaysFromMonthEnd)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PayBalance)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PayBalance)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.Eujurisdiction)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.Eujurisdiction)
+        </dd>
+    </dl>
+</div>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info"></a>
+    <a asp-page="./Invoices" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-warning"></a>
+    <a asp-page="./Payments" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-success"></a>
+    <a asp-page="./Statement" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-dark"></a>
+</p>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                Additional Addresses
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Addresses)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Address)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Contacts[0].ContactName)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Contacts)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ContactName)
+                </td>
+                <td>
+                    <a asp-page="../Contact/Details" asp-route-accountCode="@item.AccountCode" asp-route-contactName="@item.ContactName" class="btn btn-info"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+<h2>Extended Data</h2>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Subject_Account.AccountName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.IndustrySector)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.IndustrySector)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.AreaCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.AreaCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.AccountSource)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.AccountSource)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.CompanyNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.CompanyNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.VatNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.VatNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.NumberOfEmployees)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.NumberOfEmployees)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.OpeningBalance)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.OpeningBalance)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.Turnover)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.Turnover)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.BusinessDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.BusinessDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.InsertedOn)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.UpdatedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.UpdatedOn)
+        </dd>
+
+
+    </dl>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

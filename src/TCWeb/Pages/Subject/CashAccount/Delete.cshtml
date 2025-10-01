@@ -1,0 +1,99 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.CashAccount.DeleteModel
+@{ ViewData["Title"] = "Delete Cash Account"; }
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Subject_CashAccount.CashAccountName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.CashAccountCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.CashAccountCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.AccountCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.AccountName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.CashCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.CashCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.CashDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.CashDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.OpeningBalance)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.OpeningBalance)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.CurrentBalance)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.CurrentBalance)
+        </dd>
+        @{
+            if (Model.Subject_CashAccount.AccountTypeCode == 0)
+            {
+                <dt class="col-sm-2">
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountNumber)
+                </dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Subject_CashAccount.AccountNumber)
+                </dd>
+                <dt class="col-sm-2">
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.SortCode)
+                </dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Subject_CashAccount.SortCode)
+                </dd>
+            }
+        }
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountClosed)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.AccountClosed)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.InsertedOn)
+        </dd>
+    </dl>
+
+    <form method="post">
+        <input type="hidden" asp-for="Subject_CashAccount.CashAccountCode" />
+        <input type="submit" value="DELETE" class="btn btn-danger" />
+        <a asp-page="./Index" asp-route-accountType="@Model.Subject_CashAccount.AccountType" class="btn btn-info">To List</a>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

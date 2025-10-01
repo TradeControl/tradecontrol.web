@@ -16,7 +16,7 @@ namespace TradeControl.Web.Models
         public string TaskCode { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         public short OperationNumber { get; set; }
         public short Period { get; set; }
         [StringLength(10)]

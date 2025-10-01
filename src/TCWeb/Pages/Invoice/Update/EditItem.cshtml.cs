@@ -115,7 +115,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
                 {
                     if (orgRebuild)
                     {
-                        Orgs orgs = new(NodeContext, invoiceHeader.AccountCode);
+                        Subjects orgs = new(NodeContext, invoiceHeader.AccountCode);
                         await orgs.Rebuild();
                     }
                     if (periodRebuild)

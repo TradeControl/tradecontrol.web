@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class App_vwWarehouseOrg
+    public partial class App_vwWarehouseSubject
     {
         [Required]
         [StringLength(10)]

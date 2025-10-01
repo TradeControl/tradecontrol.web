@@ -24,7 +24,7 @@ namespace TradeControl.Web.Models
         public string ContactName { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [StringLength(100)]
         public string TaskTitle { get; set; }
         public short TaskStatusCode { get; set; }
@@ -85,10 +85,10 @@ namespace TradeControl.Web.Models
         [StringLength(255)]
         public string AccountName { get; set; }
         [StringLength(255)]
-        public string OrganisationStatus { get; set; }
+        public string SubjectStatus { get; set; }
         [Required]
         [StringLength(50)]
-        public string OrganisationType { get; set; }
+        public string SubjectType { get; set; }
         public short CashModeCode { get; set; }
     }
 }

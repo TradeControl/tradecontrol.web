@@ -77,8 +77,8 @@ namespace TradeControl.Web.Models
         public decimal PaidTaxValue { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbInvoices))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbInvoices))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(InvoiceStatusCode))]
         [InverseProperty(nameof(Invoice_tbStatus.TbInvoices))]
         public virtual Invoice_tbStatus InvoiceStatusCodeNavigation { get; set; }

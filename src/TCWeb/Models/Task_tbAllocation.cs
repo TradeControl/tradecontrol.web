@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbAllocation", Schema = "Task")]
-    [Index(nameof(AccountCode), nameof(AllocationCode), Name = "IX_Task_tbAllocation_ActivityCode")]
+    [Index(nameof(AccountCode), nameof(AllocationCode), Name = "IX_Task_tbAllocation_ObjectCode")]
     [Index(nameof(AccountCode), nameof(TaskCode), Name = "IX_Task_tbAllocation_TaskCode")]
     [Index(nameof(TaskStatusCode), nameof(AccountCode), nameof(AllocationCode), nameof(ActionOn), Name = "IX_Task_tbAllocation_TaskStatusCode")]
     public partial class Task_tbAllocation
@@ -57,8 +57,8 @@ namespace TradeControl.Web.Models
         public decimal UnitCharge { get; set; }
 
         [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbAllocations))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbAllocations))]
+        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashModeCode))]
         [InverseProperty(nameof(Cash_tbMode.TbAllocations))]
         public virtual Cash_tbMode CashModeCodeNavigation { get; set; }

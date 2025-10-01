@@ -1,0 +1,75 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Reports.DebtorsAndCreditorsModel
+@{ ViewData["Title"] = "Debtors and Creditors"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="PeriodName" asp-items="Model.PeriodNames"></select>
+        <select asp-for="AssetType" asp-items="Model.AssetTypes">
+            <option value="">All</option>
+        </select>
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].Description)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].MonthName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].AssetType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].AccountName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].SubjectType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].Balance)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_BalanceSheetAudit)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.MonthName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AssetType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AccountName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.SubjectType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Balance)
+                </td>
+                <td>
+                    <a asp-page="../Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
+                    <a asp-page="../Enquiry/Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-warning"></a>
+                    <a asp-page="../Enquiry/Payments" asp-route-accountCode="@item.AccountCode" class="btn btn-success"></a>
+                    <a asp-page="../Enquiry/Statement" asp-route-accountCode="@item.AccountCode" class="btn btn-dark"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -18,7 +18,7 @@ namespace TradeControl.Web.Data
     {
         #region Procedure Datasets
         public virtual DbSet<Cash_proc_CodeDefaults> Cash_CodeDefaults { get; set; }
-        public virtual DbSet<Activity_proc_WorkFlow> Activity_WorkFlow { get; set; }
+        public virtual DbSet<Object_proc_WorkFlow> Object_WorkFlow { get; set; }
         #endregion
 
         #region Cash Accounts
@@ -493,7 +493,7 @@ namespace TradeControl.Web.Data
         }
         #endregion
 
-        #region Orgs
+        #region Subjects
         public async Task<string> NextAddressCode(string accountCode)
         {
             try
@@ -519,7 +519,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Org.proc_NextAddressCode";
+                        _command.CommandText = "Subject.proc_NextAddressCode";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_addressCode);
@@ -538,7 +538,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> OrgAccountCodeDefault(string accountName)
+        public async Task<string> SubjectAccountCodeDefault(string accountName)
         {
             try
             {
@@ -563,7 +563,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Org.proc_DefaultAccountCode";
+                        _command.CommandText = "Subject.proc_DefaultAccountCode";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountName);
                         _command.Parameters.Add(_accountCode);
@@ -582,7 +582,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> OrgTaxCodeDefault(string accountCode)
+        public async Task<string> SubjectTaxCodeDefault(string accountCode)
         {
             try
             {
@@ -607,7 +607,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Org.proc_DefaultTaxCode";
+                        _command.CommandText = "Subject.proc_DefaultTaxCode";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_taxCode);
@@ -626,7 +626,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> OrgEmailAddressDefault(string accountCode)
+        public async Task<string> SubjectEmailAddressDefault(string accountCode)
         {
             try
             {
@@ -652,7 +652,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Org.proc_DefaultEmailAddress";
+                        _command.CommandText = "Subject.proc_DefaultEmailAddress";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_emailAddress);
@@ -698,7 +698,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Org.proc_BalanceOutstanding";
+                        _command.CommandText = "Subject.proc_BalanceOutstanding";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_balance);
@@ -744,7 +744,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Org.proc_BalanceToPay";
+                        _command.CommandText = "Subject.proc_BalanceToPay";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_balance);
@@ -766,13 +766,13 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Activities
-        public async Task<string> ParentActivity(string activityCode)
+        public async Task<string> ParentObject(string activityCode)
         {
             try
             {
                 var _activityCode = new SqlParameter()
                 {
-                    ParameterName = "@ActivityCode",
+                    ParameterName = "@ObjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 50,
@@ -792,7 +792,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Activity.proc_Parent";
+                        _command.CommandText = "Object.proc_Parent";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_activityCode);
                         _command.Parameters.Add(_parentCode);
@@ -811,13 +811,13 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<short> GetActivityStepNumber(string activityCode)
+        public async Task<short> GetObjectStepNumber(string activityCode)
         {
             try
             {
                 var _activityCode = new SqlParameter()
                 {
-                    ParameterName = "@ActivityCode",
+                    ParameterName = "@ObjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 50,
@@ -836,7 +836,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Activity.proc_NextStepNumber";
+                        _command.CommandText = "Object.proc_NextStepNumber";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_activityCode);
                         _command.Parameters.Add(_stepNumber);
@@ -856,13 +856,13 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<short> GetActivityAtttributeOrder(string activityCode)
+        public async Task<short> GetObjectAtttributeOrder(string activityCode)
         {
             try
             {
                 var _activityCode = new SqlParameter()
                 {
-                    ParameterName = "@ActivityCode",
+                    ParameterName = "@ObjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 50,
@@ -881,7 +881,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Activity.proc_NextAttributeOrder";
+                        _command.CommandText = "Object.proc_NextAttributeOrder";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_activityCode);
                         _command.Parameters.Add(_printOrder);
@@ -901,13 +901,13 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<short> GetActivityOperationNumber(string activityCode)
+        public async Task<short> GetObjectOperationNumber(string activityCode)
         {
             try
             {
                 var _activityCode = new SqlParameter()
                 {
-                    ParameterName = "@ActivityCode",
+                    ParameterName = "@ObjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 50,
@@ -926,7 +926,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Activity.proc_NextOperationNumber";
+                        _command.CommandText = "Object.proc_NextOperationNumber";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_activityCode);
                         _command.Parameters.Add(_operationNumber);
@@ -1710,7 +1710,7 @@ namespace TradeControl.Web.Data
             {
                 var _activityCode = new SqlParameter()
                 {
-                    ParameterName = "@ActivityCode",
+                    ParameterName = "@ObjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 50,

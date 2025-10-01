@@ -28,7 +28,7 @@ namespace TradeControl.Web.Models
         public string Period { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [Required]
         [StringLength(50)]
         public string CashCode { get; set; }

@@ -1,0 +1,46 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Enquiry.IndexModel
+
+@{ ViewData["Title"] = "Organisation Enquiries"; }
+<h1>@ViewData["Title"]</h1>
+
+<form class="form-group" method="get">
+    <p>
+        <select asp-for="SubjectType" asp-items="Model.SubjectTypes">
+            <option value="">All</option>
+        </select>
+        Name: <input type="text" asp-for="SearchString" />
+        <input type="submit" value="Filter" />
+    </p>
+</form>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].AccountName)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_AccountLookup)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AccountName)
+                </td>
+                <td>
+                    <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
+                    <a asp-page="./Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-warning"></a>
+                    <a asp-page="./Payments" asp-route-accountCode="@item.AccountCode" class="btn btn-success"></a>
+                    <a asp-page="./Statement" asp-route-accountCode="@item.AccountCode" class="btn btn-dark"></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

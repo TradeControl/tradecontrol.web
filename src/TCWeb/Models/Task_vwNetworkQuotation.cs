@@ -14,9 +14,9 @@ namespace TradeControl.Web.Models
         public int AllocationId { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [StringLength(100)]
-        public string ActivityDescription { get; set; }
+        public string ObjectDescription { get; set; }
         [Required]
         [StringLength(10)]
         public string AccountCode { get; set; }

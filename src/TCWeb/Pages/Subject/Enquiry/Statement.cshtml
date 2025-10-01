@@ -1,0 +1,63 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Enquiry.StatementModel
+@{ ViewData["Title"] = "Statement"; }
+<h1>@ViewData["Title"]</h1>
+
+<h4>@Html.DisplayFor(model => model.Subject_Account.AccountName)</h4>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info">To List</a>
+</p>
+
+<table class="table  table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Statement[0].TransactedOn)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Statement[0].Reference)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Statement[0].StatementType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Statement[0].Charge)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Statement[0].Balance)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Statement)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TransactedOn)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Reference)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.StatementType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Charge)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Balance)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info">To List</a>
+</p>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

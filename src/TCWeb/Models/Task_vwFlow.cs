@@ -20,7 +20,7 @@ namespace TradeControl.Web.Models
         public string TaskCode { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [StringLength(100)]
         public string TaskTitle { get; set; }
         [StringLength(255)]
