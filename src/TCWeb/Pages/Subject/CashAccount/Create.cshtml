@@ -11,22 +11,22 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
             <div class="form-group">
-                <label asp-for="Subject_CashAccount.AccountCode" class="control-label"></label>
+                <label asp-for="Subject_CashAccount.SubjectCode" class="control-label"></label>
                 <p>
                     <select asp-for="OrganisationName" asp-items="Model.OrganisationNames" class="form-control"></select>
                 </p>
-                <input type="hidden" asp-for="Subject_CashAccount.AccountCode" />
+                <input type="hidden" asp-for="Subject_CashAccount.SubjectCode" />
+                <span asp-validation-for="Subject_CashAccount.SubjectCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Subject_CashAccount.AccountCode" class="control-label"></label>
+                <input asp-for="Subject_CashAccount.AccountCode" class="form-control" />
                 <span asp-validation-for="Subject_CashAccount.AccountCode" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Subject_CashAccount.CashAccountCode" class="control-label"></label>
-                <input asp-for="Subject_CashAccount.CashAccountCode" class="form-control" />
-                <span asp-validation-for="Subject_CashAccount.CashAccountCode" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Subject_CashAccount.CashAccountName" class="control-label"></label>
-                <input asp-for="Subject_CashAccount.CashAccountName" class="form-control" />
-                <span asp-validation-for="Subject_CashAccount.CashAccountName" class="text-danger"></span>
+                <label asp-for="Subject_CashAccount.AccountName" class="control-label"></label>
+                <input asp-for="Subject_CashAccount.AccountName" class="form-control" />
+                <span asp-validation-for="Subject_CashAccount.AccountName" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Subject_CashAccount.AccountTypeCode" class="control-label"></label>

@@ -11,10 +11,10 @@ namespace TradeControl.Web.Data
         public enum OpStatus { Pending, InProgress, Complete }
         public enum SubjectStatus { Pending, Active, Hot, Dead };
         public enum CategoryType { CashCode, CashTotal, Expression };
-        public enum CashMode { Expense, Income, Neutral };
+        public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, Tax, Bank };
         public enum CashStatus { Forecast, Current, Closed, Archived};
-        public enum TaskStatus { Pending, Opened, Closed, Charged, Cancelled, Archived };
+        public enum ProjectStatus { Pending, Opened, Closed, Charged, Cancelled, Archived };
         public enum DocType { Quotation, SalesOrder, Enquiry, PurchaseOrder, SalesInvoice, CreditNote, DebitNote };
         public enum DocClassCode { Product, Money };
         public enum InvoiceType { SalesInvoice, CreditNote, PurchaseInvoice, DebitNote };

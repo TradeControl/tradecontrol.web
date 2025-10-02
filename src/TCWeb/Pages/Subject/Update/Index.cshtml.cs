@@ -34,7 +34,7 @@ namespace TradeControl.Web.Pages.Subject.Update
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public IList<Subject_vwAccountLookupAll> Subject_AccountLookup { get; set; }
+        public IList<Subject_vwSubjectLookupAll> Subject_SubjectLookup { get; set; }
 
         public async Task OnGetAsync(string accountCode, string subjectStatus, string subjectType)
         {
@@ -64,11 +64,11 @@ namespace TradeControl.Web.Pages.Subject.Update
 
                 SubjectStatuses = new SelectList(await subjectStatusQuery.ToListAsync());
 
-                var accounts = from tb in NodeContext.Subject_AccountLookupAll select tb;
+                var accounts = from tb in NodeContext.Subject_SubjectLookupAll select tb;
 
                 if (!string.IsNullOrEmpty(accountCode))
                 {
-                    accounts = accounts.Where(a => a.AccountCode == accountCode);
+                    accounts = accounts.Where(a => a.SubjectCode == accountCode);
                     var subject = await accounts.SingleOrDefaultAsync();
                     subjectType = subject.SubjectType;
                     SubjectStatus = subject.SubjectStatus;
@@ -80,10 +80,10 @@ namespace TradeControl.Web.Pages.Subject.Update
                 }
 
                 if (!string.IsNullOrEmpty(SearchString))
-                    accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
+                    accounts = accounts.Where(a => a.SubjectName.Contains(SearchString));
 
 
-                Subject_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
+                Subject_SubjectLookup = await accounts.OrderBy(a => a.SubjectName).ToListAsync();
             }
             catch (Exception e)
             {

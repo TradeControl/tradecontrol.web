@@ -10,7 +10,7 @@ namespace TradeControl.Web.Models
     public class Subject_vwEmailAddress
     {
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Display(Name = "Contact")]
         public string ContactName { get; set; }
         [Display(Name = "Email")]

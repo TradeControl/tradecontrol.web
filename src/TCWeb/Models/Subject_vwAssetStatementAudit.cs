@@ -22,10 +22,10 @@ namespace TradeControl.Web.Models
         public DateTime StartOn { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         public int RowNumber { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime TransactedOn { get; set; }

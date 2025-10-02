@@ -9,14 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbMirror", Schema = "Invoice")]
-    [Index(nameof(AccountCode), nameof(InvoiceNumber), Name = "IX_Invoice_tbMirror_InvoiceNumber", IsUnique = true)]
+    [Index(nameof(SubjectCode), nameof(InvoiceNumber), Name = "IX_Invoice_tbMirror_InvoiceNumber", IsUnique = true)]
     public partial class Invoice_tbMirror
     {
         public Invoice_tbMirror()
         {
             TbMirrorEvents = new HashSet<Invoice_tbMirrorEvent>();
             TbMirrorItems = new HashSet<Invoice_tbMirrorItem>();
-            TbMirrorTasks = new HashSet<Invoice_tbMirrorTask>();
+            TbMirrorProjects = new HashSet<Invoice_tbMirrorProject>();
         }
 
         [Key]
@@ -24,7 +24,7 @@ namespace TradeControl.Web.Models
         public string ContractAddress { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(50)]
         public string InvoiceNumber { get; set; }
@@ -53,9 +53,9 @@ namespace TradeControl.Web.Models
         [StringLength(42)]
         public string PaymentAddress { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbInvoiceMirror))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(InvoiceStatusCode))]
         [InverseProperty(nameof(Invoice_tbStatus.TbMirror))]
         public virtual Invoice_tbStatus InvoiceStatusCodeNavigation { get; set; }
@@ -68,7 +68,7 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Invoice_tbMirrorEvent> TbMirrorEvents { get; set; }
         [InverseProperty(nameof(Invoice_tbMirrorItem.ContractAddressNavigation))]
         public virtual ICollection<Invoice_tbMirrorItem> TbMirrorItems { get; set; }
-        [InverseProperty(nameof(Invoice_tbMirrorTask.ContractAddressNavigation))]
-        public virtual ICollection<Invoice_tbMirrorTask> TbMirrorTasks { get; set; }
+        [InverseProperty(nameof(Invoice_tbMirrorProject.ContractAddressNavigation))]
+        public virtual ICollection<Invoice_tbMirrorProject> TbMirrorProjects { get; set; }
     }
 }

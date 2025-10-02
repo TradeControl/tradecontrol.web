@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime StartOn { get; set; }
         [Column(TypeName = "decimal(38, 5)")]

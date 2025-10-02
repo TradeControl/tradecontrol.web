@@ -8,25 +8,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    [Table("vwAccountLookup", Schema = "Subject")]
-    public partial class Subject_vwAccountLookup
+    [Table("vwSubjectLookup", Schema = "Subject")]
+    public partial class Subject_vwSubjectLookup
     {
         [Key]
         [Required]
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
         [Display(Name = "Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Type")]
         public string SubjectType { get; set; }
         [StringLength(10)]
         [Display(Name = "Cash Mode")]
-        public string CashMode { get; set; }
-        public short CashModeCode { get; set; }
+        public string CashPolarity { get; set; }
+        public short CashPolarityCode { get; set; }
     }
 }

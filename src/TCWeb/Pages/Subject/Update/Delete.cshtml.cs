@@ -28,7 +28,7 @@ namespace TradeControl.Web.Pages.Subject.Update
             if (accountCode == null)
                 return NotFound();
 
-            OrgAccount = await NodeContext.Subject_Datasheet.FirstOrDefaultAsync(m => m.AccountCode == accountCode);
+            OrgAccount = await NodeContext.Subject_Datasheet.FirstOrDefaultAsync(m => m.SubjectCode == accountCode);
 
             if (OrgAccount == null)
                 return NotFound();

@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         [Key]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Key]
         [StringLength(255)]
         public string DocumentName { get; set; }
@@ -34,8 +34,8 @@ namespace TradeControl.Web.Models
         [Required]
         public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbDocs))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
     }
 }

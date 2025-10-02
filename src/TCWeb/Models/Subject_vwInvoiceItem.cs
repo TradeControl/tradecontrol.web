@@ -14,7 +14,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display (Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(20)]
         [Display(Name = "Invoice No.")]
@@ -39,7 +39,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Display(Name = "Status Code")]
         public short InvoiceStatusCode { get; set; }
         [Required]

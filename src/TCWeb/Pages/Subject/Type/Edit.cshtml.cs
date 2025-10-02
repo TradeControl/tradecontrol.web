@@ -25,8 +25,8 @@ namespace TradeControl.Web.Pages.Subject.Type
         public Subject_tbType Subject_tbType { get; set; }
 
         [BindProperty]
-        public string CashMode { get; set; }
-        public SelectList CashModes { get; set; }
+        public string CashPolarity { get; set; }
+        public SelectList CashPolaritys { get; set; }
 
         public async Task<IActionResult> OnGetAsync(short? SubjectTypeCode)
         {
@@ -40,11 +40,11 @@ namespace TradeControl.Web.Pages.Subject.Type
                 if (Subject_tbType == null)
                     return NotFound();
 
-                var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
-                CashModes = new SelectList(await modes.ToListAsync());
-                CashMode = await NodeContext.Cash_tbModes
-                                            .Where(t => t.CashModeCode == Subject_tbType.CashModeCode)
-                                            .Select(t => t.CashMode).FirstAsync();
+                var modes = NodeContext.Cash_tbPolaritys.OrderBy(m => m.CashPolarityCode).Select(m => m.CashPolarity);
+                CashPolaritys = new SelectList(await modes.ToListAsync());
+                CashPolarity = await NodeContext.Cash_tbPolaritys
+                                            .Where(t => t.CashPolarityCode == Subject_tbType.CashPolarityCode)
+                                            .Select(t => t.CashPolarity).FirstAsync();
 
                 await SetViewData();
                 return Page();
@@ -64,7 +64,7 @@ namespace TradeControl.Web.Pages.Subject.Type
                     return Page();
 
                 var orgType = await NodeContext.Subject_tbTypes.SingleOrDefaultAsync(t => t.SubjectTypeCode == Subject_tbType.SubjectTypeCode);
-                orgType.CashModeCode = await NodeContext.Cash_tbModes.Where(t => t.CashMode == CashMode).Select(t => t.CashModeCode).SingleAsync();
+                orgType.CashPolarityCode = await NodeContext.Cash_tbPolaritys.Where(t => t.CashPolarity == CashPolarity).Select(t => t.CashPolarityCode).SingleAsync();
                 orgType.SubjectType = Subject_tbType.SubjectType;
 
                 NodeContext.Attach(orgType).State = EntityState.Modified;

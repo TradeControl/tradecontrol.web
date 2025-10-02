@@ -24,12 +24,12 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         [Display(Name = "Type")]
         public string InvoiceType { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         public int NextNumber { get; set; }
 
-        [ForeignKey(nameof(CashModeCode))]
-        [InverseProperty(nameof(Cash_tbMode.TbInvoiceType))]
-        public virtual Cash_tbMode CashModeCodeNavigation { get; set; }
+        [ForeignKey(nameof(CashPolarityCode))]
+        [InverseProperty(nameof(Cash_tbPolarity.TbInvoiceType))]
+        public virtual Cash_tbPolarity CashPolarityCodeNavigation { get; set; }
         [InverseProperty(nameof(Invoice_tbEntry.InvoiceTypeCodeNavigation))]
         public virtual ICollection<Invoice_tbEntry> TbEntries { get; set; }
         [InverseProperty(nameof(Invoice_tbInvoice.InvoiceTypeCodeNavigation))]

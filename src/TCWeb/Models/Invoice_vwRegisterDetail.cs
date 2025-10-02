@@ -20,7 +20,7 @@ namespace TradeControl.Web.Models
         public string InvoiceNumber { get; set; }
         [StringLength(50)]
         [Display(Name = "Item Code")]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Cash Code")]
         public string CashCode { get; set; }
@@ -35,7 +35,7 @@ namespace TradeControl.Web.Models
         public string TaxDescription { get; set; }
         [StringLength(10)]
         [Display(Name = "A/c")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Display(Name = "Type Code")]
         public short InvoiceTypeCode { get; set; }
         [Display(Name = "Status Code")]
@@ -59,7 +59,7 @@ namespace TradeControl.Web.Models
         public bool Printed { get; set; }
         [StringLength(255)]
         [Display(Name = "Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         [Display(Name = "Owner")]
         public string UserName { get; set; }
@@ -70,7 +70,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Status")]
         public string InvoiceStatus { get; set; }
         [Display(Name = "Mode Code")]
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [StringLength(20)]
         [Display(Name = "Type")]
         public string InvoiceType { get; set; }
@@ -85,8 +85,8 @@ namespace TradeControl.Web.Models
         [DataType(DataType.Currency)]
         [Display(Name = "Total Charge")]
         public double TotalValue { get; set; }
-        [Display(Name = "Is Task?")]
-        public bool IsTask { get; set; }
+        [Display(Name = "Is Project?")]
+        public bool IsProject { get; set; }
         [Display(Name = "Ref.")]
         public string ItemReference { get; set; }
     }

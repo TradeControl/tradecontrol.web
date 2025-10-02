@@ -17,10 +17,10 @@ namespace TradeControl.Web.Models
         public string Bank { get; set; }
         [Required]
         [StringLength(10)]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         [Required]
         [StringLength(50)]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
         [StringLength(10)]
         public string SortCode { get; set; }
         [StringLength(20)]
@@ -36,7 +36,7 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "datetime")]
         public DateTime PaidOn { get; set; }
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         public string PaymentReference { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
@@ -54,7 +54,7 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string UserName { get; set; }
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(10)]
         public string TaxCode { get; set; }
     }

@@ -39,7 +39,7 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "ntext")]
         public string Note { get; set; }
         [StringLength(10)]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
         [Column(TypeName = "decimal(18, 4)")]
         public decimal TaxRate { get; set; }
     }

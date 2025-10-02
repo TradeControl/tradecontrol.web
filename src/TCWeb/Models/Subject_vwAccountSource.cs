@@ -9,9 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Subject_vwAccountSource
+    public partial class Subject_vwSubjectSource
     {
         [StringLength(100)]
-        public string AccountSource { get; set; }
+        public string SubjectSource { get; set; }
     }
 }

@@ -2,11 +2,11 @@
 @model TradeControl.Web.Pages.Subject.Address.IndexModel
 @{ ViewData["Title"] = "Addresses"; }
 <h1>@ViewData["Title"]</h1>
-<h4>@Html.DisplayFor(model => model.Subject_Account.AccountName)</h4>
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
 <hr />
 <p>
-    <a asp-page="Create" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-outline-primary">New Address</a>
-    <a asp-page="../Update/Edit" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info">To Edit</a>
+    <a asp-page="Create" asp-route-accountCode="@Model.Subject_Account.SubjectCode" class="btn btn-outline-primary">New Address</a>
+    <a asp-page="../Update/Edit" asp-route-accountCode="@Model.Subject_Account.SubjectCode" class="btn btn-info">To Edit</a>
 </p>
 
 <table class="table  table-striped">

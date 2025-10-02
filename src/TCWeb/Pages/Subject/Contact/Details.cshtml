@@ -62,10 +62,10 @@
             @Html.DisplayFor(model => model.Contact.Information)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Contact.AccountName)
+            @Html.DisplayNameFor(model => model.Contact.SubjectName)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Contact.AccountName)
+            @Html.DisplayFor(model => model.Contact.SubjectName)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Contact.SubjectStatus)
@@ -96,5 +96,5 @@
 </div>
 
 <p>
-    <a asp-page="./Index" asp-route-accountcode=@Model.Contact.AccountCode class="btn btn-info">To Listing</a>
+    <a asp-page="./Index" asp-route-accountcode=@Model.Contact.SubjectCode class="btn btn-info">To Listing</a>
 </p>

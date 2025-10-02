@@ -22,7 +22,7 @@
                 @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].InvoiceType)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].AccountName)
+                @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].ExpectedOn)
@@ -48,8 +48,8 @@
                     @Html.DisplayFor(modelItem => item.InvoiceType)
                 </td>
                 <td>
-                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
                 <td>
@@ -64,7 +64,7 @@
                 <td>
                     <a asp-page="./UnpaidDetail" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-info"></a>
                     <a asp-page="/Invoice/Update/Index" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
-                    <a asp-page="/Cash/PaymentEntry/Create" asp-route-accountCode="@item.AccountCode" asp-route-mode="0" asp-route-returnUrl="/Invoice/Register/Unpaid" class="btn btn-outline-primary"></a>                    
+                    <a asp-page="/Cash/PaymentEntry/Create" asp-route-accountCode="@item.SubjectCode" asp-route-mode="0" asp-route-returnUrl="/Invoice/Register/Unpaid" class="btn btn-outline-primary"></a>                    
                 </td>
             </tr>
         }

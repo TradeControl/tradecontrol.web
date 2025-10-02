@@ -9,19 +9,19 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class App_vwWarehouseTask
+    public partial class App_vwWarehouseProject
     {
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [Required]
         [StringLength(255)]
         public string DocumentName { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
+        public string ProjectTitle { get; set; }
         [Required]
         [Column(TypeName = "image")]
         public byte[] DocumentImage { get; set; }

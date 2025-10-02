@@ -18,11 +18,11 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "A/C")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
         [Display(Name = "Subject")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Type")]
@@ -30,8 +30,8 @@ namespace TradeControl.Web.Models
         [StringLength(255)]
         [Display(Name = "Status")]
         public string SubjectStatus { get; set; }
-        [Display(Name = "Live Tasks")]
-        public int Tasks { get; set; }
+        [Display(Name = "Live Projets")]
+        public int Projects { get; set; }
         [StringLength(50)]
         [Display(Name = "Direct Line")]
         [DataType(DataType.PhoneNumber)]

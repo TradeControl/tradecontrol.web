@@ -37,7 +37,7 @@ namespace TradeControl.Web.Pages.Subject
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public IList<Subject_vwAccountLookup> Subject_AccountLookup { get; set; }
+        public IList<Subject_vwSubjectLookup> Subject_SubjectLookup { get; set; }
 
         public async Task OnGetAsync(string returnUrl)
         {
@@ -54,16 +54,16 @@ namespace TradeControl.Web.Pages.Subject
 
                 SubjectTypes = new SelectList(await orgTypes.ToListAsync());
 
-                var accounts = from tb in NodeContext.Subject_AccountLookup
+                var accounts = from tb in NodeContext.Subject_SubjectLookup
                                select tb;
 
                 if (!string.IsNullOrEmpty(SubjectType))
                     accounts = accounts.Where(a => a.SubjectType == SubjectType);
 
                 if (!string.IsNullOrEmpty(SearchString))
-                    accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
+                    accounts = accounts.Where(a => a.SubjectName.Contains(SearchString));
 
-                Subject_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
+                Subject_SubjectLookup = await accounts.OrderBy(a => a.SubjectName).ToListAsync();
             }
             catch (Exception e)
             {

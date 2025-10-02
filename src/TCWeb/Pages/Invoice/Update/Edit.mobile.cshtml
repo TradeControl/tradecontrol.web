@@ -4,7 +4,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <div>
-    <h4>@Html.DisplayFor(model => model.Invoice_Header.AccountName)</h4>
+    <h4>@Html.DisplayFor(model => model.Invoice_Header.SubjectName)</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
@@ -100,7 +100,7 @@
             <input type="hidden" asp-for="Invoice_tbInvoice.InvoiceNumber" />
             <input type="hidden" asp-for="Invoice_tbInvoice.InvoiceTypeCode" />
             <input type="hidden" asp-for="Invoice_tbInvoice.InvoiceStatusCode" />
-            <input type="hidden" asp-for="Invoice_tbInvoice.AccountCode" />
+            <input type="hidden" asp-for="Invoice_tbInvoice.SubjectCode" />
             <input type="hidden" asp-for="Invoice_tbInvoice.Spooled" />
             <input type="hidden" asp-for="Invoice_tbInvoice.PaidValue" />
             <input type="hidden" asp-for="Invoice_tbInvoice.PaidTaxValue" />
@@ -141,7 +141,7 @@
                 </td>
                 <td>
                     @{
-                        if (!item.IsTask)
+                        if (!item.IsProject)
                         {
                             <a asp-page="./EditItem" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-cashCode="@item.CashCode" class="btn btn-secondary"></a>
                             <a asp-page="./DeleteItem" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-cashCode="@item.CashCode" class="btn btn-danger"></a>

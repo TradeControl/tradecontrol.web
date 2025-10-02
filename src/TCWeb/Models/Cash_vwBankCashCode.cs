@@ -20,6 +20,6 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         public string TaxCode { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
     }
 }

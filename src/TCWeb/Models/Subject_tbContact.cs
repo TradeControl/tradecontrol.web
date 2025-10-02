@@ -14,7 +14,7 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Key]
         [StringLength(100)]
         [Display (Name = "Contact Name")]
@@ -81,8 +81,8 @@ namespace TradeControl.Web.Models
         public DateTime UpdatedOn { get; set; }
 
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbContacts))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
     }
 }

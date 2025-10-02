@@ -9,7 +9,7 @@ namespace TradeControl.Web.Data
     {
         readonly NodeContext _context;
 
-        public string AccountCode { get; } = string.Empty;
+        public string SubjectCode { get; } = string.Empty;
 
         public Subjects(NodeContext context)
         {
@@ -19,7 +19,7 @@ namespace TradeControl.Web.Data
         public Subjects(NodeContext context, string accountCode)
         {
             _context = context;
-            AccountCode = accountCode;
+            SubjectCode = accountCode;
         }
 
         #region properties
@@ -27,7 +27,7 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                return await _context.Subject_tbSubjects.Where(o => o.AccountCode == AccountCode).Select(o => o.AddressCode).FirstOrDefaultAsync();
+                return await _context.Subject_tbSubjects.Where(o => o.SubjectCode == SubjectCode).Select(o => o.AddressCode).FirstOrDefaultAsync();
             }
             catch (Exception e)
             {
@@ -36,9 +36,9 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<decimal> BalanceOutstanding() => await _context.BalanceOutstanding(AccountCode);
+        public async Task<decimal> BalanceOutstanding() => await _context.BalanceOutstanding(SubjectCode);
 
-        public async Task<decimal> BalanceToPay() =>await _context.BalanceToPay(AccountCode);
+        public async Task<decimal> BalanceToPay() =>await _context.BalanceToPay(SubjectCode);
         #endregion
 
         #region methods
@@ -46,7 +46,7 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Subject.proc_Rebuild @p0", parameters: new[] { AccountCode });
+                int result = await _context.Database.ExecuteSqlRawAsync("Subject.proc_Rebuild @p0", parameters: new[] { SubjectCode });
                 return result != 0;
             }
             catch (Exception e)
@@ -60,7 +60,7 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                await _context.Database.ExecuteSqlRawAsync("Subject.proc_AddContact @p0, @p1", parameters: new[] { AccountCode, contactName });
+                await _context.Database.ExecuteSqlRawAsync("Subject.proc_AddContact @p0, @p1", parameters: new[] { SubjectCode, contactName });
             }
             catch (Exception e)
             {
@@ -72,7 +72,7 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                await _context.Database.ExecuteSqlRawAsync("Subject.proc_AddAddress @p0, @p1", parameters: new[] { AccountCode, address });
+                await _context.Database.ExecuteSqlRawAsync("Subject.proc_AddAddress @p0, @p1", parameters: new[] { SubjectCode, address });
             }
             catch (Exception e)
             {
@@ -80,13 +80,13 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> NextAddressCode() => await _context.NextAddressCode(AccountCode);
+        public async Task<string> NextAddressCode() => await _context.NextAddressCode(SubjectCode);
 
-        public async Task<string> DefaultAccountCode(string accountName) => await _context.SubjectAccountCodeDefault(accountName);
+        public async Task<string> DefaultSubjectCode(string accountName) => await _context.SubjectSubjectCodeDefault(accountName);
 
-        public async Task<string> DefaultTaxCode() => await _context.SubjectTaxCodeDefault(AccountCode);
+        public async Task<string> DefaultTaxCode() => await _context.SubjectTaxCodeDefault(SubjectCode);
 
-        public async Task<string> DefaultEmailAddress() => await _context.SubjectEmailAddressDefault(AccountCode);
+        public async Task<string> DefaultEmailAddress() => await _context.SubjectEmailAddressDefault(SubjectCode);
 
         #endregion
 

@@ -33,8 +33,8 @@ namespace TradeControl.Web.Models
         [DataType(DataType.Currency)]
         [Column(TypeName = "decimal(18, 5)")]
         public decimal TotalValue { get; set; }
-        [Display(Name = "Is Task?")]
-        public bool IsTask { get; set; }
+        [Display(Name = "Is Project?")]
+        public bool IsProject { get; set; }
         [Column(TypeName = "datetime")]
         [DataType(DataType.Date)]
         [Display(Name = "Actioned")]

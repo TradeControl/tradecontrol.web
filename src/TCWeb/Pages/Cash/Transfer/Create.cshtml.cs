@@ -32,7 +32,7 @@ namespace TradeControl.Web.Pages.Cash.Transfer
         public SelectList CashCodes { get; set; }
 
         [BindProperty]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
 
         [BindProperty]
         public string CashDescription { get; set; }
@@ -43,13 +43,13 @@ namespace TradeControl.Web.Pages.Cash.Transfer
             {
                 var cashAccountList = from tb in NodeContext.Subject_tbAccounts
                                       where !tb.AccountClosed && tb.AccountTypeCode == (short)NodeEnum.CashAccountType.Cash && tb.CoinTypeCode == (short)NodeEnum.CoinType.Fiat
-                                      select tb.CashAccountName;
+                                      select tb.AccountName;
 
                 CashAccounts = new SelectList(await cashAccountList.ToListAsync());
 
                 CashAccounts cashAccounts = new(NodeContext);
-                string cashAccountCode = await cashAccounts.CurrentAccount();
-                CashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                string cashSubjectCode = await cashAccounts.CurrentAccount();
+                AccountName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
 
                 var cashCodeList = from tb in NodeContext.Cash_TransferCodeLookup
                                    orderby tb.CashCode
@@ -64,11 +64,11 @@ namespace TradeControl.Web.Pages.Cash.Transfer
 
                 Cash_TransfersUnposted = new Cash_vwTransfersUnposted
                 {
-                    CashAccountCode = cashAccountCode,
+                    AccountCode = cashSubjectCode,
                     CashCode = cashCodes.CashCode,
                     TaxCode = cashCodes.TaxCode,
                     PaymentCode = await cashAccounts.NextPaymentCode(),
-                    AccountCode = await profile.CompanyAccountCode(),
+                    SubjectCode = await profile.CompanySubjectCode(),
                     PaidOn = DateTime.Today,
                     UserId = await profile.UserId(UserManager.GetUserId(User)),
                     InsertedBy = await profile.UserName(UserManager.GetUserId(User))
@@ -91,7 +91,7 @@ namespace TradeControl.Web.Pages.Cash.Transfer
         {
             try
             {
-                Cash_TransfersUnposted.CashAccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                Cash_TransfersUnposted.AccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.AccountName == AccountName).Select(t => t.AccountCode).FirstOrDefaultAsync();
                 Cash_TransfersUnposted.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstOrDefaultAsync();
 
                 CashCodes cashCode = new(NodeContext, Cash_TransfersUnposted.CashCode);

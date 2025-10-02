@@ -29,12 +29,12 @@ namespace TradeControl.Web.Pages.Subject.Address
             if (string.IsNullOrEmpty(accountCode))
                 return NotFound();
 
-            Subject_Account = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+            Subject_Account = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
             if (Subject_Account == null)
                 return NotFound();
 
-            Subject_AddressList = await NodeContext.Subject_AddressList.Where(t => t.AccountCode == accountCode).ToListAsync();
+            Subject_AddressList = await NodeContext.Subject_AddressList.Where(t => t.SubjectCode == accountCode).ToListAsync();
 
             await SetViewData();
             return Page();

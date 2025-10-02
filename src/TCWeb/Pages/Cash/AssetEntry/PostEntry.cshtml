@@ -15,16 +15,16 @@
             @Html.DisplayFor(model => model.Cash_PaymentsUnposted.UserId)
         </dd>
         <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.SubjectCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.SubjectCode)
+        </dd>
+        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.AccountCode)
         </dt>
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountCode)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashCode)
@@ -78,7 +78,7 @@
 
     <form method="post">
         <input type="submit" value="Post" class="btn btn-warning" />
-        <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">To List</a>
+        <a asp-page="./Index" asp-route-cashSubjectCode="@Model.Cash_PaymentsUnposted.AccountCode" class="btn btn-info">To List</a>
     </form>
 </div>
 

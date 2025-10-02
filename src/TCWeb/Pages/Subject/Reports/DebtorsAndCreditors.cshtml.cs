@@ -64,7 +64,7 @@ namespace TradeControl.Web.Pages.Subject.Reports
 
                 var audit = from tb in NodeContext.Subject_BalanceSheetAudits
                             where tb.StartOn == startOn
-                            orderby tb.AssetTypeCode, tb.AccountName
+                            orderby tb.AssetTypeCode, tb.SubjectName
                             select tb;
 
                 if (!string.IsNullOrEmpty(assetType))

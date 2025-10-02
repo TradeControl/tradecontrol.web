@@ -14,18 +14,18 @@ namespace TradeControl.Web.Models
         public int CandidateId { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         public string AllocationCode { get; set; }
         [StringLength(256)]
         public string AllocationDescription { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [StringLength(10)]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
         [Column(TypeName = "decimal(18, 7)")]
         public decimal UnitCharge { get; set; }
         [StringLength(15)]

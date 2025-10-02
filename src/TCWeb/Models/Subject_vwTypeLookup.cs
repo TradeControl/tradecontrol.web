@@ -19,6 +19,6 @@ namespace TradeControl.Web.Models
         public string SubjectType { get; set; }
         [StringLength(10)]
         [Display(Name = "Mode")]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
     }
 }

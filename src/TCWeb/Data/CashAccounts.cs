@@ -13,7 +13,7 @@ namespace TradeControl.Web.Data
     {
         readonly NodeContext _context;
 
-        public string CashAccountCode { get; } = string.Empty;
+        public string AccountCode { get; } = string.Empty;
 
 
         public CashAccounts(NodeContext context) 
@@ -24,7 +24,7 @@ namespace TradeControl.Web.Data
         public CashAccounts(NodeContext context, string cashAccount)
         {
             _context = context;
-            CashAccountCode = cashAccount;
+            AccountCode = cashAccount;
         }
 
 
@@ -96,7 +96,7 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Cash.proc_PaymentMove @p0, @p1", parameters: new[] { paymentCode, CashAccountCode });
+                int result = await _context.Database.ExecuteSqlRawAsync("Cash.proc_PaymentMove @p0, @p1", parameters: new[] { paymentCode, AccountCode });
 
                 return result != 0;
             }
@@ -126,7 +126,7 @@ namespace TradeControl.Web.Data
 
         public async Task<string> NextPaymentCode() => await _context.NextPaymentCode();
 
-        public async Task<string> AddPayment(string accountCode, string cashCode, DateTime paidOn, decimal toPay) => await _context.AddPayment(CashAccountCode, accountCode, cashCode, paidOn, toPay);
+        public async Task<string> AddPayment(string accountCode, string cashCode, DateTime paidOn, decimal toPay) => await _context.AddPayment(AccountCode, accountCode, cashCode, paidOn, toPay);
 
 
         public async Task<string> CurrentAccount() => await _context.CurrentAccount();

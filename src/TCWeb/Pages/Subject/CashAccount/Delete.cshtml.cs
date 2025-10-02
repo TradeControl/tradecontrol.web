@@ -45,12 +45,12 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
 
         public DeleteModel(NodeContext context) : base(context) { }
 
-        public async Task<IActionResult> OnGetAsync(string cashAccountCode)
+        public async Task<IActionResult> OnGetAsync(string cashSubjectCode)
         {
-            if (cashAccountCode == null)
+            if (cashSubjectCode == null)
                 return NotFound();
 
-            Subject_CashAccount = await NodeContext.Subject_CashAccounts.FirstOrDefaultAsync(m => m.CashAccountCode == cashAccountCode);
+            Subject_CashAccount = await NodeContext.Subject_CashAccounts.FirstOrDefaultAsync(m => m.AccountCode == cashSubjectCode);
             
             if (Subject_CashAccount == null)
                 return NotFound();
@@ -63,14 +63,14 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
             }
         }
 
-        public async Task<IActionResult> OnPostAsync(string cashAccountCode)
+        public async Task<IActionResult> OnPostAsync(string cashSubjectCode)
         {
             try
             {
-                if (cashAccountCode == null)
+                if (cashSubjectCode == null)
                     return NotFound();
 
-                var cashAccount = await NodeContext.Subject_tbAccounts.FindAsync(cashAccountCode);
+                var cashAccount = await NodeContext.Subject_tbAccounts.FindAsync(cashSubjectCode);
 
                 if (cashAccount != null)
                 {

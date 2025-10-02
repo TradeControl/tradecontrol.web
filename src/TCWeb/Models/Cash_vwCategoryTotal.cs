@@ -18,7 +18,7 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string Category { get; set; }
         public short CategoryTypeCode { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         public short CashTypeCode { get; set; }
         public short DisplayOrder { get; set; }
         public short IsEnabled { get; set; }

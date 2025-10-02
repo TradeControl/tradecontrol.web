@@ -32,10 +32,10 @@
             @Html.DisplayFor(model => model.Contact.Department)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Contact.AccountName)
+            @Html.DisplayNameFor(model => model.Contact.SubjectName)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Contact.AccountName)
+            @Html.DisplayFor(model => model.Contact.SubjectName)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Contact.InsertedBy)
@@ -54,9 +54,9 @@
 </div>
 
 <form method="post">
-    <input type="hidden" asp-for="Contact.AccountCode" />
+    <input type="hidden" asp-for="Contact.SubjectCode" />
     <input type="hidden" asp-for="Contact.ContactName" />
     <input type="submit" value="DELETE" class="btn btn-danger" />
-    <a asp-page="./Index" asp-route-accountCode="@Model.Contact.AccountCode" class="btn btn-info">To Listing</a>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Contact.SubjectCode" class="btn btn-info">To Listing</a>
 </form>
 

@@ -32,14 +32,14 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
             if (accountCode == null)
                 return NotFound();
 
-            Subject_Account = await NodeContext.Subject_Datasheet.FirstOrDefaultAsync(m => m.AccountCode == accountCode);
+            Subject_Account = await NodeContext.Subject_Datasheet.FirstOrDefaultAsync(m => m.SubjectCode == accountCode);
 
             if (Subject_Account == null)
                 return NotFound();
             else
             {
-                Subject_Contacts = await NodeContext.Subject_tbContacts.Where(t => t.AccountCode == accountCode).OrderBy(t => t.ContactName).ToListAsync();
-                Subject_Addresses = await NodeContext.Subject_tbAddresses.Where(t => t.AccountCode == accountCode && t.AddressCode != Subject_Account.AddressCode).ToListAsync();
+                Subject_Contacts = await NodeContext.Subject_tbContacts.Where(t => t.SubjectCode == accountCode).OrderBy(t => t.ContactName).ToListAsync();
+                Subject_Addresses = await NodeContext.Subject_tbAddresses.Where(t => t.SubjectCode == accountCode && t.AddressCode != Subject_Account.AddressCode).ToListAsync();
 
                 await SetViewData();
                 return Page();

@@ -11,13 +11,13 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].CashAccountCode)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].AccountCode)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].SubjectCode)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaymentReference)
@@ -42,13 +42,13 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashAccountCode)
+                    @Html.DisplayFor(modelItem => item.AccountCode)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountCode)
+                    @Html.DisplayFor(modelItem => item.SubjectCode)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.PaymentReference)

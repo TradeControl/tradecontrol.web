@@ -26,7 +26,7 @@ namespace TradeControl.Web.Pages.Subject.Contact
         public Subject_tbContact Subject_tbContact { get; set; }
 
         [BindProperty]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
 
         UserManager<TradeControlWebUser> UserManager { get; }
 
@@ -42,14 +42,14 @@ namespace TradeControl.Web.Pages.Subject.Contact
                 if (accountCode == null || contactName == null)
                     return NotFound();
 
-                var subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                var subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
                 if (subject == null)
                     return NotFound();
                 else
-                    AccountName = subject.AccountName;
+                    SubjectName = subject.SubjectName;
 
-                Subject_tbContact = await NodeContext.Subject_tbContacts.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.ContactName == contactName);
+                Subject_tbContact = await NodeContext.Subject_tbContacts.FirstOrDefaultAsync(m => m.SubjectCode == accountCode && m.ContactName == contactName);
 
                 if (Subject_tbContact == null)
                     return NotFound();
@@ -84,7 +84,7 @@ namespace TradeControl.Web.Pages.Subject.Contact
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await NodeContext.Subject_tbContacts.AnyAsync(e => e.AccountCode == Subject_tbContact.AccountCode && e.ContactName == Subject_tbContact.ContactName))
+                    if (!await NodeContext.Subject_tbContacts.AnyAsync(e => e.SubjectCode == Subject_tbContact.SubjectCode && e.ContactName == Subject_tbContact.ContactName))
                         return NotFound();
                     else
                         throw;
@@ -92,7 +92,7 @@ namespace TradeControl.Web.Pages.Subject.Contact
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("accountCode", Subject_tbContact.AccountCode);
+                route.Add("accountCode", Subject_tbContact.SubjectCode);
 
                 return RedirectToPage("./Index", route);
             }

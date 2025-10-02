@@ -4,13 +4,13 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-cashAccountName="@Model.CashAccountName" class="btn btn-outline-primary w-25">Pay Assets In/Out</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-cashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-outline-info w-25">Statement</a>
+    <a asp-page="Create" asp-route-cashSubjectName="@Model.AccountName" class="btn btn-outline-primary w-25">Pay Assets In/Out</a>
+    <a asp-page="/Cash/Statement/Index" asp-route-cashSubjectName="@Model.AccountName" asp-route-mode="1" class="btn btn-outline-info w-25">Statement</a>
 </p>
 
 <form class="form-group">
     <p>
-        <select asp-for="CashAccountName" asp-items="Model.CashAccounts">
+        <select asp-for="AccountName" asp-items="Model.CashAccounts">
         </select>
         <input type="submit" value="Filter" />
     </p>

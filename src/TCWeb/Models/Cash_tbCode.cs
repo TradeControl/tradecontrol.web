@@ -25,8 +25,8 @@ namespace TradeControl.Web.Models
             TbOptions = new HashSet<App_tbOption>();
             TbPayments = new HashSet<Cash_tbPayment>();
             TbPeriods = new HashSet<App_tbPeriod>();
-            TbTasks = new HashSet<Task_tbTask>();
-            TbInvoiceTasks = new HashSet<Invoice_tbTask>();
+            TbProjects = new HashSet<Project_tbProject>();
+            TbInvoiceProjects = new HashSet<Invoice_tbProject>();
             TbTaxTypes = new HashSet<Cash_tbTaxType>();
         }
 
@@ -82,10 +82,10 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
         [InverseProperty(nameof(App_tbPeriod.CashCodeNavigation))]
         public virtual ICollection<App_tbPeriod> TbPeriods { get; set; }
-        [InverseProperty(nameof(Task_tbTask.CashCodeNavigation))]
-        public virtual ICollection<Task_tbTask> TbTasks { get; set; }
-        [InverseProperty(nameof(Invoice_tbTask.CashCodeNavigation))]
-        public virtual ICollection<Invoice_tbTask> TbInvoiceTasks { get; set; }
+        [InverseProperty(nameof(Project_tbProject.CashCodeNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjects { get; set; }
+        [InverseProperty(nameof(Invoice_tbProject.CashCodeNavigation))]
+        public virtual ICollection<Invoice_tbProject> TbInvoiceProjects { get; set; }
         [InverseProperty(nameof(Cash_tbTaxType.CashCodeNavigation))]
         public virtual ICollection<Cash_tbTaxType> TbTaxTypes { get; set; }
     }

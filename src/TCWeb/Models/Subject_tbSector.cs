@@ -13,15 +13,15 @@ namespace TradeControl.Web.Models
     {
         [Key]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Key]
         [StringLength(50)]
         public string IndustrySector { get; set; }
         [Required]
         public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbSectors))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
     }
 }

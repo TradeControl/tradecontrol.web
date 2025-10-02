@@ -19,7 +19,7 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Invoice_Entries[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Invoice_Entries[0].SubjectCode)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Entries[0].InvoiceType)
@@ -38,8 +38,8 @@
         {
             <tr>
                 <td>
-                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountCode)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectCode)
                     </a>
                 </td>
                 <td>
@@ -52,10 +52,10 @@
                     @Html.DisplayFor(modelItem => item.ItemReference)
                 </td>
                 <td>
-                    <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-info"></a>
-                    <a asp-page="./Edit" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Post" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-warning"></a>
-                    <a asp-page="./Delete" asp-route-accountCode="@item.AccountCode" asp-route-cashCode="@item.CashCode" class="btn btn-danger"></a>
+                    <a asp-page="./Details" asp-route-accountCode="@item.SubjectCode" asp-route-cashCode="@item.CashCode" class="btn btn-info"></a>
+                    <a asp-page="./Edit" asp-route-accountCode="@item.SubjectCode" asp-route-cashCode="@item.CashCode" class="btn btn-secondary"></a>
+                    <a asp-page="./Post" asp-route-accountCode="@item.SubjectCode" asp-route-cashCode="@item.CashCode" class="btn btn-warning"></a>
+                    <a asp-page="./Delete" asp-route-accountCode="@item.SubjectCode" asp-route-cashCode="@item.CashCode" class="btn btn-danger"></a>
                 </td>
             </tr>
         }

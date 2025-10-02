@@ -42,8 +42,8 @@ namespace TradeControl.Web.Pages.Tax.Settings
 
         [BindProperty]
         [Display(Name = "Account")]
-        public string AccountName { get; set; }
-        public SelectList AccountNames { get; set; }
+        public string SubjectName { get; set; }
+        public SelectList SubjectNames { get; set; }
 
 
         public async Task<IActionResult> OnGetAsync(short? taxTypeCode)
@@ -69,9 +69,9 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 Recurrences = new SelectList(await recurrences.ToListAsync());
                 Recurrence = await NodeContext.App_tbRecurrences.Where(t => t.RecurrenceCode == Cash_tbTaxType.RecurrenceCode).Select(t => t.Recurrence).FirstAsync();
 
-                var accounts = NodeContext.Subject_AccountLookup.OrderBy(t => t.AccountName).Select(t => t.AccountName);
-                AccountNames = new SelectList(await accounts.ToListAsync());
-                AccountName = await NodeContext.Subject_tbSubjects.Where(t => t.AccountCode == Cash_tbTaxType.AccountCode).Select(t => t.AccountName).FirstAsync();
+                var accounts = NodeContext.Subject_SubjectLookup.OrderBy(t => t.SubjectName).Select(t => t.SubjectName);
+                SubjectNames = new SelectList(await accounts.ToListAsync());
+                SubjectName = await NodeContext.Subject_tbSubjects.Where(t => t.SubjectCode == Cash_tbTaxType.SubjectCode).Select(t => t.SubjectName).FirstAsync();
 
                 await SetViewData();
                 return Page();
@@ -93,7 +93,7 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 Cash_tbTaxType.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
                 Cash_tbTaxType.MonthNumber = await NodeContext.App_tbMonths.Where(t => t.MonthName == MonthName).Select(t => t.MonthNumber).FirstAsync();
                 Cash_tbTaxType.RecurrenceCode = await NodeContext.App_tbRecurrences.Where(t => t.Recurrence == Recurrence).Select(t => t.RecurrenceCode).FirstAsync();
-                Cash_tbTaxType.AccountCode = await NodeContext.Subject_tbSubjects.Where(t => t.AccountName == AccountName).Select(t => t.AccountCode).FirstAsync();
+                Cash_tbTaxType.SubjectCode = await NodeContext.Subject_tbSubjects.Where(t => t.SubjectName == SubjectName).Select(t => t.SubjectCode).FirstAsync();
 
                 NodeContext.Attach(Cash_tbTaxType).State = EntityState.Modified;
 

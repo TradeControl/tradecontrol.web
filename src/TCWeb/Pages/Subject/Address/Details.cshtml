@@ -5,7 +5,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <div>
-    <h4>@Html.DisplayFor(model => model.Address.AccountName)</h4>
+    <h4>@Html.DisplayFor(model => model.Address.SubjectName)</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
@@ -54,5 +54,5 @@
 </div>
 
 <p>
-    <a asp-page="./Index" asp-route-accountcode=@Model.Address.AccountCode class="btn btn-info">Back to list</a>
+    <a asp-page="./Index" asp-route-accountcode=@Model.Address.SubjectCode class="btn btn-info">Back to list</a>
 </p>

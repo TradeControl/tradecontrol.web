@@ -9,15 +9,15 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbSubject", Schema = "Subject")]
-    [Index(nameof(AccountCode), Name = "IX_Subject_tbSubject_OpeningBalance")]
-    [Index(nameof(AccountCode), Name = "IX_tbSubject_tb_AccountCode")]
+    [Index(nameof(SubjectCode), Name = "IX_Subject_tbSubject_OpeningBalance")]
+    [Index(nameof(SubjectCode), Name = "IX_tbSubject_tb_SubjectCode")]
     public partial class Subject_tbSubject
     {
         public Subject_tbSubject()
         {
             TbAccounts = new HashSet<Subject_tbAccount>();
             TbAddresses = new HashSet<Subject_tbAddress>();
-            TbAllocations = new HashSet<Task_tbAllocation>();
+            TbAllocations = new HashSet<Project_tbAllocation>();
             TbContacts = new HashSet<Subject_tbContact>();
             TbDocs = new HashSet<Subject_tbDoc>();
             TbEntries = new HashSet<Invoice_tbEntry>();
@@ -25,22 +25,22 @@ namespace TradeControl.Web.Models
             TbCashMirror = new HashSet<Cash_tbMirror>();
             TbInvoiceMirror = new HashSet<Invoice_tbMirror>();
             TbMirrors = new HashSet<Object_tbMirror>();
-            TbOptionAccountCodeNavigations = new HashSet<App_tbOption>();
-            TbOptionMinerAccountCodeNavigations = new HashSet<App_tbOption>();
+            TbOptionSubjectCodeNavigations = new HashSet<App_tbOption>();
+            TbOptionMinerSubjectCodeNavigations = new HashSet<App_tbOption>();
             TbPayments = new HashSet<Cash_tbPayment>();
             TbSectors = new HashSet<Subject_tbSector>();
-            TbTasks = new HashSet<Task_tbTask>();
+            TbProjects = new HashSet<Project_tbProject>();
             TbTaxTypes = new HashSet<Cash_tbTaxType>();
         }
 
         [Key]
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Display(Name = "Type")]
         public short SubjectTypeCode { get; set; }
         [Display(Name = "Status")]
@@ -68,7 +68,7 @@ namespace TradeControl.Web.Models
         public string WebSite { get; set; }
         [StringLength(100)]
         [Display(Name = "Source")]
-        public string AccountSource { get; set; }
+        public string SubjectSource { get; set; }
         [StringLength(100)]
         [Display(Name = "Payment Terms")]
         public string PaymentTerms { get; set; }
@@ -138,37 +138,37 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(TransmitStatusCode))]
         [InverseProperty(nameof(Subject_tbTransmitStatus.TbSubjects))]
         public virtual Subject_tbTransmitStatus TransmitStatusCodeNavigation { get; set; }
-        [InverseProperty(nameof(Subject_tbAccount.AccountCodeNavigation))]
+        [InverseProperty(nameof(Subject_tbAccount.SubjectCodeNavigation))]
         public virtual ICollection<Subject_tbAccount> TbAccounts { get; set; }
-        [InverseProperty(nameof(Subject_tbAddress.AccountCodeNavigation))]
+        [InverseProperty(nameof(Subject_tbAddress.SubjectCodeNavigation))]
         public virtual ICollection<Subject_tbAddress> TbAddresses { get; set; }
-        [InverseProperty(nameof(Task_tbAllocation.AccountCodeNavigation))]
-        public virtual ICollection<Task_tbAllocation> TbAllocations { get; set; }
-        [InverseProperty(nameof(Subject_tbContact.AccountCodeNavigation))]
+        [InverseProperty(nameof(Project_tbAllocation.SubjectCodeNavigation))]
+        public virtual ICollection<Project_tbAllocation> TbAllocations { get; set; }
+        [InverseProperty(nameof(Subject_tbContact.SubjectCodeNavigation))]
         public virtual ICollection<Subject_tbContact> TbContacts { get; set; }
-        [InverseProperty(nameof(Subject_tbDoc.AccountCodeNavigation))]
+        [InverseProperty(nameof(Subject_tbDoc.SubjectCodeNavigation))]
         public virtual ICollection<Subject_tbDoc> TbDocs { get; set; }
-        [InverseProperty(nameof(Invoice_tbEntry.AccountCodeNavigation))]
+        [InverseProperty(nameof(Invoice_tbEntry.SubjectCodeNavigation))]
         public virtual ICollection<Invoice_tbEntry> TbEntries { get; set; }
-        [InverseProperty(nameof(Invoice_tbInvoice.AccountCodeNavigation))]
+        [InverseProperty(nameof(Invoice_tbInvoice.SubjectCodeNavigation))]
         public virtual ICollection<Invoice_tbInvoice> TbInvoices { get; set; }
-        [InverseProperty(nameof(Cash_tbMirror.AccountCodeNavigation))]
+        [InverseProperty(nameof(Cash_tbMirror.SubjectCodeNavigation))]
         public virtual ICollection<Cash_tbMirror> TbCashMirror { get; set; }
-        [InverseProperty(nameof(Invoice_tbMirror.AccountCodeNavigation))]
+        [InverseProperty(nameof(Invoice_tbMirror.SubjectCodeNavigation))]
         public virtual ICollection<Invoice_tbMirror> TbInvoiceMirror { get; set; }
-        [InverseProperty(nameof(Object_tbMirror.AccountCodeNavigation))]
+        [InverseProperty(nameof(Object_tbMirror.SubjectCodeNavigation))]
         public virtual ICollection<Object_tbMirror> TbMirrors { get; set; }
-        [InverseProperty(nameof(App_tbOption.AccountCodeNavigation))]
-        public virtual ICollection<App_tbOption> TbOptionAccountCodeNavigations { get; set; }
-        [InverseProperty(nameof(App_tbOption.MinerAccountCodeNavigation))]
-        public virtual ICollection<App_tbOption> TbOptionMinerAccountCodeNavigations { get; set; }
-        [InverseProperty(nameof(Cash_tbPayment.AccountCodeNavigation))]
+        [InverseProperty(nameof(App_tbOption.SubjectCodeNavigation))]
+        public virtual ICollection<App_tbOption> TbOptionSubjectCodeNavigations { get; set; }
+        [InverseProperty(nameof(App_tbOption.MinerSubjectCodeNavigation))]
+        public virtual ICollection<App_tbOption> TbOptionMinerSubjectCodeNavigations { get; set; }
+        [InverseProperty(nameof(Cash_tbPayment.SubjectCodeNavigation))]
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
-        [InverseProperty(nameof(Subject_tbSector.AccountCodeNavigation))]
+        [InverseProperty(nameof(Subject_tbSector.SubjectCodeNavigation))]
         public virtual ICollection<Subject_tbSector> TbSectors { get; set; }
-        [InverseProperty(nameof(Task_tbTask.AccountCodeNavigation))]
-        public virtual ICollection<Task_tbTask> TbTasks { get; set; }
-        [InverseProperty(nameof(Cash_tbTaxType.AccountCodeNavigation))]
+        [InverseProperty(nameof(Project_tbProject.SubjectCodeNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjects { get; set; }
+        [InverseProperty(nameof(Cash_tbTaxType.SubjectCodeNavigation))]
         public virtual ICollection<Cash_tbTaxType> TbTaxTypes { get; set; }
     }
 }

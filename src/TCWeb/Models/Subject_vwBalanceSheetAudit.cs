@@ -24,18 +24,18 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "A/c")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
         [Display(Name = "Subject")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Subject Type")]
         public string SubjectType { get; set; }
         [StringLength(10)]
         [Display(Name = "Polarity")]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
         [Display(Name = "Asset Type Code")]
         public short AssetTypeCode { get; set; }
         [Required]

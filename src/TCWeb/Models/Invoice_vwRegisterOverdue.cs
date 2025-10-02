@@ -18,11 +18,11 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "A/c")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
         [Display(Name = "Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Display(Name = "Type Code")]
         public short InvoiceTypeCode { get; set; }
         [Display(Name = "Status Code")]

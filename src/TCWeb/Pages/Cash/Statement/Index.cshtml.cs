@@ -20,8 +20,8 @@ namespace TradeControl.Web.Pages.Cash.Statement
     {
 
         [BindProperty]
-        public string CashAccountName { get; set; }
-        public SelectList CashAccountNames { get; set; }
+        public string AccountName { get; set; }
+        public SelectList AccountNames { get; set; }
 
         [BindProperty]
         public string PeriodName { get; set; }
@@ -35,7 +35,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
         public IndexModel(NodeContext context) : base(context) { }
 
-        public async Task OnGetAsync(string cashAccountCode, string cashAccountName, string periodName, string paymentCode, short mode)
+        public async Task OnGetAsync(string cashSubjectCode, string cashSubjectName, string periodName, string paymentCode, short mode)
         {
             try
             {
@@ -45,10 +45,10 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                 var accounts = from tb in NodeContext.Subject_tbAccounts
                                where !tb.AccountClosed
-                               orderby tb.AccountTypeCode, tb.CashAccountName
-                               select tb.CashAccountName;
+                               orderby tb.AccountTypeCode, tb.AccountName
+                               select tb.AccountName;
 
-                CashAccountNames = new SelectList(await accounts.ToListAsync());
+                AccountNames = new SelectList(await accounts.ToListAsync());
 
                 var periodNames = from tb in NodeContext.App_Periods
                                   where tb.CashStatusCode == (short)NodeEnum.CashStatus.Current || tb.CashStatusCode == (short)NodeEnum.CashStatus.Closed
@@ -64,24 +64,24 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                     if (payment != null)
                     {
-                        cashAccountCode = payment.CashAccountCode;
+                        cashSubjectCode = payment.AccountCode;
                         startOn = payment.StartOn;
                         periodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
-                        cashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                        cashSubjectName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                     }
                 }
-                else if (!string.IsNullOrEmpty(cashAccountCode))
+                else if (!string.IsNullOrEmpty(cashSubjectCode))
                 {
-                    cashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                    cashSubjectName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                 }
-                else if (string.IsNullOrEmpty(cashAccountName))
+                else if (string.IsNullOrEmpty(cashSubjectName))
                 {
                     CashAccounts cashAccounts = new(NodeContext);
-                    cashAccountCode = await cashAccounts.CurrentAccount();
-                    cashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                    cashSubjectCode = await cashAccounts.CurrentAccount();
+                    cashSubjectName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                 }
                 else
-                    cashAccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountName == cashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                    cashSubjectCode = await NodeContext.Subject_tbAccounts.Where(t => t.AccountName == cashSubjectName).Select(t => t.AccountCode).FirstOrDefaultAsync();
 
                 if (string.IsNullOrEmpty(periodName))
                 {
@@ -92,24 +92,24 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 else
                     startOn = await NodeContext.App_Periods.Where(t => t.Description == periodName).Select(t => t.StartOn).FirstOrDefaultAsync();
 
-                CashAccountName = cashAccountName;
+                AccountName = cashSubjectName;
 
-                Subject_CashAccount = await NodeContext.Subject_CashAccounts.Where(t => t.CashAccountCode == cashAccountCode).FirstOrDefaultAsync();
+                Subject_CashAccount = await NodeContext.Subject_CashAccounts.Where(t => t.AccountCode == cashSubjectCode).FirstOrDefaultAsync();
 
                 PeriodName = periodName;
 
                 var statement = from tb in NodeContext.Cash_AccountStatements
-                                where tb.CashAccountCode == cashAccountCode && tb.StartOn == startOn
+                                where tb.AccountCode == cashSubjectCode && tb.StartOn == startOn
                                 select tb;
 
                 Cash_AccountStatement = mode switch
                 {
                     1 => await NodeContext.Cash_AccountStatements
-                                    .Where(t => t.CashAccountCode == cashAccountCode)
+                                    .Where(t => t.AccountCode == cashSubjectCode)
                                     .OrderBy(t => t.EntryNumber)
                                     .ToListAsync(),
                     _ => await NodeContext.Cash_AccountStatements
-                                    .Where(t => t.CashAccountCode == cashAccountCode && t.StartOn == startOn)
+                                    .Where(t => t.AccountCode == cashSubjectCode && t.StartOn == startOn)
                                     .OrderBy(t => t.EntryNumber)
                                     .ToListAsync(),
                 };

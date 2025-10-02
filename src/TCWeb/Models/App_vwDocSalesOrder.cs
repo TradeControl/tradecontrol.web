@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime ActionOn { get; set; }
         [Required]
@@ -26,13 +26,13 @@ namespace TradeControl.Web.Models
         public string BucketId { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
+        public string ProjectTitle { get; set; }
         [StringLength(100)]
         public string ContactName { get; set; }
         [StringLength(255)]
-        public string TaskNotes { get; set; }
+        public string ProjectNotes { get; set; }
         [Required]
         [StringLength(50)]
         public string OwnerName { get; set; }
@@ -40,10 +40,10 @@ namespace TradeControl.Web.Models
         public string CashCode { get; set; }
         [StringLength(100)]
         public string CashDescription { get; set; }
-        public short TaskStatusCode { get; set; }
+        public short ProjectStatusCode { get; set; }
         [Required]
         [StringLength(100)]
-        public string TaskStatus { get; set; }
+        public string ProjectStatus { get; set; }
         [Column(TypeName = "decimal(18, 4)")]
         public decimal Quantity { get; set; }
         [Required]
@@ -69,7 +69,7 @@ namespace TradeControl.Web.Models
         public DateTime UpdatedOn { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         public string ActionName { get; set; }

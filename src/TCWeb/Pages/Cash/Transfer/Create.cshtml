@@ -10,7 +10,7 @@
 
             <input type="hidden" asp-for="Cash_TransfersUnposted.PaymentCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.UserId" />
-            <input type="hidden" asp-for="Cash_TransfersUnposted.AccountCode" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.SubjectCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.TaxCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.InsertedBy" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.InsertedOn" />
@@ -18,12 +18,12 @@
             <input type="hidden" asp-for="Cash_TransfersUnposted.UpdatedOn" />
 
             <div class="form-group">
-                <label asp-for="Cash_TransfersUnposted.CashAccountCode" class="control-label"></label>
+                <label asp-for="Cash_TransfersUnposted.AccountCode" class="control-label"></label>
                 <p>
-                    <select asp-for="CashAccountName" asp-items="Model.CashAccounts" class="form-control"></select>
+                    <select asp-for="AccountName" asp-items="Model.CashAccounts" class="form-control"></select>
                 </p>
-                <input type="hidden" asp-for="Cash_TransfersUnposted.CashAccountCode" />
-                <span asp-validation-for="Cash_TransfersUnposted.CashAccountCode" class="text-danger"></span>
+                <input type="hidden" asp-for="Cash_TransfersUnposted.AccountCode" />
+                <span asp-validation-for="Cash_TransfersUnposted.AccountCode" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Cash_TransfersUnposted.CashCode" class="control-label"></label>

@@ -28,15 +28,15 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
 
         public IndexModel(NodeContext context) : base(context) { }
 
-        public async Task OnGetAsync(string accountType, string cashAccountCode)
+        public async Task OnGetAsync(string accountType, string cashSubjectCode)
         {
             try
             {
 
                 AccountTypes = new SelectList(await NodeContext.Subject_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
 
-                if (!string.IsNullOrEmpty(cashAccountCode))
-                    AccountType = await NodeContext.Subject_CashAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.AccountType).FirstOrDefaultAsync();
+                if (!string.IsNullOrEmpty(cashSubjectCode))
+                    AccountType = await NodeContext.Subject_CashAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountType).FirstOrDefaultAsync();
                 else if (string.IsNullOrEmpty(accountType))
                     AccountType = await NodeContext.Subject_tbAccountTypes.Where(t => t.AccountTypeCode == (short)NodeEnum.CashAccountType.Cash).Select(t => t.AccountType).FirstAsync();
                 else

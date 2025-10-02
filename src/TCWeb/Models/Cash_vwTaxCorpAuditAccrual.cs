@@ -19,22 +19,22 @@ namespace TradeControl.Web.Models
         public DateTime StartOn { get; set; }
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
+        public string ProjectTitle { get; set; }
         [Required]
         [StringLength(50)]
         public string ObjectCode { get; set; }
-        public short TaskStatusCode { get; set; }
+        public short ProjectStatusCode { get; set; }
         [Required]
         [StringLength(100)]
-        public string TaskStatus { get; set; }
+        public string ProjectStatus { get; set; }
         [StringLength(50)]
         public string CashCode { get; set; }
         [Required]

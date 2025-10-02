@@ -29,8 +29,8 @@ namespace TradeControl.Web.Pages.Invoice.Register
         public SelectList PeriodNames { get; set; }
 
         [BindProperty]
-        public string CashMode { get; set; }
-        public SelectList CashModes { get; set; }
+        public string CashPolarity { get; set; }
+        public SelectList CashPolaritys { get; set; }
 
         [BindProperty]
         public string CashCode { get; set; }
@@ -57,15 +57,15 @@ namespace TradeControl.Web.Pages.Invoice.Register
 
                 PeriodNames = new SelectList(await periodNames.ToListAsync());
 
-                CashModes = new SelectList(await NodeContext.Cash_tbModes.Where(m => m.CashModeCode < (short)NodeEnum.CashMode.Neutral)
-                                                        .OrderBy(m => m.CashModeCode).Select(m => m.CashMode).ToListAsync());
+                CashPolaritys = new SelectList(await NodeContext.Cash_tbPolaritys.Where(m => m.CashPolarityCode < (short)NodeEnum.CashPolarity.Neutral)
+                                                        .OrderBy(m => m.CashPolarityCode).Select(m => m.CashPolarity).ToListAsync());
 
                 var summary = from tb in NodeContext.Invoice_RegisterCashCodes select tb;
 
                 if (!string.IsNullOrEmpty(cashCode))
                 {
                     summary = summary.Where(i => i.CashCode == cashCode);
-                    CashMode = null;
+                    CashPolarity = null;
                     CashCode = cashCode;
                 }
                 else
@@ -85,7 +85,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
                     summary = summary.Where(i => i.StartOn == startOn);
 
                     if (!string.IsNullOrEmpty(cashMode))
-                        summary = summary.Where(i => i.CashMode == cashMode);
+                        summary = summary.Where(i => i.CashPolarity == cashMode);
                 }
 
                 summary = from tb in summary

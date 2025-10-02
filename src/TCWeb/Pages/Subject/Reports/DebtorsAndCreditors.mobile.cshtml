@@ -17,7 +17,7 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].AccountName)
+                @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].Balance)
@@ -30,16 +30,16 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                    @Html.DisplayFor(modelItem => item.SubjectName)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.Balance)
                 </td>
                 <td>
-                    <a asp-page="../Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
-                    <a asp-page="../Enquiry/Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-warning"></a>
-                    <a asp-page="../Enquiry/Payments" asp-route-accountCode="@item.AccountCode" class="btn btn-success"></a>
-                    <a asp-page="../Enquiry/Statement" asp-route-accountCode="@item.AccountCode" class="btn btn-dark"></a>
+                    <a asp-page="../Enquiry/Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info"></a>
+                    <a asp-page="../Enquiry/Invoices" asp-route-accountCode="@item.SubjectCode" class="btn btn-warning"></a>
+                    <a asp-page="../Enquiry/Payments" asp-route-accountCode="@item.SubjectCode" class="btn btn-success"></a>
+                    <a asp-page="../Enquiry/Statement" asp-route-accountCode="@item.SubjectCode" class="btn btn-dark"></a>
                 </td>
             </tr>
         }

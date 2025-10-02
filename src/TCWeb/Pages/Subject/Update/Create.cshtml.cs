@@ -34,7 +34,7 @@ namespace TradeControl.Web.Pages.Subject.Update
             [Required]
             [StringLength(255)]
             [Display(Name = "Account Name")]
-            public string AccountName { get; set; }
+            public string SubjectName { get; set; }
             [Required]
             [StringLength(50)]
             [Display(Name = "Type")]
@@ -110,7 +110,7 @@ namespace TradeControl.Web.Pages.Subject.Update
 
                 OrgEntry = new OrgData()
                 {
-                    AccountName = string.Empty,
+                    SubjectName = string.Empty,
                     SubjectType = SubjectType,
                     SubjectStatus = NodeContext.Subject_tbStatuses.Where(t => t.SubjectStatusCode == (short)NodeEnum.SubjectStatus.Active).Select(t => t.SubjectStatus).First(),
                     TaxCode = await orgs.DefaultTaxCode()
@@ -135,12 +135,12 @@ namespace TradeControl.Web.Pages.Subject.Update
                 Profile profile = new(NodeContext);
                 var userName = await profile.UserName(UserManager.GetUserId(User));
                 Subjects orgs = new(NodeContext);
-                string accountCode = await orgs.DefaultAccountCode(OrgEntry.AccountName);
+                string accountCode = await orgs.DefaultSubjectCode(OrgEntry.SubjectName);
 
                 Subject_tbSubject subject = new()
                 {
-                    AccountCode = accountCode,
-                    AccountName = OrgEntry.AccountName,
+                    SubjectCode = accountCode,
+                    SubjectName = OrgEntry.SubjectName,
                     SubjectStatusCode = NodeContext.Subject_tbStatuses.Where(t => t.SubjectStatus == OrgEntry.SubjectStatus).Select(t => t.SubjectStatusCode).First(),
                     SubjectTypeCode = NodeContext.Subject_tbTypes.Where(t => t.SubjectType == OrgEntry.SubjectType).Select(t => t.SubjectTypeCode).First(),
                     TaxCode = OrgEntry.TaxCode,
@@ -170,7 +170,7 @@ namespace TradeControl.Web.Pages.Subject.Update
                     await orgs.AddContact(OrgEntry.ContactName);
 
                 RouteValueDictionary route = new();
-                route.Add("AccountCode", orgs.AccountCode);
+                route.Add("SubjectCode", orgs.SubjectCode);
 
                 return RedirectToPage(ReturnUrl, route);
             }

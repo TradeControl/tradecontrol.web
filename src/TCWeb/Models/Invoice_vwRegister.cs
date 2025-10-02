@@ -18,7 +18,7 @@ namespace TradeControl.Web.Models
         public string InvoiceNumber { get; set; }
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         public short InvoiceTypeCode { get; set; }
         public short InvoiceStatusCode { get; set; }
         [Column(TypeName = "datetime")]
@@ -63,7 +63,7 @@ namespace TradeControl.Web.Models
         public bool Printed { get; set; }
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         [Display(Name = "Owner")]
         public string UserName { get; set; }
@@ -74,7 +74,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Status")]
         public string InvoiceStatus { get; set; }
         [Display(Name = "Mode Code")]
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [StringLength(20)]
         [Display(Name = "Type")]
         public string InvoiceType { get; set; }

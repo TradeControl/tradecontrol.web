@@ -30,13 +30,13 @@ namespace TradeControl.Web.Pages.Subject.Contact
             if (string.IsNullOrEmpty(accountCode))
                 return NotFound();
 
-            Subject_Account = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+            Subject_Account = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
             if (Subject_Account == null)
                 return NotFound();
 
             Subject_Contacts = await NodeContext.Subject_Contacts
-                                    .Where(c => c.AccountCode == accountCode)
+                                    .Where(c => c.SubjectCode == accountCode)
                                     .OrderBy(t => t.ContactName)
                                     .ToListAsync();
 

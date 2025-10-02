@@ -50,12 +50,12 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                 AccountType = accountType;
                 AccountTypes = new SelectList(await NodeContext.Subject_tbAccountTypes.OrderBy(t => t.AccountTypeCode).Select(t => t.AccountType).ToListAsync());
 
-                var accountNames = from tb in NodeContext.Subject_AccountLookup
-                                   orderby tb.AccountName
-                                   select tb.AccountName;
+                var accountNames = from tb in NodeContext.Subject_SubjectLookup
+                                   orderby tb.SubjectName
+                                   select tb.SubjectName;
 
                 OrganisationNames = new SelectList(await accountNames.ToListAsync());
-                OrganisationName = await NodeContext.App_HomeAccount.Select(t => t.AccountName).FirstAsync();
+                OrganisationName = await NodeContext.App_HomeAccount.Select(t => t.SubjectName).FirstAsync();
 
                 var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
                                        orderby tb.CashDescription
@@ -73,7 +73,7 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
 
                 Subject_CashAccount = new()
                 {
-                    AccountCode = await cashAccounts.CurrentAccount(),
+                    SubjectCode = await cashAccounts.CurrentAccount(),
                     CoinTypeCode = (short)await settings.CoinType,
                     AccountTypeCode = await NodeContext.Subject_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstOrDefaultAsync(),
                     LiquidityLevel = 0,
@@ -98,7 +98,7 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
             try
             {
                 Subject_CashAccount.AccountTypeCode = await NodeContext.Subject_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstAsync();
-                Subject_CashAccount.AccountCode = await NodeContext.Subject_tbSubjects.Where(t => t.AccountName == OrganisationName).Select(t => t.AccountCode).FirstAsync();
+                Subject_CashAccount.SubjectCode = await NodeContext.Subject_tbSubjects.Where(t => t.SubjectName == OrganisationName).Select(t => t.SubjectCode).FirstAsync();
 
                 if (!string.IsNullOrEmpty(CashDescription))
                     Subject_CashAccount.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();

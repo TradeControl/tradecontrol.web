@@ -135,7 +135,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 NodeEnum.CashAccountType cashAccountType = (NodeEnum.CashAccountType)await
                                                             (from p in NodeContext.Cash_tbPayments
                                                              join a in NodeContext.Subject_tbAccounts
-                                                                 on p.CashAccountCode equals a.CashAccountCode
+                                                                 on p.AccountCode equals a.AccountCode
                                                              where p.PaymentCode == paymentCode
                                                              select a.AccountTypeCode).SingleAsync();
 
@@ -201,7 +201,7 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 try
                 {
                     await NodeContext.SaveChangesAsync();
-                    Subjects subject = new(NodeContext, Cash_Payment.AccountCode);
+                    Subjects subject = new(NodeContext, Cash_Payment.SubjectCode);
                     await subject.Rebuild();
                 }
                 catch (DbUpdateConcurrencyException)

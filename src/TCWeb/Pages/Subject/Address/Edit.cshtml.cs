@@ -25,7 +25,7 @@ namespace TradeControl.Web.Pages.Subject.Address
         public Subject_tbAddress Subject_tbAddress { get; set; }
 
         [BindProperty]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
 
         [BindProperty]
         [Display(Name = "Admin Address?")]
@@ -50,8 +50,8 @@ namespace TradeControl.Web.Pages.Subject.Address
                 if (Subject_tbAddress == null)
                     return NotFound();
 
-                var subject = await NodeContext.Subject_tbSubjects.FirstAsync(t => t.AccountCode == Subject_tbAddress.AccountCode);
-                AccountName = subject.AccountName;
+                var subject = await NodeContext.Subject_tbSubjects.FirstAsync(t => t.SubjectCode == Subject_tbAddress.SubjectCode);
+                SubjectName = subject.SubjectName;
                 IsAdminAddress = subject.AddressCode == addressCode;
 
                 await SetViewData();
@@ -78,7 +78,7 @@ namespace TradeControl.Web.Pages.Subject.Address
 
                 if (IsAdminAddress)
                 {
-                    Subject_tbSubject subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == Subject_tbAddress.AccountCode);
+                    Subject_tbSubject subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == Subject_tbAddress.SubjectCode);
                     if (subject.AddressCode != Subject_tbAddress.AddressCode)
                     {
                         subject.AddressCode = Subject_tbAddress.AddressCode;
@@ -100,7 +100,7 @@ namespace TradeControl.Web.Pages.Subject.Address
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("accountCode", Subject_tbAddress.AccountCode);
+                route.Add("accountCode", Subject_tbAddress.SubjectCode);
 
                 return RedirectToPage("./Index", route);
             }

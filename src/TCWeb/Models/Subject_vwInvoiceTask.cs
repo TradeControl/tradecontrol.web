@@ -9,17 +9,17 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Subject_vwInvoiceTask
+    public partial class Subject_vwInvoiceProject
     {
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(20)]
         public string InvoiceNumber { get; set; }
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [StringLength(100)]
         public string ContactName { get; set; }
         [Column(TypeName = "datetime")]
@@ -38,21 +38,21 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string InvoiceStatus { get; set; }
         [StringLength(255)]
-        public string TaskNotes { get; set; }
+        public string ProjectNotes { get; set; }
         [Required]
         [StringLength(100)]
         public string CashDescription { get; set; }
         public short InvoiceStatusCode { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
+        public string ProjectTitle { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         public short InvoiceTypeCode { get; set; }
         [Required]
         [StringLength(20)]
         public string InvoiceType { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         public decimal PaidTaxValue { get; set; }
         [Column(TypeName = "decimal(18, 5)")]

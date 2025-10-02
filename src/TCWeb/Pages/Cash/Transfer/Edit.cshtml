@@ -9,16 +9,16 @@
 
 <dl class="row">
     <dt class="col-sm-2">
-        @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.CashAccountCode)
-    </dt>
-    <dd class="col-sm-10">
-        @Html.DisplayFor(model => model.Cash_TransfersUnposted.CashAccountCode)
-    </dd>
-    <dt class="col-sm-2">
         @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.AccountCode)
     </dt>
     <dd class="col-sm-10">
         @Html.DisplayFor(model => model.Cash_TransfersUnposted.AccountCode)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.SubjectCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_TransfersUnposted.SubjectCode)
     </dd>
     <dt class="col-sm-2">
         @Html.DisplayNameFor(model => model.Cash_TransfersUnposted.CashCode)
@@ -35,8 +35,8 @@
 
             <input type="hidden" asp-for="Cash_TransfersUnposted.UserId" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.PaymentCode" />
+            <input type="hidden" asp-for="Cash_TransfersUnposted.SubjectCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.AccountCode" />
-            <input type="hidden" asp-for="Cash_TransfersUnposted.CashAccountCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.PaymentStatusCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.TaxCode" />
             <input type="hidden" asp-for="Cash_TransfersUnposted.CashCode" />
@@ -68,7 +68,7 @@
 
             <div class="form-group">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_TransfersUnposted.CashAccountCode" class="btn btn-info">To List</a>
+                <a asp-page="./Index" asp-route-cashSubjectCode="@Model.Cash_TransfersUnposted.AccountCode" class="btn btn-info">To List</a>
             </div>
         </form>
     </div>

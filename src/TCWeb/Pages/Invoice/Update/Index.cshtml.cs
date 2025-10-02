@@ -31,7 +31,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
                 var invoices = from tb in NodeContext.Invoice_Register select tb;
 
                 if (!string.IsNullOrEmpty(accountCode))
-                    invoices = invoices.Where(i => i.AccountCode == accountCode);
+                    invoices = invoices.Where(i => i.SubjectCode == accountCode);
                 else if (!string.IsNullOrEmpty(invoiceNumber))
                     invoices = invoices.Where(i => i.InvoiceNumber == invoiceNumber);
                 else if (!printed)

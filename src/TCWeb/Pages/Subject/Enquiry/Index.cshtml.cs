@@ -27,7 +27,7 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
         [BindProperty(SupportsGet = true)]
         public string SearchString { get; set; }
 
-        public IList<Subject_vwAccountLookup> Subject_AccountLookup { get; set; }
+        public IList<Subject_vwSubjectLookup> Subject_SubjectLookup { get; set; }
 
         public async Task OnGetAsync(string accountCode, string subjectType)
         {
@@ -45,25 +45,25 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
                 else if (string.IsNullOrEmpty(SubjectType))
                     SubjectType = orgTypes.First();
 
-                var accounts = from tb in NodeContext.Subject_AccountLookup select tb;
+                var accounts = from tb in NodeContext.Subject_SubjectLookup select tb;
 
                 if (!string.IsNullOrEmpty(accountCode))
                 {
                     SubjectType = await (from subject in NodeContext.Subject_tbSubjects
                                               join tp in NodeContext.Subject_tbTypes on subject.SubjectTypeCode equals tp.SubjectTypeCode
-                                              where subject.AccountCode == accountCode
+                                              where subject.SubjectCode == accountCode
                                               select tp.SubjectType).FirstOrDefaultAsync();
 
-                    accounts = accounts.Where(a => a.AccountCode == accountCode);
+                    accounts = accounts.Where(a => a.SubjectCode == accountCode);
                 }
                 else
                     accounts = accounts.Where(a => a.SubjectType == SubjectType);
 
                 if (!string.IsNullOrEmpty(SearchString))
-                    accounts = accounts.Where(a => a.AccountName.Contains(SearchString));
+                    accounts = accounts.Where(a => a.SubjectName.Contains(SearchString));
 
 
-                Subject_AccountLookup = await accounts.OrderBy(a => a.AccountName).ToListAsync();
+                Subject_SubjectLookup = await accounts.OrderBy(a => a.SubjectName).ToListAsync();
             }
             catch (Exception e)
             {

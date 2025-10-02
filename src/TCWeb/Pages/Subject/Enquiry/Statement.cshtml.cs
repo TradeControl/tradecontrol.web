@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
         public IList<Subject_vwStatement> Subject_Statement { get; set; }
 
         [BindProperty]
-        public Subject_vwAccountLookup Subject_Account { get; set; }
+        public Subject_vwSubjectLookup Subject_Account { get; set; }
 
         public StatementModel(NodeContext context) : base(context) {}
 
@@ -31,13 +31,13 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
                 if (string.IsNullOrEmpty(accountCode))
                     return NotFound();
 
-                Subject_Account = await NodeContext.Subject_AccountLookup.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                Subject_Account = await NodeContext.Subject_SubjectLookup.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
                 if (Subject_Account == null)
                     return NotFound();
 
                 var statement = from tb in NodeContext.Subject_Statement
-                                where tb.AccountCode == accountCode
+                                where tb.SubjectCode == accountCode
                                 orderby tb.RowNumber descending
                                 select tb;
 

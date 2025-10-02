@@ -23,22 +23,22 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].AccountName)
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectName)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model.Subject_AccountLookup)
+        @foreach (var item in Model.Subject_SubjectLookup)
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                    @Html.DisplayFor(modelItem => item.SubjectName)
                 </td>
                 <td>
-                    <a asp-page="../Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
-                    <a asp-page="./Edit" asp-route-accountCode="@item.AccountCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-accountCode="@item.AccountCode" class="btn btn-danger"></a>
+                    <a asp-page="../Enquiry/Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info"></a>
+                    <a asp-page="./Edit" asp-route-accountCode="@item.SubjectCode" class="btn btn-secondary"></a>
+                    <a asp-page="./Delete" asp-route-accountCode="@item.SubjectCode" class="btn btn-danger"></a>
                 </td>
             </tr>
         }

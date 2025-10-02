@@ -8,16 +8,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    [Table("tbMirrorTask", Schema = "Invoice")]
-    [Index(nameof(TaskCode), nameof(ContractAddress), Name = "IX_Invoice_tbMirrorTask_TaskCode")]
-    public partial class Invoice_tbMirrorTask
+    [Table("tbMirrorProject", Schema = "Invoice")]
+    [Index(nameof(ProjectCode), nameof(ContractAddress), Name = "IX_Invoice_tbMirrorProject_ProjectCode")]
+    public partial class Invoice_tbMirrorProject
     {
         [Key]
         [StringLength(42)]
         public string ContractAddress { get; set; }
         [Key]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [Column(TypeName = "decimal(18, 4)")]
         public decimal Quantity { get; set; }
         [StringLength(10)]
@@ -29,7 +29,7 @@ namespace TradeControl.Web.Models
         public decimal TaxValue { get; set; }
 
         [ForeignKey(nameof(ContractAddress))]
-        [InverseProperty(nameof(Invoice_tbMirror.TbMirrorTasks))]
+        [InverseProperty(nameof(Invoice_tbMirror.TbMirrorProjects))]
         public virtual Invoice_tbMirror ContractAddressNavigation { get; set; }
     }
 }

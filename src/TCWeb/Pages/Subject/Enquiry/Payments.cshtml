@@ -3,10 +3,10 @@
 @{ ViewData["Title"] = "Payments"; }
 <h1>@ViewData["Title"]</h1>
 
-<h4>@Html.DisplayFor(model => model.Subject_Account.AccountName)</h4>
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
 
 <p>
-    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info">To List</a>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.SubjectCode" class="btn btn-info">To List</a>
 </p>
 
 <table class="table  table-striped">
@@ -25,7 +25,7 @@
                 @Html.DisplayNameFor(model => model.Subject_Payments[0].PaidInValue)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_Payments[0].CashAccountName)
+                @Html.DisplayNameFor(model => model.Subject_Payments[0].AccountName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Subject_Payments[0].UserName)
@@ -50,7 +50,7 @@
                     @Html.DisplayFor(modelItem => item.PaidInValue)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashAccountName)
+                    @Html.DisplayFor(modelItem => item.AccountName)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.UserName)
@@ -64,7 +64,7 @@
 </table>
 
 <p>
-    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info">To List</a>
+    <a asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.SubjectCode" class="btn btn-info">To List</a>
 </p>
 
 @section Scripts {

@@ -9,14 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Subject_vwTask
+    public partial class Subject_vwProject
     {
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [Required]
         [StringLength(10)]
         public string UserId { get; set; }
@@ -26,8 +26,8 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string ObjectCode { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
-        public short TaskStatusCode { get; set; }
+        public string ProjectTitle { get; set; }
+        public short ProjectStatusCode { get; set; }
         [Required]
         [StringLength(10)]
         public string ActionById { get; set; }
@@ -40,7 +40,7 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         public string SecondReference { get; set; }
         [StringLength(255)]
-        public string TaskNotes { get; set; }
+        public string ProjectNotes { get; set; }
         [StringLength(10)]
         public string TaxCode { get; set; }
         [Column(TypeName = "decimal(18, 4)")]
@@ -70,7 +70,7 @@ namespace TradeControl.Web.Models
         public string BucketId { get; set; }
         [Required]
         [StringLength(100)]
-        public string TaskStatus { get; set; }
+        public string ProjectStatus { get; set; }
         [StringLength(50)]
         public string CashCode { get; set; }
         [StringLength(100)]
@@ -83,14 +83,14 @@ namespace TradeControl.Web.Models
         public string ActionName { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(255)]
         public string SubjectStatus { get; set; }
         [Required]
         [StringLength(50)]
         public string SubjectType { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [StringLength(10)]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
     }
 }

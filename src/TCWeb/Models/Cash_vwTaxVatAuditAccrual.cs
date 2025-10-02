@@ -20,10 +20,10 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "datetime")]
         public DateTime ActionOn { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
+        public string ProjectTitle { get; set; }
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [Required]
         [StringLength(50)]
         public string CashCode { get; set; }
@@ -35,8 +35,8 @@ namespace TradeControl.Web.Models
         public string ObjectCode { get; set; }
         [Required]
         [StringLength(100)]
-        public string TaskStatus { get; set; }
-        public short TaskStatusCode { get; set; }
+        public string ProjectStatus { get; set; }
+        public short ProjectStatusCode { get; set; }
         [StringLength(10)]
         public string TaxCode { get; set; }
         [Column(TypeName = "decimal(18, 4)")]

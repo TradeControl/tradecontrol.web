@@ -9,19 +9,19 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbInvoice", Schema = "Invoice")]
-    [Index(nameof(AccountCode), nameof(InvoiceTypeCode), nameof(DueOn), Name = "IX_Invoice_tbInvoice_AccountCode_DueOn")]
-    [Index(nameof(AccountCode), nameof(InvoiceStatusCode), nameof(InvoiceNumber), Name = "IX_Invoice_tbInvoice_AccountCode_Status")]
-    [Index(nameof(AccountCode), nameof(InvoiceNumber), nameof(InvoiceTypeCode), Name = "IX_Invoice_tbInvoice_AccountCode_Type")]
-    [Index(nameof(AccountCode), nameof(InvoiceStatusCode), nameof(InvoiceNumber), Name = "IX_Invoice_tbInvoice_AccountValues")]
+    [Index(nameof(SubjectCode), nameof(InvoiceTypeCode), nameof(DueOn), Name = "IX_Invoice_tbInvoice_SubjectCode_DueOn")]
+    [Index(nameof(SubjectCode), nameof(InvoiceStatusCode), nameof(InvoiceNumber), Name = "IX_Invoice_tbInvoice_SubjectCode_Status")]
+    [Index(nameof(SubjectCode), nameof(InvoiceNumber), nameof(InvoiceTypeCode), Name = "IX_Invoice_tbInvoice_SubjectCode_Type")]
+    [Index(nameof(SubjectCode), nameof(InvoiceStatusCode), nameof(InvoiceNumber), Name = "IX_Invoice_tbInvoice_AccountValues")]
     [Index(nameof(ExpectedOn), nameof(InvoiceTypeCode), nameof(InvoiceStatusCode), Name = "IX_Invoice_tbInvoice_ExpectedOn")]
-    [Index(nameof(InvoiceTypeCode), nameof(UserId), nameof(InvoiceStatusCode), nameof(AccountCode), nameof(InvoiceNumber), nameof(InvoicedOn), nameof(PaymentTerms), nameof(Printed), Name = "IX_Invoice_tbInvoice_FlowInitialise")]
+    [Index(nameof(InvoiceTypeCode), nameof(UserId), nameof(InvoiceStatusCode), nameof(SubjectCode), nameof(InvoiceNumber), nameof(InvoicedOn), nameof(PaymentTerms), nameof(Printed), Name = "IX_Invoice_tbInvoice_FlowInitialise")]
     public partial class Invoice_tbInvoice
     {
         public Invoice_tbInvoice()
         {
             TbChangeLogs = new HashSet<Invoice_tbChangeLog>();
             TbItems = new HashSet<Invoice_tbItem>();
-            TbTasks = new HashSet<Invoice_tbTask>();
+            TbProjects = new HashSet<Invoice_tbProject>();
         }
 
         [Key]
@@ -32,7 +32,7 @@ namespace TradeControl.Web.Models
         public string UserId { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Display(Name = "Type")]
         public short InvoiceTypeCode { get; set; }
         [Display(Name = "Status")]
@@ -76,9 +76,9 @@ namespace TradeControl.Web.Models
         [Display(Name = "Paid Tax")]
         public decimal PaidTaxValue { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbInvoices))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(InvoiceStatusCode))]
         [InverseProperty(nameof(Invoice_tbStatus.TbInvoices))]
         public virtual Invoice_tbStatus InvoiceStatusCodeNavigation { get; set; }
@@ -96,7 +96,7 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Invoice_tbChangeLog> TbChangeLogs { get; set; }
         [InverseProperty(nameof(Invoice_tbItem.InvoiceNumberNavigation))]
         public virtual ICollection<Invoice_tbItem> TbItems { get; set; }
-        [InverseProperty(nameof(Invoice_tbTask.InvoiceNumberNavigation))]
-        public virtual ICollection<Invoice_tbTask> TbTasks { get; set; }
+        [InverseProperty(nameof(Invoice_tbProject.InvoiceNumberNavigation))]
+        public virtual ICollection<Invoice_tbProject> TbProjects { get; set; }
     }
 }

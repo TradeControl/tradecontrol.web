@@ -18,8 +18,8 @@ namespace TradeControl.Web.Models
             TbItems = new HashSet<Invoice_tbItem>();
             TbSubjects = new HashSet<Subject_tbSubject>();
             TbPayments = new HashSet<Cash_tbPayment>();
-            TbTasks = new HashSet<Task_tbTask>();
-            TbInvoiceTasks = new HashSet<Invoice_tbTask>();
+            TbProjects = new HashSet<Project_tbProject>();
+            TbInvoiceProjects = new HashSet<Invoice_tbProject>();
         }
 
         [Key]
@@ -64,9 +64,9 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Subject_tbSubject> TbSubjects { get; set; }
         [InverseProperty(nameof(Cash_tbPayment.TaxCodeNavigation))]
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
-        [InverseProperty(nameof(Task_tbTask.TaxCodeNavigation))]
-        public virtual ICollection<Task_tbTask> TbTasks { get; set; }
-        [InverseProperty(nameof(Invoice_tbTask.TaxCodeNavigation))]
-        public virtual ICollection<Invoice_tbTask> TbInvoiceTasks { get; set; }
+        [InverseProperty(nameof(Project_tbProject.TaxCodeNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjects { get; set; }
+        [InverseProperty(nameof(Invoice_tbProject.TaxCodeNavigation))]
+        public virtual ICollection<Invoice_tbProject> TbInvoiceProjects { get; set; }
     }
 }

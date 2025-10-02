@@ -17,9 +17,9 @@ namespace TradeControl.Web.Models
         [Display(Name = "Owner")]
         public string UserName { get; set; }
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Column(TypeName = "ntext")]
         [Display(Name = "Address")]
         public string InvoiceAddress { get; set; }

@@ -30,7 +30,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                     return NotFound();
 
                 var category = from c in NodeContext.Cash_tbCategories
-                               join p in NodeContext.Cash_tbModes on c.CashModeCode equals p.CashModeCode
+                               join p in NodeContext.Cash_tbPolaritys on c.CashPolarityCode equals p.CashPolarityCode
                                join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
                                join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
                                where c.CategoryCode == categoryCode
@@ -41,7 +41,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                                    CategoryType = ct.CategoryType,
                                    DisplayOrder = c.DisplayOrder,
                                    CashTypeCode = c.CashTypeCode,
-                                   CashMode = p.CashMode,
+                                   CashPolarity = p.CashPolarity,
                                    CashType = t.CashType,
                                    IsEnabled = c.IsEnabled == 0 ? false : true
                                };

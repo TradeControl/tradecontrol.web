@@ -25,7 +25,7 @@ namespace TradeControl.Web.Pages.Subject.Address
         public Subject_tbAddress Subject_tbAddress { get; set; }
 
         [BindProperty]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
 
         [BindProperty]
         [Display(Name = "Admin Address?")]
@@ -45,19 +45,19 @@ namespace TradeControl.Web.Pages.Subject.Address
                 if (string.IsNullOrEmpty(accountCode))
                     return NotFound();
 
-                var subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                var subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
                 if (subject == null)
                     return NotFound();
                 else
-                    AccountName = subject.AccountName;
+                    SubjectName = subject.SubjectName;
 
                 Profile profile = new(NodeContext);
                 Subjects orgs = new(NodeContext, accountCode);
 
                 Subject_tbAddress = new()
                 {
-                    AccountCode = accountCode,
+                    SubjectCode = accountCode,
                     AddressCode = await orgs.NextAddressCode(),
                     InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
                     InsertedOn = DateTime.Now,
@@ -66,7 +66,7 @@ namespace TradeControl.Web.Pages.Subject.Address
 
                 Subject_tbAddress.UpdatedBy = Subject_tbAddress.InsertedBy;
 
-                IsAdminAddress = !(await NodeContext.Subject_tbAddresses.Where(t => t.AccountCode == accountCode).AnyAsync());
+                IsAdminAddress = !(await NodeContext.Subject_tbAddresses.Where(t => t.SubjectCode == accountCode).AnyAsync());
 
                 await SetViewData();
                 return Page();
@@ -88,14 +88,14 @@ namespace TradeControl.Web.Pages.Subject.Address
                 NodeContext.Subject_tbAddresses.Add(Subject_tbAddress);
                 if (IsAdminAddress)
                 {
-                    Subject_tbSubject subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == Subject_tbAddress.AccountCode);
+                    Subject_tbSubject subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == Subject_tbAddress.SubjectCode);
                     subject.AddressCode = Subject_tbAddress.AddressCode;
                 }
 
                 await NodeContext.SaveChangesAsync();
 
                 RouteValueDictionary route = new();
-                route.Add("accountCode", Subject_tbAddress.AccountCode);
+                route.Add("accountCode", Subject_tbAddress.SubjectCode);
 
                 return RedirectToPage("./Index", route);
             }

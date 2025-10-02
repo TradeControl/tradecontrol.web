@@ -21,12 +21,12 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
 
         public DetailsModel(NodeContext context) : base(context) { }
 
-        public async Task<IActionResult> OnGetAsync(string cashAccountCode)
+        public async Task<IActionResult> OnGetAsync(string cashSubjectCode)
         {
-            if (cashAccountCode == null)
+            if (cashSubjectCode == null)
                 return NotFound();
 
-            Subject_CashAccount = await NodeContext.Subject_CashAccounts.FirstOrDefaultAsync(m => m.CashAccountCode == cashAccountCode);
+            Subject_CashAccount = await NodeContext.Subject_CashAccounts.FirstOrDefaultAsync(m => m.AccountCode == cashSubjectCode);
 
             if (Subject_CashAccount == null)
                 return NotFound();

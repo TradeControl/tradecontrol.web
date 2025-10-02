@@ -13,16 +13,16 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         public string SubjectType { get; set; }
         [StringLength(10)]
         public string TaxCode { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         public short SubjectStatusCode { get; set; }
         [StringLength(50)]
         public string CashCode { get; set; }

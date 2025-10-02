@@ -14,8 +14,8 @@ namespace TradeControl.Web.Models
         public Subject_tbAddress()
         {
             TbSubjects = new HashSet<Subject_tbSubject>();
-            TbTaskAddressCodeFromNavigations = new HashSet<Task_tbTask>();
-            TbTaskAddressCodeToNavigations = new HashSet<Task_tbTask>();
+            TbProjectAddressCodeFromNavigations = new HashSet<Project_tbProject>();
+            TbProjectAddressCodeToNavigations = new HashSet<Project_tbProject>();
         }
 
         [Key]
@@ -23,7 +23,7 @@ namespace TradeControl.Web.Models
         public string AddressCode { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [Column(TypeName = "ntext")]
         public string Address { get; set; }
@@ -40,14 +40,14 @@ namespace TradeControl.Web.Models
         //[Required]
         //public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbAddresses))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [InverseProperty(nameof(Subject_tbSubject.AddressCodeNavigation))]
         public virtual ICollection<Subject_tbSubject> TbSubjects { get; set; }
-        [InverseProperty(nameof(Task_tbTask.AddressCodeFromNavigation))]
-        public virtual ICollection<Task_tbTask> TbTaskAddressCodeFromNavigations { get; set; }
-        [InverseProperty(nameof(Task_tbTask.AddressCodeToNavigation))]
-        public virtual ICollection<Task_tbTask> TbTaskAddressCodeToNavigations { get; set; }
+        [InverseProperty(nameof(Project_tbProject.AddressCodeFromNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjectAddressCodeFromNavigations { get; set; }
+        [InverseProperty(nameof(Project_tbProject.AddressCodeToNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjectAddressCodeToNavigations { get; set; }
     }
 }

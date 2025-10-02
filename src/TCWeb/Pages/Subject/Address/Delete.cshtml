@@ -2,7 +2,7 @@
 @model TradeControl.Web.Pages.Subject.Address.DeleteModel
 
 <div>
-    <h4>@Html.DisplayFor(model => model.Address.AccountName)</h4>
+    <h4>@Html.DisplayFor(model => model.Address.SubjectName)</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
@@ -45,7 +45,7 @@
     <form method="post">
         <input type="hidden" asp-for="Address.AddressCode" />
         <input type="submit" value="DELETE" class="btn btn-danger" />
-        <a asp-page="./Index" asp-route-accountCode="@Model.Address.AccountCode" class="btn btn-info">To List</a>
+        <a asp-page="./Index" asp-route-accountCode="@Model.Address.SubjectCode" class="btn btn-info">To List</a>
     </form>
 
 </div>

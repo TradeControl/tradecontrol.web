@@ -4,8 +4,8 @@
     ViewData["Title"] = "Edit Organisation";
 }
 <h1>@ViewData["Title"]</h1>
-<h2>@Html.DisplayFor(model => model.Subject_tbSubject.AccountCode)</h2>
-<h3>@Html.DisplayFor(model => model.Subject_tbSubject.AccountName)</h3>
+<h2>@Html.DisplayFor(model => model.Subject_tbSubject.SubjectCode)</h2>
+<h3>@Html.DisplayFor(model => model.Subject_tbSubject.SubjectName)</h3>
 <hr />
 
 <div class="row">
@@ -13,7 +13,7 @@
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            <input type="hidden" asp-for="Subject_tbSubject.AccountCode" />
+            <input type="hidden" asp-for="Subject_tbSubject.SubjectCode" />
             <input type="hidden" asp-for="Subject_tbSubject.AddressCode" />
             <input type="hidden" asp-for="Subject_tbSubject.Logo" />
             <input type="hidden" asp-for="Subject_tbSubject.InsertedBy" />
@@ -22,15 +22,15 @@
             <input type="hidden" asp-for="Subject_tbSubject.UpdatedOn" />
 
             <div>
-                <a asp-page="/Org/Address/Index" asp-route-accountCode="@Model.Subject_tbSubject.AccountCode" class="btn btn-secondary">Addresses</a>
-                <a asp-page="/Org/Contact/Index" asp-route-accountCode="@Model.Subject_tbSubject.AccountCode" class="btn btn-secondary">Contacts</a>
+                <a asp-page="/Org/Address/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Addresses</a>
+                <a asp-page="/Org/Contact/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Contacts</a>
             </div>
             <p />
 
             <div class="form-group">
-                <label asp-for="Subject_tbSubject.AccountName" class="control-label"></label>
-                <input asp-for="Subject_tbSubject.AccountName" class="form-control" />
-                <span asp-validation-for="Subject_tbSubject.AccountName" class="text-danger"></span>
+                <label asp-for="Subject_tbSubject.SubjectName" class="control-label"></label>
+                <input asp-for="Subject_tbSubject.SubjectName" class="form-control" />
+                <span asp-validation-for="Subject_tbSubject.SubjectName" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Subject_tbSubject.SubjectTypeCode" class="control-label"></label>
@@ -94,7 +94,7 @@
 
             <div>
                 <input type="submit" value="SAVE" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbSubject.AccountCode" class="btn btn-info">To List</a>
+                <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-info">To List</a>
             </div>
             <p />
             <h2>Additional Information</h2>
@@ -109,9 +109,9 @@
                 <span asp-validation-for="Subject_tbSubject.AreaCode" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Subject_tbSubject.AccountSource" class="control-label"></label>
-                <input asp-for="Subject_tbSubject.AccountSource" class="form-control" />
-                <span asp-validation-for="Subject_tbSubject.AccountSource" class="text-danger"></span>
+                <label asp-for="Subject_tbSubject.SubjectSource" class="control-label"></label>
+                <input asp-for="Subject_tbSubject.SubjectSource" class="form-control" />
+                <span asp-validation-for="Subject_tbSubject.SubjectSource" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Subject_tbSubject.CompanyNumber" class="control-label"></label>
@@ -134,9 +134,9 @@
                 <span asp-validation-for="Subject_tbSubject.Turnover" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Subject_tbSubject.AccountSource" class="control-label"></label>
-                <input asp-for="Subject_tbSubject.AccountSource" class="form-control" />
-                <span asp-validation-for="Subject_tbSubject.AccountSource" class="text-danger"></span>
+                <label asp-for="Subject_tbSubject.SubjectSource" class="control-label"></label>
+                <input asp-for="Subject_tbSubject.SubjectSource" class="form-control" />
+                <span asp-validation-for="Subject_tbSubject.SubjectSource" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Subject_tbSubject.BusinessDescription" class="control-label"></label>
@@ -145,7 +145,7 @@
             </div>
             <div>
                 <input type="submit" value="SAVE" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbSubject.AccountCode" class="btn btn-info">To List</a>
+                <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-info">To List</a>
             </div>
         </form>
     </div>

@@ -29,7 +29,7 @@
                 @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoiceType)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Invoice_Details[0].AccountName)
+                @Html.DisplayNameFor(model => model.Invoice_Details[0].SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Details[0].CashDescription)
@@ -61,8 +61,8 @@
                 @Html.DisplayFor(modelItem => item.InvoiceType)
             </td>
             <td>
-                <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                    @Html.DisplayFor(modelItem => item.SubjectName)
                 </a>
             </td>
             <td>
@@ -78,7 +78,7 @@
                 @Html.DisplayFor(modelItem => item.InvoiceValue)
             </td>
             <td>
-                <a asp-page="./Details" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-taskCode="@item.TaskCode" class="btn btn-info"></a>
+                <a asp-page="./Details" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-projectCode="@item.ProjectCode" class="btn btn-info"></a>
                 <a asp-page="/Invoice/Update/Index" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
             </td>
         </tr>

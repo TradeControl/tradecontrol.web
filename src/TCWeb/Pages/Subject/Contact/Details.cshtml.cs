@@ -26,7 +26,7 @@ namespace TradeControl.Web.Pages.Subject.Contact
             if (accountCode == null || contactName == null)
                 return NotFound();
 
-            Contact = await NodeContext.Subject_Contacts.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.ContactName == contactName);
+            Contact = await NodeContext.Subject_Contacts.FirstOrDefaultAsync(m => m.SubjectCode == accountCode && m.ContactName == contactName);
 
             if (Contact == null)
                 return NotFound();

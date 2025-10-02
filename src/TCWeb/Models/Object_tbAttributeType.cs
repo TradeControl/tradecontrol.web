@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         public Object_tbAttributeType()
         {
-            TbAttribute1s = new HashSet<Task_tbAttribute>();
+            TbAttribute1s = new HashSet<Project_tbAttribute>();
             TbAttributes = new HashSet<Object_tbAttribute>();
         }
 
@@ -23,8 +23,8 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         public string AttributeType { get; set; }
 
-        [InverseProperty(nameof(Task_tbAttribute.AttributeTypeCodeNavigation))]
-        public virtual ICollection<Task_tbAttribute> TbAttribute1s { get; set; }
+        [InverseProperty(nameof(Project_tbAttribute.AttributeTypeCodeNavigation))]
+        public virtual ICollection<Project_tbAttribute> TbAttribute1s { get; set; }
         [InverseProperty(nameof(Object_tbAttribute.AttributeTypeCodeNavigation))]
         public virtual ICollection<Object_tbAttribute> TbAttributes { get; set; }
     }

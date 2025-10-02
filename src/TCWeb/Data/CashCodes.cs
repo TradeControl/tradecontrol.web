@@ -80,9 +80,9 @@ namespace TradeControl.Web.Data
             get { return _cashCode.TaxTypeCode; }
         }
 
-        public NodeEnum.CashMode CashModeCode
+        public NodeEnum.CashPolarity CashPolarityCode
         {
-            get { return _cashCode.CashModeCode;  }
+            get { return _cashCode.CashPolarityCode;  }
         }
 
         public NodeEnum.CashType CashTypeCode

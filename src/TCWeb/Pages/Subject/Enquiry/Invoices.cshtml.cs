@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
         public IList<Invoice_vwRegister> Subject_Invoices { get; set; }
 
         [BindProperty]
-        public Subject_vwAccountLookup Subject_Account { get; set; }
+        public Subject_vwSubjectLookup Subject_Account { get; set; }
 
         public InvoicesModel(NodeContext context) : base(context) { }
 
@@ -30,13 +30,13 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
                 if (string.IsNullOrEmpty(accountCode))
                     return NotFound();
 
-                Subject_Account = await NodeContext.Subject_AccountLookup.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                Subject_Account = await NodeContext.Subject_SubjectLookup.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
                 if (Subject_Account == null)
                     return NotFound();
 
                 var invoices = from tb in NodeContext.Invoice_Register
-                               where tb.AccountCode == accountCode
+                               where tb.SubjectCode == accountCode
                                orderby tb.InvoicedOn descending
                                select tb;
 

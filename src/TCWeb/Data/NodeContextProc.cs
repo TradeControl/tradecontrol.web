@@ -26,9 +26,9 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                var _cashAccountCode = new SqlParameter()
+                var _cashSubjectCode = new SqlParameter()
                 {
-                    ParameterName = "@CashAccountCode",
+                    ParameterName = "@AccountCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Output,
                     Size = 10
@@ -41,14 +41,14 @@ namespace TradeControl.Web.Data
                     {
                         _command.CommandText = "Cash.proc_CurrentAccount";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_cashAccountCode);
+                        _command.Parameters.Add(_cashSubjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
                     _connection.Close();
                 }
 
-                return (string)_cashAccountCode.Value;
+                return (string)_cashSubjectCode.Value;
             }
             catch (Exception e)
             {
@@ -61,9 +61,9 @@ namespace TradeControl.Web.Data
         {
                 try
                 {
-                    var _cashAccountCode = new SqlParameter()
+                    var _cashSubjectCode = new SqlParameter()
                     {
-                        ParameterName = "@CashAccountCode",
+                        ParameterName = "@AccountCode",
                         SqlDbType = System.Data.SqlDbType.VarChar,
                         Direction = System.Data.ParameterDirection.Output,
                         Size = 10
@@ -76,14 +76,14 @@ namespace TradeControl.Web.Data
                         {
                             _command.CommandText = "Cash.proc_ReserveAccount";
                             _command.CommandType = CommandType.StoredProcedure;
-                            _command.Parameters.Add(_cashAccountCode);
+                            _command.Parameters.Add(_cashSubjectCode);
 
                             await _command.ExecuteNonQueryAsync();
                         }
                         _connection.Close();
                     }
 
-                    return (string)_cashAccountCode.Value;
+                    return (string)_cashSubjectCode.Value;
                 }
                 catch (Exception e)
                 {
@@ -186,22 +186,22 @@ namespace TradeControl.Web.Data
         }
 
 
-        public async Task<string> AddPayment(string cashAccountCode, string accountCode, string cashCode, DateTime paidOn, decimal toPay)
+        public async Task<string> AddPayment(string cashSubjectCode, string accountCode, string cashCode, DateTime paidOn, decimal toPay)
         {
             try
             {
-                var _cashAccountCode = new SqlParameter()
+                var _cashSubjectCode = new SqlParameter()
                 {
-                    ParameterName = "@CashAccountCode",
+                    ParameterName = "@AccountCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
-                    Value = cashAccountCode
+                    Value = cashSubjectCode
                 };
 
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -251,7 +251,7 @@ namespace TradeControl.Web.Data
                         _command.CommandText = "Cash.proc_PaymentAdd";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
-                        _command.Parameters.Add(_cashAccountCode);
+                        _command.Parameters.Add(_cashSubjectCode);
                         _command.Parameters.Add(_cashCode);
                         _command.Parameters.Add(_paidOn);
                         _command.Parameters.Add(_toPay);
@@ -322,7 +322,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountName = new SqlParameter()
                 {
-                    ParameterName = "@AccountName",
+                    ParameterName = "@SubjectName",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Output,
                     Size = 255
@@ -500,7 +500,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -538,13 +538,13 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> SubjectAccountCodeDefault(string accountName)
+        public async Task<string> SubjectSubjectCodeDefault(string accountName)
         {
             try
             {
                 var _accountName = new SqlParameter()
                 {
-                    ParameterName = "@AccountName",
+                    ParameterName = "@SubjectName",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 255,
@@ -553,7 +553,7 @@ namespace TradeControl.Web.Data
 
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Output,
                     Size = 10
@@ -563,7 +563,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Subject.proc_DefaultAccountCode";
+                        _command.CommandText = "Subject.proc_DefaultSubjectCode";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountName);
                         _command.Parameters.Add(_accountCode);
@@ -588,7 +588,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -632,7 +632,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -677,7 +677,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -723,7 +723,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -948,17 +948,17 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Invoice
-        public async Task<string> InvoiceRaise(string taskCode, NodeEnum.InvoiceType invoiceType, DateTime invoicedOn)
+        public async Task<string> InvoiceRaise(string projectCode, NodeEnum.InvoiceType invoiceType, DateTime invoicedOn)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _invoiceType = new SqlParameter()
@@ -992,7 +992,7 @@ namespace TradeControl.Web.Data
                     {
                         _command.CommandText = "Invoice.proc_Raise";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_invoiceType);
                         _command.Parameters.Add(_invoicedOn);
                         _command.Parameters.Add(_invoiceNumber);
@@ -1017,7 +1017,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -1214,7 +1214,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -1517,17 +1517,17 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Tasks
-        public async Task<bool> IsTaskProject(string taskCode)
+        public async Task<bool> IsProject(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
 
@@ -1543,9 +1543,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_IsProject";
+                        _command.CommandText = "Project.proc_IsProjected";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_isProject);
 
                         await _command.ExecuteNonQueryAsync();
@@ -1564,17 +1564,17 @@ namespace TradeControl.Web.Data
 
         }
 
-        public async Task<bool> IsTaskFullyInvoiced(string taskCode)
+        public async Task<bool> IsProjectFullyInvoiced(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
 
@@ -1590,9 +1590,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_FullyInvoiced";
+                        _command.CommandText = "Project.proc_FullyInvoiced";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_isFullyInvoiced);
 
                         await _command.ExecuteNonQueryAsync();
@@ -1610,23 +1610,23 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> ParentTaskCode(string taskCode)
+        public async Task<string> ParentProjectCode(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
 
-                var _parentTaskCode = new SqlParameter()
+                var _parentProjectCode = new SqlParameter()
                 {
-                    ParameterName = "@ParentTaskCode",
+                    ParameterName = "@ParentProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Size = 20,
                     Direction = System.Data.ParameterDirection.Output
@@ -1637,17 +1637,17 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_Parent";
+                        _command.CommandText = "Project.proc_Parent";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
-                        _command.Parameters.Add(_parentTaskCode);
+                        _command.Parameters.Add(_projectCode);
+                        _command.Parameters.Add(_parentProjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
                     _connection.Close();
                 }
 
-                return (string)_parentTaskCode.Value;
+                return (string)_parentProjectCode.Value;
 
             }
             catch (Exception e)
@@ -1657,23 +1657,23 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> ProjectTaskCode(string taskCode)
+        public async Task<string> ProjectHeaderCode(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
 
-                var _parentTaskCode = new SqlParameter()
+                var _parentProjectCode = new SqlParameter()
                 {
-                    ParameterName = "@ParentTaskCode",
+                    ParameterName = "@ParentProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Size = 20,
                     Direction = System.Data.ParameterDirection.Output
@@ -1684,17 +1684,17 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_Project";
+                        _command.CommandText = "Project.proc_Root";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
-                        _command.Parameters.Add(_parentTaskCode);
+                        _command.Parameters.Add(_projectCode);
+                        _command.Parameters.Add(_parentProjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
                     _connection.Close();
                 }
 
-                return (string)_parentTaskCode.Value;
+                return (string)_parentProjectCode.Value;
 
             }
             catch (Exception e)
@@ -1704,7 +1704,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> GetNextTaskCode(string activityCode)
+        public async Task<string> GetNextProjectCode(string activityCode)
         {
             try
             {
@@ -1718,9 +1718,9 @@ namespace TradeControl.Web.Data
                 };
 
 
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Size = 20,
                     Direction = System.Data.ParameterDirection.Output
@@ -1731,17 +1731,17 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_NextCode";
+                        _command.CommandText = "Project.proc_NextCode";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_activityCode);
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
                     _connection.Close();
                 }
 
-                return (string)_taskCode.Value;
+                return (string)_projectCode.Value;
 
             }
             catch (Exception e)
@@ -1751,23 +1751,23 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> TaskCopy(string taskCode)
+        public async Task<string> ProjectCopy(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@FromTaskCode",
+                    ParameterName = "@FromProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
 
-                var _parentTaskCode = new SqlParameter()
+                var _parentProjectCode = new SqlParameter()
                 {
-                    ParameterName = "@ParentTaskCode",
+                    ParameterName = "@ParentProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Size = 20,
                     Direction = System.Data.ParameterDirection.Output
@@ -1778,17 +1778,17 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_Copy";
+                        _command.CommandText = "Project.proc_Copy";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
-                        _command.Parameters.Add(_parentTaskCode);
+                        _command.Parameters.Add(_projectCode);
+                        _command.Parameters.Add(_parentProjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
                     _connection.Close();
                 }
 
-                return (string)_parentTaskCode.Value;
+                return (string)_parentProjectCode.Value;
 
             }
             catch (Exception e)
@@ -1798,17 +1798,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<short> GetTaskAtttributeOrder(string taskCode)
+        public async Task<short> GetTaskAtttributeOrder(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _printOrder = new SqlParameter()
@@ -1823,9 +1823,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_NextAttributeOrder";
+                        _command.CommandText = "Project.proc_NextAttributeOrder";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_printOrder);
 
                         await _command.ExecuteNonQueryAsync();
@@ -1843,17 +1843,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<short> GetTaskOperationNumber(string taskCode)
+        public async Task<short> GetTaskOperationNumber(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _operationNumber = new SqlParameter()
@@ -1868,9 +1868,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_NextOperationNumber";
+                        _command.CommandText = "Project.proc_NextOperationNumber";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_operationNumber);
 
                         await _command.ExecuteNonQueryAsync();
@@ -1888,17 +1888,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<decimal> GetTaskCost(string taskCode)
+        public async Task<decimal> GetTaskCost(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _totalCost = new SqlParameter()
@@ -1915,9 +1915,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_Cost";
+                        _command.CommandText = "Project.proc_Cost";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_totalCost);
 
                         await _command.ExecuteNonQueryAsync();
@@ -1935,17 +1935,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> TaskPay(string taskCode, bool postPayment)
+        public async Task<string> ProjectPay(string projectCode, bool postPayment)
         {
             try
             {
                 var _invoiceNumber = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _postPayment = new SqlParameter()
@@ -1969,7 +1969,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_Pay";
+                        _command.CommandText = "Project.proc_Pay";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_invoiceNumber);
                         _command.Parameters.Add(_postPayment);
@@ -1995,7 +1995,7 @@ namespace TradeControl.Web.Data
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -2024,7 +2024,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_DefaultTaxCode";
+                        _command.CommandText = "Project.proc_DefaultTaxCode";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_cashCode);
@@ -2044,17 +2044,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<NodeEnum.InvoiceType> TaskInvoiceTypeDefault(string taskCode)
+        public async Task<NodeEnum.InvoiceType> TaskInvoiceTypeDefault(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _invoiceType = new SqlParameter()
@@ -2069,9 +2069,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_DefaultInvoiceType";
+                        _command.CommandText = "Project.proc_DefaultInvoiceType";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_invoiceType);
 
                         await _command.ExecuteNonQueryAsync();
@@ -2088,17 +2088,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<NodeEnum.DocType> TaskDocTypeDefault(string taskCode)
+        public async Task<NodeEnum.DocType> TaskDocTypeDefault(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _docType = new SqlParameter()
@@ -2113,9 +2113,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_DefaultDocType";
+                        _command.CommandText = "Project.proc_DefaultDocType";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_docType);
 
                         await _command.ExecuteNonQueryAsync();
@@ -2132,13 +2132,13 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<DateTime> TaskPaymentOnDefault(string accountCode, DateTime actionOn)
+        public async Task<DateTime> ProjectPaymentOnDefault(string accountCode, DateTime actionOn)
         {
             try
             {
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -2166,7 +2166,7 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_DefaultPaymentOn";
+                        _command.CommandText = "Project.proc_DefaultPaymentOn";
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_actionOn);
@@ -2186,17 +2186,17 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> TaskEmailAddress(string taskCode)
+        public async Task<string> TaskEmailAddress(string projectCode)
         {
             try
             {
-                var _taskCode = new SqlParameter()
+                var _projectCode = new SqlParameter()
                 {
-                    ParameterName = "@TaskCode",
+                    ParameterName = "@ProjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 20,
-                    Value = taskCode
+                    Value = projectCode
                 };
 
                 var _emailAddress = new SqlParameter()
@@ -2212,9 +2212,9 @@ namespace TradeControl.Web.Data
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
-                        _command.CommandText = "Task.proc_EmailAddress";
+                        _command.CommandText = "Project.proc_EmailAddress";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_taskCode);
+                        _command.Parameters.Add(_projectCode);
                         _command.Parameters.Add(_emailAddress);
 
                         await _command.ExecuteNonQueryAsync();
@@ -2350,7 +2350,7 @@ namespace TradeControl.Web.Data
 
                     SqlParameter p1 = command.CreateParameter();
                     p1.DbType = DbType.String;
-                    p1.ParameterName = "@AccountCode";
+                    p1.ParameterName = "@SubjectCode";
                     p1.Value = accountCode;
                     command.Parameters.Add(p1);
 
@@ -2428,7 +2428,7 @@ namespace TradeControl.Web.Data
 
         public async Task InstallBasicSetup(string templateName,
                                         short financialMonth,                                        
-                                        string govAccountName,
+                                        string govSubjectName,
                                         string bankName,
                                         string bankAddress,
                                         string dummyAccount,
@@ -2470,8 +2470,8 @@ namespace TradeControl.Web.Data
 
                     SqlParameter p2 = command.CreateParameter();
                     p2.DbType = DbType.String;
-                    p2.ParameterName = "@GovAccountName";
-                    p2.Value = govAccountName;
+                    p2.ParameterName = "@GovSubjectName";
+                    p2.Value = govSubjectName;
                     command.Parameters.Add(p2);
 
                     SqlParameter p3 = command.CreateParameter();

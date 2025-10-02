@@ -5,7 +5,7 @@
 
 <form class="form-group" method="get">
     <p>
-        <select asp-for="CashAccountName" asp-items="Model.CashAccountNames"></select>
+        <select asp-for="AccountName" asp-items="Model.AccountNames"></select>
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
             @*<option value="">All</option>*@
         </select>
@@ -20,7 +20,7 @@
                 @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].SubjectCode)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidBalance)
@@ -37,8 +37,8 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountCode)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectCode)
                     </a>
                 </td>
                 <td>
@@ -61,7 +61,7 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountName)
+                @Html.DisplayNameFor(model => model.Subject_CashAccount.SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Subject_CashAccount.CurrentBalance)
@@ -72,7 +72,7 @@
     <tbody>
         <tr>
             <td>
-                @Html.DisplayFor(model => model.Subject_CashAccount.AccountName)
+                @Html.DisplayFor(model => model.Subject_CashAccount.SubjectName)
             </td>
             <td>
                 @Html.DisplayFor(model => model.Subject_CashAccount.CurrentBalance)
@@ -83,7 +83,7 @@
 </table>
 
 <div>
-    <a asp-page="./Index" asp-route-cashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-info">Show All</a>
+    <a asp-page="./Index" asp-route-cashSubjectName="@Model.AccountName" asp-route-mode="1" class="btn btn-info">Show All</a>
 </div>
 
 @section Scripts {

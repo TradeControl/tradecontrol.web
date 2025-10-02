@@ -44,7 +44,7 @@ namespace TradeControl.Web.Pages.Cash.Totals
                     CategoryTypeCode = (short)NodeEnum.CategoryType.CashTotal,
                     DisplayOrder = 0,
                     IsEnabled = 1,
-                    CashModeCode = (short)NodeEnum.CashMode.Neutral,
+                    CashPolarityCode = (short)NodeEnum.CashPolarity.Neutral,
                     CashTypeCode = (short)NodeEnum.CashType.Trade,
                     InsertedBy = userName,
                     InsertedOn = DateTime.Now,

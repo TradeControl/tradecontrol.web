@@ -19,7 +19,7 @@ namespace TradeControl.Web.Models
         public string UserId { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         public short InvoiceTypeCode { get; set; }
         public short InvoiceStatusCode { get; set; }
         [Column(TypeName = "datetime")]

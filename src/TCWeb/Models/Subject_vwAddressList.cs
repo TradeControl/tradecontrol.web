@@ -13,13 +13,13 @@ namespace TradeControl.Web.Models
     {
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(15)]
         [Display(Name = "Address Code")]
         public string AddressCode { get; set; }
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Display(Name = "Status Code")]
         public short SubjectStatusCode { get; set; }
         [StringLength(255)]

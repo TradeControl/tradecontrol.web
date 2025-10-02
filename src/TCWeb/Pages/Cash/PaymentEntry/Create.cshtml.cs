@@ -29,9 +29,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_PaymentsUnposted { get; set; }
 
-        public SelectList CashAccountNames { get; set; }
+        public SelectList AccountNames { get; set; }
         [BindProperty]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
 
         public SelectList SubjectNames { get; set; }
         [BindProperty]
@@ -47,8 +47,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
         #region session data
         const string SessionKeyLoadMode = "_loadMode";
-        const string SessionKeyCashAccountCode = "_CashAccountCode";
         const string SessionKeyAccountCode = "_AccountCode";
+        const string SessionKeySubjectCode = "_SubjectCode";
         const string SessionKeyCashCode = "_CashCode";
         const string SessionKeyTaxCode = "_TaxCode";
         const string SessionKeyReturnUrl = "_returnUrl";
@@ -74,31 +74,12 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
         }
 
-        string CashAccountCode
-        {
-            get
-            {
-                try
-                {
-                    return HttpContext.Session.GetString(SessionKeyCashAccountCode);
-                }
-                catch
-                {
-                    return null;
-                }
-            }
-            set
-            {
-                HttpContext.Session.SetString(SessionKeyCashAccountCode, value);
-            }
-        }
-
         string AccountCode
         {
             get
             {
                 try
-                { 
+                {
                     return HttpContext.Session.GetString(SessionKeyAccountCode);
                 }
                 catch
@@ -109,6 +90,25 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             set
             {
                 HttpContext.Session.SetString(SessionKeyAccountCode, value);
+            }
+        }
+
+        string SubjectCode
+        {
+            get
+            {
+                try
+                { 
+                    return HttpContext.Session.GetString(SessionKeySubjectCode);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            set
+            {
+                HttpContext.Session.SetString(SessionKeySubjectCode, value);
             }
         }
 
@@ -170,52 +170,52 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         }
         #endregion
 
-        public async Task<IActionResult> OnGetAsync(string cashAccountCode, string mode, string accountCode, string cashCode, string taxCode, string returnUrl)
+        public async Task<IActionResult> OnGetAsync(string cashSubjectCode, string mode, string accountCode, string cashCode, string taxCode, string returnUrl)
         {
             try
             {
                 if (!string.IsNullOrEmpty(returnUrl))
                     ReturnUrl = returnUrl;
 
-                var cashAccountNames = from t in NodeContext.Subject_tbAccounts
+                var cashSubjectNames = from t in NodeContext.Subject_tbAccounts
                                        where !t.AccountClosed && t.AccountTypeCode < 2 && t.CoinTypeCode == 2
-                                       orderby t.CashAccountName
-                                       select t.CashAccountName;
+                                       orderby t.AccountName
+                                       select t.AccountName;
 
-                CashAccountNames = new SelectList(await cashAccountNames.ToListAsync());
+                AccountNames = new SelectList(await cashSubjectNames.ToListAsync());
 
-                if (!string.IsNullOrEmpty(cashAccountCode))
-                    CashAccountCode = cashAccountCode;
-                else if (string.IsNullOrEmpty(CashAccountCode))
+                if (!string.IsNullOrEmpty(cashSubjectCode))
+                    AccountCode = cashSubjectCode;
+                else if (string.IsNullOrEmpty(AccountCode))
                 {
                     CashAccounts cashAccounts = new(NodeContext);
-                    CashAccountCode = await cashAccounts.CurrentAccount();
+                    AccountCode = await cashAccounts.CurrentAccount();
                 }
 
-                CashAccountName = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountCode == CashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                AccountName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == AccountCode).Select(t => t.AccountName).FirstOrDefaultAsync();
 
                 if (!string.IsNullOrEmpty(mode))
                 {
                     InputMode = Int32.Parse(mode);
-                    AccountCode = string.Empty;
+                    SubjectCode = string.Empty;
                     CashCode = string.Empty;
                     TaxCode = string.Empty;
                 }
 
-                var organisationNames = from t in NodeContext.Subject_AccountLookup
-                                        orderby t.AccountName
-                                        select t.AccountName;
+                var organisationNames = from t in NodeContext.Subject_SubjectLookup
+                                        orderby t.SubjectName
+                                        select t.SubjectName;
 
                 SubjectNames = new SelectList(await organisationNames.ToListAsync());
 
                 var profile = new Profile(NodeContext);
 
                 if (!string.IsNullOrEmpty(accountCode))
-                    AccountCode = accountCode;
-                else if (string.IsNullOrEmpty(AccountCode))
-                    AccountCode = await profile.CompanyAccountCode();
+                    SubjectCode = accountCode;
+                else if (string.IsNullOrEmpty(SubjectCode))
+                    SubjectCode = await profile.CompanySubjectCode();
 
-                SubjectName = await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == AccountCode).Select(o => o.AccountName).FirstOrDefaultAsync();
+                SubjectName = await NodeContext.Subject_tbSubjects.Where(o => o.SubjectCode == SubjectCode).Select(o => o.SubjectName).FirstOrDefaultAsync();
 
 
                 if (InputMode == 1)
@@ -246,8 +246,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                     if (!string.IsNullOrEmpty(taxCode))
                         TaxCode = taxCode;
-                    else if (!string.IsNullOrEmpty(accountCode) && await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleOrDefaultAsync() != null)
-                        TaxCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountCode == accountCode).Select(o => o.TaxCode).SingleAsync();
+                    else if (!string.IsNullOrEmpty(accountCode) && await NodeContext.Subject_tbSubjects.Where(o => o.SubjectCode == accountCode).Select(o => o.TaxCode).SingleOrDefaultAsync() != null)
+                        TaxCode = await NodeContext.Subject_tbSubjects.Where(o => o.SubjectCode == accountCode).Select(o => o.TaxCode).SingleAsync();
                     else if (!string.IsNullOrEmpty(cashCode))
                         TaxCode = await NodeContext.Cash_tbCodes.Where(c => c.CashCode == cashCode).Select(c => c.TaxCode).SingleOrDefaultAsync();
                     else if (string.IsNullOrEmpty(TaxCode) && !string.IsNullOrEmpty(CashCode))
@@ -267,8 +267,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                 Cash_PaymentsUnposted = new Cash_vwPaymentsUnposted
                 {
-                    CashAccountCode = CashAccountCode,
                     AccountCode = AccountCode,
+                    SubjectCode = SubjectCode,
                     CashCode = CashCode,
                     TaxCode = TaxCode,
                     PaidOn = DateTime.Today,
@@ -279,7 +279,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
 
                 Cash_PaymentsUnposted.UpdatedBy = Cash_PaymentsUnposted.InsertedBy;
 
-                Subjects orgs = new(NodeContext, AccountCode);
+                Subjects orgs = new(NodeContext, SubjectCode);
 
                 var balance = await orgs.BalanceOutstanding();
 
@@ -305,9 +305,9 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             {
                 CashAccounts cashAccounts = new(NodeContext);
 
-                Cash_PaymentsUnposted.CashAccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstAsync();
+                Cash_PaymentsUnposted.AccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.AccountName == AccountName).Select(t => t.AccountCode).FirstAsync();
                 Cash_PaymentsUnposted.PaymentCode = await cashAccounts.NextPaymentCode();
-                Cash_PaymentsUnposted.AccountCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountName == SubjectName).Select(o => o.AccountCode).FirstAsync();
+                Cash_PaymentsUnposted.SubjectCode = await NodeContext.Subject_tbSubjects.Where(o => o.SubjectName == SubjectName).Select(o => o.SubjectCode).FirstAsync();
 
                 if (InputMode == 1)
                 {
@@ -330,7 +330,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 else
                 {
                     RouteValueDictionary route = new();
-                    route.Add("CashAccountCode", Cash_PaymentsUnposted.CashAccountCode);
+                    route.Add("AccountCode", Cash_PaymentsUnposted.AccountCode);
 
                     return RedirectToPage("./Index", route);
                 }
@@ -342,13 +342,13 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
             }
         }
 
-        public async Task<IActionResult> OnPostNewAccountCode()
+        public async Task<IActionResult> OnPostNewSubjectCode()
         {
             await SaveSession();    
             return LocalRedirect(@"/Subject/Update/Create?returnUrl=/Cash/PaymentEntry/Create");
         }
 
-        public async Task<IActionResult> OnPostGetAccountCode()
+        public async Task<IActionResult> OnPostGetSubjectCode()
         {
             await SaveSession();
             return LocalRedirect(@"/Subject/Index?returnUrl=/Cash/PaymentEntry/Create");
@@ -383,8 +383,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
         {
             try
             {
-                CashAccountCode = Cash_PaymentsUnposted?.CashAccountCode;
-                AccountCode = await NodeContext.Subject_tbSubjects.Where(o => o.AccountName == SubjectName).Select(o => o.AccountCode).FirstAsync();
+                AccountCode = Cash_PaymentsUnposted?.AccountCode;
+                SubjectCode = await NodeContext.Subject_tbSubjects.Where(o => o.SubjectName == SubjectName).Select(o => o.SubjectCode).FirstAsync();
                 CashCode = await NodeContext.Cash_tbCodes.Where(c => c.CashDescription == CashDescription).Select(c => c.CashCode).FirstAsync();
                 TaxCode = await NodeContext.App_tbTaxCodes.Where(c => c.TaxDescription == TaxDescription).Select(c => c.TaxCode).FirstAsync();
             }

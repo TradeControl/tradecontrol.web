@@ -72,7 +72,7 @@ namespace TradeControl.Web.Pages.Cash.Totals
                     candidates = candidates.Where(t => t.CashType == CashType);
 
                 candidates = from tb in candidates
-                             orderby tb.CategoryType, tb.CashType, tb.CashMode
+                             orderby tb.CategoryType, tb.CashType, tb.CashPolarity
                              select tb;
 
                 Cash_Candidates = await candidates.ToListAsync();

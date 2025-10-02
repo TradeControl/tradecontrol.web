@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbMirror", Schema = "Cash")]
-    [Index(nameof(AccountCode), nameof(ChargeCode), Name = "IX_Cash_tbMirror_ChargeCode", IsUnique = true)]
+    [Index(nameof(SubjectCode), nameof(ChargeCode), Name = "IX_Cash_tbMirror_ChargeCode", IsUnique = true)]
     [Index(nameof(TransmitStatusCode), nameof(ChargeCode), Name = "IX_Cash_tbMirror_TransmitStatusCode")]
     public partial class Cash_tbMirror
     {
@@ -18,7 +18,7 @@ namespace TradeControl.Web.Models
         public string CashCode { get; set; }
         [Key]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Key]
         [StringLength(50)]
         public string ChargeCode { get; set; }
@@ -36,9 +36,9 @@ namespace TradeControl.Web.Models
         [Required]
         public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbCashMirror))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbMirrors))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

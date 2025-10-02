@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbChange", Schema = "Cash")]
-    [Index(nameof(CashAccountCode), nameof(ChangeStatusCode), nameof(AddressIndex), Name = "IX_Cash_tbChange_ChangeStatusCode")]
+    [Index(nameof(AccountCode), nameof(ChangeStatusCode), nameof(AddressIndex), Name = "IX_Cash_tbChange_ChangeStatusCode")]
     public partial class Cash_tbChange
     {
         public Cash_tbChange()
@@ -22,7 +22,7 @@ namespace TradeControl.Web.Models
         public string PaymentAddress { get; set; }
         [Required]
         [StringLength(10)]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         public short ChangeTypeCode { get; set; }
         public short ChangeStatusCode { get; set; }
         public int AddressIndex { get; set; }

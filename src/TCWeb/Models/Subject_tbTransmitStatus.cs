@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         public Subject_tbTransmitStatus()
         {
-            TbTaskChangeLogs = new HashSet<Task_tbChangeLog>();
+            TbProjectChangeLogs = new HashSet<Project_tbChangeLog>();
             TbInvoiceChangeLogs = new HashSet<Invoice_tbChangeLog>();
             TbCashMirrors = new HashSet<Cash_tbMirror>();
             TbObjectMirrors = new HashSet<Object_tbMirror>();
@@ -26,8 +26,8 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         public string TransmitStatus { get; set; }
 
-        [InverseProperty(nameof(Task_tbChangeLog.TransmitStatusCodeNavigation))]
-        public virtual ICollection<Task_tbChangeLog> TbTaskChangeLogs { get; set; }
+        [InverseProperty(nameof(Project_tbChangeLog.TransmitStatusCodeNavigation))]
+        public virtual ICollection<Project_tbChangeLog> TbProjectChangeLogs { get; set; }
         [InverseProperty(nameof(Invoice_tbChangeLog.TransmitStatusCodeNavigation))]
         public virtual ICollection<Invoice_tbChangeLog> TbInvoiceChangeLogs { get; set; }
         [InverseProperty(nameof(Cash_tbMirror.TransmitStatusCodeNavigation))]

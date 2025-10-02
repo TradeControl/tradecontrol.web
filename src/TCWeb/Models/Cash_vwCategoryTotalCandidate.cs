@@ -23,6 +23,6 @@ namespace TradeControl.Web.Models
         [StringLength(25)]
         public string CashType { get; set; }
         [StringLength(10)]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
     }
 }

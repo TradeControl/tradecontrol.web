@@ -5,15 +5,9 @@
 <h1>@ViewData["Title"]</h1>
 
 <div>
-    <h4>@Html.DisplayFor(model => model.Subject_CashAccount.CashAccountName)</h4>
+    <h4>@Html.DisplayFor(model => model.Subject_CashAccount.AccountName)</h4>
     <hr />
     <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Subject_CashAccount.CashAccountCode)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Subject_CashAccount.CashAccountCode)
-        </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountCode)
         </dt>
@@ -21,10 +15,16 @@
             @Html.DisplayFor(model => model.Subject_CashAccount.AccountCode)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountName)
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.SubjectCode)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Subject_CashAccount.AccountName)
+            @Html.DisplayFor(model => model.Subject_CashAccount.SubjectCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_CashAccount.SubjectName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_CashAccount.SubjectName)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Subject_CashAccount.CashCode)
@@ -88,7 +88,7 @@
     </dl>
 
     <form method="post">
-        <input type="hidden" asp-for="Subject_CashAccount.CashAccountCode" />
+        <input type="hidden" asp-for="Subject_CashAccount.AccountCode" />
         <input type="submit" value="DELETE" class="btn btn-danger" />
         <a asp-page="./Index" asp-route-accountType="@Model.Subject_CashAccount.AccountType" class="btn btn-info">To List</a>
     </form>

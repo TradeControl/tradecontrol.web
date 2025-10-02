@@ -14,13 +14,13 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(10)]
         [Display (Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
-        [Display(Name = "Tasks")]
-        public int Tasks { get; set; }
+        public string SubjectName { get; set; }
+        [Display(Name = "Projects")]
+        public int Projects { get; set; }
         [Display(Name = "Subject Type Code")]
         public short SubjectTypeCode { get; set; }
         [Required]
@@ -28,7 +28,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Type")]
         public string SubjectType { get; set; }
         [Display(Name = "Polarity Code")]
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [Display(Name = "Status Code")]
         public short SubjectStatusCode { get; set; }
         [StringLength(255)]
@@ -70,7 +70,7 @@ namespace TradeControl.Web.Models
         public string IndustrySector { get; set; }
         [StringLength(100)]
         [Display(Name = "Source")]
-        public string AccountSource { get; set; }
+        public string SubjectSource { get; set; }
         [StringLength(100)]
         [Display(Name = "Payment Terms")]
         public string PaymentTerms { get; set; }

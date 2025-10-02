@@ -9,10 +9,10 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
             <div class="form-group">
-                <label asp-for="Invoice_Entry.AccountCode" class="control-label"></label>
+                <label asp-for="Invoice_Entry.SubjectCode" class="control-label"></label>
                 <p>
-                    <button type="submit" asp-page-handler="GetAccountCode" class="btn btn-outline-info">Select</button>
-                    <button type="submit" asp-page-handler="NewAccountCode" class="btn btn-outline-primary">New</button>
+                    <button type="submit" asp-page-handler="GetSubjectCode" class="btn btn-outline-info">Select</button>
+                    <button type="submit" asp-page-handler="NewSubjectCode" class="btn btn-outline-primary">New</button>
                 </p>
                 <p>
                     <select asp-for="SubjectName" asp-items="Model.SubjectNames" class="form-control"></select>
@@ -76,7 +76,7 @@
             </div>
 
             <input type="hidden" asp-for="Invoice_Entry.UserId" />
-            <input type="hidden" asp-for="Invoice_Entry.AccountCode" />
+            <input type="hidden" asp-for="Invoice_Entry.SubjectCode" />
             <input type="hidden" asp-for="Invoice_Entry.CashCode" />
             <input type="hidden" asp-for="Invoice_Entry.TaxCode" />
             <input type="hidden" asp-for="Invoice_Entry.InvoiceTypeCode" />

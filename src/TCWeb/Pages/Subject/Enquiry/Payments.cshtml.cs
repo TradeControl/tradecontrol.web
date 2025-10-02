@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
         public IList<Cash_vwPayment> Subject_Payments { get; set; }
 
         [BindProperty]
-        public Subject_vwAccountLookup Subject_Account { get; set; }
+        public Subject_vwSubjectLookup Subject_Account { get; set; }
 
         public PaymentsModel(NodeContext context) : base(context) { }
 
@@ -31,13 +31,13 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
                 if (string.IsNullOrEmpty(accountCode))
                     return NotFound();
 
-                Subject_Account = await NodeContext.Subject_AccountLookup.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                Subject_Account = await NodeContext.Subject_SubjectLookup.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
                 if (Subject_Account == null)
                     return NotFound();
 
                 var payments = from tb in NodeContext.Cash_Payments
-                               where tb.AccountCode == accountCode
+                               where tb.SubjectCode == accountCode
                                orderby tb.PaidOn descending
                                select tb;
 

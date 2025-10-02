@@ -28,9 +28,9 @@
                 </p>
             </div>
             <div class="form-group">
-                <label asp-for="AccountName" class="control-label"></label>
+                <label asp-for="SubjectName" class="control-label"></label>
                 <p>
-                    <select asp-for="AccountName" asp-items="Model.AccountNames" class="form-control"></select>
+                    <select asp-for="SubjectName" asp-items="Model.SubjectNames" class="form-control"></select>
                 </p>
             </div>
             <div class="form-group">
@@ -42,7 +42,7 @@
             <input type="hidden" asp-for="Cash_tbTaxType.CashCode" />
             <input type="hidden" asp-for="Cash_tbTaxType.RecurrenceCode" />
             <input type="hidden" asp-for="Cash_tbTaxType.MonthNumber" />
-            <input type="hidden" asp-for="Cash_tbTaxType.AccountCode" />
+            <input type="hidden" asp-for="Cash_tbTaxType.SubjectCode" />
             <input type="hidden" asp-for="Cash_tbTaxType.TaxTypeCode" />
             <input type="hidden" asp-for="Cash_tbTaxType.TaxType" />
 

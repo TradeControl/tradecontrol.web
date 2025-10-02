@@ -18,12 +18,12 @@ namespace TradeControl.Web.Models
             TbFlowParentCodeNavigations = new HashSet<Object_tbFlow>();
             TbMirrors = new HashSet<Object_tbMirror>();
             TbOps = new HashSet<Object_tbOp>();
-            TbTasks = new HashSet<Task_tbTask>();
+            TbProjects = new HashSet<Project_tbProject>();
         }
         [Key]
         [StringLength(50)]
         public string ObjectCode { get; set; }
-        public short TaskStatusCode { get; set; }
+        public short ProjectStatusCode { get; set; }
         [Required]
         [StringLength(15)]
         public string UnitOfMeasure { get; set; }
@@ -68,7 +68,7 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Object_tbMirror> TbMirrors { get; set; }
         [InverseProperty(nameof(Object_tbOp.ObjectCodeNavigation))]
         public virtual ICollection<Object_tbOp> TbOps { get; set; }
-        [InverseProperty(nameof(Task_tbTask.ObjectCodeNavigation))]
-        public virtual ICollection<Task_tbTask> TbTasks { get; set; }
+        [InverseProperty(nameof(Project_tbProject.ObjectCodeNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjects { get; set; }
     }
 }

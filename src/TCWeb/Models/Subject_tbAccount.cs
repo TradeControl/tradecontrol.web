@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbAccount", Schema = "Subject")]
-    [Index(nameof(AccountTypeCode), nameof(LiquidityLevel), nameof(CashAccountCode), Name = "IX_tbAccount_AccountTypeCode")]
+    [Index(nameof(AccountTypeCode), nameof(LiquidityLevel), nameof(AccountCode), Name = "IX_tbAccount_AccountTypeCode")]
     public partial class Subject_tbAccount
     {
         public Subject_tbAccount()
@@ -20,15 +20,15 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(10)]
         [Display (Name = "Cash A/c")]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         [Required]
         [StringLength(10)]
         [Display(Name = "Subject")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Cash A/c Name")]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
         [StringLength(10)]
         [Display(Name = "Sort Code")]
         public string SortCode { get; set; }
@@ -67,9 +67,9 @@ namespace TradeControl.Web.Models
         [Display(Name = "Liquidity")]
         public short LiquidityLevel { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbAccounts))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(AccountTypeCode))]
         [InverseProperty(nameof(Subject_tbAccountType.TbAccounts))]
         public virtual Subject_tbAccountType AccountTypeCodeNavigation { get; set; }
@@ -79,7 +79,7 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(CoinTypeCode))]
         [InverseProperty(nameof(Cash_tbCoinType.TbAccounts))]
         public virtual Cash_tbCoinType CoinTypeCodeNavigation { get; set; }
-        [InverseProperty(nameof(Cash_tbPayment.CashAccountCodeNavigation))]
+        [InverseProperty(nameof(Cash_tbPayment.AccountCodeNavigation))]
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
     }
 }

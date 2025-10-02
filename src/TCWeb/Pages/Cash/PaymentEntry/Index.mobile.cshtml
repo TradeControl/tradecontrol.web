@@ -5,14 +5,14 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-primary">Pay Invoices</a>
-    <a asp-page="Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-primary">Miscellaneous Payment</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-info">Statement</a>
+    <a asp-page="Create" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="0" class="btn btn-outline-primary">Pay Invoices</a>
+    <a asp-page="Create" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="1" class="btn btn-outline-primary">Miscellaneous Payment</a>
+    <a asp-page="/Cash/Statement/Index" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="0" class="btn btn-outline-info">Statement</a>
 </p>
 
 <form class="form-group">
     <p>
-        <select asp-for="CashAccountCode" asp-items="Model.CashAccountNames">
+        <select asp-for="AccountCode" asp-items="Model.AccountNames">
             <option value="">All</option>
         </select>
         <input type="submit" value="Filter" />
@@ -25,7 +25,7 @@
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountName)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].SubjectName)
             </th>
             <th></th>
         </tr>
@@ -38,8 +38,8 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
                 <td>

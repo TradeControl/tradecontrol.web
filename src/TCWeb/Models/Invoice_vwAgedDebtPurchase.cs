@@ -16,10 +16,10 @@ namespace TradeControl.Web.Models
         public string InvoiceNumber { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         public short InvoiceTypeCode { get; set; }
         public short InvoiceStatusCode { get; set; }
         [StringLength(50)]

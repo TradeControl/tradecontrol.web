@@ -16,43 +16,43 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].AccountCode)
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectCode)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].AccountName)
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectName)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].SubjectType)
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectType)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].CashMode)
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].CashPolarity)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model.Subject_AccountLookup)
+        @foreach (var item in Model.Subject_SubjectLookup)
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountCode)
+                    @Html.DisplayFor(modelItem => item.SubjectCode)
                 </td>
                 <td>
-                    <a asp-page="/Org/Update/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Org/Update/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.SubjectType)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashMode)
+                    @Html.DisplayFor(modelItem => item.CashPolarity)
                 </td>
                 <td>
-                    <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
-                    <a asp-page="./Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-warning"></a>
-                    <a asp-page="./Payments" asp-route-accountCode="@item.AccountCode" class="btn btn-success"></a>
-                    <a asp-page="./Statement" asp-route-accountCode="@item.AccountCode" class="btn btn-dark"></a>
+                    <a asp-page="./Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info"></a>
+                    <a asp-page="./Invoices" asp-route-accountCode="@item.SubjectCode" class="btn btn-warning"></a>
+                    <a asp-page="./Payments" asp-route-accountCode="@item.SubjectCode" class="btn btn-success"></a>
+                    <a asp-page="./Statement" asp-route-accountCode="@item.SubjectCode" class="btn btn-dark"></a>
                 </td>
             </tr>
         }

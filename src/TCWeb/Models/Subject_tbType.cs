@@ -20,15 +20,15 @@ namespace TradeControl.Web.Models
         [Display(Name = "Subject Type Code")]
         public short SubjectTypeCode { get; set; }
         [Display(Name = "Mode")]
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Type")]
         public string SubjectType { get; set; }
 
-        [ForeignKey(nameof(CashModeCode))]
-        [InverseProperty(nameof(Cash_tbMode.TbSubjectType))]
-        public virtual Cash_tbMode CashModeCodeNavigation { get; set; }
+        [ForeignKey(nameof(CashPolarityCode))]
+        [InverseProperty(nameof(Cash_tbPolarity.TbSubjectType))]
+        public virtual Cash_tbPolarity CashPolarityCodeNavigation { get; set; }
         [InverseProperty(nameof(Subject_tbSubject.SubjectTypeCodeNavigation))]
         public virtual ICollection<Subject_tbSubject> TbSubjects { get; set; }
     }

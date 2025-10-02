@@ -91,7 +91,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
                 if (invoiceHeader.InvoicedOn < periods.ActiveStartOn)
                     await periods.Generate();
 
-                Subjects orgs = new(NodeContext, invoiceHeader.AccountCode);
+                Subjects orgs = new(NodeContext, invoiceHeader.SubjectCode);
                 await orgs.Rebuild();
 
                 RouteValueDictionary route = new();

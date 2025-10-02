@@ -39,14 +39,14 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
             UserManager = userManager;
         }
 
-        public async Task<IActionResult> OnGetAsync(string cashAccountCode)
+        public async Task<IActionResult> OnGetAsync(string cashSubjectCode)
         {
             try
             {
-                if (string.IsNullOrEmpty(cashAccountCode))
+                if (string.IsNullOrEmpty(cashSubjectCode))
                     return NotFound();
 
-                Subject_CashAccount = await NodeContext.Subject_tbAccounts.FirstOrDefaultAsync(t => t.CashAccountCode == cashAccountCode);
+                Subject_CashAccount = await NodeContext.Subject_tbAccounts.FirstOrDefaultAsync(t => t.AccountCode == cashSubjectCode);
 
                 if (Subject_CashAccount == null)
                     return NotFound();
@@ -64,7 +64,7 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                     CashDescription = await NodeContext.Cash_tbCodes.Where(t => t.CashCode == Subject_CashAccount.CashCode).Select(t => t.CashDescription).FirstAsync();
 
                 AccountType = await NodeContext.Subject_tbAccountTypes.Where(t => t.AccountTypeCode == Subject_CashAccount.AccountTypeCode).Select(t => t.AccountType).FirstAsync();
-                OrganisationName = await NodeContext.Subject_tbSubjects.Where(t => t.AccountCode == Subject_CashAccount.AccountCode).Select(t => t.AccountName).FirstAsync();
+                OrganisationName = await NodeContext.Subject_tbSubjects.Where(t => t.SubjectCode == Subject_CashAccount.SubjectCode).Select(t => t.SubjectName).FirstAsync();
 
                 await SetViewData();
                 return Page();
@@ -96,7 +96,7 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await NodeContext.Subject_tbAccounts.AnyAsync(e => e.CashAccountCode == Subject_CashAccount.CashAccountCode))
+                    if (!await NodeContext.Subject_tbAccounts.AnyAsync(e => e.AccountCode == Subject_CashAccount.AccountCode))
                         return NotFound();
                     else
                         throw;
@@ -104,7 +104,7 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("CashAccountCode", Subject_CashAccount.CashAccountCode);
+                route.Add("AccountCode", Subject_CashAccount.AccountCode);
 
                 return RedirectToPage("./Index", route);
             }

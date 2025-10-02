@@ -4,14 +4,14 @@
 <h1>@ViewData["Title"]</h1>
 <hr />
 
-<h4>@Html.DisplayFor(model => model.AccountName)</h4>
+<h4>@Html.DisplayFor(model => model.SubjectName)</h4>
 
 <div class="row">
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Subject_tbAddress.AddressCode" />
-            <input type="hidden" asp-for="Subject_tbAddress.AccountCode" />
+            <input type="hidden" asp-for="Subject_tbAddress.SubjectCode" />
             <input type="hidden" asp-for="Subject_tbAddress.InsertedBy" />
             <input type="hidden" asp-for="Subject_tbAddress.UpdatedBy" />
             <input type="hidden" asp-for="Subject_tbAddress.InsertedOn" />
@@ -31,7 +31,7 @@
 
             <div class="form-group">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbAddress.AccountCode" class="btn btn-info">To List</a>
+                <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbAddress.SubjectCode" class="btn btn-info">To List</a>
             </div>
         </form>
 

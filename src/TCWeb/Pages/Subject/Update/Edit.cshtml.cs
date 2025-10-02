@@ -97,7 +97,7 @@ namespace TradeControl.Web.Pages.Subject.Update
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await NodeContext.Subject_tbSubjects.AnyAsync(e => e.AccountCode == Subject_tbSubject.AccountCode))
+                    if (!await NodeContext.Subject_tbSubjects.AnyAsync(e => e.SubjectCode == Subject_tbSubject.SubjectCode))
                         return NotFound();
                     else
                         throw;
@@ -105,7 +105,7 @@ namespace TradeControl.Web.Pages.Subject.Update
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("accountCode", Subject_tbSubject.AccountCode);
+                route.Add("accountCode", Subject_tbSubject.SubjectCode);
                 return RedirectToPage("./Index", route);
             }
             catch (Exception e)

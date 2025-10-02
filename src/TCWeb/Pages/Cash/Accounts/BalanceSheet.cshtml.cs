@@ -91,7 +91,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
             
             var balance_sheet = await ( from tb in NodeContext.Cash_BalanceSheet
                                         where tb.MonthNumber == period.MonthNumber && tb.StartOn <= startOn
-                                        orderby tb.YearNumber descending, tb.CashModeCode descending, tb.LiquidityLevel descending, tb.EntryNumber descending
+                                        orderby tb.YearNumber descending, tb.CashPolarityCode descending, tb.LiquidityLevel descending, tb.EntryNumber descending
                                         select tb
                                         ).ToListAsync();
 

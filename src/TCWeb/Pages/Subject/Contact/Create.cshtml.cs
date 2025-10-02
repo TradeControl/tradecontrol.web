@@ -42,7 +42,7 @@ namespace TradeControl.Web.Pages.Subject.Contact
         public Subject_tbContact Subject_tbContact { get; set; }
 
         [BindProperty]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
 
         UserManager<TradeControlWebUser> UserManager { get; }
 
@@ -58,17 +58,17 @@ namespace TradeControl.Web.Pages.Subject.Contact
                 if (string.IsNullOrEmpty(accountCode))
                     return NotFound();
 
-                var subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.AccountCode == accountCode);
+                var subject = await NodeContext.Subject_tbSubjects.FirstOrDefaultAsync(t => t.SubjectCode == accountCode);
 
                 if (subject == null)
                     return NotFound();
                 else
-                    AccountName = subject.AccountName;
+                    SubjectName = subject.SubjectName;
 
                 Profile profile = new(NodeContext);
                 Subject_tbContact = new()
                 {
-                    AccountCode = subject.AccountCode,
+                    SubjectCode = subject.SubjectCode,
                     InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
                     InsertedOn = DateTime.Now,
                     UpdatedOn = DateTime.Now
@@ -111,7 +111,7 @@ namespace TradeControl.Web.Pages.Subject.Contact
                 }
                 else
                 {
-                    route.Add("AccountCode", Subject_tbContact.AccountCode);
+                    route.Add("SubjectCode", Subject_tbContact.SubjectCode);
 
                     return RedirectToPage("./Index", route);
                 }

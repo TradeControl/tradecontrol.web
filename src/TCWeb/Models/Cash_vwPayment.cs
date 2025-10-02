@@ -14,10 +14,10 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display (Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(10)]
         [Display(Name = "Subject")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(20)]
         [Display(Name = "Payment Code")]
@@ -30,7 +30,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "Cash Account Code")]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Cash Code")]
         public string CashCode { get; set; }
@@ -77,7 +77,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(50)]
         [Display(Name = "Cash Account Name")]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
         [StringLength(100)]
         [Display(Name = "Cash Description")]
         public string CashDescription { get; set; }

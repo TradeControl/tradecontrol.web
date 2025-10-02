@@ -15,11 +15,11 @@ namespace TradeControl.Web.Data
             _context = context;
         }
 
-        public async Task<string> CompanyAccountCode()
+        public async Task<string> CompanySubjectCode()
         {
             try
             {
-                return await _context.App_tbOptions.Select(o => o.AccountCode).FirstOrDefaultAsync();
+                return await _context.App_tbOptions.Select(o => o.SubjectCode).FirstOrDefaultAsync();
             }
             catch (Exception e)
             {

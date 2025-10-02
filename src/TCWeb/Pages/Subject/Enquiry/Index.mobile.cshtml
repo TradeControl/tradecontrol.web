@@ -18,23 +18,23 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_AccountLookup[0].AccountName)
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectName)
             </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model.Subject_AccountLookup)
+        @foreach (var item in Model.Subject_SubjectLookup)
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                    @Html.DisplayFor(modelItem => item.SubjectName)
                 </td>
                 <td>
-                    <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
-                    <a asp-page="./Invoices" asp-route-accountCode="@item.AccountCode" class="btn btn-warning"></a>
-                    <a asp-page="./Payments" asp-route-accountCode="@item.AccountCode" class="btn btn-success"></a>
-                    <a asp-page="./Statement" asp-route-accountCode="@item.AccountCode" class="btn btn-dark"></a>
+                    <a asp-page="./Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info"></a>
+                    <a asp-page="./Invoices" asp-route-accountCode="@item.SubjectCode" class="btn btn-warning"></a>
+                    <a asp-page="./Payments" asp-route-accountCode="@item.SubjectCode" class="btn btn-success"></a>
+                    <a asp-page="./Statement" asp-route-accountCode="@item.SubjectCode" class="btn btn-dark"></a>
                 </td>
             </tr>
         }

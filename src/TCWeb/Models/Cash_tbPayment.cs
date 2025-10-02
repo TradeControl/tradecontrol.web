@@ -10,14 +10,14 @@ namespace TradeControl.Web.Models
 {
     [Table("tbPayment", Schema = "Cash")]
     [Index(nameof(PaymentReference), Name = "IX_Cash_tbPayment")]
+    [Index(nameof(SubjectCode), nameof(PaidOn), Name = "IX_Cash_tbPayment_SubjectCode")]
     [Index(nameof(AccountCode), nameof(PaidOn), Name = "IX_Cash_tbPayment_AccountCode")]
-    [Index(nameof(CashAccountCode), nameof(PaidOn), Name = "IX_Cash_tbPayment_CashAccountCode")]
     [Index(nameof(CashCode), nameof(PaidOn), Name = "IX_Cash_tbPayment_CashCode")]
-    [Index(nameof(AccountCode), nameof(PaymentStatusCode), nameof(PaymentCode), Name = "IX_Cash_tbPayment_PaymentCode_Status")]
-    [Index(nameof(AccountCode), nameof(PaymentCode), nameof(TaxCode), Name = "IX_Cash_tbPayment_PaymentCode_TaxCode")]
+    [Index(nameof(SubjectCode), nameof(PaymentStatusCode), nameof(PaymentCode), Name = "IX_Cash_tbPayment_PaymentCode_Status")]
+    [Index(nameof(SubjectCode), nameof(PaymentCode), nameof(TaxCode), Name = "IX_Cash_tbPayment_PaymentCode_TaxCode")]
     [Index(nameof(PaymentStatusCode), Name = "IX_Cash_tbPayment_Status")]
-    [Index(nameof(PaymentStatusCode), nameof(AccountCode), Name = "IX_Cash_tbPayment_Status_AccountCode")]
-    [Index(nameof(PaymentStatusCode), nameof(CashAccountCode), nameof(PaidOn), Name = "IX_Cash_tbPayment_Status_CashAccount_PaidOn")]
+    [Index(nameof(PaymentStatusCode), nameof(SubjectCode), Name = "IX_Cash_tbPayment_Status_SubjectCode")]
+    [Index(nameof(PaymentStatusCode), nameof(AccountCode), nameof(PaidOn), Name = "IX_Cash_tbPayment_Status_CashAccount_PaidOn")]
     [Index(nameof(TaxCode), Name = "IX_tbPayment_TaxCode")]
     public partial class Cash_tbPayment
     {
@@ -39,11 +39,11 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(10)]
         [Display(Name = "Cash Account")]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Cash Code")]
         public string CashCode { get; set; }
@@ -83,12 +83,12 @@ namespace TradeControl.Web.Models
         [DataType(DataType.Date)]
         public DateTime UpdatedOn { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
+        [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbPayments))]
-        public virtual Subject_tbSubject AccountCodeNavigation { get; set; }
-        [ForeignKey(nameof(CashAccountCode))]
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
+        [ForeignKey(nameof(AccountCode))]
         [InverseProperty(nameof(Subject_tbAccount.TbPayments))]
-        public virtual Subject_tbAccount CashAccountCodeNavigation { get; set; }
+        public virtual Subject_tbAccount AccountCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbPayments))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

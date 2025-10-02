@@ -29,11 +29,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         [BindProperty]
         public Cash_tbCategory Cash_tbCategory { get; set; }
 
-        public SelectList CashModes { get; set; }
+        public SelectList CashPolaritys { get; set; }
         public SelectList CashTypes { get; set; }
 
         [BindProperty]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
         [BindProperty]
         public string CashType { get; set; }
         [BindProperty]
@@ -53,9 +53,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 IsEnabled = Cash_tbCategory.IsEnabled != 0;
 
-                var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
-                CashModes = new SelectList(await modes.ToListAsync());
-                CashMode = await NodeContext.Cash_tbModes.Where(m => m.CashModeCode == Cash_tbCategory.CashModeCode).Select(m => m.CashMode).FirstAsync();
+                var modes = NodeContext.Cash_tbPolaritys.OrderBy(m => m.CashPolarityCode).Select(m => m.CashPolarity);
+                CashPolaritys = new SelectList(await modes.ToListAsync());
+                CashPolarity = await NodeContext.Cash_tbPolaritys.Where(m => m.CashPolarityCode == Cash_tbCategory.CashPolarityCode).Select(m => m.CashPolarity).FirstAsync();
 
                 var types = NodeContext.Cash_tbTypes.OrderBy(t => t.CashTypeCode).Select(t => t.CashType);
                 CashTypes = new SelectList(await types.ToListAsync());
@@ -80,7 +80,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 Cash_tbCategory.IsEnabled = (short)(IsEnabled ? 1 : 0);
                 Cash_tbCategory.CashTypeCode = await NodeContext.Cash_tbTypes.Where(t => t.CashType == CashType).Select(t => t.CashTypeCode).FirstAsync();
-                Cash_tbCategory.CashModeCode = await NodeContext.Cash_tbModes.Where(m => m.CashMode == CashMode).Select(m => m.CashModeCode).FirstAsync();
+                Cash_tbCategory.CashPolarityCode = await NodeContext.Cash_tbPolaritys.Where(m => m.CashPolarity == CashPolarity).Select(m => m.CashPolarityCode).FirstAsync();
 
                 Profile profile = new(NodeContext);
                 Cash_tbCategory.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));

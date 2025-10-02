@@ -18,10 +18,10 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_CashAccounts[0].CashAccountName)
+                @Html.DisplayNameFor(model => model.Subject_CashAccounts[0].AccountName)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Subject_CashAccounts[0].AccountName)
+                @Html.DisplayNameFor(model => model.Subject_CashAccounts[0].SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Subject_CashAccounts[0].CashDescription)
@@ -43,10 +43,10 @@
         {
         <tr>
             <td>
-                @Html.DisplayFor(modelItem => item.CashAccountName)
+                @Html.DisplayFor(modelItem => item.AccountName)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.AccountName)
+                @Html.DisplayFor(modelItem => item.SubjectName)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.CashDescription)
@@ -61,9 +61,9 @@
                 @Html.DisplayFor(modelItem => item.AccountClosed)
             </td>
             <td>
-                <a asp-page="./Details" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-info"></a>
-                <a asp-page="./Edit" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-secondary"></a>
-                <a asp-page="./Delete" asp-route-cashAccountCode="@item.CashAccountCode" class="btn btn-danger"></a>
+                <a asp-page="./Details" asp-route-cashSubjectCode="@item.AccountCode" class="btn btn-info"></a>
+                <a asp-page="./Edit" asp-route-cashSubjectCode="@item.AccountCode" class="btn btn-secondary"></a>
+                <a asp-page="./Delete" asp-route-cashSubjectCode="@item.AccountCode" class="btn btn-danger"></a>
             </td>
         </tr>
         }

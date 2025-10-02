@@ -52,7 +52,7 @@ namespace TradeControl.Web.Pages.Invoice.Register
 
                 if (!string.IsNullOrEmpty(accountCode))
                 {
-                    invoices = invoices.Where(i => i.AccountCode == accountCode);
+                    invoices = invoices.Where(i => i.SubjectCode == accountCode);
                     PeriodName = null;
                 }
                 else if (!string.IsNullOrEmpty(invoiceNumber))

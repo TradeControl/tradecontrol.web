@@ -18,7 +18,7 @@ namespace TradeControl.Web.Models
         public string PeriodName { get; set; }
         [StringLength(10)]
         [Display(Name = "Mode")]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Cash Code")]

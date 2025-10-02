@@ -18,7 +18,7 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "smallint")]
         public NodeEnum.TaxType TaxTypeCode { get; set; } = NodeEnum.TaxType.General;
         [Column(TypeName = "smallint")]
-        public NodeEnum.CashMode CashModeCode { get; set; } = NodeEnum.CashMode.Neutral;
+        public NodeEnum.CashPolarity CashPolarityCode { get; set; } = NodeEnum.CashPolarity.Neutral;
         [Column(TypeName = "smallint")]
         public NodeEnum.CashType CashTypeCode { get; set; } = NodeEnum.CashType.Trade;
 

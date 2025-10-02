@@ -20,7 +20,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Asset Class")]
         public string AssetName { get; set; }
         [Display(Name = "Cash Mode")]
-        public int CashModeCode { get; set; }
+        public int CashPolarityCode { get; set; }
         [Display(Name = "Liquidity")]
         public short LiquidityLevel { get; set; }
         [Column(TypeName = "datetime")]

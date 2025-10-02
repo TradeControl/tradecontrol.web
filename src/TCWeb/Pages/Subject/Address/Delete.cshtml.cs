@@ -57,7 +57,7 @@ namespace TradeControl.Web.Pages.Subject.Address
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("accountCode", tbAddress.AccountCode);
+                route.Add("accountCode", tbAddress.SubjectCode);
 
                 return RedirectToPage("./Index", route);
             }

@@ -13,11 +13,11 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(10)]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         public short LiquidityLevel { get; set; }
         [Required]
         [StringLength(50)]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
         [StringLength(10)]
         public string SortCode { get; set; }
         [StringLength(20)]

@@ -32,7 +32,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Category Type")]
         public short CategoryTypeCode { get; set; }
         [Display(Name = "Cash Mode")]
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [Display(Name = "Cash Type")]
         public short CashTypeCode { get; set; }
         [Display(Name = "Display Order")]
@@ -52,9 +52,9 @@ namespace TradeControl.Web.Models
         //[Required]
         //public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(CashModeCode))]
-        [InverseProperty(nameof(Cash_tbMode.TbCategories))]
-        public virtual Cash_tbMode CashModeCodeNavigation { get; set; }
+        [ForeignKey(nameof(CashPolarityCode))]
+        [InverseProperty(nameof(Cash_tbPolarity.TbCategories))]
+        public virtual Cash_tbPolarity CashPolarityCodeNavigation { get; set; }
         [ForeignKey(nameof(CashTypeCode))]
         [InverseProperty(nameof(Cash_tbType.TbCategories))]
         public virtual Cash_tbType CashTypeCodeNavigation { get; set; }

@@ -5,14 +5,14 @@
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="./Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-primary w-25">Pay Invoices</a>
-    <a asp-page="./Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-primary w-25">Miscellaneous Payment</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-info w-25">Statement</a>
+    <a asp-page="./Create" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="0" class="btn btn-outline-primary w-25">Pay Invoices</a>
+    <a asp-page="./Create" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="1" class="btn btn-outline-primary w-25">Miscellaneous Payment</a>
+    <a asp-page="/Cash/Statement/Index" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="0" class="btn btn-outline-info w-25">Statement</a>
 </p>
 
 <form class="form-group">
     <p>
-        <select asp-for="CashAccountName" asp-items="Model.CashAccountNames"></select>
+        <select asp-for="AccountName" asp-items="Model.AccountNames"></select>
         <input type="submit" value="Filter" />
     </p>
 </form>
@@ -23,7 +23,7 @@
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountName)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaymentReference)
@@ -51,8 +51,8 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
                 <td>

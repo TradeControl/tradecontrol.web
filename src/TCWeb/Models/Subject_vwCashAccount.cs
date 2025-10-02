@@ -8,22 +8,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TradeControl.Web.Models
 {
-    //CashAccountCode, AccountCode, CashAccountName, AccountName, SubjectType, OpeningBalance, CurrentBalance, SortCode, AccountNumber, AccountClosed, AccountType
+    //AccountCode, SubjectCode, AccountName, SubjectName, SubjectType, OpeningBalance, CurrentBalance, SortCode, AccountNumber, AccountClosed, AccountType
     [Keyless]
     public partial class Subject_vwCashAccount
     {
         [StringLength(10)]
         [Display (Name = "Cash A/c")]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Cash Account")]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
         [StringLength(255)]
         [Display(Name = "Subject")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Type")]

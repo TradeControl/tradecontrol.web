@@ -13,14 +13,14 @@
                 <span asp-validation-for="Subject_tbType.SubjectType" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Subject_tbType.CashModeCode" class="control-label"></label>
+                <label asp-for="Subject_tbType.CashPolarityCode" class="control-label"></label>
                 <p>
-                    <select asp-for="CashMode" asp-items="Model.CashModes" class="form-control"></select>
+                    <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-control"></select>
                 </p>
             </div>
 
             <input type="hidden" asp-for="Subject_tbType.SubjectTypeCode" />
-            <input type="hidden" asp-for="Subject_tbType.CashModeCode" />
+            <input type="hidden" asp-for="Subject_tbType.CashPolarityCode" />
 
             <div class="form-group">
                 <input type="submit" value="UPDATE" class="btn btn-primary" />

@@ -37,7 +37,7 @@
                 @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashType)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashMode)
+                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashPolarity)
             </th>
 
             <th></th>
@@ -60,7 +60,7 @@
                     @Html.DisplayFor(modelItem => item.CashType)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashMode)
+                    @Html.DisplayFor(modelItem => item.CashPolarity)
                 </td>
                 <td>
                     <a asp-page="./Edit" asp-route-categoryCode="@Model.Cash_Category.CategoryCode" asp-route-childCode="@item.CategoryCode" class="btn btn-info"></a>

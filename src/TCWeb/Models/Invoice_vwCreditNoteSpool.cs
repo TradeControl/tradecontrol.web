@@ -24,10 +24,10 @@ namespace TradeControl.Web.Models
         public string UserName { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         public string InvoiceStatus { get; set; }
         [Column(TypeName = "datetime")]
@@ -46,9 +46,9 @@ namespace TradeControl.Web.Models
         public string InvoiceAddress { get; set; }
         [Required]
         [StringLength(20)]
-        public string TaskCode { get; set; }
+        public string ProjectCode { get; set; }
         [StringLength(100)]
-        public string TaskTitle { get; set; }
+        public string ProjectTitle { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime ActionedOn { get; set; }
         [Column(TypeName = "decimal(18, 4)")]

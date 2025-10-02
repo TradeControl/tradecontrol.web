@@ -14,7 +14,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display (Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Display(Name = "Id")]
         public int RowNumber { get; set; }
         [Column(TypeName = "datetime")]

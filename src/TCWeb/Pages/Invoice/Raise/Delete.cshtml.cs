@@ -34,7 +34,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (accountCode == null || cashCode == null)
                     return NotFound();
 
-                Entry = await NodeContext.Invoice_Entries.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.CashCode == cashCode);
+                Entry = await NodeContext.Invoice_Entries.FirstOrDefaultAsync(m => m.SubjectCode == accountCode && m.CashCode == cashCode);
 
                 if (Entry == null)
                     return NotFound();
@@ -70,7 +70,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (accountCode == null || cashCode == null)
                     return NotFound();
 
-                var invoiceEntry = await NodeContext.Invoice_tbEntries.Where(t => t.AccountCode == accountCode && t.CashCode == cashCode).FirstAsync();
+                var invoiceEntry = await NodeContext.Invoice_tbEntries.Where(t => t.SubjectCode == accountCode && t.CashCode == cashCode).FirstAsync();
 
                 if (invoiceEntry != null)
                 {

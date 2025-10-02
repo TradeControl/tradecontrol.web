@@ -2,11 +2,11 @@
 @model TradeControl.Web.Pages.Subject.Contact.IndexModel
 @{ ViewData["Title"] = "Contacts"; }
 <h1>@ViewData["Title"]</h1>
-<h4>@Html.DisplayFor(model => model.Subject_Account.AccountName)</h4>
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
 <hr />
 <p>
-    <a asp-page="Create" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-outline-primary w-25">New Contact</a>
-    <a asp-page="../Update/Edit" asp-route-accountCode="@Model.Subject_Account.AccountCode" class="btn btn-info w-25">To edit</a>
+    <a asp-page="Create" asp-route-accountCode="@Model.Subject_Account.SubjectCode" class="btn btn-outline-primary w-25">New Contact</a>
+    <a asp-page="../Update/Edit" asp-route-accountCode="@Model.Subject_Account.SubjectCode" class="btn btn-info w-25">To edit</a>
 </p>
 <table class="table  table-striped">
     <thead>
@@ -49,9 +49,9 @@
                     @Html.DisplayFor(modelItem => item.JobTitle)
                 </td>
                 <td>
-                    <a asp-page="./Details" asp-route-accountCode="@item.AccountCode" asp-route-contactName="@item.ContactName" class="btn btn-info"></a>
-                    <a asp-page="./Edit" asp-route-accountCode="@item.AccountCode" asp-route-contactName="@item.ContactName" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-accountCode="@item.AccountCode" asp-route-contactName="@item.ContactName" class="btn btn-danger"></a>
+                    <a asp-page="./Details" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" class="btn btn-info"></a>
+                    <a asp-page="./Edit" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" class="btn btn-secondary"></a>
+                    <a asp-page="./Delete" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" class="btn btn-danger"></a>
                 </td>
             </tr>
         }
