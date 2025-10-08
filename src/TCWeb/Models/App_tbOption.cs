@@ -34,7 +34,7 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string MinerFeeCode { get; set; }
         [StringLength(10)]
-        public string MinerSubjectCode { get; set; }
+        public string MinerAccountCode { get; set; }
         public short CoinTypeCode { get; set; }
         public int? HostId { get; set; }
         [Required]
@@ -60,9 +60,9 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(CoinTypeCode))]
         [InverseProperty(nameof(Cash_tbCoinType.TbOptions))]
         public virtual Cash_tbCoinType CoinTypeCodeNavigation { get; set; }
-        [ForeignKey(nameof(MinerSubjectCode))]
-        [InverseProperty(nameof(Subject_tbSubject.TbOptionMinerSubjectCodeNavigations))]
-        public virtual Subject_tbSubject MinerSubjectCodeNavigation { get; set; }
+        [ForeignKey(nameof(MinerAccountCode))]
+        [InverseProperty(nameof(Subject_tbSubject.TbOptionMinerAccountCodeNavigations))]
+        public virtual Subject_tbSubject MinerAccountCodeNavigation { get; set; }
         [ForeignKey(nameof(MinerFeeCode))]
         [InverseProperty(nameof(Cash_tbCode.TbOptions))]
         public virtual Cash_tbCode MinerFeeCodeNavigation { get; set; }

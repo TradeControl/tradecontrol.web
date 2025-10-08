@@ -8,7 +8,7 @@
     [ExpectedOn]        DATETIME        CONSTRAINT [DF_Invoice_tbInvoice_ExpectedOn] DEFAULT (dateadd(day,(1),CONVERT([date],getdate()))) NOT NULL,
     [DueOn]             DATETIME        CONSTRAINT [DF_Invoice_tbInvoice_DueOn] DEFAULT (dateadd(day,(1),CONVERT([date],getdate()))) NOT NULL,
     [PaymentTerms]      NVARCHAR (100)  NULL,
-    [Notes]             NTEXT           NULL,
+    [Notes]             NVARCHAR(MAX)           NULL,
     [Printed]           BIT             CONSTRAINT [DF_Invoice_tb_Printed] DEFAULT ((0)) NOT NULL,
     [Spooled]           BIT             CONSTRAINT [DF_Invoice_tb_Spooled] DEFAULT ((0)) NOT NULL,
     [RowVer]            ROWVERSION      NOT NULL,

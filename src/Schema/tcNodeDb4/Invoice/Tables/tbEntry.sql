@@ -5,7 +5,7 @@
     [InvoiceTypeCode] SMALLINT        NOT NULL,
     [InvoicedOn]      DATETIME        CONSTRAINT [DF_Invoice_tbEntry_InvoicedOn] DEFAULT (CONVERT([date],getdate())) NOT NULL,
     [TaxCode]         NVARCHAR (10)   NULL,
-    [ItemReference]   NTEXT           NULL,
+    [ItemReference]   NVARCHAR(MAX)           NULL,
     [TotalValue]      DECIMAL (18, 5) CONSTRAINT [DF_Invoice_tbEntry_TotalValue] DEFAULT ((0)) NOT NULL,
     [InvoiceValue]    DECIMAL (18, 5) CONSTRAINT [DF_Invoice_tbEntry_InvoiceValue] DEFAULT ((0)) NOT NULL,
     [RowVer]          ROWVERSION      NOT NULL,

@@ -51,7 +51,7 @@ namespace TradeControl.Web.Data
             {
                 try
                 { 
-                    return (!_context.App_tbOptions.Any() || !_context.Usr_tbUsers.Any());
+                    return (!_context.AspNet_UserRegistrations.Any());
                 }
                 catch (Exception e)
                 {

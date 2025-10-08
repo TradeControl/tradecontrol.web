@@ -58,7 +58,10 @@ namespace TradeControl.Web.Pages
                 {
                     NodeSettings nodeSettings = new NodeSettings(NodeContext);
 
-                    if (nodeSettings.IsFirstUse || !nodeSettings.IsInitialised)
+                    if (nodeSettings.IsFirstUse)
+                        await NodeContext.InitializeNode();
+                    
+                    if (!nodeSettings.IsInitialised)
                         return RedirectToPage("/Admin/Setup/Config");
                     else
                         throw new Exception("Initialisation error");

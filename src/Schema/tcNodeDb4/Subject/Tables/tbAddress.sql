@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [Subject].[tbAddress] (
     [AddressCode] NVARCHAR (15) NOT NULL,
     [SubjectCode] NVARCHAR (10) NOT NULL,
-    [Address]     NTEXT         NOT NULL,
+    [Address]     NVARCHAR(MAX)         NOT NULL,
     [InsertedBy]  NVARCHAR (50) CONSTRAINT [DF_Subject_tbAddress_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
     [InsertedOn]  DATETIME      CONSTRAINT [DF_Subject_tbAddress_InsertedOn] DEFAULT (getdate()) NOT NULL,
     [UpdatedBy]   NVARCHAR (50) CONSTRAINT [DF_Subject_tbAddress_UpdatedBy] DEFAULT (suser_sname()) NOT NULL,

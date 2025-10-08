@@ -7,7 +7,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectVersion>4.1</ProjectVersion>
     <ProjectGuid>{b6a8be87-d50b-45db-a9d3-7e53270da8bf}</ProjectGuid>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql130DatabaseSchemaProvider</DSP>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql150DatabaseSchemaProvider</DSP>
     <OutputType>Database</OutputType>
     <RootPath>
     </RootPath>
@@ -493,7 +493,6 @@
     <Build Include="Cash\Functions\fnKeyAddresses.sql" />
     <Build Include="Cash\Stored Procedures\proc_ChangeAddressIndex.sql" />
     <Build Include="Cash\Stored Procedures\proc_ChangeNew.sql" />
-    <Build Include="App\Stored Procedures\proc_NodeInitialisation.sql" />
     <Build Include="App\Stored Procedures\proc_BasicSetup.sql" />
     <Build Include="App\Stored Procedures\proc_DemoBom.sql" />
     <Build Include="App\Stored Procedures\proc_DemoServices.sql" />
@@ -636,5 +635,11 @@
     <Build Include="Security\Web.sql" />
     <Build Include="App\Stored Procedures\proc_TemplateCompanyHMRC2021.sql" />
     <Build Include="Cash\Views\vwTaxLossesCarriedForward.sql" />
+    <Build Include="App\Stored Procedures\proc_DB4Migration.sql" />
+    <Build Include="App\Stored Procedures\proc_NodeDataInit.sql" />
+    <Build Include="App\Stored Procedures\proc_NodeBusinessInit.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="Script.PostDeployment.sql" />
   </ItemGroup>
 </Project>

@@ -6,8 +6,14 @@
     [InsertedBy]    NVARCHAR (50)  CONSTRAINT [DF_App_tbLog_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
     [RowVer]        ROWVERSION     NOT NULL,
     CONSTRAINT [PK_App_tbEventLog_LogCode] PRIMARY KEY CLUSTERED ([LogCode] ASC),
-    FOREIGN KEY ([EventTypeCode]) REFERENCES [App].[tbEventType] ([EventTypeCode])
+    CONSTRAINT [FK_tbEventLog_EventType] FOREIGN KEY ([EventTypeCode]) REFERENCES [App].[tbEventType] ([EventTypeCode])
 );
+
+
+GO
+ALTER TABLE [App].[tbEventLog] NOCHECK CONSTRAINT [FK_tbEventLog_EventType];
+
+
 
 
 GO

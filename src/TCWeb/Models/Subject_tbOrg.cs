@@ -26,7 +26,7 @@ namespace TradeControl.Web.Models
             TbInvoiceMirror = new HashSet<Invoice_tbMirror>();
             TbMirrors = new HashSet<Object_tbMirror>();
             TbOptionSubjectCodeNavigations = new HashSet<App_tbOption>();
-            TbOptionMinerSubjectCodeNavigations = new HashSet<App_tbOption>();
+            TbOptionMinerAccountCodeNavigations = new HashSet<App_tbOption>();
             TbPayments = new HashSet<Cash_tbPayment>();
             TbSectors = new HashSet<Subject_tbSector>();
             TbProjects = new HashSet<Project_tbProject>();
@@ -160,8 +160,8 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Object_tbMirror> TbMirrors { get; set; }
         [InverseProperty(nameof(App_tbOption.SubjectCodeNavigation))]
         public virtual ICollection<App_tbOption> TbOptionSubjectCodeNavigations { get; set; }
-        [InverseProperty(nameof(App_tbOption.MinerSubjectCodeNavigation))]
-        public virtual ICollection<App_tbOption> TbOptionMinerSubjectCodeNavigations { get; set; }
+        [InverseProperty(nameof(App_tbOption.MinerAccountCodeNavigation))]
+        public virtual ICollection<App_tbOption> TbOptionMinerAccountCodeNavigations { get; set; }
         [InverseProperty(nameof(Cash_tbPayment.SubjectCodeNavigation))]
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
         [InverseProperty(nameof(Subject_tbSector.SubjectCodeNavigation))]

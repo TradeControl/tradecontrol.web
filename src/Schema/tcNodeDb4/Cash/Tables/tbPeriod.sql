@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [Cash].[tbPeriod] (
     [CashCode]      NVARCHAR (50)   NOT NULL,
     [StartOn]       DATETIME        NOT NULL,
-    [Note]          NTEXT           NULL,
+    [Note]          NVARCHAR(MAX)           NULL,
     [RowVer]        ROWVERSION      NOT NULL,
     [InvoiceValue]  DECIMAL (18, 5) CONSTRAINT [DF_Cash_tbPeriod_InvoiceValue] DEFAULT ((0)) NOT NULL,
     [InvoiceTax]    DECIMAL (18, 5) CONSTRAINT [DF_Cash_tbPeriod_InvoiceTax] DEFAULT ((0)) NOT NULL,

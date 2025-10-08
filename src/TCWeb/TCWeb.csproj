@@ -46,9 +46,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\content\images\company_logo.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="wwwroot\content\templates\invoice_expense_standard.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

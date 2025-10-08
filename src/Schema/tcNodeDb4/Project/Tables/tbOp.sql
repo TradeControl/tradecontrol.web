@@ -5,7 +5,7 @@
     [OpStatusCode]    SMALLINT        CONSTRAINT [DF_Project_tbOp_OpStatusCode] DEFAULT ((0)) NOT NULL,
     [UserId]          NVARCHAR (10)   NOT NULL,
     [Operation]       NVARCHAR (50)   NOT NULL,
-    [Note]            NTEXT           NULL,
+    [Note]            NVARCHAR(MAX)           NULL,
     [StartOn]         DATETIME        CONSTRAINT [DF_Project_tbOp_StartOn] DEFAULT (getdate()) NOT NULL,
     [EndOn]           DATETIME        CONSTRAINT [DF_Project_tbOp_EndOn] DEFAULT (getdate()) NOT NULL,
     [OffsetDays]      SMALLINT        CONSTRAINT [DF_Project_tbOp_OffsetDays] DEFAULT ((0)) NOT NULL,

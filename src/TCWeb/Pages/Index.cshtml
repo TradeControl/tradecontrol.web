@@ -6,56 +6,54 @@
     ViewData["Title"] = "Trade Control";
 }
 
-<div>
-    <img src="@Url.Content("~/content/images/company_logo.png")" alt="Company Logo" width="200" />
-</div>
-<p/>
-<div>
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Identity.WebSite)
-        </dt>
-        <dd class="col-sm-10">
-            <a href=@Model.App_Identity.WebSite>@Html.DisplayFor(model => model.App_Identity.SubjectName)</a>
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.CurrentPeriod)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.CurrentPeriod)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Identity.EmailAddress)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Identity.EmailAddress)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Identity.PhoneNumber)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Identity.PhoneNumber)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.WebVersion)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.WebVersion)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.SqlNodeVersion)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.SqlNodeVersion)
-        </dd>
-        <dt class="col-sm-2">
-            On-line Help
-        </dt>
-        <dd class="col-sm-10">
-            <a href="https://tradecontrol.github.io">Technical Documentation</a>
-        </dd>
+<div class="mt-5 tc-align-header">
+    <div class="tc-section">
+        <dl class="row">
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.App_Identity.WebSite)
+            </dt>
+            <dd class="col-sm-10">
+                <a href=@Model.App_Identity.WebSite>@Html.DisplayFor(model => model.App_Identity.SubjectName)</a>
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.CurrentPeriod)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.CurrentPeriod)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.App_Identity.EmailAddress)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.App_Identity.EmailAddress)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.App_Identity.PhoneNumber)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.App_Identity.PhoneNumber)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.WebVersion)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.WebVersion)
+            </dd>
+            <dt class="col-sm-2">
+                @Html.DisplayNameFor(model => model.SqlNodeVersion)
+            </dt>
+            <dd class="col-sm-10">
+                @Html.DisplayFor(model => model.SqlNodeVersion)
+            </dd>
+            <dt class="col-sm-2">
+                On-line Help
+            </dt>
+            <dd class="col-sm-10">
+                <a href="https://tradecontrol.github.io">Technical Documentation</a>
+            </dd>
 
-    </dl>
+        </dl>
+    </div>
 </div>
 
 @section Scripts {

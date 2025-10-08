@@ -2,7 +2,7 @@
 CREATE   PROCEDURE Subject.proc_AddAddress 
 	(
 	@SubjectCode nvarchar(10),
-	@Address ntext
+	@Address NVARCHAR(MAX)
 	)
 AS
  	SET NOCOUNT, XACT_ABORT ON;

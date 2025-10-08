@@ -1,8 +1,8 @@
 ﻿CREATE TABLE [Project].[tbDoc] (
     [ProjectCode]            NVARCHAR (20)  NOT NULL,
     [DocumentName]        NVARCHAR (255) NOT NULL,
-    [DocumentDescription] NTEXT          NULL,
-    [DocumentImage]       IMAGE          NOT NULL,
+    [DocumentDescription] NVARCHAR(MAX)          NULL,
+    [DocumentImage]       VARBINARY(MAX)          NOT NULL,
     [InsertedBy]          NVARCHAR (50)  CONSTRAINT [DF_Project_tbDoc_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
     [InsertedOn]          DATETIME       CONSTRAINT [DF_Project_tbDoc_InsertedOn] DEFAULT (getdate()) NOT NULL,
     [UpdatedBy]           NVARCHAR (50)  CONSTRAINT [DF_Project_tbDoc_UpdatedBy] DEFAULT (suser_sname()) NOT NULL,

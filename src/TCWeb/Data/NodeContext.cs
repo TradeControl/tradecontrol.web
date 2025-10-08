@@ -1821,9 +1821,9 @@ namespace TradeControl.Web.Data
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_App_tbOptions_Cash_tbCoinType");
 
-                entity.HasOne(d => d.MinerSubjectCodeNavigation)
-                    .WithMany(p => p.TbOptionMinerSubjectCodeNavigations)
-                    .HasForeignKey(d => d.MinerSubjectCode)
+                entity.HasOne(d => d.MinerAccountCodeNavigation)
+                    .WithMany(p => p.TbOptionMinerAccountCodeNavigations)
+                    .HasForeignKey(d => d.MinerAccountCode)
                     .HasConstraintName("FK_App_tbOptions_Subject_tbSubject");
 
                 entity.HasOne(d => d.MinerFeeCodeNavigation)

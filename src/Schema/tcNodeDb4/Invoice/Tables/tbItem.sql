@@ -2,7 +2,7 @@
     [InvoiceNumber] NVARCHAR (20)   NOT NULL,
     [CashCode]      NVARCHAR (50)   NOT NULL,
     [TaxCode]       NVARCHAR (10)   NULL,
-    [ItemReference] NTEXT           NULL,
+    [ItemReference] NVARCHAR(MAX)           NULL,
     [RowVer]        ROWVERSION      NOT NULL,
     [TotalValue]    DECIMAL (18, 5) CONSTRAINT [DF_Invoice_tbItem_TotalValue] DEFAULT ((0)) NOT NULL,
     [InvoiceValue]  DECIMAL (18, 5) CONSTRAINT [DF_Invoice_tbItem_InvoiceValue] DEFAULT ((0)) NOT NULL,

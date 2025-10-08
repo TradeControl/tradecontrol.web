@@ -2324,6 +2324,28 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region config
+        public async Task InitializeNode()
+        {
+            try
+            {
+                using SqlConnection _connection = new(Database.GetConnectionString());
+                _connection.Open();
+
+                using (SqlCommand command = _connection.CreateCommand())
+                {
+                    command.CommandText = "App.proc_NodeDataInit";
+                    command.CommandType = CommandType.StoredProcedure;
+                    await command.ExecuteNonQueryAsync();
+                }
+
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                throw;
+            }
+        }
+
         public async Task ConfigureNode(string accountCode,
                                     string businessName,
                                     string fullName,
@@ -2345,7 +2367,7 @@ namespace TradeControl.Web.Data
 
                 using (SqlCommand command = _connection.CreateCommand())
                 {
-                    command.CommandText = "App.proc_NodeInitialisation";
+                    command.CommandText = "App.proc_NodeBusinessInit";
                     command.CommandType = CommandType.StoredProcedure;
 
                     SqlParameter p1 = command.CreateParameter();
@@ -2470,7 +2492,7 @@ namespace TradeControl.Web.Data
 
                     SqlParameter p2 = command.CreateParameter();
                     p2.DbType = DbType.String;
-                    p2.ParameterName = "@GovSubjectName";
+                    p2.ParameterName = "@GovAccountName";
                     p2.Value = govSubjectName;
                     command.Parameters.Add(p2);
 

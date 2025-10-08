@@ -1,71 +1,237 @@
-﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
-for details on configuring this project to bundle and minify static web assets. */
-
-a.navbar-brand {
-  white-space: normal;
-  text-align: center;
-  word-break: break-all;
+﻿/* Corporate Header & Navigation */
+header, .navbar, .tc-header {
+    background: linear-gradient(90deg, #1b6ec2 0%, #0366d6 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(27, 110, 194, 0.08);
+    border-bottom: 2px solid #1861ac;
 }
 
-/* Provide sufficient contrast against white background */
-a {
-  color: #0366d6;
+    .navbar .nav-link.active,
+    .navbar .nav-link:focus,
+    .navbar .nav-link:hover {
+        color: #e3eefd !important;
+        background-color: transparent;
+    }
+
+    .navbar .container {
+        margin-left: 56px; /* Adjust so content doesn't overlap the logo */
+    }
+
+    /* Header navigation links: default to white for visibility */
+    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
+    header .navbar .navbar-brand {
+        color: #fff !important;
+        transition: color 0.2s;
+    }
+
+        /* On hover/focus, use lighter blue/white for effect */
+        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
+        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
+            color: #e3eefd !important;
+        }
+
+    /* Company name in navbar: slightly larger than menu items */
+    header .tc-brand,
+    .navbar .tc-brand,
+    .navbar .container .tc-brand,
+    .nav-link.tc-brand {
+        color: #e3eefd !important;
+        font-weight: 700;
+        font-size: 1.25rem !important; /* Use !important to override Bootstrap */
+        letter-spacing: 0.5px;
+        transition: color 0.2s;
+    }
+
+        header .tc-brand:hover,
+        header .tc-brand:focus,
+        .navbar .tc-brand:hover,
+        .navbar .tc-brand:focus,
+        .navbar .container .tc-brand:hover,
+        .nav-link.tc-brand:hover,
+        .nav-link.tc-brand:focus {
+            color: #fff200 !important;
+            text-decoration: none;
+        }
+
+/* Navbar Logo Styles */
+.navbar-logo-absolute {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 60px; /* Match your navbar height */
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    z-index: 101;
 }
 
-.btn-primary {
-  color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+    .navbar-logo-absolute img {
+        height: 32px;
+        width: auto;
+        display: block;
+    }
+
+/* Auth links: Register, Login, Logout */
+.tc-auth-link {
+    color: #ffe082 !important;
+    font-weight: 400;
+    transition: color 0.2s;
 }
 
-.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
-  color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
-}
-
-/* Sticky footer styles
--------------------------------------------------- */
-html {
-  font-size: 14px;
-}
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.border-top {
-  border-top: 1px solid #e5e5e5;
-}
-.border-bottom {
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.box-shadow {
-  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
-}
-
-button.accept-policy {
-  font-size: 1rem;
-  line-height: inherit;
-}
-
-/* Sticky footer styles
--------------------------------------------------- */
-html {
-  position: relative;
-  min-height: 100%;
+.tc-auth-link:hover,
+.tc-auth-link:focus {
+    color: #fff !important;
+    text-decoration: none;
 }
 
 body {
-  /* Margin bottom by footer height */
-  margin-bottom: 60px;
+    margin-bottom: 60px; /* Height of the footer */
 }
-.footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  white-space: nowrap;
-  line-height: 60px; /* Vertically center the text there */
+
+/* Corporate Footer */
+footer, .footer, .tc-footer {
+    background: #1b6ec2;
+    color: #fff;
+    border-top: 2px solid #1861ac;
+    font-size: 1.05rem;
+    font-weight: 500;
+    box-shadow: 0 -2px 8px rgba(27, 110, 194, 0.08);
+    text-align: center;
+    line-height: 60px;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    white-space: normal;
+    padding: 0 2rem;
+    z-index: 100;
+}
+
+    /* Ensure footer text is white, even if text-muted is present */
+    footer.text-muted,
+    .footer.text-muted,
+    .tc-footer.text-muted {
+        color: #fff !important;
+    }
+
+/* Headings */
+h1, h2, h3, h4, h5 {
+    color: #1b6ec2;
+    font-weight: 600;
+}
+
+/* Tables */
+.table {
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(27, 110, 194, 0.04);
+    background: #fff;
+}
+
+    .table thead {
+        background: #f4f8fc;
+        color: #1b6ec2;
+        font-weight: 600;
+    }
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: #f4f8fc;
+}
+
+.table th, .table td {
+    border-color: #e5e5e5;
+}
+
+/* Forms */
+.form-group select,
+.form-group input[type="submit"] {
+    border: 1px solid #1b6ec2;
+    border-radius: 4px;
+}
+
+.form-group input[type="submit"] {
+    background: #1b6ec2;
+    color: #fff;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+    .form-group input[type="submit"]:hover,
+    .form-group input[type="submit"]:focus {
+        background: #0366d6;
+    }
+
+select:focus,
+.form-group select:focus {
+    border-color: #1861ac;
+    box-shadow: none;
+}
+
+/* Dropdown menus and select options */
+.form-group select,
+select,
+.dropdown-menu {
+    background: #fff;
+    color: #1b6ec2;
+}
+
+    .form-group select option,
+    select option {
+        color: #1b6ec2;
+        background: #fff;
+    }
+
+/* Ensure dropdown menu links are dark and readable */
+.dropdown-menu {
+    background: #fff;
+    color: #1b6ec2;
+    border: 1px solid #1861ac;
+}
+
+    .dropdown-menu .nav-link,
+    .dropdown-menu a {
+        color: #1b6ec2 !important;
+        background: transparent;
+    }
+
+        .dropdown-menu .nav-link:hover,
+        .dropdown-menu a:hover {
+            color: #0366d6 !important;
+            background: #f4f8fc;
+        }
+
+/* Utility: Corporate blue text */
+.tc-text-blue {
+    color: #1b6ec2 !important;
+}
+
+/* Utility: Corporate blue border */
+.tc-border-blue {
+    border-color: #1b6ec2 !important;
+}
+
+/* Accent Section */
+.tc-section {
+    background: #f4f8fc;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(27, 110, 194, 0.08);
+}
+
+    .tc-section dt {
+        color: #1b6ec2;
+        font-weight: 600;
+    }
+
+    .tc-section dd {
+        color: #222;
+        font-size: 1.1rem;
+    }
+
+.tc-body-align {
+    padding-left: 68px; /* 32px icon + 32px padding + extra for spacing */
+    padding-right: 24px; /* Optional: keep some right margin */
+    max-width: 1200px;   /* Optional: limit width for readability */
+    margin: 0 auto;      /* Optional: center if screen is very wide */
 }

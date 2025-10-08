@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [Subject].[tbAccount] (
-    [AccountCode] NVARCHAR (10)   NOT NULL,
+    [AccountCode]     NVARCHAR (10)   NOT NULL,
     [SubjectCode]     NVARCHAR (10)   NOT NULL,
-    [AccountName] NVARCHAR (50)   NOT NULL,
+    [AccountName]     NVARCHAR (50)   NOT NULL,
     [SortCode]        NVARCHAR (10)   NULL,
     [AccountNumber]   NVARCHAR (20)   NULL,
     [CashCode]        NVARCHAR (50)   NULL,
@@ -22,6 +22,8 @@
     CONSTRAINT [FK_Subject_tbAccount_Subject_tb] FOREIGN KEY ([SubjectCode]) REFERENCES [Subject].[tbSubject] ([SubjectCode]) ON UPDATE CASCADE,
     CONSTRAINT [FK_Subject_tbAccount_Subject_tbAccountType] FOREIGN KEY ([AccountTypeCode]) REFERENCES [Subject].[tbAccountType] ([AccountTypeCode])
 );
+
+
 
 
 GO
@@ -90,7 +92,7 @@ BEGIN
 
 			UPDATE Subject.tbAccount
 			SET UpdatedBy = SUSER_SNAME(), UpdatedOn = CURRENT_TIMESTAMP
-			FROM Subject.tbAccount INNER JOIN inserted AS i ON tbAccount.AccountCode = i.AccountCode;
+			FROM Subject.tbAccount INNER JOIN inserted AS i ON Subject.tbAccount.AccountCode = i.AccountCode;
 			END
 	END TRY
 	BEGIN CATCH
