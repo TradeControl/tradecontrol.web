@@ -1,13 +1,16 @@
 ﻿<header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+    <nav class="navbar navbar-expand-sm navbar-light bg-white box-shadow mb-3">
         <div class="container">
+            <a asp-area="" asp-page="/Index">
+                <img src="~/content/images/icon.svg" alt="Company Logo" class="tc-logo me-2" />
+            </a>
             <a class="nav-link tc-brand" asp-area="" asp-page="/Index">@ViewData["CompanyName"]</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavbar" aria-controls="mainNavbar"
                     aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
-                <ul class="navbar-nav flex-grow-1">
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav me-auto">
                     <li class="dropdown">
                         <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts<span class="caret"></span></a>
                         <ul class="dropdown-menu">
@@ -151,6 +154,11 @@
                                 }
                             }
                         </ul>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li>
+                        <partial name="_LoginPartial" />
                     </li>
                 </ul>
             </div>
