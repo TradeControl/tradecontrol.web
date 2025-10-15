@@ -27,7 +27,7 @@
                     @Html.DisplayFor(modelItem => item.ImageTag)
                 </td>
                 <td>
-                    <a asp-page="./ImageRemove" asp-route-imageTag="@item.ImageTag" asp-route-templateId="@item.TemplateId" class="btn btn-danger"></a>
+                    <a asp-page="./ImageRemove" asp-route-imageTag="@item.ImageTag" asp-route-templateId="@item.TemplateId" class="btn btn-danger"><i class="bi bi-trash"></i></a>
                 </td>
 
             </tr>

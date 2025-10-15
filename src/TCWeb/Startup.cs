@@ -60,14 +60,7 @@ namespace TradeControl.Web
         {
             services.AddRazorPages();
 
-            services.AddDetection(options =>
-            {
-                options.Responsive.DefaultTablet = Device.Desktop;
-                options.Responsive.DefaultMobile = Device.Mobile;
-                options.Responsive.DefaultDesktop = Device.Desktop;
-                options.Responsive.IncludeWebApi = false;
-                options.Responsive.Disable = false;
-            });
+            services.AddDetection();
 
             services.AddSession(options =>
             {

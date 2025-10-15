@@ -39,8 +39,12 @@
                     @Html.DisplayFor(modelItem => item)
                 </td>
                 <td>
-                    <a asp-page-handler="Download" asp-route-fileName="@item"  class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-fileName="@item" asp-route-contentType="@Model.ContentType" class="btn btn-danger"></a>
+                    <a asp-page-handler="Download" asp-route-fileName="@item" class="btn btn-secondary" title="Download">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    <a asp-page="./Delete" asp-route-fileName="@item" asp-route-contentType="@Model.ContentType" class="btn btn-danger" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </a>
                 </td>
 
             </tr>

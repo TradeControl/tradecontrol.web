@@ -1,5 +1,4 @@
-﻿/* Corporate Header & Navigation */
-header, .navbar, .tc-header {
+﻿header, .navbar, .tc-header {
     background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
     color: #fff;
     border-bottom: 2px solid #e65100;
@@ -55,6 +54,7 @@ header, .navbar, .tc-header {
             text-decoration: none;
         }
 
+
 /* Navbar Logo Styles */
 .navbar-logo-absolute {
     position: absolute;
@@ -94,7 +94,6 @@ body {
     margin-bottom: 60px;
 }
 
-/* Corporate Footer */
 footer, .footer, .tc-footer {
     background: #ff9800;
     color: #fff;
@@ -127,6 +126,8 @@ h1, h2, h3, h4, h5 {
 
 /* Tables */
 .table {
+    width: 100%;
+    table-layout: auto;     /* allow columns to size naturally */
     border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(255, 152, 0, 0.04);
@@ -143,8 +144,13 @@ h1, h2, h3, h4, h5 {
     background-color: #fffde7;
 }
 
+/* Table cells: wrap text and avoid overflow */
 .table th, .table td {
-    border-color: #ffe0b2;
+    white-space: normal;
+    word-break: break-word;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.95rem;
 }
 
 /* Forms */
@@ -234,16 +240,65 @@ select,
         font-size: 1.1rem;
     }
 
+/* Main content container: center and limit max width */
 .tc-body-align {
-    padding-left: 68px;
-    padding-right: 24px;
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-left: 0;
+    padding-right: 0;
 }
 
+.table {
+    width: 100%;
+    table-layout: auto;
+}
 .tc-logo {
     height: 32px;
     width: auto;
     vertical-align: middle;
     display: inline-block;
+}
+
+/* Mobile Devices */
+@media (max-width: 576px) {
+    footer, .footer, .tc-footer {
+        padding: 0 0.5rem;
+        line-height: 40px;
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    body {
+        margin-bottom: 40px;
+    }
+    .navbar .container {
+        margin-left: 0;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .tc-body-align {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .table {
+        font-size: 0.92rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .table td:last-child, .table th:last-child {
+        min-width: 80px;
+        white-space: nowrap;
+    }
+
+    .table td .btn {
+        display: inline-block;
+        width: auto;
+        margin-bottom: 0;
+        margin-right: 4px;
+    }
+    .table {
+        font-size: 0.92rem;
+    }
 }

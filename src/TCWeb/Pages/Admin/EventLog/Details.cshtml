@@ -37,7 +37,11 @@
 </div>
 
 <p>
-    <a asp-page="./Index" class="btn btn-info">To Listing</a>
+    <a asp-page="./Index"
+       asp-route-EventTypeFilter="@Model.EventTypeFilter"
+       asp-route-PageNumber="@Model.PageNumber"
+       asp-route-PageSize="@Model.PageSize"
+       class="btn btn-info">Back to Listing</a>
 </p>
 
 @section Scripts {

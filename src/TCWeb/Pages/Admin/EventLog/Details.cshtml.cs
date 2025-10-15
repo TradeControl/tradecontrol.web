@@ -25,6 +25,14 @@ namespace TradeControl.Web.Pages.Admin.EventLog
         [BindProperty]
         public App_vwEventLog App_EventLog { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public short? EventTypeFilter { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public int? PageNumber { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public int? PageSize { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string logCode)
         {

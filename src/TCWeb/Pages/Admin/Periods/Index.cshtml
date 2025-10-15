@@ -1,4 +1,6 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Admin.Periods.IndexModel
 @{ ViewData["Title"] = "Financial Periods"; }
 
@@ -22,24 +24,30 @@
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].YearNumber)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Years[0].YearNumber)
+                </th>
+            }
             <th>
                 @Html.DisplayNameFor(model => model.App_Years[0].Description)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.App_Years[0].StartMonth)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].CashStatus)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].InsertedBy)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].InsertedOn)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Years[0].CashStatus)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Years[0].InsertedBy)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Years[0].InsertedOn)
+                </th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -47,9 +55,12 @@
         @foreach (var item in Model.App_Years)
         {
             <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.YearNumber)
-                </td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.YearNumber)
+                    </td>
+                }
                 <td>
                     @Html.DisplayFor(modelItem => item.Description)
                 </td>
@@ -59,19 +70,24 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.CashStatus)
                 </td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.InsertedBy)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.InsertedOn)
+                    </td>
+                }
                 <td>
-                    @Html.DisplayFor(modelItem => item.InsertedBy)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.InsertedOn)
-                </td>
-                <td>
-                    <a asp-page="./Details" asp-route-yearNumber="@item.YearNumber" class="btn btn-info"></a>
+                    <a asp-page="./Details" asp-route-yearNumber="@item.YearNumber" class="btn btn-info">
+                        <i class="bi bi-eye"></i>
+                    </a>
                     @{
                         if (User.IsInRole(Constants.AdministratorsRole))
                         {
-                            <a asp-page="./Edit" asp-route-yearNumber="@item.YearNumber" class="btn btn-secondary"></a>
-                            <a asp-page="./Delete" asp-route-yearNumber="@item.YearNumber" class="btn btn-danger"></a>
+                            <a asp-page="./Edit" asp-route-yearNumber="@item.YearNumber" class="btn btn-secondary"><i class="bi bi-pencil"></i></a>
+                            <a asp-page="./Delete" asp-route-yearNumber="@item.YearNumber" class="btn btn-danger"><i class="bi bi-trash"></i></a>
                         }
                     }
                 </td>

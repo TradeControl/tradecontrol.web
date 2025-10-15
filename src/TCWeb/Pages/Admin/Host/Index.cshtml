@@ -1,6 +1,9 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Admin.Host.IndexModel
 @{ ViewData["Title"] = "Host Settings"; }
+
 <h1>@ViewData["Title"]</h1>
 
 <div class="row">
@@ -28,15 +31,18 @@
             <th>
                 @Html.DisplayNameFor(model => model.App_Hosts[0].HostDescription)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Hosts[0].EmailAddress)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Hosts[0].HostName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Hosts[0].HostPort)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Hosts[0].EmailAddress)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Hosts[0].HostName)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.App_Hosts[0].HostPort)
+                </th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -47,19 +53,21 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.HostDescription)
                 </td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.EmailAddress)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.HostName)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.HostPort)
+                    </td>
+                }
                 <td>
-                    @Html.DisplayFor(modelItem => item.EmailAddress)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.HostName)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.HostPort)
-                </td>
-
-                <td>
-                    <a asp-page="./Edit" asp-route-hostId="@item.HostId" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-hostId="@item.HostId" class="btn btn-danger"></a>
+                    <a asp-page="./Edit" asp-route-hostId="@item.HostId" class="btn btn-secondary"><i class="bi bi-pencil"></i></a>
+                    <a asp-page="./Delete" asp-route-hostId="@item.HostId" class="btn btn-danger"><i class="bi bi-trash"></i></a>
                 </td>
 
             </tr>

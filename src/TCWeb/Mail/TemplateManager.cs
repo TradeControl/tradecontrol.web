@@ -115,6 +115,7 @@ namespace TradeControl.Web.Mail
 
         async Task<string> DefaultImageTag()
         {
+            await NodeContext.SaveChangesAsync();
             int tagId = await NodeContext.Web_tbImages.CountAsync();
             string tag = string.Concat("TAG", tagId);
 

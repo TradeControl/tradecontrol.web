@@ -1,23 +1,26 @@
-﻿<!DOCTYPE html>
+﻿@inject Wangkanai.Detection.Services.IDetectionService Detection
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - @ViewData["CompanyName"]</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
     <partial name="_Navigation" />    
-    <div class="container">
-        <div class="tc-body-align">
-            <main role="main" class="pb-3">
+    <div class="container-fluid">
+        <div>
+            <main role="main">
                 @RenderBody()
             </main>
         </div>
     </div>
 
-    <partial name="_Footer" />
+    <partial name="_Footer" model="Detection" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

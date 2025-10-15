@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace TradeControl.Web.Data
 {
-    public class NodeEnum
+    public static class NodeEnum
     {
         public enum CashAccountType { Cash, Dummy, Asset }
         public enum OpStatus { Pending, InProgress, Complete }

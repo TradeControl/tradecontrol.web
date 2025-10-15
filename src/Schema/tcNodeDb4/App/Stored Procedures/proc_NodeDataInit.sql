@@ -31,6 +31,7 @@ BEGIN TRY
 	DELETE FROM App.tbTaxCode;
 	DELETE FROM Cash.tbTaxType;
 	DELETE FROM Cash.tbCategory;
+	DELETE FROM App.tbTemplate;
 	
 	IF NOT EXISTS (SELECT * FROM [Usr].[tbMenuView])
 		INSERT INTO [Usr].[tbMenuView] ([MenuViewCode], [MenuView])
@@ -70,7 +71,7 @@ BEGIN TRY
 			INSERT INTO [App].[tbTemplate] ([TemplateName], [StoredProcedure])
 			VALUES
 		('Basic Company Setup', 'App.proc_TemplateCompanyGeneral')
-		, ('HMRC Company Accounts 2020-21', 'App.proc_TemplateCompanyHMRC2021')
+		, ('HMRC Company Accounts', 'App.proc_TemplateCompanyHMRC2021')
 		, ('MIS Tutorials', 'App.proc_TemplateTutorials')
 
 	IF NOT EXISTS (SELECT * FROM [Subject].[tbAccountType])
@@ -519,7 +520,7 @@ BEGIN TRY
 	IF NOT EXISTS(SELECT * FROM App.tbTemplate)
 		INSERT INTO App.tbTemplate (TemplateName, StoredProcedure)
 		VALUES ('Basic Company Setup', 'App.proc_TemplateCompanyGeneral') 
-			, ('HMRC Company Accounts 2020-21', 'App.proc_TemplateCompanyHMRC2021')
+			, ('HMRC Company Accounts', 'App.proc_TemplateCompanyHMRC2021')
 			, ('MIS Tutorials', 'App.proc_TemplateTutorials');
 
 	IF NOT EXISTS(SELECT * FROM Usr.tbMenuView)

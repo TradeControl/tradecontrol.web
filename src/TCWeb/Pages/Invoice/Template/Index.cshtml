@@ -34,7 +34,7 @@
                 @Html.DisplayFor(modelItem => item.LastUsedOn)
             </td>
             <td>
-                <a asp-page="./TemplateRemove" asp-route-invoiceType="@Model.InvoiceType" asp-route-templateId="@item.TemplateId" class="btn btn-danger"></a>
+                    <a asp-page="./TemplateRemove" asp-route-invoiceType="@Model.InvoiceType" asp-route-templateId="@item.TemplateId" class="btn btn-danger"><i class="bi bi-trash"></i></a>
             </td>
 
         </tr>

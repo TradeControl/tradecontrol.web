@@ -22,7 +22,7 @@
                    @Html.DisplayFor(modelItem => item.AttachmentFileName)
                 </td>
                 <td>
-                    <a asp-page="./AttachmentRemove" asp-route-attachmentId="@item.AttachmentId" asp-route-invoiceType="@Model.InvoiceType" class="btn btn-danger"></a>
+                    <a asp-page="./AttachmentRemove" asp-route-attachmentId="@item.AttachmentId" asp-route-invoiceType="@Model.InvoiceType" class="btn btn-danger"><i class="bi bi-trash"></i></a>
                 </td>
 
             </tr>

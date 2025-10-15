@@ -1,4 +1,7 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+
 @model ErrorModel
 @{
     ViewData["Title"] = "Error";
@@ -17,10 +20,14 @@
 <p>
     Consult the <a href="/Admin/EventLog/Index">Error Log</a> for details. 
 </p>
-<h3>Note</h3>
-<p>
-    Most errors will be caused by integrity checks. However, if you think the error is a bug you can submit the entry to the developer from the logs.
-</p>
+
+@if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+{
+    <h3>Note</h3>
+    <p>
+        Most errors will be caused by integrity checks. However, if you think the error is a bug you can submit the entry to the developer from the logs.
+    </p>
+ }
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
