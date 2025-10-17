@@ -3,12 +3,12 @@
 @{ ViewData["Title"] = "Balance Sheet"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
         </select>
 
-        <input type="submit" value="Generate" />
+        <input type="submit" value="Generate" class="btn btn-primary" />
     </p>
 </form>
 <table class="table table-striped">

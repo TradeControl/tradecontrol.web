@@ -13,17 +13,17 @@
     }
 }
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="Category" asp-items="Model.Categories">
             <option value="">All</option>
         </select>
         Description: <input type="text" asp-for="SearchString" />
-        <input type="submit" value="Filter" />
+        <input type="submit" value="Filter" class="btn btn-primary" />
     </p>
 </form>
 
-<table class="table">
+<table class="table table-striped">
     <thead>
         <tr>
             <th>

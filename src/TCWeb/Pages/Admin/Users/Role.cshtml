@@ -22,17 +22,17 @@
     </dl>
 
     <form method="post">
-        <div class="form-group form-check">
+        <div class="mb-3 form-check">
             <label class="form-check-label">
                 <input class="form-check-input" asp-for="AspNet_UserRegistration.IsManager" /> @Html.DisplayNameFor(model => model.AspNet_UserRegistration.IsManager)
             </label>
         </div>
-        <div class="form-group form-check">
+        <div class="mb-3 form-check">
             <label class="form-check-label">
                 <input class="form-check-input" asp-for="AspNet_UserRegistration.IsAdministrator" /> @Html.DisplayNameFor(model => model.AspNet_UserRegistration.IsAdministrator)
             </label>
         </div>
-        <div class="form-group">
+        <div class="mb-3">
             <input type="hidden" asp-for="AspNet_UserRegistration.Id" />
             <input type="submit" value="Assign" class="btn btn-primary" />
             <a asp-page="./Index" class="btn btn-info">To List</a>

@@ -3,10 +3,10 @@
 @{ ViewData["Title"] = "Email Templates"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes"></select>
-        <input type="submit" value="SELECT" />
+        <input type="submit" value="SELECT" class="btn btn-primary" />
     </p>
 </form>
 
@@ -46,13 +46,13 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="TemplateFileName" class="control-label"></label>
                 <p>
                     <select asp-for="TemplateFileName" asp-items="Model.TemplateFileNames" class="form-control"></select>
                 </p>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="ASSIGN" class="btn btn-primary" />
                 <a asp-page="./Attachments" asp-route-invoiceType="@Model.InvoiceType" class="btn btn-outline-info">File Attachments</a>
             </div>

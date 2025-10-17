@@ -8,7 +8,7 @@
     <a asp-page="Create" asp-route-SubjectType="@Model.SubjectType" class="btn btn-outline-primary w-25">New Account</a>
 </p>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="SubjectType" asp-items="Model.SubjectTypes"></select>
         Name: <input type="text" asp-for="SearchString" />

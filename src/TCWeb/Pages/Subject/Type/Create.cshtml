@@ -7,12 +7,12 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbType.SubjectType" class="control-label"></label>
                 <input asp-for="Subject_tbType.SubjectType" class="form-control" />
                 <span asp-validation-for="Subject_tbType.SubjectType" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbType.CashPolarityCode" class="control-label"></label>
                 <p>
                     <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-control"></select>
@@ -22,7 +22,7 @@
             <input type="hidden" asp-for="Subject_tbType.SubjectTypeCode" />
             <input type="hidden" asp-for="Subject_tbType.CashPolarityCode" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="CREATE" class="btn btn-primary" />
                 <a asp-page="./Index" class="btn btn-info">To List</a>
             </div>

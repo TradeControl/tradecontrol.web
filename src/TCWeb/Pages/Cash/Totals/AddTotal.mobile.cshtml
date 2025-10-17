@@ -8,7 +8,7 @@
     <hr />
 </div>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="CategoryType" asp-items="Model.CategoryTypes">
             <option value="">All</option>
@@ -16,7 +16,7 @@
         <select asp-for="CashType" asp-items="Model.CashTypes">
             <option value="">All</option>
         </select>
-        <input type="submit" value="Filter" />
+        <input type="submit" value="Filter" class="btn btn-primary" />
     </p>
 </form>
 

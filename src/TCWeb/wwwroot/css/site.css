@@ -1,59 +1,60 @@
-﻿header, .navbar, .tc-header {
+﻿/* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
+
+/* Header and Navbar */
+header, .navbar, .tc-header {
     background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
     color: #fff;
     border-bottom: 2px solid #e65100;
 }
 
-    nav.navbar {
-        border-bottom: none !important;
-        box-shadow: none !important; /* Optional: also remove shadow if needed */
+nav.navbar {
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+.navbar .nav-link.active,
+.navbar .nav-link:focus,
+.navbar .nav-link:hover {
+    color: #fffde7 !important;
+    background-color: transparent;
+}
+
+.navbar .container {
+    margin-left: 56px;
+}
+
+header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
+header .navbar .navbar-brand {
+    color: #fff !important;
+    transition: color 0.2s;
+}
+
+    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
+    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
+        color: #ffe0b2 !important;
     }
+/* Company name in navbar */
+header .tc-brand,
+.navbar .tc-brand,
+.navbar .container .tc-brand,
+.nav-link.tc-brand {
+    color: #fffde7 !important;
+    font-weight: 700;
+    font-size: 1.25rem !important;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+}
 
-    .navbar .nav-link.active,
-    .navbar .nav-link:focus,
-    .navbar .nav-link:hover {
-        color: #fffde7 !important;
-        background-color: transparent;
+    header .tc-brand:hover,
+    header .tc-brand:focus,
+    .navbar .tc-brand:hover,
+    .navbar .tc-brand:focus,
+    .navbar .container .tc-brand:hover,
+    .nav-link.tc-brand:hover,
+    .nav-link.tc-brand:focus {
+        color: #ffd54f !important;
+        text-decoration: none;
     }
-
-    .navbar .container {
-        margin-left: 56px;
-    }
-
-    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
-    header .navbar .navbar-brand {
-        color: #fff !important;
-        transition: color 0.2s;
-    }
-
-        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
-        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
-            color: #ffe0b2 !important;
-        }
-
-    /* Company name in navbar: slightly larger than menu items */
-    header .tc-brand,
-    .navbar .tc-brand,
-    .navbar .container .tc-brand,
-    .nav-link.tc-brand {
-        color: #fffde7 !important;
-        font-weight: 700;
-        font-size: 1.25rem !important;
-        letter-spacing: 0.5px;
-        transition: color 0.2s;
-    }
-
-        header .tc-brand:hover,
-        header .tc-brand:focus,
-        .navbar .tc-brand:hover,
-        .navbar .tc-brand:focus,
-        .navbar .container .tc-brand:hover,
-        .nav-link.tc-brand:hover,
-        .nav-link.tc-brand:focus {
-            color: #ffd54f !important;
-            text-decoration: none;
-        }
-
 
 /* Navbar Logo Styles */
 .navbar-logo-absolute {
@@ -75,7 +76,7 @@
 
 /* Auth links: Register, Login, Logout */
 .tc-auth-link {
-    color: #ffd54f !important; /* Gold/bright orange */
+    color: #ffd54f !important;
     font-weight: 500;
     vertical-align: middle;
     padding-top: 0.5rem;
@@ -90,6 +91,7 @@
         text-decoration: none;
     }
 
+/* Body and Footer */
 body {
     margin-bottom: 60px;
 }
@@ -127,7 +129,7 @@ h1, h2, h3, h4, h5 {
 /* Tables */
 .table {
     width: 100%;
-    table-layout: auto;     /* allow columns to size naturally */
+    table-layout: auto;
     border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(255, 152, 0, 0.04);
@@ -144,7 +146,6 @@ h1, h2, h3, h4, h5 {
     background-color: #fffde7;
 }
 
-/* Table cells: wrap text and avoid overflow */
 .table th, .table td {
     white-space: normal;
     word-break: break-word;
@@ -153,46 +154,52 @@ h1, h2, h3, h4, h5 {
     font-size: 0.95rem;
 }
 
-/* Forms */
-.form-group select,
-.form-group input[type="submit"] {
+/* Forms and Buttons */
+select,
+input[type="submit"] {
     border: 1px solid #ff9800;
     border-radius: 4px;
 }
 
-.form-group input[type="submit"] {
-    background: #ff9800;
-    color: #fff;
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-    .form-group input[type="submit"]:hover,
-    .form-group input[type="submit"]:focus {
-        background: #f57c00;
+    select:focus {
+        border-color: #e65100;
+        box-shadow: none;
+    }
+    /* Orange button theme (custom, do not override Bootstrap's btn-warning) */
+    input[type="submit"].tc-btn-orange,
+    button.tc-btn-orange,
+    a.tc-btn-orange {
+        background: #ff9800;
+        color: #fff;
+        font-weight: 500;
+        border: 1px solid #ff9800;
+        border-radius: 4px;
+        transition: background 0.2s;
     }
 
-select:focus,
-.form-group select:focus {
-    border-color: #e65100;
-    box-shadow: none;
-}
+        input[type="submit"].tc-btn-orange:hover,
+        input[type="submit"].tc-btn-orange:focus,
+        button.tc-btn-orange:hover,
+        button.tc-btn-orange:focus,
+        a.tc-btn-orange:hover,
+        a.tc-btn-orange:focus {
+            background: #f57c00;
+            border-color: #f57c00;
+            color: #fff;
+        }
 
 /* Dropdown menus and select options */
-.form-group select,
 select,
 .dropdown-menu {
     background: #fff;
     color: #f57c00;
 }
 
-    .form-group select option,
     select option {
         color: #f57c00;
         background: #fff;
     }
 
-/* Ensure dropdown menu links are orange and readable */
 .dropdown-menu {
     background: #fff;
     color: #f57c00;
@@ -211,12 +218,11 @@ select,
             background: #ffe0b2;
         }
 
-/* Utility: Corporate orange text */
+/* Utility: Corporate orange text and border */
 .tc-text-orange {
     color: #ff9800 !important;
 }
 
-/* Utility: Corporate orange border */
 .tc-border-orange {
     border-color: #ff9800 !important;
 }
@@ -240,7 +246,7 @@ select,
         font-size: 1.1rem;
     }
 
-/* Main content container: center and limit max width */
+/* Main content container */
 .tc-body-align {
     width: 100%;
     max-width: none;
@@ -253,6 +259,7 @@ select,
     width: 100%;
     table-layout: auto;
 }
+
 .tc-logo {
     height: 32px;
     width: auto;
@@ -268,9 +275,11 @@ select,
         font-size: 0.95rem;
         margin-bottom: 0;
     }
+
     body {
         margin-bottom: 40px;
     }
+
     .navbar .container {
         margin-left: 0;
         padding-left: 8px;
@@ -281,6 +290,7 @@ select,
         padding-left: 8px;
         padding-right: 8px;
     }
+
     .table {
         font-size: 0.92rem;
     }
@@ -298,6 +308,7 @@ select,
         margin-bottom: 0;
         margin-right: 4px;
     }
+
     .table {
         font-size: 0.92rem;
     }

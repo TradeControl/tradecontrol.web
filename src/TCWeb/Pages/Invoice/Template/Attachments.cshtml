@@ -34,13 +34,13 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="AttachmentFileName" class="control-label"></label>
                 <p>
                     <select asp-for="AttachmentFileName" asp-items="Model.AttachmentFileNames" class="form-control"></select>
                 </p>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="ASSIGN" class="btn btn-primary" />
                 <a asp-page="./Index" class="btn btn-outline-info">Templates</a>
             </div>

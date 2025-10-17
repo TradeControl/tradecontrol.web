@@ -17,7 +17,7 @@
             <input type="hidden" asp-for="Subject_tbAddress.InsertedOn" />
             <input type="hidden" asp-for="Subject_tbAddress.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbAddress.Address" class="control-label"></label>
                 <textarea rows="5" asp-for="Subject_tbAddress.Address" class="form-control"></textarea>
                 <span asp-validation-for="Subject_tbAddress.Address" class="text-danger"></span>
@@ -29,7 +29,7 @@
                 <span asp-validation-for="IsAdminAddress" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="CREATE" class="btn btn-primary" />
                 <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbAddress.SubjectCode" class="btn btn-info">To List</a>
             </div>

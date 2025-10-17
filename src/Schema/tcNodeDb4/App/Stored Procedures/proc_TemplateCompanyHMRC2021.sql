@@ -54,7 +54,7 @@ AS
 
 		INSERT INTO [Cash].[tbCategory] ([CategoryCode], [Category], [CategoryTypeCode], [CashPolarityCode], [CashTypeCode], [DisplayOrder], [IsEnabled])
 		VALUES ('AC12', 'Turnover', 1, 2, 0, 0, 1)
-		, ('AC24', 'Income from Coronavirus business support grants', 1, 2, 0, 10, 1)
+		, ('AC24', 'Income from business support grants', 1, 2, 0, 10, 1)
 		, ('AC34', 'Tax On Profit', 1, 2, 0, 70, 1)
 		, ('AC405', 'Other Income', 1, 2, 0, 20, 1)
 		, ('AC410', 'Cost of raw material and consumables', 1, 2, 0, 30, 1)

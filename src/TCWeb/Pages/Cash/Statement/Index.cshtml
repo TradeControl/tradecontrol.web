@@ -3,13 +3,13 @@
 @{ ViewData["Title"] = "Cash Statements"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="AccountName" asp-items="Model.AccountNames"></select>
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
             @*<option value="">All</option>*@
         </select>
-        <input type="submit" value="Filter" />
+        <input type="submit" value="Filter" class="btn btn-primary" />
     </p>
 </form>
 

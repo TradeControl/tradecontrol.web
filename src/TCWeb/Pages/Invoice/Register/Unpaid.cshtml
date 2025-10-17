@@ -3,12 +3,12 @@
 @{ ViewData["Title"] = "Unpaid Invoices"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes">
             <option value="">All</option>
         </select>
-        <input type="submit" value="Filter" />
+        <input type="submit" value="Filter" class="btn btn-primary" />
     </p>
 </form>
 

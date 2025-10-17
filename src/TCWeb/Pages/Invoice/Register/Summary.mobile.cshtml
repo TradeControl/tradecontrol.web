@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = "Invoice Summary"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
             <option value="">All</option>

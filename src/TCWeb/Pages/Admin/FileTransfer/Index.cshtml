@@ -6,7 +6,7 @@
 <div class="row">
     <div class="col-md-4">
         <form method="post">
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="hidden" asp-for="@Model.ContentType" />
                 <a asp-page="./Upload" asp-route-contentType="@Model.ContentType" class="btn btn-outline-primary">UPLOAD</a>
                 <button type="submit" asp-page-handler="SyncFiles" class="btn btn-outline-success">SYNC</button>
@@ -15,10 +15,10 @@
     </div>
 </div>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="ContentType" asp-items="Model.ContentTypes"></select>
-        <input type="submit" value="SELECT" />
+        <input type="submit" value="SELECT" class="btn btn-primary" />
     </p>
 </form>
 

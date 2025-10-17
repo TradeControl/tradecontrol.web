@@ -7,12 +7,12 @@
     <a asp-page="./ProfitAndLoss" class="btn btn-outline-info">Annual Accounts</a>
 </p>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="PeriodName" asp-items="Model.PeriodNames">
         </select>
 
-        <input type="submit" value="Generate" />
+        <input type="submit" value="Generate" class="btn btn-primary" />
     </p>
 </form>
 

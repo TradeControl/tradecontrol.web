@@ -8,30 +8,34 @@
 
 <h1>@ViewData["Title"]</h1>
 
-<form method="get" class="form-inline mb-3">
-    <label for="EventTypeFilter" class="mr-2">Event Type:</label>
-    <select id="EventTypeFilter" name="EventTypeFilter" class="form-control mr-3" onchange="this.form.submit()">
-        <option value="">All</option>
-        @foreach (var type in Model.EventTypes)
-        {
-            <option value="@type.EventTypeCode" selected="@(type.EventTypeCode == Model.SelectedEventType ? "selected" : null)">
-                @type.EventType
-            </option>
-        }
-    </select>
+<form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto">
+        <label for="EventTypeFilter" class="me-2">Event Type:</label>
+        <select id="EventTypeFilter" name="EventTypeFilter" class="form-select me-3" onchange="this.form.submit()">
+            <option value="">All</option>
+            @foreach (var type in Model.EventTypes)
+            {
+                <option value="@type.EventTypeCode" selected="@(type.EventTypeCode == Model.SelectedEventType ? "selected" : null)">
+                    @type.EventType
+                </option>
+            }
+        </select>
+    </div>
 
-    <label for="PageSize" class="mr-2">Rows:</label>
-    @{
-        var sizes = new[] { 10, 50, 100 };
-    }
-    <select id="PageSize" name="PageSize" class="form-control mr-3" onchange="this.form.submit()">
-        @foreach (var size in sizes)
-        {
-            <option value="@size" selected="@(size == Model.PageSize ? "selected" : null)">
-                @size
-            </option>
+    <div class="col-auto">
+        <label for="PageSize" class="me-2">Rows:</label>
+        @{
+            var sizes = new[] { 10, 50, 100 };
         }
-    </select>
+        <select id="PageSize" name="PageSize" class="form-select me-3" onchange="this.form.submit()">
+            @foreach (var size in sizes)
+            {
+                <option value="@size" selected="@(size == Model.PageSize ? "selected" : null)">
+                    @size
+                </option>
+            }
+        </select>
+    </div>
 </form>
 
 <div class="tc-body-align">

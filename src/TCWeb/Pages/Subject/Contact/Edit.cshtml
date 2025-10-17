@@ -18,56 +18,56 @@
             <input type="hidden" asp-for="Subject_tbContact.InsertedOn" />
             <input type="hidden" asp-for="Subject_tbContact.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.EmailAddress" class="control-label"></label>
                 <input asp-for="Subject_tbContact.EmailAddress" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.EmailAddress" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.MobileNumber" class="control-label"></label>
                 <input asp-for="Subject_tbContact.MobileNumber" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.MobileNumber" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.PhoneNumber" class="control-label"></label>
                 <input asp-for="Subject_tbContact.PhoneNumber" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.PhoneNumber" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
                 <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbContact.SubjectCode" class="btn btn-info">To List</a>
             </div>
 
             <h4>Additional Info</h4>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.NameTitle" class="control-label"></label>
                 <input asp-for="Subject_tbContact.NameTitle" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.NameTitle" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.JobTitle" class="control-label"></label>
                 <input asp-for="Subject_tbContact.JobTitle" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.JobTitle" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.HomeNumber" class="control-label"></label>
                 <input asp-for="Subject_tbContact.HomeNumber" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.HomeNumber" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.Department" class="control-label"></label>
                 <input asp-for="Subject_tbContact.Department" class="form-control" />
                 <span asp-validation-for="Subject_tbContact.Department" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Subject_tbContact.Information" class="control-label"></label>
                 <textarea rows="5" asp-for="Subject_tbContact.Information" class="form-control"></textarea>
                 <span asp-validation-for="Subject_tbContact.Information" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
                 <a asp-page="./Index" asp-route-accountCode="@Model.Subject_tbContact.SubjectCode" class="btn btn-info">To List</a>
             </div>

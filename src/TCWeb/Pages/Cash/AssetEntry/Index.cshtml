@@ -1,45 +1,44 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.AssetEntry.IndexModel
 @{ ViewData["Title"] = "Unposted Assets"; }
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" asp-route-cashSubjectName="@Model.AccountName" class="btn btn-outline-primary w-25">Pay Assets In/Out</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-cashSubjectName="@Model.AccountName" asp-route-mode="1" class="btn btn-outline-info w-25">Statement</a>
+    <a class="btn btn-outline-primary w-25" title="Create a new asset entry" href="/Cash/AssetEntry/Create?cashSubjectName=LONGTERM%20LIABILITIES">Pay Assets In/Out</a>
+    <a class="btn btn-outline-info w-25" title="View account statement" href="/Cash/Statement?cashSubjectName=LONGTERM%20LIABILITIES&amp;mode=1">Statement</a>
 </p>
 
-<form class="form-group">
-    <p>
-        <select asp-for="AccountName" asp-items="Model.CashAccounts">
-        </select>
-        <input type="submit" value="Filter" />
-    </p>
+<form class="mb-3">
+    <div class="row align-items-center">
+        <div class="col-auto">
+            <select asp-for="AccountName" asp-items="Model.CashAccounts" class="form-control"></select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
-<table class="table  table-striped">
+<table class="table table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].UserId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOn)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaymentReference)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidInValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOutValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].CashCode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].IsProfitAndLoss)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].UserId)</th>
+            }
+            <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOn)</th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaymentReference)</th>
+            }
+            <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidInValue)</th>
+            <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].PaidOutValue)</th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].CashCode)</th>
+                <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].IsProfitAndLoss)</th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -47,31 +46,32 @@
         @foreach (var item in Model.Cash_AssetsUnposted)
         {
             <tr>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.UserId)</td>
+                }
+                <td>@Html.DisplayFor(modelItem => item.PaidOn)</td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.PaymentReference)</td>
+                }
+                <td>@Html.DisplayFor(modelItem => item.PaidInValue)</td>
+                <td>@Html.DisplayFor(modelItem => item.PaidOutValue)</td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.CashCode)</td>
+                    <td>@Html.DisplayFor(modelItem => item.IsProfitAndLoss)</td>
+                }
                 <td>
-                    @Html.DisplayFor(modelItem => item.UserId)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidOn)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaymentReference)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidInValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidOutValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashCode)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.IsProfitAndLoss)
-                </td>
-                <td>
-                    <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning"></a>
-                    <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+                    <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning" title="Post this entry">
+                        <i class="bi bi-arrow-right-circle"></i>
+                    </a>
+                    <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary" title="Edit this entry">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger" title="Delete this entry">
+                        <i class="bi bi-trash"></i>
+                    </a>
                 </td>
             </tr>
         }

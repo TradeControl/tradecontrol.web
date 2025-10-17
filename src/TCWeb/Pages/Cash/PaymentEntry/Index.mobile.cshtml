@@ -10,12 +10,12 @@
     <a asp-page="/Cash/Statement/Index" asp-route-cashSubjectCode="@Model.AccountCode" asp-route-mode="0" class="btn btn-outline-info">Statement</a>
 </p>
 
-<form class="form-group">
+<form class="mb-3">
     <p>
         <select asp-for="AccountCode" asp-items="Model.AccountNames">
             <option value="">All</option>
         </select>
-        <input type="submit" value="Filter" />
+        <input type="submit" value="Filter" class="btn btn-primary" />
     </p>
 </form>
 <table class="table  table-striped">

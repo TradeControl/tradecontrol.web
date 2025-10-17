@@ -7,7 +7,7 @@
     <a asp-page="Create" asp-route-accountType="@Model.AccountType" class="btn btn-outline-primary">New Account</a>
 </p>
 
-<form class="form-group" method="get">
+<form class="mb-3" method="get">
     <p>
         <select asp-for="AccountType" asp-items="Model.AccountTypes"></select>
         <input type="submit" value="Filter" />

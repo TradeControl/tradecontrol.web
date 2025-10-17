@@ -44,34 +44,34 @@
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedBy" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidOn" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidOn" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidOn" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidInValue" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidInValue" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidInValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidOutValue" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidOutValue" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidOutValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaymentReference" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaymentReference" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaymentReference" class="text-danger"></span>
             </div>
-            <div class="form-group form-check">
+            <div class="mb-3 form-check">
                 <label class="form-check-label">
                     <input asp-for="Cash_PaymentsUnposted.IsProfitAndLoss" class="form-check-input" /> @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.IsProfitAndLoss)
                 </label>                
                 <span asp-validation-for="Cash_PaymentsUnposted.IsProfitAndLoss" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
                 <a asp-page="./Index" asp-route-cashSubjectCode="@Model.Cash_PaymentsUnposted.AccountCode" class="btn btn-info">To List</a>
             </div>

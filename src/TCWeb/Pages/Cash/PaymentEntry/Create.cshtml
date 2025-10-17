@@ -9,14 +9,14 @@
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.AccountCode" class="control-label"></label>
                 <p>
                     <select asp-for="AccountName" asp-items="Model.AccountNames" class="form-control"></select>
                 </p>
                 <span asp-validation-for="Cash_PaymentsUnposted.AccountCode" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.SubjectCode" class="control-label"></label>
                 <p>
                     <button type="submit" asp-page-handler="GetSubjectCode" class="btn btn-outline-info">Select</button>
@@ -30,7 +30,7 @@
 
             @if (Model.InputMode != 0)
             {
-                <div class="form-group">
+                <div class="mb-3">
                     <label asp-for="Cash_PaymentsUnposted.CashCode" class="control-label"></label>
                     <p>
                         <button type="submit" asp-page-handler="GetCashCode" class="btn btn-outline-info">Select</button>
@@ -47,7 +47,7 @@
                     <span asp-validation-for="CashDescription" class="text-danger"></span>
                 </div>
 
-                <div class="form-group">
+                <div class="mb-3">
                     <label asp-for="Cash_PaymentsUnposted.TaxCode" class="control-label"></label>
                     <p>
                         <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
@@ -66,23 +66,23 @@
                 </div>
             }
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidOn" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidOn" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidOn" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaymentReference" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaymentReference" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaymentReference" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidInValue" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidInValue" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidInValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidOutValue" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidOutValue" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidOutValue" class="text-danger"></span>
@@ -100,7 +100,7 @@
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedBy" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="PAY" class="btn btn-primary" />
             </div>
         </form>

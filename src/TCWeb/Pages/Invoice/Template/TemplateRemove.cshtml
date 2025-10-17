@@ -28,7 +28,7 @@
         <input type="hidden" asp-for="Web_TemplateInvoice.TemplateFileName" />
         <input type="hidden" asp-for="Web_TemplateInvoice.LastUsedOn" />
 
-        <div class="form-group">
+        <div class="mb-3">
             <input type="submit" value="DELETE" class="btn btn-danger" />
             <a asp-page="./Index" asp-route-invoiceType="@Model.Web_TemplateInvoice.InvoiceType" class="btn btn-info">To List</a>
         </div>
