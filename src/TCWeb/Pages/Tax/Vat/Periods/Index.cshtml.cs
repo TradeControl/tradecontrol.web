@@ -34,6 +34,17 @@ namespace TradeControl.Web.Pages.Tax.Vat.Periods
         [Display(Name = "Vat Due")]
         public double TotalTaxValue { get; set; }
 
+        // Pagination (monthly pages in 12s)
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 24;     // default 24
+
+        [BindProperty(SupportsGet = true)]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public SelectList PageSizeOptions { get; set; }
+
         public async Task OnGetAsync(string periodName)
         {
             try
@@ -44,7 +55,7 @@ namespace TradeControl.Web.Pages.Tax.Vat.Periods
 
                 PeriodNames = new SelectList(await periodNames.ToListAsync());
 
-                DateTime startOn = DateTime.Today;                
+                DateTime startOn = DateTime.Today;
 
                 if (string.IsNullOrEmpty(periodName))
                 {
@@ -59,8 +70,27 @@ namespace TradeControl.Web.Pages.Tax.Vat.Periods
                           where tb.StartOn == startOn
                           select tb;
 
-                Cash_VatSummary = await vat.ToListAsync();
+                // Page size options (12, 24, 48)
+                PageSizeOptions = new SelectList(new[] { "12", "24", "48" }, PageSize.ToString());
+
+                // ensure sensible PageSize
+                if (PageSize <= 0) PageSize = 24;
+
+                // compute totals BEFORE paging
+                TotalItems = await vat.CountAsync();
                 TotalTaxValue = await vat.SumAsync(i => i.VatDue);
+
+                TotalPages = (int)Math.Ceiling(TotalItems / (double)PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+
+                if (PageNumber < 1) PageNumber = 1;
+                if (PageNumber > TotalPages) PageNumber = TotalPages;
+
+                Cash_VatSummary = await vat
+                    .OrderBy(t => t.TaxCode)
+                    .Skip((PageNumber - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
 
                 await SetViewData();
             }

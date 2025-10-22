@@ -36,6 +36,17 @@ namespace TradeControl.Web.Pages.Subject.Update
 
         public IList<Subject_vwSubjectLookupAll> Subject_SubjectLookup { get; set; }
 
+        // Pagination
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 10;
+
+        [BindProperty(SupportsGet = true)]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public SelectList PageSizeOptions { get; set; }
+
         public async Task OnGetAsync(string accountCode, string subjectStatus, string subjectType)
         {
             try
@@ -46,12 +57,22 @@ namespace TradeControl.Web.Pages.Subject.Update
                                orderby tb.SubjectType
                                select tb.SubjectType;
 
-                SubjectTypes = new SelectList(await orgTypes.ToListAsync());
+                // materialize and add "All" option
+                var orgTypesList = await orgTypes.ToListAsync();
+                var defaultType = orgTypesList.FirstOrDefault();
+                var typesWithAll = new List<string> { "All" };
+                typesWithAll.AddRange(orgTypesList);
 
+                SubjectTypes = new SelectList(typesWithAll);
+
+                // Page size options
+                PageSizeOptions = new SelectList(new[] { "10", "50", "100" }, PageSize.ToString());
+
+                // respect explicit query param, otherwise preserve bound SubjectType or fall back to sensible default
                 if (!string.IsNullOrEmpty(subjectType))
                     SubjectType = subjectType;
-                else if (string.IsNullOrEmpty(subjectType))
-                    SubjectType = orgTypes.First();
+                else if (string.IsNullOrEmpty(SubjectType))
+                    SubjectType = defaultType ?? "All";
 
                 if (!string.IsNullOrEmpty(subjectStatus))
                     SubjectStatus = subjectStatus;
@@ -70,20 +91,45 @@ namespace TradeControl.Web.Pages.Subject.Update
                 {
                     accounts = accounts.Where(a => a.SubjectCode == accountCode);
                     var subject = await accounts.SingleOrDefaultAsync();
-                    subjectType = subject.SubjectType;
-                    SubjectStatus = subject.SubjectStatus;
+                    if (subject != null)
+                    {
+                        SubjectType = subject.SubjectType;
+                        subjectType = subject.SubjectType;
+                        SubjectStatus = subject.SubjectStatus;
+                    }
                 }
                 else
                 {
-                    accounts = accounts.Where(a => a.SubjectType == subjectType);
-                    accounts = accounts.Where(a => a.SubjectStatus == subjectStatus);
+                    // If "All" is selected, do not filter by SubjectType
+                    if (!string.IsNullOrEmpty(SubjectType) && SubjectType != "All")
+                        accounts = accounts.Where(a => a.SubjectType == SubjectType);
+
+                    if (!string.IsNullOrEmpty(subjectStatus))
+                        accounts = accounts.Where(a => a.SubjectStatus == subjectStatus);
+                    else if (!string.IsNullOrEmpty(SubjectStatus))
+                        accounts = accounts.Where(a => a.SubjectStatus == SubjectStatus);
                 }
 
                 if (!string.IsNullOrEmpty(SearchString))
                     accounts = accounts.Where(a => a.SubjectName.Contains(SearchString));
 
+                // compute totals for pager
+                TotalItems = await accounts.CountAsync();
 
-                Subject_SubjectLookup = await accounts.OrderBy(a => a.SubjectName).ToListAsync();
+                // protect PageSize
+                if (PageSize <= 0) PageSize = 10;
+
+                TotalPages = (int)Math.Ceiling(TotalItems / (double)PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+
+                if (PageNumber < 1) PageNumber = 1;
+                if (PageNumber > TotalPages) PageNumber = TotalPages;
+
+                Subject_SubjectLookup = await accounts
+                    .OrderBy(a => a.SubjectName)
+                    .Skip((PageNumber - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
             }
             catch (Exception e)
             {
