@@ -1,25 +1,33 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Register.SummaryModel
 @{ ViewData["Title"] = "Invoice Summary"; }
 <h1>@ViewData["Title"]</h1>
 
 <form class="mb-3" method="get">
-    <p>
-        <select asp-for="PeriodName" asp-items="Model.PeriodNames">
-            <option value="">All</option>
-        </select>
-        <select asp-for="CashPolarity" asp-items="Model.CashPolaritys">
-            <option value="">All</option>
-        </select>
-        <input type="submit" value="Filter" class="btn btn-primary" />
-    </p>
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="PeriodName" asp-items="Model.PeriodNames" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
 <table class="table table-striped">
     <thead>
         <tr>
             @{ 
-                if (!string.IsNullOrEmpty(Model.CashCode))
+                // Period column shown only when cashCode is present and not on mobile
+                if (!string.IsNullOrEmpty(Model.CashCode) && Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
                 {
                     <th>
                         @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].PeriodName)
@@ -32,15 +40,26 @@
             <th>                
                 @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].CashDescription)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalInvoiceValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalTaxValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalValue)
-            </th>
+
+            @* Hide detailed columns on mobile to save horizontal space *@
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalInvoiceValue)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalTaxValue)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalValue)
+                </th>
+            }
+            else
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_CashCodes[0].TotalValue)
+                </th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -49,7 +68,7 @@
         {
         <tr>
             @{
-                if (!string.IsNullOrEmpty(Model.CashCode))
+                if (!string.IsNullOrEmpty(Model.CashCode) && Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
                 {
                     <td>
                         @Html.DisplayFor(modelItem => item.PeriodName)
@@ -62,17 +81,32 @@
             <td>
                 @Html.DisplayFor(modelItem => item.CashDescription)
             </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalInvoiceValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalTaxValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalValue)
+                </td>
+            }
+            else
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalValue)
+                </td>
+            }
+
             <td>
-                @Html.DisplayFor(modelItem => item.TotalInvoiceValue)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TotalTaxValue)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TotalValue)
-            </td>
-            <td>
-                <a asp-page="/Invoice/Register/Summary" asp-route-cashCode="@item.CashCode" class="btn btn-info"></a>                
+                <div class="action-buttons">
+                    <a asp-page="/Invoice/Register/Summary" asp-route-cashCode="@item.CashCode" class="btn btn-info" title="Drill into cash code">
+                        <i class="bi bi-info-circle"></i>
+                    </a>
+                </div>
             </td>
         </tr>
         }

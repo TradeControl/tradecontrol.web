@@ -37,6 +37,21 @@ namespace TradeControl.Web.Models
         public string MinerAccountCode { get; set; }
         public short CoinTypeCode { get; set; }
         public int? HostId { get; set; }
+
+        /// <summary>
+        /// AES symmetric key used by the application to encrypt secrets.
+        /// Stored as VARBINARY(32) in the database (AES-256).
+        /// </summary>
+        [Column(TypeName = "varbinary(32)")]
+        public byte[] SymmetricKey { get; set; }
+
+        /// <summary>
+        /// Initialization Vector used by AES encryption.
+        /// Stored as VARBINARY(16) in the database.
+        /// </summary>
+        [Column(TypeName = "varbinary(16)")]
+        public byte[] SymmetricIV { get; set; }
+
         [Required]
         [StringLength(50)]
         public string InsertedBy { get; set; }

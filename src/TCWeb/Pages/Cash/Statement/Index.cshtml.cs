@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
+using Wangkanai.Extensions;
 
 namespace TradeControl.Web.Pages.Cash.Statement
 {
@@ -98,21 +99,24 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                 PeriodName = periodName;
 
-                var statement = from tb in NodeContext.Cash_AccountStatements
-                                where tb.AccountCode == cashSubjectCode && tb.StartOn == startOn
-                                select tb;
-
-                Cash_AccountStatement = mode switch
+                try
                 {
-                    1 => await NodeContext.Cash_AccountStatements
-                                    .Where(t => t.AccountCode == cashSubjectCode)
-                                    .OrderBy(t => t.EntryNumber)
-                                    .ToListAsync(),
-                    _ => await NodeContext.Cash_AccountStatements
-                                    .Where(t => t.AccountCode == cashSubjectCode && t.StartOn == startOn)
-                                    .OrderBy(t => t.EntryNumber)
-                                    .ToListAsync(),
-                };
+                    Cash_AccountStatement = mode switch
+                    {
+                        1 => await NodeContext.Cash_AccountStatements
+                                        .Where(t => t.AccountCode == cashSubjectCode)
+                                        .OrderBy(t => t.EntryNumber)
+                                        .ToListAsync(),
+                        _ => await NodeContext.Cash_AccountStatements
+                                        .Where(t => t.AccountCode == cashSubjectCode && t.StartOn == startOn)
+                                        .OrderBy(t => t.EntryNumber)
+                                        .ToListAsync(),
+                    };
+                }
+                catch
+                {
+                    Cash_AccountStatement = new List<Cash_vwAccountStatement>();
+                }
             }
             catch (Exception e)
             {

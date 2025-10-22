@@ -18,12 +18,17 @@
             </div>
             <div class="mb-3">
                 <input type="submit" value="SET HOST" class="btn btn-primary" />
-                <a asp-page="./Create" class="btn btn-outline-primary">NEW HOST</a>
+                <a asp-page="./Create" class="btn btn-outline-primary ms-2">NEW HOST</a>
+
+                @* Admin-only: rotate keys page link *@
+                @if (User.IsInRole(Constants.AdministratorsRole))
+                {
+                    <a asp-page="./RotateKeys" class="btn btn-outline-danger ms-2" title="Rotate symmetric key and re-encrypt host passwords">Rotate Keys</a>
+                }
             </div>
         </form>
     </div>
 </div>
-
 
 <table class="table table-striped">
     <thead>
@@ -31,7 +36,7 @@
             <th>
                 @Html.DisplayNameFor(model => model.App_Hosts[0].HostDescription)
             </th>
-            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            @if (Detection.Device.Type != Device.Mobile)
             {
                 <th>
                     @Html.DisplayNameFor(model => model.App_Hosts[0].EmailAddress)
@@ -53,7 +58,7 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.HostDescription)
                 </td>
-                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                @if (Detection.Device.Type != Device.Mobile)
                 {
                     <td>
                         @Html.DisplayFor(modelItem => item.EmailAddress)
@@ -74,7 +79,6 @@
         }
     </tbody>
 </table>
-
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}

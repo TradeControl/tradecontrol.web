@@ -52,8 +52,8 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 }
                 else if (!string.IsNullOrEmpty(cashSubjectCode))
                     AccountCode = cashSubjectCode;
-                else if (AccountCode == null)
-                    AccountCode = await NodeContext.CurrentAccount();
+                else
+                    AccountCode ??= await NodeContext.CurrentAccount();
 
                 if (string.IsNullOrEmpty(AccountName))
                     AccountName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == AccountCode).Select(t => t.AccountName).FirstOrDefaultAsync();

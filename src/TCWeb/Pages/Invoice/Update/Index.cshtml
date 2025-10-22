@@ -1,4 +1,5 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Update.IndexModel
 @{ ViewData["Title"] = "Invoice Management"; }
 <h1>@ViewData["Title"]</h1>
@@ -9,24 +10,42 @@
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceNumber)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceStatus)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceType)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceStatus)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceType)
+                </th>
+            }
+
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].SubjectName)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].Printed)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].Printed)
+                </th>
+            }
+
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoicedOn)
             </th>
+
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceValue)
             </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].TotalPaidValue)
+                </th>
+            }
 
             <th></th>
         </tr>
@@ -38,34 +57,52 @@
             <td>
                 @Html.DisplayFor(modelItem => item.InvoiceNumber)
             </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceStatus)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceType)
+                </td>
+            }
+
             <td>
-                @Html.DisplayFor(modelItem => item.InvoiceStatus)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.InvoiceType)
-            </td>
-            <td>
-                <a asp-page="./Index" asp-route-accountCode="@item.SubjectCode">
+                <a asp-page="./Index" asp-route-accountCode="@item.SubjectCode" title="Open subject @item.SubjectName">
                     @Html.DisplayFor(modelItem => item.SubjectName)
                 </a>
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Printed)
-            </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.Printed)
+                </td>
+            }
+
             <td>
                 @Html.DisplayFor(modelItem => item.InvoicedOn)
             </td>
+
             <td>
                 @Html.DisplayFor(modelItem => item.TotalInvoiceValue)
             </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalPaidValue)
+                </td>
+            }
+
             <td>
-                @Html.DisplayFor(modelItem => item.TotalPaidValue)
-            </td>
-            <td>
-                <a asp-page="/Subject/Enquiry/Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info"></a>
-                <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
-                <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger"></a>
-                <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>
+                <div class="action-buttons" role="group" aria-label="Invoice actions">
+                    <a asp-page="/Subject/Enquiry/Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info" title="Subject details for @item.SubjectName" aria-label="Subject details for @item.SubjectName"></a>
+                    <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary" title="Edit invoice @item.InvoiceNumber" aria-label="Edit invoice @item.InvoiceNumber"></a>
+                    <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger" title="Delete invoice @item.InvoiceNumber" aria-label="Delete invoice @item.InvoiceNumber"></a>
+                    <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning" title="Send invoice @item.InvoiceNumber by email" aria-label="Send invoice @item.InvoiceNumber by email"></a>
+                </div>
             </td>
         </tr>
         }
@@ -73,9 +110,11 @@
 </table>
 
 <form method="post">
-    <p>
-        <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary">Mark all as sent</button>
-    </p>
+    <div class="row g-2">
+        <div class="col-12 col-sm-auto">
+            <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary w-100" title="Mark all invoices as sent">Mark all as sent</button>
+        </div>
+    </div>
 </form>
 
 @section Scripts {

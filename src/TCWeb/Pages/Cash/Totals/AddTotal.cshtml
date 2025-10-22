@@ -1,4 +1,5 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.Totals.AddTotalModel
 @{ ViewData["Title"] = "Select Total"; }
 <h1>@ViewData["Title"]</h1>
@@ -9,17 +10,22 @@
 </div>
 
 <form class="mb-3" method="get">
-    <p>
-        <select asp-for="CategoryType" asp-items="Model.CategoryTypes">
-            <option value="">All</option>
-        </select>
-        <select asp-for="CashType" asp-items="Model.CashTypes">
-            <option value="">All</option>
-        </select>
-        <input type="submit" value="Filter" class="btn btn-primary" />
-    </p>
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="CategoryType" asp-items="Model.CategoryTypes" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select asp-for="CashType" asp-items="Model.CashTypes" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
-
 
 <table class="table">
     <thead>
@@ -30,15 +36,19 @@
             <th>
                 @Html.DisplayNameFor(model => model.Cash_Candidates[0].Category)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CategoryType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashPolarity)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Candidates[0].CategoryType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Candidates[0].CashPolarity)
+                </th>
+            }
 
             <th></th>
         </tr>
@@ -53,17 +63,30 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.Category)
                 </td>
+
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CategoryType)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CashType)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CashPolarity)
+                    </td>
+                }
+
                 <td>
-                    @Html.DisplayFor(modelItem => item.CategoryType)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashType)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashPolarity)
-                </td>
-                <td>
-                    <a asp-page="./Edit" asp-route-categoryCode="@Model.Cash_Category.CategoryCode" asp-route-childCode="@item.CategoryCode" class="btn btn-info"></a>
+                    <div class="action-buttons">
+                        <a asp-page="./Edit"
+                           asp-route-categoryCode="@Model.Cash_Category.CategoryCode"
+                           asp-route-childCode="@item.CategoryCode"
+                           class="btn btn-info"
+                           title="Select this total">
+                            <i class="bi bi-check2-square"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
         }

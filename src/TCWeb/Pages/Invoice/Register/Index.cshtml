@@ -1,49 +1,62 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Register.IndexModel
 @{ ViewData["Title"] = "Invoice Register"; }
 <h1>@ViewData["Title"]</h1>
 
+<p>
+    <a asp-page="./Create" asp-route-InvoiceType="@Model.InvoiceType" class="btn btn-outline-primary w-25" title="New Entry">New Entry</a>
+</p>
+
 <form class="mb-3" method="get">
-    <p>
-        <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes">
-            <option value="">All</option>
-        </select>
-        <select asp-for="PeriodName" asp-items="Model.PeriodNames">
-            <option value="">All</option>
-        </select>
-
-        <input type="submit" value="Filter" class="btn btn-primary" />
-    </p>
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select asp-for="PeriodName" asp-items="Model.PeriodNames" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
-
-<table class="table table-striped">
+<table class="table  table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoiceNumber)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoiceStatus)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoiceType)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Details[0].UserId)
+                </th>
+            }
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Details[0].SubjectName)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Invoice_Details[0].CashDescription)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Details[0].ItemReference)
-            </th>
-            <th>
                 @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoicedOn)
             </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoiceType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Details[0].CashDescription)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Details[0].ItemReference)
+                </th>
+            }
+
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Details[0].InvoiceValue)
             </th>
-
             <th></th>
         </tr>
     </thead>
@@ -51,35 +64,46 @@
         @foreach (var item in Model.Invoice_Details)
         {
         <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.InvoiceNumber)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.InvoiceStatus)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.InvoiceType)
-            </td>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.UserId)
+                </td>
+            }
             <td>
                 <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
                     @Html.DisplayFor(modelItem => item.SubjectName)
                 </a>
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.CashDescription)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.ItemReference)
-            </td>
-            <td>
                 @Html.DisplayFor(modelItem => item.InvoicedOn)
             </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashDescription)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ItemReference)
+                </td>
+            }
+
             <td>
                 @Html.DisplayFor(modelItem => item.InvoiceValue)
             </td>
             <td>
-                <a asp-page="./Details" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-projectCode="@item.ProjectCode" class="btn btn-info"></a>
-                <a asp-page="/Invoice/Update/Index" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
+                <div class="action-buttons">
+                    <a asp-page="./Details" asp-route-invoiceNumber="@item.InvoiceNumber" asp-route-projectCode="@item.ProjectCode" class="btn btn-info" title="Details">
+                        <i class="bi bi-info-circle"></i>
+                    </a>
+                    <a asp-page="/Invoice/Update/Index" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                </div>
             </td>
         </tr>
         }

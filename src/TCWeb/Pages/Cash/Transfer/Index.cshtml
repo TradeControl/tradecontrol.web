@@ -1,39 +1,53 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.Transfer.IndexModel
 @{ ViewData["Title"] = "Bank Transfers"; }
 <h1>@ViewData["Title"]</h1>
 
 <p>
-    <a asp-page="Create" class="btn btn-outline-primary w-25">New Transfer</a>
+    <a asp-page="Create" class="btn btn-outline-primary w-25" title="New Transfer">New Transfer</a>
 </p>
 
 <table class="table  table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].AccountCode)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].AccountCode)
+                </th>
+            }
             <th>
                 @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidOn)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].SubjectCode)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaymentReference)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaymentReference)
+                </th>
+            }
+
             <th>
                 @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidInValue)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].PaidOutValue)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].CashCode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].UserId)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].CashCode)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_TransfersUnposted[0].UserId)
+                </th>
+            }
+
             <th></th>
         </tr>
     </thead>
@@ -41,34 +55,55 @@
         @foreach (var item in Model.Cash_TransfersUnposted)
         {
             <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.AccountCode)
-                </td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.AccountCode)
+                    </td>
+                }
                 <td>
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.SubjectCode)
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaymentReference)
-                </td>
+
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaymentReference)
+                    </td>
+                }
+
                 <td>
                     @Html.DisplayFor(modelItem => item.PaidInValue)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.PaidOutValue)
                 </td>
+
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CashCode)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.UserId)
+                    </td>
+                }
+
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashCode)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.UserId)
-                </td>
-                <td>
-                    <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning"></a>
-                    <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+                    <div class="action-buttons">
+                        <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning" title="Post this transfer">
+                            <i class="bi bi-arrow-right-circle"></i>
+                        </a>
+                        <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary" title="Edit this transfer">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger" title="Delete this transfer">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
         }

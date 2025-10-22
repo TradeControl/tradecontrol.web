@@ -1,4 +1,5 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.Totals.IndexModel
 @{ ViewData["Title"] = "Cash Totals"; }
 <h1>@ViewData["Title"]</h1>
@@ -7,7 +8,7 @@
     if (User.IsInRole(Constants.AdministratorsRole))
     {
         <p>
-            <a asp-page="./Create" class="btn btn-outline-primary">Create New</a>
+            <a asp-page="./Create" class="btn btn-outline-primary w-25" title="Create New">Create New</a>
         </p>
     }
 }
@@ -21,24 +22,28 @@
             <th>
                 @Html.DisplayNameFor(model => model.Cash_Totals[0].Category)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Totals[0].CashType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Totals[0].DisplayOrder)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Totals[0].InsertedBy)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Totals[0].InsertedOn)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Totals[0].UpdatedBy)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Totals[0].UpdatedOn)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Totals[0].CashType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Totals[0].DisplayOrder)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Totals[0].InsertedBy)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Totals[0].InsertedOn)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Totals[0].UpdatedBy)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Totals[0].UpdatedOn)
+                </th>
+            }
 
             <th></th>
         </tr>
@@ -53,34 +58,44 @@
                 <td>
                     @Html.DisplayFor(modelItem => item.Category)
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashType)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.DisplayOrder)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.InsertedBy)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.InsertedOn)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.UpdatedBy)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.UpdatedOn)
-                </td>
+
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CashType)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.DisplayOrder)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.InsertedBy)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.InsertedOn)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.UpdatedBy)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.UpdatedOn)
+                    </td>
+                }
 
                 <td>
-                    <a asp-page="./Details" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info"></a>
-                    @{
-                        if (User.IsInRole(Constants.AdministratorsRole))
+                    <div class="action-buttons">
+                        <a asp-page="./Details" asp-route-categoryCode="@item.CategoryCode" class="btn btn-info" title="Details">
+                            <i class="bi bi-info-circle"></i>
+                        </a>
+                        @if (User.IsInRole(Constants.AdministratorsRole))
                         {
-                            <a asp-page="./Edit" asp-route-categoryCode="@item.CategoryCode" class="btn btn-secondary"></a>
-                            <a asp-page="./Delete" asp-route-categoryCode="@item.CategoryCode" class="btn btn-danger"></a>
+                            <a asp-page="./Edit" asp-route-categoryCode="@item.CategoryCode" class="btn btn-secondary" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-page="./Delete" asp-route-categoryCode="@item.CategoryCode" class="btn btn-danger" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         }
-                    }
+                    </div>
                 </td>
             </tr>
         }

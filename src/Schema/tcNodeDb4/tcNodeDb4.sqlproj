@@ -638,6 +638,7 @@
     <Build Include="App\Stored Procedures\proc_DB4Migration.sql" />
     <Build Include="App\Stored Procedures\proc_NodeDataInit.sql" />
     <Build Include="App\Stored Procedures\proc_NodeBusinessInit.sql" />
+    <Build Include="App\Stored Procedures\proc_RotateSymmetricKeys.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

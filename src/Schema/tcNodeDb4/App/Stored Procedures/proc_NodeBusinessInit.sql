@@ -119,6 +119,9 @@ BEGIN TRY
 	FROM Usr.tbMenu;
 
 	COMMIT TRAN
+
+	EXEC App.proc_RotateSymmetricKeys;
+
 END TRY
 BEGIN CATCH
 	EXEC App.proc_ErrorLog;
