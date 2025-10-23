@@ -36,6 +36,17 @@ namespace TradeControl.Web.Pages.Invoice.Register
         [Display(Name = "Tax Total")]
         public double TotalTaxValue { get; set; }
 
+        // Pagination
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 10;     // default 10
+
+        [BindProperty(SupportsGet = true)]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public SelectList PageSizeOptions { get; set; }
+
         public async Task OnGetAsync(string invoiceType, string accountCode, string invoiceNumber)
         {
             try
@@ -48,7 +59,8 @@ namespace TradeControl.Web.Pages.Invoice.Register
 
                 InvoiceTypes = new SelectList(await NodeContext.Invoice_tbTypes.OrderBy(t => t.InvoiceTypeCode).Select(t => t.InvoiceType).ToListAsync());
 
-                var invoices = from tb in NodeContext.Invoice_RegisterDetails select tb;
+                // Base query
+                IQueryable<Invoice_vwRegisterDetail> invoices = from tb in NodeContext.Invoice_RegisterDetails select tb;
 
                 if (!string.IsNullOrEmpty(accountCode))
                 {
@@ -82,10 +94,31 @@ namespace TradeControl.Web.Pages.Invoice.Register
                 if (!string.IsNullOrEmpty(invoiceType))
                     invoices = invoices.Where(i => i.InvoiceType == invoiceType);
 
-                Invoice_Details = await invoices.OrderBy(i => i.InvoicedOn).ToListAsync();
+                // Page size options (10, 50, 100)
+                PageSizeOptions = new SelectList(new[] { "10", "50", "100" }, PageSize.ToString());
 
+                // protect PageSize
+                if (PageSize <= 0) PageSize = 10;
+
+                // compute totals BEFORE paging (use filtered query)
+                TotalItems = await invoices.CountAsync();
+
+                TotalPages = (int)Math.Ceiling(TotalItems / (double)PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+
+                if (PageNumber < 1) PageNumber = 1;
+                if (PageNumber > TotalPages) PageNumber = TotalPages;
+
+                // totals (from filtered query)
                 TotalInvoiceValue = await invoices.SumAsync(i => i.InvoiceValue);
                 TotalTaxValue = await invoices.SumAsync(i => i.TaxValue);
+
+                // fetch paged data
+                Invoice_Details = await invoices
+                    .OrderBy(i => i.InvoicedOn)
+                    .Skip((PageNumber - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
 
                 await SetViewData();
             }

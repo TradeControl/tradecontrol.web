@@ -4,6 +4,41 @@
 @{ ViewData["Title"] = "Invoice Management"; }
 <h1>@ViewData["Title"]</h1>
 
+<p>
+    <a asp-page="./Create" asp-route-InvoiceType="@Model.InvoiceType" class="btn btn-outline-primary w-25" title="New Entry">New Entry</a>
+</p>
+
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select asp-for="PeriodName" asp-items="Model.PeriodNames" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <!-- reset to first page when page size changes; preserve current filters -->
+            <input type="hidden" name="PageNumber" value="1" />
+            <input type="hidden" name="AccountCode" value="@Model.AccountCode" />
+            <input type="hidden" name="Printed" value="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : "")" />
+            <input type="hidden" name="InvoiceNumber" value="@Model.InvoiceNumber" />
+            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Rows per page" onchange="this.form.submit()"></select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </div>
+
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
+</form>
+
 <table class="table table-striped">
     <thead>
         <tr>
@@ -109,10 +144,53 @@
     </tbody>
 </table>
 
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-accountCode="@Model.AccountCode"
+                   asp-route-Printed="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : null)"
+                   asp-route-invoiceNumber="@Model.InvoiceNumber"
+                   asp-route-PeriodName="@Model.PeriodName"
+                   asp-route-InvoiceType="@Model.InvoiceType"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Index"
+                       asp-route-accountCode="@Model.AccountCode"
+                       asp-route-Printed="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : null)"
+                       asp-route-invoiceNumber="@Model.InvoiceNumber"
+                       asp-route-PeriodName="@Model.PeriodName"
+                       asp-route-InvoiceType="@Model.InvoiceType"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-accountCode="@Model.AccountCode"
+                   asp-route-Printed="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : null)"
+                   asp-route-invoiceNumber="@Model.InvoiceNumber"
+                   asp-route-PeriodName="@Model.PeriodName"
+                   asp-route-InvoiceType="@Model.InvoiceType"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
+
 <form method="post">
     <div class="row g-2">
         <div class="col-12 col-sm-auto">
-            <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary w-100" title="Mark all invoices as sent">Mark all as sent</button>
+            <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary w-100" title="Mark all invoices as sent">Mark all invoices as sent</button>
         </div>
     </div>
 </form>

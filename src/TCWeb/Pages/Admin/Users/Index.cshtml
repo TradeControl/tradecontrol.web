@@ -6,14 +6,27 @@
 
 <h1>@ViewData["Title"]</h1>
 
-<form class="mb-3">
-    <p>
-        <label class="text-body">Confirmed?</label>
-        <select asp-for="ConfirmFilterOption" asp-items="Model.ConfirmFilterOptions">
-            <option value="">All</option>
-        </select>
-        <input type="submit" value="Filter" class="btn btn-primary" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <label class="visually-hidden" for="ConfirmFilterOption">Confirmed?</label>
+            <select asp-for="ConfirmFilterOption"
+                    asp-items="Model.ConfirmFilterOptions"
+                    id="ConfirmFilterOption"
+                    class="form-control"
+                    onchange="this.form.submit()">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <!-- reset to first page when changing the filter -->
+            <input type="hidden" name="PageNumber" value="1" />
+            <noscript>
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </noscript>
+        </div>
+    </div>
 </form>
 <table class="table">
     <thead>

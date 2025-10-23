@@ -22,8 +22,8 @@
             <input type="hidden" asp-for="Subject_tbSubject.UpdatedOn" />
 
             <div>
-                <a asp-page="/Org/Address/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Addresses</a>
-                <a asp-page="/Org/Contact/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Contacts</a>
+                <a asp-page="/Subject/Address/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Addresses</a>
+                <a asp-page="/Subject/Contact/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Contacts</a>
             </div>
             <p />
 
@@ -66,16 +66,19 @@
                 <input asp-for="Subject_tbSubject.ExpectedDays" class="form-control" />
                 <span asp-validation-for="Subject_tbSubject.ExpectedDays" class="text-danger"></span>
             </div>
-            <div class="form-check-inline">
-                <label asp-for="Subject_tbSubject.PayDaysFromMonthEnd" class="control-label"></label>
-                <input asp-for="Subject_tbSubject.PayDaysFromMonthEnd" class="form-control" />
-                <span asp-validation-for="Subject_tbSubject.PayDaysFromMonthEnd" class="text-danger"></span>
+
+            <div class="form-check form-check-inline mb-3">
+                <input asp-for="Subject_tbSubject.PayDaysFromMonthEnd" class="form-check-input" />
+                <label asp-for="Subject_tbSubject.PayDaysFromMonthEnd" class="form-check-label"></label>
+                <span asp-validation-for="Subject_tbSubject.PayDaysFromMonthEnd" class="text-danger ms-2"></span>
             </div>
-            <div class="form-check-inline">
-                <label asp-for="Subject_tbSubject.PayBalance" class="control-label"></label>
-                <input asp-for="Subject_tbSubject.PayBalance" class="form-control" />
-                <span asp-validation-for="Subject_tbSubject.PayBalance" class="text-danger"></span>
+
+            <div class="form-check form-check-inline mb-3">
+                <input asp-for="Subject_tbSubject.PayBalance" class="form-check-input" />
+                <label asp-for="Subject_tbSubject.PayBalance" class="form-check-label"></label>
+                <span asp-validation-for="Subject_tbSubject.PayBalance" class="text-danger ms-2"></span>
             </div>
+
             <div class="mb-3">
                 <label asp-for="Subject_tbSubject.OpeningBalance" class="control-label"></label>
                 <input asp-for="Subject_tbSubject.OpeningBalance" class="form-control" />

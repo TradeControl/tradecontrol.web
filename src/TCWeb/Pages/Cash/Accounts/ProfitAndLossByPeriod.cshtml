@@ -8,12 +8,15 @@
 </p>
 
 <form class="mb-3" method="get">
-    <p>
-        <select asp-for="PeriodName" asp-items="Model.PeriodNames">
-        </select>
-
-        <input type="submit" value="Generate" class="btn btn-primary" />
-    </p>
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <label class="visually-hidden" for="PeriodName">Period</label>
+            <select asp-for="PeriodName" asp-items="Model.PeriodNames" id="PeriodName" class="form-control"></select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Generate" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
 <h3>Accounts</h3>

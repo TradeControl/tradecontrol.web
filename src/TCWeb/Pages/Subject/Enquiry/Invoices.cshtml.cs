@@ -23,6 +23,17 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
 
         public InvoicesModel(NodeContext context) : base(context) { }
 
+        // Pagination
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 50; // default 50
+
+        [BindProperty(SupportsGet = true)]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public SelectList PageSizeOptions { get; set; }
+
         public async Task<IActionResult> OnGetAsync(string accountCode)
         {
             try
@@ -35,12 +46,29 @@ namespace TradeControl.Web.Pages.Subject.Enquiry
                 if (Subject_Account == null)
                     return NotFound();
 
-                var invoices = from tb in NodeContext.Invoice_Register
-                               where tb.SubjectCode == accountCode
-                               orderby tb.InvoicedOn descending
-                               select tb;
+                // Base query
+                IQueryable<Invoice_vwRegister> invoices = from tb in NodeContext.Invoice_Register
+                                                          where tb.SubjectCode == accountCode
+                                                          orderby tb.InvoicedOn descending
+                                                          select tb;
 
-                Subject_Invoices = await invoices.ToListAsync();
+                // Page size options (10,50,100)
+                PageSizeOptions = new SelectList(new[] { "10", "50", "100" }, PageSize.ToString());
+                if (PageSize <= 0) PageSize = 50;
+
+                // compute totals BEFORE paging
+                TotalItems = await invoices.CountAsync();
+
+                TotalPages = (int)Math.Ceiling(TotalItems / (double)PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+
+                if (PageNumber < 1) PageNumber = 1;
+                if (PageNumber > TotalPages) PageNumber = TotalPages;
+
+                Subject_Invoices = await invoices
+                    .Skip((PageNumber - 1) * PageSize)
+                    .Take(PageSize)
+                    .ToListAsync();
 
                 await SetViewData();
                 return Page();

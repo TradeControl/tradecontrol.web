@@ -38,9 +38,16 @@
                     @{
                         if (User.IsInRole(Constants.AdministratorsRole))
                         {
-
-                            <a asp-page="./Edit" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-secondary"></a>
-                            <a asp-page="./Delete" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-danger"></a>
+                            <div class="action-buttons">
+                                <a asp-page="./Edit" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-secondary" title="Edit">
+                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Edit</span>
+                                </a>
+                                <a asp-page="./Delete" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-danger" title="Delete">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Delete</span>
+                                </a>
+                            </div>
                         }
                     }
                 </td>

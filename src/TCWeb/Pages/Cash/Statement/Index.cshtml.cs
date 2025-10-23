@@ -20,11 +20,12 @@ namespace TradeControl.Web.Pages.Cash.Statement
     public class IndexModel : DI_BasePageModel
     {
 
-        [BindProperty]
+        // bind from query string (GET) so the select posts back work
+        [BindProperty(SupportsGet = true)]
         public string AccountName { get; set; }
         public SelectList AccountNames { get; set; }
 
-        [BindProperty]
+        [BindProperty(SupportsGet = true)]
         public string PeriodName { get; set; }
         public SelectList PeriodNames { get; set; }
 
@@ -33,6 +34,17 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
         [BindProperty]
         public Subject_vwCashAccount Subject_CashAccount { get; set; }
+
+        // Pagination
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 50;    // default 50
+
+        [BindProperty(SupportsGet = true)]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public SelectList PageSizeOptions { get; set; }
 
         public IndexModel(NodeContext context) : base(context) { }
 
@@ -49,15 +61,19 @@ namespace TradeControl.Web.Pages.Cash.Statement
                                orderby tb.AccountTypeCode, tb.AccountName
                                select tb.AccountName;
 
-                AccountNames = new SelectList(await accounts.ToListAsync());
+                // supply a selected value so the select shows the current choice
+                AccountNames = new SelectList(await accounts.ToListAsync(), AccountName ?? cashSubjectName);
 
                 var periodNames = from tb in NodeContext.App_Periods
                                   where tb.CashStatusCode == (short)NodeEnum.CashStatus.Current || tb.CashStatusCode == (short)NodeEnum.CashStatus.Closed
                                   orderby tb.StartOn descending
                                   select tb.Description;
 
-                PeriodNames = new SelectList(await periodNames.ToListAsync());
+                PeriodNames = new SelectList(await periodNames.ToListAsync(), periodName ?? PeriodName);
 
+                // If the UI submitted AccountName (query string), prefer that value
+                if (string.IsNullOrEmpty(cashSubjectName) && !string.IsNullOrEmpty(AccountName))
+                    cashSubjectName = AccountName;
 
                 if (!string.IsNullOrEmpty(paymentCode))
                 {
@@ -99,19 +115,30 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                 PeriodName = periodName;
 
+                // Page size options (10,50,100)
+                PageSizeOptions = new SelectList(new[] { "10", "50", "100" }, PageSize.ToString());
+                if (PageSize <= 0) PageSize = 50;
+
+                // Base query for statements (filtered by account and optionally period)
+                IQueryable<Cash_vwAccountStatement> statements = mode == 1
+                    ? NodeContext.Cash_AccountStatements.Where(t => t.AccountCode == cashSubjectCode)
+                    : NodeContext.Cash_AccountStatements.Where(t => t.AccountCode == cashSubjectCode && t.StartOn == startOn);
+
+                // compute totals for pager
+                TotalItems = await statements.CountAsync();
+                TotalPages = (int)Math.Ceiling(TotalItems / (double)PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+
+                if (PageNumber < 1) PageNumber = 1;
+                if (PageNumber > TotalPages) PageNumber = TotalPages;
+
                 try
                 {
-                    Cash_AccountStatement = mode switch
-                    {
-                        1 => await NodeContext.Cash_AccountStatements
-                                        .Where(t => t.AccountCode == cashSubjectCode)
-                                        .OrderBy(t => t.EntryNumber)
-                                        .ToListAsync(),
-                        _ => await NodeContext.Cash_AccountStatements
-                                        .Where(t => t.AccountCode == cashSubjectCode && t.StartOn == startOn)
-                                        .OrderBy(t => t.EntryNumber)
-                                        .ToListAsync(),
-                    };
+                    Cash_AccountStatement = await statements
+                        .OrderByDescending(t => t.PaidOn)
+                        .Skip((PageNumber - 1) * PageSize)
+                        .Take(PageSize)
+                        .ToListAsync();
                 }
                 catch
                 {

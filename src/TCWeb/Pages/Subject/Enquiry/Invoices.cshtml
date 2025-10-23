@@ -28,6 +28,22 @@
             <span class="text-truncate">Register</span>
         </a>
     </div>
+
+    <div class="col-12 col-sm-3 d-flex">
+        <form method="get" class="w-100 d-flex align-items-center justify-content-center">
+            <input type="hidden" name="accountCode" value="@Model.Subject_Account.SubjectCode" />
+            <input type="hidden" name="PageNumber" value="1" />
+            <select asp-for="PageSize"
+                    asp-items="Model.PageSizeOptions"
+                    class="form-control w-50"
+                    aria-label="Rows per page"
+                    onchange="this.form.submit()">
+            </select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </form>
+    </div>
 </div>
 
 <table class="table table-striped">
@@ -74,6 +90,37 @@
         }
     </tbody>
 </table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Invoices"
+                   asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Invoices"
+                       asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Invoices"
+                   asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
 
 <div class="row g-2 mt-3">
     <div class="col-12 col-sm-3 d-flex">
