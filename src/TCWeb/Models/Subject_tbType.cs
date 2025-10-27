@@ -19,7 +19,7 @@ namespace TradeControl.Web.Models
         [Key]
         [Display(Name = "Subject Type Code")]
         public short SubjectTypeCode { get; set; }
-        [Display(Name = "Mode")]
+        [Display(Name = "Polarity")]
         public short CashPolarityCode { get; set; }
         [Required]
         [StringLength(50)]

@@ -19,20 +19,30 @@ nav.navbar {
     background-color: transparent;
 }
 
-.navbar .container {
-    margin-left: 56px;
+/* Keep navbar container flush to the left so logo/brand sit close to screen edge */
+.navbar > .container,
+.navbar > .container-fluid,
+header .navbar > .container,
+header .navbar > .container-fluid {
+    margin-left: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
 }
 
-header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
-header .navbar .navbar-brand {
-    color: #fff !important;
-    transition: color 0.2s;
-}
-
-    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
-    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
-        color: #ffe0b2 !important;
+    /* Styling for navbar links / brand */
+    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
+    header .navbar .navbar-brand {
+        color: #fff !important;
+        transition: color 0.2s;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
     }
+
+        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
+        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
+            color: #ffe0b2 !important;
+        }
+
 /* Company name in navbar */
 header .tc-brand,
 .navbar .tc-brand,
@@ -43,36 +53,54 @@ header .tc-brand,
     font-size: 1.25rem !important;
     letter-spacing: 0.5px;
     transition: color 0.2s;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0 !important;
+    padding-left: 0.125rem !important;
+    margin-right: 0 !important;
+    max-width: calc(100vw - 4rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-    header .tc-brand:hover,
-    header .tc-brand:focus,
-    .navbar .tc-brand:hover,
-    .navbar .tc-brand:focus,
-    .navbar .container .tc-brand:hover,
-    .nav-link.tc-brand:hover,
-    .nav-link.tc-brand:focus {
-        color: #ffd54f !important;
-        text-decoration: none;
-    }
+header .tc-brand:hover,
+header .tc-brand:focus,
+.navbar .tc-brand:hover,
+.navbar .tc-brand:focus,
+.navbar .container .tc-brand:hover,
+.nav-link.tc-brand:hover,
+.nav-link.tc-brand:focus {
+    color: #ffd54f !important;
+    text-decoration: none;
+}
 
-/* Navbar Logo Styles */
+/* Navbar Logo Styles (keeps absolute helper if used) */
 .navbar-logo-absolute {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 4px;
     height: 60px;
     display: flex;
     align-items: center;
-    padding-left: 12px;
+    padding-left: 4px;
     z-index: 101;
 }
 
     .navbar-logo-absolute img {
-        height: 32px;
+        height: 28px;
         width: auto;
         display: block;
     }
+
+/* Logo sizing used in brand anchor */
+.tc-logo {
+    height: 28px;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin-right: 0.25rem;
+}
 
 /* Auth links: Register, Login, Logout */
 .tc-auth-link {
@@ -136,11 +164,11 @@ h1, h2, h3, h4, h5 {
     background: #fff;
 }
 
-.table thead {
-    background: #ffe0b2;
-    color: #f57c00;
-    font-weight: 600;
-}
+    .table thead {
+        background: #ffe0b2;
+        color: #f57c00;
+        font-weight: 600;
+    }
 
 .table-striped > tbody > tr:nth-of-type(odd) {
     background-color: #fffde7;
@@ -151,10 +179,8 @@ h1, h2, h3, h4, h5 {
    but keep word-break normal so browsers do not break anywhere (per-character). */
 .table th, .table td {
     white-space: normal;
-    /* allow wrapping at word boundaries; only break words if absolutely necessary */
     overflow-wrap: break-word;
     word-break: normal;
-    /* enable hyphenation where supported to create nicer breaks */
     -webkit-hyphens: auto;
     -ms-hyphens: auto;
     hyphens: auto;
@@ -176,7 +202,6 @@ h1, h2, h3, h4, h5 {
     margin: 0;
 }
 
-    /* Prevent buttons from shrinking (keeps them side-by-side) */
     .table .action-buttons .btn {
         flex: 0 0 auto; /* don't grow or shrink; keep intrinsic size */
         white-space: nowrap; /* keep icon+text together */
@@ -200,6 +225,7 @@ input[type="submit"] {
         border-color: #e65100;
         box-shadow: none;
     }
+
     /* Orange button theme (custom, do not override Bootstrap's btn-warning) */
     input[type="submit"].tc-btn-orange,
     button.tc-btn-orange,
@@ -290,15 +316,27 @@ select,
     padding-right: 0;
 }
 
-.tc-logo {
-    height: 32px;
-    width: auto;
-    vertical-align: middle;
-    display: inline-block;
+/* Highlight only the filter dropdown and text input inside the standard filter form
+   (selector targets the pattern used in your pages: form.mb-3 > .row.g-2.align-items-center) */
+form.mb-3 > .row.g-2.align-items-center select.form-control,
+form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
+    border: 1px solid #ff9800;
+    border-radius: 4px;
+    box-shadow: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+
+    /* Focus state: stronger orange outline */
+    form.mb-3 > .row.g-2.align-items-center select.form-control:focus,
+    form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"]:focus {
+        border-color: #e65100;
+        outline: none;
+        box-shadow: 0 0 0 0.15rem rgba(245,124,0,0.15);
+    }
 
 /* Mobile Devices */
 @media (max-width: 420px) {
+
     footer, .footer, .tc-footer {
         padding: 0 0.5rem;
         line-height: 40px;
@@ -308,12 +346,6 @@ select,
 
     body {
         margin-bottom: 40px;
-    }
-
-    .navbar .container {
-        margin-left: 0;
-        padding-left: 8px;
-        padding-right: 8px;
     }
 
     .tc-body-align {
@@ -329,45 +361,61 @@ select,
         -webkit-overflow-scrolling: touch;
     }
 
-    .table .action-buttons {
-        flex-wrap: wrap;
-        gap: 0.15rem;
+        .table .action-buttons {
+            flex-wrap: wrap;
+            gap: 0.15rem;
+        }
+
+            .table .action-buttons .btn {
+                padding: 0.15rem 0.35rem !important;
+                min-width: 1.6rem !important;
+                font-size: 0.88rem !important;
+            }
+
+                .table .action-buttons .btn i {
+                    vertical-align: middle;
+                    font-size: 1.05em;
+                    margin: 0;
+                }
+
+        .table thead,
+        .table tbody,
+        .table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .table th,
+        .table td {
+            min-width: 0 !important;
+            white-space: normal !important;
+            overflow-wrap: break-word;
+            word-break: normal;
+            -webkit-hyphens: auto;
+            hyphens: auto;
+        }
+
+            .table th:last-child,
+            .table td:last-child {
+                min-width: 0 !important;
+                white-space: normal !important;
+            }
+
+    /* truncate long company name on very small screens */
+    .tc-brand {
+        max-width: calc(100vw - 5.25rem);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
     }
 
-    .table .action-buttons .btn {
-        padding: 0.15rem 0.35rem !important; 
-        min-width: 1.6rem !important; 
-        font-size: 0.88rem !important;
-    }
-
-    .table .action-buttons .btn i {
-        vertical-align: middle;
-        font-size: 1.05em;
-        margin: 0;
-    }
-
-    .table thead,
-    .table tbody,
-    .table tr {
-        display: table;
-        width: 100%;
-        table-layout: fixed;
-    }
-
-    .table th,
-    .table td {
-        min-width: 0 !important;
-        white-space: normal !important;
-        overflow-wrap: break-word;
-        word-break: normal;
-        -webkit-hyphens: auto;
-        hyphens: auto;
-    }
-
-    .table th:last-child,
-    .table td:last-child {
-        min-width: 0 !important;
-        white-space: normal !important;
+    /* tighten navbar left gutter on very small screens */
+    .navbar > .container,
+    .navbar > .container-fluid {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
     }
 }
 
@@ -388,3 +436,33 @@ select,
         font-size: 0.92rem;
     }
 }
+
+/* Category tree polarity icons: small colored dots before the title */
+.tc-cat-icon {
+  display: inline-block;
+  width: 0.66rem;
+  height: 0.66rem;
+  border-radius: 50%;
+  margin-right: 0.45rem;
+  vertical-align: text-bottom;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+}
+
+/* Cash-code icon (no polarity dot). Smaller margin and consistent alignment with category titles */
+.tc-code-icon {
+    margin-right: 0.45rem;
+    font-size: 0.95rem;
+    vertical-align: text-bottom;
+    color: inherit; /* keep same color as surrounding text */
+}
+
+/* Polarity colours:
+   Income -> black
+   Expense -> red
+   Neutral -> blue */
+.tc-cat-income { background-color: #000000; }  /* Income = black */
+.tc-cat-expense { background-color: #e53935; } /* Expense = red */
+.tc-cat-neutral { background-color: #1976d2; } /* Neutral = blue */
+
+/* Ensure Fancytree will render HTML in titles for these pages */
+.fancytree-community .fancytree-title { /* leave default; included for specificity if needed */ }

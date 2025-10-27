@@ -1,0 +1,83 @@
+﻿@page
+@using TradeControl.Web.Pages.Cash.CategoryCode
+@model TradeControl.Web.Pages.Cash.CategoryCode.CategoryTreeModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    ViewData["Title"] = "Cash Categories";
+    var isAdmin = User.IsInRole(Constants.AdministratorsRole);
+}
+<link href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/skin-win8/ui.fancytree.min.css" rel="stylesheet" />
+<link href="~/css/categoryTree.css" rel="stylesheet" />
+<meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+
+<div class="mb-3 d-flex align-items-center gap-2">
+    <div>
+        <h1 class="mb-0">@ViewData["Title"]</h1>
+    </div>
+</div>
+
+<div id="categoryTree" style="min-height:220px;"></div>
+
+<div id="mobileActionBar" class="tc-mobile-actionbar">
+    <button type="button" class="btn-action" data-action="view"><i class="bi bi-eye"></i> View</button>
+    <button type="button" class="btn-action admin-only" data-action="edit"><i class="bi bi-pencil-square"></i> Edit</button>
+    <button type="button" class="btn-action admin-only" data-action="move"><i class="bi bi-arrows-move"></i> Move</button>
+    <button type="button" class="btn-action admin-only" data-action="delete"><i class="bi bi-trash"></i> Delete</button>
+    <button type="button" class="btn-action admin-only" data-action="toggleEnabled"><i class="bi bi-power"></i> Toggle</button>
+</div>
+
+<div id="treeContextMenu" class="dropdown-menu" style="position:absolute; display:none; z-index:2000;">
+    <button type="button" class="dropdown-item" data-action="expandSelected">Expand Selected</button>
+    <button type="button" class="dropdown-item" data-action="collapseSelected">Collapse Selected</button>
+    <div class="dropdown-divider"></div>
+
+    <!-- Mobile-only via JS -->
+    <button type="button" class="dropdown-item" data-action="view">View</button>
+    <div class="dropdown-divider"></div>
+
+    <!-- Category actions (admin-only) -->
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="addExistingTotal">Add Existing Total...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="createTotal">New Total...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="addExistingCode">Add Existing Code...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="createCode">New Code...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="move">Move...</button>
+    <div class="dropdown-divider admin-only cat-only"></div>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="edit">Edit...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="delete">Delete (recursive)</button>
+
+    <!-- Code actions (admin-only) -->
+    <div class="dropdown-divider admin-only code-only"></div>
+    <button type="button" class="dropdown-item admin-only code-only" data-action="edit">Edit...</button>
+    <button type="button" class="dropdown-item admin-only code-only" data-action="move">Move...</button>
+    <button type="button" class="dropdown-item admin-only code-only" data-action="delete">Delete</button>
+
+    <div class="dropdown-divider"></div>
+    <!-- Reorder -->
+    <button type="button" class="dropdown-item admin-only" data-action="moveUp">Move Up</button>
+    <button type="button" class="dropdown-item admin-only" data-action="moveDown">Move Down</button>
+
+    <div class="dropdown-divider admin-only"></div>
+    <!-- Single toggle item; label set dynamically -->
+    <button type="button" class="dropdown-item admin-only" data-action="toggleEnabled">Enable</button>
+</div>
+
+
+@section Scripts {
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/jquery.fancytree-all.min.js"></script>
+    <script src="~/js/categoryTree.js"></script>
+    <script>
+        (function () {
+            CategoryTree.init({
+                treeSelector: "#categoryTree",
+                menuSelector: "#treeContextMenu",
+                nodesUrl: '@Url.Page("./Index", pageHandler: "Nodes")',
+                basePageUrl: '@Url.Page("./Index")',
+                rootKey: '@CategoryTreeModel.RootNodeKey',
+                discKey: '@CategoryTreeModel.DisconnectedNodeKey',
+                isAdmin: @isAdmin.ToString().ToLowerInvariant()
+            });
+        })();
+    </script>
+}

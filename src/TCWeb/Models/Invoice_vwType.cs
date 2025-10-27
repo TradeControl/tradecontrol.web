@@ -21,7 +21,7 @@ namespace TradeControl.Web.Models
         public string InvoiceType { get; set; }
         [Display(Name = "Mode Code")]
         public short CashPolarityCode { get; set; }
-        [Display(Name = "Mode")]
+        [Display(Name = "Polarity")]
         public string CashPolarity { get; set; }
         [Display(Name = "Next Number")]
         public int NextNumber { get; set; }

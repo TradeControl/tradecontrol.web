@@ -1,5 +1,13 @@
-﻿<header>
-    <nav class="navbar navbar-expand-sm navbar-light bg-white box-shadow mb-3">
+﻿@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+
+<header>
+    @{
+        // If the device is a mobile device, don't add the "navbar-expand-*" class
+        // so the navbar always stays collapsed and shows the hamburger.
+        var expandClass = (Detection?.Device?.Type == Device.Mobile) ? "" : "navbar-expand-sm";
+    }
+    <nav class="navbar @expandClass navbar-light bg-white box-shadow mb-3">
         <div class="container">
             <a asp-area="" asp-page="/Index" class="navbar-brand">
                 <img src="~/content/images/icon.svg" alt="Company Logo" class="tc-logo me-2" />
@@ -123,6 +131,9 @@
                         <ul class="dropdown-menu" aria-labelledby="navDropdownSystem">
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Tax/TaxCode/Index">Tax Codes</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/CategoryTree/Index">Category Tree</a>
                             </li>
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Cash/CategoryCode/Index">Cash Categories</a>

@@ -1,0 +1,84 @@
+﻿/* Strikethrough/muted for disabled nodes (including active/selected states) */
+.fancytree-container .fancytree-node.tc-disabled .fancytree-title,
+.fancytree-container .fancytree-node.tc-disabled.fancytree-active .fancytree-title,
+.fancytree-container .fancytree-node.tc-disabled.fancytree-selected .fancytree-title {
+    text-decoration: line-through;
+    opacity: .6;
+}
+
+/* Color variables */
+:root {
+  --tc-orange: #ff7a00; /* adjust to your brand */
+  --tc-orange-600: #e66e00;
+  --tc-on-orange: #ffffff;
+}
+
+/* Bottom-sheet menu for mobile */
+@media (max-width: 991.98px) {
+  #treeContextMenu.mobile-sheet {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    display: block;
+    width: 100%;
+    max-height: 60vh;
+    overflow-y: auto;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,.25);
+    transform: translateY(0);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 2000;
+  }
+  #treeContextMenu.mobile-sheet .dropdown-item {
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
+}
+
+/* Mobile action bar */
+.tc-mobile-actionbar {
+  display: none; /* JS toggles this on mobile */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--tc-orange, #ff7a00);
+  color: var(--tc-on-orange, #fff);
+  z-index: 2050; /* below sheet (2000+) but above tree */
+  box-shadow: 0 -4px 16px rgba(0,0,0,.25);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+}
+@media (max-width: 991.98px) {
+  .tc-mobile-actionbar.tc-visible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+  }
+  .tc-mobile-actionbar .btn-action {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: .95rem;
+    padding: 10px 8px;
+    line-height: 1.2;
+    border-radius: 6px;
+    min-width: 64px;
+  }
+  .tc-mobile-actionbar .btn-action:active {
+    background: rgba(255,255,255,0.15);
+  }
+  .tc-mobile-actionbar .btn-action i {
+    margin-right: 6px;
+  }
+}
+
+/* Optional: slightly larger tap target for tree rows on mobile */
+@media (max-width: 991.98px) {
+  .fancytree-container .fancytree-title {
+    padding: 10px 8px;
+  }
+}

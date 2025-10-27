@@ -64,15 +64,6 @@ BEGIN
 			ROLLBACK
 		END
 
-		IF UPDATE (IsEnabled)
-		BEGIN
-			UPDATE  Cash.tbCode
-			SET     IsEnabled = 0
-			FROM        inserted INNER JOIN
-										Cash.tbCode ON inserted.CategoryCode = Cash.tbCode.CategoryCode
-			WHERE        (inserted.IsEnabled = 0) AND (Cash.tbCode.IsEnabled <> 0);
-		END
-
 		IF NOT UPDATE(UpdatedBy)
 		BEGIN
 			UPDATE Cash.tbCategory
