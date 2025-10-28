@@ -1,0 +1,8 @@
+{
+  "env": { "browser": true, "es2022": true, "jquery": true },
+  "parserOptions": { "ecmaVersion": 2022, "sourceType": "module" },
+  "rules": {
+    "brace-style": ["error", "allman", { "allowSingleLine": true }],
+    "curly": ["error", "all"]
+  }
+}

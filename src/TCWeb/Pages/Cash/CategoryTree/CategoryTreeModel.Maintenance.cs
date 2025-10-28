@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
+using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryCode
 {
@@ -232,5 +233,27 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 		public Task<JsonResult> OnPostMoveAsync([FromForm] string key, [FromForm] string targetParentKey)
 			=> Task.FromResult(IsAdmin() ? NotImplemented("Move", key, targetParentKey) : new JsonResult(new { success = false, message = "Insufficient privileges" }));
 
-	}
+        public Task<JsonResult> OnPostCreateCodeByCashCodeAsync(
+            [FromForm] string siblingCashCode,
+            [FromForm] string cashCode,
+            [FromForm] string cashDescription)
+            => Task.FromResult(
+                IsAdmin()
+                    ? NotImplemented("CreateCodeByCashCode", cashCode, siblingCashCode, "code")
+                    : new JsonResult(new { success = false, message = "Insufficient privileges" })
+            );
+
+        public Task<JsonResult> OnPostCreateCodeByCategoryAsync(
+            [FromForm] string categoryCode,
+            [FromForm] string taxCode,
+            [FromForm] string cashCode,
+            [FromForm] string cashDescription,
+            [FromForm] string templateCode = null)
+            => Task.FromResult(
+                IsAdmin()
+                    ? NotImplemented("CreateCodeByCategory", cashCode, categoryCode, "code")
+                    : new JsonResult(new { success = false, message = "Insufficient privileges" })
+            );
+
+    }
 }

@@ -24,36 +24,82 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 HttpContext.Response.Headers["Pragma"] = "no-cache";
                 HttpContext.Response.Headers["Expires"] = "0";
 
+                // Top-level: Root, Disconnected, and "By Cash Type"
                 if (string.IsNullOrEmpty(id))
                 {
-                    var rootContainer = new[] {
-                        new {
-                            key = RootNodeKey,
-                            title = "<span class='tc-root-icon' style='font-weight:600;'>&#8721;</span> Root",
+                    // Determine if any disconnected categories exist
+                    var totals = await NodeContext.Cash_tbCategoryTotals
+                        .AsNoTracking()
+                        .Select(t => new { t.ParentCode, t.ChildCode })
+                        .ToListAsync();
+
+                    var linkedSet = new HashSet<string>(
+                        totals.SelectMany(t => new[] { t.ParentCode, t.ChildCode })
+                              .Where(s => !string.IsNullOrEmpty(s)));
+
+                    bool disconnectedExist = await NodeContext.Cash_tbCategories
+                        .AsNoTracking()
+                        .AnyAsync(c => !linkedSet.Contains(c.CategoryCode));
+
+                    var nodes = new List<object>
+            {
+                new {
+                    key = RootNodeKey,
+                    title = "<span class='tc-root-icon' style='font-weight:600;'>&#8721;</span> Root",
+                    folder = true,
+                    lazy = true,
+                    icon = false,
+                    data = new { isRoot = true }
+                }
+            };
+
+                    if (disconnectedExist)
+                    {
+                        nodes.Add(new
+                        {
+                            key = DisconnectedNodeKey,
+                            title = "<i class='bi bi-plug tc-disconnected-icon'></i> Disconnected",
                             folder = true,
                             lazy = true,
                             icon = false,
-                            data = new { isRoot = true }
-                        }
-                    };
-                    return new JsonResult(rootContainer);
+                            data = new { disconnected = true }
+                        });
+                    }
+
+                    nodes.Add(BuildTypesRootNode()); // Cash Types root
+
+                    return new JsonResult(nodes);
                 }
 
-                var (totals, childCodesSet, linkedSet) = await LoadTotalsAndSetsAsync();
+                // Cash Type subtree
+                if (IsTypesRootKey(id))
+                {
+                    var typeNodes = await BuildTypeNodesAsync();
+                    return new JsonResult(typeNodes);
+                }
+
+                if (IsTypeKey(id) && TryParseTypeKey(id, out var typeCode))
+                {
+                    var catNodes = await BuildCategoriesForTypeAsync(typeCode);
+                    return new JsonResult(catNodes);
+                }
+
+                // Existing totals-based tree
+                var (totals2, childCodesSet, linkedSet2) = await LoadTotalsAndSetsAsync();
 
                 if (id == RootNodeKey)
                 {
-                    var nodes = await BuildRootNodesAsync(totals, childCodesSet, linkedSet);
+                    var nodes = await BuildRootNodesAsync(totals2, childCodesSet, linkedSet2);
                     return new JsonResult(nodes);
                 }
 
                 if (id == DisconnectedNodeKey)
                 {
-                    var nodes = await BuildDisconnectedNodesAsync(linkedSet);
+                    var nodes = await BuildDisconnectedNodesAsync(linkedSet2);
                     return new JsonResult(nodes);
                 }
 
-                var childNodes = await BuildChildNodesAsync(id, totals);
+                var childNodes = await BuildChildNodesAsync(id, totals2);
                 return new JsonResult(childNodes);
             }
             catch (Exception e)
@@ -84,10 +130,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 ? cats.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Category).ToList()
                 : cats.OrderBy(c => c.CashPolarityCode).ThenBy(c => c.Category).ToList();
 
-            var disconnectedExist = await NodeContext.Cash_tbCategories
-                                    .Where(c => !linkedSet.Contains(c.CategoryCode))
-                                    .AnyAsync();
-
             var rootNodes = cats.Select(c => (object)new
             {
                 key = c.CategoryCode,
@@ -106,42 +148,35 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                     isEnabled = c.IsEnabled == 0 ? 0 : 1
                 }
             }).ToList();
-
-            if (disconnectedExist)
-            {
-                rootNodes.Add(new
-                {
-                    key = DisconnectedNodeKey,
-                    title = "Disconnected",
-                    folder = true,
-                    lazy = true,
-                    icon = false,
-                    data = new { disconnected = true }
-                });
-            }
-
+            
             return rootNodes;
         }
 
         private async Task<List<object>> BuildDisconnectedNodesAsync(HashSet<string> linkedSet)
         {
-            var disconnectedCats = await NodeContext.Cash_tbCategories.ToListAsync();
-
-            var disconnected = disconnectedCats
+            var disconnectedCats = await NodeContext.Cash_tbCategories
                 .Where(c => !linkedSet.Contains(c.CategoryCode))
                 .OrderBy(c => c.CashPolarityCode)
                 .ThenBy(c => c.DisplayOrder)
                 .ThenBy(c => c.Category)
-                .ToList();
+                .ToListAsync();
 
-            var nodes = disconnected.Select(c => (object)new
+            var discCatCodes = disconnectedCats.Select(c => c.CategoryCode).ToArray();
+            var hasCodesSet = await NodeContext.Cash_tbCodes
+                .Where(code => discCatCodes.Contains(code.CategoryCode))
+                .GroupBy(code => code.CategoryCode)
+                .Select(g => g.Key)
+                .ToListAsync();
+            var hasCodes = new HashSet<string>(hasCodesSet);
+
+            var nodes = disconnectedCats.Select(c => (object)new
             {
                 key = c.CategoryCode,
                 title =
                     $"<span class='tc-cat-icon tc-cat-{PolarityClass(c.CashPolarityCode)}'></span> " +
                     $"{WebUtility.HtmlEncode(c.Category)} ({WebUtility.HtmlEncode(c.CategoryCode)})",
-                folder = false,
-                lazy = false,
+                folder = true,                       // was: false
+                lazy = hasCodes.Contains(c.CategoryCode),
                 icon = false,
                 extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
                 data = new

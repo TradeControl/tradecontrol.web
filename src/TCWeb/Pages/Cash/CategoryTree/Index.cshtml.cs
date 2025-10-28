@@ -37,7 +37,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         /// Initializes a new instance of the <see cref="CategoryTreeModel"/> class.
         /// </summary>
         /// <param name="context">EF Core database context.</param>
-        public CategoryTreeModel(NodeContext context) : base(context) {}
+        public CategoryTreeModel(NodeContext context) : base(context) { }
 
         /// <summary>
         /// GET handler used to serve the page.
@@ -52,18 +52,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         /// <summary>
         /// Returns true if the <paramref name="parentKey"/> represents the root-level working set.
         /// </summary>
-        /// <param name="parentKey">Parent key from UI (may be empty or RootNodeKey).</param>
-        /// <returns>True if root-level.</returns>
         private static bool IsRootKey(string parentKey) =>
             string.IsNullOrEmpty(parentKey) || string.Equals(parentKey, RootNodeKey, StringComparison.Ordinal);
 
         /// <summary>
         /// Moves a node up within its sibling sequence (root, normal, or disconnected set),
-        /// enforcing non-crossing of CashPolarityCode boundaries. Uses transactional, direct updates.
+        /// enforcing non-crossing of CashPolarityCode boundaries.
+        /// Also supports Cash Type subtree reordering via DisplayOrder on Cash_tbCategories.
         /// </summary>
-        /// <param name="key">Category code of the node to move.</param>
-        /// <param name="parentKey">Parent category code, RootNodeKey, DisconnectedNodeKey, or empty.</param>
-        /// <returns>Operation result.</returns>
         public async Task<JsonResult> OnPostMoveUpAsync([FromForm] string key, [FromForm] string parentKey)
         {
             if (!User.IsInRole(Constants.AdministratorsRole))
@@ -73,12 +69,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
                 return new JsonResult(new { success = false, message = "Codes are not reorderable" });
 
-            // Ensure the working set has a persisted order
-            if (!await IsDisplayOrderInitialised(parentKey))
-                await DisplayOrderInitialise(parentKey);
-
             try
             {
+                // Cash Type subtree: delegate to per-type ordering
+                if (IsTypeParent(parentKey))
+                    return await ReorderCategoryByType(key, moveUp: true);
+
+                // Ensure the working set has a persisted order (non-type sets only)
+                if (!await IsDisplayOrderInitialised(parentKey))
+                    await DisplayOrderInitialise(parentKey);
+
                 // Disconnected: reorder by category.DisplayOrder
                 if (string.Equals(parentKey, DisconnectedNodeKey, StringComparison.Ordinal))
                 {
@@ -185,11 +185,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
         /// <summary>
         /// Moves a node down within its sibling sequence (root, normal, or disconnected set),
-        /// enforcing non-crossing of CashPolarityCode boundaries. Uses transactional, direct updates.
+        /// enforcing non-crossing of CashPolarityCode boundaries.
+        /// Also supports Cash Type subtree reordering via DisplayOrder on Cash_tbCategories.
         /// </summary>
-        /// <param name="key">Category code of the node to move.</param>
-        /// <param name="parentKey">Parent category code, RootNodeKey, DisconnectedNodeKey, or empty.</param>
-        /// <returns>Operation result.</returns>
         public async Task<JsonResult> OnPostMoveDownAsync([FromForm] string key, [FromForm] string parentKey)
         {
             if (!User.IsInRole(Constants.AdministratorsRole))
@@ -199,11 +197,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
                 return new JsonResult(new { success = false, message = "Codes are not reorderable" });
 
-            if (!await IsDisplayOrderInitialised(parentKey))
-                await DisplayOrderInitialise(parentKey);
-
             try
             {
+                // Cash Type subtree: delegate to per-type ordering
+                if (IsTypeParent(parentKey))
+                    return await ReorderCategoryByType(key, moveUp: false);
+
+                // Ensure the working set has a persisted order (non-type sets only)
+                if (!await IsDisplayOrderInitialised(parentKey))
+                    await DisplayOrderInitialise(parentKey);
+
                 // Disconnected: reorder by category.DisplayOrder
                 if (string.Equals(parentKey, DisconnectedNodeKey, StringComparison.Ordinal))
                 {

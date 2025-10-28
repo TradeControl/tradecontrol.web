@@ -17,67 +17,33 @@
     </div>
 </div>
 
-<div id="categoryTree" style="min-height:220px;"></div>
-
-<div id="mobileActionBar" class="tc-mobile-actionbar">
-    <button type="button" class="btn-action" data-action="view"><i class="bi bi-eye"></i> View</button>
-    <button type="button" class="btn-action admin-only" data-action="edit"><i class="bi bi-pencil-square"></i> Edit</button>
-    <button type="button" class="btn-action admin-only" data-action="move"><i class="bi bi-arrows-move"></i> Move</button>
-    <button type="button" class="btn-action admin-only" data-action="delete"><i class="bi bi-trash"></i> Delete</button>
-    <button type="button" class="btn-action admin-only" data-action="toggleEnabled"><i class="bi bi-power"></i> Toggle</button>
+<!-- prevent wrapping so RHS never drops below LHS -->
+<div class="row g-3 align-items-stretch flex-nowrap mx-0">
+    <div id="leftCol" class="col-12 col-lg-7 d-flex">
+        <div id="categoryTree" class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;"></div>
+    </div>
+    <div id="rightCol" class="d-none d-lg-flex col-lg-5">
+        <div id="detailsPane" class="flex-grow-1 border rounded p-2 bg-light"></div>
+    </div>
 </div>
 
-<div id="treeContextMenu" class="dropdown-menu" style="position:absolute; display:none; z-index:2000;">
-    <button type="button" class="dropdown-item" data-action="expandSelected">Expand Selected</button>
-    <button type="button" class="dropdown-item" data-action="collapseSelected">Collapse Selected</button>
-    <div class="dropdown-divider"></div>
+<partial name="_MobileActionBar" />
+<partial name="_TreeContextMenu" />
 
-    <!-- Mobile-only via JS -->
-    <button type="button" class="dropdown-item" data-action="view">View</button>
-    <div class="dropdown-divider"></div>
-
-    <!-- Category actions (admin-only) -->
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="addExistingTotal">Add Existing Total...</button>
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="createTotal">New Total...</button>
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="addExistingCode">Add Existing Code...</button>
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="createCode">New Code...</button>
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="move">Move...</button>
-    <div class="dropdown-divider admin-only cat-only"></div>
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="edit">Edit...</button>
-    <button type="button" class="dropdown-item admin-only cat-only" data-action="delete">Delete (recursive)</button>
-
-    <!-- Code actions (admin-only) -->
-    <div class="dropdown-divider admin-only code-only"></div>
-    <button type="button" class="dropdown-item admin-only code-only" data-action="edit">Edit...</button>
-    <button type="button" class="dropdown-item admin-only code-only" data-action="move">Move...</button>
-    <button type="button" class="dropdown-item admin-only code-only" data-action="delete">Delete</button>
-
-    <div class="dropdown-divider"></div>
-    <!-- Reorder -->
-    <button type="button" class="dropdown-item admin-only" data-action="moveUp">Move Up</button>
-    <button type="button" class="dropdown-item admin-only" data-action="moveDown">Move Down</button>
-
-    <div class="dropdown-divider admin-only"></div>
-    <!-- Single toggle item; label set dynamically -->
-    <button type="button" class="dropdown-item admin-only" data-action="toggleEnabled">Enable</button>
+<!-- Page config for external JS to read -->
+<div id="categoryTreeConfig"
+     data-nodes-url='@Url.Page("./Index", pageHandler: "Nodes")'
+     data-base-url='@Url.Page("./Index")'
+     data-details-url='@Url.Page("./Details")'
+     data-root='@CategoryTreeModel.RootNodeKey'
+     data-disc='@CategoryTreeModel.DisconnectedNodeKey'
+     data-is-admin='@isAdmin.ToString().ToLowerInvariant()'>
 </div>
-
 
 @section Scripts {
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/jquery.fancytree-all.min.js"></script>
+    <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
     <script src="~/js/categoryTree.js"></script>
-    <script>
-        (function () {
-            CategoryTree.init({
-                treeSelector: "#categoryTree",
-                menuSelector: "#treeContextMenu",
-                nodesUrl: '@Url.Page("./Index", pageHandler: "Nodes")',
-                basePageUrl: '@Url.Page("./Index")',
-                rootKey: '@CategoryTreeModel.RootNodeKey',
-                discKey: '@CategoryTreeModel.DisconnectedNodeKey',
-                isAdmin: @isAdmin.ToString().ToLowerInvariant()
-            });
-        })();
-    </script>
+    <script src="~/js/categoryTree.page.js"></script>
 }

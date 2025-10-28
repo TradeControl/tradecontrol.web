@@ -13,6 +13,14 @@
   --tc-on-orange: #ffffff;
 }
 
+/* Disconnected root icon */
+.tc-disconnected-icon {
+    margin-right: 6px;
+    color: var(--tc-muted, #6c757d);
+    font-size: 1.05em;
+    vertical-align: -0.06em;
+}
+
 /* Bottom-sheet menu for mobile */
 @media (max-width: 991.98px) {
   #treeContextMenu.mobile-sheet {
@@ -82,3 +90,33 @@
     padding: 10px 8px;
   }
 }
+
+/* Ensure columns can shrink inside flex row without causing horizontal scroll */
+#leftCol, #rightCol { min-width: 0; }
+
+/* Make both panes scroll inside their boxes instead of growing */
+#categoryTree, #detailsPane { overflow: auto; }
+
+/* Critical: let the inner Fancytree container fill the pane height */
+#categoryTree .fancytree-container {
+  height: 100% !important;
+  overflow: auto;
+}
+
+/* Avoid horizontal scrollbar from nowrap rows */
+.row.flex-nowrap { overflow: hidden; }
+
+/* Hide actions that are not applicable in the "By Cash Type" subtree */
+#treeContextMenu.type-ctx [data-action="addExistingTotal"],
+#treeContextMenu.type-ctx [data-action="createTotal"],
+#treeContextMenu.type-ctx [data-action="addExistingCode"],
+#treeContextMenu.type-ctx [data-action="createCode"],
+#treeContextMenu.type-ctx [data-action="move"],
+#treeContextMenu.type-ctx [data-action="delete"] {
+    display: none !important;
+}
+
+/* Root/Type nodes: hide all actions except expand/collapse */
+#treeContextMenu.synthetic-ctx .dropdown-item { display: none !important; }
+#treeContextMenu.synthetic-ctx [data-action="expandSelected"],
+#treeContextMenu.synthetic-ctx [data-action="collapseSelected"] { display: block !important; }

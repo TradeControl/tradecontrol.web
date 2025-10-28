@@ -1,0 +1,13 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.TreeDetailsModel
+@{
+    Layout = null;
+}
+@if (Model.NodeType == "category")
+{
+    @await Html.PartialAsync("_CategoryDetailsCard", Model.Category)
+}
+else if (Model.NodeType == "code")
+{
+    @await Html.PartialAsync("_CodeDetailsCard", Model.Code)
+}
