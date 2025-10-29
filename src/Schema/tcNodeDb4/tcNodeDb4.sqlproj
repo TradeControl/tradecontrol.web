@@ -639,6 +639,11 @@
     <Build Include="App\Stored Procedures\proc_NodeDataInit.sql" />
     <Build Include="App\Stored Procedures\proc_NodeBusinessInit.sql" />
     <Build Include="App\Stored Procedures\proc_RotateSymmetricKeys.sql" />
+    <Build Include="Cash\Functions\fnCategoryNamespace.sql" />
+    <Build Include="App\Functions\fnToAlphaNumeric.sql" />
+    <Build Include="Cash\Views\vwCategoryPrimaryParent.sql" />
+    <Build Include="Cash\Functions\fnCategoryNamespaceInContext.sql" />
+    <Build Include="Cash\Functions\fnCategoryNamespacePrimary.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

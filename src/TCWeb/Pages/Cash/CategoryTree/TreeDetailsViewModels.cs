@@ -13,6 +13,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsEnabled { get; set; }
         public int ChildTotalsCount { get; set; }
         public int CodesCount { get; set; }
+        public string Namespace { get; set; } = string.Empty;
+
+        public int ParentCount { get; set; }
+        public int PrimaryParentCount { get; set; }
+
+        public bool IsCategoryInPrimary { get; set; }
+        public bool IsContextInPrimary { get; set; }
+        public string PrimaryKind { get; set; } = string.Empty; // "Profit" | "VAT" | ""
+        public bool ShowWarning => IsCategoryInPrimary && !IsContextInPrimary;
     }
 
     public class CodeDetailsVm
@@ -25,5 +34,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string CashType { get; set; } = string.Empty;
         public bool IsEnabled { get; set; }
         public bool IsCategoryEnabled { get; set; }
+        public string Namespace { get; set; } = string.Empty;
     }
 }

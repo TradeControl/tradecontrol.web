@@ -6,10 +6,29 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-start">
             <div>
-                <h5 class="card-title mb-1">@Model.Category</h5>
+                <h5 class="card-title mb-1">
+                    @Model.Category
+                    @if (Model.ShowWarning)
+                    {
+                        <span class="ms-2 text-warning" title="This category has additional parents outside the primary hierarchy.">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </span>
+                    }
+                    @if (Model.IsContextInPrimary && !string.IsNullOrWhiteSpace(Model.PrimaryKind))
+                    {
+                        <span class="badge bg-info ms-2" title="This path is on the @Model.PrimaryKind primary hierarchy.">
+                            @Model.PrimaryKind
+                        </span>
+                    }
+                </h5>
                 <div class="text-muted small">@Model.CategoryCode</div>
             </div>
             <span class="@badgeClass">@(Model.IsEnabled ? "Enabled" : "Disabled")</span>
+        </div>
+
+        <div class="mt-2 text-muted small">
+            <div class="text-muted">Namespace</div>
+            <div class="font-monospace">@Model.Namespace</div>
         </div>
 
         <div class="mt-3 row g-2 small">
@@ -41,6 +60,26 @@
                 <div class="text-muted small">Codes</div>
                 <div class="fw-semibold">@Model.CodesCount</div>
             </div>
+            <div>
+                <div class="text-muted small">Parents</div>
+                <div class="fw-semibold">@Model.ParentCount</div>
+            </div>
         </div>
+
+        @if (User.IsInRole(TradeControl.Web.Authorization.Constants.AdministratorsRole))
+        {
+            <div class="mt-3 d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-action="edit">Edit</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="addExistingTotal">Add Existing Total</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-action="addExistingCode">Add Existing Code</button>
+                <button type="button" class="btn btn-sm btn-outline-warning" data-action="move">Move</button>
+                <button type="button" class="btn btn-sm btn-outline-dark" data-action="toggleEnabled">Enable/Disable</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
+                @if (Model.IsCategoryInPrimary && !Model.IsContextInPrimary)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-success" data-action="makePrimary">Make Primary</button>
+                }
+            </div>
+        }
     </div>
 </div>

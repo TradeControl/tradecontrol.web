@@ -13,16 +13,18 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     {
         public TreeDetailsModel(NodeContext context) : base(context) { }
 
-        public string NodeType { get; private set; } = ""; // "category" | "code"
+        public string NodeType { get; private set; } = "";
         public CategoryDetailsVm Category { get; private set; }
         public CodeDetailsVm Code { get; private set; }
 
-        public async Task<IActionResult> OnGetAsync(string key)
+        public async Task<IActionResult> OnGetAsync(string key, string parentKey = null)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(key))
                     return NotFound();
+
+                var helper = new CashCodes(NodeContext);
 
                 if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -47,6 +49,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                     }).FirstOrDefaultAsync();
 
                     if (vm == null) return NotFound();
+
+                    vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
                     Code = vm;
                 }
                 else
@@ -72,6 +76,28 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ParentCode == vm.CategoryCode).CountAsync();
                     vm.CodesCount = await NodeContext.Cash_tbCodes.Where(cd => cd.CategoryCode == vm.CategoryCode).CountAsync();
+                    vm.ParentCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ChildCode == vm.CategoryCode).CountAsync();
+
+                    vm.IsCategoryInPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
+                        .AnyAsync(v => v.ChildCode == vm.CategoryCode);
+
+                    vm.IsContextInPrimary = string.IsNullOrEmpty(parentKey)
+                        ? vm.IsCategoryInPrimary
+                        : await NodeContext.Cash_vwCategoryPrimaryParents
+                            .AnyAsync(v => v.ChildCode == vm.CategoryCode && v.ParentCode == parentKey);
+
+                    vm.PrimaryParentCount = await NodeContext.Cash_vwCategoryPrimaryParents
+                        .Where(v => v.ChildCode == vm.CategoryCode)
+                        .CountAsync();
+
+                    vm.PrimaryKind = string.IsNullOrEmpty(parentKey)
+                        ? ""
+                        : await NodeContext.Cash_vwCategoryPrimaryParents
+                            .Where(v => v.ChildCode == vm.CategoryCode && v.ParentCode == parentKey)
+                            .Select(v => v.PrimaryKind)
+                            .FirstOrDefaultAsync() ?? "";
+
+                    vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
                     Category = vm;
                 }
 

@@ -136,6 +136,7 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Views
+        public virtual DbSet<Cash_vwCategoryPrimaryParent> Cash_vwCategoryPrimaryParents { get; set; }
         public virtual DbSet<Subject_vwSubjectLookup> Subject_SubjectLookup { get; set; }
         public virtual DbSet<Subject_vwSubjectLookupAll> Subject_SubjectLookupAll { get; set; }
         public virtual DbSet<Subject_vwEmailAddress> Subject_EmailAddresses { get; set; }

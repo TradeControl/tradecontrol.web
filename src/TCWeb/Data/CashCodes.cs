@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Data; 
 
 using TradeControl.Web.Models;
 
@@ -60,36 +61,12 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public string Description
-        {
-            get { return _cashCode.CashDescription;  }
-        }
-
-        public string CategoryCode
-        {
-            get { return _cashCode.CategoryCode;  }
-        }
-
-        public string TaxCode
-        {
-            get { return _cashCode.TaxCode; }
-        }
-
-        public NodeEnum.TaxType TaxTypeCode
-        {
-            get { return _cashCode.TaxTypeCode; }
-        }
-
-        public NodeEnum.CashPolarity CashPolarityCode
-        {
-            get { return _cashCode.CashPolarityCode;  }
-        }
-
-        public NodeEnum.CashType CashTypeCode
-        {
-            get { return _cashCode.CashTypeCode; }
-        }
-
+        public string Description => _cashCode.CashDescription;
+        public string CategoryCode => _cashCode.CategoryCode;
+        public string TaxCode => _cashCode.TaxCode;
+        public NodeEnum.TaxType TaxTypeCode => _cashCode.TaxTypeCode;
+        public NodeEnum.CashPolarity CashPolarityCode => _cashCode.CashPolarityCode;
+        public NodeEnum.CashType CashTypeCode => _cashCode.CashTypeCode;
         #endregion
 
         #region settings
@@ -111,12 +88,122 @@ namespace TradeControl.Web.Data
 
         public async Task<bool> IsVatCashCode() => CashCode == await GetTaxCashCode(NodeEnum.TaxType.VAT);        
 
-        public bool IsTransfer
-        {
-            get { return CashTypeCode == NodeEnum.CashType.Bank; }
-        }
+        public bool IsTransfer => CashTypeCode == NodeEnum.CashType.Bank;
 
         public async Task<decimal> GetVatBalance() => await _context.VatBalance();
+
+        public async Task<string> GetCategoryNamespace(string categoryCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(categoryCode))
+                    return string.Empty;
+
+                var conn = _context.Database.GetDbConnection();
+                var close = conn.State != ConnectionState.Open;
+                if (close) await conn.OpenAsync();
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT Cash.fnCategoryNamespace(@CategoryCode)";
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "@CategoryCode";
+                    p.DbType = DbType.String;
+                    p.Size = 10;
+                    p.Value = categoryCode;
+                    cmd.Parameters.Add(p);
+
+                    var scalar = await cmd.ExecuteScalarAsync();
+                    return scalar?.ToString() ?? string.Empty;
+                }
+                finally
+                {
+                    if (close) await conn.CloseAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return string.Empty;
+            }
+        }
+
+        public async Task<string> GetCategoryNamespace(string categoryCode, string parentCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(categoryCode))
+                    return string.Empty;
+
+                if (string.IsNullOrWhiteSpace(parentCode))
+                    return await GetCategoryNamespace(categoryCode);
+
+                var conn = _context.Database.GetDbConnection();
+                var close = conn.State != ConnectionState.Open;
+                if (close) await conn.OpenAsync();
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT Cash.fnCategoryNamespaceInContext(@CategoryCode, @ParentCode)";
+                    var p1 = cmd.CreateParameter();
+                    p1.ParameterName = "@CategoryCode";
+                    p1.DbType = DbType.String; p1.Size = 10; p1.Value = categoryCode;
+                    var p2 = cmd.CreateParameter();
+                    p2.ParameterName = "@ParentCode";
+                    p2.DbType = DbType.String; p2.Size = 10; p2.Value = parentCode;
+                    cmd.Parameters.Add(p1); cmd.Parameters.Add(p2);
+
+                    var scalar = await cmd.ExecuteScalarAsync();
+                    return scalar?.ToString() ?? string.Empty;
+                }
+                finally
+                {
+                    if (close) await conn.CloseAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return string.Empty;
+            }
+        }
+
+        // Primary (NetProfit/VAT roots) namespace helper
+        public async Task<string> GetPrimaryCategoryNamespace(string categoryCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(categoryCode))
+                    return string.Empty;
+
+                var conn = _context.Database.GetDbConnection();
+                var close = conn.State != ConnectionState.Open;
+                if (close) await conn.OpenAsync();
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT Cash.fnCategoryNamespacePrimary(@CategoryCode)";
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "@CategoryCode";
+                    p.DbType = DbType.String;
+                    p.Size = 10;
+                    p.Value = categoryCode;
+                    cmd.Parameters.Add(p);
+
+                    var scalar = await cmd.ExecuteScalarAsync();
+                    return scalar?.ToString() ?? string.Empty;
+                }
+                finally
+                {
+                    if (close) await conn.CloseAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return string.Empty;
+            }
+        }
         #endregion
 
         #region actions
@@ -135,5 +222,6 @@ namespace TradeControl.Web.Data
             }
         }
         #endregion
+
     }
 }
