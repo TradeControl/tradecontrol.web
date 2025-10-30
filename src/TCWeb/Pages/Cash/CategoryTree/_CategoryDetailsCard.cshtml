@@ -75,9 +75,20 @@
                 <button type="button" class="btn btn-sm btn-outline-warning" data-action="move">Move</button>
                 <button type="button" class="btn btn-sm btn-outline-dark" data-action="toggleEnabled">Enable/Disable</button>
                 <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button>
-                @if (Model.IsCategoryInPrimary && !Model.IsContextInPrimary)
+
+                @* Only allow root assignment on true roots (no parents). Hide already-assigned roots *@
+                @if (Model.IsRootNode)
                 {
-                    <button type="button" class="btn btn-sm btn-outline-success" data-action="makePrimary">Make Primary</button>
+                    <div class="vr mx-1"></div>
+
+                    @if (!Model.IsProfitRoot)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-info" data-action="setProfitRoot" title="Assign this category as the Profit primary root">Set Profit Root</button>
+                    }
+                    @if (!Model.IsVatRoot)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-info" data-action="setVatRoot" title="Assign this category as the VAT primary root">Set VAT Root</button>
+                    }
                 }
             </div>
         }

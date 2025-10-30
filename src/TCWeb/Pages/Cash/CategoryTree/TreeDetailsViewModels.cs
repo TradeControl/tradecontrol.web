@@ -22,6 +22,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsContextInPrimary { get; set; }
         public string PrimaryKind { get; set; } = string.Empty; // "Profit" | "VAT" | ""
         public bool ShowWarning => IsCategoryInPrimary && !IsContextInPrimary;
+
+        public bool IsRootNode { get; set; }      // true when ParentCount == 0
+        public bool IsProfitRoot { get; set; }    // true when App.tbOptions.NetProfitCode == CategoryCode
+        public bool IsVatRoot { get; set; }       // true when App.tbOptions.VatCategoryCode == CategoryCode
+
+        // Keep if you also use it elsewhere; otherwise optional
+        public bool IsRootContext { get; set; }
     }
 
     public class CodeDetailsVm

@@ -56,6 +56,50 @@ BEGIN
 			SET CoinTypeCode = (SELECT CoinTypeCode FROM inserted)
 		END
 
+        DECLARE @Candidates TABLE (Code nvarchar(10) NOT NULL PRIMARY KEY);
+
+        INSERT INTO @Candidates(Code)
+        SELECT i.NetProfitCode FROM inserted i WHERE i.NetProfitCode IS NOT NULL
+        UNION
+        SELECT i.VatCategoryCode FROM inserted i WHERE i.VatCategoryCode IS NOT NULL;
+
+        -- Rule 1: must be an enabled category
+        IF EXISTS
+        (
+            SELECT 1
+            FROM @Candidates x
+            LEFT JOIN Cash.tbCategory c ON c.CategoryCode = x.Code
+            WHERE c.CategoryCode IS NULL OR c.IsEnabled = 0
+        )
+        BEGIN
+            RAISERROR('Primary root must be an enabled category.', 16, 1);
+            RETURN;
+        END
+
+        -- Rule 2: must be a true root (no parent edge)
+        IF EXISTS
+        (
+            SELECT 1
+            FROM @Candidates x
+            JOIN Cash.tbCategoryTotal t ON t.ChildCode = x.Code
+        )
+        BEGIN
+            RAISERROR('Only root categories (no parents) can be assigned as primary roots.', 16, 1);
+            RETURN;
+        END
+
+        -- Rule 3: must participate as a parent in the graph (has at least one child)
+        IF EXISTS
+        (
+            SELECT 1
+            FROM @Candidates x
+            WHERE NOT EXISTS (SELECT 1 FROM Cash.tbCategoryTotal t WHERE t.ParentCode = x.Code)
+        )
+        BEGIN
+            RAISERROR('Primary root must be a parent in the totals graph (has at least one child).', 16, 1);
+            RETURN;
+        END
+
 	END TRY
 	BEGIN CATCH
 		EXEC App.proc_ErrorLog;

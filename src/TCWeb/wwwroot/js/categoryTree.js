@@ -43,6 +43,63 @@ window.CategoryTree = (function ()
             return window.matchMedia && window.matchMedia("(max-width: 991.98px)").matches;
         }
 
+        // Derive the base path from detailsUrl, e.g. ".../CategoryTree/Details" -> ".../CategoryTree"
+        function actionsBasePath()
+        {
+            if (!detailsUrl) 
+            {
+                return "";
+            }
+            // Trim the last path segment (Details or anything else)
+            return detailsUrl.replace(/\/[^\/?#]+(\?.*)?$/i, "");
+        }
+
+        // Open an action page in RHS (desktop) or navigate (mobile)
+        function openAction(actionName, key, parentKey)
+        {
+            var base = actionsBasePath();
+            if (!base)
+            {
+                alert("Action endpoint not configured.");
+                return;
+            }
+
+            var url = base + "/" + encodeURIComponent(actionName) + "?key=" + encodeURIComponent(key || "");
+            if (parentKey)
+            {
+                url += "&parentKey=" + encodeURIComponent(parentKey);
+            }
+
+            if (isMobile())
+            {
+                window.location.href = url;
+            }
+            else
+            {
+                // Mark as embedded to suppress the full layout/navigation
+                url = appendQuery(url, "embed", "1");
+
+                var $pane = $("#detailsPane");
+                if ($pane.length)
+                {
+                    $pane.css("overflow", "auto");
+                    $.get(nocache(url))
+                        .done(function (html)
+                        {
+                            $pane.html(html);
+                        })
+                        .fail(function ()
+                        {
+                            $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
+                        });
+                }
+                else
+                {
+                    window.location.href = url;
+                }
+            }
+        }
+
         // Load details into RHS pane (desktop only)
         function loadDetails(node)
         {
@@ -752,46 +809,18 @@ window.CategoryTree = (function ()
 
                     case "move":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
-
-                        var targetParentKey = prompt("Move to parent Category Code:");
-                        if (!targetParentKey) { break; }
-
-                        var cycleDetected = false;
-                        if (node && typeof node.visit === "function")
+                        if (!isAdmin) 
                         {
-                            node.visit(function (n)
-                            {
-                                if (n && n.key === targetParentKey)
-                                {
-                                    cycleDetected = true;
-                                    return false;
-                                }
-                                return true;
-                            });
+                            alert("Insufficient privileges");
+                            break;
                         }
-                        if (cycleDetected)
+                        if (!node || !node.folder) 
                         {
-                            alert("Invalid move: the selected target is a descendant of this category.");
+                            alert("Select a category");
                             break;
                         }
 
-                        postJson("Move", { key: key, targetParentKey: targetParentKey })
-                            .done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success)
-                                {
-                                    if (parentKey) { refreshNode(parentKey); }
-                                    refreshNode(targetParentKey);
-                                    var root = tree.getNodeByKey(ROOT_KEY);
-                                    if (root && root.expanded) { root.reloadChildren(); }
-                                    var disc = tree.getNodeByKey(DISC_KEY);
-                                    if (disc && disc.expanded) { disc.reloadChildren(); }
-                                }
-                            })
-                            .fail(alertFail);
+                        openAction("Move", key, parentKey);
                         break;
                     }
 
@@ -991,20 +1020,60 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "expandSelected":
+                    case "makePrimary":
                     {
-                        if (!node) { alert("Select a node first"); break; }
-                        expandSubtree(node)
-                            .then(function () { resizeColumns(); })
-                            .catch(function () { });
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!parentKey) { alert("Open from a parent context to make primary."); break; }
+
+                        $.ajax({
+                            type: "POST",
+                            url: handlerUrl("MakePrimary"),
+                            data: { key: key, parentKey: parentKey },
+                            headers: token ? { "RequestVerificationToken": token } : {},
+                            dataType: "json"
+                        }).done(function (res)
+                        {
+                            alert((res && res.message) || "Not Yet Implemented");
+                            if (res && res.success)
+                            {
+                                var p = tree.getNodeByKey(parentKey);
+                                if (p && p.expanded) { p.reloadChildren(); }
+                                var root = tree.getNodeByKey(ROOT_KEY);
+                                if (root && root.expanded) { root.reloadChildren(); }
+                                loadDetails(tree.getActiveNode());
+                            }
+                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
-                    case "collapseSelected":
+                    case "setProfitRoot":
+                    case "setVatRoot":
                     {
-                        if (!node) { alert("Select a node first"); break; }
-                        collapseSubtree(node);
-                        resizeColumns();
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node.folder) { alert("Select a category"); break; }
+
+                        var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
+                        if (!confirm("Set " + key + " as the " + kind + " primary root?")) { break; }
+
+                        $.ajax({
+                            type: "POST",
+                            url: handlerUrl("SetPrimaryRoot"),
+                            data: { kind: kind, categoryCode: key },
+                            headers: token ? { "RequestVerificationToken": token } : {},
+                            dataType: "json"
+                        }).done(function (res)
+                        {
+                            alert((res && res.message) || "Not Yet Implemented");
+                            if (res && res.success)
+                            {
+                                // Refresh top-level anchors and details to reflect new primary paths/badges
+                                var root = tree.getNodeByKey(ROOT_KEY);
+                                if (root && root.expanded) { root.reloadChildren(); }
+                                var disc = tree.getNodeByKey(DISC_KEY);
+                                if (disc && disc.expanded) { disc.reloadChildren(); }
+                                loadDetails(tree.getActiveNode());
+                            }
+                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
@@ -1102,22 +1171,28 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "move":
+                case "move":
+                {
+                    if (!isAdmin) 
                     {
-                        if (!isAdmin)
-                        {
-                            alert("Insufficient privileges");
-                            break;
-                        }
-                        var inTypeCtx = !!(node.data && (node.data.isTypeContext === true || node.data.syntheticKind === "type"));
-                        if (inTypeCtx)
-                        {
-                            alert("Action not available in this view.");
-                            break;
-                        }
-                        callStub("Move");
+                        alert("Insufficient privileges");
                         break;
                     }
+                    var inTypeCtx = !!(node.data && (node.data.isTypeContext === true || node.data.syntheticKind === "type"));
+                    if (inTypeCtx)
+                    {
+                        alert("Action not available in this view.");
+                        break;
+                    }
+                    if (!node.folder) 
+                    {
+                        alert("Select a category");
+                        break;
+                    }
+
+                    openAction("Move", key, parentKey);
+                    break;
+                }
 
                     case "delete":
                     {
@@ -1257,19 +1332,8 @@ window.CategoryTree = (function ()
 
                 switch (action)
                 {
-                    case "view":
-                    {
-                        callStub("View");
-                        break;
-                    }
-
-                    case "edit":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        callStub("Edit");
-                        break;
-                    }
-
+                    case "view": { callStub("View"); break; }
+                    case "edit": { if (!isAdmin) { alert("Insufficient privileges"); break; } callStub("Edit"); break; }
                     case "addExistingTotal":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
@@ -1298,7 +1362,6 @@ window.CategoryTree = (function ()
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
-
                     case "addExistingCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
@@ -1326,56 +1389,25 @@ window.CategoryTree = (function ()
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
-
                     case "move":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
-
-                        var targetParentKey = prompt("Move to parent Category Code:");
-                        if (!targetParentKey) { break; }
-
-                        var cycleDetected = false;
-                        node.visit(function (n)
+                        if (!isAdmin)
                         {
-                            if (n && n.key === targetParentKey)
-                            {
-                                cycleDetected = true;
-                                return false;
-                            }
-                            return true;
-                        });
-                        if (cycleDetected) { alert("Invalid move: the selected target is a descendant of this category."); break; }
-
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("Move"),
-                            data: { key: key, targetParentKey: targetParentKey },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node.folder)
                         {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
-                            {
-                                if (parentKey) { var p = tree.getNodeByKey(parentKey); if (p && p.expanded) { p.reloadChildren(); } }
-                                var tgt = tree.getNodeByKey(targetParentKey);
-                                if (tgt && tgt.expanded) { tgt.reloadChildren(); }
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
-                                loadDetails(tree.getActiveNode());
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                            alert("Select a category");
+                            break;
+                        }
+
+                        openAction("Move", key, parentKey);
                         break;
                     }
-
                     case "toggleEnabled":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
-
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
 
                         $.ajax({
@@ -1426,6 +1458,63 @@ window.CategoryTree = (function ()
                             if (res && res.success)
                             {
                                 if (parentKey) { var p = tree.getNodeByKey(parentKey); if (p && p.expanded) { p.reloadChildren(); } }
+                                var root = tree.getNodeByKey(ROOT_KEY);
+                                if (root && root.expanded) { root.reloadChildren(); }
+                                var disc = tree.getNodeByKey(DISC_KEY);
+                                if (disc && disc.expanded) { disc.reloadChildren(); }
+                                loadDetails(tree.getActiveNode());
+                            }
+                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        break;
+                    }
+
+                    case "makePrimary":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!parentKey) { alert("Open from a parent context to make primary."); break; }
+
+                        $.ajax({
+                            type: "POST",
+                            url: handlerUrl("MakePrimary"),
+                            data: { key: key, parentKey: parentKey },
+                            headers: token ? { "RequestVerificationToken": token } : {},
+                            dataType: "json"
+                        }).done(function (res)
+                        {
+                            alert((res && res.message) || "Not Yet Implemented");
+                            if (res && res.success)
+                            {
+                                var p = tree.getNodeByKey(parentKey);
+                                if (p && p.expanded) { p.reloadChildren(); }
+                                var root = tree.getNodeByKey(ROOT_KEY);
+                                if (root && root.expanded) { root.reloadChildren(); }
+                                loadDetails(tree.getActiveNode());
+                            }
+                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        break;
+                    }
+
+                    case "setProfitRoot":
+                    case "setVatRoot":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node.folder) { alert("Select a category"); break; }
+
+                        var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
+                        if (!confirm("Set " + key + " as the " + kind + " primary root?")) { break; }
+
+                        $.ajax({
+                            type: "POST",
+                            url: handlerUrl("SetPrimaryRoot"),
+                            data: { kind: kind, categoryCode: key },
+                            headers: token ? { "RequestVerificationToken": token } : {},
+                            dataType: "json"
+                        }).done(function (res)
+                        {
+                            alert((res && res.message) || "Not Yet Implemented");
+                            if (res && res.success)
+                            {
+                                // Refresh top-level anchors and details to reflect new primary paths/badges
                                 var root = tree.getNodeByKey(ROOT_KEY);
                                 if (root && root.expanded) { root.reloadChildren(); }
                                 var disc = tree.getNodeByKey(DISC_KEY);
@@ -1486,43 +1575,84 @@ window.CategoryTree = (function ()
                 dnd5: {
                     dragStart: function (node, data)
                     {
-                        if (isMobile()) return false;
-                        if (!isAdmin) return false;
+                        if (isMobile()) 
+                        {
+                            return false;
+                        }
+                        if (!isAdmin) 
+                        {
+                            return false;
+                        }
 
                         var kinds = getNodeKinds(node);
-                        if (!kinds.isCat) return false; // categories only
+                        if (!kinds.isCat) 
+                        {
+                            return false; // categories only
+                        }
                         return true;
                     },
                     dragEnter: function (node, data)
                     {
-                        if (isMobile()) return false;
-                        if (!isAdmin) return false;
+                        if (isMobile()) 
+                        {
+                            return false;
+                        }
+                        if (!isAdmin) 
+                        {
+                            return false;
+                        }
 
                         var src = data.otherNode;
-                        if (!src) return false;
+                        if (!src) 
+                        {
+                            return false;
+                        }
 
-                        if (node === src || node.isDescendantOf(src)) return false;
-
+                        if (node === src || node.isDescendantOf(src)) 
+                        {
+                            return false;
+                        }
                         var srcKinds = getNodeKinds(src);
                         var tgtKinds = getNodeKinds(node);
-                        if (!srcKinds.isCat) return false;
-                        if (!tgtKinds.isCat) return false;
+                        if (!srcKinds.isCat) 
+                        {
+                            return false;
+                        }
+                        if (!tgtKinds.isCat) 
+                        {
+                            return false;
+                        }
 
                         var parentKeyNow = node.getParent ? (node.getParent()?.key || "") : "";
                         var inTypeCtx = !!(node.data && (node.data.isTypeContext === true || node.data.syntheticKind === "type"))
                                         || (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
-                        if (inTypeCtx) return false;
+                        if (inTypeCtx) 
+                        {
+                            return false;
+                        }
 
                         return ["over"];
                     },
                     dragDrop: function (node, data)
                     {
-                        if (isMobile()) return;
-                        if (!isAdmin) return;
-                        if (data.hitMode !== "over") return;
+                        if (isMobile()) 
+                        {
+                            return false;
+                        }
+                        if (!isAdmin) 
+                        {
+                            return false;
+                        }
+                        if (data.hitMode !== "over") 
+                        {
+                            return false;
+                        }
 
                         var src = data.otherNode;
-                        if (!src) return;
+                        if (!src) 
+                        {
+                            return false;
+                        }
 
                         if (node === src || node.isDescendantOf(src)) { alert("Invalid move: cannot move a category under itself or its descendant."); return; }
 
@@ -1539,10 +1669,21 @@ window.CategoryTree = (function ()
                         {
                             if (res && res.success)
                             {
-                                try { src.moveTo(node, "child"); } catch {}
+                                try 
+                                { 
+                                    src.moveTo(node, "child"); 
+                                } 
+                                catch {}
 
                                 var tree = $(treeSel).fancytree("getTree");
-                                function reloadIfExpanded(k) { if (!k) return; var n = tree.getNodeByKey(k); if (n && n.expanded) { n.reloadChildren(); } }
+                                function reloadIfExpanded(k) 
+                                { 
+                                    if (!k) 
+                                    {
+                                        return false;
+                                    }
+                                    var n = tree.getNodeByKey(k); if (n && n.expanded) { n.reloadChildren(); } 
+                                }
                                 reloadIfExpanded(oldParent);
                                 reloadIfExpanded(node.key);
 

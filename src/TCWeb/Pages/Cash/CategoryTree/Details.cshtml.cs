@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
+using TradeControl.Web.Pages.Cash.CategoryCode; // for CategoryTreeModel.Root/Disconnected keys
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
@@ -74,28 +75,51 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     if (vm == null) return NotFound();
 
+                    // Counts
                     vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ParentCode == vm.CategoryCode).CountAsync();
                     vm.CodesCount = await NodeContext.Cash_tbCodes.Where(cd => cd.CategoryCode == vm.CategoryCode).CountAsync();
                     vm.ParentCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ChildCode == vm.CategoryCode).CountAsync();
 
-                    vm.IsCategoryInPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
+                    vm.IsRootNode = vm.ParentCount == 0;
+
+                    var isSyntheticRootCtx = string.Equals(parentKey, CategoryTreeModel.RootNodeKey, StringComparison.Ordinal);
+                    var isDisconnectedCtx = string.Equals(parentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal);
+                    var effectiveParentKey = (string.IsNullOrEmpty(parentKey) || isSyntheticRootCtx || isDisconnectedCtx) ? null : parentKey;
+
+                    // Keep IsRootContext if you use it elsewhere; otherwise optional
+                    vm.IsRootContext = (effectiveParentKey == null) && vm.IsRootNode;
+
+                    // Load options once, use for both flags and root badge
+                    var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
+                    vm.IsProfitRoot = options != null && string.Equals(options.NetProfitCode, vm.CategoryCode, StringComparison.Ordinal);
+                    vm.IsVatRoot = options != null && string.Equals(options.VatCategoryCode, vm.CategoryCode, StringComparison.Ordinal);
+
+                    // presence on any primary path (non-root child side)
+                    var presentOnPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
                         .AnyAsync(v => v.ChildCode == vm.CategoryCode);
 
-                    vm.IsContextInPrimary = string.IsNullOrEmpty(parentKey)
-                        ? vm.IsCategoryInPrimary
-                        : await NodeContext.Cash_vwCategoryPrimaryParents
-                            .AnyAsync(v => v.ChildCode == vm.CategoryCode && v.ParentCode == parentKey);
+                    if (effectiveParentKey == null)
+                    {
+                        // In synthetic root/disconnected context, show badge for configured roots
+                        vm.PrimaryKind = vm.IsProfitRoot ? "Profit" : vm.IsVatRoot ? "VAT" : "";
+                        vm.IsCategoryInPrimary = presentOnPrimary || !string.IsNullOrEmpty(vm.PrimaryKind);
+                        vm.IsContextInPrimary = vm.IsCategoryInPrimary;
+                    }
+                    else
+                    {
+                        vm.IsCategoryInPrimary = presentOnPrimary;
+                        vm.IsContextInPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
+                            .AnyAsync(v => v.ChildCode == vm.CategoryCode && v.ParentCode == effectiveParentKey);
+
+                        vm.PrimaryKind = await NodeContext.Cash_vwCategoryPrimaryParents
+                            .Where(v => v.ChildCode == vm.CategoryCode && v.ParentCode == effectiveParentKey)
+                            .Select(v => v.PrimaryKind)
+                            .FirstOrDefaultAsync() ?? "";
+                    }
 
                     vm.PrimaryParentCount = await NodeContext.Cash_vwCategoryPrimaryParents
                         .Where(v => v.ChildCode == vm.CategoryCode)
                         .CountAsync();
-
-                    vm.PrimaryKind = string.IsNullOrEmpty(parentKey)
-                        ? ""
-                        : await NodeContext.Cash_vwCategoryPrimaryParents
-                            .Where(v => v.ChildCode == vm.CategoryCode && v.ParentCode == parentKey)
-                            .Select(v => v.PrimaryKind)
-                            .FirstOrDefaultAsync() ?? "";
 
                     vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
                     Category = vm;
