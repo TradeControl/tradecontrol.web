@@ -1,8 +1,10 @@
 ﻿// Handles the Move page when loaded into #detailsPane (embedded) or full-page.
-// Requires: jQuery, fancytree, and the Category Tree page's #categoryTreeConfig.
+// Requires: jQuery, FancyTree, and the Category Tree page's #categoryTreeConfig.
 
 (function ()
 {
+    // Allman + ES5-safe helpers
+
     function onReady(fn)
     {
         if (document.readyState === "loading")
@@ -34,6 +36,32 @@
         });
     }
 
+    function safeInvoke(target, methodName)
+    {
+        try
+        {
+            if (target && typeof target[methodName] === "function")
+            {
+                var args = Array.prototype.slice.call(arguments, 2);
+                return target[methodName].apply(target, args);
+            }
+        }
+        catch (ex)
+        {
+        }
+        return undefined;
+    }
+
+    function nocache(u)
+    {
+        if (!u)
+        {
+            return u;
+        }
+        var sep = u.indexOf("?") === -1 ? "?" : "&";
+        return u + sep + "_=" + Date.now();
+    }
+
     function expandNode(n)
     {
         if (!n)
@@ -45,7 +73,7 @@
 
     function reloadChildren(n)
     {
-        if (!n)
+        if (!n || typeof n.reloadChildren !== "function")
         {
             return Promise.resolve();
         }
@@ -98,116 +126,146 @@
         return chain;
     }
 
-    function waitForNode(tree, key, attempts)
+    // Totals vs Type helpers
+
+    function isTypeNode(n)
     {
-        attempts = attempts || 60;
-        return new Promise(function (resolve, reject)
+        if (!n) { return false; }
+        var d = n.data || {};
+        if (d.syntheticKind === "type" || d.isTypeContext === true)
         {
-            var n = tree.getNodeByKey(key);
-            if (n)
-            {
-                resolve(n);
-                return;
-            }
-
-            if (attempts <= 0)
-            {
-                reject();
-                return;
-            }
-
-            setTimeout(function ()
-            {
-                waitForNode(tree, key, attempts - 1).then(resolve).catch(reject);
-            }, 150);
-        });
-    }
-
-    function nocache(u)
-    {
-        if (!u)
-        {
-            return u;
+            return true;
         }
-        var sep = u.indexOf("?") === -1 ? "?" : "&";
-        return u + sep + "_=" + Date.now();
+        var k = n.key;
+        return (typeof k === "string" && k.indexOf("type:") === 0);
     }
 
-    // Try to activate node via FancyTree's loadKeyPath using [parentKey, movedKey]
-    function activateViaPath(tree, parentKey, movedKey)
+    function isInTypeSubtree(n)
+    {
+        var p = n;
+        while (p)
+        {
+            if (isTypeNode(p)) { return true; }
+            p = (p.getParent && p.getParent()) || null;
+        }
+        return false;
+    }
+
+    function getChildByKey(parent, key)
+    {
+        if (!parent || !parent.children) { return null; }
+        for (var i = 0; i < parent.children.length; i++)
+        {
+            var ch = parent.children[i];
+            if (ch && ch.key === key) { return ch; }
+        }
+        return null;
+    }
+
+    // BFS limited to a given subtree (single start) and time budget
+    function findInSubtreeBfs(startNode, targetKey, budgetMs)
     {
         return new Promise(function (resolve)
         {
-            try
+            var deadline = Date.now() + (budgetMs || 2500);
+            var q = [];
+            if (startNode) { q.push(startNode); }
+
+            function step()
             {
-                var path = [];
-                if (parentKey) { path.push(parentKey); }
-                path.push(movedKey);
-
-                var done = false;
-
-                tree.loadKeyPath(path, function (node, status)
+                if (Date.now() > deadline)
                 {
-                    // Called for each segment
-                    if (status === "loaded")
-                    {
-                        try
-                        {
-                            node.setExpanded(true);
-                        }
-                        catch (ex)
-                        {
-                        }
-                    }
-                    if (status === "ok" && !done)
-                    {
-                        done = true;
-                        try
-                        {
-                            tree.setFocus(true);
-                        }
-                        catch (ex)
-                        {
-                        }
-                        try
-                        {
-                            node.makeVisible();
-                        }
-                        catch (ex)
-                        {
-                        }
-                        try
-                        {
-                            node.setActive(true);
-                        }
-                        catch (ex)
-                        {
-                        }
-                        try
-                        {
-                            tree.activateKey(movedKey);
-                        }
-                        catch (ex)
-                        {
-                        }
-
-                        resolve(node);
-                    }
-                }, "activate");
-
-                // Failsafe: if loadKeyPath doesn't resolve within a short time, continue
-                setTimeout(function ()
+                    resolve(null);
+                    return;
+                }
+                if (q.length === 0)
                 {
-                    if (!done)
+                    resolve(null);
+                    return;
+                }
+
+                var n = q.shift();
+                if (n && n.key === targetKey)
+                {
+                    resolve(n);
+                    return;
+                }
+
+                if (!n || !n.folder)
+                {
+                    setTimeout(step, 0);
+                    return;
+                }
+
+                var p = awaitify(n.setExpanded(true));
+                p.then(function ()
+                {
+                    return reloadChildren(n);
+                })
+                .then(function ()
+                {
+                    var kids = n.children || [];
+                    for (var i = 0; i < kids.length; i++)
                     {
-                        resolve(null);
+                        var ch = kids[i];
+                        if (ch && ch.key === targetKey)
+                        {
+                            resolve(ch);
+                            return;
+                        }
                     }
-                }, 1500);
+                    for (var j = 0; j < kids.length; j++)
+                    {
+                        var ch2 = kids[j];
+                        if (ch2 && ch2.folder) { q.push(ch2); }
+                    }
+                    setTimeout(step, 0);
+                })
+                .catch(function ()
+                {
+                    setTimeout(step, 0);
+                });
             }
-            catch (ex)
+
+            setTimeout(step, 0);
+        });
+    }
+
+    // Sequential search across Totals roots: try each start one-by-one (avoids expanding all roots)
+    function findInStartsSequential(starts, key, budgetMs)
+    {
+        return new Promise(function (resolve)
+        {
+            var i = 0;
+
+            function next()
             {
-                resolve(null);
+                if (!starts || i >= starts.length)
+                {
+                    resolve(null);
+                    return;
+                }
+
+                var s = starts[i++];
+                findInSubtreeBfs(s, key, budgetMs || 2500)
+                    .then(function (node)
+                    {
+                        if (node)
+                        {
+                            resolve(node);
+                        }
+                        else
+                        {
+                            setTimeout(next, 0);
+                        }
+                    })
+                    .catch(function ()
+                    {
+                        setTimeout(next, 0);
+                    });
             }
+
+            next();
         });
     }
 
@@ -268,204 +326,392 @@
                 var parentKey = marker.getAttribute("data-parent") || "";
                 var movedKey = marker.getAttribute("data-key") || "";
 
+                // Optional: parent chain (Totals): topCategory|...|parent
                 var pathAttr = marker.getAttribute("data-path") || "";
-                var fullPath = [];
+                var parentPath = [];
                 if (pathAttr && pathAttr.length > 0)
                 {
-                    // data-path is root->...->parent (pipe-delimited); append movedKey
                     var parts = pathAttr.split("|");
                     for (var i = 0; i < parts.length; i++)
                     {
-                        if (parts[i]) { fullPath.push(parts[i]); }
+                        if (parts[i]) { parentPath.push(parts[i]); }
                     }
-                    fullPath.push(movedKey);
+                }
+
+                // Replace RHS immediately with moved node details (visible feedback)
+                try
+                {
+                    var cfg0 = document.getElementById("categoryTreeConfig");
+                    var detailsUrl0 = cfg0 ? cfg0.getAttribute("data-details-url") : null;
+                    if (detailsUrl0 && movedKey)
+                    {
+                        var durl = detailsUrl0 + "?key=" + encodeURIComponent(movedKey);
+                        if (parentKey)
+                        {
+                            durl += "&parentKey=" + encodeURIComponent(parentKey);
+                        }
+
+                        fetch(nocache(durl), { credentials: "same-origin" })
+                            .then(function (r) { return r.text(); })
+                            .then(function (detailsHtml)
+                            {
+                                pane.innerHTML = detailsHtml;
+                            })
+                            .catch(function (ex)
+                            {
+                            });
+                    }
+                }
+                catch (ex)
+                {
                 }
 
                 // Ensure we have a tree instance before using it
                 if (!window.$ || !window.$.ui || !window.$.fn.fancytree)
                 {
-                    // No tree present: render the returned HTML and bail
                     pane.innerHTML = html;
                     return;
                 }
 
-                var tree = window.$("#categoryTree").fancytree("getTree");
+                var tree = ($.ui && $.ui.fancytree && $.ui.fancytree.getTree)
+                    ? $.ui.fancytree.getTree("#categoryTree")
+                    : window.$("#categoryTree").fancytree("getTree");
                 if (!tree)
                 {
                     pane.innerHTML = html;
                     return;
                 }
 
-                // Clear current active node
+                // Clear any current active node
                 var curActive = tree.getActiveNode && tree.getActiveNode();
                 if (curActive)
                 {
+                    safeInvoke(curActive, "setActive", false);
+                }
+
+                // Reload the whole tree once (deterministic), then select under Totals without expanding unrelated roots
+                var cfgEl = document.getElementById("categoryTreeConfig");
+                var nodesUrl = cfgEl ? cfgEl.getAttribute("data-nodes-url") : null;
+
+                function selectAndScroll(n)
+                {
+                    safeInvoke(tree, "setFocus", true);
+                    safeInvoke(n, "makeVisible");
+                    safeInvoke(n, "setActive", true);
+                    safeInvoke(tree, "activateKey", n.key);
                     try
                     {
-                        curActive.setActive(false);
+                        var span = (n && typeof n.getEventTarget === "function") ? n.getEventTarget() : null;
+                        if (span && span.scrollIntoView)
+                        {
+                            span.scrollIntoView({ block: "nearest", inline: "nearest" });
+                        }
                     }
                     catch (ex)
                     {
                     }
                 }
 
-                // If we have a full path, use loadKeyPath directly (most reliable)
-                if (fullPath.length > 0 && typeof tree.loadKeyPath === "function")
+                function buildTotalsStarts()
                 {
-                    var lpDone = false;
-                    try
+                    var root = tree.getRootNode();
+                    var starts = [];
+                    if (root && root.children && root.children.length)
                     {
-                        tree.loadKeyPath(fullPath, function (node, status)
+                        for (var i = 0; i < root.children.length; i++)
                         {
-                            if (status === "loaded")
+                            var ch = root.children[i];
+                            if (ch && !isTypeNode(ch))
                             {
-                                try { node.setExpanded(true); } catch (ex) { }
+                                starts.push(ch); // only Totals roots
                             }
-                            if (status === "ok" && !lpDone)
+                        }
+                    }
+                    return starts;
+                }
+
+                function expandPathUnderTotals(starts, parentPathArr)
+                {
+                    // Sequentially: find top node in one Totals root, then walk the chain under that subtree only
+                    if (!parentPathArr || parentPathArr.length === 0)
+                    {
+                        return Promise.resolve(null);
+                    }
+
+                    var topKey = parentPathArr[0];
+                    return findInStartsSequential(starts, topKey, 2500)
+                        .then(function (current)
+                        {
+                            if (!current)
                             {
-                                lpDone = true;
+                                return null;
+                            }
 
-                                try { tree.setFocus(true); } catch (ex) { }
-                                try { node.makeVisible(); } catch (ex) { }
-                                try { node.setActive(true); } catch (ex) { }
-                                try { tree.activateKey(movedKey); } catch (ex) { }
+                            var idx = 1;
 
-                                try
+                            function step()
+                            {
+                                if (idx >= parentPathArr.length)
                                 {
-                                    var sp = (node && typeof node.getEventTarget === "function") ? node.getEventTarget() : null;
-                                    if (sp && sp.scrollIntoView)
+                                    return Promise.resolve(current);
+                                }
+
+                                var nextKey = parentPathArr[idx++];
+                                return expandNode(current)
+                                    .then(function () { return reloadChildren(current); })
+                                    .then(function ()
                                     {
-                                        sp.scrollIntoView({ block: "nearest", inline: "nearest" });
+                                        var next = getChildByKey(current, nextKey);
+                                        if (next)
+                                        {
+                                            current = next;
+                                            return step();
+                                        }
+                                        return findInSubtreeBfs(current, nextKey, 2000)
+                                            .then(function (found)
+                                            {
+                                                if (!found)
+                                                {
+                                                    return null;
+                                                }
+                                                current = found;
+                                                return step();
+                                            });
+                                    });
+                            }
+
+                            return step();
+                        });
+                }
+
+                if (nodesUrl && tree && typeof tree.reload === "function")
+                {
+                    tree.reload({ url: nocache(nodesUrl) })
+                        .done(function ()
+                        {
+                            setTimeout(function ()
+                            {
+                                var starts = buildTotalsStarts();
+
+                                // Preferred: use parentPath (precise, minimal expansion)
+                                var chain = null;
+                                if (parentPath && parentPath.length > 0)
+                                {
+                                    chain = expandPathUnderTotals(starts, parentPath)
+                                        .then(function (parentNode)
+                                        {
+                                            if (!parentNode)
+                                            {
+                                                return false;
+                                            }
+
+                                            return expandNode(parentNode)
+                                                .then(function () { return reloadChildren(parentNode); })
+                                                .then(function ()
+                                                {
+                                                    var movedChild = getChildByKey(parentNode, movedKey);
+                                                    if (movedChild)
+                                                    {
+                                                        selectAndScroll(movedChild);
+                                                        return true;
+                                                    }
+                                                    return findInSubtreeBfs(parentNode, movedKey, 2500)
+                                                        .then(function (found)
+                                                        {
+                                                            if (found)
+                                                            {
+                                                                selectAndScroll(found);
+                                                                return true;
+                                                            }
+                                                            return false;
+                                                        });
+                                                });
+                                        });
+                                }
+                                else
+                                {
+                                    // Fallback: find the parentKey by sequentially probing Totals roots
+                                    if (parentKey)
+                                    {
+                                        chain = findInStartsSequential(starts, parentKey, 2500)
+                                            .then(function (parentNode2)
+                                            {
+                                                if (!parentNode2)
+                                                {
+                                                    return false;
+                                                }
+                                                return expandNode(parentNode2)
+                                                    .then(function () { return reloadChildren(parentNode2); })
+                                                    .then(function ()
+                                                    {
+                                                        var movedChild2 = getChildByKey(parentNode2, movedKey);
+                                                        if (movedChild2)
+                                                        {
+                                                            selectAndScroll(movedChild2);
+                                                            return true;
+                                                        }
+                                                        return findInSubtreeBfs(parentNode2, movedKey, 2500)
+                                                            .then(function (found2)
+                                                            {
+                                                                if (found2)
+                                                                {
+                                                                    selectAndScroll(found2);
+                                                                    return true;
+                                                                }
+                                                                return false;
+                                                            });
+                                                    });
+                                            });
+                                    }
+                                    else
+                                    {
+                                        // Last resort: look for movedKey by probing each Totals root one-by-one
+                                        chain = new Promise(function (resolve)
+                                        {
+                                            var i = 0;
+                                            function next()
+                                            {
+                                                if (!starts || i >= starts.length)
+                                                {
+                                                    resolve(false);
+                                                    return;
+                                                }
+                                                var s = starts[i++];
+                                                findInSubtreeBfs(s, movedKey, 2500)
+                                                    .then(function (found3)
+                                                    {
+                                                        if (found3)
+                                                        {
+                                                            selectAndScroll(found3);
+                                                            resolve(true);
+                                                        }
+                                                        else
+                                                        {
+                                                            setTimeout(next, 0);
+                                                        }
+                                                    })
+                                                    .catch(function () { setTimeout(next, 0); });
+                                            }
+                                            next();
+                                        });
                                     }
                                 }
-                                catch (ex)
-                                {
-                                }
 
-                                // Keep headers coherent, then stop
-                                reloadAnchors(tree);
-                            }
-                        }, "activate");
-
-                        // If loadKeyPath didn’t resolve promptly, fall through to the existing fallback
-                        setTimeout(function ()
-                        {
-                            if (!lpDone)
-                            {
-                                runFallback(); // defined below
-                            }
-                        }, 1500);
-                    }
-                    catch (ex)
-                    {
-                        runFallback();
-                    }
+                                (chain || Promise.resolve(false))
+                                    .then(function ()
+                                    {
+                                        return reloadAnchors(tree);
+                                    })
+                                    .catch(function ()
+                                    {
+                                    });
+                            }, 30);
+                        });
                 }
                 else
                 {
-                    runFallback();
-                }
+                    // No reload available: try parent-targeted selection with current tree
+                    var startsNow = buildTotalsStarts();
 
-                // Existing fallback logic extracted into a function
-                function runFallback()
-                {
-                    // First attempt: directly activate via parentKey->movedKey if available
-                    activateViaPath(tree, parentKey, movedKey)
-                        .then(function (node)
-                        {
-                            if (node)
+                    var chain2 = null;
+                    if (parentPath && parentPath.length > 0)
+                    {
+                        chain2 = expandPathUnderTotals(startsNow, parentPath)
+                            .then(function (parentNode3)
                             {
-                                try
-                                {
-                                    var span = (node && typeof node.getEventTarget === "function") ? node.getEventTarget() : null;
-                                    if (span && span.scrollIntoView)
+                                if (!parentNode3) { return false; }
+                                return expandNode(parentNode3)
+                                    .then(function () { return reloadChildren(parentNode3); })
+                                    .then(function ()
                                     {
-                                        span.scrollIntoView({ block: "nearest", inline: "nearest" });
-                                    }
-                                }
-                                catch (ex) { }
-                                return reloadAnchors(tree);
-                            }
-
-                            // Deterministic reload/expand flow
-                            return reloadAnchors(tree)
-                                .then(function ()
-                                {
-                                    if (oldKey && oldKey !== parentKey)
-                                    {
-                                        var oldParent = tree.getNodeByKey(oldKey);
-                                        if (oldParent && oldParent.expanded)
+                                        var movedChild3 = getChildByKey(parentNode3, movedKey);
+                                        if (movedChild3)
                                         {
-                                            oldParent.setExpanded(false);
+                                            selectAndScroll(movedChild3);
+                                            return true;
                                         }
-                                        return reloadNodeByKey(tree, oldKey);
-                                    }
-                                })
-                                .then(function () { return reloadNodeByKey(tree, parentKey); })
-                                .then(function ()
-                                {
-                                    var targetParent = parentKey ? tree.getNodeByKey(parentKey) : null;
-                                    try
-                                    {
-                                        if (targetParent && typeof targetParent.makeVisible === "function")
-                                        {
-                                            targetParent.makeVisible();
-                                        }
-                                    }
-                                    catch (ex) { }
-
-                                    if (!targetParent)
-                                    {
-                                        return null;
-                                    }
-
-                                    return expandNode(targetParent)
-                                        .then(function () { return reloadChildren(targetParent); })
-                                        .then(function () { return targetParent; });
-                                })
-                                .then(function () { return waitForNode(tree, movedKey, 60); })
-                                .then(function (moved)
-                                {
-                                    try { tree.setFocus(true); } catch (ex) { }
-                                    try { moved.makeVisible(); } catch (ex) { }
-                                    try { moved.setActive(true); } catch (ex) { }
-                                    try { tree.activateKey(movedKey); } catch (ex) { }
-
-                                    try
-                                    {
-                                        var span2 = (moved && typeof moved.getEventTarget === "function") ? moved.getEventTarget() : null;
-                                        if (span2 && span2.scrollIntoView)
-                                        {
-                                            span2.scrollIntoView({ block: "nearest", inline: "nearest" });
-                                        }
-                                    }
-                                    catch (ex) { }
-
-                                    return reloadAnchors(tree);
-                                })
-                                .catch(function ()
-                                {
-                                    // Heavy fallback: reload whole tree once, then try to activate
-                                    try
-                                    {
-                                        if (nodesUrl && tree && typeof tree.reload === "function")
-                                        {
-                                            tree.reload({ url: nocache(nodesUrl) })
-                                                .done(function ()
+                                        return findInSubtreeBfs(parentNode3, movedKey, 2500)
+                                            .then(function (found4)
+                                            {
+                                                if (found4)
                                                 {
-                                                    var m = tree.getNodeByKey(movedKey);
-                                                    if (m)
-                                                    {
-                                                        try { tree.setFocus(true); } catch (ex) { }
-                                                        try { m.makeVisible(); } catch (ex) { }
-                                                        try { m.setActive(true); } catch (ex) { }
-                                                        try { tree.activateKey(movedKey); } catch (ex) { }
-                                                    }
-                                                });
+                                                    selectAndScroll(found4);
+                                                    return true;
+                                                }
+                                                return false;
+                                            });
+                                    });
+                            });
+                    }
+                    else if (parentKey)
+                    {
+                        chain2 = findInStartsSequential(startsNow, parentKey, 2500)
+                            .then(function (parentNode4)
+                            {
+                                if (!parentNode4) { return false; }
+                                return expandNode(parentNode4)
+                                    .then(function () { return reloadChildren(parentNode4); })
+                                    .then(function ()
+                                    {
+                                        var movedChild4 = getChildByKey(parentNode4, movedKey);
+                                        if (movedChild4)
+                                        {
+                                            selectAndScroll(movedChild4);
+                                            return true;
                                         }
-                                    }
-                                    catch (ex) { }
-                                });
+                                        return findInSubtreeBfs(parentNode4, movedKey, 2500)
+                                            .then(function (found5)
+                                            {
+                                                if (found5)
+                                                {
+                                                    selectAndScroll(found5);
+                                                    return true;
+                                                }
+                                                return false;
+                                            });
+                                    });
+                            });
+                    }
+                    else
+                    {
+                        // Sequentially probe Totals roots for movedKey
+                        chain2 = new Promise(function (resolve)
+                        {
+                            var i2 = 0;
+                            function next2()
+                            {
+                                if (!startsNow || i2 >= startsNow.length)
+                                {
+                                    resolve(false);
+                                    return;
+                                }
+                                var s2 = startsNow[i2++];
+                                findInSubtreeBfs(s2, movedKey, 2500)
+                                    .then(function (found6)
+                                    {
+                                        if (found6)
+                                        {
+                                            selectAndScroll(found6);
+                                            resolve(true);
+                                        }
+                                        else
+                                        {
+                                            setTimeout(next2, 0);
+                                        }
+                                    })
+                                    .catch(function () { setTimeout(next2, 0); });
+                            }
+                            next2();
+                        });
+                    }
+
+                    (chain2 || Promise.resolve(false))
+                        .then(function ()
+                        {
+                            return reloadAnchors(tree);
+                        })
+                        .catch(function ()
+                        {
                         });
                 }
             })
@@ -495,7 +741,6 @@
 
             try
             {
-                // Ensure we have a tree instance before using it
                 if (!window.$ || !window.$.ui || !window.$.fn.fancytree)
                 {
                     pane.innerHTML = "";
@@ -548,7 +793,6 @@
             }
             catch (ex)
             {
-                // ignore
             }
         }, true);
     });

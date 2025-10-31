@@ -230,9 +230,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 		public Task<JsonResult> OnPostDeleteAsync([FromForm] string key, [FromForm] bool recursive = false)
 			=> Task.FromResult(IsAdmin() ? NotImplemented("Delete", key, null) : new JsonResult(new { success = false, message = "Insufficient privileges" }));
 
-		public Task<JsonResult> OnPostMoveAsync([FromForm] string key, [FromForm] string targetParentKey)
-			=> Task.FromResult(IsAdmin() ? NotImplemented("Move", key, targetParentKey) : new JsonResult(new { success = false, message = "Insufficient privileges" }));
-
         public Task<JsonResult> OnPostCreateCodeByCashCodeAsync(
             [FromForm] string siblingCashCode,
             [FromForm] string cashCode,

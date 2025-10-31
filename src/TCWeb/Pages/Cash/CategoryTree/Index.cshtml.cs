@@ -310,5 +310,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 return new JsonResult(new { success = false, message = "Insufficient privileges" });
             }
         }
+
     }
 }

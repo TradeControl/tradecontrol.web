@@ -176,5 +176,93 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 return new JsonResult(new { success = false, message = e.Message });
             }
         }
+
+        // Reorder within a single Cash Type by placing 'key' before/after 'anchorKey'.
+        // Only applies to CategoryTypeCode == 0 (Cash Code) and enabled categories.
+        public async Task<JsonResult> OnPostReorderTypeAsync([FromForm] string key, [FromForm] string anchorKey, [FromForm] string mode)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(anchorKey))
+                return new JsonResult(new { success = false, message = "Missing parameters." });
+
+            mode = (mode ?? "").ToLowerInvariant();
+            if (mode != "before" && mode != "after")
+                return new JsonResult(new { success = false, message = "Invalid mode." });
+
+            try
+            {
+                // Validate both categories exist, enabled, and are Cash Code type
+                var pair = await NodeContext.Cash_tbCategories
+                    .Where(c => (c.CategoryCode == key || c.CategoryCode == anchorKey)
+                                && c.IsEnabled != 0
+                                && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
+                    .Select(c => new { c.CategoryCode, c.CashTypeCode })
+                    .ToListAsync();
+
+                if (pair.Count != 2)
+                    return new JsonResult(new { success = false, message = "Category not found or disabled." });
+
+                var srcType = pair.First(p => p.CategoryCode == key).CashTypeCode;
+                var anchType = pair.First(p => p.CategoryCode == anchorKey).CashTypeCode;
+
+                if (srcType != anchType)
+                    return new JsonResult(new { success = false, message = "Categories are not in the same Cash Type." });
+
+                // Build current sequence for this Cash Type (zeros last)
+                var list = await NodeContext.Cash_tbCategories
+                    .Where(c => c.IsEnabled != 0
+                                && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE
+                                && c.CashTypeCode == srcType)
+                    .OrderBy(c => c.DisplayOrder == 0)   // false (non-zero) first, true (zero) last
+                    .ThenBy(c => c.DisplayOrder)
+                    .ThenBy(c => c.CategoryCode)
+                    .Select(c => new { c.CategoryCode, c.DisplayOrder })
+                    .ToListAsync();
+
+                var seq = list.Select(x => x.CategoryCode).ToList();
+                var srcIdx = seq.IndexOf(key);
+                var anchIdx = seq.IndexOf(anchorKey);
+
+                if (srcIdx < 0 || anchIdx < 0)
+                    return new JsonResult(new { success = false, message = "Sequence not found." });
+
+                // Remove source and insert relative to anchor
+                seq.RemoveAt(srcIdx);
+                var insertIdx = seq.IndexOf(anchorKey);
+                if (insertIdx < 0) insertIdx = 0;
+                if (mode == "after") insertIdx++;
+
+                if (insertIdx < 0) insertIdx = 0;
+                if (insertIdx > seq.Count) insertIdx = seq.Count;
+
+                seq.Insert(insertIdx, key);
+
+                // Persist a compact 1..N order for stability
+                await using var tx = await NodeContext.Database.BeginTransactionAsync();
+
+                short order = 1;
+                foreach (var code in seq)
+                {
+                    await NodeContext.Cash_tbCategories
+                        .Where(c => c.CategoryCode == code
+                                    && c.CashTypeCode == srcType
+                                    && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
+                        .ExecuteUpdateAsync(s => s.SetProperty(c => c.DisplayOrder, order));
+                    order++;
+                }
+
+                await tx.CommitAsync();
+
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = "Server error." });
+            }
+        }
     }
+
 }
