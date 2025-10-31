@@ -1,5 +1,17 @@
-﻿// TCWeb: Cash/CategoryTree page script
-// Usage: CategoryTree.init({ treeSelector, menuSelector, nodesUrl, basePageUrl, rootKey, discKey, isAdmin, actionBarSelector, detailsUrl });
+﻿/*
+ CategoryTree: interactive cash category tree
+ - Drag/drop reordering
+   - Cash Type view: reorder siblings (server: ReorderType)
+   - Totals/Disconnected: reorder siblings (server: ReorderSiblings)
+   - Autoscrolls when dragging near container edges
+ - Keyboard
+   - Shift+Up/Down: reorder before/after previous/next sibling (persists)
+   - Left/Right: collapse/expand
+   - Home/End: jump to first/last sibling
+ - Expand/Collapse Selected from context menu
+ - State persistence: expanded nodes + active node (localStorage)
+ - Accessibility: aria-live announcements on reorder; focus preserved
+*/
 
 window.CategoryTree = (function ()
 {
@@ -244,6 +256,240 @@ window.CategoryTree = (function ()
             }
         }
 
+        // Short helper to get the Fancytree Tree instance without using deprecated plugin call
+        function getTree()
+        {
+            try
+            {
+                if (!$.ui || !$.ui.fancytree) { return null; }
+                var el = $(treeSel).get(0);
+                return $.ui.fancytree.getTree(el);
+            }
+            catch (ex)
+            {
+                return null;
+            }
+        }
+
+        // Safe reload helper — resolves key/plain object and calls reloadChildren(options) only if available/expanded
+        function reloadIfExpandedNode(nodeOrKey, options)
+        {
+            try
+            {
+                var tree = getTree();
+                if (!tree) { return; }
+                if (!nodeOrKey) { return; }
+
+                var node = null;
+
+                if (typeof nodeOrKey === "string")
+                {
+                    node = tree.getNodeByKey(nodeOrKey);
+                }
+                else if (nodeOrKey && typeof nodeOrKey.key === "string")
+                {
+                    node = tree.getNodeByKey(nodeOrKey.key) || nodeOrKey;
+                }
+                else
+                {
+                    node = nodeOrKey;
+                }
+
+                if (node && typeof node.reloadChildren === "function" && node.expanded)
+                {
+                    if (options) { node.reloadChildren(options); }
+                    else { node.reloadChildren(); }
+                }
+            }
+            catch (ex)
+            {
+                console.warn("reloadIfExpandedNode failed", ex);
+            }
+        }
+
+        // ---------- State persistence (expanded/active), toast, aria-live, autoscroll ----------
+
+        function stateKey(name)
+        {
+            // Namespace per page and root
+            var rootPart = (typeof ROOT_KEY !== "undefined" && ROOT_KEY) ? ROOT_KEY : "root";
+            var pagePart = (window.location && window.location.pathname) ? window.location.pathname : "page";
+            return "tc.categoryTree." + name + "." + pagePart + "." + rootPart;
+        }
+
+        function loadExpandedSet()
+        {
+            try
+            {
+                var raw = localStorage.getItem(stateKey("expanded"));
+                var arr = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(arr)) { arr = []; }
+                return new Set(arr);
+            }
+            catch (ex)
+            {
+                return new Set();
+            }
+        }
+
+        function saveExpandedSet(set)
+        {
+            try
+            {
+                localStorage.setItem(stateKey("expanded"), JSON.stringify(Array.from(set)));
+            }
+            catch (ex)
+            {
+            }
+        }
+
+        function persistExpanded(node, expanded)
+        {
+            if (!node || !node.key) { return; }
+            var set = loadExpandedSet();
+            if (expanded)
+            {
+                set.add(node.key);
+            }
+            else
+            {
+                set.delete(node.key);
+            }
+            saveExpandedSet(set);
+        }
+
+        function restoreExpandedForNode(node, expandSet)
+        {
+            try
+            {
+                if (!node || !node.children) { return; }
+                var set = expandSet || loadExpandedSet();
+                // Expand any child that is marked expanded; lazy expand is handled by Fancytree on demand
+                node.children.forEach(function (ch)
+                {
+                    if (ch && ch.key && set.has(ch.key))
+                    {
+                        ch.setExpanded(true);
+                    }
+                });
+            }
+            catch (ex)
+            {
+            }
+        }
+
+        function persistActiveKey(node)
+        {
+            try
+            {
+                var k = (node && node.key) ? node.key : "";
+                localStorage.setItem(stateKey("active"), k || "");
+            }
+            catch (ex)
+            {
+            }
+        }
+
+        function loadActiveKey()
+        {
+            try
+            {
+                return localStorage.getItem(stateKey("active")) || "";
+            }
+            catch (ex)
+            {
+                return "";
+            }
+        }
+
+        // Lightweight toast
+        function notify(message, kind)
+        {
+            try
+            {
+                var type = kind || "info"; // info|success|warning|danger
+                var el = document.createElement("div");
+                el.className = "tc-toast alert alert-" + (type === "error" ? "danger" : type);
+                el.textContent = message || "";
+                el.style.position = "fixed";
+                el.style.right = "12px";
+                el.style.bottom = "12px";
+                el.style.zIndex = "1080";
+                el.style.padding = "8px 12px";
+                el.style.boxShadow = "0 0.25rem 0.75rem rgba(0,0,0,.15)";
+                document.body.appendChild(el);
+                setTimeout(function ()
+                {
+                    if (el && el.parentNode)
+                    {
+                        el.parentNode.removeChild(el);
+                    }
+                }, 1800);
+            }
+            catch (ex)
+            {
+            }
+        }
+
+        // Accessibility: aria-live polite region
+        function ensureAriaLive()
+        {
+            var live = document.getElementById("tcAriaLive");
+            if (!live)
+            {
+                live = document.createElement("div");
+                live.id = "tcAriaLive";
+                live.setAttribute("aria-live", "polite");
+                live.className = "visually-hidden";
+                document.body.appendChild(live);
+            }
+            return live;
+        }
+
+        function announce(text)
+        {
+            try
+            {
+                var live = ensureAriaLive();
+                // Clear then set to force screen readers to read
+                live.textContent = "";
+                setTimeout(function () { live.textContent = text || ""; }, 10);
+            }
+            catch (ex)
+            {
+            }
+        }
+
+        // Autoscroll tree container while dragging near edges
+        function bindAutoscrollHandlers()
+        {
+            var $cont = $(treeSel).find(".fancytree-container");
+            if ($cont.length === 0) { return; }
+
+            $cont.on("dragover", function (e)
+            {
+                var container = this;
+                var rect = container.getBoundingClientRect();
+                var y = (e.originalEvent && e.originalEvent.clientY) ? e.originalEvent.clientY : e.clientY;
+                var topGap = y - rect.top;
+                var bottomGap = rect.bottom - y;
+
+                var threshold = 40; // px
+                var maxStep = 18;   // px per event
+
+                if (topGap < threshold)
+                {
+                    var stepUp = Math.ceil((threshold - topGap) / 4);
+                    container.scrollTop = Math.max(0, container.scrollTop - Math.min(maxStep, stepUp));
+                }
+                else if (bottomGap < threshold)
+                {
+                    var stepDown = Math.ceil((threshold - bottomGap) / 4);
+                    container.scrollTop = container.scrollTop + Math.min(maxStep, stepDown);
+                }
+            });
+        }
+
         // Allow moving leafs under Disconnected; restrict to folder-only elsewhere (via menu)
         function moveNodeInUi(node, direction)
         {
@@ -467,6 +713,11 @@ window.CategoryTree = (function ()
             setBarButtonVisible("move", isAdmin && !inTypeCtx);
             setBarButtonVisible("delete", isAdmin && !inTypeCtx);
 
+            // Remove maintenance buttons from mobile action bar
+            setBarButtonVisible("makePrimary", false);
+            setBarButtonVisible("setProfitRoot", false);
+            setBarButtonVisible("setVatRoot", false);
+
             if (isAdmin && typeof data.isEnabled !== "undefined")
             {
                 var toggleBtn = bar.querySelector("[data-action='toggleEnabled']");
@@ -620,6 +871,9 @@ window.CategoryTree = (function ()
                 }
             }
 
+            // Remove maintenance actions from context menu
+            $menu.find("[data-action='makePrimary'], [data-action='setProfitRoot'], [data-action='setVatRoot']").hide();
+
             if (isDiscCategory)
             {
                 $menu.find(".dropdown-item").hide();
@@ -697,168 +951,240 @@ window.CategoryTree = (function ()
             }, 10);
         }
 
-        function bindKeyboardHandlers()
-        {
-            $(treeSel).on("keydown", function (e)
-            {
-                // Shift+ArrowUp / Shift+ArrowDown
-                var key = e.which || e.keyCode;
-                var isUp = (key === 38);
-                var isDown = (key === 40);
-                if (!e.shiftKey || (!isUp && !isDown))
-                {
-                    return;
-                }
+		function bindKeyboardHandlers()
+		{
+			$(treeSel).on("keydown", function (e)
+			{
+				var keyCode = e.which || e.keyCode;
 
-                if (isMobile()) { return; }
-                if (!isAdmin) { return; }
+				// Non-shift navigation: Left/Right/Home/End
+				if (!e.shiftKey)
+				{
+					var treeNav = getTree();
+					var cur = treeNav && treeNav.getActiveNode ? treeNav.getActiveNode() : null;
+					if (!cur) { return; }
 
-                var tree = $(treeSel).fancytree("getTree");
-                if (!tree) { return; }
+					// Left: collapse, or go to parent if already collapsed
+					if (keyCode === 37)
+					{
+						if (cur.folder && cur.expanded)
+						{
+							cur.setExpanded(false);
+							persistExpanded(cur, false);
+						}
+						else
+						{
+							var par = cur.getParent && cur.getParent();
+							if (par && par.key)
+							{
+								par.setActive(true);
+								persistActiveKey(par);
+							}
+						}
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
 
-                var node = tree.getActiveNode && tree.getActiveNode();
-                if (!node) { return; }
+					// Right: expand
+					if (keyCode === 39)
+					{
+						if (cur.folder && !cur.expanded)
+						{
+							cur.setExpanded(true);
+							persistExpanded(cur, true);
+						}
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
 
-                // Categories only
-                var kinds = getNodeKinds(node);
-                if (!kinds.isCat) { return; }
+					// Home: first sibling
+					if (keyCode === 36)
+					{
+						var first = cur.getParent && cur.getParent() && cur.getParent().getFirstChild && cur.getParent().getFirstChild();
+						if (first) { first.setActive(true); persistActiveKey(first); }
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
 
-                var parent = node.getParent ? node.getParent() : null;
-                if (!parent) { return; }
+					// End: last sibling
+					if (keyCode === 35)
+					{
+						var last = cur.getParent && cur.getParent() && cur.getParent().getLastChild && cur.getParent().getLastChild();
+						if (last) { last.setActive(true); persistActiveKey(last); }
+					 e.preventDefault();
+					 e.stopPropagation();
+					 return;
+					}
 
-                // Find anchor sibling (skip non-folders except under Disconnected)
-                function findAnchor(n, direction)
-                {
-                    var p = n.getParent ? n.getParent() : null;
-                    var parentKey = p ? (p.key || "") : "";
-                    var cur = (direction === "up") ? n.getPrevSibling() : n.getNextSibling();
+					// Other non-shift keys: do not interfere
+					return;
+				}
 
-                    if (parentKey !== DISC_KEY)
-                    {
-                        while (cur && !cur.folder)
-                        {
-                            cur = (direction === "up") ? cur.getPrevSibling() : cur.getNextSibling();
-                        }
-                    }
-                    return cur || null;
-                }
+				// Shift+ArrowUp / Shift+ArrowDown => reorder before/after sibling
+				var isUp = (keyCode === 38);
+				var isDown = (keyCode === 40);
+				if (!isUp && !isDown)
+				{
+					return;
+				}
 
-                // Identify Cash Type container parents (synthetic/type)
-                function isTypeContainer(p)
-                {
-                    if (!p) { return false; }
-                    var d = p.data || {};
-                    var k = p.key || "";
-                    return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                           || (typeof k === "string" && k.indexOf("type:") === 0);
-                }
+				if (isMobile()) { return; }
+				if (!isAdmin) { return; }
 
-                var anchor = findAnchor(node, isUp ? "up" : "down");
-                if (!anchor)
-                {
-                    // No sibling in that direction
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return;
-                }
+				var tree = getTree();
+				if (!tree) { return; }
 
-                var mode = isUp ? "before" : "after";
-                var token = antiXsrf();
+				var node = tree.getActiveNode && tree.getActiveNode();
+				if (!node) { return; }
 
-                // Cash Type view => ReorderType
-                if (isTypeContainer(parent))
-                {
-                    $.ajax({
-                        type: "POST",
-                        url: handlerUrl("ReorderType"),
-                        data: { key: node.key, anchorKey: anchor.key, mode: mode },
-                        headers: token ? { "RequestVerificationToken": token } : {},
-                        dataType: "json"
-                    }).done(function (res)
-                    {
-                        if (res && res.success)
-                        {
-                            try
-                            {
-                                node.moveTo(anchor, mode);
-                            }
-                            catch (ex)
-                            {
-                            }
+				// Categories only
+				var kinds = getNodeKinds(node);
+				if (!kinds.isCat) { return; }
 
-                            if (parent.expanded)
-                            {
-                                parent.reloadChildren();
-                            }
+				var parent = node.getParent ? node.getParent() : null;
+				if (!parent) { return; }
 
-                            if (!isMobile())
-                            {
-                                loadDetails(node);
-                                resizeColumns();
-                            }
-                        }
-                        else
-                        {
-                            alert((res && res.message) || "Reorder failed");
-                        }
-                    }).fail(function (xhr)
-                    {
-                        alert("Server error (" + xhr.status + ")");
-                    });
-                }
-                else
-                {
-                    // Totals/Disconnected => ReorderSiblings
-                    $.ajax({
-                        type: "POST",
-                        url: handlerUrl("ReorderSiblings"),
-                        data: { parentKey: parent.key || "", key: node.key, anchorKey: anchor.key, mode: mode },
-                        headers: token ? { "RequestVerificationToken": token } : {},
-                        dataType: "json"
-                    }).done(function (res)
-                    {
-                        if (res && res.success)
-                        {
-                            try
-                            {
-                                node.moveTo(anchor, mode);
-                            }
-                            catch (ex)
-                            {
-                            }
+				// Find anchor sibling (skip non-folders except under Disconnected)
+				function findAnchor(n, direction)
+				{
+					var p = n.getParent ? n.getParent() : null;
+					var parentKey = p ? (p.key || "") : "";
+					var cur = (direction === "up") ? n.getPrevSibling() : n.getNextSibling();
 
-                            if (parent.expanded)
-                            {
-                                parent.reloadChildren();
-                            }
+					if (parentKey !== DISC_KEY)
+					{
+						while (cur && !cur.folder)
+						{
+							cur = (direction === "up") ? cur.getPrevSibling() : cur.getNextSibling();
+						}
+					}
+					return cur || null;
+				}
 
-                            var t = $(treeSel).fancytree("getTree");
-                            var root = t.getNodeByKey(ROOT_KEY);
-                            if (root && root.expanded) { root.reloadChildren(); }
-                            var disc = t.getNodeByKey(DISC_KEY);
-                            if (disc && disc.expanded) { disc.reloadChildren(); }
+				// Identify Cash Type container parents (synthetic/type)
+				function isTypeContainer(p)
+				{
+					if (!p) { return false; }
+					var d = p.data || {};
+					var k = p.key || "";
+					return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
+						   || (typeof k === "string" && k.indexOf("type:") === 0);
+				}
 
-                            if (!isMobile())
-                            {
-                                loadDetails(node);
-                                resizeColumns();
-                            }
-                        }
-                        else
-                        {
-                            alert((res && res.message) || "Reorder failed");
-                        }
-                    }).fail(function (xhr)
-                    {
-                        alert("Server error (" + xhr.status + ")");
-                    });
-                }
+				var anchor = findAnchor(node, isUp ? "up" : "down");
+				if (!anchor)
+				{
+					// No sibling in that direction
+					e.preventDefault();
+					e.stopPropagation();
+					return;
+				}
 
-                // Consume the key
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        }
+				var mode = isUp ? "before" : "after";
+				var token = antiXsrf();
+
+				// Cash Type view => ReorderType
+				if (isTypeContainer(parent))
+				{
+					$.ajax({
+						type: "POST",
+						url: handlerUrl("ReorderType"),
+						data: { key: node.key, anchorKey: anchor.key, mode: mode },
+						headers: token ? { "RequestVerificationToken": token } : {},
+						dataType: "json"
+					}).done(function (res)
+					{
+						if (res && res.success)
+						{
+							try
+							{
+								node.moveTo(anchor, mode);
+							}
+							catch (ex)
+							{
+							}
+
+							reloadIfExpandedNode(parent);
+
+							node.setActive(true);
+							persistActiveKey(node);
+							announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
+							notify("Order updated", "success");
+
+							if (!isMobile())
+							{
+								loadDetails(node);
+								resizeColumns();
+							}
+						}
+						else
+						{
+							alert((res && res.message) || "Reorder failed");
+						}
+					}).fail(function (xhr)
+					{
+						alert("Server error (" + xhr.status + ")");
+					});
+				}
+				else
+				{
+					// Totals/Disconnected => ReorderSiblings
+					$.ajax({
+						type: "POST",
+						url: handlerUrl("ReorderSiblings"),
+						data: { parentKey: parent.key || "", key: node.key, anchorKey: anchor.key, mode: mode },
+						headers: token ? { "RequestVerificationToken": token } : {},
+						dataType: "json"
+					}).done(function (res)
+					{
+						if (res && res.success)
+						{
+							try
+							{
+								node.moveTo(anchor, mode);
+							}
+							catch (ex)
+							{
+							}
+
+							reloadIfExpandedNode(parent);
+
+						 node.setActive(true);
+						 persistActiveKey(node);
+						 announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
+						 notify("Order updated", "success");
+
+							var t = getTree();
+							var root = t.getNodeByKey(ROOT_KEY);
+							var disc = t.getNodeByKey(DISC_KEY);
+							reloadIfExpandedNode(root);
+						 reloadIfExpandedNode(disc);
+
+							if (!isMobile())
+							{
+								loadDetails(node);
+								resizeColumns();
+							}
+						}
+						else
+						{
+						 alert((res && res.message) || "Reorder failed");
+						}
+					}).fail(function (xhr)
+					{
+						alert("Server error (" + xhr.status + ")");
+					});
+				}
+
+				// Consume the key
+				e.preventDefault();
+				e.stopPropagation();
+			});
+		}
+
         function bindContextMenuHandlers()
         {
             var $menu = $(menuSel);
@@ -869,7 +1195,7 @@ window.CategoryTree = (function ()
                 var key = $menu.data("nodeKey");
                 var parentKey = $menu.data("parentKey");
 
-                var tree = $(treeSel).fancytree("getTree");
+                var tree = getTree();
                 var node = key ? tree.getNodeByKey(key) : null;
 
                 var token = antiXsrf();
@@ -904,18 +1230,18 @@ window.CategoryTree = (function ()
                     if (!n) { return; }
                     if (n.expanded)
                     {
-                        n.reloadChildren();
+                        reloadIfExpandedNode(n);
                     }
                     else
                     {
                         var ex = n.setExpanded(true);
                         if (ex && typeof ex.done === "function")
                         {
-                            ex.done(function () { n.reloadChildren(); });
+                            ex.done(function () { reloadIfExpandedNode(n); });
                         }
                         else
                         {
-                            n.reloadChildren();
+                            reloadIfExpandedNode(n);
                         }
                     }
                 }
@@ -1002,9 +1328,9 @@ window.CategoryTree = (function ()
                                 {
                                     refreshNode(targetParent);
                                     var root = tree.getNodeByKey(ROOT_KEY);
-                                    if (root && root.expanded) { root.reloadChildren(); }
                                     var disc = tree.getNodeByKey(DISC_KEY);
-                                    if (disc && disc.expanded) { disc.reloadChildren(); }
+                                    reloadIfExpandedNode(root);
+                                    reloadIfExpandedNode(disc);
                                 }
                             })
                             .fail(alertFail);
@@ -1211,9 +1537,9 @@ window.CategoryTree = (function ()
                                     if (!isMobile()) { loadDetails(node); }
 
                                     var disc = tree.getNodeByKey(DISC_KEY);
-                                    if (disc && disc.expanded) { disc.reloadChildren(); }
                                     var root = tree.getNodeByKey(ROOT_KEY);
-                                    if (root && root.expanded) { root.reloadChildren(); }
+                                    reloadIfExpandedNode(disc);
+                                    reloadIfExpandedNode(root);
                                 }
                                 else
                                 {
@@ -1244,9 +1570,9 @@ window.CategoryTree = (function ()
                             {
                                 if (parentKey) { refreshNode(parentKey); }
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
                                 var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
+                                reloadIfExpandedNode(root);
+                                reloadIfExpandedNode(disc);
                             }
                         }).fail(alertFail);
                         break;
@@ -1269,9 +1595,9 @@ window.CategoryTree = (function ()
                             if (res && res.success)
                             {
                                 var p = tree.getNodeByKey(parentKey);
-                                if (p && p.expanded) { p.reloadChildren(); }
+                                reloadIfExpandedNode(p);
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
+                                reloadIfExpandedNode(root);
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -1300,9 +1626,9 @@ window.CategoryTree = (function ()
                             {
                                 // Refresh top-level anchors and details to reflect new primary paths/badges
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
                                 var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
+                                reloadIfExpandedNode(root);
+                                reloadIfExpandedNode(disc);
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -1326,7 +1652,7 @@ window.CategoryTree = (function ()
                 if (!target) {return;}
 
                 var action = target.getAttribute("data-action");
-                var tree = $(treeSel).fancytree("getTree");
+                var tree = getTree();
                 var node = tree && tree.getActiveNode ? tree.getActiveNode() : null;
 
                 if (!node)
@@ -1353,7 +1679,7 @@ window.CategoryTree = (function ()
 
                 function refreshAnchors()
                 {
-                    var t = $(treeSel).fancytree("getTree");
+                    var t = getTree();
                     if (!t) { return; }
                     var top = t.getRootNode();
                     if (!top || !top.children) { return; }
@@ -1362,7 +1688,7 @@ window.CategoryTree = (function ()
                         var n = top.children[i];
                         if (n && n.expanded)
                         {
-                            n.reloadChildren({ url: nocache(appendQuery(nodesUrl, 'id', n.key)) });
+                            reloadIfExpandedNode(n, { url: nocache(appendQuery(nodesUrl, 'id', n.key)) });
                         }
                     }
                 }
@@ -1504,7 +1830,7 @@ window.CategoryTree = (function ()
             $pane.off("click.detailsActions").on("click.detailsActions", "[data-action]", function ()
             {
                 var action = $(this).data("action");
-                var tree = $(treeSel).fancytree("getTree");
+                var tree = getTree();
                 var node = tree && tree.getActiveNode ? tree.getActiveNode() : null;
 
                 if (!node)
@@ -1531,7 +1857,7 @@ window.CategoryTree = (function ()
 
                 function refreshAnchors()
                 {
-                    var t = $(treeSel).fancytree("getTree");
+                    var t = getTree();
                     if (!t) { return; }
                     var top = t.getRootNode();
                     if (!top || !top.children) { return; }
@@ -1540,7 +1866,7 @@ window.CategoryTree = (function ()
                         var n = top.children[i];
                         if (n && n.expanded)
                         {
-                            n.reloadChildren({ url: nocache(appendQuery(nodesUrl, 'id', n.key)) });
+                            reloadIfExpandedNode(n, { url: nocache(appendQuery(nodesUrl, 'id', n.key)) });
                         }
                     }
                 }
@@ -1585,11 +1911,11 @@ window.CategoryTree = (function ()
                             alert((res && res.message) || "Not Yet Implemented");
                             if (res && res.success)
                             {
-                                if (node.expanded) { node.reloadChildren(); }
+                                reloadIfExpandedNode(node);
                                 var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
+                                reloadIfExpandedNode(disc);
+                                reloadIfExpandedNode(root);
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
@@ -1616,7 +1942,7 @@ window.CategoryTree = (function ()
                             if (res && res.success)
                             {
                                 var tgt = tree.getNodeByKey(targetCategory);
-                                if (tgt && tgt.expanded) { tgt.reloadChildren(); }
+                                reloadIfExpandedNode(tgt);
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
@@ -1655,9 +1981,9 @@ window.CategoryTree = (function ()
                                 setNodeEnabledInUi(node, !!makeEnabled, !kinds.isCode);
                                 loadDetails(node);
                                 var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
+                                reloadIfExpandedNode(disc);
+                                reloadIfExpandedNode(root);
                             }
                             else
                             {
@@ -1689,11 +2015,11 @@ window.CategoryTree = (function ()
                             alert((res && res.message) || "Not Yet Implemented");
                             if (res && res.success)
                             {
-                                if (parentKey) { var p = tree.getNodeByKey(parentKey); if (p && p.expanded) { p.reloadChildren(); } }
+                                if (parentKey) { var p = tree.getNodeByKey(parentKey); reloadIfExpandedNode(p); }
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
                                 var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
+                                reloadIfExpandedNode(root);
+                                reloadIfExpandedNode(disc);
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -1717,9 +2043,9 @@ window.CategoryTree = (function ()
                             if (res && res.success)
                             {
                                 var p = tree.getNodeByKey(parentKey);
-                                if (p && p.expanded) { p.reloadChildren(); }
+                                reloadIfExpandedNode(p);
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
+                                reloadIfExpandedNode(root);
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -1748,9 +2074,9 @@ window.CategoryTree = (function ()
                             {
                                 // Refresh top-level anchors and details to reflect new primary paths/badges
                                 var root = tree.getNodeByKey(ROOT_KEY);
-                                if (root && root.expanded) { root.reloadChildren(); }
                                 var disc = tree.getNodeByKey(DISC_KEY);
-                                if (disc && disc.expanded) { disc.reloadChildren(); }
+                                reloadIfExpandedNode(root);
+                                reloadIfExpandedNode(disc);
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -1790,18 +2116,41 @@ window.CategoryTree = (function ()
                     ensureTreeContainerSizing();
                     resizeColumns();
                 },
+                expand: function (event, data)
+                {
+                    persistExpanded(data.node, true);
+                },
+                collapse: function (event, data)
+                {
+                    persistExpanded(data.node, false);
+                },
                 load: function (event, data)
                 {
                     if (!data.node)
                     {
                         var root = data.tree.getNodeByKey(ROOT_KEY);
-                        if (root && !root.expanded) {root.setExpanded(true);}
+                        if (root && !root.expanded) { root.setExpanded(true); }
                     }
+
+                    // Restore expanded state for this branch (handles subsequent lazy loads too)
+                    var set = loadExpandedSet();
+                    var scope = data.node ? data.node : data.tree.getRootNode();
+                    restoreExpandedForNode(scope, set);
+
+                    // Try restore active selection
+                    var activeKey = loadActiveKey();
+                    if (activeKey)
+                    {
+                        var n = data.tree.getNodeByKey(activeKey);
+                        if (n) { n.setActive(true); }
+                    }
+
                     ensureTreeContainerSizing();
                     resizeColumns();
                 },
                 activate: function (event, data)
                 {
+                    persistActiveKey(data.node);
                     loadDetails(data.node);
                 },
                 dnd5: {
@@ -1860,15 +2209,35 @@ window.CategoryTree = (function ()
                     },
                     dragDrop: function (node, data)
                     {
+                        console.log("categoryTree.dragDrop", { nodeKey: node && node.key, hitMode: data && data.hitMode, srcKey: data && data.otherNode && data.otherNode.key });
+
                         if (isMobile()) { return false; }
                         if (!isAdmin) { return false; }
 
                         var src = data.otherNode;
-                        if (!src) { return false; }
+                        if (!src)
+                        {
+                            console.log("dragDrop: no source node");
+                            return false;
+                        }
+
                         if (node === src || node.isDescendantOf(src))
                         {
                             alert("Invalid move: cannot move a category under itself or its descendant.");
                             return false;
+                        }
+
+                        // Ensure we have tree reference for reloads
+                        var t = getTree();
+
+                        // Helper: detect synthetic/type container parents
+                        function isTypeContainer(p)
+                        {
+                            if (!p) { return false; }
+                            var d = p.data || {};
+                            var k = p.key || "";
+                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
+                                   || (typeof k === "string" && k.indexOf("type:") === 0);
                         }
 
                         // Sibling reordering (before/after)
@@ -1876,19 +2245,11 @@ window.CategoryTree = (function ()
                         {
                             var parent = node.getParent ? node.getParent() : null;
 
-                            function isTypeContainer(p)
-                            {
-                                if (!p) { return false; }
-                                var d = p.data || {};
-                                var k = p.key || "";
-                                return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                                       || (typeof k === "string" && k.indexOf("type:") === 0);
-                            }
-
-                            // Cash Type: ReorderType
+                            // Cash Type sibling reorder -> ReorderType
                             if (parent && isTypeContainer(parent))
                             {
                                 var tokenA = antiXsrf();
+                                console.log("POST ReorderType", { key: src.key, anchorKey: node.key, mode: data.hitMode });
 
                                 $.ajax({
                                     type: "POST",
@@ -1906,12 +2267,15 @@ window.CategoryTree = (function ()
                                         }
                                         catch (ex)
                                         {
+                                            console.warn("moveTo failed (ReorderType UI move)", ex);
                                         }
 
-                                        if (parent.expanded)
-                                        {
-                                            parent.reloadChildren();
-                                        }
+                                        reloadIfExpandedNode(parent);
+
+                                        src.setActive(true);
+                                        persistActiveKey(src);
+                                        announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
+                                        notify("Order updated", "success");
 
                                         if (!isMobile())
                                         {
@@ -1921,20 +2285,23 @@ window.CategoryTree = (function ()
                                     }
                                     else
                                     {
+                                        console.warn("ReorderType response:", res);
                                         alert((res && res.message) || "Reorder failed");
                                     }
                                 }).fail(function (xhr)
                                 {
+                                    console.error("ReorderType AJAX failed", xhr);
                                     alert("Server error (" + xhr.status + ")");
                                 });
 
                                 return;
                             }
 
-                            // Totals/Disconnected: ReorderSiblings
+                            // Totals/Disconnected sibling reorder -> ReorderSiblings
                             if (parent && !isTypeContainer(parent))
                             {
                                 var tokenB = antiXsrf();
+                                console.log("POST ReorderSiblings", { parentKey: parent.key || "", key: src.key, anchorKey: node.key, mode: data.hitMode });
 
                                 $.ajax({
                                     type: "POST",
@@ -1952,17 +2319,21 @@ window.CategoryTree = (function ()
                                         }
                                         catch (ex)
                                         {
+                                            console.warn("moveTo failed (ReorderSiblings UI move)", ex);
                                         }
 
-                                        var t = $(treeSel).fancytree("getTree");
-                                        if (parent.expanded)
-                                        {
-                                            parent.reloadChildren();
-                                        }
+                                        reloadIfExpandedNode(parent);
+
+                                        src.setActive(true);
+                                        persistActiveKey(src);
+                                        announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
+                                        notify("Order updated", "success");
+
+                                        // Refresh top anchors
                                         var root = t.getNodeByKey(ROOT_KEY);
-                                        if (root && root.expanded) { root.reloadChildren(); }
                                         var disc = t.getNodeByKey(DISC_KEY);
-                                        if (disc && disc.expanded) { disc.reloadChildren(); }
+                                        reloadIfExpandedNode(root);
+                                        reloadIfExpandedNode(disc);
 
                                         if (!isMobile())
                                         {
@@ -1972,16 +2343,74 @@ window.CategoryTree = (function ()
                                     }
                                     else
                                     {
+                                        console.warn("ReorderSiblings response:", res);
                                         alert((res && res.message) || "Reorder failed");
                                     }
                                 }).fail(function (xhr)
                                 {
+                                    console.error("ReorderSiblings AJAX failed", xhr);
                                     alert("Server error (" + xhr.status + ")");
                                 });
 
                                 return;
                             }
                         }
+
+                        // Fallback: child drop (move under parent) - call Move handler when hitMode === "over"
+                        if (data.hitMode !== "over") { return false; }
+
+                        var token2 = antiXsrf();
+                        var oldParent = src.getParent ? (src.getParent() && src.getParent().key) || "" : "";
+
+                        console.log("POST Move", { key: src.key, targetParentKey: node.key });
+
+                        $.ajax({
+                            type: "POST",
+                            url: handlerUrl("Move"),
+                            data: { key: src.key, targetParentKey: node.key },
+                            headers: token2 ? { "RequestVerificationToken": token2 } : {},
+                            dataType: "json"
+                        }).done(function (res)
+                        {
+                            if (res && res.success)
+                            {
+                                try
+                                {
+                                    src.moveTo(node, "child");
+                                }
+                                catch (ex)
+                                {
+                                    console.warn("moveTo failed (Move UI move)", ex);
+                                }
+
+                                // reload relevant parents
+                                reloadIfExpandedNode(oldParent);
+                                reloadIfExpandedNode(node.key);
+
+                                var root = t.getNodeByKey(ROOT_KEY);
+                                var disc = t.getNodeByKey(DISC_KEY);
+                                reloadIfExpandedNode(root);
+                                reloadIfExpandedNode(disc);
+
+                                src.setActive(true);
+                                persistActiveKey(src);
+
+                                if (!isMobile()) { loadDetails(src); resizeColumns(); }
+                                notify("Moved", "success");
+                                announce("Moved " + (src.title || src.key) + " under " + (node.title || node.key));
+                            }
+                            else
+                            {
+                                console.warn("Move response:", res);
+                                alert((res && res.message) || "Move failed");
+                            }
+                        }).fail(function (xhr)
+                        {
+                            console.error("Move AJAX failed", xhr);
+                            alert("Server error (" + xhr.status + ")");
+                        });
+
+                        return;
                     },
                     dragEnd: function () { }
                 }
@@ -2049,15 +2478,16 @@ window.CategoryTree = (function ()
                 }
             });
 
-            bindContextMenuHandlers();
-            bindActionBarHandlers();
-            bindDetailsPaneHandlers();
-            bindKeyboardHandlers();
+			bindContextMenuHandlers();
+			bindActionBarHandlers();
+			bindDetailsPaneHandlers();
+			bindKeyboardHandlers();
+			bindAutoscrollHandlers();
 
             if (!isMobile())
             {
-                var tree = $(treeSel).fancytree("getTree");
-                loadDetails(tree.getActiveNode());
+                var tree = getTree();
+                if (tree) { loadDetails(tree.getActiveNode()); }
             }
 
             $(window).on("resize orientationchange", function ()

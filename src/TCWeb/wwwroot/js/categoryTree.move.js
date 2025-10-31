@@ -62,6 +62,22 @@
         return u + sep + "_=" + Date.now();
     }
 
+    // New: safe helper to get the Fancytree Tree instance without invoking deprecated plugin call
+    function getTree()
+    {
+        try
+        {
+            if (!window.$ || !window.$.ui || !window.$.fn.fancytree || !$.ui.fancytree) { return null; }
+            var el = document.querySelector("#categoryTree");
+            if (!el) { return null; }
+            return $.ui.fancytree.getTree(el);
+        }
+        catch (ex)
+        {
+            return null;
+        }
+    }
+
     function expandNode(n)
     {
         if (!n)
@@ -373,9 +389,8 @@
                     return;
                 }
 
-                var tree = ($.ui && $.ui.fancytree && $.ui.fancytree.getTree)
-                    ? $.ui.fancytree.getTree("#categoryTree")
-                    : window.$("#categoryTree").fancytree("getTree");
+                // Use safe helper instead of deprecated plugin getter
+                var tree = getTree();
                 if (!tree)
                 {
                     pane.innerHTML = html;
@@ -747,7 +762,8 @@
                     return;
                 }
 
-                var tree = window.$("#categoryTree").fancytree("getTree");
+                // Use safe helper instead of deprecated plugin getter
+                var tree = getTree();
                 if (!tree)
                 {
                     pane.innerHTML = "";

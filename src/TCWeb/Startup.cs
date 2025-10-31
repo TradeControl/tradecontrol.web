@@ -87,6 +87,17 @@ namespace TradeControl.Web
             }
 
             app.UseHttpsRedirection();
+            
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.Equals("/favicon.ico", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.Redirect("/favicon.svg", permanent: false);
+                    return;
+                }
+                await next();
+            });
+
             app.UseStaticFiles();
 
             app.UseDetection();
