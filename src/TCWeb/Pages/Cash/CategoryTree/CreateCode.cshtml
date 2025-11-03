@@ -1,0 +1,65 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.CreateCodeModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    Layout = null;
+    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+}
+
+@if (Model.OperationSucceeded && isEmbedded)
+{
+    <div id="createCodeResult"
+         data-key="@Model.NewKey"
+         data-parent="@Model.NewParentKey"
+         data-category="@Model.CategoryCode"
+         data-name="@Model.NewName"
+         data-polarity="@Model.NewPolarity"
+         data-categorytype="@Model.NewCategoryType"
+         data-isenabled="@Model.NewIsEnabled"
+         data-cashcode="@Model.NewCashCode"></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Create Cash Code</h5>
+
+            <!-- validation summary so embedded responses show errors -->
+            <form method="post" asp-page="./CreateCode" asp-route-key="@Model.CategoryCode" asp-route-embed="1">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+                <input asp-for="CategoryCode" type="hidden" />
+
+                <div class="mb-3">
+                    <label asp-for="CashCode" class="form-label">Cash Code</label>
+                    <input asp-for="CashCode" class="form-control" maxlength="50" />
+                    <span asp-validation-for="CashCode" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CashDescription" class="form-label">Description</label>
+                    <input asp-for="CashDescription" class="form-control" maxlength="100" />
+                    <span asp-validation-for="CashDescription" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="TaxCode" class="form-label">Tax Code</label>
+                    <select asp-for="TaxCode" class="form-select" asp-items="Model.TaxCodes"></select>
+                    <span asp-validation-for="TaxCode" class="text-danger small"></span>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input asp-for="IsEnabled" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsEnabled" class="form-check-label">Enabled</label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <a class="btn btn-secondary" href="javascript:void(0)"
+                       onclick="(function(){ var p = document.getElementById('detailsPane'); if(p){ p.innerHTML=''; } else { window.location.href='@Url.Page("/Cash/CategoryTree/Index")'; } })()">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}

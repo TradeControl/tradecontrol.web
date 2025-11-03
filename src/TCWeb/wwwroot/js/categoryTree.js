@@ -1386,52 +1386,25 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
+                        // Determine parent target (use current node if folder, otherwise parentKey)
+                        var targetParent = (node && node.folder) ? key : parentKey;
+                        if (!targetParent)
+                        {
+                            alert("Select a parent category");
+                            break;
+                        }
+
                         var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
+
+                        // If creating under Disconnected root, open the full CreateCategory page (embedded)
                         if (isDisc && key === DISC_KEY)
                         {
-                            var categoryCode = prompt("New Category Code:");
-                            if (!categoryCode) { break; }
-                            var categoryName = prompt("Category Name:");
-                            if (!categoryName) { break; }
-
-                            var cashTypeCodeStr = prompt("Cash Type Code (number):");
-                            if (!cashTypeCodeStr) { break; }
-                            var cashTypeCode = parseInt(cashTypeCodeStr, 10);
-                            if (isNaN(cashTypeCode)) { alert("Invalid Cash Type Code"); break; }
-
-                            var polStr = prompt("Cash Polarity (0=Expense, 1=Income, 2=Neutral):", "2");
-                            if (!polStr && polStr !== "0") { break; }
-                            var cashPolarityCode = parseInt(polStr, 10);
-                            if (isNaN(cashPolarityCode) || cashPolarityCode < 0 || cashPolarityCode > 2)
-                            {
-                                alert("Invalid Cash Polarity"); break;
-                            }
-
-                            postJson("CreateCategory", {
-                                parentKey: DISC_KEY,
-                                categoryCode: categoryCode,
-                                category: categoryName,
-                                cashTypeCode: cashTypeCode,
-                                cashPolarityCode: cashPolarityCode,
-                                isEnabled: 1
-                            }).done(function (res)
-                            {
-                                if (res && res.success)
-                                {
-                                    refreshNode(DISC_KEY);
-                                    alert("Category created");
-                                }
-                                else
-                                {
-                                    alert((res && res.message) || "Create failed");
-                                }
-                            }).fail(alertFail);
+                            openAction("CreateCategory", "", DISC_KEY);
                         }
                         else
                         {
-                            postJson("CreateTotal", { parentKey: key || parentKey })
-                                .done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
-                                .fail(alertFail);
+                            // Open embedded CreateTotal with parentKey set
+                            openAction("CreateTotal", "", targetParent);
                         }
                         break;
                     }
@@ -1444,54 +1417,52 @@ window.CategoryTree = (function ()
                         var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
                         var discCat = isDiscCategoryNode(node);
 
-                        var newCashCode = prompt("New Cash Code:");
-                        if (!newCashCode) { break; }
-                        var newDesc = prompt("Description:");
-                        if (!newDesc) { break; }
-
-                        if (discCat)
+                        // Determine category target: if node is a category use its key, otherwise use parentKey
+                        var targetCategory = (node && node.folder) ? key : parentKey;
+                        if (!targetCategory)
                         {
-                            postJson("CreateCodeByCategory", {
-                                categoryCode: key,
-                                taxCode: "",
-                                cashCode: newCashCode,
-                                cashDescription: newDesc,
-                                templateCode: ""
-                            }).done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success) { refreshNode(key); }
-                            }).fail(alertFail);
+                            alert("Select a category to add a code under");
+                            break;
                         }
-                        else if (isCodeNode)
+
+                        // Open embedded CreateCode and pre-fill the Category via parentKey
+                        openAction("CreateCode", targetCategory);
+                        break;
+                    }
+
+                    case "createTotal":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+
+                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
+                        if (isDisc && key === DISC_KEY)
                         {
-                            var siblingCashCode = key.indexOf("code:") === 0 ? key.substring("code:".length) : key;
-                            postJson("CreateCodeByCashCode", {
-                                siblingCashCode: siblingCashCode,
-                                cashCode: newCashCode,
-                                cashDescription: newDesc
-                            }).done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                            }).fail(alertFail);
+                            // Open embedded CreateCategory when invoked from disconnected root
+                            openAction("CreateCategory", "", DISC_KEY);
                         }
                         else
                         {
-                            postJson("CreateCodeByCategory", {
-                                categoryCode: key,
-                                taxCode: "",
-                                cashCode: newCashCode,
-                                cashDescription: newDesc,
-                                templateCode: ""
-                            }).done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success) { refreshNode(key); }
-                            }).fail(alertFail);
+                            // Open embedded CreateTotal with parentKey
+                            openAction("CreateTotal", "", key || parentKey);
                         }
                         break;
                     }
 
+                    case "createCode":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node) { alert("Select a node first"); break; }
+
+                        var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
+                        var discCat = isDiscCategoryNode(node);
+
+                        var targetCategory = node.folder ? key : parentKey;
+                        if (!targetCategory) { alert("Select a category"); break; }
+
+                        // Open embedded CreateCode with Category pre-filled via key
+                        openAction("CreateCode", targetCategory);
+                        break;
+                    }
                     case "moveUp":
                     case "moveDown":
                     {

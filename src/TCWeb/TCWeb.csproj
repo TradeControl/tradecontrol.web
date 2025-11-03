@@ -56,6 +56,7 @@
     <None Include="wwwroot\content\templates\invoice_income_standard.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="wwwroot\js\categoryTree.embeddedCreate.js" />
   </ItemGroup>
 
 </Project>

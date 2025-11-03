@@ -1,0 +1,60 @@
+﻿@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.CreateCategoryModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    Layout = null;
+    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+}
+
+@if (Model.OperationSucceeded && isEmbedded)
+{
+    <div id="createCategoryResult"
+         data-key="@Model.NewKey"
+         data-parent="@Model.NewParentKey"
+         data-name="@Model.Category"
+         data-polarity="@Model.CashPolarityCode"
+         data-categorytype="@( (short)TradeControl.Web.Data.NodeEnum.CategoryType.CashCode )"
+         data-isenabled="@(Model.IsEnabled ? 1 : 0)"></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Create Category</h5>
+
+            <form method="post" asp-page="./CreateCategory" asp-route-parentKey="@Model.ParentKey" asp-route-embed="1">
+                @Html.AntiForgeryToken()
+                <input asp-for="ParentKey" type="hidden" />
+                <div class="mb-3">
+                    <label asp-for="CategoryCode" class="form-label">Category Code</label>
+                    <input asp-for="CategoryCode" class="form-control" maxlength="10" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Category" class="form-label">Category Name</label>
+                    <input asp-for="Category" class="form-control" maxlength="50" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CashTypeCode" class="form-label">Cash Type</label>
+                    <select asp-for="CashTypeCode" class="form-select" asp-items="Model.CashTypes"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CashPolarityCode" class="form-label">Polarity</label>
+                    <select asp-for="CashPolarityCode" class="form-select" asp-items="Model.Polarities"></select>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input asp-for="IsEnabled" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsEnabled" class="form-check-label">Enabled</label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                    <a class="btn btn-secondary" href="javascript:window.history.back()">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
