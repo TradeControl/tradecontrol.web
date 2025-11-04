@@ -37,14 +37,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                     join pol in NodeContext.Cash_tbPolaritys on cat.CashPolarityCode equals pol.CashPolarityCode
                                     join typ in NodeContext.Cash_tbTypes on cat.CashTypeCode equals typ.CashTypeCode
                                     where code.CashCode == cashCode
-                                    select new CodeDetailsVm
-                                    {
+                                    select new CodeDetailsVm {
                                         CashCode = code.CashCode,
                                         CashDescription = code.CashDescription,
                                         CategoryCode = cat.CategoryCode,
                                         Category = cat.Category,
                                         CashPolarity = pol.CashPolarity,
                                         CashType = typ.CashType,
+                                        // Populate TaxCode from the code row so UI can show it
+                                        TaxCode = code.TaxCode,
                                         IsEnabled = code.IsEnabled != 0,
                                         IsCategoryEnabled = cat.IsEnabled != 0
                                     }).FirstOrDefaultAsync();
@@ -62,8 +63,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                     join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
                                     join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
                                     where c.CategoryCode == key
-                                    select new CategoryDetailsVm
-                                    {
+                                    select new CategoryDetailsVm {
                                         CategoryCode = c.CategoryCode,
                                         Category = c.Category,
                                         CategoryType = ct.CategoryType,

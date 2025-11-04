@@ -39,6 +39,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string Category { get; set; } = string.Empty;
         public string CashPolarity { get; set; } = string.Empty;
         public string CashType { get; set; } = string.Empty;
+        public string TaxCode { get; set; } = string.Empty;
         public bool IsEnabled { get; set; }
         public bool IsCategoryEnabled { get; set; }
         public string Namespace { get; set; } = string.Empty;

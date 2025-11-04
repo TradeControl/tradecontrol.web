@@ -16,6 +16,7 @@
         {
             return url;
         }
+
         return _appendQuery(url, '_', Date.now());
     }
 
@@ -40,6 +41,37 @@
         catch (e)
         {
             return null;
+        }
+    }
+
+    // small safe-invoke helpers to keep code compact and avoid repeated try/catch formatting
+    function safeInvoke(target, methodName)
+    {
+        try
+        {
+            if (target && typeof target[methodName] === "function")
+            {
+                target[methodName]();
+            }
+        }
+        catch (_)
+        {
+            // swallow
+        }
+    }
+
+    function safeInvokeWithArg(target, methodName, arg)
+    {
+        try
+        {
+            if (target && typeof target[methodName] === "function")
+            {
+                target[methodName](arg);
+            }
+        }
+        catch (_)
+        {
+            // swallow
         }
     }
 
@@ -79,6 +111,7 @@
                                     {
                                         var url = _nocache(_appendQuery(_nodesUrl, 'id', node.key));
                                         var r2 = node.reloadChildren({ url: url });
+
                                         if (r2 && typeof r2.then === "function")
                                         {
                                             r2.then(afterReload, afterReload);
@@ -95,6 +128,7 @@
                                     else
                                     {
                                         var r2 = node.reloadChildren();
+
                                         if (r2 && typeof r2.then === "function")
                                         {
                                             r2.then(afterReload, afterReload);
@@ -134,6 +168,7 @@
                                     {
                                         var url2 = _nocache(_appendQuery(_nodesUrl, 'id', node.key));
                                         var r2 = node.reloadChildren({ url: url2 });
+
                                         if (r2 && typeof r2.then === "function")
                                         {
                                             r2.then(afterReload, afterReload);
@@ -150,6 +185,7 @@
                                     else
                                     {
                                         var r2 = node.reloadChildren();
+
                                         if (r2 && typeof r2.then === "function")
                                         {
                                             r2.then(afterReload, afterReload);
@@ -187,6 +223,7 @@
                         {
                             var url3 = _nocache(_appendQuery(_nodesUrl, 'id', node.key));
                             var r = node.reloadChildren({ url: url3 });
+
                             if (r && typeof r.then === "function")
                             {
                                 r.then(afterReload, afterReload);
@@ -203,6 +240,7 @@
                         else
                         {
                             var r = node.reloadChildren();
+
                             if (r && typeof r.then === "function")
                             {
                                 r.then(afterReload, afterReload);
@@ -248,6 +286,7 @@
             try
             {
                 var node = tree.getNodeByKey(keyToFind);
+
                 if (!node && typeof keyToFind === "string" && !keyToFind.startsWith("code:"))
                 {
                     node = tree.getNodeByKey("code:" + keyToFind);
@@ -257,29 +296,26 @@
                 {
                     try
                     {
-                        if (typeof node.makeVisible === "function")
-                        {
-                            node.makeVisible();
-                        }
+                        safeInvoke(node, "makeVisible");
                     }
                     catch (e)
                     {
+                        // swallow
                     }
 
                     try
                     {
-                        if (typeof node.setActive === "function")
-                        {
-                            node.setActive(true);
-                        }
+                        safeInvokeWithArg(node, "setActive", true);
                     }
                     catch (e)
                     {
+                        // swallow
                     }
 
                     try
                     {
                         var el = (typeof node.getEventTarget === "function") ? node.getEventTarget() : null;
+
                         if (el && el.scrollIntoView)
                         {
                             el.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -287,6 +323,7 @@
                     }
                     catch (e)
                     {
+                        // swallow
                     }
 
                     return true;
@@ -319,15 +356,18 @@
         if (parentKey)
         {
             var parentNode = tree.getNodeByKey(parentKey);
+
             if (!parentNode)
             {
                 var root = tree.getRootNode();
                 var promises = [];
+
                 if (root && root.children)
                 {
                     for (var i = 0; i < root.children.length; i++)
                     {
                         var top = root.children[i];
+
                         if (top && top.expanded && typeof top.reloadChildren === "function")
                         {
                             (function (n)
@@ -340,6 +380,7 @@
                                         {
                                             var url = _nocache(_appendQuery(_nodesUrl, 'id', n.key));
                                             var r = n.reloadChildren({ url: url });
+
                                             if (r && typeof r.then === "function")
                                             {
                                                 r.then(res, res);
@@ -356,6 +397,7 @@
                                         else
                                         {
                                             var r = n.reloadChildren();
+
                                             if (r && typeof r.then === "function")
                                             {
                                                 r.then(res, res);
@@ -414,11 +456,13 @@
         {
             var root = tree.getRootNode();
             var topPromises = [];
+
             if (root && root.children)
             {
                 for (var j = 0; j < root.children.length; j++)
                 {
                     var n = root.children[j];
+
                     if (n && n.expanded && typeof n.reloadChildren === "function")
                     {
                         (function (nn)
@@ -431,6 +475,7 @@
                                     {
                                         var url = _nocache(_appendQuery(_nodesUrl, 'id', nn.key));
                                         var r = nn.reloadChildren({ url: url });
+
                                         if (r && typeof r.then === "function")
                                         {
                                             r.then(res, res);
@@ -447,6 +492,7 @@
                                     else
                                     {
                                         var r = nn.reloadChildren();
+
                                         if (r && typeof r.then === "function")
                                         {
                                             r.then(res, res);
@@ -508,6 +554,7 @@
             {
                 return "";
             }
+
             return String(str)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
@@ -519,16 +566,11 @@
         try
         {
             var existing = tree.getNodeByKey(key);
+
             if (existing)
             {
-                if (typeof existing.makeVisible === "function")
-                {
-                    existing.makeVisible();
-                }
-                if (typeof existing.setActive === "function")
-                {
-                    existing.setActive(true);
-                }
+                safeInvoke(existing, "makeVisible");
+                safeInvokeWithArg(existing, "setActive", true);
                 return true;
             }
 
@@ -563,14 +605,8 @@
 
                 if (newNode)
                 {
-                    if (typeof newNode.makeVisible === "function")
-                    {
-                        newNode.makeVisible();
-                    }
-                    if (typeof newNode.setActive === "function")
-                    {
-                        newNode.setActive(true);
-                    }
+                    safeInvoke(newNode, "makeVisible");
+                    safeInvokeWithArg(newNode, "setActive", true);
 
                     // Schedule a refresh of parent's children to replace the temporary node with server-rendered node.
                     try
@@ -620,8 +656,10 @@
         }
 
         var id = marker.id || "";
+
         if (id === "createResult" || id === "createCategoryResult")
         {
+            // existing handling unchanged...
             var key = (marker.getAttribute("data-key") || "").trim();
             var parent = (marker.getAttribute("data-parent") || "").trim();
             var name = (marker.getAttribute("data-name") || "").trim();
@@ -635,6 +673,7 @@
             }
 
             var tree = getTreeGlobal();
+
             if (tree && parent)
             {
                 var parentNode = tree.getNodeByKey(parent);
@@ -642,6 +681,7 @@
                 if (parentNode && parentNode.expanded)
                 {
                     var ok = tryInsertAndSelectUnderParent(tree, parentNode, key, name, polarity, categoryType, isEnabled);
+
                     if (ok)
                     {
                         return;
@@ -655,66 +695,126 @@
         {
             try
             {
-                // Prefer explicit data-key if server returned it (e.g. "code:ABC").
+                // read and trim attributes
                 var keyAttr = (marker.getAttribute("data-key") || "").trim();
                 var cash = ((marker.getAttribute("data-cashcode") || marker.getAttribute("data-cashCode") || "")).trim();
                 var category = ((marker.getAttribute("data-parent") || marker.getAttribute("data-category") || "")).trim();
 
-                // If data-key missing but we have cash code, construct the key
+                // If server provided a full node JSON, prefer that.
+                var nodeJson = marker.getAttribute("data-node") || "";
                 var nodeKey = keyAttr || (cash ? ("code:" + cash) : "");
 
                 console.debug("embeddedCreate: createCodeResult marker:", {
                     keyAttr: keyAttr,
                     cash: cash,
                     category: category,
-                    nodeKey: nodeKey
+                    nodeKey: nodeKey,
+                    nodeJsonPresent: !!nodeJson
                 });
 
-                console.log("embeddedCreate: createCodeResult marker:", {
-                    keyAttr: keyAttr,
-                    cash: cash,
-                    category: category,
-                    nodeKey: nodeKey
-                });
+                var tree = getTreeGlobal();
+
+                // If server sent the exact node JSON, insert it directly (preserves icon/title/data exactly)
+                if (nodeJson && tree)
+                {
+                    try
+                    {
+                        var parsed = JSON.parse(nodeJson);
+                        var parsedKey = (parsed && parsed.key) ? parsed.key : nodeKey;
+                        var parentNode = category ? tree.getNodeByKey(category) : null;
+
+                        // If node already exists, update it instead of adding a duplicate
+                        var existing = tree.getNodeByKey(parsedKey);
+
+                        if (existing)
+                        {
+                            // update title and data and classes, then render
+                            try
+                            {
+                                existing.title = parsed.title || existing.title;
+                            }
+                            catch (_)
+                            {
+                                // swallow
+                            }
+
+                            try
+                            {
+                                existing.data = parsed.data || existing.data;
+                            }
+                            catch (_)
+                            {
+                                // swallow
+                            }
+
+                            try
+                            {
+                                if (parsed.extraClasses)
+                                {
+                                    existing.li && existing.li.classList && existing.li.classList.add(parsed.extraClasses);
+                                }
+                                else
+                                {
+                                    // remove tc-disabled if previously set and new node is enabled
+                                    existing.li && existing.li.classList && existing.li.classList.remove("tc-disabled");
+                                }
+                            }
+                            catch (_)
+                            {
+                                // swallow
+                            }
+
+                            safeInvoke(existing, "makeVisible");
+                            safeInvokeWithArg(existing, "setActive", true);
+                            safeInvoke(existing, "renderTitle");
+                            return;
+                        }
+
+                        if (parentNode && typeof parentNode.addChildren === "function")
+                        {
+                            // addChildren expects an array or single object
+                            var added = parentNode.addChildren(parsed);
+                            // ensure selection of newly-added node
+                            var newNode = tree.getNodeByKey(parsedKey) || (added && added.length ? added[0] : null);
+
+                            if (newNode)
+                            {
+                                safeInvoke(newNode, "makeVisible");
+                                safeInvokeWithArg(newNode, "setActive", true);
+                                safeInvoke(newNode, "renderTitle");
+                                return; // done
+                            }
+                        }
+                        else
+                        {
+                            // no parent found - attempt to add at root level (fallback)
+                            var root = tree.getRootNode();
+
+                            if (root && typeof root.addChildren === "function")
+                            {
+                                var addedRoot = root.addChildren(parsed);
+                                var newNode2 = tree.getNodeByKey(parsedKey) || (addedRoot && addedRoot.length ? addedRoot[0] : null);
+
+                                if (newNode2)
+                                {
+                                    safeInvoke(newNode2, "makeVisible");
+                                    safeInvokeWithArg(newNode2, "setActive", true);
+                                    safeInvoke(newNode2, "renderTitle");
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    catch (ex)
+                    {
+                        console.warn("embeddedCreate: failed to parse/apply data-node JSON", ex);
+                    }
+                }
+
+                // Fallback to existing behavior (try insert placeholder / reload parent & select)
                 if (nodeKey)
                 {
                     reloadParentAndSelect(nodeKey, category || "");
-
-                    // Fallback: ensure RHS details are populated.
-                    // If detailsPane remains empty or still contains the marker, fetch details directly.
-                    setTimeout(function ()
-                    {
-                        try
-                        {
-                            var pane = document.getElementById("detailsPane");
-                            if (!pane) { return; }
-                            var content = (pane.innerHTML || "").trim();
-
-                            // If still empty or still showing the success marker, request details.
-                            if (!content || content.indexOf("createCodeResult") !== -1 || content.indexOf("createResult") !== -1)
-                            {
-                                var cfg = document.getElementById("categoryTreeConfig");
-                                var detailsUrl = cfg ? cfg.dataset.detailsUrl : null;
-                                if (!detailsUrl) { return; }
-
-                                var durl = detailsUrl + "?key=" + encodeURIComponent(nodeKey);
-                                if (category) { durl += "&parentKey=" + encodeURIComponent(category); }
-                                // use nocache helper to avoid stale result
-                                fetch(_nocache(durl), { credentials: "same-origin" })
-                                    .then(function (r) { return r.text(); })
-                                    .then(function (html)
-                                    {
-                                        // Replace pane with actual details HTML
-                                        pane.innerHTML = html;
-                                    })
-                                    .catch(function ()
-                                    {
-                                        // best-effort: ignore errors
-                                    });
-                            }
-                        }
-                        catch (ex) { /* swallow */ }
-                    }, 500);
                 }
             }
             catch (ex)
@@ -733,10 +833,12 @@
 
         var m = null;
         m = el.querySelector("#createResult, #createCategoryResult, #createCodeResult");
+
         if (!m && el.id && (el.id === "createResult" || el.id === "createCategoryResult" || el.id === "createCodeResult"))
         {
             m = el;
         }
+
         if (m)
         {
             processMarker(m);
@@ -747,6 +849,7 @@
     function bindEmbeddedFormSubmit()
     {
         var pane = document.getElementById("detailsPane");
+
         if (!pane)
         {
             return;
@@ -755,12 +858,14 @@
         pane.addEventListener("submit", function (e)
         {
             var form = e.target;
+
             if (!form || form.tagName !== "FORM")
             {
                 return;
             }
 
             var actionUrl = form.getAttribute("action") || window.location.href;
+
             if (actionUrl.indexOf("embed=1") === -1 && !form.querySelector("input[name='embed'][value='1']"))
             {
                 return;
@@ -793,6 +898,7 @@
                         }
                         catch (ex)
                         {
+                            // swallow
                         }
 
                         scanDetailsPaneForMarkers(pane);
@@ -813,6 +919,7 @@
     document.addEventListener("DOMContentLoaded", function ()
     {
         var pane = document.getElementById("detailsPane");
+
         if (!pane)
         {
             return;
@@ -830,6 +937,7 @@
                     for (var i = 0; i < m.addedNodes.length; i++)
                     {
                         var n = m.addedNodes[i];
+
                         if (n.nodeType === 1)
                         {
                             scanDetailsPaneForMarkers(n);
@@ -841,5 +949,121 @@
 
         mo.observe(pane, { childList: true, subtree: true });
     });
+
+
+    window.tcRefreshActiveNode = function ()
+    {
+        try
+        {
+            var tree = getTreeGlobal();
+            var pane = document.getElementById("detailsPane");
+
+            // If not embedded, fall back to index
+            if (!pane)
+            {
+                try
+                {
+                    window.location.href = "/Cash/CategoryTree/Index";
+                }
+                catch (_)
+                {
+                    // swallow
+                }
+                return;
+            }
+
+            if (!tree || typeof tree.getActiveNode !== "function")
+            {
+                pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
+                return;
+            }
+
+            var active = tree.getActiveNode();
+            if (!active || !active.key)
+            {
+                pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
+                return;
+            }
+
+            // Determine parentKey for reloadParentAndSelect (best-effort)
+            var parentKey = "";
+            try
+            {
+                var pnode = active.getParent && active.getParent();
+                parentKey = (pnode && pnode.key) ? pnode.key : "";
+            }
+            catch (_)
+            {
+                parentKey = "";
+            }
+
+            // Use the tree's existing reloadParentAndSelect which handles lazy loads and selection safely.
+            try
+            {
+                reloadParentAndSelect(active.key, parentKey);
+            }
+            catch (ex)
+            {
+                // If that fails, fallback to a safe fetch (no redirects)
+                var url = "/Cash/CategoryTree/Details?key=" + encodeURIComponent(active.key) + "&embed=1";
+                fetch(url, { credentials: "same-origin", redirect: "manual" })
+                    .then(function (resp)
+                    {
+                        if (!resp || resp.type === "opaqueredirect" || (resp.status >= 300 && resp.status < 400) || resp.status !== 200)
+                        {
+                            throw new Error("bad response");
+                        }
+                        return resp.text();
+                    })
+                    .then(function (html) { pane.innerHTML = html; })
+                    .catch(function () { pane.innerHTML = "<div class='text-muted small p-2'>No details</div>"; });
+            }
+        }
+        catch (_)
+        {
+            try
+            {
+                window.location.href = "/Cash/CategoryTree/Index";
+            }
+            catch (_) { /* swallow */ }
+        }
+    };
+
+    // delegated embedded cancel handler — inside the IIFE, after tcRefreshActiveNode is defined
+    document.addEventListener("click", function (e)
+    {
+        try
+        {
+            var btn = e.target.closest && e.target.closest("[data-embedded-cancel]");
+            if (!btn)
+            {
+                return;
+            }
+
+            e.preventDefault();
+
+            if (typeof window.tcRefreshActiveNode === "function")
+            {
+                window.tcRefreshActiveNode();
+            }
+            else if (typeof window.tcEmbeddedReloadActive === "function")
+            {
+                window.tcEmbeddedReloadActive();
+            }
+            else
+            {
+                // last-resort: show placeholder so user doesn't get redirected unexpectedly
+                var p = document.getElementById("detailsPane");
+                if (p) 
+                {
+                    p.innerHTML = "<div class='text-muted small p-2'>No details</div>";
+                }
+            }
+        }
+        catch (_)
+        {
+            // swallow
+        }
+    }, true);
 }
 )();

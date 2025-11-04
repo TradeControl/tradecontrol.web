@@ -37,6 +37,7 @@ window.CategoryTree = (function ()
         var ROOT_KEY = cfg.rootKey;
         var DISC_KEY = cfg.discKey;
         var isAdmin = !!cfg.isAdmin;
+        var CATEGORYTYPE_CASHTOTAL = 1; // server: (short)NodeEnum.CategoryType.CashTotal
 
         function handlerUrl(handlerName)
         {
@@ -67,7 +68,7 @@ window.CategoryTree = (function ()
         }
 
         // Open an action page in RHS (desktop) or navigate (mobile)
-        function openAction(actionName, key, parentKey)
+        function openAction(actionName, key, parentKey, extras)
         {
             var base = actionsBasePath();
             if (!base)
@@ -76,11 +77,33 @@ window.CategoryTree = (function ()
                 return;
             }
 
-            var url = base + "/" + encodeURIComponent(actionName) + "?key=" + encodeURIComponent(key || "");
+            // Build query parameters robustly
+            var parts = [];
+            parts.push("key=" + encodeURIComponent(key || ""));
+
             if (parentKey)
             {
-                url += "&parentKey=" + encodeURIComponent(parentKey);
+                parts.push("parentKey=" + encodeURIComponent(parentKey));
             }
+
+            if (extras && typeof extras === "object")
+            {
+                for (var p in extras)
+                {
+                    if (!Object.prototype.hasOwnProperty.call(extras, p)) 
+                    {
+                        continue;
+                    }
+                    var v = extras[p];
+                    if (v === null || typeof v === "undefined") 
+                    {
+                        continue;
+                    }
+                    parts.push(encodeURIComponent(p) + "=" + encodeURIComponent(v));
+                }
+            }
+
+            var url = base + "/" + encodeURIComponent(actionName) + "?" + parts.join("&");
 
             if (isMobile())
             {
@@ -111,7 +134,6 @@ window.CategoryTree = (function ()
                 }
             }
         }
-
         // Load details into RHS pane (desktop only)
         function loadDetails(node)
         {
@@ -196,15 +218,55 @@ window.CategoryTree = (function ()
         {
             var key = node ? node.key : null;
             var data = (node && node.data) || {};
-            var nodeType = data.nodeType; // "category" | "code" | "synthetic"
-            // Treat synthetic (By Cash Type root/type nodes) as synthetic along with root/disconnected
+
+            // Prefer explicit server-provided nodeType when available
+            var nodeType = (typeof data.nodeType !== "undefined" && data.nodeType !== null) ? String(data.nodeType) : null; // "category" | "code" | "synthetic" | null
+
+            // If not provided, infer conservatively from key and folder flag
+            if (!nodeType)
+            {
+                if (typeof key === "string" && key.indexOf("code:") === 0)
+                {
+                    nodeType = "code";
+                }
+                else if (typeof key === "string" && key.indexOf("type:") === 0)
+                {
+                    nodeType = "synthetic";
+                }
+                else if (node && node.folder)
+                {
+                    // folder -> assume category (safe for menus that act on categories)
+                    nodeType = "category";
+                }
+                else
+                {
+                    // fallback: treat as synthetic to avoid showing category-only actions for unknown leaves
+                    nodeType = "synthetic";
+                }
+            }
+
             var isSynthetic = !node || key === ROOT_KEY || key === DISC_KEY || nodeType === "synthetic";
-            var isCode = nodeType === "code" || (key && typeof key === "string" && key.startsWith("code:"));
-            // A category is a folder that is not a code and not synthetic
-            var isCat = node && node.folder && !isCode && !isSynthetic;
+            var isCode = (nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
+            var isCat = !!(node && node.folder && !isCode && !isSynthetic);
             var isRoot = key === ROOT_KEY;
             var isDisconnect = key === DISC_KEY;
-            return { key, data, nodeType, isSynthetic, isCode, isCat, isRoot, isDisconnect };
+
+            // numeric metadata (defensive)
+            var categoryType = (typeof data.categoryType !== "undefined") ? Number(data.categoryType) : undefined;
+            var cashPolarity = (typeof data.cashPolarity !== "undefined") ? Number(data.cashPolarity) : undefined;
+
+            return {
+                key: key,
+                data: data,
+                nodeType: nodeType,
+                isSynthetic: isSynthetic,
+                isCode: isCode,
+                isCat: isCat,
+                isRoot: isRoot,
+                isDisconnect: isDisconnect,
+                categoryType: categoryType,
+                cashPolarity: cashPolarity
+            };
         }
 
         // Column sizing: keep tree and details aligned to footer
@@ -749,7 +811,7 @@ window.CategoryTree = (function ()
             if (bar) {bar.classList.remove("tc-visible");}
         }
 
-        function showContextMenu(x, y, node)
+         function showContextMenu(x, y, node)
         {
             var $menu = $(menuSel);
             $menu.find(".admin-only").toggle(!!isAdmin);
@@ -793,8 +855,30 @@ window.CategoryTree = (function ()
 
             $menu.find(".cat-only").toggle(isCat && !isRoot && !isDisconnect && !inTypeCtx);
 
-            var showCreateTotal = isAdmin && !inTypeCtx && (isRoot || isDiscRoot || (isCat && !isDisconnect && !isRoot));
+            // decide visibility for createTotal and createCategory
+            // showCreateCategory should be shown for Disconnected root or for categories (not root)
+            var showCreateCategory = isAdmin && !inTypeCtx && (isDiscRoot || (isCat && !isRoot));
+            // showCreateTotal should be shown for root or for category totals, but NOT for the disconnected root.
+            var showCreateTotal = isAdmin && !inTypeCtx && ((isRoot && !isDiscRoot) || (isCat && !isDisconnect && !isRoot));
+
+            // toggle menu items
             $menu.find("[data-action='createTotal']").toggle(showCreateTotal);
+            $menu.find("[data-action='createCategory']").toggle(showCreateCategory);
+
+            // adjust labels deterministically (keep createTotal label behavior for roots/categories)
+            var $createTotal = $menu.find("[data-action='createTotal']");
+            if ($createTotal.length)
+            {
+                if (isRoot) { $createTotal.text("New Total…"); }
+                else { $createTotal.text("New Total…"); }
+            }
+
+            var $createCategory = $menu.find("[data-action='createCategory']");
+            if ($createCategory.length)
+            {
+                // label consistent for category creation
+                $createCategory.text("New Category…");
+            }
 
             $menu.find(".code-only").toggle(isCode && !isDisconnect);
 
@@ -839,22 +923,24 @@ window.CategoryTree = (function ()
             var $createCode = $menu.find("[data-action='createCode']");
             if ($createCode.length)
             {
+                // Server-provided node payload includes `data.categoryType` (numeric).
+                // Allow create when categoryType === 0 (CashCode). Treat value as numeric/string defensively.
+                var isCashCodeCategory = !!(data && typeof data.categoryType !== "undefined" && Number(data.categoryType) === 0);
+
                 if (isDiscCategory)
                 {
-                    $createCode.text("New Code…").show();
+                    $createCode.text("New Cash Code…").show();
                 }
                 else if (isCode)
                 {
-                    $createCode.text("New Code like this…").show();
+                    $createCode.text("New Cash Code like this…").show();
                 }
                 else
                 {
                     $createCode.text("New Code…");
-                    $createCode.toggle(isAdmin && !inTypeCtx && isCat && !isRoot && !isDisconnect);
-                }
-                if (!isDiscCategory && !isCode)
-                {
-                    $createCode.hide();
+                    // Show when admin, not in type-context, is a category, not synthetic root/disconnected,
+                    // and the category's CategoryType == CashCode (0).
+                    $createCode.toggle(isAdmin && !inTypeCtx && isCat && !isRoot && !isDisconnect && isCashCodeCategory);
                 }
             }
 
@@ -1407,7 +1493,7 @@ window.CategoryTree = (function ()
                             openAction("CreateTotal", "", targetParent);
                         }
                         break;
-                    }
+                    }  
 
                     case "createCode":
                     {
@@ -1425,9 +1511,19 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        // Open embedded CreateCode and pre-fill the Category via parentKey
-                        openAction("CreateCode", targetCategory);
-                        break;
+                        // If the current node is a code, offer quick-create "like this" using sibling template
+                        if (isCodeNode)
+                        {
+                            var siblingCash = (key && key.indexOf("code:") === 0) ? key.substring(5) : (node && node.data && node.data.cashCode) || "";
+                            openAction("CreateCode", targetCategory, null, { siblingCashCode: siblingCash });
+                            break;
+                        }
+                        else
+                        {
+                            // Default: open embedded CreateCode and pre-fill the Category via parentKey
+                            openAction("CreateCode", targetCategory);
+                            break;
+                        }
                     }
 
                     case "createTotal":
@@ -1454,15 +1550,24 @@ window.CategoryTree = (function ()
                         if (!node) { alert("Select a node first"); break; }
 
                         var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
-                        var discCat = isDiscCategoryNode(node);
 
                         var targetCategory = node.folder ? key : parentKey;
                         if (!targetCategory) { alert("Select a category"); break; }
 
-                        // Open embedded CreateCode with Category pre-filled via key
-                        openAction("CreateCode", targetCategory);
-                        break;
+                        if (isCodeNode)
+                        {
+                            var siblingCash2 = (key && key.indexOf("code:") === 0) ? key.substring(5) : (node && node.data && node.data.cashCode) || "";
+                            openAction("CreateCode", targetCategory, null, { siblingCashCode: siblingCash2 });
+                            break;
+                        }
+                        else
+                        {
+                            // Fall back to opening embedded CreateCode
+                            openAction("CreateCode", targetCategory);
+                            break;
+                        }
                     }
+
                     case "moveUp":
                     case "moveDown":
                     {
@@ -1606,8 +1711,32 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    default:
+                    case "createCategory":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+
+                        // Determine parent target (use current node if folder, otherwise parentKey)
+                        var targetParent = (node && node.folder) ? key : parentKey;
+                        if (!targetParent)
+                        {
+                            alert("Select a parent category");
+                            break;
+                        }
+
+                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
+
+                        // If invoked from the Disconnected root open CreateCategory with DISC_KEY
+                        if (isDisc && key === DISC_KEY)
+                        {
+                            openAction("CreateCategory", "", DISC_KEY);
+                        }
+                        else
+                        {
+                            // Standard case: open embedded CreateCategory with parentKey set
+                            openAction("CreateCategory", "", targetParent);
+                        }
                         break;
+                    }
                 }
             });
         }
@@ -2053,6 +2182,33 @@ window.CategoryTree = (function ()
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
+
+                    case "createCategory":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+
+                        // Determine parent target (use current node if folder, otherwise parentKey)
+                        var targetParent = (node && node.folder) ? key : parentKey;
+                        if (!targetParent)
+                        {
+                            alert("Select a parent category");
+                            break;
+                        }
+
+                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
+
+                        // If invoked from the Disconnected root open CreateCategory with DISC_KEY
+                        if (isDisc && key === DISC_KEY)
+                        {
+                            openAction("CreateCategory", "", DISC_KEY);
+                        }
+                        else
+                        {
+                            // Standard case: open embedded CreateCategory with parentKey set
+                            openAction("CreateCategory", "", targetParent);
+                        }
+                        break;
+                    }
                 }
             });
         }
@@ -2137,6 +2293,7 @@ window.CategoryTree = (function ()
                         if (!kinds.isCat) { return false; } // categories only
                         return true;
                     },
+
                     dragEnter: function (node, data)
                     {
                         if (isMobile()) { return false; }
@@ -2160,7 +2317,7 @@ window.CategoryTree = (function ()
                             var d = p.data || {};
                             var k = p.key || "";
                             return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                                   || (typeof k === "string" && k.indexOf("type:") === 0);
+                                    || (typeof k === "string" && k.indexOf("type:") === 0);
                         }
 
                         // Cash Type siblings
@@ -2175,9 +2332,31 @@ window.CategoryTree = (function ()
                             return ["before", "after"];
                         }
 
-                        // Otherwise, only allow child move (handled by server 'Move' handler)
-                        return ["over"];
+                        // Otherwise, consider child drop (over). Only allow "over" when target is a Total category.
+                        // If target has explicit categoryType and it's not CashTotal, disallow "over".
+                        try
+                        {
+                            var tgtData = node.data || {};
+                            if (typeof tgtData.categoryType !== "undefined")
+                            {
+                                if (Number(tgtData.categoryType) === CATEGORYTYPE_CASHTOTAL)
+                                {
+                                    return ["over"];
+                                }
+                                // target is not a Total -> do not allow child drops
+                                return false;
+                            }
+
+                            // No explicit categoryType (synthetic/roots) — disallow child drops to be safe
+                            return false;
+                        }
+                        catch (ex)
+                        {
+                            // conservative fallback: disallow child drops
+                            return false;
+                        }
                     },
+
                     dragDrop: function (node, data)
                     {
                         console.log("categoryTree.dragDrop", { nodeKey: node && node.key, hitMode: data && data.hitMode, srcKey: data && data.otherNode && data.otherNode.key });
@@ -2198,6 +2377,25 @@ window.CategoryTree = (function ()
                             return false;
                         }
 
+                        // Prevent dropping a CashCode-category under a non-Total category (extra safety server-side)
+                        if (data.hitMode === "over")
+                        {
+                            try
+                            {
+                                var tgtData = node.data || {};
+                                if (typeof tgtData.categoryType !== "undefined" && Number(tgtData.categoryType) !== CATEGORYTYPE_CASHTOTAL)
+                                {
+                                    alert("Invalid move: only Total-type categories may have child categories.");
+                                    return false;
+                                }
+                            }
+                            catch (ex)
+                            {
+                                alert("Invalid move: cannot determine target category type.");
+                                return false;
+                            }
+                        }
+
                         // Ensure we have tree reference for reloads
                         var t = getTree();
 
@@ -2208,7 +2406,7 @@ window.CategoryTree = (function ()
                             var d = p.data || {};
                             var k = p.key || "";
                             return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                                   || (typeof k === "string" && k.indexOf("type:") === 0);
+                                    || (typeof k === "string" && k.indexOf("type:") === 0);
                         }
 
                         // Sibling reordering (before/after)
@@ -2382,9 +2580,9 @@ window.CategoryTree = (function ()
                         });
 
                         return;
-                    },
-                    dragEnd: function () { }
+                    }
                 }
+
             });
 
             // Desktop: right click

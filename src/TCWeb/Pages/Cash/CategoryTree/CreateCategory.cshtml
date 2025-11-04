@@ -52,9 +52,78 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Create</button>
-                    <a class="btn btn-secondary" href="javascript:window.history.back()">Cancel</a>
+
+                    @* Cancel: fetch parent details and select the parent node (same pattern as CreateCode.cshtml) *@
+                    <a class="btn btn-secondary" href="javascript:void(0)" onclick="tcCancel()">Cancel</a>
                 </div>
             </form>
         </div>
     </div>
+
+    <script>
+        // Cancel helper: reloads the parent details into #detailsPane.
+        // - No debug alert.
+        // - If not embedded or details pane missing, navigate back to index.
+        // - If parent is empty or a disconnected token, show "No details".
+        function tcCancel()
+        {
+            try
+            {
+                var p = document.getElementById('detailsPane');
+                var parentInput = document.querySelector('input[name="ParentKey"]');
+                var parent = parentInput ? (parentInput.value || '') : '';
+
+                // Not embedded -> navigate to index
+                if (!p)
+                {
+                    window.location.href = '@Url.Page("/Cash/CategoryTree/Index")';
+                    return;
+                }
+
+                // Treat empty parent or common disconnected tokens as "No details"
+                if (!parent || parent === "__ROOT__" || parent.toLowerCase() === "disc" || parent.toLowerCase() === "disconnected")
+                {
+                    p.innerHTML = '<div class="text-muted small p-2">No details</div>';
+                    return;
+                }
+
+                var url = '/Cash/CategoryTree/Details?key=' + encodeURIComponent(parent) + '&embed=1';
+                fetch(url, { credentials: 'same-origin' })
+                    .then(function (r)
+                    {
+                        if (!r.ok) { throw new Error('bad status: ' + r.status); }
+                        return r.text();
+                    })
+                    .then(function (html)
+                    {
+                        p.innerHTML = html;
+                        try
+                        {
+                            if (window.$ && window.$.ui && window.$.ui.fancytree)
+                            {
+                                var tree = $.ui.fancytree.getTree('#categoryTree');
+                                if (tree && parent)
+                                {
+                                    var node = tree.getNodeByKey(parent);
+                                    if (node)
+                                    {
+                                        try { node.makeVisible(); } catch (e) { /* swallow */ }
+                                        try { node.setActive(true); } catch (e) { /* swallow */ }
+                                    }
+                                }
+                            }
+                        }
+                        catch (e) { /* swallow */ }
+                    })
+                    .catch(function ()
+                    {
+                        p.innerHTML = '<div class="text-muted small p-2">No details</div>';
+                    });
+            }
+            catch (ex)
+            {
+                try { window.location.href = '@Url.Page("/Cash/CategoryTree/Index")'; } catch (_) { /* swallow */ }
+            }
+        }
+    </script>
 }

@@ -16,7 +16,8 @@
          data-polarity="@Model.NewPolarity"
          data-categorytype="@Model.NewCategoryType"
          data-isenabled="@Model.NewIsEnabled"
-         data-cashcode="@Model.NewCashCode"></div>
+         data-cashcode="@Model.NewCashCode"
+         data-node='@Html.Raw(Model.NewNodeJson)'></div>
 }
 else
 {
@@ -56,8 +57,38 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Create</button>
+
+                    @* Cancel: when embedded, reload the parent details pane for the category (fallback: clear pane).
+                       When not embedded, navigate back to the index page. *@
                     <a class="btn btn-secondary" href="javascript:void(0)"
-                       onclick="(function(){ var p = document.getElementById('detailsPane'); if(p){ p.innerHTML=''; } else { window.location.href='@Url.Page("/Cash/CategoryTree/Index")'; } })()">Cancel</a>
+                       onclick="(function(){
+                            var p = document.getElementById('detailsPane');
+                            if (p) {
+                                var cat = '@Model.CategoryCode';
+                                // Fetch parent details and select the parent category in the tree to avoid selecting a code
+                                var url = '/Cash/CategoryTree/Details?key=' + encodeURIComponent(cat || '') + '&embed=1';
+                                fetch(url, { credentials: 'same-origin' })
+                                    .then(function (r) { return r.text(); })
+                                    .then(function (html) {
+                                        p.innerHTML = html;
+                                        try {
+                                            if (window.$ && window.$.ui && window.$.ui.fancytree) {
+                                                var tree = $.ui.fancytree.getTree('#categoryTree');
+                                                if (tree && cat) {
+                                                    var node = tree.getNodeByKey(cat);
+                                                    if (node) {
+                                                        try { node.makeVisible(); } catch (e) { }
+                                                        try { node.setActive(true); } catch (e) { }
+                                                    }
+                                                }
+                                            }
+                                        } catch (e) { /* swallow */ }
+                                    })
+                                    .catch(function () { p.innerHTML = ''; });
+                            } else {
+                                window.location.href='@Url.Page("/Cash/CategoryTree/Index")';
+                            }
+                       })()">Cancel</a>
                 </div>
             </form>
         </div>

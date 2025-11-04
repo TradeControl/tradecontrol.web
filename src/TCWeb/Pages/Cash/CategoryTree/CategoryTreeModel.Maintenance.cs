@@ -233,8 +233,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             // If required creation fields not provided, return a hint so client can open full Create page
             if (string.IsNullOrWhiteSpace(categoryCode) || string.IsNullOrWhiteSpace(category))
             {
-                return new JsonResult(new
-                {
+                return new JsonResult(new {
                     success = false,
                     message = "Missing creation data. Open the CreateTotal action/page to provide details."
                 });
@@ -249,8 +248,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 var now = DateTime.UtcNow;
                 var user = User?.Identity?.Name ?? "system";
 
-                var cat = new Cash_tbCategory
-                {
+                var cat = new Cash_tbCategory {
                     CategoryCode = categoryCode,
                     Category = category,
                     CategoryTypeCode = (short)NodeEnum.CategoryType.CashTotal,
@@ -276,8 +274,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                         .Where(t => t.ParentCode == parentKey)
                         .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
-                    {
+                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
                         ParentCode = parentKey,
                         ChildCode = categoryCode,
                         DisplayOrder = nextOrder
@@ -347,8 +344,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 await using var tx = await NodeContext.Database.BeginTransactionAsync();
 
-                var code = new Cash_tbCode
-                {
+                var code = new Cash_tbCode {
                     CashCode = cashCode,
                     CashDescription = cashDescription,
                     CategoryCode = categoryCode,
@@ -373,30 +369,247 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             }
         }
 
-        public Task<JsonResult> OnPostAddExistingTotalAsync([FromForm] string parentKey, [FromForm] string childKey)
-            => Task.FromResult(IsAdmin() ? NotImplemented("AddExistingTotal", childKey, parentKey, "category") : new JsonResult(new { success = false, message = "Insufficient privileges" }));
+        /// <summary>
+        /// Add an existing category as a child under a specified parent (totals).
+        /// Ensures parent is CashTotal, prevents cycles and duplicate mappings.
+        /// </summary>
+        public async Task<JsonResult> OnPostAddExistingTotalAsync([FromForm] string parentKey, [FromForm] string childKey)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
 
+            if (string.IsNullOrWhiteSpace(parentKey) || string.IsNullOrWhiteSpace(childKey))
+                return new JsonResult(new { success = false, message = "Missing parameters." });
+
+            if (string.Equals(parentKey, childKey, StringComparison.OrdinalIgnoreCase))
+                return new JsonResult(new { success = false, message = "Parent and child cannot be the same." });
+
+            try
+            {
+                // Validate parent exists, enabled and is a Total
+                var parent = await NodeContext.Cash_tbCategories
+                    .Where(c => c.CategoryCode == parentKey && c.IsEnabled != 0)
+                    .Select(c => new { c.CategoryCode, c.CategoryTypeCode })
+                    .FirstOrDefaultAsync();
+
+                if (parent == null)
+                    return new JsonResult(new { success = false, message = "Parent category not found or disabled." });
+
+                if (parent.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
+                    return new JsonResult(new { success = false, message = "Parent must be a Total-type category." });
+
+                // Validate child exists and enabled
+                var child = await NodeContext.Cash_tbCategories
+                    .Where(c => c.CategoryCode == childKey && c.IsEnabled != 0)
+                    .Select(c => c.CategoryCode)
+                    .FirstOrDefaultAsync();
+
+                if (string.IsNullOrEmpty(child))
+                    return new JsonResult(new { success = false, message = "Child category not found or disabled." });
+
+                // Prevent duplicate mapping
+                var exists = await NodeContext.Cash_tbCategoryTotals.AnyAsync(t => t.ParentCode == parentKey && t.ChildCode == childKey);
+                if (exists)
+                    return new JsonResult(new { success = false, message = "Child already attached to parent." });
+
+                // Prevent cycles: ensure parent is not a descendant of child
+                var parentMap = await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => t.ChildCode != null && t.ParentCode != null)
+                    .GroupBy(t => t.ChildCode)
+                    .Select(g => new { Child = g.Key, Parent = g.Select(x => x.ParentCode).FirstOrDefault() })
+                    .ToDictionaryAsync(x => x.Child, x => x.Parent);
+
+                var cur = parentKey;
+                var guard = 0;
+                while (!string.IsNullOrEmpty(cur) && guard++ < 1024)
+                {
+                    if (string.Equals(cur, childKey, StringComparison.OrdinalIgnoreCase))
+                        return new JsonResult(new { success = false, message = "Operation would create a cycle." });
+
+                    if (!parentMap.TryGetValue(cur, out var p) || string.IsNullOrEmpty(p))
+                        break;
+
+                    cur = p;
+                }
+
+                // Insert mapping
+                short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => t.ParentCode == parentKey)
+                    .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
+
+                NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
+                    ParentCode = parentKey,
+                    ChildCode = childKey,
+                    DisplayOrder = nextOrder
+                });
+
+                await NodeContext.SaveChangesAsync();
+
+                return new JsonResult(new { success = true, message = "Child added", key = childKey, parentKey });
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = "Server error." });
+            }
+        }
+
+        /// <summary>
+        /// Add an existing Cash Code to a category (reassign code to the target category).
+        /// </summary>
+        public async Task<JsonResult> OnPostAddExistingCodeAsync([FromForm] string parentKey, [FromForm] string codeKey)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+            if (string.IsNullOrWhiteSpace(parentKey) || string.IsNullOrWhiteSpace(codeKey))
+                return new JsonResult(new { success = false, message = "Missing parameters." });
+
+            try
+            {
+                var category = await NodeContext.Cash_tbCategories
+                    .Where(c => c.CategoryCode == parentKey && c.IsEnabled != 0)
+                    .Select(c => new { c.CategoryCode, c.CategoryTypeCode })
+                    .FirstOrDefaultAsync();
+
+                if (category == null)
+                    return new JsonResult(new { success = false, message = "Target category not found or disabled." });
+
+                // Optionally enforce category type (only allow attaching to CashCode categories).
+                // This follows the UI rule that codes belong under CategoryType == CashCode (0).
+                if (category.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
+                    return new JsonResult(new { success = false, message = "Target category is not a Cash Code category." });
+
+                var code = await NodeContext.Cash_tbCodes.FirstOrDefaultAsync(c => c.CashCode == codeKey);
+                if (code == null)
+                    return new JsonResult(new { success = false, message = "Cash code not found." });
+
+                // Reassign the code
+                code.CategoryCode = parentKey;
+                NodeContext.Attach(code).State = EntityState.Modified;
+                await NodeContext.SaveChangesAsync();
+
+                return new JsonResult(new { success = true, message = "Cash code reassigned", cashCode = codeKey, parentKey });
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = "Server error." });
+            }
+        }
+
+        /// <summary>
+        /// CreateCode shortcut - if only parentKey provided instruct client to open full create page.
+        /// </summary>
         public Task<JsonResult> OnPostCreateCodeAsync([FromForm] string parentKey)
-            => Task.FromResult(IsAdmin() ? NotImplemented("CreateCode", null, parentKey, "code") : new JsonResult(new { success = false, message = "Insufficient privileges" }));
+        {
+            if (!IsAdmin())
+                return Task.FromResult(new JsonResult(new { success = false, message = "Insufficient privileges" }));
 
-        public Task<JsonResult> OnPostAddExistingCodeAsync([FromForm] string parentKey, [FromForm] string codeKey)
-            => Task.FromResult(IsAdmin() ? NotImplemented("AddExistingCode", codeKey, parentKey, "code") : new JsonResult(new { success = false, message = "Insufficient privileges" }));
+            if (string.IsNullOrWhiteSpace(parentKey))
+                return Task.FromResult(new JsonResult(new { success = false, message = "Missing parentKey. Open the Create Code page." }));
 
+            return Task.FromResult(new JsonResult(new { success = false, message = "Open the CreateCode page to provide details.", parentKey }));
+        }
+
+        /// <summary>
+        /// Edit invoked from context menu - instruct client to open full Edit page.
+        /// </summary>
         public Task<JsonResult> OnPostEditAsync([FromForm] string key)
-            => Task.FromResult(IsAdmin() ? NotImplemented("Edit", key, null) : new JsonResult(new { success = false, message = "Insufficient privileges" }));
+        {
+            if (!IsAdmin())
+                return Task.FromResult(new JsonResult(new { success = false, message = "Insufficient privileges" }));
 
-        public Task<JsonResult> OnPostDeleteAsync([FromForm] string key, [FromForm] bool recursive = false)
-            => Task.FromResult(IsAdmin() ? NotImplemented("Delete", key, null) : new JsonResult(new { success = false, message = "Insufficient privileges" }));
+            if (string.IsNullOrWhiteSpace(key))
+                return Task.FromResult(new JsonResult(new { success = false, message = "Missing key" }));
 
-        public Task<JsonResult> OnPostCreateCodeByCashCodeAsync(
-            [FromForm] string siblingCashCode,
-            [FromForm] string cashCode,
-            [FromForm] string cashDescription)
-            => Task.FromResult(
-                IsAdmin()
-                    ? NotImplemented("CreateCodeByCashCode", cashCode, siblingCashCode, "code")
-                    : new JsonResult(new { success = false, message = "Insufficient privileges" })
-            );
+            return Task.FromResult(new JsonResult(new { success = false, message = "Open the Edit page for the selected node.", key }));
+        }
+
+        /// <summary>
+        /// Delete a code or category. For categories a recursive delete is required if the category has children.
+        /// The operation refuses to delete categories that still contain Cash Codes.
+        /// </summary>
+        public async Task<JsonResult> OnPostDeleteAsync([FromForm] string key, [FromForm] bool recursive = false)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+            if (string.IsNullOrWhiteSpace(key))
+                return new JsonResult(new { success = false, message = "Missing key" });
+
+            try
+            {
+                // Delete a code
+                if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var cashCode = key.Substring("code:".Length);
+                    var code = await NodeContext.Cash_tbCodes.FirstOrDefaultAsync(c => c.CashCode == cashCode);
+                    if (code == null)
+                        return new JsonResult(new { success = false, message = "Cash code not found." });
+
+                    NodeContext.Cash_tbCodes.Remove(code);
+                    await NodeContext.SaveChangesAsync();
+
+                    return new JsonResult(new { success = true, message = "Cash code deleted.", key });
+                }
+
+                // Delete a category (and optionally descendants)
+                var cat = await NodeContext.Cash_tbCategories.FirstOrDefaultAsync(c => c.CategoryCode == key);
+                if (cat == null)
+                    return new JsonResult(new { success = false, message = "Category not found." });
+
+                // Build descendant set
+                var edges = await NodeContext.Cash_tbCategoryTotals
+                                .Select(t => new { t.ParentCode, t.ChildCode })
+                                .ToListAsync();
+
+                var stack = new Stack<string>();
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                stack.Push(key);
+                while (stack.Count > 0)
+                {
+                    var cur = stack.Pop();
+                    if (!seen.Add(cur)) continue;
+                    foreach (var ch in edges.Where(e => e.ParentCode == cur && !string.IsNullOrEmpty(e.ChildCode)).Select(e => e.ChildCode))
+                        stack.Push(ch);
+                }
+
+                // If non-recursive and there are children, refuse
+                if (!recursive && edges.Any(e => e.ParentCode == key))
+                {
+                    return new JsonResult(new { success = false, message = "Category has child categories. Use recursive delete to remove." });
+                }
+
+                // Check for Cash Codes in the set - cannot delete categories that have codes
+                var codeCount = await NodeContext.Cash_tbCodes.Where(c => seen.Contains(c.CategoryCode)).CountAsync();
+                if (codeCount > 0)
+                {
+                    return new JsonResult(new { success = false, message = "Cannot delete category tree while Cash Codes exist. Remove or reassign codes first.", codes = codeCount });
+                }
+
+                await using var tx = await NodeContext.Database.BeginTransactionAsync();
+
+                // Remove totals entries where parent or child in set
+                await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => seen.Contains(t.ParentCode) || seen.Contains(t.ChildCode))
+                    .ExecuteDeleteAsync();
+
+                // Remove category rows
+                await NodeContext.Cash_tbCategories
+                    .Where(c => seen.Contains(c.CategoryCode))
+                    .ExecuteDeleteAsync();
+
+                await tx.CommitAsync();
+
+                return new JsonResult(new { success = true, message = "Category deleted", key, deletedCount = seen.Count });
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = "Server error." });
+            }
+        }
 
         /// <summary>
         /// Create a category (used for disconnected creation or explicit category creation).
@@ -423,8 +636,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 if (await NodeContext.Cash_tbCategories.AnyAsync(c => c.CategoryCode == categoryCode))
                     return new JsonResult(new { success = false, message = "Category code already exists." });
 
-                var cat = new Cash_tbCategory
-                {
+                var cat = new Cash_tbCategory {
                     CategoryCode = categoryCode,
                     Category = category,
                     CategoryTypeCode = (short)NodeEnum.CategoryType.CashTotal,
@@ -445,8 +657,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                         .Where(t => t.ParentCode == parentKey)
                         .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
-                    {
+                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
                         ParentCode = parentKey,
                         ChildCode = categoryCode,
                         DisplayOrder = nextOrder

@@ -31,6 +31,10 @@
                 <div class="text-muted">Category State</div>
                 <div>@(Model.IsCategoryEnabled ? "Enabled" : "Disabled")</div>
             </div>
+            <div class="col-6">
+                <div class="text-muted">Tax Code</div>
+                <div>@Model.TaxCode</div>
+            </div>
         </div>
 
         @if (User.IsInRole(TradeControl.Web.Authorization.Constants.AdministratorsRole))

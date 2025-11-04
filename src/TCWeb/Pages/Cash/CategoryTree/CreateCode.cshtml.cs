@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -48,6 +49,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public short NewCashType { get; private set; }
         public short NewIsEnabled { get; private set; }
 
+        // JSON for the exact node object to add client-side
+        public string NewNodeJson { get; private set; } = "";
+
         public async Task OnGetAsync()
         {
             var taxes = await NodeContext.App_tbTaxCodes
@@ -56,6 +60,31 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .ToListAsync();
 
             TaxCodes = new SelectList(taxes, "TaxCode", "TaxCode");
+
+            // If invoked with a siblingCashCode query string, use its TaxCode as the form default.
+            if (string.IsNullOrWhiteSpace(TaxCode))
+            {
+                try
+                {
+                    var sibling = Request?.Query["siblingCashCode"].FirstOrDefault();
+                    if (!string.IsNullOrWhiteSpace(sibling))
+                    {
+                        var tb = await NodeContext.Cash_tbCodes
+                            .Where(c => c.CashCode == sibling)
+                            .Select(c => c.TaxCode)
+                            .FirstOrDefaultAsync();
+
+                        if (!string.IsNullOrWhiteSpace(tb))
+                        {
+                            TaxCode = tb;
+                        }
+                    }
+                }
+                catch
+                {
+                    // swallow — continue to business default below if not set
+                }
+            }
 
             // Set default TaxCode to the business default when not provided (important for calculations).
             // Only set when TaxCode is empty so validation/posted values are not overwritten.
@@ -185,8 +214,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 await using var tx = await NodeContext.Database.BeginTransactionAsync();
 
-                var code = new Cash_tbCode
-                {
+                var code = new Cash_tbCode {
                     CashCode = CashCode,
                     CashDescription = CashDescription,
                     CategoryCode = CategoryCode,
@@ -216,6 +244,52 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 NewCategoryType = parent?.CategoryTypeCode ?? (short)NodeEnum.CategoryType.CashCode;
                 NewCashType = parent?.CashTypeCode ?? 0;
                 NewIsEnabled = code.IsEnabled;
+
+                // Build exact node object for client insertion (title WITH icon HTML so tree render matches server nodes)
+                // where NewNodeJson is constructed (replace the nodeObj creation with the block below)
+
+                try
+                {
+                    // Build title without embedded <i>
+                    var titleText = $"{code.CashCode} - {code.CashDescription}";
+
+                    // Map CashTypeCode -> icon class (same mapping as CashCodeIconClass)
+                    string iconClass;
+                    switch (NewCashType)
+                    {
+                        case 1:
+                            iconClass = "bi bi-file-earmark-text tc-code-icon";
+                            break;
+                        case 2:
+                            iconClass = "bi bi-bank tc-code-icon";
+                            break;
+                        default:
+                            iconClass = "bi bi-wallet2 tc-code-icon";
+                            break;
+                    }
+
+                    var nodeObj = new {
+                        title = titleText,
+                        key = NewKey,
+                        folder = false,
+                        lazy = false,
+                        // supply the icon class so the tree renders the icon element once
+                        icon = iconClass,
+                        extraClasses = NewIsEnabled == 1 ? null : "tc-disabled",
+                        data = new {
+                            nodeType = "code",
+                            cashPolarity = NewPolarity,
+                            categoryType = NewCategoryType,
+                            isEnabled = NewIsEnabled,
+                            cashCode = code.CashCode
+                        }
+                    };
+                    NewNodeJson = JsonSerializer.Serialize(nodeObj);
+                }
+                catch
+                {
+                    NewNodeJson = "";
+                }
 
                 if (Request.Query["embed"] == "1")
                     return Page();

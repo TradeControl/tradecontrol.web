@@ -25,6 +25,18 @@ BEGIN
         RETURN;
     END
 
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN Cash.tbCategory p ON p.CategoryCode = i.ParentCode
+        WHERE ISNULL(p.CategoryTypeCode, -1) <> 1
+    )
+    BEGIN
+        RAISERROR ('Invalid parent: only Total-type categories may be parents in Cash.tbCategoryTotal.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
     DECLARE @violations TABLE (ChildCode nvarchar(10), ParentCode nvarchar(10));
 
     ;WITH down_paths AS

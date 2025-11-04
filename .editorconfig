@@ -4,6 +4,7 @@ root = true
 
 # Default C# naming rules (PascalCase for types)
 [*.cs]
+csharp_new_line_before_open_brace = types, methods, properties, indexers, events, anonymous_methods, control_blocks, lambda, accessors
 dotnet_naming_rule.types_should_be_pascal_case.severity = suggestion
 dotnet_naming_rule.types_should_be_pascal_case.symbols = all_types
 dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case_style

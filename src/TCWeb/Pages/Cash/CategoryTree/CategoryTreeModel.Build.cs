@@ -279,16 +279,20 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                             .Select(code => new { code.CashCode, code.CashDescription, code.IsEnabled })
                             .ToListAsync();
 
-            var codeNodes = codes.Select(cd => (object)new
-            {
+            // inside BuildChildNodesAsync where codeNodes is created — replace the codeNodes construction with:
+
+            // Replace the existing codeNodes construction inside BuildChildNodesAsync with this block:
+
+            var codeNodes = codes.Select(cd => (object)new {
                 key = $"code:{cd.CashCode}",
-                title = $"<i class='bi {CashCodeIconClass(categoryCashType)} tc-code-icon'></i> {WebUtility.HtmlEncode(cd.CashCode)} - {WebUtility.HtmlEncode(cd.CashDescription)}",
+                // Title without inline icon HTML; Fancytree will render the icon from `icon` property
+                title = $"{WebUtility.HtmlEncode(cd.CashCode)} - {WebUtility.HtmlEncode(cd.CashDescription)}",
                 folder = false,
                 lazy = false,
-                icon = false,
+                // Set icon to the bootstrap-icon class + helper class so only one icon is rendered
+                icon = "bi " + CashCodeIconClass(categoryCashType) + " tc-code-icon",
                 extraClasses = cd.IsEnabled == 0 ? "tc-disabled" : null,
-                data = new
-                {
+                data = new {
                     cashCode = cd.CashCode,
                     cashPolarity = categoryPolarity,
                     cashType = categoryCashType,

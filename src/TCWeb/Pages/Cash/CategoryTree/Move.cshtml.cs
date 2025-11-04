@@ -60,8 +60,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     .ToListAsync();
 
                 CandidateParents = candidates
-                    .Select(x => new SelectListItem
-                    {
+                    .Select(x => new SelectListItem {
                         Value = x.CategoryCode,
                         Text = $"{x.Category} ({x.CategoryCode})"
                     })
@@ -99,7 +98,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 var cats = await NodeContext.Cash_tbCategories
                     .Where(c => (c.CategoryCode == Key || c.CategoryCode == TargetParentKey) && c.IsEnabled != 0)
-                    .Select(c => new { c.CategoryCode, c.Category, c.CashTypeCode, c.CashPolarityCode })
+                    .Select(c => new { c.CategoryCode, c.Category, c.CashTypeCode, c.CashPolarityCode, c.CategoryTypeCode })
                     .ToListAsync();
 
                 var src = cats.FirstOrDefault(c => c.CategoryCode == Key);
@@ -108,6 +107,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (src == null || tgt == null)
                 {
                     ModelState.AddModelError(string.Empty, "Category not found or disabled.");
+                    await OnGetAsync();
+                    return Page();
+                }
+
+                // Server-side validation: only allow moving under a CashTotal category
+                if (tgt.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid target parent. Only Total-type categories may have child categories.");
                     await OnGetAsync();
                     return Page();
                 }
@@ -127,8 +134,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     .Where(t => t.ParentCode == TargetParentKey)
                     .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
-                {
+                NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
                     ParentCode = TargetParentKey,
                     ChildCode = Key,
                     DisplayOrder = nextOrder
