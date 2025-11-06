@@ -12,7 +12,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize(Roles = "Administrators")]
     public class CreateTotalModel : DI_BasePageModel
     {
-        public CreateTotalModel(NodeContext context) : base(context) { }
+        public CreateTotalModel(NodeContext context) : base(context)
+        {
+        }
 
         [BindProperty(SupportsGet = true)]
         public string ParentKey { get; set; } = "";
@@ -40,17 +42,36 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public short NewCategoryType { get; private set; }
         public short NewIsEnabled { get; private set; }
 
-        public Task OnGetAsync()
+        public async Task<IActionResult> OnGetAsync()
         {
-            // Values are fixed for Totals - no DB calls required here.
-            CashTypeCode = (short)NodeEnum.CashType.Trade;
-            CashPolarityCode = (short)NodeEnum.CashPolarity.Neutral;
-            return Task.CompletedTask;
+            // Ensure fixed values are initialized
+            SetFixedValues();
+
+            // SupportsGet already binds ParentKey from querystring when present.
+            // As a defensive fallback, read "parentKey" query if the property is still empty.
+            if (string.IsNullOrWhiteSpace(ParentKey))
+            {
+                try
+                {
+                    var q = HttpContext?.Request?.Query["parentKey"].ToString();
+                    if (!string.IsNullOrWhiteSpace(q))
+                    {
+                        ParentKey = q;
+                    }
+                }
+                catch
+                {
+                    // swallow
+                }
+            }
+
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            await OnGetAsync();
+            // Initialize fixed values for POST as well
+            SetFixedValues();
 
             if (string.IsNullOrWhiteSpace(CategoryCode) || string.IsNullOrWhiteSpace(Category))
             {
@@ -64,10 +85,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 return Page();
             }
 
+            if (string.IsNullOrWhiteSpace(ParentKey))
+            {
+                ModelState.AddModelError(nameof(ParentKey), "Parent category is required.");
+                return Page();
+            }
+
             try
             {
-                var cat = new Cash_tbCategory
-                {
+                var cat = new Cash_tbCategory {
                     CategoryCode = CategoryCode,
                     Category = Category,
                     CategoryTypeCode = (short)NodeEnum.CategoryType.CashTotal,
@@ -84,18 +110,26 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 if (!string.IsNullOrWhiteSpace(ParentKey))
                 {
-                    short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == ParentKey)
-                        .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
+                    // Only add a totals mapping if the parent is a real category (skip synthetic roots like "__ROOT__")
+                    var parentIsRealCategory = await NodeContext.Cash_tbCategories
+                        .AnyAsync(c => c.CategoryCode == ParentKey);
 
-                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
+                    if (parentIsRealCategory)
                     {
-                        ParentCode = ParentKey,
-                        ChildCode = CategoryCode,
-                        DisplayOrder = nextOrder
-                    });
+                        short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
+                            .Where(t => t.ParentCode == ParentKey)
+                            .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                    await NodeContext.SaveChangesAsync();
+                        NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
+                        {
+                            ParentCode = ParentKey,
+                            ChildCode = CategoryCode,
+                            DisplayOrder = nextOrder
+                        });
+
+                        await NodeContext.SaveChangesAsync();
+                    }
+                    // else: ParentKey is synthetic (e.g., ROOT) → create as a root Total, no mapping row
                 }
 
                 await tx.CommitAsync();
@@ -111,7 +145,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 NewIsEnabled = cat.IsEnabled;
 
                 if (Request.Query["embed"] == "1")
+                {
                     return Page();
+                }
 
                 return RedirectToPage("/Cash/CategoryTree/Index");
             }
@@ -121,6 +157,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 ModelState.AddModelError(string.Empty, "Server error.");
                 return Page();
             }
+        }
+
+        private void SetFixedValues()
+        {
+            CashTypeCode = (short)NodeEnum.CashType.Trade;
+            CashPolarityCode = (short)NodeEnum.CashPolarity.Neutral;
         }
     }
 }

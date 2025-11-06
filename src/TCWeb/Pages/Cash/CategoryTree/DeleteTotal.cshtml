@@ -1,0 +1,51 @@
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.DeleteTotalModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    Layout = null;
+
+    var parentKey = (Request.Query["parentKey"].Count > 0) ? Request.Query["parentKey"].ToString() : (Request.HasFormContentType ? Request.Form["parentKey"].ToString() : "");
+    var childKey = (Request.Query["childKey"].Count > 0) ? Request.Query["childKey"].ToString() : (Request.HasFormContentType ? Request.Form["childKey"].ToString() : "");
+    var parentDisplay = Model.ParentDisplay ?? parentKey;
+    var childDisplay = Model.ChildDisplay ?? childKey;
+}
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title text-danger">Delete Total</h5>
+
+        <div class="mb-3">
+            <p class="mb-2">
+                You are about to delete the Total subtree:
+            </p>
+            <dl class="row">
+                <dt class="col-sm-3">Parent</dt>
+                <dd class="col-sm-9"><code>@parentDisplay</code></dd>
+
+                <dt class="col-sm-3">Total (child)</dt>
+                <dd class="col-sm-9"><code>@childDisplay</code></dd>
+            </dl>
+
+            <div class="alert alert-warning" role="alert">
+                <strong>Warning:</strong> This action will recursively delete the selected Total category
+                <code>@childDisplay</code> and all descendant Total categories. Mappings involving those totals will also be removed.
+                Cash Code categories are not deleted by this action and may become disconnected if they were under the deleted totals.
+            </div>
+        </div>
+
+        <form id="deleteTotalForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteTotal", parentKey = parentKey, childKey = childKey })">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="parentKey" value="@parentKey" />
+            <input type="hidden" name="childKey" value="@childKey" />
+            <input type="hidden" name="ParentKey" value="@parentKey" />
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">Delete</button>
+                <a class="btn btn-secondary" href="javascript:void(0)" data-embedded-cancel>Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="~/js/categoryTree.delete.js" asp-append-version="true"></script>
+<script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>

@@ -1,4 +1,4 @@
-﻿/*
+/*
  CategoryTree: interactive cash category tree
  - Drag/drop reordering
    - Cash Type view: reorder siblings (server: ReorderType)
@@ -69,71 +69,234 @@ window.CategoryTree = (function ()
 
         // Open an action page in RHS (desktop) or navigate (mobile)
         function openAction(actionName, key, parentKey, extras)
+{
+    var base = actionsBasePath();
+    if (!base)
+    {
+        alert("Action endpoint not configured.");
+        return;
+    }
+
+    // Record a precise return target for Cancel: active node if available, else the key parameter.
+    try
+    {
+        if (typeof window.tcSetCancelReturn === "function")
         {
-            var base = actionsBasePath();
-            if (!base)
+            var retKey = "";
+            try
             {
-                alert("Action endpoint not configured.");
-                return;
+                var t = getTree();
+                var active = t && t.getActiveNode ? t.getActiveNode() : null;
+                retKey = (active && active.key) ? active.key : (key || "");
             }
-
-            // Build query parameters robustly
-            var parts = [];
-            parts.push("key=" + encodeURIComponent(key || ""));
-
-            if (parentKey)
+            catch (e)
             {
-                parts.push("parentKey=" + encodeURIComponent(parentKey));
+                retKey = key || "";
             }
+            window.tcSetCancelReturn(retKey || "");
+        }
+    }
+    catch (e)
+    {
+        // swallow
+    }
 
-            if (extras && typeof extras === "object")
+    // Build query parameters robustly
+    var parts = [];
+    parts.push("key=" + encodeURIComponent(key || ""));
+
+    if (parentKey)
+    {
+        parts.push("parentKey=" + encodeURIComponent(parentKey));
+    }
+
+    if (extras && typeof extras === "object")
+    {
+        for (var p in extras)
+        {
+            if (!Object.prototype.hasOwnProperty.call(extras, p))
             {
-                for (var p in extras)
+                continue;
+            }
+            var v = extras[p];
+            if (v === null || typeof v === "undefined")
+            {
+                continue;
+            }
+            parts.push(encodeURIComponent(p) + "=" + encodeURIComponent(v));
+        }
+    }
+
+    var url = base + "/" + encodeURIComponent(actionName) + "?" + parts.join("&");
+
+    if (isMobile())
+    {
+        window.location.href = url;
+    }
+    else
+    {
+        // Mark as embedded to suppress the full layout/navigation
+        url = appendQuery(url, "embed", "1");
+
+        var $pane = $("#detailsPane");
+        if ($pane.length)
+        {
+            $pane.css("overflow", "auto");
+            $.get(nocache(url))
+                .done(function (html)
                 {
-                    if (!Object.prototype.hasOwnProperty.call(extras, p)) 
-                    {
-                        continue;
-                    }
-                    var v = extras[p];
-                    if (v === null || typeof v === "undefined") 
-                    {
-                        continue;
-                    }
-                    parts.push(encodeURIComponent(p) + "=" + encodeURIComponent(v));
-                }
-            }
+                    $pane.html(html);
+                })
+                .fail(function ()
+                {
+                    $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
+                });
+        }
+        else
+        {
+            window.location.href = url;
+        }
+    }
+}
 
-            var url = base + "/" + encodeURIComponent(actionName) + "?" + parts.join("&");
-
+        function openEmbeddedUrl(url)
+        {
             if (isMobile())
             {
                 window.location.href = url;
+                return;
+            }
+
+            var $pane = $("#detailsPane");
+            if ($pane.length)
+            {
+                $pane.css("overflow", "auto");
+                $.get(nocache(url))
+                    .done(function (html) { $pane.html(html); })
+                    .fail(function () { $pane.html("<div class='text-muted small p-2'>No details</div>"); });
             }
             else
             {
-                // Mark as embedded to suppress the full layout/navigation
-                url = appendQuery(url, "embed", "1");
-
-                var $pane = $("#detailsPane");
-                if ($pane.length)
-                {
-                    $pane.css("overflow", "auto");
-                    $.get(nocache(url))
-                        .done(function (html)
-                        {
-                            $pane.html(html);
-                        })
-                        .fail(function ()
-                        {
-                            $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
-                        });
-                }
-                else
-                {
-                    window.location.href = url;
-                }
+                window.location.href = url;
             }
         }
+
+        // Small global helpers to reduce duplication and keep behaviour identical
+        function postJsonGlobal(handler, data)
+        {
+            var token = antiXsrf();
+            return $.ajax({
+                type: "POST",
+                url: handlerUrl(handler),
+                data: data,
+                headers: token ? { "RequestVerificationToken": token } : {},
+                dataType: "json"
+            });
+        }
+
+        function getEffectiveParentKey(node, menuParentKey)
+        {
+            if (typeof menuParentKey === "string" && menuParentKey) { return menuParentKey; }
+            try
+            {
+                var p = node && node.getParent ? node.getParent() : null;
+                return (p && p.key) ? p.key : "";
+            }
+            catch (_)
+            {
+                return "";
+            }
+        }
+
+        function refreshTopAnchors()
+        {
+            try
+            {
+                var t = getTree();
+                if (!t) { return; }
+                var root = t.getNodeByKey(ROOT_KEY);
+                var disc = t.getNodeByKey(DISC_KEY);
+                reloadIfExpandedNode(root);
+                reloadIfExpandedNode(disc);
+            }
+            catch (_)
+            {
+                // swallow
+            }
+        }
+
+        function openDeleteFor(node, menuParentKey)
+        {
+            try
+            {
+                if (!node) { alert("Select a node first"); return; }
+
+                var kinds = getNodeKinds(node);
+                var key = kinds.key;
+                var data = kinds.data || {};
+
+                // Resolve parentKey
+                var parentKey = (typeof menuParentKey === "string" && menuParentKey) ? menuParentKey : "";
+                if (!parentKey)
+                {
+                    try
+                    {
+                        var p = node.getParent && node.getParent();
+                        parentKey = (p && p.key) ? p.key : "";
+                    }
+                    catch (_) { parentKey = ""; }
+                }
+
+                // Cash Code leaf -> DeleteCashCode
+                if (kinds.isCode || (key && typeof key === "string" && key.indexOf("code:") === 0))
+                {
+                    var codeUrl = actionsBasePath() + "/DeleteCashCode?key=" + encodeURIComponent(key) + "&embed=1";
+                    openEmbeddedUrl(codeUrl);
+                    return;
+                }
+
+                var catType = (typeof data.categoryType !== "undefined") ? Number(data.categoryType) : NaN;
+                var isCashCodeCategory = (catType === 0);
+                var isTotalCategory = (catType === CATEGORYTYPE_CASHTOTAL);
+
+                if (isCashCodeCategory)
+                {
+                    openAction("DeleteCategory", key);
+                    return;
+                }
+
+                // Disconnected Total -> delete the category (no mapping parent)
+                if (parentKey === DISC_KEY && isTotalCategory)
+                {
+                    openAction("DeleteCategory", key);
+                    return;
+                }
+
+                // ROOT-level Total -> delete the category tree (no mapping from ROOT exists)
+                if (parentKey === ROOT_KEY && isTotalCategory)
+                {
+                    openAction("DeleteCategory", key);
+                    return;
+                }
+
+                // Totals context with a real parent (not type or synthetic) -> DeleteTotal (mapping-based)
+                var parentIsSyntheticType = (typeof parentKey === "string" && parentKey.indexOf("type:") === 0);
+                if (parentKey && parentKey !== "" && !parentIsSyntheticType && isTotalCategory)
+                {
+                    openAction("DeleteTotal", "", parentKey, { childKey: key });
+                    return;
+                }
+
+                // Fallback
+                openAction("DeleteCategory", key);
+            }
+            catch (ex)
+            {
+                console.error("openDeleteFor failed", ex);
+                alert("Unable to perform delete action");
+            }
+        }
+
         // Load details into RHS pane (desktop only)
         function loadDetails(node)
         {
@@ -811,7 +974,7 @@ window.CategoryTree = (function ()
             if (bar) {bar.classList.remove("tc-visible");}
         }
 
-         function showContextMenu(x, y, node)
+        function showContextMenu(x, y, node)
         {
             var $menu = $(menuSel);
             $menu.find(".admin-only").toggle(!!isAdmin);
@@ -855,28 +1018,22 @@ window.CategoryTree = (function ()
 
             $menu.find(".cat-only").toggle(isCat && !isRoot && !isDisconnect && !inTypeCtx);
 
-            // decide visibility for createTotal and createCategory
-            // showCreateCategory should be shown for Disconnected root or for categories (not root)
+            // Visibility rules
             var showCreateCategory = isAdmin && !inTypeCtx && (isDiscRoot || (isCat && !isRoot));
-            // showCreateTotal should be shown for root or for category totals, but NOT for the disconnected root.
-            var showCreateTotal = isAdmin && !inTypeCtx && ((isRoot && !isDiscRoot) || (isCat && !isDisconnect && !isRoot));
+            var showCreateTotal = isAdmin && !inTypeCtx && ((isRoot || isDiscRoot) || (isCat && !isDisconnect && !isRoot));
 
-            // toggle menu items
             $menu.find("[data-action='createTotal']").toggle(showCreateTotal);
             $menu.find("[data-action='createCategory']").toggle(showCreateCategory);
 
-            // adjust labels deterministically (keep createTotal label behavior for roots/categories)
             var $createTotal = $menu.find("[data-action='createTotal']");
             if ($createTotal.length)
             {
-                if (isRoot) { $createTotal.text("New Total…"); }
-                else { $createTotal.text("New Total…"); }
+                $createTotal.text("New Total…");
             }
 
             var $createCategory = $menu.find("[data-action='createCategory']");
             if ($createCategory.length)
             {
-                // label consistent for category creation
                 $createCategory.text("New Category…");
             }
 
@@ -923,8 +1080,7 @@ window.CategoryTree = (function ()
             var $createCode = $menu.find("[data-action='createCode']");
             if ($createCode.length)
             {
-                // Server-provided node payload includes `data.categoryType` (numeric).
-                // Allow create when categoryType === 0 (CashCode). Treat value as numeric/string defensively.
+                // Allow create when categoryType === 0 (CashCode)
                 var isCashCodeCategory = !!(data && typeof data.categoryType !== "undefined" && Number(data.categoryType) === 0);
 
                 if (isDiscCategory)
@@ -938,27 +1094,9 @@ window.CategoryTree = (function ()
                 else
                 {
                     $createCode.text("New Code…");
-                    // Show when admin, not in type-context, is a category, not synthetic root/disconnected,
-                    // and the category's CategoryType == CashCode (0).
                     $createCode.toggle(isAdmin && !inTypeCtx && isCat && !isRoot && !isDisconnect && isCashCodeCategory);
                 }
             }
-
-            var $createTotal = $menu.find("[data-action='createTotal']");
-            if ($createTotal.length)
-            {
-                if (isDiscRoot)
-                {
-                    $createTotal.text("New Category…");
-                }
-                else if (isRoot)
-                {
-                    $createTotal.text("New Total…");
-                }
-            }
-
-            // Remove maintenance actions from context menu
-            $menu.find("[data-action='makePrimary'], [data-action='setProfitRoot'], [data-action='setVatRoot']").hide();
 
             if (isDiscCategory)
             {
@@ -971,10 +1109,15 @@ window.CategoryTree = (function ()
 
                 if (isAdmin)
                 {
+                    // Allow creating a new Totals root directly from Disconnected
+                    var nt = showFirst("createTotal");
+                    nt.text("New Total…");
+
                     var cc = showFirst("createCode");
                     cc.text("New Code…");
 
                     showFirst("edit");
+
                     var del = showFirst("delete");
                     del.text("Delete");
 
@@ -1037,239 +1180,236 @@ window.CategoryTree = (function ()
             }, 10);
         }
 
-		function bindKeyboardHandlers()
-		{
-			$(treeSel).on("keydown", function (e)
-			{
-				var keyCode = e.which || e.keyCode;
+        function bindKeyboardHandlers()
+        {
+            $(treeSel).on("keydown", function (e)
+            {
+                var key = e.key || (function (kc)
+                {
+                    switch (kc)
+                    {
+                        case 37: return "ArrowLeft";
+                        case 39: return "ArrowRight";
+                        case 36: return "Home";
+                        case 35: return "End";
+                        case 38: return "ArrowUp";
+                        case 40: return "ArrowDown";
+                        default: return "";
+                    }
+                })(e.which);
 
-				// Non-shift navigation: Left/Right/Home/End
-				if (!e.shiftKey)
-				{
-					var treeNav = getTree();
-					var cur = treeNav && treeNav.getActiveNode ? treeNav.getActiveNode() : null;
-					if (!cur) { return; }
+                // Non-shift navigation: Left/Right/Home/End
+                if (!e.shiftKey)
+                {
+                    var treeNav = getTree();
+                    var cur = treeNav && treeNav.getActiveNode ? treeNav.getActiveNode() : null;
+                    if (!cur) { return; }
 
-					// Left: collapse, or go to parent if already collapsed
-					if (keyCode === 37)
-					{
-						if (cur.folder && cur.expanded)
-						{
-							cur.setExpanded(false);
-							persistExpanded(cur, false);
-						}
-						else
-						{
-							var par = cur.getParent && cur.getParent();
-							if (par && par.key)
-							{
-								par.setActive(true);
-								persistActiveKey(par);
-							}
-						}
-						e.preventDefault();
-						e.stopPropagation();
-						return;
-					}
+                    // Left: collapse, or go to parent if already collapsed
+                    if (key === "ArrowLeft")
+                    {
+                        if (cur.folder && cur.expanded)
+                        {
+                            cur.setExpanded(false);
+                            persistExpanded(cur, false);
+                        }
+                        else
+                        {
+                            var par = cur.getParent && cur.getParent();
+                            if (par && par.key)
+                            {
+                                par.setActive(true);
+                                persistActiveKey(par);
+                            }
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
 
-					// Right: expand
-					if (keyCode === 39)
-					{
-						if (cur.folder && !cur.expanded)
-						{
-							cur.setExpanded(true);
-							persistExpanded(cur, true);
-						}
-						e.preventDefault();
-						e.stopPropagation();
-						return;
-					}
+                    // Right: expand
+                    if (key === "ArrowRight")
+                    {
+                        if (cur.folder && !cur.expanded)
+                        {
+                            cur.setExpanded(true);
+                            persistExpanded(cur, true);
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
 
-					// Home: first sibling
-					if (keyCode === 36)
-					{
-						var first = cur.getParent && cur.getParent() && cur.getParent().getFirstChild && cur.getParent().getFirstChild();
-						if (first) { first.setActive(true); persistActiveKey(first); }
-						e.preventDefault();
-						e.stopPropagation();
-						return;
-					}
+                    // Home: first sibling
+                    if (key === "Home")
+                    {
+                        var first = cur.getParent && cur.getParent() && cur.getParent().getFirstChild && cur.getParent().getFirstChild();
+                        if (first) { first.setActive(true); persistActiveKey(first); }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
 
-					// End: last sibling
-					if (keyCode === 35)
-					{
-						var last = cur.getParent && cur.getParent() && cur.getParent().getLastChild && cur.getParent().getLastChild();
-						if (last) { last.setActive(true); persistActiveKey(last); }
-					 e.preventDefault();
-					 e.stopPropagation();
-					 return;
-					}
+                    // End: last sibling
+                    if (key === "End")
+                    {
+                        var last = cur.getParent && cur.getParent() && cur.getParent().getLastChild && cur.getParent().getLastChild();
+                        if (last) { last.setActive(true); persistActiveKey(last); }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
 
-					// Other non-shift keys: do not interfere
-					return;
-				}
+                    // Other non-shift keys: do not interfere
+                    return;
+                }
 
-				// Shift+ArrowUp / Shift+ArrowDown => reorder before/after sibling
-				var isUp = (keyCode === 38);
-				var isDown = (keyCode === 40);
-				if (!isUp && !isDown)
-				{
-					return;
-				}
+                // Shift+ArrowUp / Shift+ArrowDown => reorder before/after sibling
+                var isUp = (key === "ArrowUp");
+                var isDown = (key === "ArrowDown");
+                if (!isUp && !isDown)
+                {
+                    return;
+                }
 
-				if (isMobile()) { return; }
-				if (!isAdmin) { return; }
+                if (isMobile()) { return; }
+                if (!isAdmin) { return; }
 
-				var tree = getTree();
-				if (!tree) { return; }
+                var tree = getTree();
+                if (!tree) { return; }
 
-				var node = tree.getActiveNode && tree.getActiveNode();
-				if (!node) { return; }
+                var node = tree.getActiveNode && tree.getActiveNode();
+                if (!node) { return; }
 
-				// Categories only
-				var kinds = getNodeKinds(node);
-				if (!kinds.isCat) { return; }
+                // Categories only
+                var kinds = getNodeKinds(node);
+                if (!kinds.isCat) { return; }
 
-				var parent = node.getParent ? node.getParent() : null;
-				if (!parent) { return; }
+                var parent = node.getParent ? node.getParent() : null;
+                if (!parent) { return; }
 
-				// Find anchor sibling (skip non-folders except under Disconnected)
-				function findAnchor(n, direction)
-				{
-					var p = n.getParent ? n.getParent() : null;
-					var parentKey = p ? (p.key || "") : "";
-					var cur = (direction === "up") ? n.getPrevSibling() : n.getNextSibling();
+                // Find anchor sibling (skip non-folders except under Disconnected)
+                function findAnchor(n, direction)
+                {
+                    var p = n.getParent ? n.getParent() : null;
+                    var parentKey = p ? (p.key || "") : "";
+                    var cur = (direction === "up") ? n.getPrevSibling() : n.getNextSibling();
 
-					if (parentKey !== DISC_KEY)
-					{
-						while (cur && !cur.folder)
-						{
-							cur = (direction === "up") ? cur.getPrevSibling() : cur.getNextSibling();
-						}
-					}
-					return cur || null;
-				}
+                    if (parentKey !== DISC_KEY)
+                    {
+                        while (cur && !cur.folder)
+                        {
+                            cur = (direction === "up") ? cur.getPrevSibling() : cur.getNextSibling();
+                        }
+                    }
+                    return cur || null;
+                }
 
-				// Identify Cash Type container parents (synthetic/type)
-				function isTypeContainer(p)
-				{
-					if (!p) { return false; }
-					var d = p.data || {};
-					var k = p.key || "";
-					return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-						   || (typeof k === "string" && k.indexOf("type:") === 0);
-				}
+                // Identify Cash Type container parents (synthetic/type)
+                function isTypeContainer(p)
+                {
+                    if (!p) { return false; }
+                    var d = p.data || {};
+                    var k = p.key || "";
+                    return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
+                           || (typeof k === "string" && k.indexOf("type:") === 0);
+                }
 
-				var anchor = findAnchor(node, isUp ? "up" : "down");
-				if (!anchor)
-				{
-					// No sibling in that direction
-					e.preventDefault();
-					e.stopPropagation();
-					return;
-				}
+                var anchor = findAnchor(node, isUp ? "up" : "down");
+                if (!anchor)
+                {
+                    // No sibling in that direction
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
 
-				var mode = isUp ? "before" : "after";
-				var token = antiXsrf();
+                var mode = isUp ? "before" : "after";
 
-				// Cash Type view => ReorderType
-				if (isTypeContainer(parent))
-				{
-					$.ajax({
-						type: "POST",
-						url: handlerUrl("ReorderType"),
-						data: { key: node.key, anchorKey: anchor.key, mode: mode },
-						headers: token ? { "RequestVerificationToken": token } : {},
-						dataType: "json"
-					}).done(function (res)
-					{
-						if (res && res.success)
-						{
-							try
-							{
-								node.moveTo(anchor, mode);
-							}
-							catch (ex)
-							{
-							}
+                // Cash Type view => ReorderType
+                if (isTypeContainer(parent))
+                {
+                    postJsonGlobal("ReorderType", { key: node.key, anchorKey: anchor.key, mode: mode })
+                    .done(function (res)
+                    {
+                        if (res && res.success)
+                        {
+                            try
+                            {
+                                node.moveTo(anchor, mode);
+                            }
+                            catch (ex)
+                            {
+                            }
 
-							reloadIfExpandedNode(parent);
+                            reloadIfExpandedNode(parent);
 
-							node.setActive(true);
-							persistActiveKey(node);
-							announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
-							notify("Order updated", "success");
+                            node.setActive(true);
+                            persistActiveKey(node);
+                            announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
+                            notify("Order updated", "success");
 
-							if (!isMobile())
-							{
-								loadDetails(node);
-								resizeColumns();
-							}
-						}
-						else
-						{
-							alert((res && res.message) || "Reorder failed");
-						}
-					}).fail(function (xhr)
-					{
-						alert("Server error (" + xhr.status + ")");
-					});
-				}
-				else
-				{
-					// Totals/Disconnected => ReorderSiblings
-					$.ajax({
-						type: "POST",
-						url: handlerUrl("ReorderSiblings"),
-						data: { parentKey: parent.key || "", key: node.key, anchorKey: anchor.key, mode: mode },
-						headers: token ? { "RequestVerificationToken": token } : {},
-						dataType: "json"
-					}).done(function (res)
-					{
-						if (res && res.success)
-						{
-							try
-							{
-								node.moveTo(anchor, mode);
-							}
-							catch (ex)
-							{
-							}
+                            if (!isMobile())
+                            {
+                                loadDetails(node);
+                                resizeColumns();
+                            }
+                        }
+                        else
+                        {
+                            alert((res && res.message) || "Reorder failed");
+                        }
+                    }).fail(function (xhr)
+                    {
+                        alert("Server error (" + xhr.status + ")");
+                    });
+                }
+                else
+                {
+                    // Totals/Disconnected => ReorderSiblings
+                    postJsonGlobal("ReorderSiblings", { parentKey: parent.key || "", key: node.key, anchorKey: anchor.key, mode: mode })
+                    .done(function (res)
+                    {
+                        if (res && res.success)
+                        {
+                            try
+                            {
+                                node.moveTo(anchor, mode);
+                            }
+                            catch (ex)
+                            {
+                            }
 
-							reloadIfExpandedNode(parent);
+                            reloadIfExpandedNode(parent);
 
-						 node.setActive(true);
-						 persistActiveKey(node);
-						 announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
-						 notify("Order updated", "success");
+                            node.setActive(true);
+                            persistActiveKey(node);
+                            announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
+                            notify("Order updated", "success");
 
-							var t = getTree();
-							var root = t.getNodeByKey(ROOT_KEY);
-							var disc = t.getNodeByKey(DISC_KEY);
-							reloadIfExpandedNode(root);
-						 reloadIfExpandedNode(disc);
+                            refreshTopAnchors();
 
-							if (!isMobile())
-							{
-								loadDetails(node);
-								resizeColumns();
-							}
-						}
-						else
-						{
-						 alert((res && res.message) || "Reorder failed");
-						}
-					}).fail(function (xhr)
-					{
-						alert("Server error (" + xhr.status + ")");
-					});
-				}
+                            if (!isMobile())
+                            {
+                                loadDetails(node);
+                                resizeColumns();
+                            }
+                        }
+                        else
+                        {
+                            alert((res && res.message) || "Reorder failed");
+                        }
+                    }).fail(function (xhr)
+                    {
+                        alert("Server error (" + xhr.status + ")");
+                    });
+                }
 
-				// Consume the key
-				e.preventDefault();
-				e.stopPropagation();
-			});
-		}
+                // Consume the key
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        }
 
         function bindContextMenuHandlers()
         {
@@ -1286,23 +1426,6 @@ window.CategoryTree = (function ()
 
                 var token = antiXsrf();
                 $menu.hide();
-
-                function handlerUrl(name)
-                {
-                    var sep = basePageUrl.indexOf('?') === -1 ? '?' : '&';
-                    return basePageUrl + sep + 'handler=' + name;
-                }
-
-                function postJson(handler, data)
-                {
-                    return $.ajax({
-                        type: "POST",
-                        url: handlerUrl(handler),
-                        data: data,
-                        headers: token ? { "RequestVerificationToken": token } : {},
-                        dataType: "json"
-                    });
-                }
 
                 function alertFail(xhr)
                 {
@@ -1348,17 +1471,7 @@ window.CategoryTree = (function ()
                             alert("Select a folder");
                             break;
                         }
-
-                        // Expand the selected node and all descendants (lazy-safe)
-                        expandSubtree(node)
-                            .then(function ()
-                            {
-                                resizeColumns();
-                            })
-                            .catch(function ()
-                            {
-                                resizeColumns();
-                            });
+                        expandSubtree(node).then(function () { resizeColumns(); }).catch(function () { resizeColumns(); });
                         break;
                     }
 
@@ -1369,15 +1482,14 @@ window.CategoryTree = (function ()
                             alert("Select a folder");
                             break;
                         }
-
-                        // Collapse the selected node and all descendants
                         collapseSubtree(node);
                         resizeColumns();
                         break;
                     }
+
                     case "view":
                     {
-                        postJson("View", { key: key, parentKey: parentKey })
+                        postJsonGlobal("View", { key: key, parentKey: parentKey })
                             .done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
                             .fail(alertFail);
                         break;
@@ -1386,7 +1498,7 @@ window.CategoryTree = (function ()
                     case "edit":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        postJson("Edit", { key: key })
+                        postJsonGlobal("Edit", { key: key })
                             .done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
                             .fail(alertFail);
                         break;
@@ -1406,17 +1518,14 @@ window.CategoryTree = (function ()
                         var childKey = prompt("Existing Category Code to add under " + targetParent + ":");
                         if (!childKey) { break; }
 
-                        postJson("AddExistingTotal", { parentKey: targetParent, childKey: childKey })
+                        postJsonGlobal("AddExistingTotal", { parentKey: targetParent, childKey: childKey })
                             .done(function (res)
                             {
                                 alert((res && res.message) || "Not Yet Implemented");
                                 if (res && res.success)
                                 {
                                     refreshNode(targetParent);
-                                    var root = tree.getNodeByKey(ROOT_KEY);
-                                    var disc = tree.getNodeByKey(DISC_KEY);
-                                    reloadIfExpandedNode(root);
-                                    reloadIfExpandedNode(disc);
+                                    refreshTopAnchors();
                                 }
                             })
                             .fail(alertFail);
@@ -1427,7 +1536,6 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
-                        // Code must be added under a category; use current node if it's a category, else its parent
                         var targetCategory = (node && node.folder) ? key : parentKey;
                         if (!targetCategory)
                         {
@@ -1438,7 +1546,7 @@ window.CategoryTree = (function ()
                         var codeKey = prompt("Existing Cash Code to add under " + targetCategory + ":");
                         if (!codeKey) { break; }
 
-                        postJson("AddExistingCode", { parentKey: targetCategory, codeKey: codeKey })
+                        postJsonGlobal("AddExistingCode", { parentKey: targetCategory, codeKey: codeKey })
                             .done(function (res)
                             {
                                 alert((res && res.message) || "Not Yet Implemented");
@@ -1453,17 +1561,8 @@ window.CategoryTree = (function ()
 
                     case "move":
                     {
-                        if (!isAdmin) 
-                        {
-                            alert("Insufficient privileges");
-                            break;
-                        }
-                        if (!node || !node.folder) 
-                        {
-                            alert("Select a category");
-                            break;
-                        }
-
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node || !node.folder) { alert("Select a category"); break; }
                         openAction("Move", key, parentKey);
                         break;
                     }
@@ -1472,7 +1571,7 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
-                        // Determine parent target (use current node if folder, otherwise parentKey)
+                        // Use the node itself if it is a folder; otherwise fallback to its parentKey.
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
@@ -1480,20 +1579,19 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
+                        // Only route to ROOT when the user actually clicked the Disconnected root node itself.
+                        if (targetParent === DISC_KEY)
+                        {
+                            // Creating a brand new root total (will still appear disconnected until it has children).
+                            openAction("CreateTotal", "", ROOT_KEY);
+                            break;
+                        }
 
-                        // If creating under Disconnected root, open the full CreateCategory page (embedded)
-                        if (isDisc && key === DISC_KEY)
-                        {
-                            openAction("CreateCategory", "", DISC_KEY);
-                        }
-                        else
-                        {
-                            // Open embedded CreateTotal with parentKey set
-                            openAction("CreateTotal", "", targetParent);
-                        }
+                        // Normal path: create a new Total as a child of the selected (possibly disconnected) category.
+                        // Server will create a mapping parentKey -> new Total, making the parent a root-level total.
+                        openAction("CreateTotal", "", targetParent);
                         break;
-                    }  
+                    }
 
                     case "createCode":
                     {
@@ -1501,9 +1599,7 @@ window.CategoryTree = (function ()
                         if (!node) { alert("Select a node first"); break; }
 
                         var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
-                        var discCat = isDiscCategoryNode(node);
 
-                        // Determine category target: if node is a category use its key, otherwise use parentKey
                         var targetCategory = (node && node.folder) ? key : parentKey;
                         if (!targetCategory)
                         {
@@ -1511,7 +1607,6 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        // If the current node is a code, offer quick-create "like this" using sibling template
                         if (isCodeNode)
                         {
                             var siblingCash = (key && key.indexOf("code:") === 0) ? key.substring(5) : (node && node.data && node.data.cashCode) || "";
@@ -1520,49 +1615,6 @@ window.CategoryTree = (function ()
                         }
                         else
                         {
-                            // Default: open embedded CreateCode and pre-fill the Category via parentKey
-                            openAction("CreateCode", targetCategory);
-                            break;
-                        }
-                    }
-
-                    case "createTotal":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-
-                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
-                        if (isDisc && key === DISC_KEY)
-                        {
-                            // Open embedded CreateCategory when invoked from disconnected root
-                            openAction("CreateCategory", "", DISC_KEY);
-                        }
-                        else
-                        {
-                            // Open embedded CreateTotal with parentKey
-                            openAction("CreateTotal", "", key || parentKey);
-                        }
-                        break;
-                    }
-
-                    case "createCode":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
-
-                        var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
-
-                        var targetCategory = node.folder ? key : parentKey;
-                        if (!targetCategory) { alert("Select a category"); break; }
-
-                        if (isCodeNode)
-                        {
-                            var siblingCash2 = (key && key.indexOf("code:") === 0) ? key.substring(5) : (node && node.data && node.data.cashCode) || "";
-                            openAction("CreateCode", targetCategory, null, { siblingCashCode: siblingCash2 });
-                            break;
-                        }
-                        else
-                        {
-                            // Fall back to opening embedded CreateCode
                             openAction("CreateCode", targetCategory);
                             break;
                         }
@@ -1580,7 +1632,7 @@ window.CategoryTree = (function ()
                         }
 
                         var handler = action === "moveUp" ? "MoveUp" : "MoveDown";
-                        postJson(handler, { key: key, parentKey: parentKey })
+                        postJsonGlobal(handler, { key: key, parentKey: parentKey })
                             .done(function (res)
                             {
                                 if (res && res.success)
@@ -1603,7 +1655,7 @@ window.CategoryTree = (function ()
                         if (!node) { alert("Select a node first"); break; }
 
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
-                        postJson("SetEnabled", { key: key, enabled: makeEnabled })
+                        postJsonGlobal("SetEnabled", { key: key, enabled: makeEnabled })
                             .done(function (res)
                             {
                                 if (res && res.success)
@@ -1611,11 +1663,7 @@ window.CategoryTree = (function ()
                                     var isCodeNode2 = (node.data && node.data.nodeType === "code") || (key && key.indexOf("code:") === 0);
                                     setNodeEnabledInUi(node, !!makeEnabled, !isCodeNode2);
                                     if (!isMobile()) { loadDetails(node); }
-
-                                    var disc = tree.getNodeByKey(DISC_KEY);
-                                    var root = tree.getNodeByKey(ROOT_KEY);
-                                    reloadIfExpandedNode(disc);
-                                    reloadIfExpandedNode(root);
+                                    refreshTopAnchors();
                                 }
                                 else
                                 {
@@ -1629,28 +1677,7 @@ window.CategoryTree = (function ()
                     case "delete":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-
-                        var discCat = isDiscCategoryNode(node);
-                        var recursive = !!(node && node.folder && node.data && node.data.nodeType === "category" && !discCat);
-
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("Delete"),
-                            data: { key: key, recursive: recursive },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
-                            {
-                                if (parentKey) { refreshNode(parentKey); }
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                reloadIfExpandedNode(root);
-                                reloadIfExpandedNode(disc);
-                            }
-                        }).fail(alertFail);
+                        openDeleteFor(node, $menu.data("parentKey") || "");
                         break;
                     }
 
@@ -1659,24 +1686,19 @@ window.CategoryTree = (function ()
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!parentKey) { alert("Open from a parent context to make primary."); break; }
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("MakePrimary"),
-                            data: { key: key, parentKey: parentKey },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
+                        postJsonGlobal("MakePrimary", { key: key, parentKey: parentKey })
+                            .done(function (res)
                             {
-                                var p = tree.getNodeByKey(parentKey);
-                                reloadIfExpandedNode(p);
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                reloadIfExpandedNode(root);
-                                loadDetails(tree.getActiveNode());
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                                alert((res && res.message) || "Not Yet Implemented");
+                                if (res && res.success)
+                                {
+                                    var p = tree.getNodeByKey(parentKey);
+                                    reloadIfExpandedNode(p);
+                                    refreshTopAnchors();
+                                    loadDetails(tree.getActiveNode());
+                                }
+                            })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
@@ -1689,25 +1711,17 @@ window.CategoryTree = (function ()
                         var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
                         if (!confirm("Set " + key + " as the " + kind + " primary root?")) { break; }
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("SetPrimaryRoot"),
-                            data: { kind: kind, categoryCode: key },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
+                        postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
+                            .done(function (res)
                             {
-                                // Refresh top-level anchors and details to reflect new primary paths/badges
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                reloadIfExpandedNode(root);
-                                reloadIfExpandedNode(disc);
-                                loadDetails(tree.getActiveNode());
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                                alert((res && res.message) || "Not Yet Implemented");
+                                if (res && res.success)
+                                {
+                                    refreshTopAnchors();
+                                    loadDetails(tree.getActiveNode());
+                                }
+                            })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
@@ -1715,7 +1729,6 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
-                        // Determine parent target (use current node if folder, otherwise parentKey)
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
@@ -1723,18 +1736,8 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
-
-                        // If invoked from the Disconnected root open CreateCategory with DISC_KEY
-                        if (isDisc && key === DISC_KEY)
-                        {
-                            openAction("CreateCategory", "", DISC_KEY);
-                        }
-                        else
-                        {
-                            // Standard case: open embedded CreateCategory with parentKey set
-                            openAction("CreateCategory", "", targetParent);
-                        }
+                        // Always open CreateCategory (user intent is explicit via menu label)
+                        openAction("CreateCategory", "", targetParent);
                         break;
                     }
                 }
@@ -1769,13 +1772,6 @@ window.CategoryTree = (function ()
                     var p = node.getParent();
                     parentKey = (p && p.key) ? p.key : "";
                 }
-                var token = antiXsrf();
-
-                function handlerUrl(name)
-                {
-                    var sep = basePageUrl.indexOf('?') === -1 ? '?' : '&';
-                    return basePageUrl + sep + 'handler=' + name;
-                }
 
                 function refreshAnchors()
                 {
@@ -1795,26 +1791,15 @@ window.CategoryTree = (function ()
 
                 function callStub(handler, extra)
                 {
-                    $.ajax({
-                        type: "POST",
-                        url: handlerUrl(handler),
-                        data: Object.assign({ key: key, parentKey: parentKey }, extra || {}),
-                        headers: token ? { "RequestVerificationToken": token } : {},
-                        dataType: "json"
-                    }).done(function (res)
-                    {
-                        alert((res && res.message) || "Not Yet Implemented");
-                    }).fail(function (xhr)
-                    {
-                        alert("Server error (" + xhr.status + ")");
-                    });
+                    return postJsonGlobal(handler, Object.assign({ key: key, parentKey: parentKey }, extra || {}));
                 }
 
                 switch (action)
                 {
                     case "view":
                     {
-                        callStub("View");
+                        callStub("View").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
@@ -1825,36 +1810,14 @@ window.CategoryTree = (function ()
                             alert("Insufficient privileges");
                             break;
                         }
-                        callStub("Edit");
+                        callStub("Edit").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
-                case "move":
-                {
-                    if (!isAdmin) 
+                    case "move":
                     {
-                        alert("Insufficient privileges");
-                        break;
-                    }
-                    var inTypeCtx = !!(node.data && (node.data.isTypeContext === true || node.data.syntheticKind === "type"));
-                    if (inTypeCtx)
-                    {
-                        alert("Action not available in this view.");
-                        break;
-                    }
-                    if (!node.folder) 
-                    {
-                        alert("Select a category");
-                        break;
-                    }
-
-                    openAction("Move", key, parentKey);
-                    break;
-                }
-
-                    case "delete":
-                    {
-                        if (!isAdmin)
+                        if (!isAdmin) 
                         {
                             alert("Insufficient privileges");
                             break;
@@ -1865,19 +1828,20 @@ window.CategoryTree = (function ()
                             alert("Action not available in this view.");
                             break;
                         }
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("Delete"),
-                            data: { key: key, recursive: (node.folder && node.data && node.data.nodeType === "category") },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
+                        if (!node.folder) 
                         {
-                            alert((res && res.message) || "Not Yet Implemented");
-                        }).fail(function (xhr)
-                        {
-                            alert("Server error (" + xhr.status + ")");
-                        });
+                            alert("Select a category");
+                            break;
+                        }
+
+                        openAction("Move", key, parentKey);
+                        break;
+                    }
+
+                    case "delete":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        openDeleteFor(node, parentKey || "");
                         break;
                     }
 
@@ -1890,34 +1854,54 @@ window.CategoryTree = (function ()
                         }
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("SetEnabled"),
-                            data: { key: key, enabled: makeEnabled },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            if (res && res.success)
+                        postJsonGlobal("SetEnabled", { key: key, enabled: makeEnabled })
+                            .done(function (res)
                             {
-                                setNodeEnabledInUi(node, !!makeEnabled, !kinds.isCode);
-                                updateActionBar(node);
-                                if (!isMobile())
+                                if (res && res.success)
                                 {
-                                    loadDetails(node);
+                                    setNodeEnabledInUi(node, !!makeEnabled, !kinds.isCode);
+                                    updateActionBar(node);
+                                    if (!isMobile())
+                                    {
+                                        loadDetails(node);
+                                    }
+                                    refreshTopAnchors();
                                 }
-                                refreshAnchors();
-                            }
-                            else
+                                else
+                                {
+                                    alert((res && res.message) || "Update failed");
+                                }
+                            }).fail(function (xhr)
                             {
-                                alert((res && res.message) || "Update failed");
-                            }
-                        }).fail(function (xhr)
-                        {
-                            alert("Server error (" + xhr.status + ")");
-                        });
+                                alert("Server error (" + xhr.status + ")");
+                            });
                         break;
                     }
+                }
+            });
+        }
+
+        function bindCancelInPane()
+        {
+            var $pane = $("#detailsPane");
+            if ($pane.length === 0)
+            {
+                return;
+            }
+
+            $pane.off("click.cancelEmbedded").on("click.cancelEmbedded", "[data-embedded-cancel]", function (e)
+            {
+                e.preventDefault();
+                try
+                {
+                    if (typeof window.tcCancel === "function")
+                    {
+                        window.tcCancel();
+                    }
+                }
+                catch (_)
+                {
+                    // swallow
                 }
             });
         }
@@ -1947,13 +1931,6 @@ window.CategoryTree = (function ()
                     var p = node.getParent();
                     parentKey = (p && p.key) ? p.key : "";
                 }
-                var token = antiXsrf();
-
-                function handlerUrl(name)
-                {
-                    var sep = basePageUrl.indexOf('?') === -1 ? '?' : '&';
-                    return basePageUrl + sep + 'handler=' + name;
-                }
 
                 function refreshAnchors()
                 {
@@ -1973,25 +1950,13 @@ window.CategoryTree = (function ()
 
                 function callStub(handler, extra)
                 {
-                    $.ajax({
-                        type: "POST",
-                        url: handlerUrl(handler),
-                        data: Object.assign({ key: key, parentKey: parentKey }, extra || {}),
-                        headers: token ? { "RequestVerificationToken": token } : {},
-                        dataType: "json"
-                    }).done(function (res)
-                    {
-                        alert((res && res.message) || "Not Yet Implemented");
-                    }).fail(function (xhr)
-                    {
-                        alert("Server error (" + xhr.status + ")");
-                    });
+                    return postJsonGlobal(handler, Object.assign({ key: key, parentKey: parentKey }, extra || {}));
                 }
 
                 switch (action)
                 {
-                    case "view": { callStub("View"); break; }
-                    case "edit": { if (!isAdmin) { alert("Insufficient privileges"); break; } callStub("Edit"); break; }
+                    case "view": { callStub("View").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); }); break; }
+                    case "edit": { if (!isAdmin) { alert("Insufficient privileges"); break; } callStub("Edit").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); }); break; }
                     case "addExistingTotal":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
@@ -2000,24 +1965,17 @@ window.CategoryTree = (function ()
                         var childKey = prompt("Existing Category Code to add under " + key + ":");
                         if (!childKey) { break; }
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("AddExistingTotal"),
-                            data: { parentKey: key, childKey: childKey },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
+                        postJsonGlobal("AddExistingTotal", { parentKey: key, childKey: childKey })
+                            .done(function (res)
                             {
-                                reloadIfExpandedNode(node);
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                reloadIfExpandedNode(disc);
-                                reloadIfExpandedNode(root);
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                                alert((res && res.message) || "Not Yet Implemented");
+                                if (res && res.success)
+                                {
+                                    reloadIfExpandedNode(node);
+                                    refreshTopAnchors();
+                                }
+                            })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
                     case "addExistingCode":
@@ -2030,21 +1988,17 @@ window.CategoryTree = (function ()
                         var codeKey = prompt("Existing Cash Code to add under " + targetCategory + ":");
                         if (!codeKey) { break; }
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("AddExistingCode"),
-                            data: { parentKey: targetCategory, codeKey: codeKey },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
+                        postJsonGlobal("AddExistingCode", { parentKey: targetCategory, codeKey: codeKey })
+                            .done(function (res)
                             {
-                                var tgt = tree.getNodeByKey(targetCategory);
-                                reloadIfExpandedNode(tgt);
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                                alert((res && res.message) || "Not Yet Implemented");
+                                if (res && res.success)
+                                {
+                                    var tgt = tree.getNodeByKey(targetCategory);
+                                    reloadIfExpandedNode(tgt);
+                                }
+                            })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
                     case "move":
@@ -2068,61 +2022,28 @@ window.CategoryTree = (function ()
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("SetEnabled"),
-                            data: { key: key, enabled: makeEnabled },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            if (res && res.success)
+                        postJsonGlobal("SetEnabled", { key: key, enabled: makeEnabled })
+                            .done(function (res)
                             {
-                                setNodeEnabledInUi(node, !!makeEnabled, !kinds.isCode);
-                                loadDetails(node);
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                reloadIfExpandedNode(disc);
-                                reloadIfExpandedNode(root);
-                            }
-                            else
-                            {
-                                alert((res && res.message) || "Update failed");
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                                if (res && res.success)
+                                {
+                                    setNodeEnabledInUi(node, !!makeEnabled, !kinds.isCode);
+                                    loadDetails(node);
+                                    refreshTopAnchors();
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || "Update failed");
+                                }
+                            })
+                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
                         break;
                     }
 
                     case "delete":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        var discCat = false;
-                        if (node && node.getParent)
-                        {
-                            var pp = node.getParent();
-                            discCat = !!(pp && pp.key === DISC_KEY);
-                        }
-                        var recursive = !!(node && node.folder && node.data && node.data.nodeType === "category" && !discCat);
-
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("Delete"),
-                            data: { key: key, recursive: recursive },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
-                            {
-                                if (parentKey) { var p = tree.getNodeByKey(parentKey); reloadIfExpandedNode(p); }
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                reloadIfExpandedNode(root);
-                                reloadIfExpandedNode(disc);
-                                loadDetails(tree.getActiveNode());
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        openDeleteFor(node, parentKey || "");
                         break;
                     }
 
@@ -2131,21 +2052,15 @@ window.CategoryTree = (function ()
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!parentKey) { alert("Open from a parent context to make primary."); break; }
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("MakePrimary"),
-                            data: { key: key, parentKey: parentKey },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
+                        postJsonGlobal("MakePrimary", { key: key, parentKey: parentKey })
+                        .done(function (res)
                         {
                             alert((res && res.message) || "Not Yet Implemented");
                             if (res && res.success)
                             {
                                 var p = tree.getNodeByKey(parentKey);
                                 reloadIfExpandedNode(p);
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                reloadIfExpandedNode(root);
+                                refreshTopAnchors();
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -2161,22 +2076,13 @@ window.CategoryTree = (function ()
                         var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
                         if (!confirm("Set " + key + " as the " + kind + " primary root?")) { break; }
 
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("SetPrimaryRoot"),
-                            data: { kind: kind, categoryCode: key },
-                            headers: token ? { "RequestVerificationToken": token } : {},
-                            dataType: "json"
-                        }).done(function (res)
+                        postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
+                        .done(function (res)
                         {
                             alert((res && res.message) || "Not Yet Implemented");
                             if (res && res.success)
                             {
-                                // Refresh top-level anchors and details to reflect new primary paths/badges
-                                var root = tree.getNodeByKey(ROOT_KEY);
-                                var disc = tree.getNodeByKey(DISC_KEY);
-                                reloadIfExpandedNode(root);
-                                reloadIfExpandedNode(disc);
+                                refreshTopAnchors();
                                 loadDetails(tree.getActiveNode());
                             }
                         }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
@@ -2194,22 +2100,10 @@ window.CategoryTree = (function ()
                             alert("Select a parent category");
                             break;
                         }
-
-                        var isDisc = (key === DISC_KEY) || (parentKey === DISC_KEY);
-
-                        // If invoked from the Disconnected root open CreateCategory with DISC_KEY
-                        if (isDisc && key === DISC_KEY)
-                        {
-                            openAction("CreateCategory", "", DISC_KEY);
-                        }
-                        else
-                        {
-                            // Standard case: open embedded CreateCategory with parentKey set
-                            openAction("CreateCategory", "", targetParent);
-                        }
+                        openAction("CreateCategory", "", targetParent);
                         break;
                     }
-                }
+                                    }
             });
         }
 
@@ -2417,16 +2311,8 @@ window.CategoryTree = (function ()
                             // Cash Type sibling reorder -> ReorderType
                             if (parent && isTypeContainer(parent))
                             {
-                                var tokenA = antiXsrf();
-                                console.log("POST ReorderType", { key: src.key, anchorKey: node.key, mode: data.hitMode });
-
-                                $.ajax({
-                                    type: "POST",
-                                    url: handlerUrl("ReorderType"),
-                                    data: { key: src.key, anchorKey: node.key, mode: data.hitMode },
-                                    headers: tokenA ? { "RequestVerificationToken": tokenA } : {},
-                                    dataType: "json"
-                                }).done(function (res)
+                                postJsonGlobal("ReorderType", { key: src.key, anchorKey: node.key, mode: data.hitMode })
+                                .done(function (res)
                                 {
                                     if (res && res.success)
                                     {
@@ -2469,16 +2355,8 @@ window.CategoryTree = (function ()
                             // Totals/Disconnected sibling reorder -> ReorderSiblings
                             if (parent && !isTypeContainer(parent))
                             {
-                                var tokenB = antiXsrf();
-                                console.log("POST ReorderSiblings", { parentKey: parent.key || "", key: src.key, anchorKey: node.key, mode: data.hitMode });
-
-                                $.ajax({
-                                    type: "POST",
-                                    url: handlerUrl("ReorderSiblings"),
-                                    data: { parentKey: parent.key || "", key: src.key, anchorKey: node.key, mode: data.hitMode },
-                                    headers: tokenB ? { "RequestVerificationToken": tokenB } : {},
-                                    dataType: "json"
-                                }).done(function (res)
+                                postJsonGlobal("ReorderSiblings", { parentKey: parent.key || "", key: src.key, anchorKey: node.key, mode: data.hitMode })
+                                .done(function (res)
                                 {
                                     if (res && res.success)
                                     {
@@ -2498,11 +2376,7 @@ window.CategoryTree = (function ()
                                         announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
                                         notify("Order updated", "success");
 
-                                        // Refresh top anchors
-                                        var root = t.getNodeByKey(ROOT_KEY);
-                                        var disc = t.getNodeByKey(DISC_KEY);
-                                        reloadIfExpandedNode(root);
-                                        reloadIfExpandedNode(disc);
+                                        refreshTopAnchors();
 
                                         if (!isMobile())
                                         {
@@ -2528,18 +2402,8 @@ window.CategoryTree = (function ()
                         // Fallback: child drop (move under parent) - call Move handler when hitMode === "over"
                         if (data.hitMode !== "over") { return false; }
 
-                        var token2 = antiXsrf();
-                        var oldParent = src.getParent ? (src.getParent() && src.getParent().key) || "" : "";
-
-                        console.log("POST Move", { key: src.key, targetParentKey: node.key });
-
-                        $.ajax({
-                            type: "POST",
-                            url: handlerUrl("Move"),
-                            data: { key: src.key, targetParentKey: node.key },
-                            headers: token2 ? { "RequestVerificationToken": token2 } : {},
-                            dataType: "json"
-                        }).done(function (res)
+                        postJsonGlobal("Move", { key: src.key, targetParentKey: node.key })
+                        .done(function (res)
                         {
                             if (res && res.success)
                             {
@@ -2553,13 +2417,10 @@ window.CategoryTree = (function ()
                                 }
 
                                 // reload relevant parents
-                                reloadIfExpandedNode(oldParent);
+                                reloadIfExpandedNode(src.getParent ? (src.getParent() && src.getParent().key) || "" : "");
                                 reloadIfExpandedNode(node.key);
 
-                                var root = t.getNodeByKey(ROOT_KEY);
-                                var disc = t.getNodeByKey(DISC_KEY);
-                                reloadIfExpandedNode(root);
-                                reloadIfExpandedNode(disc);
+                                refreshTopAnchors();
 
                                 src.setActive(true);
                                 persistActiveKey(src);
@@ -2650,6 +2511,7 @@ window.CategoryTree = (function ()
 			bindContextMenuHandlers();
 			bindActionBarHandlers();
 			bindDetailsPaneHandlers();
+            bindCancelInPane();
 			bindKeyboardHandlers();
 			bindAutoscrollHandlers();
 

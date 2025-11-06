@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -526,11 +526,40 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             return Task.FromResult(new JsonResult(new { success = false, message = "Open the Edit page for the selected node.", key }));
         }
 
-        /// <summary>
-        /// Delete a code or category. For categories a recursive delete is required if the category has children.
-        /// The operation refuses to delete categories that still contain Cash Codes.
-        /// </summary>
-        public async Task<JsonResult> OnPostDeleteAsync([FromForm] string key, [FromForm] bool recursive = false)
+
+        public async Task<JsonResult> OnPostDeleteCashCodeAsync([FromForm] string key)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+            if (string.IsNullOrWhiteSpace(key) || !key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
+                return new JsonResult(new { success = false, message = "Missing or invalid key" });
+
+            try
+            {
+                var cashCode = key.Substring("code:".Length);
+                var code = await NodeContext.Cash_tbCodes.FirstOrDefaultAsync(c => c.CashCode == cashCode);
+                if (code == null)
+                    return new JsonResult(new { success = false, message = "Cash code not found." });
+
+                // Quick safety check: refuse delete if payments reference this cash code
+                var paymentCount = await NodeContext.Cash_tbPayments.Where(p => p.CashCode == cashCode).CountAsync();
+                if (paymentCount > 0)
+                    return new JsonResult(new { success = false, message = "Cannot delete Cash Code: related payments exist.", payments = paymentCount });
+
+                NodeContext.Cash_tbCodes.Remove(code);
+                await NodeContext.SaveChangesAsync();
+
+                return new JsonResult(new { success = true, message = "Cash code deleted.", cashCode = cashCode });
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = "Server error." });
+            }
+        }
+
+        public async Task<JsonResult> OnPostDeleteCategoryAsync([FromForm] string key)
         {
             if (!IsAdmin())
                 return new JsonResult(new { success = false, message = "Insufficient privileges" });
@@ -540,26 +569,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
             try
             {
-                // Delete a code
-                if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
-                {
-                    var cashCode = key.Substring("code:".Length);
-                    var code = await NodeContext.Cash_tbCodes.FirstOrDefaultAsync(c => c.CashCode == cashCode);
-                    if (code == null)
-                        return new JsonResult(new { success = false, message = "Cash code not found." });
-
-                    NodeContext.Cash_tbCodes.Remove(code);
-                    await NodeContext.SaveChangesAsync();
-
-                    return new JsonResult(new { success = true, message = "Cash code deleted.", key });
-                }
-
-                // Delete a category (and optionally descendants)
+                // Verify category exists
                 var cat = await NodeContext.Cash_tbCategories.FirstOrDefaultAsync(c => c.CategoryCode == key);
                 if (cat == null)
                     return new JsonResult(new { success = false, message = "Category not found." });
 
-                // Build descendant set
+                // Build descendant set (recursive)
                 var edges = await NodeContext.Cash_tbCategoryTotals
                                 .Select(t => new { t.ParentCode, t.ChildCode })
                                 .ToListAsync();
@@ -575,13 +590,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                         stack.Push(ch);
                 }
 
-                // If non-recursive and there are children, refuse
-                if (!recursive && edges.Any(e => e.ParentCode == key))
-                {
-                    return new JsonResult(new { success = false, message = "Category has child categories. Use recursive delete to remove." });
-                }
-
-                // Check for Cash Codes in the set - cannot delete categories that have codes
+                // If any cash codes exist in the delete set, refuse — caller must remove or reassign codes first.
                 var codeCount = await NodeContext.Cash_tbCodes.Where(c => seen.Contains(c.CategoryCode)).CountAsync();
                 if (codeCount > 0)
                 {
@@ -590,7 +599,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 await using var tx = await NodeContext.Database.BeginTransactionAsync();
 
-                // Remove totals entries where parent or child in set
+                // Remove totals mappings where parent or child in set
                 await NodeContext.Cash_tbCategoryTotals
                     .Where(t => seen.Contains(t.ParentCode) || seen.Contains(t.ChildCode))
                     .ExecuteDeleteAsync();
@@ -607,6 +616,96 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
             catch (Exception e)
             {
                 await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = "Server error." });
+            }
+        }
+
+        public async Task<JsonResult> OnPostDeleteTotalAsync([FromForm] string parentKey, [FromForm] string childKey)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+            if (string.IsNullOrWhiteSpace(parentKey) || string.IsNullOrWhiteSpace(childKey))
+                return new JsonResult(new { success = false, message = "Missing parameters." });
+
+            try
+            {
+                // Ensure mapping exists (defensive)
+                var mappingExists = await NodeContext.Cash_tbCategoryTotals
+                    .AnyAsync(t => t.ParentCode == parentKey && t.ChildCode == childKey);
+
+                if (!mappingExists)
+                    return new JsonResult(new { success = false, message = "Mapping not found." });
+
+                // Build descendant set from childKey
+                var edges = await NodeContext.Cash_tbCategoryTotals
+                                .Select(t => new { t.ParentCode, t.ChildCode })
+                                .ToListAsync();
+
+                var stack = new Stack<string>();
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                stack.Push(childKey);
+
+                while (stack.Count > 0)
+                {
+                    var cur = stack.Pop();
+                    if (!seen.Add(cur))
+                        continue;
+
+                    foreach (var ch in edges
+                        .Where(e => string.Equals(e.ParentCode, cur, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(e.ChildCode))
+                        .Select(e => e.ChildCode))
+                    {
+                        stack.Push(ch);
+                    }
+                }
+
+                // Partition seen into totals and non-totals
+                var cats = await NodeContext.Cash_tbCategories
+                    .Where(c => seen.Contains(c.CategoryCode))
+                    .Select(c => new { c.CategoryCode, c.CategoryTypeCode })
+                    .ToListAsync();
+
+                short totalType = (short)NodeEnum.CategoryType.CashTotal;
+                var totalsToDelete = new HashSet<string>(cats
+                    .Where(c => c.CategoryTypeCode == totalType)
+                    .Select(c => c.CategoryCode), StringComparer.OrdinalIgnoreCase);
+
+                if (totalsToDelete.Count == 0)
+                {
+                    return new JsonResult(new { success = true, message = "No total categories to delete.", parentKey, childKey, deletedTotals = 0 });
+                }
+
+                await using var tx = await NodeContext.Database.BeginTransactionAsync();
+
+                // Remove any totals mappings involving nodes in totalsToDelete
+                await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => totalsToDelete.Contains(t.ParentCode) || totalsToDelete.Contains(t.ChildCode))
+                    .ExecuteDeleteAsync();
+
+                // Defensive: ensure direct mapping is also removed
+                await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => t.ParentCode == parentKey && t.ChildCode == childKey)
+                    .ExecuteDeleteAsync();
+
+                // Delete the total categories themselves
+                var deletedTotals = await NodeContext.Cash_tbCategories
+                    .Where(c => totalsToDelete.Contains(c.CategoryCode))
+                    .ExecuteDeleteAsync();
+
+                await tx.CommitAsync();
+
+                return new JsonResult(new {
+                    success = true,
+                    message = "Total category subtree deleted.",
+                    parentKey,
+                    childKey,
+                    deletedTotals
+                });
+            }
+            catch (Exception ex)
+            {
+                await NodeContext.ErrorLog(ex);
                 return new JsonResult(new { success = false, message = "Server error." });
             }
         }
