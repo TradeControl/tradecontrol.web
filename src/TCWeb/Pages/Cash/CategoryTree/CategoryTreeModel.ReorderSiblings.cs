@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 using TradeControl.Web.Authorization;
 
-namespace TradeControl.Web.Pages.Cash.CategoryCode
+namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public partial class CategoryTreeModel
     {

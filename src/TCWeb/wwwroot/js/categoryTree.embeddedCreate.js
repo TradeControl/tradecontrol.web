@@ -1,8 +1,10 @@
 (function ()
 {
-    // Page config (used to force a fresh nodes load when reloading a parent)
     var _cfgEl = document.getElementById("categoryTreeConfig");
     var _nodesUrl = _cfgEl ? _cfgEl.dataset.nodesUrl : null;
+    var _debug = !!(window.tcTree && window.tcTree.debug);
+
+    exposeTestHooks();
 
     function _appendQuery(url, key, value)
     {
@@ -31,10 +33,9 @@
         }
         catch (e)
         {
-            // swallow
         }
     }
-    // lightweight global-safe helpers (avoid deprecated plugin call)
+
     function getTreeGlobal()
     {
         try
@@ -58,7 +59,6 @@
         }
     }
 
-    // small safe-invoke helpers to keep code compact and avoid repeated try/catch formatting
     function safeInvoke(target, methodName)
     {
         noThrow(function ()
@@ -70,7 +70,6 @@
         });
     }
 
-    // Replace the whole function
     function safeInvokeWithArg(target, methodName, arg)
     {
         noThrow(function ()
@@ -82,13 +81,101 @@
         });
     }
 
+    // --- New unified reconciliation helper (extracted) ---
+    function reconcileAndSelect(opts)
+    {
+        // opts: { parentKey, childKey, name?, polarity?, categoryType?, isEnabled? }
+        if (!opts || !opts.childKey)
+        {
+            return;
+        }
+
+        var parentKey = (opts.parentKey || "").trim();
+        var childKey = (opts.childKey || "").trim();
+        var name = opts.name;
+        var polarity = opts.polarity;
+        var categoryType = opts.categoryType;
+        var isEnabled = opts.isEnabled;
+
+        // 1. Optimistic insertion (if parent currently expanded)
+        try
+        {
+            if (parentKey)
+            {
+                var tree0 = getTreeGlobal();
+                var parentNode0 = tree0 ? tree0.getNodeByKey(parentKey) : null;
+                if (tree0 && parentNode0 && parentNode0.expanded)
+                {
+                    tryInsertAndSelectUnderParent(tree0, parentNode0, childKey, name, polarity, categoryType, isEnabled);
+                }
+            }
+        }
+        catch (_)
+        {
+        }
+
+        // 2. Anchor refresh -> duplicate purge -> parent resolution -> expand+reload -> selection
+        refreshTopAnchorsLocal()
+            .then(function ()
+            {
+                removeFromDiscIfDuplicated(parentKey);
+
+                var parentNode = pickParentUnderRoot(parentKey);
+                if (!parentNode)
+                {
+                    var a = getAnchors();
+                    parentNode = a.tree ? a.tree.getNodeByKey(parentKey) : null;
+                }
+
+                if (!parentNode)
+                {
+                    // Fallback early
+                    fullTreeReloadAndSelect(parentKey, childKey);
+                    return;
+                }
+
+                return ensureNodeExpandedAndReload(parentNode)
+                    .then(function ()
+                    {
+                        // Attempt selection via existing helper
+                        reloadParentAndSelect(childKey, parentKey);
+
+                        // Secondary attempt & details activation check
+                        setTimeout(function ()
+                        {
+                            try
+                            {
+                                var tree = getTreeGlobal();
+                                var found = tree && (tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey));
+                                if (!found)
+                                {
+                                    fullTreeReloadAndSelect(parentKey, childKey);
+                                }
+                            }
+                            catch (_)
+                            {
+                                fullTreeReloadAndSelect(parentKey, childKey);
+                            }
+                        }, 400);
+                    });
+            })
+            .catch(function ()
+            {
+                fullTreeReloadAndSelect(parentKey, childKey);
+            });
+    }
+    // --- end new helper ---
+
     function fullTreeReloadAndSelect(parentKey, childKey)
     {
         try
         {
             var tree = getTreeGlobal();
             var cfgEl = document.getElementById("categoryTreeConfig");
-            if (!tree || !cfgEl) { return; }
+            if (!tree || !cfgEl)
+            {
+                return;
+            }
 
             var rootKey = cfgEl.dataset.root;
             var discKey = cfgEl.dataset.disc;
@@ -97,7 +184,6 @@
             {
                 try
                 {
-                    // Ensure root expanded (so parent appears in new classification)
                     var rootNode = rootKey ? tree.getNodeByKey(rootKey) : null;
                     if (rootNode && !rootNode.expanded)
                     {
@@ -105,13 +191,13 @@
                         {
                             rootNode.setExpanded(true);
                         }
-                        catch(_) {}
+                        catch (_)
+                        {
+                        }
                     }
 
-                    // Prefer the parent under root
                     var parentNode = parentKey ? tree.getNodeByKey(parentKey) : null;
 
-                    // If parent ended up under Disconnected due to timing, purge duplicate and re-resolve under root
                     if (parentNode && parentNode.getParent && parentNode.getParent().key === discKey)
                     {
                         try
@@ -119,91 +205,141 @@
                             var rootParentVersion = tree.getNodeByKey(parentKey);
                             if (rootParentVersion && rootParentVersion !== parentNode && rootParentVersion.getParent && rootParentVersion.getParent().key === rootKey)
                             {
-                                // remove disconnected copy
                                 try
                                 {
                                     parentNode.remove();
                                 }
-                                catch(_) {}
+                                catch (_)
+                                {
+                                }
                                 parentNode = rootParentVersion;
                             }
                         }
-                        catch(_) { /* swallow */ }
+                        catch (_)
+                        {
+                        }
                     }
 
-                    // Expand parent and reload its children for fresh T3 presence
                     if (parentNode)
                     {
                         ensureNodeExpandedAndReload(parentNode).then(function ()
                         {
-                            // Attempt to select child
                             selectChild(childKey, parentKey);
                         });
                     }
                     else
                     {
-                        // Fallback: just try select child directly
                         selectChild(childKey, parentKey);
                     }
                 }
-                catch(_)
+                catch (_)
                 {
                     selectChild(childKey, parentKey);
                 }
             }
 
-            function selectChild(childKey, parentKey)
+            function selectChild(childKey)
             {
-                try
+                // Use adaptive retry if available, otherwise fallback to loop
+                if (window.tcTree && typeof window.tcTree.retry === "function")
                 {
-                    var attempts = 6;
-                    (function retry()
+                    window.tcTree.retry(function ()
                     {
-                        var n = tree.getNodeByKey(childKey);
-                        if (!n) { n = tree.getNodeByKey("code:" + childKey); }
-
-                        if (n)
+                        try
                         {
-                            try
+                            var n = tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey);
+                            if (n)
                             {
-                                n.makeVisible();
+                                try
+                                {
+                                    n.makeVisible();
+                                }
+                                catch (_)
+                                {
+                                }
+                                try
+                                {
+                                    n.setActive(true);
+                                }
+                                catch (_)
+                                {
+                                }
+                                return true;
                             }
-                            catch(_) {}
-                            try
-                            {
-                                n.setActive(true);
-                            }
-                            catch(_) {}
-                            return;
                         }
-
-                        if (--attempts > 0)
+                        catch (_)
                         {
-                            setTimeout(retry, 180);
                         }
-                    })();
+                        return false;
+                    }, { attempts: 6, delayMs: 160, factor: 1.25 });
                 }
-                catch(_) { /* swallow */ }
+                else
+                {
+                    try
+                    {
+                        var attempts = 6;
+                        (function retry()
+                        {
+                            var n = tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey);
+                            if (n)
+                            {
+                                try
+                                {
+                                    n.makeVisible();
+                                }
+                                catch (_)
+                                {
+                                }
+                                try
+                                {
+                                    n.setActive(true);
+                                }
+                                catch (_)
+                                {
+                                }
+                                return;
+                            }
+
+                            if (--attempts > 0)
+                            {
+                                setTimeout(retry, 180);
+                            }
+                        })();
+                    }
+                    catch (_)
+                    {
+                    }
+                }
             }
 
-            // Reload entire tree source (top-level classification recomputed)
             var res = tree.reload({ url: _nocache(_nodesUrl) });
             if (res && typeof res.then === "function")
             {
-                res.then(function () { setTimeout(doSelection, 60); }, function () { setTimeout(doSelection, 60); });
+                res.then(function ()
+                {
+                    setTimeout(doSelection, 60);
+                }, function ()
+                {
+                    setTimeout(doSelection, 60);
+                });
             }
             else if (res && typeof res.done === "function")
             {
-                res.done(function () { setTimeout(doSelection, 60); }).fail(function () { setTimeout(doSelection, 60); });
+                res.done(function ()
+                {
+                    setTimeout(doSelection, 60);
+                }).fail(function ()
+                {
+                    setTimeout(doSelection, 60);
+                });
             }
             else
             {
                 setTimeout(doSelection, 120);
             }
         }
-        catch(_)
+        catch (_)
         {
-            // swallow
         }
     }
 
@@ -218,11 +354,23 @@
                     var r = url ? node.reloadChildren({ url: url }) : node.reloadChildren();
                     if (r && typeof r.then === "function")
                     {
-                        r.then(function () { resolve(); }, function () { resolve(); });
+                        r.then(function ()
+                        {
+                            resolve();
+                        }, function ()
+                        {
+                            resolve();
+                        });
                     }
                     else if (r && typeof r.done === "function")
                     {
-                        r.done(function () { resolve(); }).fail(function () { resolve(); });
+                        r.done(function ()
+                        {
+                            resolve();
+                        }).fail(function ()
+                        {
+                            resolve();
+                        });
                     }
                     else
                     {
@@ -242,20 +390,29 @@
             {
                 var tree = getTreeGlobal();
                 var cfgEl = document.getElementById("categoryTreeConfig");
-                if (!tree || !cfgEl) { resolve(); return; }
+                if (!tree || !cfgEl)
+                {
+                    resolve();
+                    return;
+                }
 
                 var rootKey = cfgEl.dataset && cfgEl.dataset.root;
                 var discKey = cfgEl.dataset && cfgEl.dataset.disc;
-
                 var promises = [];
 
                 [rootKey, discKey].forEach(function (k)
                 {
-                    if (!k) { return; }
-                    var n = tree.getNodeByKey(k);
-                    if (!n || typeof n.reloadChildren !== "function") { return; }
+                    if (!k)
+                    {
+                        return;
+                    }
 
-                    // Ensure both anchors are expanded so child sets are materialized
+                    var n = tree.getNodeByKey(k);
+                    if (!n || typeof n.reloadChildren !== "function")
+                    {
+                        return;
+                    }
+
                     try
                     {
                         if (!n.expanded)
@@ -263,7 +420,9 @@
                             n.setExpanded(true);
                         }
                     }
-                    catch (_) { /* swallow */ }
+                    catch (_)
+                    {
+                    }
 
                     var url = null;
                     if (_nodesUrl)
@@ -272,7 +431,10 @@
                         {
                             url = _nocache(_appendQuery(_nodesUrl, "id", n.key));
                         }
-                        catch (_) { url = null; }
+                        catch (_)
+                        {
+                            url = null;
+                        }
                     }
 
                     promises.push(asPromise(n, url));
@@ -305,9 +467,14 @@
     {
         var tree = getTreeGlobal();
         var cfgEl = document.getElementById("categoryTreeConfig");
-        if (!tree || !cfgEl) { return { tree: null, root: null, disc: null }; }
+        if (!tree || !cfgEl)
+        {
+            return { tree: null, root: null, disc: null };
+        }
+
         var rootKey = cfgEl.dataset && cfgEl.dataset.root;
         var discKey = cfgEl.dataset && cfgEl.dataset.disc;
+
         return {
             tree: tree,
             root: rootKey ? tree.getNodeByKey(rootKey) : null,
@@ -315,13 +482,16 @@
         };
     }
 
-    // Prefer the parent instance that is a direct child under ROOT
     function pickParentUnderRoot(parentKey)
     {
         try
         {
             var a = getAnchors();
-            if (!a.root || !a.root.children) { return null; }
+            if (!a.root || !a.root.children)
+            {
+                return null;
+            }
+
             for (var i = 0; i < a.root.children.length; i++)
             {
                 var ch = a.root.children[i];
@@ -330,6 +500,7 @@
                     return ch;
                 }
             }
+
             return null;
         }
         catch (_)
@@ -338,15 +509,16 @@
         }
     }
 
-    // If the parent is under ROOT, remove any stale duplicate under DISCONNECTED
     function removeFromDiscIfDuplicated(parentKey)
     {
         try
         {
             var a = getAnchors();
-            if (!a.root || !a.disc) { return; }
+            if (!a.root || !a.disc)
+            {
+                return;
+            }
 
-            // Confirm parent exists under ROOT
             var existsUnderRoot = false;
             if (a.root.children)
             {
@@ -359,9 +531,12 @@
                     }
                 }
             }
-            if (!existsUnderRoot) { return; }
 
-            // Remove stale copy from DISCONNECTED if present there
+            if (!existsUnderRoot)
+            {
+                return;
+            }
+
             if (a.disc.children)
             {
                 for (var j = 0; j < a.disc.children.length; j++)
@@ -373,7 +548,9 @@
                         {
                             ch.remove();
                         }
-                        catch (_) { /* swallow */ }
+                        catch (_)
+                        {
+                        }
                         break;
                     }
                 }
@@ -381,12 +558,9 @@
         }
         catch (_)
         {
-            // swallow
         }
     }
 
-    // Ensure a fancytree node is expanded and its children reloaded (returns a Promise).
-    // Uses a forced nocache nodesUrl when available to avoid stale cached child lists.
     function ensureNodeExpandedAndReload(node)
     {
         return new Promise(function (resolve)
@@ -399,7 +573,6 @@
 
             function afterReload()
             {
-                // Give a small delay to allow lazy children to populate.
                 setTimeout(resolve, 120);
             }
 
@@ -417,40 +590,20 @@
                             {
                                 try
                                 {
-                                    if (_nodesUrl)
-                                    {
-                                        var url = _nocache(_appendQuery(_nodesUrl, 'id', node.key));
-                                        var r2 = node.reloadChildren({ url: url });
+                                    var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, 'id', node.key)) : null;
+                                    var r2 = url ? node.reloadChildren({ url: url }) : node.reloadChildren();
 
-                                        if (r2 && typeof r2.then === "function")
-                                        {
-                                            r2.then(afterReload, afterReload);
-                                        }
-                                        else if (r2 && r2.done)
-                                        {
-                                            r2.done(afterReload).fail(afterReload);
-                                        }
-                                        else
-                                        {
-                                            afterReload();
-                                        }
+                                    if (r2 && typeof r2.then === "function")
+                                    {
+                                        r2.then(afterReload, afterReload);
+                                    }
+                                    else if (r2 && r2.done)
+                                    {
+                                        r2.done(afterReload).fail(afterReload);
                                     }
                                     else
                                     {
-                                        var r2 = node.reloadChildren();
-
-                                        if (r2 && typeof r2.then === "function")
-                                        {
-                                            r2.then(afterReload, afterReload);
-                                        }
-                                        else if (r2 && r2.done)
-                                        {
-                                            r2.done(afterReload).fail(afterReload);
-                                        }
-                                        else
-                                        {
-                                            afterReload();
-                                        }
+                                        afterReload();
                                     }
                                 }
                                 catch (ex)
@@ -474,40 +627,20 @@
                             {
                                 try
                                 {
-                                    if (_nodesUrl)
-                                    {
-                                        var url2 = _nocache(_appendQuery(_nodesUrl, 'id', node.key));
-                                        var r2 = node.reloadChildren({ url: url2 });
+                                    var url2 = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, 'id', node.key)) : null;
+                                    var r2b = url2 ? node.reloadChildren({ url: url2 }) : node.reloadChildren();
 
-                                        if (r2 && typeof r2.then === "function")
-                                        {
-                                            r2.then(afterReload, afterReload);
-                                        }
-                                        else if (r2 && r2.done)
-                                        {
-                                            r2.done(afterReload).fail(afterReload);
-                                        }
-                                        else
-                                        {
-                                            afterReload();
-                                        }
+                                    if (r2b && typeof r2b.then === "function")
+                                    {
+                                        r2b.then(afterReload, afterReload);
+                                    }
+                                    else if (r2b && r2b.done)
+                                    {
+                                        r2b.done(afterReload).fail(afterReload);
                                     }
                                     else
                                     {
-                                        var r2 = node.reloadChildren();
-
-                                        if (r2 && typeof r2.then === "function")
-                                        {
-                                            r2.then(afterReload, afterReload);
-                                        }
-                                        else if (r2 && r2.done)
-                                        {
-                                            r2.done(afterReload).fail(afterReload);
-                                        }
-                                        else
-                                        {
-                                            afterReload();
-                                        }
+                                        afterReload();
                                     }
                                 }
                                 catch (ex)
@@ -529,40 +662,20 @@
                 {
                     try
                     {
-                        if (_nodesUrl)
-                        {
-                            var url3 = _nocache(_appendQuery(_nodesUrl, 'id', node.key));
-                            var r = node.reloadChildren({ url: url3 });
+                        var url3 = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, 'id', node.key)) : null;
+                        var r = url3 ? node.reloadChildren({ url: url3 }) : node.reloadChildren();
 
-                            if (r && typeof r.then === "function")
-                            {
-                                r.then(afterReload, afterReload);
-                            }
-                            else if (r && r.done)
-                            {
-                                r.done(afterReload).fail(afterReload);
-                            }
-                            else
-                            {
-                                afterReload();
-                            }
+                        if (r && typeof r.then === "function")
+                        {
+                            r.then(afterReload, afterReload);
+                        }
+                        else if (r && r.done)
+                        {
+                            r.done(afterReload).fail(afterReload);
                         }
                         else
                         {
-                            var r = node.reloadChildren();
-
-                            if (r && typeof r.then === "function")
-                            {
-                                r.then(afterReload, afterReload);
-                            }
-                            else if (r && r.done)
-                            {
-                                r.done(afterReload).fail(afterReload);
-                            }
-                            else
-                            {
-                                afterReload();
-                            }
+                            afterReload();
                         }
                     }
                     catch (ex)
@@ -577,7 +690,6 @@
             }
             catch (ex)
             {
-                // best-effort
                 setTimeout(resolve, 200);
             }
         });
@@ -591,56 +703,95 @@
             return;
         }
 
-        function trySelectNode(keyToFind, attemptsLeft)
+        function selectWithRetry(keyToFind, attempts, delayMs, factor)
         {
-            try
+            if (window.tcTree && typeof window.tcTree.retry === "function")
             {
-                var node = tree.getNodeByKey(keyToFind);
-
-                if (!node && typeof keyToFind === "string" && !keyToFind.startsWith("code:"))
+                return window.tcTree.retry(function ()
                 {
-                    node = tree.getNodeByKey("code:" + keyToFind);
-                }
-
-                if (node)
-                {
-                    noThrow(function ()
+                    try
                     {
-                        safeInvoke(node, "makeVisible");
-                        safeInvokeWithArg(node, "setActive", true);
+                        var node = tree.getNodeByKey(keyToFind);
 
-                        var el = (typeof node.getEventTarget === "function") ? node.getEventTarget() : null;
-                        if (el && el.scrollIntoView)
+                        if (!node && typeof keyToFind === "string" && !keyToFind.startsWith("code:"))
                         {
-                            el.scrollIntoView({ block: "nearest", inline: "nearest" });
+                            node = tree.getNodeByKey("code:" + keyToFind);
                         }
-                    });
 
-                    return true;
-                }
+                        if (node)
+                        {
+                            noThrow(function ()
+                            {
+                                safeInvoke(node, "makeVisible");
+                                safeInvokeWithArg(node, "setActive", true);
 
-                if (attemptsLeft <= 0)
-                {
-                    return false;
-                }
+                                var el = (typeof node.getEventTarget === "function") ? node.getEventTarget() : null;
+                                if (el && el.scrollIntoView)
+                                {
+                                    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+                                }
+                            });
 
-                setTimeout(function ()
-                {
-                    trySelectNode(keyToFind, attemptsLeft - 1);
-                }, 300);
-            }
-            catch (ex)
-            {
-                if (attemptsLeft > 0)
-                {
-                    setTimeout(function ()
+                            return true;
+                        }
+                    }
+                    catch (ex)
                     {
-                        trySelectNode(keyToFind, attemptsLeft - 1);
-                    }, 300);
-                }
-            }
+                        // swallow and retry
+                    }
 
-            return false;
+                    return false;
+                }, { attempts: attempts || 6, delayMs: delayMs || 160, factor: factor || 1.25 });
+            }
+            else
+            {
+                // Fallback to simple loop if helper not available
+                var attemptsLeft = attempts || 6;
+
+                (function retry()
+                {
+                    try
+                    {
+                        var node = tree.getNodeByKey(keyToFind);
+
+                        if (!node && typeof keyToFind === "string" && !keyToFind.startsWith("code:"))
+                        {
+                            node = tree.getNodeByKey("code:" + keyToFind);
+                        }
+
+                        if (node)
+                        {
+                            noThrow(function ()
+                            {
+                                safeInvoke(node, "makeVisible");
+                                safeInvokeWithArg(node, "setActive", true);
+
+                                var el = (typeof node.getEventTarget === "function") ? node.getEventTarget() : null;
+                                if (el && el.scrollIntoView)
+                                {
+                                    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+                                }
+                            });
+
+                            return;
+                        }
+
+                        if (--attemptsLeft > 0)
+                        {
+                            setTimeout(retry, delayMs || 180);
+                        }
+                    }
+                    catch (ex)
+                    {
+                        if (--attemptsLeft > 0)
+                        {
+                            setTimeout(retry, delayMs || 180);
+                        }
+                    }
+                })();
+
+                return null;
+            }
         }
 
         if (parentKey)
@@ -649,7 +800,7 @@
 
             if (!parentNode)
             {
-                // Reload all expanded top-level anchors, then try selection twice
+                // Reload all expanded top-level anchors, then schedule adaptive selection attempts
                 var root = tree.getRootNode();
                 var promises = [];
 
@@ -666,40 +817,20 @@
                                 {
                                     try
                                     {
-                                        if (_nodesUrl)
-                                        {
-                                            var url = _nocache(_appendQuery(_nodesUrl, "id", n.key));
-                                            var r = n.reloadChildren({ url: url });
+                                        var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", n.key)) : null;
+                                        var r = url ? n.reloadChildren({ url: url }) : n.reloadChildren();
 
-                                            if (r && typeof r.then === "function")
-                                            {
-                                                r.then(res, res);
-                                            }
-                                            else if (r && r.done)
-                                            {
-                                                r.done(res).fail(res);
-                                            }
-                                            else
-                                            {
-                                                setTimeout(res, 150);
-                                            }
+                                        if (r && typeof r.then === "function")
+                                        {
+                                            r.then(res, res);
+                                        }
+                                        else if (r && r.done)
+                                        {
+                                            r.done(res).fail(res);
                                         }
                                         else
                                         {
-                                            var r = n.reloadChildren();
-
-                                            if (r && typeof r.then === "function")
-                                            {
-                                                r.then(res, res);
-                                            }
-                                            else if (r && r.done)
-                                            {
-                                                r.done(res).fail(res);
-                                            }
-                                            else
-                                            {
-                                                setTimeout(res, 150);
-                                            }
+                                            setTimeout(res, 150);
                                         }
                                     }
                                     catch (e)
@@ -715,45 +846,45 @@
                 Promise.all(promises)
                     .then(function ()
                     {
-                        setTimeout(function () { trySelectNode(key, 6); }, 300);
-                        setTimeout(function () { trySelectNode(key, 4); }, 800);
+                        setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
+                        setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
                     })
                     .catch(function ()
                     {
-                        setTimeout(function () { trySelectNode(key, 6); }, 300);
-                        setTimeout(function () { trySelectNode(key, 4); }, 800);
+                        setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
+                        setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
                     });
 
                 return;
             }
 
-            // Ensure parent expanded + reloaded (nocache), then retry selection twice
+            // Ensure parent expanded + reloaded (nocache), then adaptive selection
             ensureNodeExpandedAndReload(parentNode)
                 .then(function ()
                 {
-                    trySelectNode(key, 6);
-                    setTimeout(function () { trySelectNode(key, 4); }, 500);
+                    selectWithRetry(key, 6, 160, 1.25);
+                    setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 500);
                 })
                 .catch(function ()
                 {
-                    trySelectNode(key, 6);
-                    setTimeout(function () { trySelectNode(key, 4); }, 500);
+                    selectWithRetry(key, 6, 160, 1.25);
+                    setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 500);
                 });
 
             return;
         }
 
-        // No parent provided: reload all expanded top anchors, then try selection twice
+        // No parent provided: reload all expanded top anchors, then adaptive selection
         try
         {
-            var root = tree.getRootNode();
+            var root2 = tree.getRootNode();
             var topPromises = [];
 
-            if (root && root.children)
+            if (root2 && root2.children)
             {
-                for (var j = 0; j < root.children.length; j++)
+                for (var j = 0; j < root2.children.length; j++)
                 {
-                    var n = root.children[j];
+                    var n = root2.children[j];
                     if (n && n.expanded && typeof n.reloadChildren === "function")
                     {
                         (function (nn)
@@ -762,40 +893,20 @@
                             {
                                 try
                                 {
-                                    if (_nodesUrl)
-                                    {
-                                        var url = _nocache(_appendQuery(_nodesUrl, "id", nn.key));
-                                        var r = nn.reloadChildren({ url: url });
+                                    var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", nn.key)) : null;
+                                    var r = url ? nn.reloadChildren({ url: url }) : nn.reloadChildren();
 
-                                        if (r && typeof r.then === "function")
-                                        {
-                                            r.then(res, res);
-                                        }
-                                        else if (r && r.done)
-                                        {
-                                            r.done(res).fail(res);
-                                        }
-                                        else
-                                        {
-                                            setTimeout(res, 150);
-                                        }
+                                    if (r && typeof r.then === "function")
+                                    {
+                                        r.then(res, res);
+                                    }
+                                    else if (r && r.done)
+                                    {
+                                        r.done(res).fail(res);
                                     }
                                     else
                                     {
-                                        var r = nn.reloadChildren();
-
-                                        if (r && typeof r.then === "function")
-                                        {
-                                            r.then(res, res);
-                                        }
-                                        else if (r && r.done)
-                                        {
-                                            r.done(res).fail(res);
-                                        }
-                                        else
-                                        {
-                                            setTimeout(res, 150);
-                                        }
+                                        setTimeout(res, 150);
                                     }
                                 }
                                 catch (e)
@@ -811,23 +922,22 @@
             Promise.all(topPromises)
                 .then(function ()
                 {
-                    setTimeout(function () { trySelectNode(key, 6); }, 300);
-                    setTimeout(function () { trySelectNode(key, 4); }, 800);
+                    setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
+                    setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
                 })
                 .catch(function ()
                 {
-                    setTimeout(function () { trySelectNode(key, 6); }, 300);
-                    setTimeout(function () { trySelectNode(key, 4); }, 800);
+                    setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
+                    setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
                 });
         }
         catch (ex)
         {
-            setTimeout(function () { trySelectNode(key, 6); }, 300);
-            setTimeout(function () { trySelectNode(key, 4); }, 800);
+            setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
+            setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
         }
     }
 
-    // Build a temporary node that mirrors server node shape (icon, title, data) so context menu works immediately.
     function tryInsertAndSelectUnderParent(tree, parentNode, key, title, polarityCode, categoryTypeCode, isEnabled)
     {
         if (!tree || !parentNode || !key)
@@ -861,13 +971,12 @@
                 return true;
             }
 
-            if (parentNode && parentNode.expanded && typeof parentNode.addChildren === "function")
+            if (parentNode.expanded && typeof parentNode.addChildren === "function")
             {
                 var safeTitle = escapeHtml(title || key);
                 var safeCode = escapeHtml(key);
                 var polClass = (Number(polarityCode) === 0) ? "expense" : (Number(polarityCode) === 1) ? "income" : "neutral";
 
-                // Use same markup as server nodes so icon and title match
                 var prefixedTitle = "<span class='tc-cat-icon tc-cat-" + polClass + "'></span> " + safeTitle + " (" + safeCode + ")";
 
                 var newNodes = parentNode.addChildren(
@@ -895,7 +1004,6 @@
                     safeInvoke(newNode, "makeVisible");
                     safeInvokeWithArg(newNode, "setActive", true);
 
-                    // Schedule a refresh of parent's children to replace the temporary node with server-rendered node.
                     try
                     {
                         setTimeout(function ()
@@ -914,13 +1022,11 @@
                             }
                             catch (e)
                             {
-                                // ignore reload errors
                             }
                         }, 450);
                     }
                     catch (ex)
                     {
-                        // ignore scheduling errors
                     }
 
                     return true;
@@ -929,7 +1035,10 @@
         }
         catch (ex)
         {
-            console.warn("tryInsertAndSelectUnderParent failed", ex);
+            if (_debug)
+            {
+                console.warn("tryInsertAndSelectUnderParent failed", ex);
+            }
         }
 
         return false;
@@ -944,64 +1053,6 @@
 
         var id = marker.id || "";
 
-        function ensureSelectedAndDetails(nodeKey, parentKey)
-        {
-            reloadParentAndSelect(nodeKey, parentKey);
-
-            setTimeout(function ()
-            {
-                try
-                {
-                    reloadParentAndSelect(nodeKey, parentKey);
-                }
-                catch (_)
-                {
-                    // swallow
-                }
-            }, 500);
-
-            setTimeout(function ()
-            {
-                try
-                {
-                    var tree = getTreeGlobal();
-                    var pane = document.getElementById("detailsPane");
-                    if (!tree || !pane)
-                    {
-                        return;
-                    }
-
-                    var n = tree.getNodeByKey(nodeKey) || tree.getNodeByKey("code:" + nodeKey);
-                    if (n)
-                    {
-                        try
-                        {
-                            safeInvokeWithArg(n, "setActive", true);
-                        }
-                        catch (_)
-                        {
-                            // swallow
-                        }
-                        return; // activate->loadDetails path should run
-                    }
-
-                    // If node still not visible, fetch details directly (keeps UX responsive)
-                    var url = "/Cash/CategoryTree/Details?key=" + encodeURIComponent(nodeKey) + "&embed=1";
-                    fetch(url, { credentials: "same-origin" })
-                        .then(function (r) { return r.text(); })
-                        .then(function (html) { pane.innerHTML = html; })
-                        .catch(function ()
-                        {
-                            // swallow
-                        });
-                }
-                catch (_)
-                {
-                    // swallow
-                }
-            }, 900);
-        }
-
         if (id === "createResult" || id === "createCategoryResult")
         {
             var key = (marker.getAttribute("data-key") || "").trim();
@@ -1011,70 +1062,19 @@
             var categoryType = parseInt((marker.getAttribute("data-categorytype") || "0").trim(), 10);
             var isEnabled = (marker.getAttribute("data-isenabled") || "1").trim();
 
-            if (!key) { return; }
-
-            // Optimistic temporary insertion if parent still expanded in its old location
-            try
+            if (!key)
             {
-                var tree0 = getTreeGlobal();
-                if (tree0 && parent)
-                {
-                    var parentNode0 = tree0.getNodeByKey(parent);
-                    if (parentNode0 && parentNode0.expanded)
-                    {
-                        tryInsertAndSelectUnderParent(tree0, parentNode0, key, name, polarity, categoryType, isEnabled);
-                    }
-                }
+                return;
             }
-            catch(_) {}
 
-            // Anchor-based refresh path
-            refreshTopAnchorsLocal()
-                .then(function ()
-                {
-                    removeFromDiscIfDuplicated(parent);
-
-                    var parentNode = pickParentUnderRoot(parent);
-                    if (!parentNode)
-                    {
-                        var a = getAnchors();
-                        parentNode = a.tree ? a.tree.getNodeByKey(parent) : null;
-                    }
-
-                    if (parentNode)
-                    {
-                        return ensureNodeExpandedAndReload(parentNode)
-                            .then(function ()
-                            {
-                                // Attempt selection
-                                ensureSelectedAndDetails(key, parent);
-
-                                // Verify selection success after short delay; if not, do full tree reload fallback
-                                setTimeout(function ()
-                                {
-                                    try
-                                    {
-                                        var tree = getTreeGlobal();
-                                        var found = tree && (tree.getNodeByKey(key) || tree.getNodeByKey("code:" + key));
-                                        if (!found)
-                                        {
-                                            // Fallback path
-                                            fullTreeReloadAndSelect(parent, key);
-                                        }
-                                    }
-                                    catch(_) { fullTreeReloadAndSelect(parent, key); }
-                                }, 400);
-                            });
-                    }
-
-                    // Parent not found (rare) — full reload fallback immediately
-                    fullTreeReloadAndSelect(parent, key);
-                })
-                .catch(function ()
-                {
-                    // Anchor refresh failed — invoke full tree reload fallback
-                    fullTreeReloadAndSelect(parent, key);
-                });
+            reconcileAndSelect({
+                parentKey: parent,
+                childKey: key,
+                name: name,
+                polarity: polarity,
+                categoryType: categoryType,
+                isEnabled: isEnabled
+            });
 
             return;
         }
@@ -1107,7 +1107,6 @@
                             }
                             catch (_)
                             {
-                                // swallow
                             }
 
                             try
@@ -1116,7 +1115,6 @@
                             }
                             catch (_)
                             {
-                                // swallow
                             }
 
                             try
@@ -1132,14 +1130,12 @@
                             }
                             catch (_)
                             {
-                                // swallow
                             }
 
                             safeInvoke(existing, "makeVisible");
                             safeInvokeWithArg(existing, "setActive", true);
                             safeInvoke(existing, "renderTitle");
 
-                            // ensure parent selections settle
                             reloadParentAndSelect(parsedKey, category || "");
                             return;
                         }
@@ -1177,19 +1173,24 @@
                     }
                     catch (ex)
                     {
-                        console.warn("embeddedCreate: failed to parse/apply data-node JSON", ex);
+                        if (_debug)
+                        {
+                            console.warn("embeddedCreate: failed to parse/apply data-node JSON", ex);
+                        }
                     }
                 }
 
-                // Fallback path
                 if (nodeKey)
                 {
-                    ensureSelectedAndDetails(nodeKey, category || "");
+                    reconcileAndSelect({ parentKey: category || "", childKey: nodeKey });
                 }
             }
             catch (ex)
             {
-                console.warn("embeddedCreate: error processing createCodeResult", ex);
+                if (_debug)
+                {
+                    console.warn("embeddedCreate: error processing createCodeResult", ex);
+                }
             }
         }
     }
@@ -1201,8 +1202,7 @@
             return;
         }
 
-        var m = null;
-        m = el.querySelector("#createResult, #createCategoryResult, #createCodeResult");
+        var m = el.querySelector("#createResult, #createCategoryResult, #createCodeResult");
 
         if (!m && el.id && (el.id === "createResult" || el.id === "createCategoryResult" || el.id === "createCodeResult"))
         {
@@ -1215,26 +1215,29 @@
         }
     }
 
-    // Intercept embedded form submits inside detailsPane and POST via AJAX (keeps top-level page intact).
     function bindEmbeddedFormSubmit()
     {
         var pane = document.getElementById("detailsPane");
-        if (!pane) { return; }
+        if (!pane)
+        {
+            return;
+        }
 
         pane.addEventListener("submit", function (e)
         {
             var form = e.target;
-            if (!form || form.tagName !== "FORM") { return; }
+            if (!form || form.tagName !== "FORM")
+            {
+                return;
+            }
 
             var actionUrl = form.getAttribute("action") || window.location.href;
 
-            // Intercept only embedded flows (query or hidden input)
             if (actionUrl.indexOf("embed=1") === -1 && !form.querySelector("input[name='embed'][value='1']"))
             {
                 return;
             }
 
-            // Ensure ParentKey present; fallback to Totals root
             try
             {
                 var parentInput = form.querySelector('input[name="ParentKey"]');
@@ -1257,7 +1260,9 @@
                     }
                 }
             }
-            catch (_) { /* swallow */ }
+            catch (_)
+            {
+            }
 
             e.preventDefault();
             e.stopPropagation();
@@ -1266,13 +1271,15 @@
             {
                 var fd = new FormData(form);
 
-                // Include antiforgery in header (token is already in form, header improves reliability with AJAX)
                 var token = (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
-                            || (document.querySelector('meta[name="request-verification-token"]') || {}).content
-                            || "";
+                    || (document.querySelector('meta[name="request-verification-token"]') || {}).content
+                    || "";
 
                 var headers = { "X-Requested-With": "XMLHttpRequest" };
-                if (token) { headers["RequestVerificationToken"] = token; }
+                if (token)
+                {
+                    headers["RequestVerificationToken"] = token;
+                }
 
                 fetch(actionUrl, {
                     method: "POST",
@@ -1280,46 +1287,48 @@
                     credentials: "same-origin",
                     headers: headers
                 })
-                .then(function (resp) { return resp.text(); })
-                .then(function (html)
-                {
-                    pane.innerHTML = html;
-
-                    // After the page fragment loads, process success marker and force a parent reload+selection
-                    try
+                    .then(function (resp)
                     {
-                        var marker = pane.querySelector("#createResult, #createCategoryResult");
-                        if (marker)
+                        return resp.text();
+                    })
+                    .then(function (html)
+                    {
+                        pane.innerHTML = html;
+
+                        try
                         {
-                            var parentKey = (marker.getAttribute("data-parent") || "").trim();
+                            var marker = pane.querySelector("#createResult, #createCategoryResult");
+                            if (marker)
+                            {
+                                var parentKey = (marker.getAttribute("data-parent") || "").trim();
 
-                            refreshTopAnchorsLocal()
-                                .then(function ()
-                                {
-                                    removeFromDiscIfDuplicated(parentKey);
-
-                                    var a = getAnchors();
-                                    var parentNode = pickParentUnderRoot(parentKey) || (a.tree && parentKey ? a.tree.getNodeByKey(parentKey) : null);
-
-                                    if (parentNode)
+                                refreshTopAnchorsLocal()
+                                    .then(function ()
                                     {
-                                        return ensureNodeExpandedAndReload(parentNode);
-                                    }
-                                })
-                                .then(function ()
-                                {
-                                    // Selection is driven by processMarker’s ensureSelectedAndDetails
-                                })
-                                .catch(function () { /* swallow */ });
+                                        removeFromDiscIfDuplicated(parentKey);
+
+                                        var a = getAnchors();
+                                        var parentNode = pickParentUnderRoot(parentKey) || (a.tree && parentKey ? a.tree.getNodeByKey(parentKey) : null);
+
+                                        if (parentNode)
+                                        {
+                                            return ensureNodeExpandedAndReload(parentNode);
+                                        }
+                                    })
+                                    .catch(function ()
+                                    {
+                                    });
+                            }
                         }
-                    }
-                    catch (_) { /* swallow */ }
-                })
-                .catch(function (err)
-                {
-                    pane.innerHTML = "<div class='text-danger p-2 small'>Failed to submit form (network)</div>";
-                    console.error("Embedded submit failed", err);
-                });
+                        catch (_)
+                        {
+                        }
+                    })
+                    .catch(function (err)
+                    {
+                        pane.innerHTML = "<div class='text-danger p-2 small'>Failed to submit form (network)</div>";
+                        console.error("Embedded submit failed", err);
+                    });
             }
             catch (ex)
             {
@@ -1368,7 +1377,6 @@
             var tree = getTreeGlobal();
             var pane = document.getElementById("detailsPane");
 
-            // If not embedded, fall back to index
             if (!pane)
             {
                 try
@@ -1377,7 +1385,6 @@
                 }
                 catch (_)
                 {
-                    // swallow
                 }
                 return;
             }
@@ -1395,7 +1402,6 @@
                 return;
             }
 
-            // Determine parentKey for reloadParentAndSelect (best-effort)
             var parentKey = "";
             try
             {
@@ -1407,14 +1413,12 @@
                 parentKey = "";
             }
 
-            // Use the tree's existing reloadParentAndSelect which handles lazy loads and selection safely.
             try
             {
                 reloadParentAndSelect(active.key, parentKey);
             }
             catch (ex)
             {
-                // If that fails, fallback to a safe fetch (no redirects)
                 var url = "/Cash/CategoryTree/Details?key=" + encodeURIComponent(active.key) + "&embed=1";
                 fetch(url, { credentials: "same-origin", redirect: "manual" })
                     .then(function (resp)
@@ -1425,8 +1429,14 @@
                         }
                         return resp.text();
                     })
-                    .then(function (html) { pane.innerHTML = html; })
-                    .catch(function () { pane.innerHTML = "<div class='text-muted small p-2'>No details</div>"; });
+                    .then(function (html)
+                    {
+                        pane.innerHTML = html;
+                    })
+                    .catch(function ()
+                    {
+                        pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
+                    });
             }
         }
         catch (_)
@@ -1435,11 +1445,13 @@
             {
                 window.location.href = "/Cash/CategoryTree/Index";
             }
-            catch (_) { /* swallow */ }
+            catch (_)
+            {
+            }
         }
     };
 
-   function byId(id)
+    function byId(id)
     {
         try
         {
@@ -1463,7 +1475,6 @@
         }
     }
 
-    // delegated embedded cancel handler — inside the IIFE, after tcRefreshActiveNode is defined
     document.addEventListener("submit", function (e)
     {
         try
@@ -1474,9 +1485,8 @@
                 return;
             }
 
-            // Only for CreateTotal forms shown in the embedded RHS
             var isCreateTotal = (form.action && form.action.toLowerCase().indexOf("/createtotal") >= 0)
-                                || (form.getAttribute("data-action") === "CreateTotal");
+                || (form.getAttribute("data-action") === "CreateTotal");
 
             if (!isCreateTotal)
             {
@@ -1507,7 +1517,43 @@
         }
         catch (ex)
         {
-            // swallow
         }
     }, true);
+
+    // ---- Test/Debug Hook Exposure ----
+    function exposeTestHooks()
+    {
+        // Expose hooks only when debugging/under test
+        var isPlaywright = /Playwright|pwtest/i.test(navigator.userAgent);
+        var isForced = (typeof window.__TC_FORCE_TEST_HOOKS__ !== "undefined");
+        var isDebug = !!(window.tcTree && window.tcTree.debug === true);
+
+        if (!(isDebug || isPlaywright || isForced))
+        {
+            return;
+        }
+
+        window.tcTree = window.tcTree || {};
+
+        if (!window.tcTree.reloadAndSelect && typeof reloadParentAndSelect === "function")
+        {
+            window.tcTree.reloadAndSelect = reloadParentAndSelect;
+        }
+
+        if (!window.tcTree.reconcileAndSelect && typeof reconcileAndSelect === "function")
+        {
+            window.tcTree.reconcileAndSelect = reconcileAndSelect;
+        }
+
+        if (!window.tcTree.ensureExpanded && typeof ensureNodeExpandedAndReload === "function")
+        {
+            window.tcTree.ensureExpanded = ensureNodeExpandedAndReload;
+        }
+
+        if (!window.tcTree.fullReloadSelect && typeof fullTreeReloadAndSelect === "function")
+        {
+            window.tcTree.fullReloadSelect = fullTreeReloadAndSelect;
+        }
+    }
+
 })();

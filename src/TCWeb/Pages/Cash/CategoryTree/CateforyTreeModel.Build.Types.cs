@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
 
-namespace TradeControl.Web.Pages.Cash.CategoryCode
+namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public partial class CategoryTreeModel
     {

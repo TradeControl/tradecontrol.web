@@ -104,7 +104,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 // If parentKey is provided and not the special disconnected key, attach under parent.
                 if (!string.IsNullOrWhiteSpace(ParentKey)
-                    && !string.Equals(ParentKey, TradeControl.Web.Pages.Cash.CategoryCode.CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal))
+                    && !string.Equals(ParentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal))
                 {
                     short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
                         .Where(t => t.ParentCode == ParentKey)

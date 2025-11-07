@@ -1,4 +1,4 @@
-﻿/* Strikethrough/muted for disabled nodes (including active/selected states) */
+/* Strikethrough/muted for disabled nodes (including active/selected states) */
 .fancytree-container .fancytree-node.tc-disabled .fancytree-title,
 .fancytree-container .fancytree-node.tc-disabled.fancytree-active .fancytree-title,
 .fancytree-container .fancytree-node.tc-disabled.fancytree-selected .fancytree-title {
@@ -21,6 +21,46 @@
     vertical-align: -0.06em;
 }
 
+@media (min-width: 992px) {
+    .tc-tree-split {
+        display: flex;
+        width: 100%;
+        align-items: stretch;
+        gap: 0; /* gutter handled by Split.js */
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+        .tc-tree-split .tc-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+    /* Initial (pre-Split) 33/67 sizing; removed after Split initializes */
+    #leftCol.tc-initial-left {
+        flex: 0 1 33.333%;
+        max-width: 33.333%;
+    }
+
+    #rightCol.tc-initial-right {
+        flex: 1 1 66.667%;
+        max-width: 66.667%;
+    }
+
+    /* Gutter styling (Split.js injects a div.gutter) */
+    .gutter {
+        flex: 0 0 6px;
+        background: #e0e0e0;
+        cursor: col-resize;
+        position: relative;
+    }
+
+        .gutter:hover {
+            background: #d0d0d0;
+        }
+}
 /* Bottom-sheet menu for mobile */
 @media (max-width: 991.98px) {
   #treeContextMenu.mobile-sheet {
@@ -95,7 +135,13 @@
 #leftCol, #rightCol { min-width: 0; }
 
 /* Make both panes scroll inside their boxes instead of growing */
-#categoryTree, #detailsPane { overflow: auto; }
+#categoryTree,
+#detailsPane {
+    overflow: auto;
+    height: 100%;
+    box-sizing: border-box;
+}
+
 
 /* Critical: let the inner Fancytree container fill the pane height */
 #categoryTree .fancytree-container {

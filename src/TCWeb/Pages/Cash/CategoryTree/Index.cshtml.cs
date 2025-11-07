@@ -14,7 +14,7 @@ using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Cash.CategoryCode
+namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     /// <summary>
     /// PageModel that provides the server-side handlers used by the Cash Category Fancytree.

@@ -10,7 +10,7 @@ using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Cash.CategoryCode
+namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     /// <summary>
     /// CategoryTree maintenance endpoints and helpers (state-changing logic only).

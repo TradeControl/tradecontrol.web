@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace TradeControl.Web.Pages.Cash.CategoryCode
+namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     /// <summary>
     /// Cash Type-based category ordering (DisplayOrder on Cash_tbCategories).

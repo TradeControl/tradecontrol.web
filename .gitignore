@@ -338,3 +338,17 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
+# --- UI test harness (Playwright) ---
+# Node dependencies (never commit)
+tests/ui/node_modules/
+# Playwright browser binaries (installed via: npm run install:pw)
+tests/ui/.cache/
+# Test output artifacts
+**/tests/ui/test-results/
+**/tests/ui/playwright-report/
+**/tests/ui/blob-report/
+# Traces, videos, screenshots (retain locally only)
+**/tests/ui/**/*.trace.zip
+**/tests/ui/**/*.png
+**/tests/ui/**/*.webm
