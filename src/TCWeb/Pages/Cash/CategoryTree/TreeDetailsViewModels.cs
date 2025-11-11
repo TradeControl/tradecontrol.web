@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
@@ -29,6 +29,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
         // Keep if you also use it elsewhere; otherwise optional
         public bool IsRootContext { get; set; }
+        public bool IsDisconnectedContext { get; set; }
+        public bool IsCashCodeCategory { get; set; }
+
     }
 
     public class CodeDetailsVm

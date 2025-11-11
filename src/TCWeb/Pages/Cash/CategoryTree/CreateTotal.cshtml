@@ -4,6 +4,7 @@
 @{
     Layout = null;
     var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    // ParentKey may be a real category, __ROOT__, or __DISCONNECTED__ (synthetic)
 }
 
 @if (Model.OperationSucceeded && isEmbedded)
@@ -23,7 +24,24 @@ else
         <div class="card-body">
             <h5 class="card-title">Create Total</h5>
 
-            <form method="post" asp-page="./CreateTotal" asp-route-parentKey="@Model.ParentKey" asp-route-embed="1" data-parent="@Model.ParentKey">
+            @if (!ViewContext.ModelState.IsValid)
+            {
+                <div class="alert alert-danger py-1 px-2 mb-2 small">
+                    @foreach (var err in ViewContext.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        @err.ErrorMessage
+            
+                        <br />
+                    }
+                </div>
+            }
+
+            <form method="post"
+                  asp-page="./CreateTotal"
+                  asp-route-parentKey="@Model.ParentKey"
+                  asp-route-embed="1"
+                  data-parent="@Model.ParentKey"
+                  data-action="CreateTotal">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="embed" value="1" />
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
@@ -32,11 +50,13 @@ else
                 <div class="mb-3">
                     <label asp-for="CategoryCode" class="form-label">Category Code</label>
                     <input asp-for="CategoryCode" class="form-control" maxlength="10" />
+                    <span asp-validation-for="CategoryCode" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="Category" class="form-label">Category Name</label>
                     <input asp-for="Category" class="form-control" maxlength="50" />
+                    <span asp-validation-for="Category" class="text-danger small"></span>
                 </div>
 
                 <div class="form-check mb-3">
@@ -46,7 +66,10 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Create</button>
-                    <a class="btn btn-secondary" href="#" data-embedded-cancel onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+                    <a class="btn btn-secondary"
+                       href="#"
+                       data-embedded-cancel
+                       onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
                 </div>
             </form>
         </div>

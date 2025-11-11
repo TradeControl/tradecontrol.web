@@ -12,9 +12,9 @@ using TradeControl.Web.Models;
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
-    public class CreateCodeModel : DI_BasePageModel
+    public class CreateCashCodeModel : DI_BasePageModel
     {
-        public CreateCodeModel(NodeContext context) : base(context) { }
+        public CreateCashCodeModel(NodeContext context) : base(context) { }
 
         [BindProperty(SupportsGet = true)]
         public string CategoryCode { get; set; } = "";
@@ -82,7 +82,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
                 catch
                 {
-                    // swallow — continue to business default below if not set
+                    // swallow â€” continue to business default below if not set
                 }
             }
 
@@ -107,7 +107,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
                 catch
                 {
-                    // swallow errors — we don't want GET to fail for this lookup.
+                    // swallow errors â€” we don't want GET to fail for this lookup.
                 }
             }
 

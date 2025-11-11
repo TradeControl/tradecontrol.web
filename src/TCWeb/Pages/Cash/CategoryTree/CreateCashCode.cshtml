@@ -1,5 +1,5 @@
-﻿@page
-@model TradeControl.Web.Pages.Cash.CategoryTree.CreateCodeModel
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.CreateCashCodeModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     Layout = null;
@@ -26,7 +26,7 @@ else
             <h5 class="card-title">Create Cash Code</h5>
 
             <!-- validation summary so embedded responses show errors -->
-            <form method="post" asp-page="./CreateCode" asp-route-key="@Model.CategoryCode" asp-route-embed="1">
+            <form method="post" asp-page="./CreateCashCode" asp-route-key="@Model.CategoryCode" asp-route-embed="1">
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="All" class="text-danger mb-2"></div>
 

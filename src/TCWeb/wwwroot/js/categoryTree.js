@@ -56,21 +56,10 @@ window.CategoryTree = (function ()
             return window.matchMedia && window.matchMedia("(max-width: 991.98px)").matches;
         }
 
-        // Derive the base path from detailsUrl, e.g. ".../CategoryTree/Details" -> ".../CategoryTree"
-        function actionsBasePath()
-        {
-            if (!detailsUrl) 
-            {
-                return "";
-            }
-            // Trim the last path segment (Details or anything else)
-            return detailsUrl.replace(/\/[^\/?#]+(\?.*)?$/i, "");
-        }
-
         // Open an action page in RHS (desktop) or navigate (mobile)
         function openAction(actionName, key, parentKey, extras)
 {
-    var base = actionsBasePath();
+    var base = basePageUrl;
     if (!base)
     {
         alert("Action endpoint not configured.");
@@ -250,7 +239,7 @@ window.CategoryTree = (function ()
                 // Cash Code leaf -> DeleteCashCode
                 if (kinds.isCode || (key && typeof key === "string" && key.indexOf("code:") === 0))
                 {
-                    var codeUrl = actionsBasePath() + "/DeleteCashCode?key=" + encodeURIComponent(key) + "&embed=1";
+                    var codeUrl = basePageUrl + "/DeleteCashCode?key=" + encodeURIComponent(key) + "&embed=1";
                     openEmbeddedUrl(codeUrl);
                     return;
                 }
@@ -297,11 +286,24 @@ window.CategoryTree = (function ()
             }
         }
 
+        function tcIsSyntheticKey(key)
+        {
+            if (!key)
+            {
+                return true;
+            }
+            return key === "__DISCONNECTED__"
+                || key === "__ROOT__"
+                || /^root_\d+$/i.test(key)
+                || (typeof key === "string" && key.indexOf("type:") === 0);
+        }
+
+
         // Load details into RHS pane (desktop only)
         function loadDetails(node)
         {
-            if (!detailsUrl) {return;}
-            if (isMobile()) {return;}
+            if (!detailsUrl) { return; }
+            if (isMobile()) { return; }
 
             var $pane = $("#detailsPane");
             if ($pane.length)
@@ -315,6 +317,7 @@ window.CategoryTree = (function ()
                 return;
             }
 
+            // Extract keys
             var key = node.key || "";
             var parentKey = "";
             if (node && typeof node.getParent === "function")
@@ -323,8 +326,32 @@ window.CategoryTree = (function ()
                 parentKey = (p && p.key) ? p.key : "";
             }
 
+            // If the selected node itself is synthetic, try to show its parent's details (if real).
+            if (tcIsSyntheticKey(key))
+            {
+                if (parentKey && !tcIsSyntheticKey(parentKey))
+                {
+                    var parentUrl = detailsUrl + "?key=" + encodeURIComponent(parentKey);
+                    $.get(nocache(parentUrl))
+                        .done(function (html)
+                        {
+                            $pane.html(html);
+                        })
+                        .fail(function ()
+                        {
+                            $pane.html("<div class='text-muted small p-2'>No details</div>");
+                        });
+                }
+                else
+                {
+                    $pane.html("<div class='text-muted small p-2'>No details</div>");
+                }
+                return;
+            }
+
+            // Build URL for the selected node; parentKey is optional context only when it is real
             var url = detailsUrl + "?key=" + encodeURIComponent(key);
-            if (parentKey)
+            if (parentKey && !tcIsSyntheticKey(parentKey))
             {
                 url += "&parentKey=" + encodeURIComponent(parentKey);
             }
@@ -334,11 +361,10 @@ window.CategoryTree = (function ()
                 {
                     $pane.html(html);
 
-                    // Hide Move button outside Totals (i.e., in Type subtree or Disconnected)
+                    // Existing post-load UI logic (move button visibility etc.) can remain as-is
                     try
                     {
-                        // Use same context detection as menus
-                        var kinds = getNodeKinds(node); // { isCat, isDisconnect, isRoot, ... }
+                        var kinds = getNodeKinds(node);
                         var data = kinds.data || {};
                         var parentKeyNow = "";
                         if (node && node.getParent)
@@ -347,18 +373,14 @@ window.CategoryTree = (function ()
                             parentKeyNow = (pp && pp.key) ? pp.key : "";
                         }
 
-                        // In Cash Type view if node or its context signals 'type'
                         var inTypeCtx = !!(data && (data.isTypeContext === true || data.syntheticKind === "type"))
                                         || (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
 
-                        // In Disconnected view if node is the disc root or under it
                         var isDiscRoot = (typeof kinds.key === "string" && kinds.key === DISC_KEY);
                         var isDiscCategory = !!(kinds.isCat && parentKeyNow === DISC_KEY);
 
-                        // Show only for real categories under Totals; also honor admin
                         var showMove = !!isAdmin && !!kinds.isCat && !inTypeCtx && !isDiscRoot && !isDiscCategory;
 
-                        // Details pane uses data-action="move" hooks
                         var $moveBtn = $pane.find("[data-action='move']");
                         if ($moveBtn.length)
                         {
@@ -1065,7 +1087,7 @@ window.CategoryTree = (function ()
                     "[data-action='addExistingTotal']",
                     "[data-action='createTotal']",
                     "[data-action='addExistingCode']",
-                    "[data-action='createCode']",
+                    "[data-action='createCashCode']",
                     "[data-action='move']",
                     "[data-action='delete']"
                 ];
@@ -1077,7 +1099,7 @@ window.CategoryTree = (function ()
                 $menu.addClass("synthetic-ctx");
             }
 
-            var $createCode = $menu.find("[data-action='createCode']");
+            var $createCode = $menu.find("[data-action='createCashCode']");
             if ($createCode.length)
             {
                 // Allow create when categoryType === 0 (CashCode)
@@ -1113,8 +1135,8 @@ window.CategoryTree = (function ()
                     var nt = showFirst("createTotal");
                     nt.text("New Total…");
 
-                    var cc = showFirst("createCode");
-                    cc.text("New Code…");
+                    var cc = showFirst("createCashCode");
+                    cc.text("New Cash Code…");
 
                     showFirst("edit");
 
@@ -1134,7 +1156,7 @@ window.CategoryTree = (function ()
                 var hideRootSelectors = [
                     "[data-action='addExistingTotal']",
                     "[data-action='addExistingCode']",
-                    "[data-action='createCode']",
+                    "[data-action='createCashCode']",
                     "[data-action='move']",
                     "[data-action='moveUp']",
                     "[data-action='moveDown']",
@@ -1489,18 +1511,51 @@ window.CategoryTree = (function ()
 
                     case "view":
                     {
-                        postJsonGlobal("View", { key: key, parentKey: parentKey })
-                            .done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
-                            .fail(alertFail);
+                        if (!node) { alert("Select a node first"); break; }
+                        if (isMobile())
+                        {
+                            var url = detailsUrl + "?key=" + encodeURIComponent(key);
+                            if (parentKey) { url += "&parentKey=" + encodeURIComponent(parentKey); }
+                            window.location.href = url;
+                        }
+                        else
+                        {
+                            // Desktop RHS
+                            loadDetails(node);
+                        }
                         break;
                     }
 
                     case "edit":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        postJsonGlobal("Edit", { key: key })
-                            .done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
-                            .fail(alertFail);
+                        if (!node) { alert("Select a node first"); break; }
+
+                        var kinds = getNodeKinds(node);
+
+                        // Cash Code
+                        if (kinds.isCode)
+                        {
+                            openAction("EditCashCode", key);
+                            break;
+                        }
+
+                        // Total category
+                        if (kinds.data && kinds.data.categoryType === CATEGORYTYPE_CASHTOTAL)
+                        {
+                            openAction("EditTotal", key);
+                            break;
+                        }
+
+                        // Cash Code category (categoryType == 0)
+                        if (kinds.data && kinds.data.categoryType === 0)
+                        {
+                            openAction("EditCategory", key);
+                            break;
+                        }
+
+                        // Fallback
+                        openAction("EditCategory", key);
                         break;
                     }
 
@@ -1515,20 +1570,8 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        var childKey = prompt("Existing Category Code to add under " + targetParent + ":");
-                        if (!childKey) { break; }
-
-                        postJsonGlobal("AddExistingTotal", { parentKey: targetParent, childKey: childKey })
-                            .done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success)
-                                {
-                                    refreshNode(targetParent);
-                                    refreshTopAnchors();
-                                }
-                            })
-                            .fail(alertFail);
+                        // Open embedded AddTotal page (select from dropdown)
+                        openAction("AddTotal", "", targetParent);
                         break;
                     }
 
@@ -1579,11 +1622,10 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        // Only route to ROOT when the user actually clicked the Disconnected root node itself.
                         if (targetParent === DISC_KEY)
                         {
-                            // Creating a brand new root total (will still appear disconnected until it has children).
-                            openAction("CreateTotal", "", ROOT_KEY);
+                            // Disconnected create: pass Disconnected context. Submit logic will blank ParentKey.
+                            openAction("CreateTotal", "", DISC_KEY);
                             break;
                         }
 
@@ -1593,7 +1635,7 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "createCode":
+                    case "createCashCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node) { alert("Select a node first"); break; }
@@ -1610,12 +1652,12 @@ window.CategoryTree = (function ()
                         if (isCodeNode)
                         {
                             var siblingCash = (key && key.indexOf("code:") === 0) ? key.substring(5) : (node && node.data && node.data.cashCode) || "";
-                            openAction("CreateCode", targetCategory, null, { siblingCashCode: siblingCash });
+                            openAction("CreateCashCode", targetCategory, null, { siblingCashCode: siblingCash });
                             break;
                         }
                         else
                         {
-                            openAction("CreateCode", targetCategory);
+                            openAction("CreateCashCode", targetCategory);
                             break;
                         }
                     }
@@ -1627,7 +1669,7 @@ window.CategoryTree = (function ()
                         if (!node) { alert("Select a node first"); break; }
                         if (key && key.indexOf("code:") === 0)
                         {
-                            alert("Cannot reorder code nodes");
+                            alert("Cannot reorder cash code nodes");
                             break;
                         }
 
@@ -1798,8 +1840,17 @@ window.CategoryTree = (function ()
                 {
                     case "view":
                     {
-                        callStub("View").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
-                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        if (!node) { alert("Select a node first"); break; }
+                        if (isMobile())
+                        {
+                            var url = detailsUrl + "?key=" + encodeURIComponent(key);
+                            if (parentKey) { url += "&parentKey=" + encodeURIComponent(parentKey); }
+                            window.location.href = url;
+                        }
+                        else
+                        {
+                            loadDetails(node);
+                        }
                         break;
                     }
 
@@ -1810,8 +1861,31 @@ window.CategoryTree = (function ()
                             alert("Insufficient privileges");
                             break;
                         }
-                        callStub("Edit").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); })
-                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
+
+                        var kinds2 = getNodeKinds(node);
+
+                        if (kinds2.isCode)
+                        {
+                            openAction("EditCashCode", key);
+                            break;
+                        }
+                        if (kinds2.data && kinds2.data.categoryType === CATEGORYTYPE_CASHTOTAL)
+                        {
+                            openAction("EditTotal", key);
+                            break;
+                        }
+                        if (kinds2.data && kinds2.data.categoryType === 0)
+                        {
+                            openAction("EditCategory", key);
+                            break;
+                        }
+
+                        openAction("EditCategory", key);
                         break;
                     }
 
@@ -1955,29 +2029,57 @@ window.CategoryTree = (function ()
 
                 switch (action)
                 {
-                    case "view": { callStub("View").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); }); break; }
-                    case "edit": { if (!isAdmin) { alert("Insufficient privileges"); break; } callStub("Edit").done(function (res) { alert((res && res.message) || "Not Yet Implemented"); }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); }); break; }
+                    case "view":
+                    {
+                        if (!node) { alert("Select a node first"); break; }
+                        if (isMobile())
+                        {
+                            var url = detailsUrl + "?key=" + encodeURIComponent(key);
+                            if (parentKey) { url += "&parentKey=" + encodeURIComponent(parentKey); }
+                            window.location.href = url;
+                        }
+                        else
+                        {
+                            loadDetails(node);
+                        }
+                        break;
+                    }
+                    case "edit":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node) { alert("Select a node first"); break; }
+
+                        var kinds3 = getNodeKinds(node);
+
+                        if (kinds3.isCode)
+                        {
+                            openAction("EditCashCode", key);
+                            break;
+                        }
+                        if (kinds3.data && kinds3.data.categoryType === CATEGORYTYPE_CASHTOTAL)
+                        {
+                            openAction("EditTotal", key);
+                            break;
+                        }
+                        if (kinds3.data && kinds3.data.categoryType === 0)
+                        {
+                            openAction("EditCategory", key);
+                            break;
+                        }
+
+                        openAction("EditCategory", key);
+                        break;
+                    }
+
                     case "addExistingTotal":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node.folder) { alert("Select a category"); break; }
 
-                        var childKey = prompt("Existing Category Code to add under " + key + ":");
-                        if (!childKey) { break; }
-
-                        postJsonGlobal("AddExistingTotal", { parentKey: key, childKey: childKey })
-                            .done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success)
-                                {
-                                    reloadIfExpandedNode(node);
-                                    refreshTopAnchors();
-                                }
-                            })
-                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        openAction("AddTotal", "", key);
                         break;
                     }
+
                     case "addExistingCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }

@@ -12,7 +12,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize]
     public class TreeDetailsModel : DI_BasePageModel
     {
-        public TreeDetailsModel(NodeContext context) : base(context) { }
+        public TreeDetailsModel(NodeContext context) : base(context)
+        {
+        }
 
         public string NodeType { get; private set; } = "";
         public CategoryDetailsVm Category { get; private set; }
@@ -23,7 +25,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             try
             {
                 if (string.IsNullOrWhiteSpace(key))
+                {
                     return NotFound();
+                }
 
                 var helper = new CashCodes(NodeContext);
 
@@ -44,20 +48,24 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                         Category = cat.Category,
                                         CashPolarity = pol.CashPolarity,
                                         CashType = typ.CashType,
-                                        // Populate TaxCode from the code row so UI can show it
                                         TaxCode = code.TaxCode,
                                         IsEnabled = code.IsEnabled != 0,
                                         IsCategoryEnabled = cat.IsEnabled != 0
                                     }).FirstOrDefaultAsync();
 
-                    if (vm == null) return NotFound();
+                    if (vm == null)
+                    {
+                        return NotFound();
+                    }
 
                     vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
+
                     Code = vm;
                 }
                 else
                 {
                     NodeType = "category";
+
                     var vm = await (from c in NodeContext.Cash_tbCategories
                                     join p in NodeContext.Cash_tbPolaritys on c.CashPolarityCode equals p.CashPolarityCode
                                     join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
@@ -73,7 +81,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                         IsEnabled = c.IsEnabled != 0
                                     }).FirstOrDefaultAsync();
 
-                    if (vm == null) return NotFound();
+                    if (vm == null)
+                    {
+                        return NotFound();
+                    }
 
                     // Counts
                     vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ParentCode == vm.CategoryCode).CountAsync();
@@ -86,21 +97,19 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     var isDisconnectedCtx = string.Equals(parentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal);
                     var effectiveParentKey = (string.IsNullOrEmpty(parentKey) || isSyntheticRootCtx || isDisconnectedCtx) ? null : parentKey;
 
-                    // Keep IsRootContext if you use it elsewhere; otherwise optional
                     vm.IsRootContext = (effectiveParentKey == null) && vm.IsRootNode;
 
-                    // Load options once, use for both flags and root badge
+                    // Options for Profit/VAT roots
                     var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
                     vm.IsProfitRoot = options != null && string.Equals(options.NetProfitCode, vm.CategoryCode, StringComparison.Ordinal);
                     vm.IsVatRoot = options != null && string.Equals(options.VatCategoryCode, vm.CategoryCode, StringComparison.Ordinal);
 
-                    // presence on any primary path (non-root child side)
+                    // Presence on any primary path
                     var presentOnPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
                         .AnyAsync(v => v.ChildCode == vm.CategoryCode);
 
                     if (effectiveParentKey == null)
                     {
-                        // In synthetic root/disconnected context, show badge for configured roots
                         vm.PrimaryKind = vm.IsProfitRoot ? "Profit" : vm.IsVatRoot ? "VAT" : "";
                         vm.IsCategoryInPrimary = presentOnPrimary || !string.IsNullOrEmpty(vm.PrimaryKind);
                         vm.IsContextInPrimary = vm.IsCategoryInPrimary;
@@ -122,6 +131,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         .CountAsync();
 
                     vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
+
+                    // Flags for UI
+                    bool isDisconnectedContext = string.Equals(parentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal);
+
+                    bool isCashCodeCategory =
+                        vm.CodesCount > 0 ||
+                        (!string.IsNullOrEmpty(vm.CashType) && vm.CashType.Contains("Code", StringComparison.OrdinalIgnoreCase));
+
+                    vm.IsDisconnectedContext = isDisconnectedContext;
+                    vm.IsCashCodeCategory = isCashCodeCategory;
+
                     Category = vm;
                 }
 

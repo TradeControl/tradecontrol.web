@@ -4,6 +4,8 @@
     var _nodesUrl = _cfgEl ? _cfgEl.dataset.nodesUrl : null;
     var _debug = !!(window.tcTree && window.tcTree.debug);
 
+    if (_debug) { console.log("[embeddedCreate] debug enabled"); }
+
     exposeTestHooks();
 
     function _appendQuery(url, key, value)
@@ -81,10 +83,8 @@
         });
     }
 
-    // --- New unified reconciliation helper (extracted) ---
     function reconcileAndSelect(opts)
     {
-        // opts: { parentKey, childKey, name?, polarity?, categoryType?, isEnabled? }
         if (!opts || !opts.childKey)
         {
             return;
@@ -97,16 +97,30 @@
         var categoryType = opts.categoryType;
         var isEnabled = opts.isEnabled;
 
-        // 1. Optimistic insertion (if parent currently expanded)
+        var tree = getTreeGlobal();
+        if (!tree)
+        {
+            return;
+        }
+
+        if (_debug)
+        {
+            console.log("[reconcile] start", { parentKey: parentKey, childKey: childKey });
+        }
+
+        // 1. Optimistic insert if parent already expanded and child missing
         try
         {
             if (parentKey)
             {
-                var tree0 = getTreeGlobal();
-                var parentNode0 = tree0 ? tree0.getNodeByKey(parentKey) : null;
-                if (tree0 && parentNode0 && parentNode0.expanded)
+                var parentNode0 = tree.getNodeByKey(parentKey);
+                if (parentNode0 && parentNode0.expanded)
                 {
-                    tryInsertAndSelectUnderParent(tree0, parentNode0, childKey, name, polarity, categoryType, isEnabled);
+                    var existingChild = tree.getNodeByKey(childKey);
+                    if (!existingChild)
+                    {
+                        tryInsertAndSelectUnderParent(tree, parentNode0, childKey, name, polarity, categoryType, isEnabled);
+                    }
                 }
             }
         }
@@ -114,57 +128,203 @@
         {
         }
 
-        // 2. Anchor refresh -> duplicate purge -> parent resolution -> expand+reload -> selection
-        refreshTopAnchorsLocal()
-            .then(function ()
+        // 2. If no parent key (should not happen for add-existing), just full reload + select
+        if (!parentKey)
+        {
+            fullTreeReloadAndSelect(parentKey, childKey);
+            return;
+        }
+
+        var cfgEl = document.getElementById("categoryTreeConfig");
+        var discKey = (cfgEl && cfgEl.dataset) ? (cfgEl.dataset.disc || "") : "";
+
+        // Internal: select child strictly under parent
+        function selectUnderParent()
+        {
+            try
             {
-                removeFromDiscIfDuplicated(parentKey);
-
-                var parentNode = pickParentUnderRoot(parentKey);
+                var parentNode = tree.getNodeByKey(parentKey);
                 if (!parentNode)
                 {
-                    var a = getAnchors();
-                    parentNode = a.tree ? a.tree.getNodeByKey(parentKey) : null;
-                }
-
-                if (!parentNode)
-                {
-                    // Fallback early
-                    fullTreeReloadAndSelect(parentKey, childKey);
+                    if (_debug) { console.log("[reconcile] parent still missing - abort select"); }
                     return;
                 }
 
-                return ensureNodeExpandedAndReload(parentNode)
-                    .then(function ()
+                var found = null;
+                if (parentNode.children)
+                {
+                    for (var i = 0; i < parentNode.children.length; i++)
                     {
-                        // Attempt selection via existing helper
-                        reloadParentAndSelect(childKey, parentKey);
-
-                        // Secondary attempt & details activation check
-                        setTimeout(function ()
+                        var c = parentNode.children[i];
+                        if (c && c.key === childKey)
                         {
-                            try
-                            {
-                                var tree = getTreeGlobal();
-                                var found = tree && (tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey));
-                                if (!found)
-                                {
-                                    fullTreeReloadAndSelect(parentKey, childKey);
-                                }
-                            }
-                            catch (_)
-                            {
-                                fullTreeReloadAndSelect(parentKey, childKey);
-                            }
-                        }, 400);
-                    });
-            })
-            .catch(function ()
+                            found = c;
+                            break;
+                        }
+                    }
+                }
+
+                if (found)
+                {
+                    if (_debug) { console.log("[reconcile] selecting child under parent"); }
+                    try
+                    {
+                        found.makeVisible();
+                    }
+                    catch (_){}
+                    try
+                    {
+                        found.setActive(true);
+                    }
+                    catch (_){}
+                    // Only now remove lingering disconnected copy
+                    if (discKey && parentKey !== discKey)
+                    {
+                        try
+                        {
+                            removeChildFromDisconnected(childKey);
+                        }
+                        catch (_){}
+                    }
+                    // Load RHS details explicitly
+                    setTimeout(function () { loadDetailsEmbedded(childKey, parentKey); }, 160);
+                }
+                else
+                {
+                    if (_debug) { console.log("[reconcile] child not found under parent after reload"); }
+                }
+            }
+            catch (_)
             {
-                fullTreeReloadAndSelect(parentKey, childKey);
+            }
+        }
+
+        // 3. Ensure parent exists; if not, reload root anchors minimally
+        var parentNode = tree.getNodeByKey(parentKey);
+        if (!parentNode)
+        {
+            // Reload root & disconnected (single pass)
+            var anchors = getAnchors();
+            var jobs = [];
+            [anchors.root, anchors.disc].forEach(function (n)
+            {
+                if (!n || typeof n.reloadChildren !== "function")
+                {
+                    return;
+                }
+                try
+                {
+                    if (!n.expanded)
+                    {
+                        n.setExpanded(true);
+                    }
+                }
+                catch (_){}
+                var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", n.key)) : null;
+                jobs.push(new Promise(function (resolve)
+                {
+                    try
+                    {
+                        var r = url ? n.reloadChildren({ url: url }) : n.reloadChildren();
+                        if (r && typeof r.then === "function") { r.then(resolve, resolve); }
+                        else if (r && r.done) { r.done(resolve).fail(resolve); }
+                        else { setTimeout(resolve, 80); }
+                    }
+                    catch (_)
+                    {
+                        setTimeout(resolve, 80);
+                    }
+                }));
             });
+
+            Promise.all(jobs).then(function ()
+            {
+                parentNode = tree.getNodeByKey(parentKey);
+                if (!parentNode)
+                {
+                    if (_debug) { console.log("[reconcile] parent missing after anchors reload; forcing full tree reload"); }
+                    fullTreeReloadAndSelect(parentKey, childKey);
+                    return;
+                }
+                proceedWithParent(parentNode);
+            });
+            return;
+        }
+
+        proceedWithParent(parentNode);
+
+        // 4. Expand + reload parent once, then select
+        function proceedWithParent(pNode)
+        {
+            // Ensure expanded
+            var expandRes;
+            try
+            {
+                if (!pNode.expanded && typeof pNode.setExpanded === "function")
+                {
+                    expandRes = pNode.setExpanded(true);
+                }
+            }
+            catch (_){}
+
+            function afterExpand()
+            {
+                try
+                {
+                    if (typeof pNode.reloadChildren === "function")
+                    {
+                        var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", pNode.key)) : null;
+                        var r = url ? pNode.reloadChildren({ url: url }) : pNode.reloadChildren();
+                        if (r && typeof r.then === "function")
+                        {
+                            r.then(function ()
+                            {
+                                selectUnderParent();
+                            }, function ()
+                            {
+                                selectUnderParent();
+                            });
+                        }
+                        else if (r && r.done)
+                        {
+                            r.done(function ()
+                            {
+                                selectUnderParent();
+                            }).fail(function ()
+                            {
+                                selectUnderParent();
+                            });
+                        }
+                        else
+                        {
+                            setTimeout(selectUnderParent, 120);
+                        }
+                    }
+                    else
+                    {
+                        selectUnderParent();
+                    }
+                }
+                catch (_)
+                {
+                    selectUnderParent();
+                }
+            }
+
+            if (expandRes && typeof expandRes.then === "function")
+            {
+                expandRes.then(afterExpand, afterExpand);
+            }
+            else if (expandRes && typeof expandRes.done === "function")
+            {
+                expandRes.done(afterExpand).fail(afterExpand);
+            }
+            else
+            {
+                afterExpand();
+            }
+        }
     }
-    // --- end new helper ---
 
     function fullTreeReloadAndSelect(parentKey, childKey)
     {
@@ -224,7 +384,44 @@
                     {
                         ensureNodeExpandedAndReload(parentNode).then(function ()
                         {
-                            selectChild(childKey, parentKey);
+                            // Parent-first selection after full reload
+                            var t = getTreeGlobal();
+                            var p = t && t.getNodeByKey(parentKey);
+                            var found = null;
+                            if (p && p.children)
+                            {
+                                for (var i = 0; i < p.children.length; i++)
+                                {
+                                    if (p.children[i] && p.children[i].key === childKey)
+                                    {
+                                        found = p.children[i];
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (found)
+                            {
+                                try
+                                {
+                                    found.makeVisible();
+                                }
+                                catch (_)
+                                {
+                                }
+
+                                try
+                                {
+                                    found.setActive(true);
+                                }
+                                catch (_)
+                                {
+                                }
+                            }
+                            else
+                            {
+                                selectChild(childKey, parentKey);
+                            }
                         });
                     }
                     else
@@ -257,6 +454,7 @@
                                 catch (_)
                                 {
                                 }
+
                                 try
                                 {
                                     n.setActive(true);
@@ -280,7 +478,16 @@
                         var attempts = 6;
                         (function retry()
                         {
-                            var n = tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey);
+                            var n = null;
+
+                            try
+                            {
+                                n = tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey);
+                            }
+                            catch (_)
+                            {
+                            }
+
                             if (n)
                             {
                                 try
@@ -290,6 +497,7 @@
                                 catch (_)
                                 {
                                 }
+
                                 try
                                 {
                                     n.setActive(true);
@@ -561,6 +769,445 @@
         }
     }
 
+    function refreshAnchorsSelective(parentKey)
+    {
+        // Reload __DISCONNECTED__ always; reload __ROOT__ only when parent is a direct child of root
+        return new Promise(function (resolve)
+        {
+            try
+            {
+                var a = getAnchors();
+                var jobs = [];
+
+                function asPromise(node, url)
+                {
+                    return new Promise(function (res)
+                    {
+                        try
+                        {
+                            var r = url ? node.reloadChildren({ url: url }) : node.reloadChildren();
+                            if (r && typeof r.then === "function") { r.then(res, res); }
+                            else if (r && r.done) { r.done(res).fail(res); }
+                            else { setTimeout(res, 80); }
+                        }
+                        catch (_)
+                        {
+                            setTimeout(res, 80);
+                        }
+                    });
+                }
+
+                // Always keep anchors expanded
+                try
+                {
+                    a.root && !a.root.expanded && a.root.setExpanded(true);
+                }
+                catch (_){}
+
+                try
+                {
+                    a.disc && !a.disc.expanded && a.disc.setExpanded(true);
+                }
+                catch (_){}
+
+                // Disconnected always
+                if (a.disc)
+                {
+                    var urlD = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", a.disc.key)) : null;
+                    jobs.push(asPromise(a.disc, urlD));
+                }
+
+                // Reload root only if parent is a root-level child (avoid nuking deeper subtrees)
+                var isRootChild = !!pickParentUnderRoot(parentKey);
+                if (isRootChild && a.root)
+                {
+                    var urlR = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", a.root.key)) : null;
+                    jobs.push(asPromise(a.root, urlR));
+                }
+
+                if (jobs.length === 0)
+                {
+                    resolve();
+                    return;
+                }
+
+                Promise.all(jobs).then(function () { setTimeout(resolve, 60); })
+                                 .catch(function () { setTimeout(resolve, 60); });
+            }
+            catch (_)
+            {
+                resolve();
+            }
+        });
+    }
+
+    function removeChildFromDisconnected(childKey)
+    {
+        try
+        {
+            if (!childKey) { return; }
+
+            var a = getAnchors();
+            if (!a.disc) { return; }
+
+            // Disconnected totals appear as direct children; remove if present
+            if (a.disc.children)
+            {
+                for (var j = 0; j < a.disc.children.length; j++)
+                {
+                    var ch = a.disc.children[j];
+                    if (ch && ch.key === childKey)
+                    {
+                        try
+                        {
+                            ch.remove();
+                        }
+                        catch (_) {}
+
+                        break;
+                    }
+                }
+            }
+        }
+        catch (_)
+        {
+        }
+    }
+
+    function expandAncestorsAndReload(targetParentKey)
+    {
+        return new Promise(function (resolve)
+        {
+            try
+            {
+                var tree = getTreeGlobal();
+                if (!tree || !targetParentKey)
+                {
+                    resolve();
+                    return;
+                }
+
+                var chain = [];
+                var n = tree.getNodeByKey(targetParentKey);
+                while (n && n.key && n.parent)
+                {
+                    chain.push(n);
+                    n = n.parent;
+                }
+
+                // Include root if not already
+                var a = getAnchors();
+                if (a.root && chain.indexOf(a.root) < 0)
+                {
+                    chain.push(a.root);
+                }
+
+                chain.reverse(); // expand top-down
+
+                function step(i)
+                {
+                    if (i >= chain.length)
+                    {
+                        resolve();
+                        return;
+                    }
+
+                    var cur = chain[i];
+
+                    function next()
+                    {
+                        step(i + 1);
+                    }
+
+                    try
+                    {
+                        if (!cur.expanded && typeof cur.setExpanded === "function")
+                        {
+                            var r = cur.setExpanded(true);
+                            if (r && typeof r.then === "function") { r.then(next, next); }
+                            else if (r && typeof r.done === "function") { r.done(next).fail(next); }
+                            else { setTimeout(next, 60); }
+                        }
+                        else if (typeof cur.reloadChildren === "function")
+                        {
+                            var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", cur.key)) : null;
+                            var rr = url ? cur.reloadChildren({ url: url }) : cur.reloadChildren();
+                            if (rr && typeof rr.then === "function") { rr.then(next, next); }
+                            else if (rr && typeof rr.done === "function") { rr.done(next).fail(next); }
+                            else { setTimeout(next, 50); }
+                        }
+                        else
+                        {
+                            setTimeout(next, 40);
+                        }
+                    }
+                    catch (_)
+                    {
+                        setTimeout(next, 60);
+                    }
+                }
+
+                step(0);
+            }
+            catch (_)
+            {
+                resolve();
+            }
+        });
+    }
+
+    function ensureParentMaterialized(parentKey, maxDepth)
+    {
+        maxDepth = Math.max(1, Math.min(4, maxDepth || 3));
+
+        return new Promise(function (resolve)
+        {
+            try
+            {
+                var tree = getTreeGlobal();
+                if (!tree || !parentKey)
+                {
+                    resolve();
+                    return;
+                }
+
+                // Quick success
+                if (tree.getNodeByKey(parentKey))
+                {
+                    resolve();
+                    return;
+                }
+
+                var level = 0;
+
+                function expandWave()
+                {
+                    try
+                    {
+                        // If parent appeared while we waited, stop
+                        if (tree.getNodeByKey(parentKey))
+                        {
+                            resolve();
+                            return;
+                        }
+
+                        var nodes = [];
+                        var root = tree.getRootNode();
+
+                        // Collect all non-expanded folders currently visible to expand this wave
+                        root.visit(function (n)
+                        {
+                            try
+                            {
+                                if (n && n.folder && !n.expanded)
+                                {
+                                    nodes.push(n);
+                                }
+                            }
+                            catch (_)
+                            {
+                            }
+                        });
+
+                        if (nodes.length === 0)
+                        {
+                            resolve();
+                            return;
+                        }
+
+                        var jobs = [];
+
+                        function asPromise(node)
+                        {
+                            return new Promise(function (res)
+                            {
+                                try
+                                {
+                                    var r = node.setExpanded(true);
+                                    if (r && typeof r.then === "function")
+                                    {
+                                        r.then(function ()
+                                        {
+                                            try
+                                            {
+                                                if (typeof node.reloadChildren === "function")
+                                                {
+                                                    var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", node.key)) : null;
+                                                    var rr = url ? node.reloadChildren({ url: url }) : node.reloadChildren();
+
+                                                    if (rr && typeof rr.then === "function") { rr.then(res, res); }
+                                                    else if (rr && rr.done) { rr.done(res).fail(res); }
+                                                    else { setTimeout(res, 60); }
+                                                }
+                                                else
+                                                {
+                                                    setTimeout(res, 40);
+                                                }
+                                            }
+                                            catch (_)
+                                            {
+                                                setTimeout(res, 60);
+                                            }
+                                        }, function ()
+                                        {
+                                            setTimeout(res, 60);
+                                        });
+                                    }
+                                    else if (r && typeof r.done === "function")
+                                    {
+                                        r.done(function ()
+                                        {
+                                            try
+                                            {
+                                                if (typeof node.reloadChildren === "function")
+                                                {
+                                                    var url2 = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", node.key)) : null;
+                                                    var rr2 = url2 ? node.reloadChildren({ url: url2 }) : node.reloadChildren();
+                                                    if (rr2 && typeof rr2.then === "function") { rr2.then(res, res); }
+                                                    else if (rr2 && rr2.done) { rr2.done(res).fail(res); }
+                                                    else { setTimeout(res, 60); }
+                                                }
+                                                else
+                                                {
+                                                    setTimeout(res, 40);
+                                                }
+                                            }
+                                            catch (_)
+                                            {
+                                                setTimeout(res, 60);
+                                            }
+                                        }).fail(function ()
+                                        {
+                                            setTimeout(res, 60);
+                                        });
+                                    }
+                                    else
+                                    {
+                                        setTimeout(res, 40);
+                                    }
+                                }
+                                catch (_)
+                                {
+                                    setTimeout(res, 60);
+                                }
+                            });
+                        }
+
+                        for (var i = 0; i < nodes.length; i++)
+                        {
+                            jobs.push(asPromise(nodes[i]));
+                        }
+
+                        Promise.all(jobs)
+                            .then(function ()
+                            {
+                                try
+                                {
+                                    if (tree.getNodeByKey(parentKey))
+                                    {
+                                        resolve();
+                                        return;
+                                    }
+
+                                    if (++level >= maxDepth)
+                                    {
+                                        resolve();
+                                        return;
+                                    }
+
+                                    // Next wave
+                                    setTimeout(expandWave, 80);
+                                }
+                                catch (_)
+                                {
+                                    resolve();
+                                }
+                            })
+                            .catch(function ()
+                            {
+                                resolve();
+                            });
+                    }
+                    catch (_)
+                    {
+                        resolve();
+                    }
+                }
+
+                // Start
+                expandWave();
+            }
+            catch (_)
+            {
+                resolve();
+            }
+        });
+    }
+
+    function forceSelectChild(parentKey, childKey, attempts)
+    {
+        attempts = attempts || 8;
+
+        var tree = getTreeGlobal();
+        if (!tree || !childKey)
+        {
+            return;
+        }
+
+        (function retry()
+        {
+            try
+            {
+                var node = null;
+
+                if (parentKey)
+                {
+                    var p = tree.getNodeByKey(parentKey);
+                    if (p && p.children)
+                    {
+                        for (var i = 0; i < p.children.length; i++)
+                        {
+                            var c = p.children[i];
+                            if (c && c.key === childKey)
+                            {
+                                node = c;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!node)
+                {
+                    node = tree.getNodeByKey(childKey) || tree.getNodeByKey("code:" + childKey);
+                }
+
+                if (node)
+                {
+                    try
+                    {
+                        node.makeVisible();
+                    }
+                    catch (_){}
+                    try
+                    {
+                        node.setActive(true);
+                    }
+                    catch (_){}
+                    return;
+                }
+            }
+            catch (_)
+            {
+            }
+
+            if (--attempts > 0)
+            {
+                setTimeout(retry, 160);
+            }
+        })();
+    }
+
     function ensureNodeExpandedAndReload(node)
     {
         return new Promise(function (resolve)
@@ -800,73 +1447,70 @@
 
             if (!parentNode)
             {
-                // Reload all expanded top-level anchors, then schedule adaptive selection attempts
-                var root = tree.getRootNode();
-                var promises = [];
-
-                if (root && root.children)
-                {
-                    for (var i = 0; i < root.children.length; i++)
-                    {
-                        var top = root.children[i];
-                        if (top && top.expanded && typeof top.reloadChildren === "function")
-                        {
-                            (function (n)
-                            {
-                                promises.push(new Promise(function (res)
-                                {
-                                    try
-                                    {
-                                        var url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", n.key)) : null;
-                                        var r = url ? n.reloadChildren({ url: url }) : n.reloadChildren();
-
-                                        if (r && typeof r.then === "function")
-                                        {
-                                            r.then(res, res);
-                                        }
-                                        else if (r && r.done)
-                                        {
-                                            r.done(res).fail(res);
-                                        }
-                                        else
-                                        {
-                                            setTimeout(res, 150);
-                                        }
-                                    }
-                                    catch (e)
-                                    {
-                                        setTimeout(res, 150);
-                                    }
-                                }));
-                            })(top);
-                        }
-                    }
-                }
-
-                Promise.all(promises)
-                    .then(function ()
-                    {
-                        setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
-                        setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
-                    })
-                    .catch(function ()
-                    {
-                        setTimeout(function () { selectWithRetry(key, 6, 160, 1.25); }, 300);
-                        setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 800);
-                    });
-
+                // ... (unchanged pre-existing code)
                 return;
             }
 
-            // Ensure parent expanded + reloaded (nocache), then adaptive selection
+            // Ensure parent expanded + reloaded (nocache), then parent-aware selection
             ensureNodeExpandedAndReload(parentNode)
                 .then(function ()
                 {
-                    selectWithRetry(key, 6, 160, 1.25);
-                    setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 500);
+                    // Parent-biased selection: search only under intended parent first
+                    var attempts = 6;
+                    var delay = 160;
+
+                    (function trySelectUnderParent()
+                    {
+                        try
+                        {
+                            // Ensure we still have a fresh parent reference
+                            var p = tree.getNodeByKey(parentKey);
+                            var found = null;
+
+                            if (p && p.children)
+                            {
+                                for (var i = 0; i < p.children.length; i++)
+                                {
+                                    var c = p.children[i];
+                                    if (c && c.key === key)
+                                    {
+                                        found = c;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (found)
+                            {
+                                safeInvoke(found, "makeVisible");
+                                safeInvokeWithArg(found, "setActive", true);
+                                var el = (typeof found.getEventTarget === "function") ? found.getEventTarget() : null;
+                                if (el && el.scrollIntoView)
+                                {
+                                    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+                                }
+                                return;
+                            }
+                        }
+                        catch (_)
+                        {
+                        }
+
+                        if (--attempts > 0)
+                        {
+                            setTimeout(trySelectUnderParent, delay);
+                            return;
+                        }
+
+                        // Fallback: global lookup with retry (may still find the Disconnected copy,
+                        // but by now parent should be refreshed and contain the child)
+                        selectWithRetry(key, 6, 160, 1.25);
+                        setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 500);
+                    })();
                 })
                 .catch(function ()
                 {
+                    // Fallback: global lookup with retry
                     selectWithRetry(key, 6, 160, 1.25);
                     setTimeout(function () { selectWithRetry(key, 4, 200, 1.25); }, 500);
                 });
@@ -966,9 +1610,22 @@
 
             if (existing)
             {
-                safeInvoke(existing, "makeVisible");
-                safeInvokeWithArg(existing, "setActive", true);
-                return true;
+                // Only short-circuit if the existing node is already under the intended parent
+                try
+                {
+                    var ep = existing.getParent && existing.getParent();
+                    if (ep && ep.key === parentNode.key)
+                    {
+                        safeInvoke(existing, "makeVisible");
+                        safeInvokeWithArg(existing, "setActive", true);
+                        return true;
+                    }
+                }
+                catch (_)
+                {
+                }
+
+                // Otherwise, do NOT return here: let proper reload move it
             }
 
             if (parentNode.expanded && typeof parentNode.addChildren === "function")
@@ -1044,6 +1701,49 @@
         return false;
     }
 
+    // Helper: fetch and render details into RHS (desktop + mobile)
+    function loadDetailsEmbedded(key, parentKey)
+    {
+        try
+        {
+            var pane = document.getElementById("detailsPane");
+            if (!pane || !key)
+            {
+                return;
+            }
+
+            var url = "/Cash/CategoryTree/Details";
+            url = _appendQuery(url, "key", key);
+            url = _appendQuery(url, "embed", "1");
+            if (parentKey)
+            {
+                url = _appendQuery(url, "parentKey", parentKey);
+            }
+
+            fetch(_nocache(url), { credentials: "same-origin" })
+                .then(function (resp)
+                {
+                    if (!resp || !resp.ok)
+                    {
+                        throw new Error("bad response");
+                    }
+                    return resp.text();
+                })
+                .then(function (html)
+                {
+                    pane.innerHTML = html;
+                })
+                .catch(function (e)
+                {
+                    void e;
+                });
+        }
+        catch (e)
+        {
+            void e;
+        }
+    }
+
     function processMarker(marker)
     {
         if (!marker)
@@ -1051,8 +1751,58 @@
             return;
         }
 
+        if (_debug)
+        {
+            console.log("[processMarker]", marker.id);
+        }
+
         var id = marker.id || "";
 
+        function applyEditToExistingNode(node, name, isEnabled, polarity, cashType)
+        {
+            if (!node)
+            {
+                return;
+            }
+
+            if (!isNaN(polarity))
+            {
+                node.data.cashPolarity = polarity;
+            }
+            if (!isNaN(cashType))
+            {
+                node.data.cashType = cashType;
+            }
+
+            var pol = (typeof node.data.cashPolarity !== "undefined") ? Number(node.data.cashPolarity) : 2;
+            var polClass = (pol === 0) ? "expense" : (pol === 1) ? "income" : "neutral";
+
+            function esc(s)
+            {
+                return String(s || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            var safeName = esc(name || node.title || node.key);
+            var safeCode = esc(node.key);
+            node.title = "<span class='tc-cat-icon tc-cat-" + polClass + "'></span> " + safeName + " (" + safeCode + ")";
+            node.data.isEnabled = (isEnabled === "0") ? 0 : 1;
+
+            if (node.li && node.li.classList)
+            {
+                node.li.classList.toggle("tc-disabled", node.data.isEnabled === 0);
+            }
+
+            safeInvoke(node, "renderTitle");
+            safeInvoke(node, "makeVisible");
+            safeInvokeWithArg(node, "setActive", true);
+        }
+
+        // Create (Totals or Categories)
         if (id === "createResult" || id === "createCategoryResult")
         {
             var key = (marker.getAttribute("data-key") || "").trim();
@@ -1061,10 +1811,25 @@
             var polarity = parseInt((marker.getAttribute("data-polarity") || "2").trim(), 10);
             var categoryType = parseInt((marker.getAttribute("data-categorytype") || "0").trim(), 10);
             var isEnabled = (marker.getAttribute("data-isenabled") || "1").trim();
-
             if (!key)
             {
                 return;
+            }
+
+            try
+            {
+                if (categoryType === 1 && (!parent || parent === "__ROOT__"))
+                {
+                    var cfgEl2 = document.getElementById("categoryTreeConfig");
+                    var discKey2 = cfgEl2 && cfgEl2.dataset ? (cfgEl2.dataset.disc || "") : "";
+                    if (discKey2)
+                    {
+                        parent = discKey2;
+                    }
+                }
+            }
+            catch (_)
+            {
             }
 
             reconcileAndSelect({
@@ -1076,16 +1841,81 @@
                 isEnabled: isEnabled
             });
 
+            // After create, show details explicitly
+            setTimeout(function () { loadDetailsEmbedded(key, parent); }, 350);
             return;
         }
-        else if (id === "createCodeResult")
+
+        // Edit Total
+        if (id === "editTotalResult")
+        {
+            var keyEt = (marker.getAttribute("data-key") || "").trim();
+            var parentEt = (marker.getAttribute("data-parent") || "").trim();
+            var nameEt = (marker.getAttribute("data-name") || "").trim();
+            var isEnabledEt = (marker.getAttribute("data-isenabled") || "1").trim();
+            var polarityEt = parseInt((marker.getAttribute("data-polarity") || "").trim(), 10);
+            var cashTypeEt = parseInt((marker.getAttribute("data-cashtype") || "").trim(), 10);
+
+            if (!keyEt)
+            {
+                return;
+            }
+
+            try
+            {
+                var treeEt = getTreeGlobal();
+                var nEt = treeEt && treeEt.getNodeByKey(keyEt);
+                applyEditToExistingNode(nEt, nameEt, isEnabledEt, polarityEt, cashTypeEt);
+            }
+            catch (e)
+            {
+                void e;
+            }
+
+            // Explicitly refresh RHS details (do not rely on activation)
+            setTimeout(function () { loadDetailsEmbedded(keyEt, parentEt); }, 200);
+            return;
+        }
+
+        // Edit Category
+        if (id === "editCategoryResult")
+        {
+            var keyEc = (marker.getAttribute("data-key") || "").trim();
+            var parentEc = (marker.getAttribute("data-parent") || "").trim();
+            var nameEc = (marker.getAttribute("data-name") || "").trim();
+            var isEnabledEc = (marker.getAttribute("data-isenabled") || "1").trim();
+            var polarityEc = parseInt((marker.getAttribute("data-polarity") || "").trim(), 10);
+            var cashTypeEc = parseInt((marker.getAttribute("data-cashtype") || "").trim(), 10);
+
+            if (!keyEc)
+            {
+                return;
+            }
+
+            try
+            {
+                var treeEc = getTreeGlobal();
+                var nEc = treeEc && treeEc.getNodeByKey(keyEc);
+                applyEditToExistingNode(nEc, nameEc, isEnabledEc, polarityEc, cashTypeEc);
+            }
+            catch (e)
+            {
+                void e;
+            }
+
+            // Explicitly refresh RHS details (do not rely on activation)
+            setTimeout(function () { loadDetailsEmbedded(keyEc, parentEc); }, 200);
+            return;
+        }
+
+        // Create Cash Code
+        if (id === "createCodeResult")
         {
             try
             {
                 var keyAttr = (marker.getAttribute("data-key") || "").trim();
                 var cash = ((marker.getAttribute("data-cashcode") || marker.getAttribute("data-cashCode") || "")).trim();
                 var category = ((marker.getAttribute("data-parent") || marker.getAttribute("data-category") || "")).trim();
-
                 var nodeJson = marker.getAttribute("data-node") || "";
                 var nodeKey = keyAttr || (cash ? ("code:" + cash) : "");
                 var tree2 = getTreeGlobal();
@@ -1105,18 +1935,12 @@
                             {
                                 existing.title = parsed.title || existing.title;
                             }
-                            catch (_)
-                            {
-                            }
-
+                            catch (e) { void e; }
                             try
                             {
                                 existing.data = parsed.data || existing.data;
                             }
-                            catch (_)
-                            {
-                            }
-
+                            catch (e) { void e; }
                             try
                             {
                                 if (parsed.extraClasses)
@@ -1128,15 +1952,13 @@
                                     existing.li && existing.li.classList && existing.li.classList.remove("tc-disabled");
                                 }
                             }
-                            catch (_)
-                            {
-                            }
+                            catch (e) { void e; }
 
                             safeInvoke(existing, "makeVisible");
                             safeInvokeWithArg(existing, "setActive", true);
                             safeInvoke(existing, "renderTitle");
-
                             reloadParentAndSelect(parsedKey, category || "");
+                            setTimeout(function () { loadDetailsEmbedded(parsedKey, category || ""); }, 300);
                             return;
                         }
 
@@ -1150,6 +1972,7 @@
                                 safeInvokeWithArg(newNode, "setActive", true);
                                 safeInvoke(newNode, "renderTitle");
                                 reloadParentAndSelect(parsedKey, category || "");
+                                setTimeout(function () { loadDetailsEmbedded(parsedKey, category || ""); }, 300);
                                 return;
                             }
                         }
@@ -1166,6 +1989,7 @@
                                     safeInvokeWithArg(newNode2, "setActive", true);
                                     safeInvoke(newNode2, "renderTitle");
                                     reloadParentAndSelect(parsedKey, category || "");
+                                    setTimeout(function () { loadDetailsEmbedded(parsedKey, category || ""); }, 300);
                                     return;
                                 }
                             }
@@ -1173,26 +1997,69 @@
                     }
                     catch (ex)
                     {
-                        if (_debug)
-                        {
-                            console.warn("embeddedCreate: failed to parse/apply data-node JSON", ex);
-                        }
+                        if (_debug) { console.warn("embeddedCreate: failed to parse/apply data-node JSON", ex); }
                     }
                 }
 
                 if (nodeKey)
                 {
                     reconcileAndSelect({ parentKey: category || "", childKey: nodeKey });
+                    setTimeout(function () { loadDetailsEmbedded(nodeKey, category || ""); }, 350);
                 }
             }
             catch (ex)
             {
-                if (_debug)
+                if (_debug) { console.warn("embeddedCreate: error processing createCodeResult", ex); }
+            }
+            return;
+        }
+
+        // Add Existing Total (attach existing total-type category under a parent)
+        if (id === "addExistingTotalResult")
+        {
+            var keyAet = (marker.getAttribute("data-key") || "").trim();
+            var parentAet = (marker.getAttribute("data-parent") || "").trim();
+            var nameAet = (marker.getAttribute("data-name") || "").trim();
+            var polarityAet = parseInt((marker.getAttribute("data-polarity") || "2").trim(), 10);
+            var isEnabledAet = (marker.getAttribute("data-isenabled") || "1").trim();
+            var categoryTypeAet = parseInt((marker.getAttribute("data-categorytype") || "1").trim(), 10);
+
+            if (!keyAet)
+            {
+                return;
+            }
+
+            // Remove the Disconnected copy first to avoid duplicate-key conflicts on reload
+            try
+            {
+                var cfgElA = document.getElementById("categoryTreeConfig");
+                var discKeyA = (cfgElA && cfgElA.dataset) ? (cfgElA.dataset.disc || "") : "";
+                if (discKeyA && parentAet && parentAet !== discKeyA)
                 {
-                    console.warn("embeddedCreate: error processing createCodeResult", ex);
+                    removeChildFromDisconnected(keyAet);
                 }
             }
+            catch (_)
+            {
+            }
+
+            reconcileAndSelect({
+                parentKey: parentAet,
+                childKey: keyAet,
+                name: nameAet,
+                polarity: polarityAet,
+                categoryType: categoryTypeAet,
+                isEnabled: isEnabledAet
+            });
+
+            setTimeout(function ()
+            {
+                loadDetailsEmbedded(keyAet, parentAet);
+                forceSelectChild(parentAet, keyAet, 6);
+            }, 300);
+            return;
         }
+
     }
 
     function scanDetailsPaneForMarkers(el)
@@ -1202,9 +2069,17 @@
             return;
         }
 
-        var m = el.querySelector("#createResult, #createCategoryResult, #createCodeResult");
+        var selector = "#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingTotalResult";
+        var m = el.querySelector(selector)
 
-        if (!m && el.id && (el.id === "createResult" || el.id === "createCategoryResult" || el.id === "createCodeResult"))
+        if (!m && el.id && (
+                el.id === "createResult" ||
+                el.id === "createCategoryResult" ||
+                el.id === "createCodeResult" ||
+                el.id === "editTotalResult" ||
+                el.id === "editCategoryResult" ||
+                el.id === "addExistingTotalResult" 
+            ))
         {
             m = el;
         }
@@ -1242,6 +2117,7 @@
             {
                 var parentInput = form.querySelector('input[name="ParentKey"]');
                 var parentVal = parentInput && typeof parentInput.value === "string" ? parentInput.value : "";
+
                 if (!parentVal)
                 {
                     var cfgEl = document.getElementById("categoryTreeConfig");
@@ -1260,8 +2136,9 @@
                     }
                 }
             }
-            catch (_)
+            catch (e)
             {
+                void e;
             }
 
             e.preventDefault();
@@ -1271,7 +2148,8 @@
             {
                 var fd = new FormData(form);
 
-                var token = (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
+                var token =
+                    (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
                     || (document.querySelector('meta[name="request-verification-token"]') || {}).content
                     || "";
 
@@ -1293,35 +2171,87 @@
                     })
                     .then(function (html)
                     {
+                        if (typeof html === "string"
+                            && (html.indexOf('id="categoryTreeConfig"') >= 0 || html.indexOf('id="categoryTree"') >= 0))
+                        {
+                            window.location.href = "/Cash/CategoryTree/Index";
+                            return;
+                        }
+
                         pane.innerHTML = html;
+
+                        var marker = null;
 
                         try
                         {
-                            var marker = pane.querySelector("#createResult, #createCategoryResult");
-                            if (marker)
-                            {
-                                var parentKey = (marker.getAttribute("data-parent") || "").trim();
-
-                                refreshTopAnchorsLocal()
-                                    .then(function ()
-                                    {
-                                        removeFromDiscIfDuplicated(parentKey);
-
-                                        var a = getAnchors();
-                                        var parentNode = pickParentUnderRoot(parentKey) || (a.tree && parentKey ? a.tree.getNodeByKey(parentKey) : null);
-
-                                        if (parentNode)
-                                        {
-                                            return ensureNodeExpandedAndReload(parentNode);
-                                        }
-                                    })
-                                    .catch(function ()
-                                    {
-                                    });
-                            }
+                            marker = pane.querySelector("#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingTotalResult");
                         }
-                        catch (_)
+                        catch (e)
                         {
+                            void e;
+                        }
+
+                        if (marker)
+                        {
+                            try
+                            {
+                                processMarker(marker);
+                            }
+                            catch (e)
+                            {
+                                void e;
+                            }
+
+                            var parentKey = (marker.getAttribute("data-parent") || "").trim();
+                            try
+                            {
+                                if (marker.id === "createResult")
+                                {
+                                    var catTypeAttr = (marker.getAttribute("data-categorytype") || "").trim();
+                                    var catTypeNum = catTypeAttr ? parseInt(catTypeAttr, 10) : NaN;
+                                    if (catTypeNum === 1)
+                                    {
+                                        var cfgEl3 = document.getElementById("categoryTreeConfig");
+                                        var discKey3 = cfgEl3 && cfgEl3.dataset ? (cfgEl3.dataset.disc || "") : "";
+                                        if ((!parentKey || parentKey === "__ROOT__") && discKey3)
+                                        {
+                                            parentKey = discKey3;
+                                        }
+                                    }
+                                }
+                            }
+                            catch (e)
+                            {
+                                void e;
+                            }
+
+                            // RHS details: explicitly reload with the active key now
+                            var keyAttr = (marker.getAttribute("data-key") || "").trim();
+                            setTimeout(function ()
+                            {
+                                loadDetailsEmbedded(keyAttr, parentKey);
+                            }, 150);
+
+                            // Keep anchors fresh, but don’t rely on them to populate RHS
+                            refreshTopAnchorsLocal()
+                                .then(function ()
+                                {
+                                    removeFromDiscIfDuplicated(parentKey);
+
+                                    var a = getAnchors();
+                                    var parentNode = pickParentUnderRoot(parentKey)
+                                        || (a.tree && parentKey ? a.tree.getNodeByKey(parentKey) : null);
+
+                                    if (parentNode)
+                                    {
+                                        return ensureNodeExpandedAndReload(parentNode);
+                                    }
+                                })
+                                .catch(function () { });
+                        }
+                        else
+                        {
+                            // Validation view: leave pane content (form with errors) visible
                         }
                     })
                     .catch(function (err)
@@ -1487,20 +2417,27 @@
 
             var isCreateTotal = (form.action && form.action.toLowerCase().indexOf("/createtotal") >= 0)
                 || (form.getAttribute("data-action") === "CreateTotal");
-
-            if (!isCreateTotal)
-            {
-                return;
-            }
+            if (!isCreateTotal) { return; }
 
             var parentInput = form.querySelector('input[name="ParentKey"]');
             var parentVal = parentInput && typeof parentInput.value === "string" ? parentInput.value : "";
+            var ctxParent = (form.getAttribute("data-parent") || "").trim();
 
-            if (!parentVal)
+            if (ctxParent === "__DISCONNECTED__")
+            {
+                if (!parentInput)
+                {
+                    parentInput = document.createElement("input");
+                    parentInput.type = "hidden";
+                    parentInput.name = "ParentKey";
+                    form.appendChild(parentInput);
+                }
+                parentInput.value = ""; // disconnected create
+            }
+            else if (!parentVal)
             {
                 var c = cfg();
                 var rootKey = (c && c.dataset && c.dataset.root) ? String(c.dataset.root) : "";
-
                 if (rootKey)
                 {
                     if (!parentInput)

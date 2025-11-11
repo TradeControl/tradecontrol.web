@@ -156,7 +156,7 @@
 #treeContextMenu.type-ctx [data-action="addExistingTotal"],
 #treeContextMenu.type-ctx [data-action="createTotal"],
 #treeContextMenu.type-ctx [data-action="addExistingCode"],
-#treeContextMenu.type-ctx [data-action="createCode"],
+#treeContextMenu.type-ctx [data-action="createCashCode"],
 #treeContextMenu.type-ctx [data-action="move"],
 #treeContextMenu.type-ctx [data-action="delete"] {
     display: none !important;

@@ -386,7 +386,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             try
             {
-                // Validate parent exists, enabled and is a Total
                 var parent = await NodeContext.Cash_tbCategories
                     .Where(c => c.CategoryCode == parentKey && c.IsEnabled != 0)
                     .Select(c => new { c.CategoryCode, c.CategoryTypeCode })
@@ -398,7 +397,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (parent.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
                     return new JsonResult(new { success = false, message = "Parent must be a Total-type category." });
 
-                // Validate child exists and enabled
                 var child = await NodeContext.Cash_tbCategories
                     .Where(c => c.CategoryCode == childKey && c.IsEnabled != 0)
                     .Select(c => c.CategoryCode)
@@ -407,12 +405,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (string.IsNullOrEmpty(child))
                     return new JsonResult(new { success = false, message = "Child category not found or disabled." });
 
-                // Prevent duplicate mapping
                 var exists = await NodeContext.Cash_tbCategoryTotals.AnyAsync(t => t.ParentCode == parentKey && t.ChildCode == childKey);
                 if (exists)
                     return new JsonResult(new { success = false, message = "Child already attached to parent." });
 
-                // Prevent cycles: ensure parent is not a descendant of child
+                // Prevent cycles (ensure parent is not a descendant of child)
                 var parentMap = await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ChildCode != null && t.ParentCode != null)
                     .GroupBy(t => t.ChildCode)
@@ -432,7 +429,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     cur = p;
                 }
 
-                // Insert mapping
                 short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ParentCode == parentKey)
                     .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
@@ -499,7 +495,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         }
 
         /// <summary>
-        /// CreateCode shortcut - if only parentKey provided instruct client to open full create page.
+        /// CreateCashCode shortcut - if only parentKey provided instruct client to open full create page.
         /// </summary>
         public Task<JsonResult> OnPostCreateCodeAsync([FromForm] string parentKey)
         {
@@ -509,7 +505,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             if (string.IsNullOrWhiteSpace(parentKey))
                 return Task.FromResult(new JsonResult(new { success = false, message = "Missing parentKey. Open the Create Code page." }));
 
-            return Task.FromResult(new JsonResult(new { success = false, message = "Open the CreateCode page to provide details.", parentKey }));
+            return Task.FromResult(new JsonResult(new { success = false, message = "Open the CreateCashCode page to provide details.", parentKey }));
         }
 
         /// <summary>
