@@ -1084,7 +1084,7 @@ window.CategoryTree = (function ()
             {
                 $menu.addClass("type-ctx");
                 var blockSelectors = [
-                    "[data-action='addExistingTotal']",
+                    "[data-action='addExistingCategory']",
                     "[data-action='createTotal']",
                     "[data-action='addExistingCode']",
                     "[data-action='createCashCode']",
@@ -1154,7 +1154,7 @@ window.CategoryTree = (function ()
             if (isDiscRoot)
             {
                 var hideRootSelectors = [
-                    "[data-action='addExistingTotal']",
+                    "[data-action='addExistingCategory']",
                     "[data-action='addExistingCode']",
                     "[data-action='createCashCode']",
                     "[data-action='move']",
@@ -1559,7 +1559,7 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "addExistingTotal":
+                    case "addExistingCategory":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
@@ -1570,8 +1570,8 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        // Open embedded AddTotal page (select from dropdown)
-                        openAction("AddTotal", "", targetParent);
+                        // Open embedded AddCategory page (select from dropdown)
+                        openAction("AddCategory", "", targetParent);
                         break;
                     }
 
@@ -2071,12 +2071,12 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "addExistingTotal":
+                    case "addExistingCategory":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node.folder) { alert("Select a category"); break; }
 
-                        openAction("AddTotal", "", key);
+                        openAction("AddCategory", "", key);
                         break;
                     }
 

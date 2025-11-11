@@ -717,6 +717,55 @@
         }
     }
 
+    function removeExistingOutsideParent(childKey, parentKey)
+    {
+        try
+        {
+            var tree = getTreeGlobal();
+            if (!tree || !childKey || !parentKey)
+            {
+                return;
+            }
+
+            var existing = null;
+            try
+            {
+                existing = tree.getNodeByKey(childKey);
+            }
+            catch (_)
+            {
+                existing = null;
+            }
+
+            if (!existing)
+            {
+                return;
+            }
+
+            var ep = null;
+            try
+            {
+                ep = existing.getParent && existing.getParent();
+            }
+            catch (_)
+            {
+                ep = null;
+            }
+
+            if (!ep || ep.key !== parentKey)
+            {
+                try
+                {
+                    existing.remove();
+                }
+                catch (_){ }
+            }
+        }
+        catch (_)
+        {
+        }
+    }
+
     function removeFromDiscIfDuplicated(parentKey)
     {
         try
@@ -2014,8 +2063,8 @@
             return;
         }
 
-        // Add Existing Total (attach existing total-type category under a parent)
-        if (id === "addExistingTotalResult")
+        // Add Existing Category (attach existing category under a parent)
+        if (id === "addExistingCategoryResult")
         {
             var keyAet = (marker.getAttribute("data-key") || "").trim();
             var parentAet = (marker.getAttribute("data-parent") || "").trim();
@@ -2028,6 +2077,9 @@
             {
                 return;
             }
+
+            // Remove any existing copy outside intended parent (prevents duplicate-key suppression)
+            removeExistingOutsideParent(keyAet, parentAet);
 
             // Remove the Disconnected copy first to avoid duplicate-key conflicts on reload
             try
@@ -2069,7 +2121,7 @@
             return;
         }
 
-        var selector = "#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingTotalResult";
+        var selector = "#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingCategoryResult";
         var m = el.querySelector(selector)
 
         if (!m && el.id && (
@@ -2078,7 +2130,7 @@
                 el.id === "createCodeResult" ||
                 el.id === "editTotalResult" ||
                 el.id === "editCategoryResult" ||
-                el.id === "addExistingTotalResult" 
+                el.id === "addExistingCategoryResult" 
             ))
         {
             m = el;
@@ -2184,7 +2236,7 @@
 
                         try
                         {
-                            marker = pane.querySelector("#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingTotalResult");
+                            marker = pane.querySelector("#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingCategoryResult");
                         }
                         catch (e)
                         {

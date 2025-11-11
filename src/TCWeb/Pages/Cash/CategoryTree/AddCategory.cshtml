@@ -1,15 +1,16 @@
 @page
-@model TradeControl.Web.Pages.Cash.CategoryTree.AddTotalModel
+@model TradeControl.Web.Pages.Cash.CategoryTree.AddCategoryModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     Layout = null;
     var isEmbedded = (Request.Query["embed"] == "1")
         || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    var isCategoryListEmpty = Model.CategoryList?.Count == 0;
 }
 
 @if (Model.OperationSucceeded && isEmbedded)
 {
-    <div id="addExistingTotalResult"
+    <div id="addExistingCategoryResult"
          data-key="@Model.ChildKey"
          data-parent="@Model.ParentKey"
          data-name="@Model.ChildName"
@@ -21,7 +22,7 @@ else
 {
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">Add Existing Total</h5>
+            <h5 class="card-title">Add Existing Category</h5>
 
             @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
             {
@@ -29,11 +30,11 @@ else
             }
 
             <form method="post"
-                  asp-page="./AddTotal"
+                  asp-page="./AddCategory"
                   asp-route-parentKey="@Model.ParentKey"
                   asp-route-embed="1"
                   data-parent="@Model.ParentKey"
-                  data-action="AddExistingTotal">
+                  data-action="AddExistingCategory">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="embed" value="1" />
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
@@ -47,7 +48,7 @@ else
 
                 <div class="mb-3">
                     <label asp-for="ChildKey" class="form-label">Select Total</label>
-                    <select asp-for="ChildKey" asp-items="Model.TotalOptions" class="form-select"></select>
+                    <select asp-for="ChildKey" asp-items="Model.CategoryList" class="form-select"></select>
                     <span asp-validation-for="ChildKey" class="text-danger small"></span>
                     <div class="form-text">
                         Only enabled Total-type categories not already attached to this parent are listed.
@@ -55,7 +56,7 @@ else
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" @(Model.TotalOptions?.Count == 0 ? "disabled" : "")>Add</button>
+                    <button type="submit" class="btn btn-primary" @(isCategoryListEmpty ? "disabled" : "")>Add</button>
                     <a href="#" class="btn btn-secondary" data-embedded-cancel
                        onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
                 </div>

@@ -373,7 +373,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         /// Add an existing category as a child under a specified parent (totals).
         /// Ensures parent is CashTotal, prevents cycles and duplicate mappings.
         /// </summary>
-        public async Task<JsonResult> OnPostAddExistingTotalAsync([FromForm] string parentKey, [FromForm] string childKey)
+        public async Task<JsonResult> OnPostAddExistingCategoryAsync([FromForm] string parentKey, [FromForm] string childKey)
         {
             if (!IsAdmin())
                 return new JsonResult(new { success = false, message = "Insufficient privileges" });

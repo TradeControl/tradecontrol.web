@@ -153,7 +153,7 @@
 .row.flex-nowrap { overflow: hidden; }
 
 /* Hide actions that are not applicable in the "By Cash Type" subtree */
-#treeContextMenu.type-ctx [data-action="addExistingTotal"],
+#treeContextMenu.type-ctx [data-action="addExistingCategory"],
 #treeContextMenu.type-ctx [data-action="createTotal"],
 #treeContextMenu.type-ctx [data-action="addExistingCode"],
 #treeContextMenu.type-ctx [data-action="createCashCode"],
