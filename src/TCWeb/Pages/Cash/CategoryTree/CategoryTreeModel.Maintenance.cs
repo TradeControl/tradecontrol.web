@@ -522,7 +522,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             return Task.FromResult(new JsonResult(new { success = false, message = "Open the Edit page for the selected node.", key }));
         }
 
-
         public async Task<JsonResult> OnPostDeleteCashCodeAsync([FromForm] string key)
         {
             if (!IsAdmin())

@@ -1,28 +1,24 @@
 @page
-@model TradeControl.Web.Pages.Cash.CategoryTree.AddCategoryModel
+@model TradeControl.Web.Pages.Cash.CategoryTree.AddCashCodeModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     Layout = null;
     var isEmbedded = (Request.Query["embed"] == "1")
         || (Request.HasFormContentType && Request.Form["embed"] == "1");
-    var isCategoryListEmpty = Model.CategoryList?.Count == 0;
+    var isListEmpty = Model.CodeList?.Count == 0;
 }
 
 @if (Model.OperationSucceeded && isEmbedded)
 {
-    <div id="addExistingCategoryResult"
-         data-key="@Model.ChildKey"
-         data-parent="@Model.ParentKey"
-         data-name="@Model.ChildName"
-         data-polarity="@Model.ChildPolarity"
-         data-categorytype="@( (short)TradeControl.Web.Data.NodeEnum.CategoryType.CashTotal )"
-         data-isenabled="@(Model.ChildIsEnabled ? "1" : "0")"></div>
+    <div id="addExistingCashCodeResult"
+         data-key="@Model.Code"
+         data-parent="@Model.ParentKey"></div>
 }
 else
 {
     <div class="card">
         <div class="card-body">
-            <h5 class="card-title">Add Category</h5>
+            <h5 class="card-title">Add Cash Code</h5>
 
             @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
             {
@@ -30,33 +26,31 @@ else
             }
 
             <form method="post"
-                  asp-page="./AddCategory"
+                  asp-page="./AddCashCode"
                   asp-route-parentKey="@Model.ParentKey"
                   asp-route-embed="1"
                   data-parent="@Model.ParentKey"
-                  data-action="AddExistingCategory">
+                  data-action="AddExistingCashCode">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="embed" value="1" />
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
                 <input type="hidden" name="ReturnKey" value="@Model.ParentKey" />
 
                 <div class="mb-3">
-                    <label class="form-label">Parent Total</label>
+                    <label class="form-label">Target Category</label>
                     <input class="form-control" value="@Model.ParentKey" disabled />
-                    <div class="form-text">Attach an existing Total under this parent.</div>
+                    <div class="form-text">Attach or move an existing code under this category.</div>
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="ChildKey" class="form-label">Select Total</label>
-                    <select asp-for="ChildKey" asp-items="Model.CategoryList" class="form-select"></select>
-                    <span asp-validation-for="ChildKey" class="text-danger small"></span>
-                    <div class="form-text">
-                        Only enabled Total-type categories not already attached to this parent are listed.
-                    </div>
+                    <label asp-for="Code" class="form-label">Select Cash Code</label>
+                    <select asp-for="Code" asp-items="Model.CodeList" class="form-select"></select>
+                    <span asp-validation-for="Code" class="text-danger small"></span>
+                    <div class="form-text">Only enabled codes not already under this category are listed.</div>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" @(isCategoryListEmpty ? "disabled" : "")>Add</button>
+                    <button type="submit" class="btn btn-primary" @(isListEmpty ? "disabled" : "")>Add</button>
                     <a href="#" class="btn btn-secondary" data-embedded-cancel
                        onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
                 </div>
@@ -66,11 +60,21 @@ else
 
     <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
     <script>
-        // Ensure embedded submit interception is active for this form
+        // Match AddCategory: ensure embedded submit interception is active
         try {
             if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
                 window.tcTree.bindEmbeddedFormSubmit();
             }
-        } catch (e) { /* no-op */ }
+        } catch (e) { }
+
+        // Guard against any accidental auto-submit on select change (some browsers/plugins)
+        (function(){
+            var form = document.querySelector('form[data-action="AddExistingCashCode"]');
+            if (!form) return;
+            var sel = form.querySelector('select[name="Code"]');
+            if (!sel) return;
+            sel.addEventListener('keydown', function(ev){ ev.stopPropagation(); }, true);
+            sel.addEventListener('change', function(ev){ ev.stopPropagation(); }, true);
+        })();
     </script>
 }

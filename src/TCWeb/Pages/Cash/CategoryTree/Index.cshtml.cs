@@ -56,9 +56,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             string.IsNullOrEmpty(parentKey) || string.Equals(parentKey, RootNodeKey, StringComparison.Ordinal);
 
         /// <summary>
-        /// Moves a node up within its sibling sequence (root, normal, or disconnected set),
-        /// enforcing non-crossing of CashPolarityCode boundaries.
-        /// Also supports Cash Type subtree reordering via DisplayOrder on Cash_tbCategories.
+        /// Moves a node up within its sibling sequence (root, normal, or disconnected set).
+        /// Cash Polarity boundaries are no longer enforced (requested change).
         /// </summary>
         public async Task<JsonResult> OnPostMoveUpAsync([FromForm] string key, [FromForm] string parentKey)
         {
@@ -71,33 +70,31 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             try
             {
-                // Cash Type subtree: delegate to per-type ordering
                 if (IsTypeParent(parentKey))
                     return await ReorderCategoryByType(key, moveUp: true);
 
-                // Ensure the working set has a persisted order (non-type sets only)
                 if (!await IsDisplayOrderInitialised(parentKey))
                     await DisplayOrderInitialise(parentKey);
 
-                // Disconnected: reorder by category.DisplayOrder
+                // Disconnected set
                 if (string.Equals(parentKey, DisconnectedNodeKey, StringComparison.Ordinal))
                 {
                     var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
                     var linkedSet = new HashSet<string>(totals.SelectMany(t => new[] { t.ParentCode, t.ChildCode }).Where(s => !string.IsNullOrEmpty(s)));
 
                     var list = await NodeContext.Cash_tbCategories
-                                    .Where(c => c.IsEnabled != 0 && !linkedSet.Contains(c.CategoryCode))
-                                    .OrderBy(c => c.DisplayOrder)
-                                    .ToListAsync();
+                        .Where(c => c.IsEnabled != 0 && !linkedSet.Contains(c.CategoryCode))
+                        .OrderBy(c => c.DisplayOrder)
+                        .ToListAsync();
 
                     var idx = list.FindIndex(c => c.CategoryCode == key);
-                    if (idx < 0) return new JsonResult(new { success = false, message = "Node not found" });
-                    if (idx == 0) return new JsonResult(new { success = false, message = "Already at top" });
+                    if (idx < 0)
+                        return new JsonResult(new { success = false, message = "Node not found" });
+                    if (idx == 0)
+                        return new JsonResult(new { success = false, message = "Already at top" });
 
                     var cur = list[idx];
                     var prev = list[idx - 1];
-                    if (cur.CashPolarityCode != prev.CashPolarityCode)
-                        return new JsonResult(new { success = false, message = "Cannot move across polarity boundary" });
 
                     await using var tx = await NodeContext.Database.BeginTransactionAsync();
                     await NodeContext.Cash_tbCategories.Where(c => c.CategoryCode == prev.CategoryCode)
@@ -109,7 +106,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return new JsonResult(new { success = true });
                 }
 
-                // Root-level: reorder by category.DisplayOrder
+                // Root set
                 if (IsRootKey(parentKey))
                 {
                     var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
@@ -122,13 +119,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         .ToListAsync();
 
                     var idx = roots.FindIndex(c => c.CategoryCode == key);
-                    if (idx < 0) return new JsonResult(new { success = false, message = "Node not found in root set" });
-                    if (idx == 0) return new JsonResult(new { success = false, message = "Already at top" });
+                    if (idx < 0)
+                        return new JsonResult(new { success = false, message = "Node not found in root set" });
+                    if (idx == 0)
+                        return new JsonResult(new { success = false, message = "Already at top" });
 
                     var cur = roots[idx];
                     var prev = roots[idx - 1];
-                    if (cur.CashPolarityCode != prev.CashPolarityCode)
-                        return new JsonResult(new { success = false, message = "Cannot move across polarity boundary" });
 
                     await using var tx = await NodeContext.Database.BeginTransactionAsync();
                     await NodeContext.Cash_tbCategories.Where(c => c.CategoryCode == prev.CategoryCode)
@@ -139,30 +136,22 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     return new JsonResult(new { success = true });
                 }
-                else
+
+                // Child-level (totals mappings)
                 {
-                    // Child-level: reorder by totals.DisplayOrder
                     var totalsForParent = await NodeContext.Cash_tbCategoryTotals
                         .Where(t => t.ParentCode == parentKey)
                         .OrderBy(t => t.DisplayOrder)
                         .ToListAsync();
 
                     var idx = totalsForParent.FindIndex(t => t.ChildCode == key);
-                    if (idx < 0) return new JsonResult(new { success = false, message = "Node not found" });
-                    if (idx == 0) return new JsonResult(new { success = false, message = "Already at top" });
+                    if (idx < 0)
+                        return new JsonResult(new { success = false, message = "Node not found" });
+                    if (idx == 0)
+                        return new JsonResult(new { success = false, message = "Already at top" });
 
                     var cur = totalsForParent[idx];
                     var prev = totalsForParent[idx - 1];
-
-                    var cats = await NodeContext.Cash_tbCategories
-                        .Where(c => c.CategoryCode == cur.ChildCode || c.CategoryCode == prev.ChildCode)
-                        .Select(c => new { c.CategoryCode, c.CashPolarityCode })
-                        .ToListAsync();
-
-                    var curPol = cats.First(c => c.CategoryCode == cur.ChildCode).CashPolarityCode;
-                    var prevPol = cats.First(c => c.CategoryCode == prev.ChildCode).CashPolarityCode;
-                    if (curPol != prevPol)
-                        return new JsonResult(new { success = false, message = "Cannot move across polarity boundary" });
 
                     await using var tx = await NodeContext.Database.BeginTransactionAsync();
                     await NodeContext.Cash_tbCategoryTotals
@@ -184,9 +173,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         }
 
         /// <summary>
-        /// Moves a node down within its sibling sequence (root, normal, or disconnected set),
-        /// enforcing non-crossing of CashPolarityCode boundaries.
-        /// Also supports Cash Type subtree reordering via DisplayOrder on Cash_tbCategories.
+        /// Moves a node down within its sibling sequence (root, normal, or disconnected set).
+        /// Cash Polarity boundaries are no longer enforced (requested change).
         /// </summary>
         public async Task<JsonResult> OnPostMoveDownAsync([FromForm] string key, [FromForm] string parentKey)
         {
@@ -199,33 +187,31 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             try
             {
-                // Cash Type subtree: delegate to per-type ordering
                 if (IsTypeParent(parentKey))
                     return await ReorderCategoryByType(key, moveUp: false);
 
-                // Ensure the working set has a persisted order (non-type sets only)
                 if (!await IsDisplayOrderInitialised(parentKey))
                     await DisplayOrderInitialise(parentKey);
 
-                // Disconnected: reorder by category.DisplayOrder
+                // Disconnected
                 if (string.Equals(parentKey, DisconnectedNodeKey, StringComparison.Ordinal))
                 {
                     var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
                     var linkedSet = new HashSet<string>(totals.SelectMany(t => new[] { t.ParentCode, t.ChildCode }).Where(s => !string.IsNullOrEmpty(s)));
 
                     var list = await NodeContext.Cash_tbCategories
-                                    .Where(c => c.IsEnabled != 0 && !linkedSet.Contains(c.CategoryCode))
-                                    .OrderBy(c => c.DisplayOrder)
-                                    .ToListAsync();
+                        .Where(c => c.IsEnabled != 0 && !linkedSet.Contains(c.CategoryCode))
+                        .OrderBy(c => c.DisplayOrder)
+                        .ToListAsync();
 
                     var idx = list.FindIndex(c => c.CategoryCode == key);
-                    if (idx < 0) return new JsonResult(new { success = false, message = "Node not found" });
-                    if (idx >= list.Count - 1) return new JsonResult(new { success = false, message = "Already at bottom" });
+                    if (idx < 0)
+                        return new JsonResult(new { success = false, message = "Node not found" });
+                    if (idx >= list.Count - 1)
+                        return new JsonResult(new { success = false, message = "Already at bottom" });
 
                     var cur = list[idx];
                     var next = list[idx + 1];
-                    if (cur.CashPolarityCode != next.CashPolarityCode)
-                        return new JsonResult(new { success = false, message = "Cannot move across polarity boundary" });
 
                     await using var tx = await NodeContext.Database.BeginTransactionAsync();
                     await NodeContext.Cash_tbCategories.Where(c => c.CategoryCode == next.CategoryCode)
@@ -237,7 +223,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return new JsonResult(new { success = true });
                 }
 
-                // Root-level: reorder by category.DisplayOrder
+                // Root
                 if (IsRootKey(parentKey))
                 {
                     var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
@@ -250,13 +236,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         .ToListAsync();
 
                     var idx = roots.FindIndex(c => c.CategoryCode == key);
-                    if (idx < 0) return new JsonResult(new { success = false, message = "Node not found in root set" });
-                    if (idx >= roots.Count - 1) return new JsonResult(new { success = false, message = "Already at bottom" });
+                    if (idx < 0)
+                        return new JsonResult(new { success = false, message = "Node not found in root set" });
+                    if (idx >= roots.Count - 1)
+                        return new JsonResult(new { success = false, message = "Already at bottom" });
 
                     var cur = roots[idx];
                     var next = roots[idx + 1];
-                    if (cur.CashPolarityCode != next.CashPolarityCode)
-                        return new JsonResult(new { success = false, message = "Cannot move across polarity boundary" });
 
                     await using var tx = await NodeContext.Database.BeginTransactionAsync();
                     await NodeContext.Cash_tbCategories.Where(c => c.CategoryCode == next.CategoryCode)
@@ -267,30 +253,22 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     return new JsonResult(new { success = true });
                 }
-                else
+
+                // Child-level
                 {
-                    // Child-level: reorder by totals.DisplayOrder
                     var totalsForParent = await NodeContext.Cash_tbCategoryTotals
-                                    .Where(t => t.ParentCode == parentKey)
-                                    .OrderBy(t => t.DisplayOrder)
-                                    .ToListAsync();
+                        .Where(t => t.ParentCode == parentKey)
+                        .OrderBy(t => t.DisplayOrder)
+                        .ToListAsync();
 
                     var idx = totalsForParent.FindIndex(t => t.ChildCode == key);
-                    if (idx < 0) return new JsonResult(new { success = false, message = "Node not found" });
-                    if (idx >= totalsForParent.Count - 1) return new JsonResult(new { success = false, message = "Already at bottom" });
+                    if (idx < 0)
+                        return new JsonResult(new { success = false, message = "Node not found" });
+                    if (idx >= totalsForParent.Count - 1)
+                        return new JsonResult(new { success = false, message = "Already at bottom" });
 
                     var cur = totalsForParent[idx];
                     var next = totalsForParent[idx + 1];
-
-                    var cats = await NodeContext.Cash_tbCategories
-                        .Where(c => c.CategoryCode == cur.ChildCode || c.CategoryCode == next.ChildCode)
-                        .Select(c => new { c.CategoryCode, c.CashPolarityCode })
-                        .ToListAsync();
-
-                    var curPol = cats.First(c => c.CategoryCode == cur.ChildCode).CashPolarityCode;
-                    var nextPol = cats.First(c => c.CategoryCode == next.ChildCode).CashPolarityCode;
-                    if (curPol != nextPol)
-                        return new JsonResult(new { success = false, message = "Cannot move across polarity boundary" });
 
                     await using var tx = await NodeContext.Database.BeginTransactionAsync();
                     await NodeContext.Cash_tbCategoryTotals
@@ -307,9 +285,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             catch (Exception e)
             {
                 await NodeContext.ErrorLog(e);
-                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+                return new JsonResult(new { success = false, message = e.Message });
             }
         }
-
     }
 }

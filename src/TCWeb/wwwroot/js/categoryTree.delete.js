@@ -1,12 +1,6 @@
 (function ()
 {
-    // Helpers
-    function cfg()
-    {
-        var el = document.getElementById("categoryTreeConfig");
-        return el || null;
-    }
-
+    // ----------- Tree helpers -----------
     function getTree()
     {
         try
@@ -15,54 +9,38 @@
             {
                 return null;
             }
+
             var el = document.querySelector("#categoryTree");
-            if (!el)
-            {
-                return null;
-            }
-            return $.ui.fancytree.getTree(el);
+            return el ? $.ui.fancytree.getTree(el) : null;
         }
-        catch (e)
+        catch (_)
         {
             return null;
         }
     }
 
-    function appendQuery(url, key, value)
+    function detailsUrlFor(key, parentKey)
     {
-        var sep = url.indexOf("?") === -1 ? "?" : "&";
-        return url + sep + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+        var u = "/Cash/CategoryTree/Details?key=" + encodeURIComponent(key || "");
+        u += "&embed=1";
+        if (parentKey)
+        {
+            u += "&parentKey=" + encodeURIComponent(parentKey);
+        }
+        return u;
     }
 
-    function nocache(url)
-    {
-        try
-        {
-            return appendQuery(url, "_", Date.now());
-        }
-        catch (e)
-        {
-            return url;
-        }
-    }
-
-    function loadDetailsFor(key)
+    function loadDetails(key, parentKey)
     {
         try
         {
             var pane = document.getElementById("detailsPane");
-            var cfgEl = cfg();
-            if (!pane || !cfgEl)
+            if (!pane || !key)
             {
                 return;
             }
-            var detailsUrl = cfgEl.dataset.detailsUrl;
-            if (!detailsUrl)
-            {
-                return;
-            }
-            var url = detailsUrl + "?key=" + encodeURIComponent(key) + "&embed=1";
-            fetch(nocache(url), { credentials: "same-origin" })
+
+            fetch(detailsUrlFor(key, parentKey), { credentials: "same-origin" })
                 .then(function (r)
                 {
                     return r.text();
@@ -73,632 +51,362 @@
                 })
                 .catch(function ()
                 {
-                    pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
+                    // silent
                 });
         }
-        catch (e)
+        catch (_)
         {
-            /* swallow */
         }
     }
 
-    function activateNode(key)
+    // ----------- Confirm checkbox -> Delete button wiring -----------
+    function bindConfirmToggle(chk)
     {
-        try
+        if (!chk)
         {
-            var tree = getTree();
-            if (!tree || !key)
+            return;
+        }
+
+        var form = chk.closest("form");
+        var id = chk.id || "";
+        var targetButtonId = "";
+
+        // Patterns we accept:
+        // confirmDeleteCode -> btnDeleteCode
+        // confirmDeleteCategory -> btnDeleteCategory
+        // confirmDeleteTotal -> btnDeleteTotal
+        // confirmDelete -> btnDelete
+        if (/^confirmDelete(Code|Category|Total)?$/i.test(id))
+        {
+            targetButtonId = id.replace(/^confirm/i, "btn");
+        }
+
+        var buttons = [];
+        if (targetButtonId)
+        {
+            var btn = document.getElementById(targetButtonId);
+            if (btn)
             {
-                return;
-            }
-            var n = tree.getNodeByKey(key);
-            if (!n)
-            {
-                return;
-            }
-            try
-            {
-                n.makeVisible();
-            }
-            catch (e)
-            {
-                /* swallow */
-            }
-            try
-            {
-                n.setActive(true);
-            }
-            catch (e)
-            {
-                /* swallow */
+                buttons.push(btn);
             }
         }
-        catch (e)
+
+        if (buttons.length === 0 && form)
         {
-            /* swallow */
+            buttons = Array.prototype.slice.call(form.querySelectorAll("button[type='submit'],input[type='submit']"));
         }
-    }
 
-    function reloadChildrenFor(parentKey)
-    {
-        try
+        function apply()
         {
-            var tree = getTree();
-            if (!tree || !parentKey)
+            var enabled = !!chk.checked;
+            for (var i = 0; i < buttons.length; i++)
             {
-                return;
-            }
-            var p = tree.getNodeByKey(parentKey);
-            if (!p)
-            {
-                return;
-            }
-
-            var cfgEl = cfg();
-            var nodesUrl = cfgEl ? cfgEl.dataset.nodesUrl : null;
-
-            if (typeof p.reloadChildren === "function")
-            {
-                if (nodesUrl)
+                var b = buttons[i];
+                if (!b)
                 {
-                    var url = nocache(appendQuery(nodesUrl, "id", p.key));
-                    p.reloadChildren({ url: url });
+                    continue;
                 }
-                else
-                {
-                    p.reloadChildren();
-                }
-            }
-        }
-        catch (e)
-        {
-            /* swallow */
-        }
-    }
-
-    function removeNodeIfPresent(key)
-    {
-        try
-        {
-            var tree = getTree();
-            if (!tree || !key)
-            {
-                return;
-            }
-            var n = tree.getNodeByKey(key) || tree.getNodeByKey("code:" + key);
-            if (n)
-            {
                 try
                 {
-                    n.remove();
+                    b.disabled = !enabled;
                 }
-                catch (e)
+                catch (_)
                 {
-                    /* swallow */
-                }
-            }
-        }
-        catch (e)
-        {
-            /* swallow */
-        }
-    }
-
-    function goIndex()
-    {
-        try
-        {
-            window.location.href = "/Cash/CategoryTree/Index";
-        }
-        catch (e)
-        {
-            /* swallow */
-        }
-    }
-
-    function refreshActiveIfAvailable()
-    {
-        try
-        {
-            if (typeof window.tcRefreshActiveNode === "function")
-            {
-                window.tcRefreshActiveNode();
-            }
-        }
-        catch (e)
-        {
-            /* swallow */
-        }
-    }
-
-    function isSynthetic(key)
-    {
-        return !key
-            || key === "__DISCONNECTED__"
-            || key === "__ROOT__"
-            || /^root_\d+$/i.test(key)
-            || (typeof key === "string" && key.indexOf("type:") === 0);
-    }
-
-    // Enable/disable Delete buttons when a confirm checkbox exists on page
-    function bindConfirmToggles()
-    {
-        try
-        {
-            // Delete Category
-            var formCat = document.getElementById("deleteCategoryForm");
-            if (formCat)
-            {
-                var chkCat = formCat.querySelector("#confirmDelete");
-                var btnCat = document.getElementById("btnDelete") || formCat.querySelector('button[type="submit"]');
-                var updateCat = function ()
-                {
-                    if (!btnCat)
-                    {
-                        return;
-                    }
-
-                    // Only enforce disabled when a checkbox exists; otherwise leave as-is (enabled).
-                    if (chkCat)
-                    {
-                        btnCat.disabled = !(chkCat.checked === true);
-                    }
-                };
-                if (chkCat)
-                {
-                    chkCat.addEventListener("change", updateCat, false);
-                    updateCat();
-                }
-                // If no checkbox, do not disable the button here.
-            }
-
-            // Delete Cash Code
-            var formCode = document.getElementById("deleteCashCodeForm");
-            if (formCode)
-            {
-                var chkCode = formCode.querySelector("#confirmDeleteCode");
-                var btnCode = document.getElementById("btnDeleteCode") || formCode.querySelector('button[type="submit"]');
-                var updateCode = function ()
-                {
-                    if (!btnCode)
-                    {
-                        return;
-                    }
-                    if (chkCode)
-                    {
-                        btnCode.disabled = !(chkCode.checked === true);
-                    }
-                };
-                if (chkCode)
-                {
-                    chkCode.addEventListener("change", updateCode, false);
-                    updateCode();
                 }
             }
-
-            // Delete Total has no confirm checkbox by design.
         }
-        catch (e)
+
+        apply();
+        chk.addEventListener("change", apply);
+    }
+
+    function wireAllConfirmToggles()
+    {
+        // Explicit known ids plus generic pattern match
+        var ids = ["confirmDeleteCode", "confirmDeleteCategory", "confirmDeleteTotal", "confirmDelete"];
+        for (var i = 0; i < ids.length; i++)
         {
-            /* swallow */
+            var c = document.getElementById(ids[i]);
+            if (c)
+            {
+                bindConfirmToggle(c);
+            }
+        }
+
+        // Any checkbox with data-confirm attribute
+        var generics = document.querySelectorAll("input[type='checkbox'][data-confirm]");
+        for (var j = 0; j < generics.length; j++)
+        {
+            bindConfirmToggle(generics[j]);
         }
     }
 
-    function handleDeleteTotalSubmit(form, e)
+    // ----------- Submission helpers -----------
+    function postJson(form, payload, callback)
     {
-        e.preventDefault();
-        var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn)
-        {
-            submitBtn.disabled = true;
-        }
+        var token =
+            (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
+            || (document.querySelector('meta[name="request-verification-token"]') || {}).content
+            || "";
 
-        var fd = new FormData(form);
-
-        fetch(form.action, { method: "POST", body: fd, credentials: "same-origin" })
-            .then(function (res)
+        fetch(form.action, {
+            method: "POST",
+            body: payload,
+            credentials: "same-origin",
+            headers: token ? { "RequestVerificationToken": token } : {}
+        })
+            .then(function (resp)
             {
-                // Prefer JSON; if HTML/plain text returned, treat HTTP 200 as success and continue.
-                return res.json().catch(function ()
+                var ct = (resp.headers.get("content-type") || "").toLowerCase();
+                if (ct.indexOf("application/json") >= 0)
                 {
-                    return { success: res.ok, message: "non-json" };
-                });
-            })
-            .then(function (json)
-            {
-                if (!json || json.success !== true)
-                {
-                    alert((json && json.message) || "Delete failed");
-                    if (submitBtn)
-                    {
-                        submitBtn.disabled = false;
-                    }
-                    return;
+                    return resp.json();
                 }
-
-                var pane = document.getElementById("detailsPane");
-                var parent = (fd.get("parentKey") || "").trim();
-                var child = (fd.get("childKey") || "").trim();
-
-                // Remove child from both root & disconnected duplicates if present
-                removeNodeIfPresent(child);
-                removeNodeIfPresent("code:" + child); // in case coded version exists
-
-                // Reload anchors to purge duplicates
-                if (typeof refreshTopAnchorsLocal === "function")
+                return resp.text().then(function (t)
                 {
                     try
                     {
-                        refreshTopAnchorsLocal();
+                        return JSON.parse(t);
                     }
-                    catch (ex) { /* swallow */ }
+                    catch (_)
+                    {
+                        return { success: false, message: "Unexpected response." };
+                    }
+                });
+            })
+            .then(function (data)
+            {
+                callback(null, data);
+            })
+            .catch(function (err)
+            {
+                callback(err);
+            });
+    }
+
+    // ----------- Delete Cash Code -----------
+    function handleDeleteCashCode()
+    {
+        var form = document.getElementById("deleteCashCodeForm");
+        if (!form)
+        {
+            return;
+        }
+
+        form.addEventListener("submit", function (e)
+        {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var keyInput = form.querySelector('input[name="key"]');
+            var key = keyInput ? (keyInput.value || "").trim() : "";
+            if (!key)
+            {
+                alert("Missing key.");
+                return;
+            }
+
+            var fd = new FormData();
+            fd.append("key", key);
+
+            postJson(form, fd, function (err, data)
+            {
+                if (err || !data || data.success !== true)
+                {
+                    alert((data && data.message) || "Delete failed.");
+                    return;
                 }
 
-                // Only load/activate parent if it is a real category code
-                if (!isSynthetic(parent))
+                var cashCode = data.cashCode || key.replace(/^code:/, "");
+                var nodeKey = (key.indexOf("code:") === 0) ? key : ("code:" + cashCode);
+
+                var parentKey = "";
+                try
                 {
-                    loadDetailsFor(parent);
-                    activateNode(parent);
-                    reloadChildrenFor(parent);
+                    var tree = getTree();
+                    if (tree)
+                    {
+                        var n = tree.getNodeByKey(nodeKey) || tree.getNodeByKey(cashCode);
+                        var p = n && n.getParent && n.getParent();
+                        parentKey = (p && p.key) ? p.key : "";
+                    }
+                }
+                catch (_)
+                {
+                }
+
+                if (!parentKey)
+                {
+                    var parentEl = document.getElementById("deleteCashCodeParent");
+                    parentKey = parentEl ? (parentEl.value || "").trim() : "";
+                }
+
+                try
+                {
+                    var tree2 = getTree();
+                    if (tree2)
+                    {
+                        var n1 = tree2.getNodeByKey(nodeKey);
+                        var n2 = tree2.getNodeByKey(cashCode);
+                        if (n1 && n1.remove)
+                        {
+                            n1.remove();
+                        }
+                        if (n2 && n2.remove)
+                        {
+                            n2.remove();
+                        }
+
+                        if (parentKey)
+                        {
+                            var p = tree2.getNodeByKey(parentKey);
+                            if (p && p.reloadChildren)
+                            {
+                                try
+                                {
+                                    p.reloadChildren();
+                                }
+                                catch (_)
+                                {
+                                }
+                            }
+                            if (p && p.setActive)
+                            {
+                                try
+                                {
+                                    p.setActive(true);
+                                }
+                                catch (_)
+                                {
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (_)
+                {
+                }
+
+                if (parentKey)
+                {
+                    loadDetails(parentKey, "");
                 }
                 else
                 {
+                    var pane = document.getElementById("detailsPane");
                     if (pane)
                     {
                         pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
                     }
                 }
-
-                refreshActiveIfAvailable();
-            })
-            .catch(function ()
-            {
-                alert("Server error");
-                if (submitBtn)
-                {
-                    submitBtn.disabled = false;
-                }
             });
+        });
     }
 
-    function handleDeleteCategorySubmit(form, e)
+    // ----------- Delete Category -----------
+    function handleDeleteCategory()
     {
-        e.preventDefault();
-        var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn)
+        var form = document.getElementById("deleteCategoryForm");
+        if (!form)
         {
-            submitBtn.disabled = true;
+            return;
         }
 
-        var fd = new FormData(form);
-
-        fetch(form.action, { method: "POST", body: fd, credentials: "same-origin" })
-            .then(function (res)
-            {
-                return res.json().catch(function ()
-                {
-                    return null;
-                });
-            })
-            .then(function (json)
-            {
-                if (!json || json.success !== true)
-                {
-                    alert((json && json.message) || "Delete failed");
-                    if (submitBtn)
-                    {
-                        submitBtn.disabled = false;
-                    }
-                    return;
-                }
-
-                // json.key is the deleted category
-                var victimKey = (json.key || "").toString();
-                var pane = document.getElementById("detailsPane");
-
-                if (!pane)
-                {
-                    goIndex();
-                    return;
-                }
-
-                pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
-
-                // Remove victim, reload its parent, and activate parent
-                var tree = getTree();
-                var parentKey = "";
-                if (tree)
-                {
-                    var victim = victimKey ? tree.getNodeByKey(victimKey) : null;
-                    var parent = victim && victim.getParent ? victim.getParent() : null;
-                    if (victim)
-                    {
-                        try
-                        {
-                            victim.remove();
-                        }
-                        catch (e)
-                        {
-                            /* swallow */
-                        }
-                    }
-                    parentKey = parent && parent.key ? parent.key : "";
-                }
-
-                if (parentKey)
-                {
-                    reloadChildrenFor(parentKey);
-                    activateNode(parentKey);
-                }
-            })
-            .catch(function ()
-            {
-                alert("Server error");
-                if (submitBtn)
-                {
-                    submitBtn.disabled = false;
-                }
-            });
-    }
-
-    function handleDeleteCashCodeSubmit(form, e)
-    {
-        e.preventDefault();
-        var submitBtn = form.querySelector("button[type='submit']");
-        if (submitBtn)
+        form.addEventListener("submit", function (e)
         {
-            submitBtn.disabled = true;
-        }
+            e.preventDefault();
+            e.stopPropagation();
 
-        var fd = new FormData(form);
+            var keyInput = form.querySelector('input[name="key"]');
+            var key = keyInput ? (keyInput.value || "").trim() : "";
+            if (!key)
+            {
+                alert("Missing key.");
+                return;
+            }
 
-        fetch(form.action, { method: "POST", body: fd, credentials: "same-origin" })
-            .then(function (res)
+            var fd = new FormData();
+            fd.append("key", key);
+
+            postJson(form, fd, function (err, data)
             {
-                return res.json().catch(function ()
+                if (err || !data || data.success !== true)
                 {
-                    return null;
-                });
-            })
-            .then(function (json)
-            {
-                if (!json || json.success !== true)
-                {
-                    alert((json && json.message) || "Delete failed");
-                    if (submitBtn)
-                    {
-                        submitBtn.disabled = false;
-                    }
+                    alert((data && data.message) || "Delete failed.");
                     return;
                 }
-
-                // Reload parent details and tree branch
-                var pane = document.getElementById("detailsPane");
-                var parentKey = "";
 
                 try
                 {
                     var tree = getTree();
-                    var active = tree && tree.getActiveNode ? tree.getActiveNode() : null;
-                    parentKey = (active && active.key) ? active.key : parentKey;
+                    if (tree)
+                    {
+                        var node = tree.getNodeByKey(key);
+                        if (node && node.remove)
+                        {
+                            node.remove();
+                        }
+                    }
                 }
-                catch (e)
+                catch (_)
                 {
-                    /* swallow */
                 }
 
-                if (!pane)
+                var fallbackKey = "";
+                try
                 {
-                    goIndex();
-                    return;
+                    var cfg = document.getElementById("categoryTreeConfig");
+                    if (cfg && cfg.dataset)
+                    {
+                        fallbackKey = cfg.dataset.root || "";
+                    }
+                }
+                catch (_)
+                {
                 }
 
-                if (parentKey)
+                if (fallbackKey)
                 {
-                    loadDetailsFor(parentKey);
-                    activateNode(parentKey);
-                    reloadChildrenFor(parentKey);
+                    loadDetails(fallbackKey, "");
+                    try
+                    {
+                        var tree2 = getTree();
+                        var fb = tree2 && tree2.getNodeByKey(fallbackKey);
+                        if (fb && fb.setActive)
+                        {
+                            fb.setActive(true);
+                        }
+                    }
+                    catch (_)
+                    {
+                    }
                 }
                 else
                 {
-                    pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
-                }
-            })
-            .catch(function ()
-            {
-                alert("Server error");
-                if (submitBtn)
-                {
-                    submitBtn.disabled = false;
+                    var pane = document.getElementById("detailsPane");
+                    if (pane)
+                    {
+                        pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
+                    }
                 }
             });
+        });
     }
 
-    function isDeleteTotalForm(form)
+    // ----------- Init -----------
+    function onReady()
     {
-        if (!form)
-        {
-            return false;
-        }
-        var id = (form.id || "").toLowerCase();
-        if (id === "deletetotalform")
-        {
-            return true;
-        }
-
-        var action = (form.getAttribute("action") || "").toLowerCase();
-        if (action.indexOf("deletetotal") >= 0)
-        {
-            return true;
-        }
-        if (action.indexOf("handler=deletetotal") >= 0)
-        {
-            return true;
-        }
-
-        // Heuristic: has both parentKey and childKey inputs
-        try
-        {
-            if (form.querySelector('input[name="parentKey"]') && form.querySelector('input[name="childKey"]'))
-            {
-                return true;
-            }
-        }
-        catch (e)
-        {
-            /* swallow */
-        }
-
-        return false;
+        wireAllConfirmToggles();
+        handleDeleteCashCode();
+        handleDeleteCategory();
     }
 
-    // Strong Cancel binding: delegated + direct + mutation observer
-    function bindInlineCancel()
+    if (document.readyState === "loading")
     {
-        try
-        {
-            var anchors = document.querySelectorAll("[data-embedded-cancel]");
-            anchors.forEach(function (a)
-            {
-                a.addEventListener("click", function (ev)
-                {
-                    ev.preventDefault();
-                    try
-                    {
-                        if (typeof window.tcRefreshActiveNode === "function")
-                        {
-                            window.tcRefreshActiveNode();
-                            return;
-                        }
-                    }
-                    catch (ex)
-                    {
-                        /* swallow */
-                    }
-                    goIndex();
-                }, { capture: true, once: false });
-            });
-        }
-        catch (e)
-        {
-            /* swallow */
-        }
+        document.addEventListener("DOMContentLoaded", onReady);
     }
-
-    // Delegated listeners (works for embedded content and for direct navigation)
-    document.addEventListener("submit", function (e)
+    else
     {
-        var form = e.target;
-        if (!form || form.tagName !== "FORM")
-        {
-            return;
-        }
-
-        var id = form.id || "";
-
-        if (id === "deleteCategoryForm")
-        {
-            handleDeleteCategorySubmit(form, e);
-            return;
-        }
-
-        if (id === "deleteCashCodeForm")
-        {
-            handleDeleteCashCodeSubmit(form, e);
-            return;
-        }
-
-        // Broaden detection for Delete Total forms so we always intercept and prevent navigation to raw JSON.
-        if (id === "deleteTotalForm" || isDeleteTotalForm(form))
-        {
-            handleDeleteTotalSubmit(form, e);
-            return;
-        }
-    }, true);
-
-    document.addEventListener("click", function (e)
-    {
-        var el = e.target && e.target.closest ? e.target.closest("[data-embedded-cancel]") : null;
-        if (!el)
-        {
-            return;
-        }
-
-        e.preventDefault();
-
-        try
-        {
-            if (typeof window.tcRefreshActiveNode === "function")
-            {
-                window.tcRefreshActiveNode();
-                return;
-            }
-        }
-        catch (ex)
-        {
-            /* swallow */
-        }
-
-        goIndex();
-    }, true);
-
-    // Ensure binding covers dynamically loaded embedded content
-    document.addEventListener("DOMContentLoaded", function ()
-    {
-        bindConfirmToggles();
-        bindInlineCancel();
-
-        var pane = document.getElementById("detailsPane");
-        if (pane && window.MutationObserver)
-        {
-            try
-            {
-                var mo = new MutationObserver(function (mutations)
-                {
-                    mutations.forEach(function (m)
-                    {
-                        if (m.addedNodes && m.addedNodes.length)
-                        {
-                            // rebind toggles and cancel for freshly loaded embedded delete pages
-                            bindConfirmToggles();
-                            bindInlineCancel();
-                        }
-                    });
-                });
-                mo.observe(pane, { childList: true, subtree: true });
-            }
-            catch (e)
-            {
-                /* swallow */
-            }
-        }
-    });
-
-    // Escape to cancel (nice-to-have)
-    document.addEventListener("keydown", function (e)
-    {
-        try
-        {
-            if (e.key === "Escape" || e.key === "Esc")
-            {
-                var hasDeleteForm = document.getElementById("deleteCategoryForm")
-                    || document.getElementById("deleteTotalForm")
-                    || document.getElementById("deleteCashCodeForm");
-                if (hasDeleteForm)
-                {
-                    e.preventDefault();
-                    if (typeof window.tcRefreshActiveNode === "function")
-                    {
-                        window.tcRefreshActiveNode();
-                        return;
-                    }
-                    goIndex();
-                }
-            }
-        }
-        catch (ex)
-        {
-            /* swallow */
-        }
-    }, true);
+        onReady();
+    }
 })();

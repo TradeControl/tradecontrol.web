@@ -42,16 +42,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         .AnyAsync(c => !linkedSet.Contains(c.CategoryCode));
 
                     var nodes = new List<object>
-            {
-                new {
-                    key = RootNodeKey,
-                    title = "<span class='tc-root-icon' style='font-weight:600;'>&#8721;</span> Root",
-                    folder = true,
-                    lazy = true,
-                    icon = false,
-                    data = new { isRoot = true }
-                }
-            };
+                    {
+                        new {
+                            key = RootNodeKey,
+                            title = "<span class='tc-root-icon' style='font-weight:600;'>&#8721;</span> Root",
+                            folder = true,
+                            lazy = true,
+                            icon = false,
+                            data = new { isRoot = true }
+                        }
+                    };
 
                     if (disconnectedExist)
                     {
@@ -254,24 +254,56 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .ToListAsync();
             var hasCodes = new HashSet<string>(hasCodesSet);
 
-            var categoryNodes = cats.Select(c => (object)new
+            // Helper builders to avoid duplicating title/icon logic.
+            object BuildCategoryNode(Cash_tbCategory c)
             {
-                key = c.CategoryCode,
-                title =
+                var title =
                     $"<span class='tc-cat-icon tc-cat-{PolarityClass(c.CashPolarityCode)}'></span> " +
-                    $"{WebUtility.HtmlEncode(c.Category)} ({WebUtility.HtmlEncode(c.CategoryCode)})",
-                folder = true,
-                lazy = hasChildCategory.Contains(c.CategoryCode) || hasCodes.Contains(c.CategoryCode),
-                icon = false,
-                extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
-                data = new
-                {
-                    cashPolarity = c.CashPolarityCode,
-                    categoryType = c.CategoryTypeCode,
-                    nodeType = "category",
-                    isEnabled = c.IsEnabled == 0 ? 0 : 1
-                }
-            }).ToList();
+                    $"{WebUtility.HtmlEncode(c.Category)} ({WebUtility.HtmlEncode(c.CategoryCode)})";
+
+                return new {
+                    key = c.CategoryCode,
+                    title = title,
+                    folder = true,
+                    lazy = hasChildCategory.Contains(c.CategoryCode) || hasCodes.Contains(c.CategoryCode),
+                    icon = false, // we embed the icon HTML ourselves
+                    extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
+                    data = new {
+                        cashPolarity = c.CashPolarityCode,
+                        categoryType = c.CategoryTypeCode,
+                        nodeType = "category",
+                        isEnabled = c.IsEnabled == 0 ? 0 : 1
+                    }
+                };
+            }
+
+            object BuildCodeNode(dynamic cd)
+            {
+                // Use parent cash type to derive icon (same mapping as CashCodeIconClass)
+                var iconClass = CashCodeIconClass(categoryCashType);
+
+                var title =
+                    $"<span class='tc-code-icon bi {iconClass}'></span> " +
+                    $"{WebUtility.HtmlEncode(cd.CashCode)} - {WebUtility.HtmlEncode(cd.CashDescription)}";
+
+                return new {
+                    key = $"code:{cd.CashCode}",
+                    title = title,
+                    folder = false,
+                    lazy = false,
+                    icon = false, // icon HTML already in title
+                    extraClasses = cd.IsEnabled == 0 ? "tc-disabled" : null,
+                    data = new {
+                        cashCode = cd.CashCode,
+                        cashPolarity = categoryPolarity,
+                        cashType = categoryCashType,
+                        nodeType = "code",
+                        isEnabled = cd.IsEnabled == 0 ? 0 : 1
+                    }
+                };
+            }
+
+            var categoryNodes = cats.Select(BuildCategoryNode).ToList();
 
             var codes = await NodeContext.Cash_tbCodes
                             .Where(code => code.CategoryCode == parentId)
@@ -279,27 +311,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                             .Select(code => new { code.CashCode, code.CashDescription, code.IsEnabled })
                             .ToListAsync();
 
-            // inside BuildChildNodesAsync where codeNodes is created — replace the codeNodes construction with:
-
-            // Replace the existing codeNodes construction inside BuildChildNodesAsync with this block:
-
-            var codeNodes = codes.Select(cd => (object)new {
-                key = $"code:{cd.CashCode}",
-                // Title without inline icon HTML; Fancytree will render the icon from `icon` property
-                title = $"{WebUtility.HtmlEncode(cd.CashCode)} - {WebUtility.HtmlEncode(cd.CashDescription)}",
-                folder = false,
-                lazy = false,
-                // Set icon to the bootstrap-icon class + helper class so only one icon is rendered
-                icon = "bi " + CashCodeIconClass(categoryCashType) + " tc-code-icon",
-                extraClasses = cd.IsEnabled == 0 ? "tc-disabled" : null,
-                data = new {
-                    cashCode = cd.CashCode,
-                    cashPolarity = categoryPolarity,
-                    cashType = categoryCashType,
-                    nodeType = "code",
-                    isEnabled = cd.IsEnabled == 0 ? 0 : 1
-                }
-            }).ToList();
+            var codeNodes = codes.Select(BuildCodeNode).ToList();
 
             return categoryNodes.Concat(codeNodes).ToList();
         }

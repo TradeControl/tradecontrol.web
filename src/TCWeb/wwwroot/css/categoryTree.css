@@ -21,6 +21,13 @@
     vertical-align: -0.06em;
 }
 
+.tc-code-icon {
+    margin-right: 6px;
+    font-size: 0.95em;
+    vertical-align: -0.08em;
+    color: var(--tc-muted, #6c757d);
+}
+
 @media (min-width: 992px) {
     .tc-tree-split {
         display: flex;
@@ -155,7 +162,7 @@
 /* Hide actions that are not applicable in the "By Cash Type" subtree */
 #treeContextMenu.type-ctx [data-action="addExistingCategory"],
 #treeContextMenu.type-ctx [data-action="createTotal"],
-#treeContextMenu.type-ctx [data-action="addExistingCode"],
+#treeContextMenu.type-ctx [data-action="addExistingCashCode"],
 #treeContextMenu.type-ctx [data-action="createCashCode"],
 #treeContextMenu.type-ctx [data-action="move"],
 #treeContextMenu.type-ctx [data-action="delete"] {
@@ -166,3 +173,8 @@
 #treeContextMenu.synthetic-ctx .dropdown-item { display: none !important; }
 #treeContextMenu.synthetic-ctx [data-action="expandSelected"],
 #treeContextMenu.synthetic-ctx [data-action="collapseSelected"] { display: block !important; }
+
+/* Ensure embedded pages can't inject a second context menu */
+#detailsPane #treeContextMenu {
+    display: none !important;
+}

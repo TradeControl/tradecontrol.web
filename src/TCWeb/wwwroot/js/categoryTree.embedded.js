@@ -108,13 +108,14 @@
             console.log("[reconcile] start", { parentKey: parentKey, childKey: childKey });
         }
 
-        // 1. Optimistic insert if parent already expanded and child missing
+        // 1. Optimistic insert ONLY for category nodes (never for cash code nodes)
         try
         {
             if (parentKey)
             {
                 var parentNode0 = tree.getNodeByKey(parentKey);
-                if (parentNode0 && parentNode0.expanded)
+                var isCodeChild = childKey.indexOf("code:") === 0;
+                if (parentNode0 && parentNode0.expanded && !isCodeChild)
                 {
                     var existingChild = tree.getNodeByKey(childKey);
                     if (!existingChild)
@@ -1958,7 +1959,7 @@
         }
 
         // Create Cash Code
-        if (id === "createCodeResult")
+        if (id === "createCashCodeResult")
         {
             try
             {
@@ -2058,12 +2059,88 @@
             }
             catch (ex)
             {
-                if (_debug) { console.warn("embeddedCreate: error processing createCodeResult", ex); }
+                if (_debug) { console.warn("embeddedCreate: error processing createCashCodeResult", ex); }
             }
             return;
         }
 
-        // Add Existing Category (attach existing category under a parent)
+        // Edit Cash Code
+        if (id === "editCashCodeResult")
+        {
+            var keyEcc = (marker.getAttribute("data-key") || "").trim();          // expects "code:XYZ"
+            var parentEcc = (marker.getAttribute("data-parent") || "").trim();
+            var nameEcc = (marker.getAttribute("data-name") || "").trim();
+            var isEnabledEcc = (marker.getAttribute("data-isenabled") || "1").trim();
+            var cashTypeEcc = parseInt((marker.getAttribute("data-cashtype") || "0").trim(), 10);
+
+            if (!keyEcc)
+            {
+                return;
+            }
+
+            try
+            {
+                var treeEcc = getTreeGlobal();
+                var nEcc = treeEcc && treeEcc.getNodeByKey(keyEcc);
+
+                // Build icon class from cash type
+                var iconClass = "bi-wallet2";
+                if (cashTypeEcc === 1)
+                {
+                    iconClass = "bi-file-earmark-text";
+                }
+                else if (cashTypeEcc === 2)
+                {
+                    iconClass = "bi-bank";
+                }
+
+                function esc(s)
+                {
+                    return String(s || "")
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
+
+                // Extract raw code for title (key may be prefixed)
+                var rawCode = keyEcc.replace(/^code:/, "");
+                var titleHtml = "<span class=\"tc-code-icon bi " + iconClass + "\"></span> "
+                              + esc(rawCode) + " - " + esc(nameEcc || "");
+
+                if (nEcc)
+                {
+                    nEcc.title = titleHtml;
+                    nEcc.data = nEcc.data || {};
+                    nEcc.data.nodeType = "code";
+                    nEcc.data.isEnabled = (isEnabledEcc === "0") ? 0 : 1;
+                    if (typeof cashTypeEcc === "number" && !isNaN(cashTypeEcc))
+                    {
+                        nEcc.data.cashType = cashTypeEcc;
+                    }
+
+                    if (nEcc.li && nEcc.li.classList)
+                    {
+                        nEcc.li.classList.toggle("tc-disabled", nEcc.data.isEnabled === 0);
+                    }
+
+                    safeInvoke(nEcc, "renderTitle");
+                    safeInvoke(nEcc, "makeVisible");
+                    safeInvokeWithArg(nEcc, "setActive", true);
+                }
+            }
+            catch (_)
+            {
+            }
+
+            // Explicitly refresh RHS details
+            setTimeout(function () { loadDetailsEmbedded(keyEcc, parentEcc); }, 200);
+            return;
+        }
+
+
+        // Add Category (attach existing category under a parent)
         if (id === "addExistingCategoryResult")
         {
             var keyAet = (marker.getAttribute("data-key") || "").trim();
@@ -2112,6 +2189,284 @@
             return;
         }
 
+        // Add Existing Cash Code (attach/move)
+        if (id === "addExistingCashCodeResult")
+        {
+            var rawKey = (marker.getAttribute("data-key") || "").trim();
+            var parentAce = (marker.getAttribute("data-parent") || "").trim();
+
+            // New: attempt to read description explicitly from marker (robust against varied attribute names)
+            var descOverride = (marker.getAttribute("data-description")
+                || marker.getAttribute("data-desc")
+                || marker.getAttribute("data-name")
+                || marker.getAttribute("data-cashdescription")
+                || "").trim();
+
+            if (!rawKey) { return; }
+
+            var prefKey = rawKey.indexOf("code:") === 0 ? rawKey : ("code:" + rawKey);
+            var rawOnly = rawKey.replace(/^code:/, "");
+            var variants = [prefKey, rawOnly];
+
+            var tree = getTreeGlobal();
+            if (!tree) { return; }
+
+            function purgeOutsideTarget(rawBaseKey, targetParentKey)
+            {
+                try
+                {
+                    var root = tree.getRootNode();
+                    if (!root) { return; }
+                    var allKeys = [rawBaseKey, "code:" + rawBaseKey];
+                    root.visit(function (n)
+                    {
+                        if (!n || !n.key) { return; }
+                        if (allKeys.indexOf(n.key) < 0) { return; }
+                        try
+                        {
+                            var p = n.getParent && n.getParent();
+                            var pk = p && p.key ? p.key : "";
+                            if (pk !== targetParentKey)
+                            {
+                                n.remove();
+                            }
+                        }
+                        catch (_){}
+                    });
+                }
+                catch (_){}
+            }
+
+            var existingNode = tree.getNodeByKey(prefKey) || tree.getNodeByKey(rawOnly);
+            var oldParentKey = "";
+            try
+            {
+                oldParentKey = existingNode && existingNode.getParent ? (existingNode.getParent().key || "") : "";
+            }
+            catch (_){}
+
+            purgeOutsideTarget(rawOnly, parentAce);
+
+            try
+            {
+                if (oldParentKey && oldParentKey !== parentAce)
+                {
+                    var oldParentNode = tree.getNodeByKey(oldParentKey);
+                    if (oldParentNode && typeof oldParentNode.reloadChildren === "function")
+                    {
+                        var urlOld = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", oldParentNode.key)) : null;
+                        oldParentNode.reloadChildren(urlOld ? { url: urlOld } : undefined);
+                    }
+                }
+            }
+            catch (_){}
+
+            // Modified: allow passing description override
+            function ensureCodeNodePresent(parentNode, descriptionOverride)
+            {
+                if (!parentNode) { return null; }
+
+                for (var i = 0; i < variants.length; i++)
+                {
+                    var existingUnderTarget = tree.getNodeByKey(variants[i]);
+                    if (existingUnderTarget
+                        && existingUnderTarget.getParent
+                        && existingUnderTarget.getParent().key === parentNode.key)
+                    {
+                        // If a description override is supplied, update title now
+                        if (descriptionOverride)
+                        {
+                            try
+                            {
+                                var cashTypeExisting = 0;
+                                if (existingUnderTarget.data)
+                                {
+                                    if (typeof existingUnderTarget.data.cashType !== "undefined")
+                                    {
+                                        cashTypeExisting = Number(existingUnderTarget.data.cashType) || 0;
+                                    }
+                                    else if (typeof existingUnderTarget.data.cashTypeCode !== "undefined")
+                                    {
+                                        cashTypeExisting = Number(existingUnderTarget.data.cashTypeCode) || 0;
+                                    }
+                                }
+                                var iconClassOverride = "bi-wallet2";
+                                if (cashTypeExisting === 1) { iconClassOverride = "bi-file-earmark-text"; }
+                                else if (cashTypeExisting === 2) { iconClassOverride = "bi-bank"; }
+                                function esc(o)
+                                {
+                                    return String(o || "")
+                                        .replace(/&/g, "&amp;")
+                                        .replace(/</g, "&lt;")
+                                        .replace(/>/g, "&gt;")
+                                        .replace(/"/g, "&quot;")
+                                        .replace(/'/g, "&#039;");
+                                }
+                                existingUnderTarget.title = "<span class='tc-code-icon bi " + iconClassOverride + "'></span> "
+                                    + rawOnly + " - " + esc(descriptionOverride);
+                                safeInvoke(existingUnderTarget, "renderTitle");
+                            }
+                            catch (_){}
+                        }
+                        safeInvoke(existingUnderTarget, "makeVisible");
+                        safeInvokeWithArg(existingUnderTarget, "setActive", true);
+                        return existingUnderTarget;
+                    }
+                }
+
+                var origNode = existingNode;
+                var origData = (origNode && origNode.data) ? origNode.data : {};
+                var origTitle = (origNode && typeof origNode.title === "string") ? origNode.title : "";
+                var extractedDesc = "";
+                try
+                {
+                    if (origTitle)
+                    {
+                        var plain = origTitle.replace(/<[^>]+>/g, "").trim();
+                        var m = plain.match(/^[^\s-]+?\s*-\s*(.+)$/);
+                        if (m && m[1]) { extractedDesc = m[1].trim(); }
+                    }
+                }
+                catch (_){}
+
+                var cashType = 0;
+                try
+                {
+                    if (typeof origData.cashType !== "undefined")
+                    {
+                        cashType = Number(origData.cashType) || 0;
+                    }
+                    else if (typeof origData.cashTypeCode !== "undefined")
+                    {
+                        cashType = Number(origData.cashTypeCode) || 0;
+                    }
+                    else if (parentNode.data)
+                    {
+                        if (typeof parentNode.data.cashType !== "undefined")
+                        {
+                            cashType = Number(parentNode.data.cashType) || 0;
+                        }
+                        else if (typeof parentNode.data.cashTypeCode !== "undefined")
+                        {
+                            cashType = Number(parentNode.data.cashTypeCode) || 0;
+                        }
+                    }
+                }
+                catch (_){ cashType = 0; }
+
+                var iconClass;
+                switch (cashType)
+                {
+                    case 1: iconClass = "bi-file-earmark-text"; break;
+                    case 2: iconClass = "bi-bank"; break;
+                    default: iconClass = "bi-wallet2"; break;
+                }
+
+                function escapeHtml(str)
+                {
+                    return String(str || "")
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
+
+                // Use override if provided; else extracted; else fallback.
+                var finalDesc = descriptionOverride || extractedDesc || "(Description)";
+                var titleHtml =
+                    "<span class='tc-code-icon bi " + iconClass + "'></span> "
+                    + rawOnly + " - " + escapeHtml(finalDesc);
+
+                try
+                {
+                    var added = parentNode.addChildren({
+                        title: titleHtml,
+                        key: prefKey,
+                        folder: false,
+                        icon: false,
+                        lazy: false,
+                        extraClasses: (origData.isEnabled === 0) ? "tc-disabled" : null,
+                        data: {
+                            nodeType: "code",
+                            cashCode: rawOnly,
+                            isEnabled: (typeof origData.isEnabled === "number") ? origData.isEnabled : 1,
+                            cashPolarity: (typeof origData.cashPolarity !== "undefined") ? origData.cashPolarity : undefined,
+                            cashType: cashType,
+                            categoryType: (typeof origData.categoryType !== "undefined") ? origData.categoryType : undefined
+                        }
+                    });
+
+                    var newNode = tree.getNodeByKey(prefKey) || (added && added.length ? added[0] : null);
+                    return newNode || null;
+                }
+                catch (_)
+                {
+                    return null;
+                }
+            }
+
+            function selectAndShow(parentKey, keyVariants, attempts)
+            {
+                attempts = attempts || 8;
+                (function retry()
+                {
+                    var node = null;
+                    for (var i = 0; !node && i < keyVariants.length; i++)
+                    {
+                        try
+                        {
+                            node = tree.getNodeByKey(keyVariants[i]);
+                        }
+                        catch (_){}
+                    }
+                    if (node)
+                    {
+                        try
+                        {
+                            node.makeVisible();
+                        }
+                        catch (_){}
+                        try
+                        {
+                            node.setActive(true);
+                        }
+                        catch (_){}
+                        loadDetailsEmbedded(node.key, parentKey);
+                        return;
+                    }
+                    if (--attempts > 0)
+                    {
+                        setTimeout(retry, 160);
+                    }
+                    else
+                    {
+                        fullTreeReloadAndSelect(parentKey, prefKey);
+                        setTimeout(function () { loadDetailsEmbedded(prefKey, parentKey); }, 450);
+                    }
+                })();
+            }
+
+            expandAncestorsAndReload(parentAce)
+                .then(function ()
+                {
+                    var parentNode = tree.getNodeByKey(parentAce);
+                    if (!parentNode) { throw new Error("parent missing after expand"); }
+                    return ensureNodeExpandedAndReload(parentNode).then(function () { return parentNode; });
+                })
+                .then(function (parentNode)
+                {
+                    var present = ensureCodeNodePresent(parentNode, descOverride);
+                    selectAndShow(parentAce, variants.concat(present ? [present.key] : []), 8);
+                })
+                .catch(function ()
+                {
+                    fullTreeReloadAndSelect(parentAce, prefKey);
+                    setTimeout(function () { loadDetailsEmbedded(prefKey, parentAce); }, 450);
+                });
+
+            return;
+        }
     }
 
     function scanDetailsPaneForMarkers(el)
@@ -2121,16 +2476,18 @@
             return;
         }
 
-        var selector = "#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingCategoryResult";
+        var selector = "#createResult, #createCategoryResult, #createCashCodeResult, #editTotalResult, #editCategoryResult, #addExistingCategoryResult, #addExistingCashCodeResult";
         var m = el.querySelector(selector)
 
         if (!m && el.id && (
                 el.id === "createResult" ||
                 el.id === "createCategoryResult" ||
-                el.id === "createCodeResult" ||
+                el.id === "createCashCodeResult" ||
                 el.id === "editTotalResult" ||
                 el.id === "editCategoryResult" ||
-                el.id === "addExistingCategoryResult" 
+                el.id === "editCashCodeResult" ||
+                el.id === "addExistingCategoryResult" ||
+                el.id === "addExistingCashCodeResult"
             ))
         {
             m = el;
@@ -2236,7 +2593,7 @@
 
                         try
                         {
-                            marker = pane.querySelector("#createResult, #createCategoryResult, #createCodeResult, #editTotalResult, #editCategoryResult, #addExistingCategoryResult");
+                            marker = pane.querySelector("#createResult, #createCategoryResult, #createCashCodeResult, #editTotalResult, #editCategoryResult, #editCashCodeResult, #addExistingCategoryResult, #addExistingCashCodeResult");
                         }
                         catch (e)
                         {

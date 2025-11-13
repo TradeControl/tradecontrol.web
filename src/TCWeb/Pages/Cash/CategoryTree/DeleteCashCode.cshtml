@@ -37,9 +37,11 @@
             </div>
         </div>
 
-        <form id="deleteCashCodeForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteCashCode", key = key })">
+        <form id="deleteCashCodeForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteCashCode", key = key, embed = 1 })">
             @Html.AntiForgeryToken()
+            <input type="hidden" name="embed" value="1" />
             <input type="hidden" name="key" value="@key" />
+            <input type="hidden" id="deleteCashCodeParent" value="@category" />
 
             <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="confirmDeleteCode" />

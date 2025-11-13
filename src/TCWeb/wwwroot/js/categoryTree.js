@@ -39,6 +39,150 @@ window.CategoryTree = (function ()
         var isAdmin = !!cfg.isAdmin;
         var CATEGORYTYPE_CASHTOTAL = 1; // server: (short)NodeEnum.CategoryType.CashTotal
 
+        var menuOriginalHtml = null;
+        var menuTemplates = { items: {}, dividerHtml: "<div class='dropdown-divider'></div>" };
+
+        // Capture pristine menu and templates once when DOM ready (before any context mutations)
+        $(function ()
+        {
+            try
+            {
+                var $m = $(menuSel).first();
+                if ($m.length)
+                {
+                    menuOriginalHtml = $m.html();
+                }
+            }
+            catch (_)
+            {
+            }
+            cacheMenuTemplates();
+            traceMenuOrigins();
+        });
+
+        // Helpers for debugging duplicate context menus
+        function hashHtml(str)
+        {
+            try
+            {
+                var s = (str || "").replace(/\s+/g, " ");
+                var h = 0;
+                for (var i = 0; i < s.length; i++)
+                {
+                    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+                }
+                return h;
+            }
+            catch (_)
+            {
+                return 0;
+            }
+        }
+
+        function traceMenuOrigins()
+        {
+            try
+            {
+                var ids = [];
+                $("#treeContextMenu").each(function (i)
+                {
+                    var $m = $(this);
+                    ids.push({
+                        index: i,
+                        inDetailsPane: $m.closest("#detailsPane").length > 0,
+                        childCount: $m.children().length,
+                        htmlHash: hashHtml($m.html())
+                    });
+                });
+
+                if (ids.length > 1)
+                {
+                    console.warn("TRACE duplicate #treeContextMenu instances", ids);
+                }
+                else
+                {
+                    console.warn("TRACE single #treeContextMenu", ids);
+                }
+            }
+            catch (_)
+            {
+            }
+        }
+
+        // New: log before we rebuild this open
+        function debugLogMenuPre()
+        {
+            try
+            {
+                var $all = $(menuSel);
+                var $chosen = (function ()
+                {
+                    var $top = $all.filter(function ()
+                    {
+                        return $(this).closest("#detailsPane").length === 0;
+                    });
+                    return $top.length ? $top.first() : $all.first();
+                })();
+
+                var firstItems = $chosen.find(".dropdown-item").map(function ()
+                {
+                    return $(this).text().trim();
+                }).get().slice(0, 8);
+
+                console.warn("CTX pre", {
+                    totalInstances: $all.length,
+                    chosenInDetailsPane: $chosen.closest("#detailsPane").length > 0,
+                    chosenChildCount: $chosen.children().length,
+                    chosenHash: hashHtml($chosen.html()),
+                    firstItems: firstItems
+                });
+            }
+            catch (_)
+            {
+            }
+        }
+
+        function debugLogMenuPost($menu)
+        {
+            try
+            {
+                function isElementShown($el)
+                {
+                    var el = $el.get(0);
+                    if (!el) { return false; }
+                    var inline = el.style && el.style.display ? el.style.display : "";
+                    var hasHiddenAttr = $el.is("[hidden]");
+                    var hasDNone = $el.hasClass("d-none");
+                    // We consider the element 'would show' if this item itself isn't hidden via inline style or common hidden flags
+                    return inline !== "none" && !hasHiddenAttr && !hasDNone;
+                }
+
+                var $items = $menu.find(".dropdown-item");
+                var wouldShow = $items.filter(function () { return isElementShown($(this)); })
+                                      .map(function () { return $(this).text().trim(); }).get();
+                var visibleNow = $items.filter(":visible")
+                                       .map(function () { return $(this).text().trim(); }).get();
+
+                console.warn("CTX post", {
+                    wouldShowCount: wouldShow.length,
+                    wouldShow: wouldShow.slice(0, 24),
+                    visibleCount: visibleNow.length,
+                    visible: visibleNow.slice(0, 24),
+                    hash: hashHtml($menu.html())
+                });
+            }
+            catch (_)
+            {
+            }
+        }
+
+        // Run once on DOM ready to list menu instances
+        $(function ()
+        {
+            traceMenuOrigins();
+        });
+        // End debug helpers
+
         function handlerUrl(handlerName)
         {
             var sep = basePageUrl.indexOf('?') === -1 ? '?' : '&';
@@ -58,95 +202,95 @@ window.CategoryTree = (function ()
 
         // Open an action page in RHS (desktop) or navigate (mobile)
         function openAction(actionName, key, parentKey, extras)
-{
-    var base = basePageUrl;
-    if (!base)
-    {
-        alert("Action endpoint not configured.");
-        return;
-    }
-
-    // Record a precise return target for Cancel: active node if available, else the key parameter.
-    try
-    {
-        if (typeof window.tcSetCancelReturn === "function")
         {
-            var retKey = "";
+            var base = basePageUrl;
+            if (!base)
+            {
+                alert("Action endpoint not configured.");
+                return;
+            }
+
+            // Record a precise return target for Cancel: active node if available, else the key parameter.
             try
             {
-                var t = getTree();
-                var active = t && t.getActiveNode ? t.getActiveNode() : null;
-                retKey = (active && active.key) ? active.key : (key || "");
+                if (typeof window.tcSetCancelReturn === "function")
+                {
+                    var retKey = "";
+                    try
+                    {
+                        var t = getTree();
+                        var active = t && t.getActiveNode ? t.getActiveNode() : null;
+                        retKey = (active && active.key) ? active.key : (key || "");
+                    }
+                    catch (e)
+                    {
+                        retKey = key || "";
+                    }
+                    window.tcSetCancelReturn(retKey || "");
+                }
             }
             catch (e)
             {
-                retKey = key || "";
+                // swallow
             }
-            window.tcSetCancelReturn(retKey || "");
-        }
-    }
-    catch (e)
-    {
-        // swallow
-    }
 
-    // Build query parameters robustly
-    var parts = [];
-    parts.push("key=" + encodeURIComponent(key || ""));
+            // Build query parameters robustly
+            var parts = [];
+            parts.push("key=" + encodeURIComponent(key || ""));
 
-    if (parentKey)
-    {
-        parts.push("parentKey=" + encodeURIComponent(parentKey));
-    }
-
-    if (extras && typeof extras === "object")
-    {
-        for (var p in extras)
-        {
-            if (!Object.prototype.hasOwnProperty.call(extras, p))
+            if (parentKey)
             {
-                continue;
+                parts.push("parentKey=" + encodeURIComponent(parentKey));
             }
-            var v = extras[p];
-            if (v === null || typeof v === "undefined")
+
+            if (extras && typeof extras === "object")
             {
-                continue;
+                for (var p in extras)
+                {
+                    if (!Object.prototype.hasOwnProperty.call(extras, p))
+                    {
+                        continue;
+                    }
+                    var v = extras[p];
+                    if (v === null || typeof v === "undefined")
+                    {
+                        continue;
+                    }
+                    parts.push(encodeURIComponent(p) + "=" + encodeURIComponent(v));
+                }
             }
-            parts.push(encodeURIComponent(p) + "=" + encodeURIComponent(v));
-        }
-    }
 
-    var url = base + "/" + encodeURIComponent(actionName) + "?" + parts.join("&");
+            var url = base + "/" + encodeURIComponent(actionName) + "?" + parts.join("&");
 
-    if (isMobile())
-    {
-        window.location.href = url;
-    }
-    else
-    {
-        // Mark as embedded to suppress the full layout/navigation
-        url = appendQuery(url, "embed", "1");
+            if (isMobile())
+            {
+                window.location.href = url;
+            }
+            else
+            {
+                // Mark as embedded to suppress the full layout/navigation
+                url = appendQuery(url, "embed", "1");
 
-        var $pane = $("#detailsPane");
-        if ($pane.length)
-        {
-            $pane.css("overflow", "auto");
-            $.get(nocache(url))
-                .done(function (html)
+                var $pane = $("#detailsPane");
+                if ($pane.length)
                 {
-                    $pane.html(html);
-                })
-                .fail(function ()
+                    $pane.css("overflow", "auto");
+                    $.get(nocache(url))
+                        .done(function (html)
+                        {
+                            $pane.html(html);
+                        })
+                        .fail(function ()
+                        {
+                            $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
+                        });
+                }
+                else
                 {
-                    $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
-                });
+                    window.location.href = url;
+                }
+            }
         }
-        else
-        {
-            window.location.href = url;
-        }
-    }
-}
 
         function openEmbeddedUrl(url)
         {
@@ -298,7 +442,6 @@ window.CategoryTree = (function ()
                 || (typeof key === "string" && key.indexOf("type:") === 0);
         }
 
-
         // Load details into RHS pane (desktop only)
         function loadDetails(node)
         {
@@ -313,7 +456,7 @@ window.CategoryTree = (function ()
 
             if (!node)
             {
-                $pane.empty();
+                $pane.html("<div class='text-muted small p-2'>No details</div>");
                 return;
             }
 
@@ -326,7 +469,7 @@ window.CategoryTree = (function ()
                 parentKey = (p && p.key) ? p.key : "";
             }
 
-            // If the selected node itself is synthetic, try to show its parent's details (if real).
+            // Synthetic fallback: show parent details if parent real
             if (tcIsSyntheticKey(key))
             {
                 if (parentKey && !tcIsSyntheticKey(parentKey))
@@ -336,6 +479,7 @@ window.CategoryTree = (function ()
                         .done(function (html)
                         {
                             $pane.html(html);
+                            applyDetailsVisibility(node, $pane);
                         })
                         .fail(function ()
                         {
@@ -349,7 +493,7 @@ window.CategoryTree = (function ()
                 return;
             }
 
-            // Build URL for the selected node; parentKey is optional context only when it is real
+            // Build URL for the selected node
             var url = detailsUrl + "?key=" + encodeURIComponent(key);
             if (parentKey && !tcIsSyntheticKey(parentKey))
             {
@@ -360,42 +504,170 @@ window.CategoryTree = (function ()
                 .done(function (html)
                 {
                     $pane.html(html);
-
-                    // Existing post-load UI logic (move button visibility etc.) can remain as-is
-                    try
-                    {
-                        var kinds = getNodeKinds(node);
-                        var data = kinds.data || {};
-                        var parentKeyNow = "";
-                        if (node && node.getParent)
-                        {
-                            var pp = node.getParent();
-                            parentKeyNow = (pp && pp.key) ? pp.key : "";
-                        }
-
-                        var inTypeCtx = !!(data && (data.isTypeContext === true || data.syntheticKind === "type"))
-                                        || (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
-
-                        var isDiscRoot = (typeof kinds.key === "string" && kinds.key === DISC_KEY);
-                        var isDiscCategory = !!(kinds.isCat && parentKeyNow === DISC_KEY);
-
-                        var showMove = !!isAdmin && !!kinds.isCat && !inTypeCtx && !isDiscRoot && !isDiscCategory;
-
-                        var $moveBtn = $pane.find("[data-action='move']");
-                        if ($moveBtn.length)
-                        {
-                            $moveBtn.toggle(showMove);
-                        }
-                    }
-                    catch (ex)
-                    {
-                        // no-op
-                    }
+                    applyDetailsVisibility(node, $pane);
                 })
                 .fail(function ()
                 {
                     $pane.html("<div class='text-muted small p-2'>No details</div>");
                 });
+        }
+
+        // Visibility application extracted for clarity
+        function applyDetailsVisibility(node, $pane)
+        {
+            try
+            {
+                var kinds = getNodeKinds(node);
+                var data = kinds.data || {};
+                var keyNow = kinds.key || "";
+                var parentKeyNow = "";
+                if (node && node.getParent)
+                {
+                    var pp = node.getParent();
+                    parentKeyNow = (pp && pp.key) ? pp.key : "";
+                }
+
+                var isCode = kinds.isCode === true;
+                var isCat = kinds.isCat === true;
+                var isRoot = kinds.isRoot === true;
+                var isDiscRoot = kinds.isDisconnect === true;
+                var isTypeNode = (typeof keyNow === "string" && keyNow.indexOf("type:") === 0) || (data && data.syntheticKind === "type");
+                var inTypeCtx = (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
+
+                var catType = (typeof data.categoryType !== "undefined") ? Number(data.categoryType) : NaN;
+                var isCatTotal = (catType === 1);
+                var isCatCashCode = (catType === 0);
+
+                function dv(action, show)
+                {
+                    var $btns = $pane.find(actionSelectors(action).join(","));
+                    $btns.toggle(!!show);
+                    return $btns;
+                }
+
+                var known = [
+                    "edit","delete","toggleEnabled","addCategory","addCashCode",
+                    "move","moveUp","moveDown","setProfitRoot","setVatRoot","expand","collapse"
+                ];
+                for (var i = 0; i < known.length; i++)
+                {
+                    dv(known[i], false);
+                }
+
+                if (isRoot || isDiscRoot || isTypeNode)
+                {
+                    return;
+                }
+
+                var order = [];
+
+                if (isCode)
+                {
+                    dv("edit", isAdmin);
+                    dv("delete", isAdmin);
+                    dv("toggleEnabled", isAdmin);
+                    order = ["edit", "delete", "toggleEnabled"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    return;
+                }
+
+                if (!isCat)
+                {
+                    return;
+                }
+
+                if (inTypeCtx)
+                {
+                    dv("edit", isAdmin);
+                    dv("delete", isAdmin);
+                    dv("toggleEnabled", isAdmin);
+                    dv("addCashCode", isAdmin);
+                    dv("move", isAdmin);
+                    order = ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    return;
+                }
+
+                if (parentKeyNow === DISC_KEY)
+                {
+                    dv("edit", isAdmin);
+                    dv("delete", isAdmin);
+                    dv("toggleEnabled", isAdmin);
+                    dv("addCashCode", isAdmin && (isCatTotal || isCatCashCode));
+                    dv("addCategory", isAdmin && isCatTotal);
+                    dv("move", isAdmin);
+
+                    order = isCatTotal
+                        ? ["edit", "delete", "toggleEnabled", "addCategory", "addCashCode", "move"]
+                        : ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    return;
+                }
+
+                if (parentKeyNow === ROOT_KEY)
+                {
+                    if (isCatTotal)
+                    {
+                        dv("edit", isAdmin);
+                        dv("delete", isAdmin);
+                        dv("toggleEnabled", isAdmin);
+                        dv("addCategory", isAdmin);
+                        dv("addCashCode", isAdmin);
+                        dv("move", isAdmin);
+                        dv("setProfitRoot", isAdmin);
+                        dv("setVatRoot", isAdmin);
+
+                        order = ["edit", "delete", "toggleEnabled", "addCategory", "addCashCode", "move", "setProfitRoot", "setVatRoot"];
+                        arrangeDetailsButtons($pane, order);
+                        setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    }
+                    else if (isCatCashCode)
+                    {
+                        dv("delete", isAdmin);
+                        dv("toggleEnabled", isAdmin);
+                        dv("addCashCode", isAdmin);
+                        dv("move", isAdmin);
+
+                        order = ["delete", "toggleEnabled", "addCashCode", "move"];
+                        arrangeDetailsButtons($pane, order);
+                        setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    }
+                    return;
+                }
+
+                // Normal totals context
+                if (isCatTotal)
+                {
+                    dv("edit", isAdmin);
+                    dv("delete", isAdmin);
+                    dv("toggleEnabled", isAdmin);
+                    dv("addCategory", isAdmin);
+                    dv("addCashCode", isAdmin);
+                    dv("move", isAdmin);
+
+                    order = ["edit", "delete", "toggleEnabled", "addCategory", "addCashCode", "move"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                }
+                else if (isCatCashCode)
+                {
+                    dv("edit", isAdmin);
+                    dv("delete", isAdmin);
+                    dv("toggleEnabled", isAdmin);
+                    dv("addCashCode", isAdmin);
+                    dv("move", isAdmin);
+
+                    order = ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                }
+            }
+            catch (_)
+            {
+            }
         }
 
         // Helpers to classify node
@@ -922,6 +1194,179 @@ window.CategoryTree = (function ()
             }
         }
 
+        // Helper: alias resolution for data-action selectors
+        function actionSelectors(action)
+        {
+            switch (action)
+            {
+                case "addCategory":
+                    return ["[data-action='addCategory']", "[data-action='addExistingCategory']"];
+                case "addCashCode":
+                    return ["[data-action='addCashCode']", "[data-action='addExistingCashCode']", "[data-action='addExistingCode']"];
+                case "expand":
+                    return ["[data-action='expandSelected']"];
+                case "collapse":
+                    return ["[data-action='collapseSelected']"];
+                default:
+                    return ["[data-action='" + action + "']"];
+            }
+        }
+
+        // Helper: set Enable/Disable label in a given scope (menu or pane)
+        function setToggleEnabledLabel($scope, isEnabled)
+        {
+            try
+            {
+                var $btn = $scope.find("[data-action='toggleEnabled']");
+                if ($btn.length)
+                {
+                    $btn.each(function ()
+                    {
+                        var $b = $(this);
+                        // If the item contains an icon, preserve it and replace trailing text
+                        var html = $b.html() || "";
+                        if (/<i[^>]*>/i.test(html))
+                        {
+                            // Replace text after icon
+                            $b.html(html.replace(/(<i[^>]*>.*?<\/i>\s*)[^<]*/i, "$1" + (isEnabled ? "Disable" : "Enable")));
+                        }
+                        else
+                        {
+                            $b.text(isEnabled ? "Disable" : "Enable");
+                        }
+                    });
+                }
+            }
+            catch (_)
+            {
+            }
+        }
+
+        // Helper: ensure only one visible instance for a given action
+        function ensureSingleVisible($scope, action)
+        {
+            try
+            {
+                var sels = actionSelectors(action).join(",");
+                var $items = $scope.find(sels).filter(":visible");
+                if ($items.length > 1)
+                {
+                    // Keep the first, hide the rest
+                    $items.slice(1).hide();
+                }
+            }
+            catch (_)
+            {
+            }
+        }
+
+        // Helper: reorder menu items into a specific order and show group dividers
+        function reorderMenu($menu, order, groups)
+        {
+            try
+            {
+                var items = [];
+                order.forEach(function (act)
+                {
+                    var $els = $menu.find(actionSelectors(act).join(",")).filter(":visible");
+                    if ($els.length)
+                    {
+                        // Use the first instance for order; hide the rest duplicates
+                        var $first = $els.first();
+                        $els.slice(1).hide();
+                        items.push($first);
+                    }
+                });
+
+                if (items.length === 0)
+                {
+                    return;
+                }
+
+                // Append in order to re-sequence
+                var $container = $menu;
+                items.forEach(function ($el)
+                {
+                    $container.append($el);
+                });
+
+                // Handle dividers if present; otherwise harmless
+                $menu.find(".dropdown-divider").hide();
+
+                if (Array.isArray(groups) && groups.length > 0)
+                {
+                    // groups is an array of indices where a new group starts (except 0)
+                    groups.forEach(function (startIdx)
+                    {
+                        if (startIdx > 0 && startIdx < items.length)
+                        {
+                            var $before = items[startIdx];
+                            // Find an existing divider near this spot or create one
+                            var $div = $menu.find(".dropdown-divider:hidden").first();
+                            if ($div.length === 0)
+                            {
+                                $div = $("<div class='dropdown-divider'></div>");
+                                $menu.append($div);
+                            }
+                            $div.insertBefore($before).show();
+                        }
+                    });
+                }
+
+                normalizeDividers($menu);
+            }
+            catch (_)
+            {
+            }
+        }
+
+        // Helper: reorder details pane buttons to match order
+        function arrangeDetailsButtons($pane, order)
+        {
+            try
+            {
+                var $all = $pane.find("[data-action]");
+                if ($all.length === 0)
+                {
+                    return;
+                }
+
+                // Try to use the parent of the first button as container
+                var $container = $($all.get(0)).parent();
+                if ($container.length === 0)
+                {
+                    return;
+                }
+
+                // Collect in order; prefer visible ones that exist
+                var list = [];
+                order.forEach(function (act)
+                {
+                    var $els = $pane.find(actionSelectors(act).join(",")).filter(":visible");
+                    if ($els.length)
+                    {
+                        // Keep first instance; hide dupes
+                        var $first = $els.first();
+                        $els.slice(1).hide();
+                        list.push($first);
+                    }
+                });
+
+                if (list.length === 0)
+                {
+                    return;
+                }
+
+                list.forEach(function ($el)
+                {
+                    $container.append($el);
+                });
+            }
+            catch (_)
+            {
+            }
+        }
+
         // Mobile action bar
         function updateActionBar(node)
         {
@@ -996,186 +1441,312 @@ window.CategoryTree = (function ()
             if (bar) {bar.classList.remove("tc-visible");}
         }
 
+        function getMenuInstance()
+        {
+            // Prefer the top-level menu (not inside #detailsPane)
+            var $all = $(menuSel);
+            if ($all.length <= 1) { return $all.first(); }
+
+            var $topLevel = $all.filter(function () { return $(this).closest("#detailsPane").length === 0; });
+            var $chosen = $topLevel.length ? $topLevel.first() : $all.first();
+
+            if ($all.length > 1 && window.console && console.warn)
+            {
+                console.warn("Multiple #treeContextMenu instances detected; using top-level instance.", $all.length);
+            }
+            return $chosen;
+        }
+
+        function cacheMenuTemplates()
+        {
+            try
+            {
+                var $m = $(menuSel).first();
+                if ($m.length === 0) { return; }
+
+                $m.find(".dropdown-item[data-action]").each(function ()
+                {
+                    var $it = $(this);
+                    var act = String($it.data("action") || "");
+                    if (act && !menuTemplates.items[act])
+                    {
+                        menuTemplates.items[act] = $it.prop("outerHTML");
+                    }
+                });
+
+                var $div = $m.find(".dropdown-divider").first();
+                if ($div.length)
+                {
+                    menuTemplates.dividerHtml = $div.prop("outerHTML");
+                }
+            }
+            catch (_)
+            {
+            }
+        }
+
+        function renderMenuFromTemplates($menu, actions, groupSplits)
+        {
+            try
+            {
+                var parts = [];
+                var splits = Array.isArray(groupSplits) ? groupSplits.slice(0) : [];
+                splits.sort(function (a, b) { return a - b; });
+
+                for (var i = 0; i < actions.length; i++)
+                {
+                    // Insert divider at defined split indices (e.g. [3, 6, ...])
+                    if (splits.length && i === splits[0])
+                    {
+                        parts.push(menuTemplates.dividerHtml);
+                        splits.shift();
+                    }
+
+                    var act = actions[i];
+                    var tpl = menuTemplates.items[act];
+                    if (tpl) { parts.push(tpl); }
+                }
+
+                $menu.html(parts.join(""));
+
+                // Normalize if last/first ended up a divider
+                normalizeDividers($menu);
+            }
+            catch (_)
+            {
+            }
+        }
+
         function showContextMenu(x, y, node)
         {
-            var $menu = $(menuSel);
-            $menu.find(".admin-only").toggle(!!isAdmin);
-
-            var kinds = getNodeKinds(node);
-            var key = kinds.key, data = kinds.data, isSynthetic = kinds.isSynthetic, isCode = kinds.isCode, isCat = kinds.isCat, isRoot = kinds.isRoot, isDisconnect = kinds.isDisconnect;
-
-            var parentKeyNow = "";
-            if (node && node.getParent)
+            if (!node)
             {
-                var p = node.getParent();
-                parentKeyNow = (p && p.key) ? p.key : "";
+                return;
             }
 
-            var inTypeCtx = (data && (data.isTypeContext === true || data.syntheticKind === "type")) ? true : false;
-            if (!inTypeCtx && typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0)
+            debugLogMenuPre();
+            var $menu = getMenuInstance();
+
+            if (menuOriginalHtml !== null)
             {
-                inTypeCtx = true;
-            }
-
-            var isTypeKey = (typeof key === "string" && key.indexOf("type:") === 0);
-            var isTypeNode = isTypeKey || (data && (data.syntheticKind === "type" || data.nodeType === "synthetic")) ? true : false;
-            var isDiscRoot = (typeof key === "string" && key === DISC_KEY);
-            var isDiscCategory = !!(isCat && parentKeyNow === DISC_KEY);
-
-            if (isDiscRoot)
-            {
-                isSynthetic = false;
-            }
-
-            function showFirst(action)
-            {
-                return $menu.find("[data-action='" + action + "']").hide().first().show();
-            }
-
-            $menu.removeClass("type-ctx synthetic-ctx");
-            $menu.find(".dropdown-item").show();
-            $menu.find(".admin-only").toggle(!!isAdmin);
-
-            $menu.find("[data-action='view']").toggle(!isSynthetic && isMobile());
-
-            $menu.find(".cat-only").toggle(isCat && !isRoot && !isDisconnect && !inTypeCtx);
-
-            // Visibility rules
-            var showCreateCategory = isAdmin && !inTypeCtx && (isDiscRoot || (isCat && !isRoot));
-            var showCreateTotal = isAdmin && !inTypeCtx && ((isRoot || isDiscRoot) || (isCat && !isDisconnect && !isRoot));
-
-            $menu.find("[data-action='createTotal']").toggle(showCreateTotal);
-            $menu.find("[data-action='createCategory']").toggle(showCreateCategory);
-
-            var $createTotal = $menu.find("[data-action='createTotal']");
-            if ($createTotal.length)
-            {
-                $createTotal.text("New Total…");
-            }
-
-            var $createCategory = $menu.find("[data-action='createCategory']");
-            if ($createCategory.length)
-            {
-                $createCategory.text("New Category…");
-            }
-
-            $menu.find(".code-only").toggle(isCode && !isDisconnect);
-
-            var showMove = isAdmin && isCat && !isRoot && !isDisconnect && !isDiscCategory;
-            $menu.find("[data-action='moveUp'], [data-action='moveDown']").toggle(showMove);
-
-            // Hide Expand/Collapse for Cash Codes (and any non-folder leaf)
-            $menu.find("[data-action='expandSelected'], [data-action='collapseSelected']")
-                 .toggle(!!(node && node.folder));
-
-            var canToggle = !!isAdmin && !!node && !isSynthetic && typeof data.isEnabled !== "undefined";
-            var $toggle = $menu.find("[data-action='toggleEnabled']");
-            if (canToggle)
-            {
-                var label = (data.isEnabled === 1) ? "Disable" : "Enable";
-                $toggle.text(label).show();
+                $menu.html(menuOriginalHtml);
             }
             else
             {
-                $toggle.hide();
+                menuOriginalHtml = $menu.html();
             }
 
-            if (inTypeCtx)
+            function showExpandCollapseOnly()
             {
-                $menu.addClass("type-ctx");
-                var blockSelectors = [
-                    "[data-action='addExistingCategory']",
-                    "[data-action='createTotal']",
-                    "[data-action='addExistingCode']",
-                    "[data-action='createCashCode']",
-                    "[data-action='move']",
-                    "[data-action='delete']"
-                ];
-                $menu.find(blockSelectors.join(",")).hide();
+                renderMenuFromTemplates($menu, ["expand", "collapse"], []);
+            }
+
+            // ---- Node classification (early) ----
+            var data = node.data || {};
+            var parentKeyNow = "";
+            try
+            {
+                var pTmp = node.getParent && node.getParent();
+                parentKeyNow = (pTmp && pTmp.key) ? pTmp.key : "";
+            }
+            catch (_)
+            {
+                parentKeyNow = "";
+            }
+
+            // Defer build if lazy folder and critical metadata (categoryType) missing
+            if (node.folder && node.lazy && !node.loaded && typeof data.categoryType === "undefined")
+            {
+                node.load().done(function ()
+                {
+                    showContextMenu(x, y, node);
+                }).fail(function ()
+                {
+                    renderMenuFromTemplates($menu, ["view"], []);
+                    $menu.removeClass("mobile-sheet").css({ top: y + "px", left: x + "px" }).show();
+                    debugLogMenuPost($menu);
+                });
+                return;
+            }
+
+            // Optional heuristic for root-level folders (kept as-is)
+            if (node.folder && typeof data.categoryType === "undefined")
+            {
+                if (parentKeyNow === ROOT_KEY)
+                {
+                    data.categoryType = CATEGORYTYPE_CASHTOTAL;
+                    node.data.categoryType = CATEGORYTYPE_CASHTOTAL;
+                }
+            }
+
+            var kinds = getNodeKinds(node);
+            var key = kinds.key;
+            var isCode = kinds.isCode === true;
+            var isCat = kinds.isCat === true;
+            var isRoot = kinds.isRoot === true;
+            var isDiscRoot = kinds.isDisconnect === true;
+            var isTypeNode = (typeof key === "string" && key.indexOf("type:") === 0) || (data && data.syntheticKind === "type");
+            var inTypeCtx = (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
+
+            var catType = (typeof data.categoryType !== "undefined") ? Number(data.categoryType) : NaN;
+            var isCatTotal = (catType === CATEGORYTYPE_CASHTOTAL);
+            var isCatCashCode = (catType === 0);
+
+            // Build the ordered action list and group split indexes
+            var order = [];
+            var groups = [];
+
+            function pushIf(cond, act)
+            {
+                if (cond) { order.push(act); }
             }
 
             if (isRoot || isTypeNode)
             {
-                $menu.addClass("synthetic-ctx");
+                order = ["expand", "collapse"];
+                groups = [];
+                renderMenuFromTemplates($menu, order, groups);
             }
-
-            var $createCode = $menu.find("[data-action='createCashCode']");
-            if ($createCode.length)
+            else if (isDiscRoot)
             {
-                // Allow create when categoryType === 0 (CashCode)
-                var isCashCodeCategory = !!(data && typeof data.categoryType !== "undefined" && Number(data.categoryType) === 0);
+                order = [];
+                pushIf(isAdmin, "createTotal");
+                pushIf(isAdmin, "createCategory");
+                order.push("expand", "collapse");
+                groups = [2];
+                renderMenuFromTemplates($menu, order, groups);
+            }
+            else if (isCode)
+            {
+                order = ["view"];
+                pushIf(isAdmin, "createCashCode");
+                pushIf(isAdmin, "edit");
+                pushIf(isAdmin, "delete");
+                pushIf(isAdmin, "toggleEnabled");
 
-                if (isDiscCategory)
+                groups = [];
+                renderMenuFromTemplates($menu, order, groups);
+
+                // Label tweak and toggle text
+                var $cc = $menu.find("[data-action='createCashCode']");
+                if ($cc.length) { $cc.text("New Cash Code like this…"); }
+                setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
+            }
+            else if (isCat)
+            {
+                if (inTypeCtx)
                 {
-                    $createCode.text("New Cash Code…").show();
+                    order = ["view"];
+                    pushIf(isAdmin, "moveUp");
+                    pushIf(isAdmin, "moveDown");
+                    pushIf(isAdmin, "toggleEnabled");
+
+                    groups = [];
+                    renderMenuFromTemplates($menu, order, groups);
+                    setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
                 }
-                else if (isCode)
+                else if (parentKeyNow === DISC_KEY)
                 {
-                    $createCode.text("New Cash Code like this…").show();
+                    order = ["view"];
+                    pushIf(isAdmin, "createTotal");
+                    pushIf(isAdmin, "createCategory");
+                    pushIf(isAdmin && isCatCashCode, "createCashCode");
+                    pushIf(isAdmin, "edit");
+                    pushIf(isAdmin, "delete");
+                    pushIf(isAdmin, "toggleEnabled");
+                    pushIf(isAdmin && isCatTotal, "addCategory");
+                    pushIf(isAdmin && (isCatTotal || isCatCashCode), "addCashCode");
+                    pushIf(isAdmin, "move");
+
+                    groups = (isCatCashCode ? [4, 7] : [3, 6]);
+                    renderMenuFromTemplates($menu, order, groups);
+                    setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
+                }
+                else if (parentKeyNow === ROOT_KEY)
+                {
+                    if (isCatTotal)
+                    {
+                        order = ["view"];
+                        pushIf(isAdmin, "createTotal");
+                        pushIf(isAdmin, "createCategory");
+                        pushIf(isAdmin, "edit");
+                        pushIf(isAdmin, "delete");
+                        pushIf(isAdmin, "toggleEnabled");
+                        pushIf(isAdmin, "addCategory");
+                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "moveUp");
+                        pushIf(isAdmin, "moveDown");
+                        order.push("expand", "collapse");
+                        pushIf(isAdmin, "setProfitRoot");
+                        pushIf(isAdmin, "setVatRoot");
+
+                        groups = [3, 6, 9, 13];
+                        renderMenuFromTemplates($menu, order, groups);
+                        setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
+                    }
+                    else if (isCatCashCode)
+                    {
+                        order = ["view"];
+                        pushIf(isAdmin, "createCashCode");
+                        pushIf(isAdmin, "edit");
+                        pushIf(isAdmin, "delete");
+                        pushIf(isAdmin, "toggleEnabled");
+                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "moveUp");
+                        pushIf(isAdmin, "moveDown");
+                        order.push("expand", "collapse");
+
+                        groups = [2, 5, 7];
+                        renderMenuFromTemplates($menu, order, groups);
+                        setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
+                    }
                 }
                 else
                 {
-                    $createCode.text("New Code…");
-                    $createCode.toggle(isAdmin && !inTypeCtx && isCat && !isRoot && !isDisconnect && isCashCodeCategory);
-                }
-            }
-
-            if (isDiscCategory)
-            {
-                $menu.find(".dropdown-item").hide();
-
-                if (isMobile())
-                {
-                    showFirst("view");
-                }
-
-                if (isAdmin)
-                {
-                    // Allow creating a new Totals root directly from Disconnected
-                    var nt = showFirst("createTotal");
-                    nt.text("New Total…");
-
-                    var cc = showFirst("createCashCode");
-                    cc.text("New Cash Code…");
-
-                    showFirst("edit");
-
-                    var del = showFirst("delete");
-                    del.text("Delete");
-
-                    if (typeof data.isEnabled !== "undefined")
+                    if (isCatTotal)
                     {
-                        var en = showFirst("toggleEnabled");
-                        en.text((data.isEnabled === 1) ? "Disable" : "Enable");
+                        order = ["view"];
+                        pushIf(isAdmin, "createTotal");
+                        pushIf(isAdmin, "createCategory");
+                        pushIf(isAdmin, "edit");
+                        pushIf(isAdmin, "delete");
+                        pushIf(isAdmin, "toggleEnabled");
+                        pushIf(isAdmin, "addCategory");
+                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "moveUp");
+                        pushIf(isAdmin, "moveDown");
+                        order.push("expand", "collapse");
+
+                        groups = [3, 6, 9];
+                        renderMenuFromTemplates($menu, order, groups);
+                        setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
+                    }
+                    else if (isCatCashCode)
+                    {
+                        order = ["view"];
+                        pushIf(isAdmin, "createCashCode");
+                        pushIf(isAdmin, "edit");
+                        pushIf(isAdmin, "delete");
+                        pushIf(isAdmin, "toggleEnabled");
+                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "moveUp");
+                        pushIf(isAdmin, "moveDown");
+                        order.push("expand", "collapse");
+
+                        groups = [2, 5, 7];
+                        renderMenuFromTemplates($menu, order, groups);
+                        setToggleEnabledLabel($menu, (data && data.isEnabled === 1));
                     }
                 }
             }
 
-            if (isDiscRoot)
-            {
-                var hideRootSelectors = [
-                    "[data-action='addExistingCategory']",
-                    "[data-action='addExistingCode']",
-                    "[data-action='createCashCode']",
-                    "[data-action='move']",
-                    "[data-action='moveUp']",
-                    "[data-action='moveDown']",
-                    "[data-action='edit']",
-                    "[data-action='delete']",
-                    "[data-action='toggleEnabled']"
-                ];
-                $menu.find(hideRootSelectors.join(",")).hide();
-            }
-
-            normalizeDividers($menu);
-
             if (isMobile())
             {
                 hideActionBar();
-            }
-
-            if (isMobile())
-            {
                 $menu.addClass("mobile-sheet").css({ top: "", left: "" }).show();
             }
             else
@@ -1183,14 +1754,16 @@ window.CategoryTree = (function ()
                 $menu.removeClass("mobile-sheet").css({ top: y + "px", left: x + "px" }).show();
             }
 
-            $menu.data("nodeKey", key).data("parentKey", isSynthetic ? "" : parentKeyNow);
+            debugLogMenuPost($menu);
+
+            $menu.data("nodeKey", key).data("parentKey", (kinds.isSynthetic ? "" : parentKeyNow));
 
             setTimeout(function ()
             {
                 $(document).one("click.treeCtx", function ()
                 {
                     $menu.hide().data("nodeKey", null).data("parentKey", null);
-                    if (isMobile() && node && !isSynthetic)
+                    if (isMobile() && node && !kinds.isSynthetic)
                     {
                         updateActionBar(node);
                     }
@@ -1536,7 +2109,8 @@ window.CategoryTree = (function ()
                         // Cash Code
                         if (kinds.isCode)
                         {
-                            openAction("EditCashCode", key);
+                            var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
+                            openAction("EditCashCode", raw);
                             break;
                         }
 
@@ -1575,10 +2149,11 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "addExistingCode":
+                    case "addExistingCashCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
+                        // Use the node itself if it is a folder; otherwise its parent (mirrors addExistingCategory)
                         var targetCategory = (node && node.folder) ? key : parentKey;
                         if (!targetCategory)
                         {
@@ -1586,19 +2161,8 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        var codeKey = prompt("Existing Cash Code to add under " + targetCategory + ":");
-                        if (!codeKey) { break; }
-
-                        postJsonGlobal("AddExistingCode", { parentKey: targetCategory, codeKey: codeKey })
-                            .done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success)
-                                {
-                                    refreshNode(targetCategory);
-                                }
-                            })
-                            .fail(alertFail);
+                        // Open embedded AddCashCode page (idempotent attach/move)
+                        openAction("AddCashCode", "", targetCategory);
                         break;
                     }
 
@@ -1861,6 +2425,7 @@ window.CategoryTree = (function ()
                             alert("Insufficient privileges");
                             break;
                         }
+
                         if (!node)
                         {
                             alert("Select a node first");
@@ -1871,7 +2436,8 @@ window.CategoryTree = (function ()
 
                         if (kinds2.isCode)
                         {
-                            openAction("EditCashCode", key);
+                            var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
+                            openAction("EditCashCode", raw);
                             break;
                         }
                         if (kinds2.data && kinds2.data.categoryType === CATEGORYTYPE_CASHTOTAL)
@@ -2053,7 +2619,8 @@ window.CategoryTree = (function ()
 
                         if (kinds3.isCode)
                         {
-                            openAction("EditCashCode", key);
+                            var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
+                            openAction("EditCashCode", raw);
                             break;
                         }
                         if (kinds3.data && kinds3.data.categoryType === CATEGORYTYPE_CASHTOTAL)
@@ -2080,29 +2647,16 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "addExistingCode":
+                    case "addExistingCashCode":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                    if (!isAdmin) { alert("Insufficient privileges"); break; }
+                    if (!node.folder) { alert("Select a category"); break; }
 
-                        var targetCategory = node.folder ? key : parentKey;
-                        if (!targetCategory) { alert("Select a category"); break; }
-
-                        var codeKey = prompt("Existing Cash Code to add under " + targetCategory + ":");
-                        if (!codeKey) { break; }
-
-                        postJsonGlobal("AddExistingCode", { parentKey: targetCategory, codeKey: codeKey })
-                            .done(function (res)
-                            {
-                                alert((res && res.message) || "Not Yet Implemented");
-                                if (res && res.success)
-                                {
-                                    var tgt = tree.getNodeByKey(targetCategory);
-                                    reloadIfExpandedNode(tgt);
-                                }
-                            })
-                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
-                        break;
+                    // Open embedded AddCashCode with this category as parent
+                    openAction("AddCashCode", "", key);
+                    break;
                     }
+
                     case "move":
                     {
                         if (!isAdmin)
@@ -2600,15 +3154,15 @@ window.CategoryTree = (function ()
             })();
 
             // Empty-area context menu (desktop)
-            $(treeSel).on("contextmenu", function (e)
-            {
-                if (isMobile()) {return;}
-                if ($(e.target).closest(".fancytree-node").length === 0)
-                {
-                    e.preventDefault();
-                    showContextMenu(e.pageX, e.pageY, null);
-                }
-            });
+            //$(treeSel).on("contextmenu", function (e)
+            //{
+            //    if (isMobile()) {return;}
+            //    if ($(e.target).closest(".fancytree-node").length === 0)
+            //    {
+            //        e.preventDefault();
+            //        showContextMenu(e.pageX, e.pageY, null);
+            //    }
+            //});
 
 			bindContextMenuHandlers();
 			bindActionBarHandlers();
