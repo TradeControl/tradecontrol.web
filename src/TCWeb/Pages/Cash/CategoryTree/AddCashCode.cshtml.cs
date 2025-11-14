@@ -27,34 +27,70 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         // Not bound; rebuilt each request
         public List<SelectListItem> CodeList { get; private set; } = new();
 
+        // Expose whether this page is requested as an embedded fragment (RHS pane)
+        public bool IsEmbedded { get; private set; }
+
         public async Task<IActionResult> OnGetAsync(string parentKey, bool embed = false)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(parentKey))
+                // Determine embed intent from multiple sources (query/form/explicit parameter)
+                var isEmbedded =
+                    embed
+                    || (Request?.Query != null && string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal))
+                    || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal));
+                IsEmbedded = isEmbedded;
+
+                // Accept a variety of query keys / route values as fallbacks for the parent key
+                string resolvedParent = parentKey;
+                if (string.IsNullOrWhiteSpace(resolvedParent))
+                {
+                    if (Request?.Query != null)
+                    {
+                        resolvedParent = Request.Query["key"].FirstOrDefault()
+                                       ?? Request.Query["parentKey"].FirstOrDefault()
+                                       ?? Request.Query["category"].FirstOrDefault()
+                                       ?? Request.Query["categoryCode"].FirstOrDefault()
+                                       ?? Request.Query["CategoryCode"].FirstOrDefault();
+                    }
+
+                    if (string.IsNullOrWhiteSpace(resolvedParent) && RouteData?.Values != null)
+                    {
+                        if (RouteData.Values.TryGetValue("key", out var routeKey))
+                        {
+                            resolvedParent = routeKey?.ToString();
+                        }
+                        else if (RouteData.Values.TryGetValue("category", out var routeCat))
+                        {
+                            resolvedParent = routeCat?.ToString();
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(resolvedParent))
                 {
                     ErrorMessage = "Missing parent key.";
                     await PopulateCodesAsync(null);
-                    return embed ? Content("<div class='text-danger small p-2'>Missing parent key</div>") : Page();
+                    return IsEmbedded ? Content("<div class='text-danger small p-2'>Missing parent key</div>") : Page();
                 }
 
                 var parent = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == parentKey)
+                    .Where(c => c.CategoryCode == resolvedParent)
                     .Select(c => new { c.CategoryCode, c.IsEnabled })
                     .FirstOrDefaultAsync();
 
                 if (parent == null || parent.IsEnabled == 0)
                 {
                     ErrorMessage = "Parent not found or disabled.";
-                    await PopulateCodesAsync(null, parentKey);
-                    return embed ? Content("<div class='text-danger small p-2'>Parent not found or disabled</div>") : Page();
+                    await PopulateCodesAsync(null, resolvedParent);
+                    return IsEmbedded ? Content("<div class='text-danger small p-2'>Parent not found or disabled</div>") : Page();
                 }
 
-                ParentKey = parentKey;
+                ParentKey = resolvedParent;
                 // Clear any stale model state for Code so the TagHelper uses the property value
                 ModelState.Remove(nameof(Code));
 
-                await PopulateCodesAsync(Code, parentKey);
+                await PopulateCodesAsync(Code, ParentKey);
                 return Page();
             }
             catch (Exception ex)
@@ -73,6 +109,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 embed
                 || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
                 || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
+
+            IsEmbedded = isEmbedded;
 
             Code = Code?.Trim();
 

@@ -2,13 +2,11 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.AddCashCodeModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
-    var isEmbedded = (Request.Query["embed"] == "1")
-        || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = Model.IsEmbedded ? null : "_Layout";
     var isListEmpty = Model.CodeList?.Count == 0;
 }
 
-@if (Model.OperationSucceeded && isEmbedded)
+@if (Model.OperationSucceeded && Model.IsEmbedded)
 {
     <div id="addExistingCashCodeResult"
          data-key="@Model.Code"
@@ -28,11 +26,13 @@ else
             <form method="post"
                   asp-page="./AddCashCode"
                   asp-route-parentKey="@Model.ParentKey"
-                  asp-route-embed="1"
                   data-parent="@Model.ParentKey"
                   data-action="AddExistingCashCode">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="embed" value="1" />
+                @if (Model.IsEmbedded)
+                {
+                    <input type="hidden" name="embed" value="1" />
+                }
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
                 <input type="hidden" name="ReturnKey" value="@Model.ParentKey" />
 
@@ -59,14 +59,31 @@ else
     </div>
 
     <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
-    <script>
-        // Match AddCategory: ensure embedded submit interception is active
-        try {
-            if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
-                window.tcTree.bindEmbeddedFormSubmit();
-            }
-        } catch (e) { }
 
+    @* Ensure embedded submit interception is active when embedded (no-op otherwise) *@
+    @if (Model.IsEmbedded)
+    {
+        <script>
+            try {
+                if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
+                    window.tcTree.bindEmbeddedFormSubmit();
+                }
+            } catch (e) { }
+        </script>
+    }
+    else
+    {
+        <script>
+            // Also harmless to attempt binding on full page; keep defensive call
+            try {
+                if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
+                    window.tcTree.bindEmbeddedFormSubmit();
+                }
+            } catch (e) { }
+        </script>
+    }
+
+    <script>
         // Guard against any accidental auto-submit on select change (some browsers/plugins)
         (function(){
             var form = document.querySelector('form[data-action="AddExistingCashCode"]');

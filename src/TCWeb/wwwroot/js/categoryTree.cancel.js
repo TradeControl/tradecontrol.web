@@ -213,30 +213,63 @@
             // Not embedded -> prefer history.back, else index
             if (!pane)
             {
-                try
+                // Mobile/full page path: navigate explicitly with selection and expand hints.
+                // Prefer recorded cancel key; fallback to hidden ReturnKey or ParentKey on the current form.
+                var retKeyMobile = (_tcCancelReturnKey && typeof _tcCancelReturnKey === "string") ? _tcCancelReturnKey : "";
+                var form = document.querySelector("form");
+                if (!retKeyMobile && form)
                 {
-                    if (window.history && window.history.length > 1)
+                    try
                     {
-                        window.history.back();
-                        return;
+                        var fk = form.querySelector("input[name='ReturnKey']");
+                        if (fk && fk.value) { retKeyMobile = fk.value; }
                     }
-                }
-                catch (e)
-                {
-                    // swallow
+                    catch (_) { }
                 }
 
-                try
+                var parentHint = "";
+                if (form)
                 {
-                    window.location.href = "/Cash/CategoryTree/Index";
+                    try
+                    {
+                        var pk = form.querySelector("input[name='ParentKey']");
+                        if (pk && pk.value) { parentHint = pk.value; }
+                    }
+                    catch (_) { }
                 }
-                catch (_)
+
+                // Last resort: derive parent from in-memory tree if loaded
+                if (!parentHint && retKeyMobile)
                 {
-                    // swallow
+                    try
+                    {
+                        var t2 = getTree();
+                        if (t2)
+                        {
+                            var nn = t2.getNodeByKey(retKeyMobile);
+                            if (nn && nn.getParent)
+                            {
+                                var pp = nn.getParent();
+                                parentHint = (pp && pp.key) ? pp.key : "";
+                            }
+                        }
+                    }
+                    catch (_) { }
                 }
+
+                _tcCancelReturnKey = "";
+
+                var target = "/Cash/CategoryTree/Index";
+                var qs = [];
+                if (retKeyMobile) { qs.push("select=" + encodeURIComponent(retKeyMobile)); }
+                if (parentHint) { qs.push("expand=" + encodeURIComponent(parentHint)); }
+                if (qs.length)
+                {
+                    target += "?" + qs.join("&");
+                }
+                window.location.href = target;
                 return;
             }
-
             // Try host refresh, but do NOT return here; still run explicit restore below.
             try
             {

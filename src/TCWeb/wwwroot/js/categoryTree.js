@@ -42,6 +42,10 @@ window.CategoryTree = (function ()
         var menuOriginalHtml = null;
         var menuTemplates = { items: {}, dividerHtml: "<div class='dropdown-divider'></div>" };
 
+        var querySelectionApplied = false;
+        var selectionRetryCount = 0;
+        var MAX_SELECTION_RETRIES = 50;
+
         // Capture pristine menu and templates once when DOM ready (before any context mutations)
         $(function ()
         {
@@ -57,131 +61,7 @@ window.CategoryTree = (function ()
             {
             }
             cacheMenuTemplates();
-            traceMenuOrigins();
         });
-
-        // Helpers for debugging duplicate context menus
-        function hashHtml(str)
-        {
-            try
-            {
-                var s = (str || "").replace(/\s+/g, " ");
-                var h = 0;
-                for (var i = 0; i < s.length; i++)
-                {
-                    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-                }
-                return h;
-            }
-            catch (_)
-            {
-                return 0;
-            }
-        }
-
-        function traceMenuOrigins()
-        {
-            try
-            {
-                var ids = [];
-                $("#treeContextMenu").each(function (i)
-                {
-                    var $m = $(this);
-                    ids.push({
-                        index: i,
-                        inDetailsPane: $m.closest("#detailsPane").length > 0,
-                        childCount: $m.children().length,
-                        htmlHash: hashHtml($m.html())
-                    });
-                });
-
-                if (ids.length > 1)
-                {
-                    console.warn("TRACE duplicate #treeContextMenu instances", ids);
-                }
-                else
-                {
-                    console.warn("TRACE single #treeContextMenu", ids);
-                }
-            }
-            catch (_)
-            {
-            }
-        }
-
-        // New: log before we rebuild this open
-        function debugLogMenuPre()
-        {
-            try
-            {
-                var $all = $(menuSel);
-                var $chosen = (function ()
-                {
-                    var $top = $all.filter(function ()
-                    {
-                        return $(this).closest("#detailsPane").length === 0;
-                    });
-                    return $top.length ? $top.first() : $all.first();
-                })();
-
-                var firstItems = $chosen.find(".dropdown-item").map(function ()
-                {
-                    return $(this).text().trim();
-                }).get().slice(0, 8);
-
-                console.warn("CTX pre", {
-                    totalInstances: $all.length,
-                    chosenInDetailsPane: $chosen.closest("#detailsPane").length > 0,
-                    chosenChildCount: $chosen.children().length,
-                    chosenHash: hashHtml($chosen.html()),
-                    firstItems: firstItems
-                });
-            }
-            catch (_)
-            {
-            }
-        }
-
-        function debugLogMenuPost($menu)
-        {
-            try
-            {
-                function isElementShown($el)
-                {
-                    var el = $el.get(0);
-                    if (!el) { return false; }
-                    var inline = el.style && el.style.display ? el.style.display : "";
-                    var hasHiddenAttr = $el.is("[hidden]");
-                    var hasDNone = $el.hasClass("d-none");
-                    // We consider the element 'would show' if this item itself isn't hidden via inline style or common hidden flags
-                    return inline !== "none" && !hasHiddenAttr && !hasDNone;
-                }
-
-                var $items = $menu.find(".dropdown-item");
-                var wouldShow = $items.filter(function () { return isElementShown($(this)); })
-                                      .map(function () { return $(this).text().trim(); }).get();
-                var visibleNow = $items.filter(":visible")
-                                       .map(function () { return $(this).text().trim(); }).get();
-
-                console.warn("CTX post", {
-                    wouldShowCount: wouldShow.length,
-                    wouldShow: wouldShow.slice(0, 24),
-                    visibleCount: visibleNow.length,
-                    visible: visibleNow.slice(0, 24),
-                    hash: hashHtml($menu.html())
-                });
-            }
-            catch (_)
-            {
-            }
-        }
-
-        // Run once on DOM ready to list menu instances
-        $(function ()
-        {
-            traceMenuOrigins();
-        });
-        // End debug helpers
 
         function handlerUrl(handlerName)
         {
@@ -200,6 +80,751 @@ window.CategoryTree = (function ()
             return window.matchMedia && window.matchMedia("(max-width: 991.98px)").matches;
         }
 
+        // Descendant loader: breadth-first load (no visible expand) folders under a parent until target key appears or cap reached.
+        function loadDescendantsUntilKey(parentNode, targetKey, maxFolders, callback)
+        {
+            if (!parentNode || !targetKey)
+            {
+                callback(false);
+                return;
+            }
+
+            var tree = getTree();
+            if (!tree)
+            {
+                callback(false);
+                return;
+            }
+
+            var queue = [];
+            var visited = new Set();
+
+            function enqueue(n)
+            {
+                if (!n) { return; }
+                if (!n.key) { return; }
+                if (visited.has(n.key)) { return; }
+                visited.add(n.key);
+                queue.push(n);
+            }
+
+            enqueue(parentNode);
+
+            function step()
+            {
+                // Already present?
+                var found = tree.getNodeByKey(targetKey);
+                if (found)
+                {
+                    callback(true);
+                    return;
+                }
+
+                if (queue.length === 0 || visited.size > maxFolders)
+                {
+                    callback(false);
+                    return;
+                }
+
+                var current = queue.shift();
+
+                // If current is lazy and not yet loaded, load its children without expanding.
+                if (current.lazy && !current.loaded)
+                {
+                    try
+                    {
+                        var resLoad = current.load();
+                        if (resLoad && typeof resLoad.then === "function")
+                        {
+                            resLoad.then(function ()
+                            {
+                                try
+                                {
+                                    if (current.children && current.children.length)
+                                    {
+                                        current.children.forEach(function (ch)
+                                        {
+                                            enqueue(ch);
+                                        });
+                                    }
+                                }
+                                catch (_)
+                                {
+                                }
+                                // Continue BFS after a short yield
+                                setTimeout(step, 25);
+                            }).catch(function ()
+                            {
+                                setTimeout(step, 25);
+                            });
+                            return;
+                        }
+                        if (resLoad && typeof resLoad.done === "function")
+                        {
+                            resLoad.done(function ()
+                            {
+                                try
+                                {
+                                    if (current.children && current.children.length)
+                                    {
+                                        current.children.forEach(function (ch)
+                                        {
+                                            enqueue(ch);
+                                        });
+                                    }
+                                }
+                                catch (_)
+                                {
+                                }
+                                setTimeout(step, 25);
+                            }).fail(function ()
+                            {
+                                setTimeout(step, 25);
+                            });
+                            return;
+                        }
+                    }
+                    catch (_)
+                    {
+                        // If load() threw, just continue
+                    }
+                }
+
+                // Enqueue any already-loaded children (do NOT expand)
+                try
+                {
+                    if (current.children && current.children.length)
+                    {
+                        current.children.forEach(function (ch)
+                        {
+                            enqueue(ch);
+                        });
+                    }
+                }
+                catch (_)
+                {
+                    // swallow
+                }
+
+                // Yield to avoid blocking UI
+                setTimeout(step, 25);
+            }
+
+            step();
+        }
+
+        // Collapse all expanded folders except the ancestor chain of the given node.
+        function pruneExpandedToBranch(node)
+        {
+            try
+            {
+                if (!node) { return; }
+
+                var tree = getTree();
+                if (!tree) { return; }
+
+                // Build set of keys to keep expanded: node + its ancestors
+                var keep = new Set();
+                var cur = node;
+                while (cur)
+                {
+                    if (cur.key)
+                    {
+                        keep.add(cur.key);
+                    }
+
+                    try
+                    {
+                        cur = cur.getParent ? cur.getParent() : null;
+                    }
+                    catch (_)
+                    {
+                        cur = null;
+                    }
+                }
+
+                // Visit all nodes and collapse those expanded folders not on the keep list
+                var root = tree.getRootNode();
+                if (!root) { return; }
+
+                root.visit(function (n)
+                {
+                    try
+                    {
+                        if (n && n.folder && n.expanded)
+                        {
+                            // Keep nodes in the ancestor chain (including the selected node)
+                            if (!keep.has(n.key))
+                            {
+                                try
+                                {
+                                    n.setExpanded(false);
+                                    persistExpanded(n, false);
+                                }
+                                catch (_)
+                                {
+                                    // swallow
+                                }
+                            }
+                        }
+                    }
+                    catch (_)
+                    {
+                        // swallow
+                    }
+                });
+            }
+            catch (_)
+            {
+                // swallow
+            }
+        }
+
+        // Focus branch without visible flicker: disable CSS transitions, expand ancestors (root->node),
+        // then collapse non-ancestor nodes, restore transitions and resize.
+        function focusBranch(node, onComplete)
+        {
+            try
+            {
+                if (!node)
+                {
+                    if (typeof onComplete === "function")
+                    {
+                        onComplete();
+                    }
+                    return;
+                }
+
+                var tree = getTree();
+                if (!tree)
+                {
+                    if (typeof onComplete === "function")
+                    {
+                        onComplete();
+                    }
+                    return;
+                }
+
+                // Build ancestor chain (node -> root) and lookup set
+                var ancestors = [];
+                var keep = new Set();
+                var cur = node;
+                while (cur)
+                {
+                    if (cur.key)
+                    {
+                        ancestors.push(cur);
+                        keep.add(cur.key);
+                    }
+
+                    try
+                    {
+                        cur = cur.getParent ? cur.getParent() : null;
+                    }
+                    catch (_)
+                    {
+                        cur = null;
+                    }
+                }
+                ancestors.reverse(); // root -> node
+
+                // Add class to suppress CSS transitions/animations during DOM updates
+                var $container = $(treeSel);
+                try
+                {
+                    $container.addClass("tc-no-transition");
+                }
+                catch (_)
+                {
+                    // swallow
+                }
+
+                // Expand ancestors sequentially (handles lazy loads)
+                function expandSeq(idx)
+                {
+                    try
+                    {
+                        if (idx >= ancestors.length)
+                        {
+                            // After expansion, collapse non-ancestor expanded nodes in the next RAF tick
+                            requestAnimationFrame(function ()
+                            {
+                                try
+                                {
+                                    var root = tree.getRootNode();
+                                    if (root)
+                                    {
+                                        root.visit(function (n)
+                                        {
+                                            try
+                                            {
+                                                if (n && n.folder && n.expanded && !keep.has(n.key))
+                                                {
+                                                    try
+                                                    {
+                                                        n.setExpanded(false);
+                                                        persistExpanded(n, false);
+                                                    }
+                                                    catch (_)
+                                                    {
+                                                        // swallow
+                                                    }
+                                                }
+                                            }
+                                            catch (_)
+                                            {
+                                                // swallow
+                                            }
+                                        });
+                                    }
+                                }
+                                catch (_)
+                                {
+                                    // swallow
+                                }
+
+                                // Next RAF: restore transitions and resize, then call onComplete
+                                requestAnimationFrame(function ()
+                                {
+                                    try
+                                    {
+                                        $container.removeClass("tc-no-transition");
+                                    }
+                                    catch (_)
+                                    {
+                                        // swallow
+                                    }
+
+                                    try
+                                    {
+                                        resizeColumns();
+                                    }
+                                    catch (_)
+                                    {
+                                        // swallow
+                                    }
+
+                                    if (typeof onComplete === "function")
+                                    {
+                                        onComplete();
+                                    }
+                                });
+                            });
+
+                            return;
+                        }
+
+                        var a = ancestors[idx];
+                        if (!a || !a.folder)
+                        {
+                            expandSeq(idx + 1);
+                            return;
+                        }
+
+                        if (a.expanded)
+                        {
+                            expandSeq(idx + 1);
+                            return;
+                        }
+
+                        var res = null;
+                        try
+                        {
+                            res = a.setExpanded(true);
+                        }
+                        catch (_)
+                        {
+                            res = null;
+                        }
+
+                        if (res && typeof res.then === "function")
+                        {
+                            res.then(function ()
+                            {
+                                try
+                                {
+                                    persistExpanded(a, true);
+                                }
+                                catch (_) { }
+                                expandSeq(idx + 1);
+                            }).catch(function ()
+                            {
+                                expandSeq(idx + 1);
+                            });
+                            return;
+                        }
+
+                        if (res && typeof res.done === "function")
+                        {
+                            res.done(function ()
+                            {
+                                try
+                                {
+                                    persistExpanded(a, true);
+                                }
+                                catch (_) { }
+                                expandSeq(idx + 1);
+                            }).fail(function ()
+                            {
+                                expandSeq(idx + 1);
+                            });
+                            return;
+                        }
+
+                        try
+                        {
+                            persistExpanded(a, true);
+                        }
+                        catch (_) { }
+                        expandSeq(idx + 1);
+                    }
+                    catch (_)
+                    {
+                        // swallow and continue
+                        expandSeq(idx + 1);
+                    }
+                }
+
+                // Start expansion on next RAF to batch style changes
+                requestAnimationFrame(function ()
+                {
+                    expandSeq(0);
+                });
+            }
+            catch (_)
+            {
+                try
+                {
+                    if (typeof onComplete === "function")
+                    {
+                        onComplete();
+                    }
+                }
+                catch (_)
+                {
+                }
+            }
+        }
+
+        function applyQuerySelection()
+        {
+            try
+            {
+                // silent entry log removed
+            }
+            catch (_)
+            {
+            }
+
+            if (querySelectionApplied)
+            {
+                return;
+            }
+
+            try
+            {
+                var params = new URLSearchParams(window.location.search);
+                var selectKey = params.get("select") || params.get("returnKey") || params.get("key");
+                var expandKey = params.get("expand") || params.get("parentKey");
+                if (!selectKey && !expandKey)
+                {
+                    return;
+                }
+
+                var tree = getTree();
+                if (!tree)
+                {
+                    return;
+                }
+
+                function scheduleRetry()
+                {
+                    if (selectionRetryCount >= MAX_SELECTION_RETRIES)
+                    {
+                        return;
+                    }
+                    selectionRetryCount++;
+                    setTimeout(applyQuerySelection, 100);
+                }
+
+                function finalizeActivate()
+                {
+                    if (!selectKey)
+                    {
+                        querySelectionApplied = true;
+                        return;
+                    }
+
+                    var n = tree.getNodeByKey(selectKey);
+
+                    if (!n)
+                    {
+                        scheduleRetry();
+                        return;
+                    }
+
+                    try
+                    {
+                        // Do not call `makeVisible()` here (it expands many nodes).
+                        // Instead perform a minimal, silent branch-focus (collapse others, expand only ancestors),
+                        // then set active and load details.
+                        focusBranch(n, function ()
+                        {
+                            try
+                            {
+                                n.setActive(true);
+                            }
+                            catch (_)
+                            {
+                            }
+
+                            try
+                            {
+                                persistActiveKey(n);
+                            }
+                            catch (_)
+                            {
+                            }
+
+                            if (isMobile())
+                            {
+                                updateActionBar(n);
+                            }
+                            else
+                            {
+                                loadDetails(n);
+                            }
+
+                            querySelectionApplied = true;
+                        });
+                    }
+                    catch (_)
+                    {
+                        // Fallback: best-effort
+                        try
+                        {
+                            n.makeVisible();
+                        }
+                        catch (_)
+                        {
+                        }
+                        try
+                        {
+                            n.setActive(true);
+                        }
+                        catch (_)
+                        {
+                        }
+                        persistActiveKey(n);
+                        if (isMobile())
+                        {
+                            updateActionBar(n);
+                        }
+                        else
+                        {
+                            loadDetails(n);
+                        }
+                        querySelectionApplied = true;
+                    }
+                }
+
+                if (expandKey)
+                {
+                    var parentNode = tree.getNodeByKey(expandKey);
+
+                    if (!parentNode)
+                    {
+                        // EXPAND KEY NOT FOUND: attempt a bounded search from the root for the selected key.
+                        // This covers cases where the requested parent isn't yet present (level‑3, etc.).
+                        var rootNode = tree.getRootNode();
+                        loadDescendantsUntilKey(rootNode, selectKey, 200, function (found)
+                        {
+                            if (found)
+                            {
+                                finalizeActivate();
+                            }
+                            else
+                            {
+                                // If not found by scanning the tree now, fall back to the normal retry loop.
+                                scheduleRetry();
+                            }
+                        });
+
+                        return;
+                    }
+
+                    function continueAfterParentReady()
+                    {
+                        // If target already available, activate directly
+                        var existing = tree.getNodeByKey(selectKey);
+                        if (existing)
+                        {
+                            finalizeActivate();
+                            return;
+                        }
+
+                        // Perform bounded descendant scan under the parent
+                        loadDescendantsUntilKey(parentNode, selectKey, 50, function (found)
+                        {
+                            if (found)
+                            {
+                                finalizeActivate();
+                            }
+                            else
+                            {
+                                // Fall back to retries; node may appear later by other loads
+                                scheduleRetry();
+                            }
+                        });
+                    }
+
+                    // If lazy and not loaded, expand (which triggers lazyLoad) then continue when ready
+                    if (parentNode.lazy && !parentNode.loaded)
+                    {
+                        // Use setExpanded(true) — this reliably triggers Fancytree's lazy load + expansion.
+                        var ex = parentNode.setExpanded(true);
+
+                        function afterExpand()
+                        {
+                            setTimeout(continueAfterParentReady, 30);
+                        }
+
+                        if (ex && typeof ex.then === "function")
+                        {
+                            ex.then(afterExpand).catch(function ()
+                            {
+                                setTimeout(continueAfterParentReady, 200);
+                            });
+                            return;
+                        }
+                        if (ex && typeof ex.done === "function")
+                        {
+                            ex.done(afterExpand).fail(function ()
+                            {
+                                setTimeout(continueAfterParentReady, 200);
+                            });
+                            return;
+                        }
+
+                        // Fallback: schedule continue anyway
+                        setTimeout(continueAfterParentReady, 30);
+                        return;
+                    }
+
+                    // Ensure expanded
+                    if (parentNode.folder && !parentNode.expanded)
+                    {
+                        var ex2 = parentNode.setExpanded(true);
+                        if (ex2 && typeof ex2.then === "function")
+                        {
+                            ex2.then(function ()
+                            {
+                                setTimeout(continueAfterParentReady, 30);
+                            });
+                            return;
+                        }
+                        if (ex2 && typeof ex2.done === "function")
+                        {
+                            ex2.done(function ()
+                            {
+                                setTimeout(continueAfterParentReady, 30);
+                            });
+                            return;
+                        }
+
+                        setTimeout(continueAfterParentReady, 30);
+                        return;
+                    }
+
+                    // Already loaded & expanded
+                    continueAfterParentReady();
+                    return;
+                }
+
+                finalizeActivate();
+            }
+            catch (_)
+            {
+            }
+        }
+
+        // Fallback retry: when URL requests a selection, ensure applyQuerySelection runs until applied.
+        // Conservative, throttled attempts (self-scheduling) to avoid overlapping calls.
+        (function ()
+        {
+            try
+            {
+                var qs = new URLSearchParams(window.location.search || "");
+                if (!(qs.has("select") || qs.has("returnKey") || qs.has("key"))) { return; }
+
+                var tries = 0;
+                var maxTries = 20; // 20 * minInterval = maximum total time
+                var minInterval = 150; // ms between attempts (throttle)
+                var lastCall = 0;
+
+                function attempt()
+                {
+                    try
+                    {
+                        // Stop if applied or exhausted
+                        if (typeof querySelectionApplied !== "undefined" && querySelectionApplied === true)
+                        {
+                            return;
+                        }
+
+                        if (tries >= maxTries)
+                        {
+                            return;
+                        }
+
+                        var now = Date.now();
+                        var delta = now - lastCall;
+                        if (delta < minInterval)
+                        {
+                            // schedule next attempt to respect throttle
+                            setTimeout(attempt, minInterval - delta);
+                            return;
+                        }
+
+                        lastCall = now;
+                        tries++;
+
+                        try
+                        {
+                            if (typeof applyQuerySelection === "function")
+                            {
+                                applyQuerySelection();
+                            }
+                        }
+                        catch (_)
+                        {
+                        }
+
+                        // If not yet applied, schedule next attempt
+                        if (!(typeof querySelectionApplied !== "undefined" && querySelectionApplied === true) && tries < maxTries)
+                        {
+                            setTimeout(attempt, minInterval);
+                        }
+                    }
+                    catch (_)
+                    {
+                        // swallow and schedule a safe retry up to limit
+                        tries++;
+                        if (tries < maxTries)
+                        {
+                            setTimeout(attempt, minInterval);
+                        }
+                    }
+                }
+
+                // Kick off first attempt
+                setTimeout(attempt, minInterval);
+            }
+            catch (_)
+            {
+            }
+        })();
+
         // Open an action page in RHS (desktop) or navigate (mobile)
         function openAction(actionName, key, parentKey, extras)
         {
@@ -210,39 +835,40 @@ window.CategoryTree = (function ()
                 return;
             }
 
-            // Record a precise return target for Cancel: active node if available, else the key parameter.
+            // Determine returnKey (current active node preferred)
+            var returnKey = "";
+            try
+            {
+                var t = getTree();
+                var active = t && t.getActiveNode ? t.getActiveNode() : null;
+                returnKey = (active && active.key) ? active.key : (key || "");
+            }
+            catch (_)
+            {
+                returnKey = key || "";
+            }
+
+            // Persist for embedded Cancel
             try
             {
                 if (typeof window.tcSetCancelReturn === "function")
                 {
-                    var retKey = "";
-                    try
-                    {
-                        var t = getTree();
-                        var active = t && t.getActiveNode ? t.getActiveNode() : null;
-                        retKey = (active && active.key) ? active.key : (key || "");
-                    }
-                    catch (e)
-                    {
-                        retKey = key || "";
-                    }
-                    window.tcSetCancelReturn(retKey || "");
+                    window.tcSetCancelReturn(returnKey || "");
                 }
             }
-            catch (e)
-            {
-                // swallow
-            }
+            catch (_) { }
 
-            // Build query parameters robustly
+            // Build query parameters
             var parts = [];
             parts.push("key=" + encodeURIComponent(key || ""));
-
             if (parentKey)
             {
                 parts.push("parentKey=" + encodeURIComponent(parentKey));
             }
-
+            if (returnKey)
+            {
+                parts.push("returnKey=" + encodeURIComponent(returnKey));
+            }
             if (extras && typeof extras === "object")
             {
                 for (var p in extras)
@@ -262,33 +888,33 @@ window.CategoryTree = (function ()
 
             var url = base + "/" + encodeURIComponent(actionName) + "?" + parts.join("&");
 
+            // Mobile: full layout navigation (no embed)
             if (isMobile())
             {
                 window.location.href = url;
+                return;
+            }
+
+            // Desktop: embedded in RHS pane
+            url = appendQuery(url, "embed", "1");
+            var $pane = $("#detailsPane");
+            if ($pane.length)
+            {
+                $pane.css("overflow", "auto");
+                $.get(nocache(url))
+                    .done(function (html)
+                    {
+                        $pane.html(html);
+                    })
+                    .fail(function ()
+                    {
+                        $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
+                    });
             }
             else
             {
-                // Mark as embedded to suppress the full layout/navigation
-                url = appendQuery(url, "embed", "1");
-
-                var $pane = $("#detailsPane");
-                if ($pane.length)
-                {
-                    $pane.css("overflow", "auto");
-                    $.get(nocache(url))
-                        .done(function (html)
-                        {
-                            $pane.html(html);
-                        })
-                        .fail(function ()
-                        {
-                            $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
-                        });
-                }
-                else
-                {
-                    window.location.href = url;
-                }
+                // Fallback: full page if pane missing
+                window.location.href = url;
             }
         }
 
@@ -1200,9 +1826,9 @@ window.CategoryTree = (function ()
             switch (action)
             {
                 case "addCategory":
-                    return ["[data-action='addCategory']", "[data-action='addExistingCategory']"];
+                    return ["[data-action='addExistingCategory']", "[data-action='addCategory']"];
                 case "addCashCode":
-                    return ["[data-action='addCashCode']", "[data-action='addExistingCashCode']", "[data-action='addExistingCode']"];
+                    return ["[data-action='addExistingCashCode']", "[data-action='addCashCode']", "[data-action='addExistingCode']"];
                 case "expand":
                     return ["[data-action='expandSelected']"];
                 case "collapse":
@@ -1450,10 +2076,6 @@ window.CategoryTree = (function ()
             var $topLevel = $all.filter(function () { return $(this).closest("#detailsPane").length === 0; });
             var $chosen = $topLevel.length ? $topLevel.first() : $all.first();
 
-            if ($all.length > 1 && window.console && console.warn)
-            {
-                console.warn("Multiple #treeContextMenu instances detected; using top-level instance.", $all.length);
-            }
             return $chosen;
         }
 
@@ -1524,7 +2146,6 @@ window.CategoryTree = (function ()
                 return;
             }
 
-            debugLogMenuPre();
             var $menu = getMenuInstance();
 
             if (menuOriginalHtml !== null)
@@ -1564,7 +2185,6 @@ window.CategoryTree = (function ()
                 {
                     renderMenuFromTemplates($menu, ["view"], []);
                     $menu.removeClass("mobile-sheet").css({ top: y + "px", left: x + "px" }).show();
-                    debugLogMenuPost($menu);
                 });
                 return;
             }
@@ -1654,8 +2274,8 @@ window.CategoryTree = (function ()
                     pushIf(isAdmin, "edit");
                     pushIf(isAdmin, "delete");
                     pushIf(isAdmin, "toggleEnabled");
-                    pushIf(isAdmin && isCatTotal, "addCategory");
-                    pushIf(isAdmin && (isCatTotal || isCatCashCode), "addCashCode");
+                    pushIf(isAdmin && isCatTotal, "addExistingCategory");
+                    pushIf(isAdmin && (isCatTotal || isCatCashCode), "addExistingCashCode");
                     pushIf(isAdmin, "move");
 
                     groups = (isCatCashCode ? [4, 7] : [3, 6]);
@@ -1672,8 +2292,8 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addCategory");
-                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "addExistingCategory");
+                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
@@ -1692,7 +2312,7 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
@@ -1713,8 +2333,8 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addCategory");
-                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "addExistingCategory");
+                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
@@ -1731,7 +2351,7 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addCashCode");
+                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
@@ -1746,15 +2366,12 @@ window.CategoryTree = (function ()
 
             if (isMobile())
             {
-                hideActionBar();
                 $menu.addClass("mobile-sheet").css({ top: "", left: "" }).show();
             }
             else
             {
                 $menu.removeClass("mobile-sheet").css({ top: y + "px", left: x + "px" }).show();
             }
-
-            debugLogMenuPost($menu);
 
             $menu.data("nodeKey", key).data("parentKey", (kinds.isSynthetic ? "" : parentKeyNow));
 
@@ -2153,7 +2770,7 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
 
-                        // Use the node itself if it is a folder; otherwise its parent (mirrors addExistingCategory)
+                        // Use the node itself if it is a folder; otherwise its parent (mirrors addCategory)
                         var targetCategory = (node && node.folder) ? key : parentKey;
                         if (!targetCategory)
                         {
@@ -2806,29 +3423,56 @@ window.CategoryTree = (function ()
                     if (!data.node)
                     {
                         var root = data.tree.getNodeByKey(ROOT_KEY);
-                        if (root && !root.expanded) { root.setExpanded(true); }
+                        if (root && !root.expanded)
+                        {
+                            root.setExpanded(true);
+                        }
                     }
 
-                    // Restore expanded state for this branch (handles subsequent lazy loads too)
                     var set = loadExpandedSet();
                     var scope = data.node ? data.node : data.tree.getRootNode();
                     restoreExpandedForNode(scope, set);
 
-                    // Try restore active selection
-                    var activeKey = loadActiveKey();
-                    if (activeKey)
-                    {
-                        var n = data.tree.getNodeByKey(activeKey);
-                        if (n) { n.setActive(true); }
-                    }
-
                     ensureTreeContainerSizing();
                     resizeColumns();
+
+                    // Apply query selection (event-driven short delay to avoid race with lazy-load)
+                    try
+                    {
+                        var _qs = new URLSearchParams(window.location.search || "");
+                        if (_qs.has("select") || _qs.has("returnKey") || _qs.has("key"))
+                        {
+                            setTimeout(function ()
+                            {
+                                try
+                                {
+                                    applyQuerySelection();
+                                }
+                                catch (_) { }
+                            }, 50);
+                        }
+                        else
+                        {
+                            applyQuerySelection();
+                        }
+                    }
+                    catch (_)
+                    {
+                        applyQuerySelection();
+                    }
                 },
                 activate: function (event, data)
                 {
                     persistActiveKey(data.node);
-                    loadDetails(data.node);
+
+                    if (isMobile())
+                    {
+                        updateActionBar(data.node);
+                    }
+                    else
+                    {
+                        loadDetails(data.node);
+                    }
                 },
                 dnd5: {
                     autoExpandMS: 300,
@@ -2883,7 +3527,6 @@ window.CategoryTree = (function ()
                         }
 
                         // Otherwise, consider child drop (over). Only allow "over" when target is a Total category.
-                        // If target has explicit categoryType and it's not CashTotal, disallow "over".
                         try
                         {
                             var tgtData = node.data || {};
@@ -2909,15 +3552,12 @@ window.CategoryTree = (function ()
 
                     dragDrop: function (node, data)
                     {
-                        console.log("categoryTree.dragDrop", { nodeKey: node && node.key, hitMode: data && data.hitMode, srcKey: data && data.otherNode && data.otherNode.key });
-
                         if (isMobile()) { return false; }
                         if (!isAdmin) { return false; }
 
                         var src = data.otherNode;
                         if (!src)
                         {
-                            console.log("dragDrop: no source node");
                             return false;
                         }
 
@@ -2978,7 +3618,7 @@ window.CategoryTree = (function ()
                                         }
                                         catch (ex)
                                         {
-                                            console.warn("moveTo failed (ReorderType UI move)", ex);
+                                            // swallow
                                         }
 
                                         reloadIfExpandedNode(parent);
@@ -2996,12 +3636,10 @@ window.CategoryTree = (function ()
                                     }
                                     else
                                     {
-                                        console.warn("ReorderType response:", res);
                                         alert((res && res.message) || "Reorder failed");
                                     }
                                 }).fail(function (xhr)
                                 {
-                                    console.error("ReorderType AJAX failed", xhr);
                                     alert("Server error (" + xhr.status + ")");
                                 });
 
@@ -3022,7 +3660,6 @@ window.CategoryTree = (function ()
                                         }
                                         catch (ex)
                                         {
-                                            console.warn("moveTo failed (ReorderSiblings UI move)", ex);
                                         }
 
                                         reloadIfExpandedNode(parent);
@@ -3042,12 +3679,10 @@ window.CategoryTree = (function ()
                                     }
                                     else
                                     {
-                                        console.warn("ReorderSiblings response:", res);
                                         alert((res && res.message) || "Reorder failed");
                                     }
                                 }).fail(function (xhr)
                                 {
-                                    console.error("ReorderSiblings AJAX failed", xhr);
                                     alert("Server error (" + xhr.status + ")");
                                 });
 
@@ -3069,7 +3704,6 @@ window.CategoryTree = (function ()
                                 }
                                 catch (ex)
                                 {
-                                    console.warn("moveTo failed (Move UI move)", ex);
                                 }
 
                                 // reload relevant parents
@@ -3087,12 +3721,10 @@ window.CategoryTree = (function ()
                             }
                             else
                             {
-                                console.warn("Move response:", res);
                                 alert((res && res.message) || "Move failed");
                             }
                         }).fail(function (xhr)
                         {
-                            console.error("Move AJAX failed", xhr);
                             alert("Server error (" + xhr.status + ")");
                         });
 
@@ -3153,23 +3785,12 @@ window.CategoryTree = (function ()
                 $(window).on("scroll", cancelPress);
             })();
 
-            // Empty-area context menu (desktop)
-            //$(treeSel).on("contextmenu", function (e)
-            //{
-            //    if (isMobile()) {return;}
-            //    if ($(e.target).closest(".fancytree-node").length === 0)
-            //    {
-            //        e.preventDefault();
-            //        showContextMenu(e.pageX, e.pageY, null);
-            //    }
-            //});
-
-			bindContextMenuHandlers();
-			bindActionBarHandlers();
-			bindDetailsPaneHandlers();
+            bindContextMenuHandlers();
+            bindActionBarHandlers();
+            bindDetailsPaneHandlers();
             bindCancelInPane();
-			bindKeyboardHandlers();
-			bindAutoscrollHandlers();
+            bindKeyboardHandlers();
+            bindAutoscrollHandlers();
 
             if (!isMobile())
             {
@@ -3182,11 +3803,11 @@ window.CategoryTree = (function ()
                 resizeColumns();
             });
             resizeColumns();
-        } 
+        }
 
         // Initialize the tree after cfg is available
         initTree();
-    } 
+    }
 
     return { init: init };
 })();

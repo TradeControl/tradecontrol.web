@@ -13,23 +13,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     {
         public EditTotalModel(NodeContext context) : base(context) { }
 
-        [BindProperty]
-        public string CategoryCode { get; set; }
-
-        [BindProperty]
-        public string Category { get; set; }
-
-        [BindProperty]
-        public bool IsEnabled { get; set; }
-
-        [BindProperty]
-        public string ParentKey { get; set; }
+        [BindProperty] public string CategoryCode { get; set; }
+        [BindProperty] public string Category { get; set; }
+        [BindProperty] public bool IsEnabled { get; set; }
+        [BindProperty] public string ParentKey { get; set; }
+        [BindProperty] public string ReturnKey { get; set; }
 
         public bool OperationSucceeded { get; private set; }
-
         public string ErrorMessage { get; private set; }
 
-        public async Task<IActionResult> OnGetAsync(string key, bool embed = false)
+        public async Task<IActionResult> OnGetAsync(string key, bool embed = false, string returnKey = null)
         {
             try
             {
@@ -48,7 +41,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return embed ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
                 }
 
-                // Must be a Total category (CategoryType == CashTotal)
                 if (cat.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
                 {
                     ErrorMessage = "Not a Total category.";
@@ -59,11 +51,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 Category = cat.Category;
                 IsEnabled = cat.IsEnabled != 0;
 
-                // Determine parent (if any) via totals mapping
                 ParentKey = await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ChildCode == CategoryCode)
                     .Select(t => t.ParentCode)
                     .FirstOrDefaultAsync() ?? "";
+
+                ReturnKey = string.IsNullOrWhiteSpace(returnKey) ? CategoryCode : returnKey;
 
                 return Page();
             }
@@ -75,15 +68,19 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             }
         }
 
-        public async Task<IActionResult> OnPostAsync(bool embed = false)
+        public async Task<IActionResult> OnPostAsync(bool embed = false, string returnKey = null)
         {
             try
             {
-                // Robust embed detection (form OR query)
                 var isEmbedded =
                     embed
                     || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
                     || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
+
+                // Prefer explicit ReturnKey from query/form, fallback to current category
+                ReturnKey = !string.IsNullOrWhiteSpace(returnKey)
+                    ? returnKey
+                    : (Request.HasFormContentType ? Request.Form["ReturnKey"].ToString() : null);
 
                 if (string.IsNullOrWhiteSpace(CategoryCode))
                 {
@@ -106,9 +103,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return isEmbedded ? Content("<div class='text-danger small p-2'>Invalid category type</div>") : Page();
                 }
 
+                // Apply edits
                 if (!string.IsNullOrWhiteSpace(Category))
+                {
                     cat.Category = Category.Trim();
-
+                }
                 cat.IsEnabled = IsEnabled ? (short)1 : (short)0;
 
                 NodeContext.Attach(cat).State = EntityState.Modified;
@@ -116,29 +115,33 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 OperationSucceeded = true;
 
-                // Re-evaluate ParentKey for the marker
+                // Resolve parent for expand hint
                 ParentKey = await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ChildCode == CategoryCode)
                     .Select(t => t.ParentCode)
                     .FirstOrDefaultAsync() ?? "";
 
-                // Embedded: return the marker div (cshtml has Layout = null already)
-                if (isEmbedded)
-                    return Page();
+                if (string.IsNullOrWhiteSpace(ReturnKey))
+                {
+                    ReturnKey = CategoryCode;
+                }
 
-                // Non-embedded: full redirect
-                return RedirectToPage("./Index", new { key = CategoryCode });
+                if (isEmbedded)
+                {
+                    return Page();
+                }
+
+                // Redirect with selection + expand so tree activates node and shows mobile footer
+                return RedirectToPage("./Index", new { select = ReturnKey, expand = ParentKey });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                // Preserve embedded vs full response
                 var isEmbedded =
                     embed
                     || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
                     || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
-
                 return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
         }

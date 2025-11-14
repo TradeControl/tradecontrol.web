@@ -178,3 +178,18 @@
 #detailsPane #treeContextMenu {
     display: none !important;
 }
+
+/* Utility class to disable CSS transitions/animations during programmatic tree updates (prevents flicker) */
+.tc-no-transition .fancytree-container,
+.tc-no-transition .fancytree-node,
+.tc-no-transition .fancytree-expander,
+.tc-no-transition .fancytree-title,
+.tc-no-transition .fancytree-node .fancytree-icon {
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    animation: none !important;
+}
