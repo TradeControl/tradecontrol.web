@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Encodings.Web;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -35,13 +36,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool OperationSucceeded { get; private set; }
         public string OldParentKey { get; private set; } = string.Empty;
 
-        // Already present in your code
         public string NewParentKey { get; private set; } = string.Empty;
-
-        // New: used by client to anchor under type container (keys like "type:<CashTypeCode>")
         public string NewTypeKey { get; private set; } = string.Empty;
-
-        // New: pipe-delimited chain of ancestors from top category (under type) down to TargetParentKey
         public string NewParentPath { get; private set; } = string.Empty;
 
         public async Task<IActionResult> OnGetAsync()
@@ -111,7 +107,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                // Server-side validation: only allow moving under a CashTotal category
                 if (tgt.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
                 {
                     ModelState.AddModelError(string.Empty, "Invalid target parent. Only Total-type categories may have child categories.");
@@ -145,16 +140,30 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 OperationSucceeded = true;
 
-                // Preserve for client
                 NewParentKey = TargetParentKey;
                 NewTypeKey = $"type:{tgt.CashTypeCode}";
-                NewParentPath = await BuildAncestorPathAsync(TargetParentKey); // topCategory|...|TargetParentKey
-
-                // Keep the old parent to discreetly collapse/update in UI
+                NewParentPath = await BuildAncestorPathAsync(TargetParentKey);
                 ParentKey = OldParentKey;
 
-                await OnGetAsync();
-                return Page();
+                // Embedded desktop (AJAX or embed=1): return a compact success marker,
+                // which categoryTree.move.js consumes to select and show details.
+                bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+                if (isAjax || Request.Query["embed"] == "1")
+                {
+                    var enc = HtmlEncoder.Default;
+                    var html =
+                        "<div id=\"moveResult\""
+                        + " data-key=\"" + enc.Encode(Key) + "\""
+                        + " data-parent=\"" + enc.Encode(NewParentKey ?? string.Empty) + "\""
+                        + " data-old=\"" + enc.Encode(OldParentKey ?? string.Empty) + "\""
+                        + " data-type=\"" + enc.Encode(NewTypeKey ?? string.Empty) + "\""
+                        + " data-path=\"" + enc.Encode(NewParentPath ?? string.Empty) + "\"></div>";
+
+                    return Content(html, "text/html");
+                }
+
+                // Mobile/full-page: go back to Index selecting the moved node and expanding its new parent.
+                return RedirectToPage("/Cash/CategoryTree/Index", new { select = Key, parentKey = TargetParentKey });
             }
             catch (Exception e)
             {
@@ -163,7 +172,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             }
         }
 
-        // Build top-down chain of category codes from the top (under type) down to the given parent
         private async Task<string> BuildAncestorPathAsync(string leafParent)
         {
             if (string.IsNullOrWhiteSpace(leafParent))

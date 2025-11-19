@@ -2,9 +2,9 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.AddCategoryModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
     var isEmbedded = (Request.Query["embed"] == "1")
         || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = isEmbedded ? null : "_Layout";
     var isCategoryListEmpty = Model.CategoryList?.Count == 0;
 }
 
@@ -32,11 +32,14 @@ else
             <form method="post"
                   asp-page="./AddCategory"
                   asp-route-parentKey="@Model.ParentKey"
-                  asp-route-embed="1"
+                  asp-route-embed="@(isEmbedded ? "1" : null)"
                   data-parent="@Model.ParentKey"
                   data-action="AddExistingCategory">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="embed" value="1" />
+                @if (isEmbedded)
+                {
+                    <input type="hidden" name="embed" value="1" />
+                }
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
                 <input type="hidden" name="ReturnKey" value="@Model.ParentKey" />
 
@@ -66,11 +69,6 @@ else
 
     <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
     <script>
-        // Ensure embedded submit interception is active for this form
-        try {
-            if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
-                window.tcTree.bindEmbeddedFormSubmit();
-            }
-        } catch (e) { /* no-op */ }
+        try { if (window.tcTree?.bindEmbeddedFormSubmit) { window.tcTree.bindEmbeddedFormSubmit(); } } catch(e){}
     </script>
 }

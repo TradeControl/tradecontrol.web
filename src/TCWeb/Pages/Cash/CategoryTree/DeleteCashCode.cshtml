@@ -1,59 +1,110 @@
 @page
 @model TradeControl.Web.Pages.Cash.CategoryTree.DeleteCashCodeModel
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
-
-    var key = (Request.Query["key"].Count > 0) ? Request.Query["key"].ToString()
-                                             : (Request.HasFormContentType ? Request.Form["key"].ToString() : "");
-    var code = Model.CashCode ?? (key?.StartsWith("code:") == true ? key.Substring("code:".Length) : key);
-    var desc = Model.CashDescription ?? string.Empty;
-    var category = Model.CategoryCode ?? string.Empty;
+    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = isEmbedded ? null : "_Layout";
 }
 
-<div class="card">
-    <div class="card-body">
-        <h5 class="card-title text-danger">Delete Cash Code</h5>
+@if (Model.OperationSucceeded && isEmbedded)
+{
+    <div id="deleteCashCodeResult"
+         data-cashcode="@Model.CashCode"
+         data-parent="@Model.ParentCategoryCode"></div>
 
-        <div class="mb-3">
-            <p class="mb-2">
-                You are about to delete this Cash Code:
-            </p>
+    <div class="alert alert-success small mb-2">Cash code deleted.</div>
 
-            <dl class="row">
-                <dt class="col-sm-3">Cash Code</dt>
-                <dd class="col-sm-9"><code>@code</code></dd>
+    <script>
+        (function () {
+            try {
+                var m = document.getElementById("deleteCashCodeResult");
+                if (!m) return;
+                var raw = m.getAttribute("data-cashcode") || "";
+                var parent = m.getAttribute("data-parent") || "";
+                if (!raw) return;
+                // Remove node and select parent (no duplicate code)
+                var tree = $.ui && $.ui.fancytree && $.ui.fancytree.getTree("#categoryTree");
+                if (!tree) return;
+                var node = tree.getNodeByKey("code:" + raw);
+                var parentNode = node && node.getParent ? node.getParent() : (parent ? tree.getNodeByKey(parent) : null);
+                if (node) { try { node.remove(); } catch(e){} }
+                if (parentNode) {
+                    try { parentNode.makeVisible(); } catch(e){}
+                    try { parentNode.setActive(true); } catch(e){}
+                    if (typeof window.loadDetails === "function") { window.loadDetails(parentNode); }
+                }
+            } catch(_) {}
+        })();
+    </script>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Delete Cash Code</h5>
 
-                <dt class="col-sm-3">Description</dt>
-                <dd class="col-sm-9">@desc</dd>
+            @if (string.IsNullOrWhiteSpace(Model.CashCode))
+            {
+                <div class="alert alert-warning small">Missing key. No deletion performed.</div>
+            }
+            else
+            {
+                <!-- Original warning retained -->
+                <div class="alert alert-warning" role="alert">
+                    <strong>Warning:</strong> Deleting a Cash Code will be refused if related payments or transactions exist.
+                    Remove or reassign related payment/transaction rows before attempting to delete.
+                </div>
 
-                <dt class="col-sm-3">Category</dt>
-                <dd class="col-sm-9"><code>@category</code></dd>
-            </dl>
-
-            <div class="alert alert-warning" role="alert">
-                <strong>Warning:</strong> Deleting a Cash Code will be refused if related payments or transactions exist.
-                Remove or reassign related payment/transaction rows before attempting to delete.
-            </div>
+                <form method="post"
+                      asp-page="./DeleteCashCode"
+                      asp-route-key="@(string.IsNullOrWhiteSpace(Model.Key) ? $"code:{Model.CashCode}" : Model.Key)"
+                      asp-route-embed="@(isEmbedded ? "1" : null)">
+                    @Html.AntiForgeryToken()
+                    @if (isEmbedded)
+                    {
+                        <input type="hidden" name="embed" value="1" />
+                    }
+                    <input type="hidden" name="CashCode" value="@Model.CashCode" />
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                        <a class="btn btn-secondary" href="#" data-embedded-cancel
+                           onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+                    </div>
+                </form>
+            }
         </div>
-
-        <form id="deleteCashCodeForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteCashCode", key = key, embed = 1 })">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="embed" value="1" />
-            <input type="hidden" name="key" value="@key" />
-            <input type="hidden" id="deleteCashCodeParent" value="@category" />
-
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="confirmDeleteCode" />
-                <label class="form-check-label" for="confirmDeleteCode">I understand this will permanently delete the Cash Code (if no related payments exist)</label>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button id="btnDeleteCode" type="submit" class="btn btn-danger" disabled>Delete</button>
-                <a class="btn btn-secondary" href="javascript:void(0)" data-embedded-cancel>Cancel</a>
-            </div>
-        </form>
     </div>
-</div>
 
-<script src="~/js/categoryTree.delete.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
+    <script>
+        // Ensure embedded desktop submits POST (fallback if global binder not present)
+        (function(){
+            try {
+                if (!@((isEmbedded).ToString().ToLower())) return;
+                var f = document.getElementById("deleteCashCodeForm");
+                if (!f) return;
+                if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
+                    window.tcTree.bindEmbeddedFormSubmit();
+                    return;
+                }
+                // Fallback: AJAX POST and replace pane
+                f.addEventListener("submit", function(ev){
+                    ev.preventDefault();
+                    var fd = new FormData(f);
+                    fetch(window.location.href, {
+                        method: "POST",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        body: fd
+                    })
+                    .then(r => r.text())
+                    .then(html => {
+                        var pane = document.getElementById("detailsPane");
+                        if (pane) { pane.innerHTML = html; }
+                    })
+                    .catch(()=> alert("Delete failed (network error)"));
+                });
+            } catch(_) {}
+        })();
+    </script>
+}

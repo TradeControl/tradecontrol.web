@@ -38,5 +38,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 ChildDisplay = c != null ? c.Category : ChildKey;
             }
         }
+
     }
 }

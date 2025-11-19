@@ -179,7 +179,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     if (isEmbedded)
                         return Page();
 
-                    return RedirectToPage("./Index", new { key = ChildKey });
+                    return RedirectToPage("/Cash/CategoryTree/Index",
+                        new { select = ChildKey, parentKey = ParentKey, expand = ParentKey });
                 }
 
                 // Build ancestor map for cycle detection (ParentKey upwards)
@@ -196,7 +197,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 if (cycleDetected)
                 {
-                    // Treat as a no-op move attempt (cannot re-parent ancestor under its descendant without structural inversion)
                     ChildName = child.Category;
                     ChildPolarity = child.CashPolarityCode;
                     ChildIsEnabled = child.IsEnabled != 0;
@@ -205,7 +205,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     if (isEmbedded)
                         return Page();
 
-                    return RedirectToPage("./Index", new { key = ChildKey });
+                    return RedirectToPage("/Cash/CategoryTree/Index",
+                        new { select = ChildKey, parentKey = ParentKey, expand = ParentKey });
                 }
 
                 // MOVE: detach from old parent if different
@@ -280,7 +281,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (isEmbedded)
                     return Page();
 
-                return RedirectToPage("./Index", new { key = ChildKey });
+                return RedirectToPage("/Cash/CategoryTree/Index",
+                    new { select = ChildKey, parentKey = ParentKey, expand = ParentKey });
             }
             catch (Exception ex)
             {

@@ -2,9 +2,8 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.CreateTotalModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
     var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
-    // ParentKey may be a real category, __ROOT__, or __DISCONNECTED__ (synthetic)
+    Layout = isEmbedded ? null : "_Layout";
 }
 
 @if (Model.OperationSucceeded && isEmbedded)

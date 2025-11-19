@@ -2,37 +2,52 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.EditCategoryModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
-    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    var embed = Request.Query["embed"] == "1" || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = embed ? null : "_Layout";
 }
-
-@if (Model.OperationSucceeded && isEmbedded)
+@if (Model.OperationSucceeded)
 {
-    <div id="editCategoryResult"
-         data-key="@Model.CategoryCode"
-         data-parent="@Model.ParentKey"
-         data-name="@Model.Category"
-         data-isenabled="@(Model.IsEnabled ? "1" : "0")"
-         data-polarity="@Model.CashPolarityCode"
-         data-cashtype="@Model.CashTypeCode"></div>
+    if (embed)
+    {
+        <div id="editCategoryResult"
+            data-key="@Model.CategoryCode"
+            data-parent="@Model.ParentKey"
+            data-name="@Model.Category"
+            data-isenabled="@(Model.IsEnabled ? "1" : "0")"
+            data-polarity="@Model.CashPolarityCode"
+            data-cashtype="@Model.CashTypeCode">
+        </div>
+        <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
+    }
+    else
+    {
+        <div class="container py-3">
+            <div class="alert alert-success mb-3"> Category updated: @Model.Category (@Model.CategoryCode)</div>
+            <a class="btn btn-primary" asp-page="./Index" asp-route-select="@Model.CategoryCode" asp-route-expand="@Model.ParentKey">Back to Category Tree</a>
+        </div>
+    }
 }
 else
 {
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Edit Category</h5>
-
             @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
             {
-                <div class="alert alert-danger py-1 px-2 mb-2 small">@Model.ErrorMessage</div>
+                <div class="alert alert-danger py-1 px-2 mb-3 small">@Model.ErrorMessage</div>
             }
 
             <form method="post"
                   asp-page="./EditCategory"
                   asp-route-key="@Model.CategoryCode"
-                  asp-route-embed="1">
+                  asp-route-embed="@(embed ? "1" : null)">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="embed" value="1" />
+
+                @if (embed)
+                {
+                    <input type="hidden" name="embed" value="1" />
+                }
+
                 <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
 
@@ -44,19 +59,16 @@ else
                 <div class="mb-3">
                     <label asp-for="Category" class="form-label">Name</label>
                     <input asp-for="Category" class="form-control" maxlength="50" />
-                    <span asp-validation-for="Category" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="CashTypeCode" class="form-label">Cash Type</label>
                     <select asp-for="CashTypeCode" class="form-select" asp-items="Model.CashTypes"></select>
-                    <span asp-validation-for="CashTypeCode" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="CashPolarityCode" class="form-label">Polarity</label>
                     <select asp-for="CashPolarityCode" class="form-select" asp-items="Model.CashPolarities"></select>
-                    <span asp-validation-for="CashPolarityCode" class="text-danger small"></span>
                 </div>
 
                 <div class="form-check mb-3">
@@ -66,13 +78,28 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Save</button>
-                    <a href="#" class="btn btn-secondary"
-                       data-embedded-cancel
-                       onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+
+                    @if (embed)
+                    {
+                        <a href="#"
+                           class="btn btn-secondary"
+                           data-embedded-cancel
+                           onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-secondary"
+                           asp-page="./Index"
+                           asp-route-select="@Model.CategoryCode"
+                           asp-route-expand="@Model.ParentKey">Cancel</a>
+                    }
                 </div>
             </form>
         </div>
     </div>
 
-    <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
+    @if (embed)
+    {
+        <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
+    }
 }

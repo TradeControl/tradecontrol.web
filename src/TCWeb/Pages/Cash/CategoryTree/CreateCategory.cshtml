@@ -2,19 +2,68 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.CreateCategoryModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
     var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = isEmbedded ? null : "_Layout";
 }
 
-@if (Model.OperationSucceeded && isEmbedded)
+@if (Model.OperationSucceeded && (Request.Query["embed"] == "1" || (Request.HasFormContentType && Request.Form["embed"] == "1")))
 {
     <div id="createCategoryResult"
          data-key="@Model.NewKey"
-         data-parent="@Model.NewParentKey"
+         data-parent="@Model.ParentKey"
          data-name="@Model.Category"
+         data-cashtype="@Model.CashTypeCode"
          data-polarity="@Model.CashPolarityCode"
-         data-categorytype="@( (short)TradeControl.Web.Data.NodeEnum.CategoryType.CashCode )"
-         data-isenabled="@(Model.IsEnabled ? 1 : 0)"></div>
+         data-enabled="@(Model.IsEnabled ? 1 : 0)"
+         data-node='@Html.Raw(Model.NewNodeJson)'></div>
+
+    <script>
+        (function ()
+        {
+            try
+            {
+                var el = document.getElementById("createCategoryResult");
+                if (!el)
+                {
+                    return;
+                }
+
+                var catKey = el.getAttribute("data-key") || "";
+                var parentRaw = el.getAttribute("data-parent") || "";
+                var nodeJson = el.getAttribute("data-node") || "";
+                if (!catKey || !nodeJson)
+                {
+                    return;
+                }
+
+                // Parent candidates:
+                // 1. Explicit ParentKey (Totals / disconnected mapping)
+                // 2. Type synthetic if no parent provided: type:<cashType>
+                var candidates = [];
+                if (parentRaw)
+                {
+                    candidates.push(parentRaw);
+                }
+                else
+                {
+                    var ct = el.getAttribute("data-cashtype") || "";
+                    if (ct)
+                    {
+                        candidates.push("type:" + ct);
+                    }
+                }
+
+                if (window.CategoryTree
+                    && typeof window.CategoryTree.appendAndSelectCreatedCategory === "function")
+                {
+                    window.CategoryTree.appendAndSelectCreatedCategory(catKey, candidates, nodeJson);
+                }
+            }
+            catch (_)
+            {
+            }
+        })();
+    </script>
 }
 else
 {
@@ -22,27 +71,42 @@ else
         <div class="card-body">
             <h5 class="card-title">Create Category</h5>
 
-            <form method="post" asp-page="./CreateCategory" asp-route-parentKey="@Model.ParentKey" asp-route-embed="1">
+            <form method="post"
+                  asp-page="./CreateCategory"
+                  asp-route-parentKey="@Model.ParentKey"
+                  asp-route-embed="@(isEmbedded ? "1" : null)">
                 @Html.AntiForgeryToken()
-                <input asp-for="ParentKey" type="hidden" />
+                @if (isEmbedded)
+                {
+                    <input type="hidden" name="embed" value="1" />
+                }
+
+                <div asp-validation-summary="All" class="text-danger mb-2 small"></div>
+
+                <input type="hidden" asp-for="ParentKey" />
+
                 <div class="mb-3">
                     <label asp-for="CategoryCode" class="form-label">Category Code</label>
                     <input asp-for="CategoryCode" class="form-control" maxlength="10" />
+                    <span asp-validation-for="CategoryCode" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="Category" class="form-label">Category Name</label>
+                    <label asp-for="Category" class="form-label">Name</label>
                     <input asp-for="Category" class="form-control" maxlength="50" />
+                    <span asp-validation-for="Category" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="CashTypeCode" class="form-label">Cash Type</label>
                     <select asp-for="CashTypeCode" class="form-select" asp-items="Model.CashTypes"></select>
+                    <span asp-validation-for="CashTypeCode" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="CashPolarityCode" class="form-label">Polarity</label>
                     <select asp-for="CashPolarityCode" class="form-select" asp-items="Model.Polarities"></select>
+                    <span asp-validation-for="CashPolarityCode" class="text-danger small"></span>
                 </div>
 
                 <div class="form-check mb-3">
@@ -52,7 +116,8 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Create</button>
-                    <a class="btn btn-secondary" href="javascript:void(0)" data-embedded-cancel>Cancel</a>
+                    <a class="btn btn-secondary" href="#" data-embedded-cancel
+                       onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
                 </div>
             </form>
         </div>

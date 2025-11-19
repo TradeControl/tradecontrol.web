@@ -1,99 +1,63 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
-using TradeControl.Web.Models;
-
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
     public class EditCashCodeModel : DI_BasePageModel
     {
         public EditCashCodeModel(NodeContext context) : base(context) { }
+        [BindProperty] public string CashCode { get; set; } = "";
+        [BindProperty] public string CashDescription { get; set; } = "";
+        [BindProperty] public bool IsEnabled { get; set; }
+        [BindProperty] public string ParentKey { get; set; } = "";
 
-        [BindProperty(SupportsGet = true)]
-        public string Key { get; set; } = "";
+        // optional: if editing influences title icon, we may track cash type
+        public short CashTypeCode { get; private set; }
 
-        [BindProperty]
-        public string CashCode { get; set; } = "";
-
-        [BindProperty]
-        public string CashDescription { get; set; } = "";
-
-        // Dropdown binding (select by description, store code)
-        [BindProperty]
-        public string TaxDescription { get; set; } = "";
-
-        [BindProperty]
-        public string TaxCode { get; set; } = "";
-
-        [BindProperty]
-        public bool IsEnabled { get; set; } = true;
-
-        [BindProperty(SupportsGet = true)]
-        public string ParentKey { get; set; } = "";
-
-        public short ParentCashType { get; private set; } = 0;
-
-        public bool OperationSucceeded { get; private set; } = false;
+        public bool OperationSucceeded { get; private set; }
         public string ErrorMessage { get; private set; } = "";
 
-        public SelectList TaxDescriptions { get; private set; }
-
-        public async Task<IActionResult> OnGetAsync(string key, string parentKey = "", bool embed = false)
+        public async Task<IActionResult> OnGetAsync(string key, bool embed = false)
         {
             try
             {
-                var raw = (key ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(raw))
+                if (string.IsNullOrWhiteSpace(key))
                 {
                     ErrorMessage = "Missing key.";
-                    await PopulateTaxDescriptionsAsync(null);
                     return embed ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
                 }
 
-                CashCode = raw;
-                var row = await NodeContext.Cash_tbCodes
-                    .Where(c => c.CashCode == raw)
-                    .Select(c => new { c.CashCode, c.CashDescription, c.TaxCode, c.IsEnabled, c.CategoryCode })
-                    .SingleOrDefaultAsync();
+                var codeRow = await NodeContext.Cash_tbCodes
+                    .Join(NodeContext.Cash_tbCategories,
+                          cd => cd.CategoryCode,
+                          ct => ct.CategoryCode,
+                          (cd, ct) => new { cd, ct })
+                    .Where(x => x.cd.CashCode == key)
+                    .Select(x => new {
+                        x.cd.CashCode,
+                        x.cd.CashDescription,
+                        x.cd.IsEnabled,
+                        Parent = x.cd.CategoryCode,
+                        CashType = x.ct.CashTypeCode
+                    })
+                    .FirstOrDefaultAsync();
 
-                if (row == null)
+                if (codeRow == null)
                 {
                     ErrorMessage = "Cash code not found.";
-                    await PopulateTaxDescriptionsAsync(null);
                     return embed ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
                 }
 
-                CashDescription = row.CashDescription;
-                TaxCode = row.TaxCode;
-                IsEnabled = row.IsEnabled != 0;
-
-                // Resolve the description for current TaxCode and build dropdown
-                TaxDescription = await NodeContext.App_tbTaxCodes
-                    .Where(t => t.TaxCode == TaxCode)
-                    .Select(t => t.TaxDescription)
-                    .FirstOrDefaultAsync() ?? "";
-
-                await PopulateTaxDescriptionsAsync(TaxDescription);
-
-                ParentKey = string.IsNullOrWhiteSpace(parentKey) ? row.CategoryCode : parentKey;
-
-                try
-                {
-                    ParentCashType = await NodeContext.Cash_tbCategories
-                        .Where(c => c.CategoryCode == ParentKey)
-                        .Select(c => c.CashTypeCode)
-                        .FirstOrDefaultAsync();
-                }
-                catch
-                {
-                    ParentCashType = 0;
-                }
+                CashCode = codeRow.CashCode;
+                CashDescription = codeRow.CashDescription;
+                IsEnabled = codeRow.IsEnabled != 0;
+                ParentKey = codeRow.Parent ?? "";
+                CashTypeCode = codeRow.CashType;
 
                 return Page();
             }
@@ -101,7 +65,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                await PopulateTaxDescriptionsAsync(null);
                 return embed ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
         }
@@ -115,94 +78,53 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             try
             {
-                var raw = (Key ?? CashCode ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(raw))
+                if (string.IsNullOrWhiteSpace(CashCode))
                 {
                     ErrorMessage = "Missing key.";
-                    await PopulateTaxDescriptionsAsync(TaxDescription);
                     return isEmbedded ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
                 }
 
-                var row = await NodeContext.Cash_tbCodes.FirstOrDefaultAsync(c => c.CashCode == raw);
-                if (row == null)
+                var codeRow = await NodeContext.Cash_tbCodes
+                    .FirstOrDefaultAsync(c => c.CashCode == CashCode);
+
+                if (codeRow == null)
                 {
                     ErrorMessage = "Cash code not found.";
-                    await PopulateTaxDescriptionsAsync(TaxDescription);
-                    return Page();
+                    return isEmbedded ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
                 }
 
-                // Validate TaxDescription -> map to TaxCode
-                if (string.IsNullOrWhiteSpace(TaxDescription))
+                if (!string.IsNullOrWhiteSpace(CashDescription))
                 {
-                    ModelState.AddModelError(nameof(TaxDescription), "Select a tax code.");
-                    await PopulateTaxDescriptionsAsync(null);
-                    return Page();
+                    codeRow.CashDescription = CashDescription.Trim();
                 }
+                codeRow.IsEnabled = IsEnabled ? (short)1 : (short)0;
 
-                var selectedTaxCode = await NodeContext.App_tbTaxCodes
-                    .Where(t => t.TaxDescription == TaxDescription)
-                    .Select(t => t.TaxCode)
-                    .FirstOrDefaultAsync();
-
-                if (string.IsNullOrWhiteSpace(selectedTaxCode))
-                {
-                    ModelState.AddModelError(nameof(TaxDescription), "Invalid tax code selection.");
-                    await PopulateTaxDescriptionsAsync(TaxDescription);
-                    return Page();
-                }
-
-                // Persist edits
-                row.CashDescription = (CashDescription ?? "").Trim();
-                row.TaxCode = selectedTaxCode;
-                row.IsEnabled = IsEnabled ? (short)1 : (short)0;
-
+                NodeContext.Attach(codeRow).State = EntityState.Modified;
                 await NodeContext.SaveChangesAsync();
 
-                // Load parent cash type for marker icon
-                try
-                {
-                    ParentCashType = await NodeContext.Cash_tbCategories
-                        .Where(c => c.CategoryCode == row.CategoryCode)
-                        .Select(c => c.CashTypeCode)
-                        .FirstOrDefaultAsync();
-                }
-                catch
-                {
-                    ParentCashType = 0;
-                }
+                // resolve current parent + cash type for marker/title
+                var parentType = await NodeContext.Cash_tbCategories
+                    .Where(c => c.CategoryCode == codeRow.CategoryCode)
+                    .Select(c => new { c.CashTypeCode })
+                    .FirstOrDefaultAsync();
 
-                CashCode = row.CashCode;
+                ParentKey = codeRow.CategoryCode;
+                CashTypeCode = parentType?.CashTypeCode ?? 0;
                 OperationSucceeded = true;
 
                 if (isEmbedded)
                 {
-                    return Page(); // emits editCashCodeResult marker
+                    return Page();
                 }
 
-                return RedirectToPage("/Cash/CategoryTree/Index", new { key = "code:" + CashCode });
+                return RedirectToPage("./Index", new { key = "code:" + CashCode, select = "code:" + CashCode, expand = ParentKey });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                await PopulateTaxDescriptionsAsync(TaxDescription);
-                return Page();
+                return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
-        }
-
-        private async Task PopulateTaxDescriptionsAsync(string selectedDescription)
-        {
-            var taxes = await NodeContext.App_tbTaxCodes
-                .OrderBy(t => t.TaxDescription)
-                .Select(t => new { t.TaxDescription })
-                .ToListAsync();
-
-            TaxDescriptions = new SelectList(
-                taxes,
-                nameof(App_tbTaxCode.TaxDescription),
-                nameof(App_tbTaxCode.TaxDescription),
-                selectedDescription
-            );
         }
     }
 }

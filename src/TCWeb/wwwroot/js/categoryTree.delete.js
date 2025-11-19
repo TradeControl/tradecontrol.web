@@ -282,6 +282,16 @@
                             }
                         }
                     }
+                    else
+                    {
+                        // No tree present (mobile/full-page) → go back to Index selecting parent
+                        if (parentKey)
+                        {
+                            var url1 = "/Cash/CategoryTree/Index?key=" + encodeURIComponent(parentKey);
+                            window.location.href = url1;
+                            return;
+                        }
+                    }
                 }
                 catch (_)
                 {
@@ -302,6 +312,85 @@
             });
         });
     }
+
+    // Desktop embedded delete: remove node and select its parent without full reload.
+    // Reuses existing tree utilities; does NOT duplicate deletion logic (server already deleted).
+    (function ()
+    {
+        try
+        {
+            var marker = document.querySelector("#deleteCashCodeResult");
+            if (!marker)
+            {
+                return;
+            }
+
+            var rawCode = marker.getAttribute("data-cashcode") || "";
+            var parentKey = marker.getAttribute("data-parent") || "";
+
+            if (!rawCode)
+            {
+                return;
+            }
+
+            var tree = $.ui && $.ui.fancytree && $.ui.fancytree.getTree("#categoryTree");
+            if (!tree)
+            {
+                return;
+            }
+
+            var nodeKey = "code:" + rawCode;
+            var node = tree.getNodeByKey(nodeKey);
+            var parentNode = null;
+
+            if (node && node.getParent)
+            {
+                parentNode = node.getParent();
+            }
+            else if (parentKey)
+            {
+                parentNode = tree.getNodeByKey(parentKey);
+            }
+
+            if (node)
+            {
+                try
+                {
+                    node.remove();
+                }
+                catch (_)
+                {
+                }
+            }
+
+            if (parentNode)
+            {
+                try
+                {
+                    parentNode.makeVisible();
+                }
+                catch (_)
+                {
+                }
+                try
+                {
+                    parentNode.setActive(true);
+                    if (typeof window.loadDetails === "function")
+                    {
+                        window.loadDetails(parentNode);
+                    }
+                }
+                catch (_)
+                {
+                }
+            }
+        }
+        catch (_)
+        {
+            // silent
+        }
+    })();
+
 
     // ----------- Delete Category -----------
     function handleDeleteCategory()
@@ -346,6 +435,15 @@
                         {
                             node.remove();
                         }
+                    }
+                    else
+                    {
+                        // No tree present (mobile/full-page) → go back to Index selecting root
+                        var cfg = document.getElementById("categoryTreeConfig");
+                        var fbKey = (cfg && cfg.dataset) ? (cfg.dataset.root || "") : "";
+                        var url2 = "/Cash/CategoryTree/Index" + (fbKey ? ("?key=" + encodeURIComponent(fbKey)) : "");
+                        window.location.href = url2;
+                        return;
                     }
                 }
                 catch (_)
@@ -393,12 +491,128 @@
         });
     }
 
+    // ----------- Delete Total (mapping) -----------
+    function handleDeleteTotal()
+    {
+        var form = document.getElementById("deleteTotalForm");
+        if (!form)
+        {
+            return;
+        }
+
+        form.addEventListener("submit", function (e)
+        {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var parentInput = form.querySelector('input[name="parentKey"]');
+            var childInput = form.querySelector('input[name="childKey"]') || form.querySelector('input[name="key"]');
+
+            var parentKey = parentInput ? (parentInput.value || "").trim() : "";
+            var childKey = childInput ? (childInput.value || "").trim() : "";
+
+            if (!parentKey || !childKey)
+            {
+                alert("Missing parent or child key.");
+                return;
+            }
+
+            var fd = new FormData();
+            fd.append("parentKey", parentKey);
+            fd.append("childKey", childKey);
+
+            postJson(form, fd, function (err, data)
+            {
+                if (err || !data || data.success !== true)
+                {
+                    alert((data && data.message) || "Delete failed.");
+                    return;
+                }
+
+                var pKey = (data.parentKey || data.ParentKey || parentKey);
+                var cKey = (data.childKey || data.ChildKey || data.key || childKey);
+
+                var tree = null;
+                try
+                {
+                    tree = getTree();
+                }
+                catch (_)
+                {
+                    tree = null;
+                }
+
+                if (tree)
+                {
+                    try
+                    {
+                        var pNode = tree.getNodeByKey(pKey);
+                        if (pNode && pNode.children && pNode.children.length)
+                        {
+                            for (var i = 0; i < pNode.children.length; i++)
+                            {
+                                var ch = pNode.children[i];
+                                if (ch && ch.key === cKey && ch.remove)
+                                {
+                                    try
+                                    {
+                                        ch.remove();
+                                    }
+                                    catch (_){}
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (pNode && pNode.reloadChildren)
+                        {
+                            try
+                            {
+                                pNode.reloadChildren();
+                            }
+                            catch (_){}
+                        }
+
+                        if (pNode && pNode.setActive)
+                        {
+                            try
+                            {
+                                pNode.setActive(true);
+                            }
+                            catch (_){}
+                        }
+                    }
+                    catch (_)
+                    {
+                    }
+
+                    if (pKey)
+                    {
+                        loadDetails(pKey, "");
+                    }
+                }
+                else
+                {
+                    // Mobile/full page: include both select and key to maximize matching paths
+                    // Add parentKey hint (expand) for deeper nodes; cache‑buster to avoid stale HTML.
+                    var url = "/Cash/CategoryTree/Index"
+                        + "?select=" + encodeURIComponent(pKey)
+                        + "&key=" + encodeURIComponent(pKey)
+                        + "&expand=" + encodeURIComponent(pKey)
+                        + "&_=" + Date.now();
+                    window.location.href = url;
+                }
+            });
+        });
+    }
+
     // ----------- Init -----------
     function onReady()
     {
         wireAllConfirmToggles();
         handleDeleteCashCode();
         handleDeleteCategory();
+        handleDeleteTotal();
     }
 
     if (document.readyState === "loading")

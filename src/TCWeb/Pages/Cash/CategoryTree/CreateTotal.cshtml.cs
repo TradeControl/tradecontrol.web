@@ -110,7 +110,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 if (!string.IsNullOrWhiteSpace(ParentKey))
                 {
-                    // Only add a totals mapping if the parent is a real category (skip synthetic roots like "__ROOT__")
                     var parentIsRealCategory = await NodeContext.Cash_tbCategories
                         .AnyAsync(c => c.CategoryCode == ParentKey);
 
@@ -120,8 +119,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                             .Where(t => t.ParentCode == ParentKey)
                             .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                        NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
-                        {
+                        NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
                             ParentCode = ParentKey,
                             ChildCode = CategoryCode,
                             DisplayOrder = nextOrder
@@ -129,7 +127,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                         await NodeContext.SaveChangesAsync();
                     }
-                    // else: ParentKey is synthetic (e.g., ROOT) → create as a root Total, no mapping row
                 }
 
                 await tx.CommitAsync();
@@ -138,18 +135,21 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 NewKey = CategoryCode;
                 NewParentKey = ParentKey ?? "";
 
-                // Populate marker metadata
+                // Marker metadata (optional for client)
                 NewName = cat.Category;
                 NewPolarity = cat.CashPolarityCode;
                 NewCategoryType = cat.CategoryTypeCode;
                 NewIsEnabled = cat.IsEnabled;
 
-                if (Request.Query["embed"] == "1")
+                // Embedded pane only when truly called via AJAX (desktop RHS).
+                // If not AJAX, treat as full-page (mobile or direct) and redirect to Index with selection.
+                bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+                if (isAjax && Request.Query["embed"] == "1")
                 {
                     return Page();
                 }
 
-                return RedirectToPage("/Cash/CategoryTree/Index");
+                return RedirectToPage("/Cash/CategoryTree/Index", new { key = NewKey, parentKey = NewParentKey });
             }
             catch (Exception ex)
             {

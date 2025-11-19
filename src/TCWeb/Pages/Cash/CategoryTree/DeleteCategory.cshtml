@@ -2,7 +2,8 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.DeleteCategoryModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
+    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = isEmbedded ? null : "_Layout";
 
     var key = (Request.Query["key"].Count > 0) ? Request.Query["key"].ToString()
                                                 : (Request.HasFormContentType ? Request.Form["key"].ToString() : "");

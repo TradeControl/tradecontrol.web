@@ -40,6 +40,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string NewKey { get; private set; } = "";
         public string NewParentKey { get; private set; } = "";
 
+        public string NewNodeJson { get; private set; } = "";
+
         // Populate select lists only (do not overwrite bound properties)
         private async Task PopulateSelectListsAsync()
         {
@@ -85,11 +87,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             try
             {
-                var cat = new Cash_tbCategory
-                {
+                var cat = new Cash_tbCategory {
                     CategoryCode = CategoryCode,
                     Category = Category,
-                    // This category represents a Cash Code (affects entries/behaviour)
                     CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode,
                     CashTypeCode = CashTypeCode,
                     CashPolarityCode = CashPolarityCode,
@@ -102,7 +102,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 NodeContext.Cash_tbCategories.Add(cat);
                 await NodeContext.SaveChangesAsync();
 
-                // If parentKey is provided and not the special disconnected key, attach under parent.
                 if (!string.IsNullOrWhiteSpace(ParentKey)
                     && !string.Equals(ParentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal))
                 {
@@ -110,8 +109,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         .Where(t => t.ParentCode == ParentKey)
                         .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal
-                    {
+                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
                         ParentCode = ParentKey,
                         ChildCode = CategoryCode,
                         DisplayOrder = nextOrder
@@ -124,22 +122,38 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 OperationSucceeded = true;
                 NewKey = CategoryCode;
-                // If a parentKey was supplied use that; otherwise, for CashCode categories
-                // expose the synthetic type parent so the client can reload only the proper type subtree.
-                if (!string.IsNullOrWhiteSpace(ParentKey))
-                {
-                    NewParentKey = ParentKey;
-                }
-                else
-                {
-                    // For CashCode categories the tree places them under "type:<CashTypeCode>"
-                    NewParentKey = $"type:{cat.CashTypeCode}";
-                }
 
-                if (Request.Query["embed"] == "1")
+                NewNodeJson = System.Text.Json.JsonSerializer.Serialize(new {
+                    key = NewKey,            // category code
+                    title = Category,        // display name
+                    folder = true,
+                    lazy = false,
+                    data = new {
+                        nodeType = "category",
+                        categoryType = (short)NodeEnum.CategoryType.CashCode, // you set CategoryTypeCode earlier
+                        cashPolarity = CashPolarityCode,
+                        cashType = CashTypeCode,
+                        isEnabled = IsEnabled ? 1 : 0
+                    }
+                });
+
+                // Determine the best parent hint for selection/expand on mobile
+                var parentHint = !string.IsNullOrWhiteSpace(ParentKey)
+                    ? ParentKey
+                    : $"type:{cat.CashTypeCode}";
+
+                // Embedded desktop (AJAX/embed=1) => return Page()
+                var isEmbedded =
+                    string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal)
+                    || string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase)
+                    || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal));
+
+                if (isEmbedded)
                     return Page();
 
-                return RedirectToPage("/Cash/CategoryTree/Index");
+                // Mobile/full-page: redirect with selection hints
+                return RedirectToPage("/Cash/CategoryTree/Index",
+                    new { select = CategoryCode, parentKey = parentHint, expand = parentHint });
             }
             catch (Exception ex)
             {

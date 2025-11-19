@@ -7,14 +7,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
-
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
     public class EditCategoryModel : DI_BasePageModel
     {
         public EditCategoryModel(NodeContext context) : base(context) { }
-
         [BindProperty] public string CategoryCode { get; set; } = "";
         [BindProperty] public string Category { get; set; } = "";
         [BindProperty] public bool IsEnabled { get; set; }
@@ -36,7 +34,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     ErrorMessage = "Missing key.";
-                    BuildLists();
+                    await BuildLists();
                     return embed ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
                 }
 
@@ -46,14 +44,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (cat == null)
                 {
                     ErrorMessage = "Category not found.";
-                    BuildLists();
+                    await BuildLists();
                     return embed ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
                 }
 
                 if (cat.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
                 {
                     ErrorMessage = "Not a Cash Code category.";
-                    BuildLists();
+                    await BuildLists();
                     return embed ? Content("<div class='text-danger small p-2'>Invalid category type</div>") : Page();
                 }
 
@@ -68,113 +66,89 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     .Select(t => t.ParentCode)
                     .FirstOrDefaultAsync() ?? "";
 
-                BuildLists();
+                await BuildLists();
                 return Page();
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                BuildLists();
+                await BuildLists();
                 return embed ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
         }
 
         public async Task<IActionResult> OnPostAsync(bool embed = false)
         {
+            var isEmbedded =
+                embed
+                || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
+                || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
+
             try
             {
-                var isEmbedded =
-                    embed
-                    || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
-                    || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
-
                 if (string.IsNullOrWhiteSpace(CategoryCode))
                 {
                     ErrorMessage = "Missing key.";
-                    BuildLists();
+                    await BuildLists();
                     return isEmbedded ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
                 }
 
                 var cat = await NodeContext.Cash_tbCategories
                     .FirstOrDefaultAsync(c => c.CategoryCode == CategoryCode);
 
-                if (cat == null)
+                if (cat == null || cat.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
                 {
-                    ErrorMessage = "Category not found.";
-                    BuildLists();
-                    return isEmbedded ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
-                }
-
-                if (cat.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
-                {
-                    ErrorMessage = "Not a Cash Code category.";
-                    BuildLists();
-                    return isEmbedded ? Content("<div class='text-danger small p-2'>Invalid category type</div>") : Page();
+                    ErrorMessage = "Category not found or invalid type.";
+                    await BuildLists();
+                    return Page();
                 }
 
                 if (!string.IsNullOrWhiteSpace(Category))
+                {
                     cat.Category = Category.Trim();
-
+                }
                 cat.IsEnabled = IsEnabled ? (short)1 : (short)0;
-
-                // Update selectable properties
                 cat.CashTypeCode = CashTypeCode;
                 cat.CashPolarityCode = CashPolarityCode;
 
                 NodeContext.Attach(cat).State = EntityState.Modified;
                 await NodeContext.SaveChangesAsync();
 
-                OperationSucceeded = true;
-
                 ParentKey = await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ChildCode == CategoryCode)
                     .Select(t => t.ParentCode)
                     .FirstOrDefaultAsync() ?? "";
 
-                CashTypeCode = cat.CashTypeCode;
-                CashPolarityCode = cat.CashPolarityCode;
+                OperationSucceeded = true;
 
                 if (isEmbedded)
+                {
                     return Page();
+                }
 
-                return RedirectToPage("./Index", new { key = CategoryCode });
+                return RedirectToPage("./Index", new { select = CategoryCode, expand = ParentKey });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                var isEmbedded =
-                    embed
-                    || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
-                    || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
-
                 ErrorMessage = "Server error.";
-                BuildLists();
+                await BuildLists();
                 return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
         }
 
-        private void BuildLists()
+        private async Task BuildLists()
         {
-            CashTypes = Enum.GetValues(typeof(NodeEnum.CashType))
-                .Cast<NodeEnum.CashType>()
-                .Select(t => new SelectListItem {
-                    Value = ((short)t).ToString(),
-                    Text = t.ToString(),
-                    Selected = ((short)t) == CashTypeCode
-                })
-                .OrderBy(i => i.Text)
-                .ToList();
+            CashTypes = await NodeContext.Cash_tbTypes
+                .OrderBy(t => t.CashType)
+                .Select(t => new SelectListItem { Value = t.CashTypeCode.ToString(), Text = t.CashType })
+                .ToListAsync();
 
-            CashPolarities = Enum.GetValues(typeof(NodeEnum.CashPolarity))
-                .Cast<NodeEnum.CashPolarity>()
-                .Select(p => new SelectListItem {
-                    Value = ((short)p).ToString(),
-                    Text = p.ToString(),
-                    Selected = ((short)p) == CashPolarityCode
-                })
-                .OrderBy(i => i.Text)
-                .ToList();
+            CashPolarities = await NodeContext.Cash_tbPolaritys
+                .OrderBy(p => p.CashPolarity)
+                .Select(p => new SelectListItem { Value = p.CashPolarityCode.ToString(), Text = p.CashPolarity })
+                .ToListAsync();
         }
     }
 }

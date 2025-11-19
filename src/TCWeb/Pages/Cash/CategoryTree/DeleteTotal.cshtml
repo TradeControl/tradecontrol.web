@@ -2,7 +2,8 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.DeleteTotalModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    Layout = null;
+    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = isEmbedded ? null : "_Layout";
 
     var parentKey = (Request.Query["parentKey"].Count > 0) ? Request.Query["parentKey"].ToString() : (Request.HasFormContentType ? Request.Form["parentKey"].ToString() : "");
     var childKey = (Request.Query["childKey"].Count > 0) ? Request.Query["childKey"].ToString() : (Request.HasFormContentType ? Request.Form["childKey"].ToString() : "");
