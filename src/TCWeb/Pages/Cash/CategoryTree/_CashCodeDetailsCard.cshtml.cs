@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
-    public class _CodeDetailsCardModel : PageModel
+    public class _CashCodeDetailsCardModel : PageModel
     {
         public void OnGet()
         {

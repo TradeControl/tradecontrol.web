@@ -46,6 +46,11 @@ window.CategoryTree = (function ()
         var selectionRetryCount = 0;
         var MAX_SELECTION_RETRIES = 50;
 
+        const MAX_BFS_FOLDERS = 150;          // was 600
+        const CODE_POLL_MAX_TRIES = 12;       // was 40
+        const CODE_POLL_INTERVAL_MS = 150;    // unchanged interval, fewer tries
+        const BFS_STEP_DELAY_MS = 25;         // existing 25; keep symbolic
+
         // Capture pristine menu and templates once when DOM ready (before any context mutations)
         $(function ()
         {
@@ -96,14 +101,24 @@ window.CategoryTree = (function ()
                 return;
             }
 
+            // Guard: already present
+            if (tree.getNodeByKey(targetKey))
+            {
+                callback(true);
+                return;
+            }
+
+            maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
+
             var queue = [];
             var visited = new Set();
 
             function enqueue(n)
             {
-                if (!n) { return; }
-                if (!n.key) { return; }
-                if (visited.has(n.key)) { return; }
+                if (!n || !n.key || visited.has(n.key))
+                {
+                    return;
+                }
                 visited.add(n.key);
                 queue.push(n);
             }
@@ -112,9 +127,7 @@ window.CategoryTree = (function ()
 
             function step()
             {
-                // Already present?
-                var found = tree.getNodeByKey(targetKey);
-                if (found)
+                if (tree.getNodeByKey(targetKey))
                 {
                     callback(true);
                     return;
@@ -128,86 +141,44 @@ window.CategoryTree = (function ()
 
                 var current = queue.shift();
 
-                // If current is lazy and not yet loaded, load its children without expanding.
                 if (current.lazy && !current.loaded)
                 {
                     try
                     {
                         var resLoad = current.load();
+                        var after = function ()
+                        {
+                            try
+                            {
+                                (current.children || []).forEach(enqueue);
+                            }
+                            catch (_) {}
+                            setTimeout(step, BFS_STEP_DELAY_MS);
+                        };
+
                         if (resLoad && typeof resLoad.then === "function")
                         {
-                            resLoad.then(function ()
-                            {
-                                try
-                                {
-                                    if (current.children && current.children.length)
-                                    {
-                                        current.children.forEach(function (ch)
-                                        {
-                                            enqueue(ch);
-                                        });
-                                    }
-                                }
-                                catch (_)
-                                {
-                                }
-                                // Continue BFS after a short yield
-                                setTimeout(step, 25);
-                            }).catch(function ()
-                            {
-                                setTimeout(step, 25);
-                            });
+                            resLoad.then(after, after);
                             return;
                         }
                         if (resLoad && typeof resLoad.done === "function")
                         {
-                            resLoad.done(function ()
-                            {
-                                try
-                                {
-                                    if (current.children && current.children.length)
-                                    {
-                                        current.children.forEach(function (ch)
-                                        {
-                                            enqueue(ch);
-                                        });
-                                    }
-                                }
-                                catch (_)
-                                {
-                                }
-                                setTimeout(step, 25);
-                            }).fail(function ()
-                            {
-                                setTimeout(step, 25);
-                            });
+                            resLoad.done(after).fail(after);
                             return;
                         }
                     }
-                    catch (_)
+                    catch (_) {}
+                }
+                else
+                {
+                    try
                     {
-                        // If load() threw, just continue
+                        (current.children || []).forEach(enqueue);
                     }
+                    catch (_) {}
                 }
 
-                // Enqueue any already-loaded children (do NOT expand)
-                try
-                {
-                    if (current.children && current.children.length)
-                    {
-                        current.children.forEach(function (ch)
-                        {
-                            enqueue(ch);
-                        });
-                    }
-                }
-                catch (_)
-                {
-                    // swallow
-                }
-
-                // Yield to avoid blocking UI
-                setTimeout(step, 25);
+                setTimeout(step, BFS_STEP_DELAY_MS);
             }
 
             step();
@@ -809,126 +780,115 @@ window.CategoryTree = (function ()
                     return null;
                 }
 
-                function loadUnderRootUntilKey(targetKey, maxFolders, callback)
-                {
-                    try
-                    {
-                        var rootNode = tree.getNodeByKey(ROOT_KEY);
-                        if (!rootNode)
-                        {
-                            callback(false);
-                            return;
-                        }
+ 		        function loadUnderRootUntilKey(targetKey, maxFolders, callback)
+		        {
+			        try
+			        {
+				        var tree = getTree();
+				        if (!tree)
+				        {
+					        callback(false);
+					        return;
+				        }
 
-                        var queue = [];
-                        var visited = new Set();
+				        // Guard: already present
+				        if (tree.getNodeByKey(targetKey))
+				        {
+					        callback(true);
+					        return;
+				        }
 
-                        function enqueue(n)
-                        {
-                            if (!n || !n.key)
-                            {
-                                return;
-                            }
-                            if (visited.has(n.key))
-                            {
-                                return;
-                            }
-                            visited.add(n.key);
-                            queue.push(n);
-                        }
+				        var rootNode = tree.getNodeByKey(ROOT_KEY);
+				        if (!rootNode)
+				        {
+					        callback(false);
+					        return;
+				        }
 
-                        enqueue(rootNode);
+				        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
 
-                        (function step()
-                        {
-                            try
-                            {
-                                var exist = tree.getNodeByKey(targetKey);
-                                if (exist)
-                                {
-                                    callback(true);
-                                    return;
-                                }
-                            }
-                            catch (_)
-                            {
-                            }
+				        var queue = [];
+				        var visited = new Set();
 
-                            if (queue.length === 0 || visited.size > maxFolders)
-                            {
-                                callback(false);
-                                return;
-                            }
+				        function enqueue(n)
+				        {
+					        if (!n || !n.key || visited.has(n.key))
+					        {
+						        return;
+					        }
+					        visited.add(n.key);
+					        queue.push(n);
+				        }
 
-                            var current = queue.shift();
+				        enqueue(rootNode);
 
-                            if (current !== rootNode && isTypeSyntheticNode(current))
-                            {
-                                setTimeout(step, 10);
-                                return;
-                            }
+				        (function step()
+				        {
+					        if (tree.getNodeByKey(targetKey))
+					        {
+						        callback(true);
+						        return;
+					        }
 
-                            if (current.lazy && !current.loaded)
-                            {
-                                try
-                                {
-                                    var res = current.load();
-                                    var after = function ()
-                                    {
-                                        try
-                                        {
-                                            if (current.children && current.children.length)
-                                            {
-                                                for (var ci = 0; ci < current.children.length; ci++)
-                                                {
-                                                    enqueue(current.children[ci]);
-                                                }
-                                            }
-                                        }
-                                        catch (_)
-                                        {
-                                        }
-                                        setTimeout(step, 15);
-                                    };
+					        if (queue.length === 0 || visited.size > maxFolders)
+					        {
+						        callback(false);
+						        return;
+					        }
 
-                                    if (res && typeof res.then === "function")
-                                    {
-                                        res.then(after, after);
-                                        return;
-                                    }
-                                    if (res && res.done)
-                                    {
-                                        res.done(after).fail(after);
-                                        return;
-                                    }
-                                }
-                                catch (_)
-                                {
-                                }
-                            }
+					        var current = queue.shift();
 
-                            try
-                            {
-                                if (current.children && current.children.length)
-                                {
-                                    for (var cj = 0; cj < current.children.length; cj++)
-                                    {
-                                        enqueue(current.children[cj]);
-                                    }
-                                }
-                            }
-                            catch (_)
-                            {
-                            }
+					        function isTypeSyntheticNode(node)
+					        {
+						        if (!node) { return false; }
+						        var k = node.key || "";
+						        var d = node.data || {};
+						        return k.indexOf("type:") === 0 || d.syntheticKind === "type" || d.isTypeContext === true;
+					        }
 
-                            setTimeout(step, 15);
-                        })();
-                    }
-                    catch (_)
-                    {
-                        callback(false);
-                    }
-                }
+					        if (current !== rootNode && isTypeSyntheticNode(current))
+					        {
+						        setTimeout(step, 10);
+						        return;
+					        }
+
+					        if (current.lazy && !current.loaded)
+					        {
+						        try
+						        {
+							        var res = current.load();
+							        var after = function ()
+							        {
+								        try
+								        {
+									        (current.children || []).forEach(enqueue);
+								        }
+								        catch (_) {}
+								        setTimeout(step, 15);
+							        };
+							        if (res && res.then) { res.then(after, after); return; }
+							        if (res && res.done) { res.done(after).fail(after); return; }
+						        }
+						        catch (_) {}
+					        }
+					        else
+					        {
+						        try
+						        {
+							        (current.children || []).forEach(enqueue);
+						        }
+						        catch (_) {}
+					        }
+
+					        setTimeout(step, 15);
+				        })();
+			        }
+			        catch (_)
+			        {
+				        callback(false);
+			        }
+		        }
+ 
 
                 function findPreferredParentUnderRoot(parentKey)
                 {
@@ -1016,34 +976,34 @@ window.CategoryTree = (function ()
                     setTimeout(applyQuerySelection, 110);
                 }
 
-                function activateNodeFinal(n)
-                {
-                    if (!n)
-                    {
-                        return;
-                    }
+		        function activateNodeFinal(n)
+		        {
+			        if (!n)
+			        {
+				        return;
+			        }
+			        if (querySelectionApplied)
+			        {
+				        return;
+			        }
+			        querySelectionApplied = true;
 
-                    try
-                    {
-                        focusBranch(n, function ()
-                        {
-                            try
+			        try
+			        {
+				        focusBranch(n, function ()
+				        {
+					        try
                             {
                                 n.setActive(true);
-                            }
-                            catch (_)
-                            {
-                            }
 
-                            try
+                            }
+                            catch (_) {}
+					        try
                             {
                                 persistActiveKey(n);
                             }
-                            catch (_)
-                            {
-                            }
-
-                            if (isMobile())
+                            catch (_) {}
+					        if (isMobile())
                             {
                                 updateActionBar(n);
                             }
@@ -1051,37 +1011,26 @@ window.CategoryTree = (function ()
                             {
                                 loadDetails(n);
                             }
-
-                            querySelectionApplied = true;
-                        });
-                    }
-                    catch (_)
-                    {
-                        try
+				        });
+			        }
+			        catch (_)
+			        {
+				        try
                         {
                             n.makeVisible();
                         }
-                        catch (_)
-                        {
-                        }
-
-                        try
+                        catch (_) {}
+				        try
                         {
                             n.setActive(true);
                         }
-                        catch (_)
-                        {
-                        }
-
-                        try
+                        catch (_) {}
+				        try
                         {
                             persistActiveKey(n);
                         }
-                        catch (_)
-                        {
-                        }
-
-                        if (isMobile())
+                        catch (_) {}
+				        if (isMobile())
                         {
                             updateActionBar(n);
                         }
@@ -1089,10 +1038,8 @@ window.CategoryTree = (function ()
                         {
                             loadDetails(n);
                         }
-
-                        querySelectionApplied = true;
-                    }
-                }
+			        }
+		        }
 
                 function finalizeActivateGeneric()
                 {
@@ -1136,35 +1083,35 @@ window.CategoryTree = (function ()
                 }
 
                 // Creation-aware poll: reload the intended parent under ROOT until the child appears (strictly under ROOT).
-                function pollForChildUnderParent(parentNode, variantKeys, maxTries, intervalMs, onDone)
-                {
-                    var tries = 0;
+		        function pollForChildUnderParent(parentNode, variantKeys, maxTries, intervalMs, onDone)
+		        {
+			        var tries = 0;
 
-                    function tick()
-                    {
-                        tries++;
+			        function tick()
+			        {
+				        tries++;
 
-                        reloadChildrenNoCache(parentNode).then(function ()
-                        {
-                            var hit = findChildUnderParentByVariants(parentNode, variantKeys);
-                            if (hit)
-                            {
-                                onDone(hit);
-                                return;
-                            }
+				        reloadChildrenNoCache(parentNode).then(function ()
+				        {
+					        var hit = findChildUnderParentByVariants(parentNode, variantKeys);
+					        if (hit)
+					        {
+						        onDone(hit);
+						        return;
+					        }
 
-                            if (tries >= maxTries)
-                            {
-                                onDone(null);
-                                return;
-                            }
+					        if (tries >= maxTries)
+					        {
+						        onDone(null);
+						        return;
+					        }
 
-                            setTimeout(tick, intervalMs);
-                        });
-                    }
+					        setTimeout(tick, intervalMs);
+				        });
+			        }
 
-                    tick();
-                }
+			        tick();
+		        }
 
                 function attemptCodeParentSelection()
                 {
@@ -1750,6 +1697,10 @@ window.CategoryTree = (function ()
                 if (parentKey && !tcIsSyntheticKey(parentKey))
                 {
                     var parentUrl = detailsUrl + "?key=" + encodeURIComponent(parentKey);
+
+                    // Desktop RHS should fetch embed=1 (no layout)
+                    parentUrl = appendQuery(parentUrl, "embed", "1");
+
                     $.get(nocache(parentUrl))
                         .done(function (html)
                         {
@@ -1775,6 +1726,9 @@ window.CategoryTree = (function ()
                 url += "&parentKey=" + encodeURIComponent(parentKey);
             }
 
+            // Desktop RHS should fetch embed=1 (no layout)
+            url = appendQuery(url, "embed", "1");
+
             $.get(nocache(url))
                 .done(function (html)
                 {
@@ -1790,51 +1744,523 @@ window.CategoryTree = (function ()
         // Detect an embed result marker in the pane and trigger in-place selection
         function tryApplyEmbedMarker($scope)
         {
-            try
-            {
-                var $m = ($scope && $scope.length ? $scope : $("#detailsPane")).find("#tcEmbedResult").first();
-                if (!$m.length)
-                {
-                    return false;
-                }
+            var $pane = ($scope && $scope.length ? $scope : $("#detailsPane"));
+            var $marker = $pane.find("#tcEmbedResult").first();
 
-                var selectVal = $m.attr("data-select") || "";
-                var expandVal = $m.attr("data-expand") || "";
-                if (!selectVal || !expandVal)
-                {
-                    return false;
-                }
-
-                // Update the page URL (no navigation)
-                try
-                {
-                    var u = new URL(window.location.href);
-                    u.searchParams.set("select", selectVal);
-                    u.searchParams.set("key", selectVal);
-                    u.searchParams.set("expand", expandVal);
-                    window.history.replaceState({}, "", u.toString());
-                }
-                catch (_)
-                {
-                }
-
-                // Re-run selection pipeline (creation-aware)
-                try
-                {
-                    querySelectionApplied = false;
-                    selectionRetryCount = 0;
-                    applyQuerySelection();
-                }
-                catch (_)
-                {
-                }
-
-                return true;
-            }
-            catch (_)
+            if (!$marker.length)
             {
                 return false;
             }
+
+            var selectVal = $marker.attr("data-select") || "";
+            var expandVal = $marker.attr("data-expand") || "";
+            var removeKey = $marker.attr("data-remove") || "";
+            var nodeJson = $marker.attr("data-node") || "";
+
+            if (!selectVal || !expandVal)
+            {
+                return false;
+            }
+
+            var tree = getTree();
+            if (!tree)
+            {
+                return false;
+            }
+
+            // Normalize code key
+            if (selectVal.indexOf("code:") !== 0)
+            {
+                selectVal = "code:" + selectVal;
+            }
+
+            function isTypeSyntheticNode(n)
+            {
+                if (!n) { return false; }
+                var k = n.key || "";
+                var d = n.data || {};
+                return (k.indexOf("type:") === 0) || d.syntheticKind === "type" || d.isTypeContext === true;
+            }
+
+            function collectParents(key)
+            {
+                var list = [];
+                try
+                {
+                    var root = tree.getRootNode();
+                    if (!root) { return list; }
+                    root.visit(function (n)
+                    {
+                        if (n && n.key === key)
+                        {
+                            list.push(n);
+                        }
+                        return true;
+                    });
+                }
+                catch (ex)
+                {
+                }
+                return list;
+            }
+
+            function chooseParentInstance(key)
+            {
+                var all = collectParents(key);
+                if (all.length === 0) { return null; }
+                if (all.length === 1) { return all[0]; }
+
+                // Prefer instance under ROOT without a type synthetic ancestor
+                var rootKey = (typeof ROOT_KEY !== "undefined" && ROOT_KEY) ? ROOT_KEY : "__ROOT__";
+                function chainHas(node, testKey)
+                {
+                    var cur = node;
+                    while (cur)
+                    {
+                        if (cur.key === testKey) { return true; }
+                        try
+                        {
+                            cur = cur.getParent ? cur.getParent() : null;
+                        }
+                        catch (ex)
+                        {
+                            cur = null;
+                        }
+                    }
+                    return false;
+                }
+
+                function hasTypeAncestor(node)
+                {
+                    var cur = node;
+                    var skipFirst = true;
+                    while (cur)
+                    {
+                        if (!skipFirst && isTypeSyntheticNode(cur))
+                        {
+                            return true;
+                        }
+                        skipFirst = false;
+                        try
+                        {
+                            cur = cur.getParent ? cur.getParent() : null;
+                        }
+                        catch (ex)
+                        {
+                            cur = null;
+                        }
+                    }
+                    return false;
+                }
+                for (var i = 0; i < all.length; i++)
+                {
+                    if (chainHas(all[i], rootKey) && !hasTypeAncestor(all[i]))
+                    {
+                        return all[i];
+                    }
+                }
+                for (var j = 0; j < all.length; j++)
+                {
+                    if (!hasTypeAncestor(all[j]))
+                    {
+                        return all[j];
+                    }
+                }
+                return all[0];
+            }
+
+
+        function deriveCodeSiblingTemplate(parentNode)
+        {
+            try
+            {
+                if (!parentNode || !parentNode.children) { return null; }
+                for (var i = 0; i < parentNode.children.length; i++)
+                {
+                    var ch = parentNode.children[i];
+                    if (!ch || !ch.key || ch.key.indexOf("code:") !== 0) { continue; }
+                    // Use the full HTML title of the first existing code node as template
+                    if (typeof ch.title === "string" && ch.title.length > 0)
+                    {
+                        return ch.title;
+                    }
+                }
+            }
+            catch (ex)
+            {
+            }
+            return null;
+        }
+
+        function buildFormattedCodeTitle(spec, siblingTemplate)
+        {
+            // spec.key is "code:XXXX"
+            var rawCode = spec.key.replace(/^code:/, "");
+            var desc = (spec.data && (spec.data.cashDescription || spec.data.description)) || rawCode;
+
+            // If we have a sibling template, try to replace code and description
+            if (siblingTemplate && typeof siblingTemplate === "string")
+            {
+                var html = siblingTemplate;
+
+                // Replace any occurrence of previous code in data-* attributes or text segments
+                // BASIC patterns (defensive; adjust if your template differs):
+                html = html.replace(/data-code="[^"]*"/, 'data-code="' + rawCode + '"');
+
+                // Replace plain code tokens inside spans (common pattern: might be "C12345 - Description")
+                // Try a conservative replacement only if the old sibling code is detectable.
+                // We cannot know old sibling code here, so instead, if template ends with text between >...<, override innerText.
+                var textMatch = html.match(/>([^<>]*)<\/span>\s*$/);
+                if (textMatch)
+                {
+                    var newText = desc;
+                    html = html.replace(/>([^<>]*)<\/span>\s*$/, '>' + newText + '</span>');
+                }
+
+                return html;
+            }
+
+            // Fallback minimal formatting; adjust classes if your server emits different ones
+            return "<span class='tc-code'><i class='bi bi-dot'></i> " + escapeHtml(desc) + "</span>";
+        }
+
+        function escapeHtml(s)
+        {
+            if (s == null) { return ""; }
+            return String(s)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+            // Deletion flow: remove node and activate parent
+            if (removeKey)
+            {
+                if (removeKey.indexOf("code:") !== 0)
+                {
+                    removeKey = "code:" + removeKey;
+                }
+
+                var removedParent = null;
+                try
+                {
+                    var root = tree.getRootNode();
+                    if (root)
+                    {
+                        root.visit(function (n)
+                        {
+                            if (n && n.key === removeKey)
+                            {
+                                try
+                                {
+                                    removedParent = n.getParent ? n.getParent() : null;
+                                }
+                                catch (ex)
+                                {
+                                    removedParent = null;
+                                }
+                                try
+                                {
+                                    n.remove();
+                                }
+                                catch (exRm)
+                                {
+                                }
+                                return false;
+                            }
+                            return true;
+                        });
+                    }
+                }
+                catch (exWalk)
+                {
+                }
+
+                var parentNode = removedParent || chooseParentInstance(expandVal) || tree.getNodeByKey(expandVal);
+                if (parentNode)
+                {
+                    try
+                    {
+                        parentNode.setActive(true);
+                        persistActiveKey(parentNode);
+                        if (!isMobile())
+                        {
+                            loadDetails(parentNode);
+                        }
+                        else
+                        {
+                            updateActionBar(parentNode);
+                        }
+                    }
+                    catch (exAct)
+                    {
+                    }
+                    querySelectionApplied = true;
+                    return true;
+                }
+
+                // Fallback: pipeline
+                querySelectionApplied = false;
+                selectionRetryCount = 0;
+                applyQuerySelection();
+                return true;
+            }
+
+            // Creation flow: if we have JSON spec, insert directly without waiting for reload
+            var parentForCreate = chooseParentInstance(expandVal) || tree.getNodeByKey(expandVal);
+            if (parentForCreate && nodeJson)
+            {
+                var spec = null;
+                try
+                {
+                    spec = JSON.parse(nodeJson);
+                }
+                catch (exParse)
+                {
+                    spec = null;
+                }
+
+                if (spec && spec.key && !tree.getNodeByKey(spec.key))
+                {
+                    // Fancytree expected structure
+                    var siblingTemplate = deriveCodeSiblingTemplate(parentForCreate);
+                    var formattedTitle = buildFormattedCodeTitle(spec, siblingTemplate);
+
+                    var siblingCodeNode = null;
+
+                    try
+                    {
+                        if (parentForCreate && parentForCreate.children)
+                        {
+                            for (var si = 0; si < parentForCreate.children.length; si++)
+                            {
+                                var sc = parentForCreate.children[si];
+                                if (sc && sc.key && sc.key.indexOf("code:") === 0)
+                                {
+                                    siblingCodeNode = sc;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch (exSiblingInit)
+                    {
+                        siblingCodeNode = null;
+                    }
+
+                    // IMPORTANT: include icon:false so Fancytree never renders the default "document" icon.
+                    // Also copy extraClasses if sibling has them (visual parity).
+                    var newNodeData =
+                    {
+                        title: formattedTitle,
+                        key: spec.key,
+                        folder: false,
+                        lazy: false,
+                        icon: false, // suppress built-in icon immediately
+                        extraClasses: siblingCodeNode && siblingCodeNode.extraClasses ? siblingCodeNode.extraClasses : "",
+                        data: (function ()
+                        {
+                            var d = spec.data || {};
+                            if (!d.nodeType) { d.nodeType = "code"; }
+                            if (typeof d.isEnabled === "undefined" && siblingCodeNode && siblingCodeNode.data)
+                            {
+                                d.isEnabled = siblingCodeNode.data.isEnabled;
+                            }
+                            return d;
+                        })()
+                    };
+
+                    // Ensure parent expanded so it renders immediately
+                    function afterExpand()
+                    {
+                        try
+                        {
+                            parentForCreate.addChildren([newNodeData]);
+                        }
+                        catch (exAdd)
+                        {
+                        }
+
+                        var created = tree.getNodeByKey(spec.key);
+                        if (created)
+                        {
+                            try
+                            {
+                                // Ensure icon property persisted
+                                created.icon = false;
+
+                                // If template included its own <i>, we keep it; remove any auto-inserted .fancytree-icon span.
+                                // Fancytree sometimes renders before icon:false takes effect on manual addChildren; do a DOM cleanup.
+                                var $li = $(created.span).closest("li");
+                                $li.find("> span.fancytree-node > span.fancytree-icon").remove();
+
+                                // Some themes add an <img> or <span class='fancytree-expander'> sibling followed by icon; double-check:
+                                var $iconSiblings = $(created.span).siblings(".fancytree-icon");
+                                if ($iconSiblings.length)
+                                {
+                                    $iconSiblings.remove();
+                                }
+
+                                // Final render to normalise
+                                created.render(false);
+                            }
+                            catch (exIconFix)
+                            {
+                            }
+
+                            // Activate and show details/action bar
+                            try
+                            {
+                                created.setActive(true);
+                                persistActiveKey(created);
+                                if (isMobile())
+                                {
+                                    updateActionBar(created);
+                                }
+                                else
+                                {
+                                    loadDetails(created);
+                                }
+                            }
+                            catch (exAct)
+                            {
+                            }
+
+                            querySelectionApplied = true;
+                            return true;
+                        }
+
+                        // Fallback pipeline if not found
+                        querySelectionApplied = false;
+                        selectionRetryCount = 0;
+                        applyQuerySelection();
+                        return true;
+                    }
+
+                    if (parentForCreate.folder && !parentForCreate.expanded)
+                    {
+                        var expRes = parentForCreate.setExpanded(true);
+                        if (expRes && typeof expRes.then === "function")
+                        {
+                            expRes.then(afterExpand, afterExpand);
+                        }
+                        else if (expRes && expRes.done)
+                        {
+                            expRes.done(afterExpand).fail(afterExpand);
+                        }
+                        else
+                        {
+                            afterExpand();
+                        }
+                    }
+                    else
+                    {
+                        afterExpand();
+                    }
+                    return true;
+                }
+            }
+
+            // No direct spec or already present: fall back to existing polling logic (minimal)
+            var parentNode = parentForCreate;
+            if (parentNode)
+            {
+                var tries = 0;
+                var maxTries = (typeof CODE_POLL_MAX_TRIES !== "undefined" ? CODE_POLL_MAX_TRIES : 12);
+                var intervalMs = (typeof CODE_POLL_INTERVAL_MS !== "undefined" ? CODE_POLL_INTERVAL_MS : 150);
+
+                function poll()
+                {
+                    var found = tree.getNodeByKey(selectVal);
+                    if (found)
+                    {
+                        try
+                        {
+                            found.setActive(true);
+                            persistActiveKey(found);
+                            if (!isMobile())
+                            {
+                                loadDetails(found);
+                            }
+                            else
+                            {
+                                updateActionBar(found);
+                            }
+                        }
+                        catch (exSel)
+                        {
+                        }
+                        querySelectionApplied = true;
+                        return;
+                    }
+
+                    if (tries >= maxTries)
+                    {
+                        querySelectionApplied = false;
+                        selectionRetryCount = 0;
+                        applyQuerySelection();
+                        return;
+                    }
+
+                    tries++;
+                    var reloadPromise = null;
+                    try
+                    {
+                        if (parentNode.reloadChildren)
+                        {
+                            var url = (typeof nodesUrl !== "undefined" && nodesUrl)
+                                ? nocache(appendQuery(nodesUrl, "id", parentNode.key))
+                                : null;
+                            reloadPromise = url ? parentNode.reloadChildren({ url: url }) : parentNode.reloadChildren();
+                        }
+                    }
+                    catch (exReload)
+                    {
+                    }
+
+                    if (reloadPromise && typeof reloadPromise.then === "function")
+                    {
+                        reloadPromise.then(function () { setTimeout(poll, intervalMs); }, function () { setTimeout(poll, intervalMs); });
+                    }
+                    else if (reloadPromise && reloadPromise.done)
+                    {
+                        reloadPromise.done(function () { setTimeout(poll, intervalMs); }).fail(function () { setTimeout(poll, intervalMs); });
+                    }
+                    else
+                    {
+                        setTimeout(poll, intervalMs);
+                    }
+                }
+
+                if (parentNode.folder && !parentNode.expanded)
+                {
+                    var ex = parentNode.setExpanded(true);
+                    if (ex && typeof ex.then === "function")
+                    {
+                        ex.then(poll, poll);
+                    }
+                    else if (ex && ex.done)
+                    {
+                        ex.done(poll).fail(poll);
+                    }
+                    else
+                    {
+                        poll();
+                    }
+                }
+                else
+                {
+                    poll();
+                }
+                return true;
+            }
+
+            // Absolute fallback
+            querySelectionApplied = false;
+            selectionRetryCount = 0;
+            applyQuerySelection();
+            return true;
         }
 
         // Observe #detailsPane so POST-backs that replace its HTML still trigger selection
@@ -1857,6 +2283,26 @@ window.CategoryTree = (function ()
                         {
                             try
                             {
+                                if (querySelectionApplied)
+                                {
+                                    var marker = pane.querySelector("#tcEmbedResult");
+                                    if (marker)
+                                    {
+                                        var sel = marker.getAttribute("data-select") || "";
+                                        if (sel && !getTree().getNodeByKey(sel))
+                                        {
+                                            // allow; fall through
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        continue;
+                                    }
+                                }
                                 tryApplyEmbedMarker($(pane));
                             }
                             catch (_)
@@ -1893,7 +2339,7 @@ window.CategoryTree = (function ()
                 var isRoot = kinds.isRoot === true;
                 var isDiscRoot = kinds.isDisconnect === true;
                 var isTypeNode = (typeof key === "string" && key.indexOf("type:") === 0)
-                    || (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
+                                 || (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
                 var inTypeCtx = (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
 
                 var catType = (typeof data.categoryType !== "undefined") ? Number(data.categoryType) : NaN;
@@ -1925,9 +2371,11 @@ window.CategoryTree = (function ()
                     });
                 }
 
+                // Include all possible actions (now with createCategory/createTotal/createCashCode/newTotal, addExisting variants)
                 var known = [
                     "edit","delete","toggleEnabled",
-                    "addCategory","addCashCode","addTotal",
+                    "addCategory","createCategory","newTotal","createTotal",
+                    "addCashCode","createCashCode",
                     "move","moveUp","moveDown","setProfitRoot","setVatRoot","expand","collapse"
                 ];
                 for (var i = 0; i < known.length; i++)
@@ -1942,12 +2390,18 @@ window.CategoryTree = (function ()
 
                 var order = [];
 
+                // Code leaf (details card shows only edit/toggle/delete)
                 if (isCode)
                 {
                     dv("edit", isAdmin);
                     dv("delete", isAdmin);
                     dv("toggleEnabled", isAdmin);
-                    order = ["edit", "delete", "toggleEnabled"];
+                    dv("createCashCode", isAdmin);  // create new code under same category
+                    dv("addCashCode", isAdmin);     // attach existing code under same category
+
+                    setButtonText($pane, "createCashCode", "New Cash Code");
+
+                    order = ["edit","delete","toggleEnabled","createCashCode","addCashCode"];
                     arrangeDetailsButtons($pane, order);
                     setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                     return;
@@ -1958,119 +2412,106 @@ window.CategoryTree = (function ()
                     return;
                 }
 
+                // Type context (synthetic parents) – restrict
                 if (inTypeCtx)
                 {
                     dv("edit", isAdmin);
                     dv("delete", isAdmin);
                     dv("toggleEnabled", isAdmin);
-                    dv("addCashCode", isAdmin);
+                    dv("addCashCode", isAdmin);   // attach existing only
+                    // creation of new totals/categories suppressed in type view
                     dv("move", isAdmin);
 
-                    order = ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
+                    order = ["edit","delete","toggleEnabled","addCashCode","move"];
                     arrangeDetailsButtons($pane, order);
                     setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                     return;
                 }
 
-                if (parentKeyNow === DISC_KEY)
+                // Unified helper for Total category UI
+                function showTotalCategory()
                 {
                     dv("edit", isAdmin);
                     dv("delete", isAdmin);
                     dv("toggleEnabled", isAdmin);
 
+                    dv("addCategory", isAdmin);        // attach existing category
+                    dv("createTotal", isAdmin);        // new total (canonical)
+                    dv("createCategory", isAdmin);     // new category child
+
+                    dv("move", isAdmin);
+
+                    setButtonText($pane, "addCategory", "Add Category");
+                    setButtonText($pane, "createTotal", "New Total");
+                    setButtonText($pane, "createCategory", "New Category");
+
+                    order = ["edit","delete","toggleEnabled","addCategory","createTotal","createCategory","move"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                }
+
+                // Unified helper for Cash Code category UI
+                function showCashCodeCategory()
+                {
+                    dv("edit", isAdmin);
+                    dv("delete", isAdmin);
+                    dv("toggleEnabled", isAdmin);
+
+                    dv("addCashCode", isAdmin);        // attach existing code
+                    dv("createCashCode", isAdmin);     // new code
+
+                    dv("move", isAdmin);
+
+                    setButtonText($pane, "addCashCode", "Add Cash Code");
+                    setButtonText($pane, "createCashCode", "New Cash Code");
+
+                    order = ["edit","delete","toggleEnabled","addCashCode","createCashCode","move"];
+                    arrangeDetailsButtons($pane, order);
+                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                }
+
+                // Disconnected context
+                if (parentKeyNow === DISC_KEY)
+                {
                     if (isCatTotal)
                     {
-                        // Totals: show Add Category + Add Total; hide Add Cash Code
-                        dv("addCategory", isAdmin);
-                        dv("addTotal", isAdmin);
-
-                        // Relabel buttons for clarity
-                        setButtonText($pane, "addCategory", "Add Category");
-                        setButtonText($pane, "addTotal", "Add Total");
-
-                        dv("move", isAdmin);
-                        order = ["edit", "delete", "toggleEnabled", "addCategory", "addTotal", "move"];
+                        showTotalCategory();
                     }
                     else if (isCatCashCode)
                     {
-                        dv("addCashCode", isAdmin);
-                        dv("move", isAdmin);
-                        order = ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
+                        showCashCodeCategory();
                     }
-
-                    arrangeDetailsButtons($pane, order);
-                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                     return;
                 }
 
+                // Root context
                 if (parentKeyNow === ROOT_KEY)
                 {
                     if (isCatTotal)
                     {
-                        dv("edit", isAdmin);
-                        dv("delete", isAdmin);
-                        dv("toggleEnabled", isAdmin);
-
-                        dv("addCategory", isAdmin);
-                        dv("addTotal", isAdmin);
-
-                        // Relabel
-                        setButtonText($pane, "addCategory", "Add Category");
-                        setButtonText($pane, "addTotal", "Add Total");
-
-                        dv("move", isAdmin);
+                        showTotalCategory();
+                        // Root-level extras (Set Profit/VAT Root)
                         dv("setProfitRoot", isAdmin);
                         dv("setVatRoot", isAdmin);
-
-                        order = ["edit", "delete", "toggleEnabled", "addCategory", "addTotal", "move", "setProfitRoot", "setVatRoot"];
+                        order = ["edit","delete","toggleEnabled","addCategory","createTotal","createCategory","move","setProfitRoot","setVatRoot"];
                         arrangeDetailsButtons($pane, order);
-                        setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                     }
                     else if (isCatCashCode)
                     {
-                        dv("delete", isAdmin);
-                        dv("toggleEnabled", isAdmin);
-                        dv("addCashCode", isAdmin);
-                        dv("move", isAdmin);
-
-                        order = ["delete", "toggleEnabled", "addCashCode", "move"];
-                        arrangeDetailsButtons($pane, order);
-                        setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                        // Root-level cash code category: include edit as per standard
+                        showCashCodeCategory();
                     }
                     return;
                 }
 
-                // Normal totals context
+                // Normal (mapped) context
                 if (isCatTotal)
                 {
-                    dv("edit", isAdmin);
-                    dv("delete", isAdmin);
-                    dv("toggleEnabled", isAdmin);
-
-                    dv("addCategory", isAdmin);
-                    dv("addTotal", isAdmin);
-
-                    // Relabel
-                    setButtonText($pane, "addCategory", "Add Category");
-                    setButtonText($pane, "addTotal", "Add Total");
-
-                    dv("move", isAdmin);
-
-                    order = ["edit", "delete", "toggleEnabled", "addCategory", "addTotal", "move"];
-                    arrangeDetailsButtons($pane, order);
-                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    showTotalCategory();
                 }
                 else if (isCatCashCode)
                 {
-                    dv("edit", isAdmin);
-                    dv("delete", isAdmin);
-                    dv("toggleEnabled", isAdmin);
-                    dv("addCashCode", isAdmin);
-                    dv("move", isAdmin);
-
-                    order = ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
-                    arrangeDetailsButtons($pane, order);
-                    setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
+                    showCashCodeCategory();
                 }
             }
             catch (_)
@@ -2607,13 +3048,18 @@ window.CategoryTree = (function ()
         {
             switch (action)
             {
-                case "addCategory":
-                    return ["[data-action='addExistingCategory']", "[data-action='addCategory']"];
-                case "addCashCode":
-                    return ["[data-action='addExistingCashCode']", "[data-action='addCashCode']", "[data-action='addExistingCode']"];
-                case "addTotal":
-                    // Prefer Add Existing Category if present, else fall back to New Total
-                    return ["[data-action='addExistingCategory']", "[data-action='createTotal']"];
+                case "addCategory":          // attach existing category (mapping)
+                    return ["[data-action='addExistingCategory']"];
+                case "createCategory":       // create a new child category under a Total
+                    return ["[data-action='createCategory']"];
+                case "createTotal":          // canonical new Total action
+                    return ["[data-action='createTotal']"];
+                case "newTotal":             // legacy/migrated name mapped to createTotal
+                    return ["[data-action='createTotal']"];
+                case "addCashCode":          // attach existing cash code to category
+                    return ["[data-action='addExistingCashCode']", "[data-action='addExistingCode']"];
+                case "createCashCode":       // create new cash code
+                    return ["[data-action='createCashCode']"];
                 case "expand":
                     return ["[data-action='expandSelected']"];
                 case "collapse":
@@ -3108,7 +3554,7 @@ window.CategoryTree = (function ()
                 setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
             }
             // Category nodes
-            else if (isCat)
+            else if (isCat) 
             {
                 if (inTypeCtx)
                 {
@@ -3124,25 +3570,20 @@ window.CategoryTree = (function ()
                     order = ["view"];
                     if (isCatTotal)
                     {
-                        // EXACT requirement: Totals -> no Add Cash Code; show Add Total (existing) AND keep Add Category
-                        pushIf(isAdmin, "createTotal");          // New Total
-                        pushIf(isAdmin, "createCategory");       // New Category
-                        pushIf(isAdmin, "addExistingCategory");  // Add Total (labelled below)
-                        // NO cash-code actions here
+                        pushIf(isAdmin, "createTotal");
+                        pushIf(isAdmin, "createCategory");
+                        pushIf(isAdmin, "addExistingCategory");
                     }
                     else if (isCatCashCode)
                     {
-                        // Cash Code Category -> allow code actions only
                         pushIf(isAdmin, "createCashCode");
                         pushIf(isAdmin, "addExistingCashCode");
                     }
-
                     pushIf(isAdmin, "edit");
                     pushIf(isAdmin, "delete");
                     pushIf(isAdmin, "toggleEnabled");
                     pushIf(isAdmin, "move");
-
-                    groups = isCatCashCode ? [4, 7] : [3, 6];
+                    groups = [ (isCatTotal ? 3 : 3) ];
                     renderMenuFromTemplates($menu, order, groups);
                     setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                 }
@@ -3151,36 +3592,34 @@ window.CategoryTree = (function ()
                     if (isCatTotal)
                     {
                         order = ["view"];
-                        pushIf(isAdmin, "createTotal");          // New Total
-                        pushIf(isAdmin, "createCategory");       // New Category
+                        pushIf(isAdmin, "createTotal");
+                        pushIf(isAdmin, "createCategory");
+                        pushIf(isAdmin, "addExistingCategory");
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addExistingCategory");  // Add Total (labelled below)
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected", "collapseSelected");
+                        order.push("expandSelected","collapseSelected");
                         pushIf(isAdmin, "setProfitRoot");
                         pushIf(isAdmin, "setVatRoot");
-                        groups = [3, 6, 9, 13];
-                        renderMenuFromTemplates($menu, order, groups);
+                        renderMenuFromTemplates($menu, order, [3, 6, 9, 13]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                     else if (isCatCashCode)
                     {
                         order = ["view"];
                         pushIf(isAdmin, "createCashCode");
+                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected", "collapseSelected");
-                        groups = [2, 5, 7];
-                        renderMenuFromTemplates($menu, order, groups);
+                        order.push("expandSelected","collapseSelected");
+                        renderMenuFromTemplates($menu, order, [2,5,7]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                 }
@@ -3189,34 +3628,32 @@ window.CategoryTree = (function ()
                     if (isCatTotal)
                     {
                         order = ["view"];
-                        pushIf(isAdmin, "createTotal");          // New Total
-                        pushIf(isAdmin, "createCategory");       // New Category
+                        pushIf(isAdmin, "createTotal");
+                        pushIf(isAdmin, "createCategory");
+                        pushIf(isAdmin, "addExistingCategory");
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addExistingCategory");  // Add Total (labelled below)
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected", "collapseSelected");
-                        groups = [3, 6, 9];
-                        renderMenuFromTemplates($menu, order, groups);
+                        order.push("expandSelected","collapseSelected");
+                        renderMenuFromTemplates($menu, order, [3,6,9]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                     else if (isCatCashCode)
                     {
                         order = ["view"];
                         pushIf(isAdmin, "createCashCode");
+                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "edit");
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
-                        pushIf(isAdmin, "addExistingCashCode");
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected", "collapseSelected");
-                        groups = [2, 5, 7];
-                        renderMenuFromTemplates($menu, order, groups);
+                        order.push("expandSelected","collapseSelected");
+                        renderMenuFromTemplates($menu, order, [2,5,7]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                 }
@@ -3254,6 +3691,19 @@ window.CategoryTree = (function ()
             if (parentKeyNow !== ROOT_KEY)
             {
                 $menu.find("[data-action='setProfitRoot'],[data-action='setVatRoot']").hide();
+            }
+
+            // NEW: Desktop does not need 'View' in context menu
+            if (!isMobile())
+            {
+                try
+                {
+                    $menu.find("[data-action='view']").remove();
+                    normalizeDividers($menu);
+                }
+                catch (_)
+                {
+                }
             }
 
             // Position & show
@@ -3664,16 +4114,13 @@ window.CategoryTree = (function ()
                     case "addExistingCashCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-
-                        // Use the node itself if it is a folder; otherwise its parent (mirrors addCategory)
-                        var targetCategory = (node && node.folder) ? key : parentKey;
+                        // Allow from category or code leaf (use parent if leaf)
+                        var targetCategory = node.folder ? key : parentKey;
                         if (!targetCategory)
                         {
-                            alert("Select a category to add an existing code under");
+                            alert("Select a category first");
                             break;
                         }
-
-                        // Open embedded AddCashCode page (idempotent attach/move)
                         openAction("AddCashCode", "", targetCategory);
                         break;
                     }
@@ -4058,6 +4505,7 @@ window.CategoryTree = (function ()
             });
         }
 
+        // add createTotal/createCashCode cases for desktop buttons
         function bindDetailsPaneHandlers()
         {
             var $pane = $("#detailsPane");
@@ -4084,32 +4532,10 @@ window.CategoryTree = (function ()
                     parentKey = (p && p.key) ? p.key : "";
                 }
 
-                function refreshAnchors()
-                {
-                    var t = getTree();
-                    if (!t) { return; }
-                    var top = t.getRootNode();
-                    if (!top || !top.children) { return; }
-                    for (var i = 0; i < top.children.length; i++)
-                    {
-                        var n = top.children[i];
-                        if (n && n.expanded)
-                        {
-                            reloadIfExpandedNode(n, { url: nocache(appendQuery(nodesUrl, 'id', n.key)) });
-                        }
-                    }
-                }
-
-                function callStub(handler, extra)
-                {
-                    return postJsonGlobal(handler, Object.assign({ key: key, parentKey: parentKey }, extra || {}));
-                }
-
                 switch (action)
                 {
                     case "view":
                     {
-                        if (!node) { alert("Select a node first"); break; }
                         if (isMobile())
                         {
                             var url = detailsUrl + "?key=" + encodeURIComponent(key);
@@ -4122,30 +4548,21 @@ window.CategoryTree = (function ()
                         }
                         break;
                     }
+
                     case "edit":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
-
-                        var kinds3 = getNodeKinds(node);
-
-                        if (kinds3.isCode)
+                        if (kinds.isCode)
                         {
                             var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
                             openAction("EditCashCode", raw);
                             break;
                         }
-                        if (kinds3.data && kinds3.data.categoryType === CATEGORYTYPE_CASHTOTAL)
+                        if (kinds.data && kinds.data.categoryType === 1)
                         {
                             openAction("EditTotal", key);
                             break;
                         }
-                        if (kinds3.data && kinds3.data.categoryType === 0)
-                        {
-                            openAction("EditCategory", key);
-                            break;
-                        }
-
                         openAction("EditCategory", key);
                         break;
                     }
@@ -4154,42 +4571,62 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node.folder) { alert("Select a category"); break; }
-
                         openAction("AddCategory", "", key);
                         break;
                     }
 
                     case "addExistingCashCode":
                     {
-                    if (!isAdmin) { alert("Insufficient privileges"); break; }
-                    if (!node.folder) { alert("Select a category"); break; }
-
-                    // Open embedded AddCashCode with this category as parent
-                    openAction("AddCashCode", "", key);
-                    break;
-                    }
-
-                    case "move":
-                    {
-                        if (!isAdmin)
-                        {
-                            alert("Insufficient privileges");
-                            break;
-                        }
-                        if (!node.folder)
-                        {
-                            alert("Select a category");
-                            break;
-                        }
-
-                        openAction("Move", key, parentKey);
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node.folder) { alert("Select a category"); break; }
+                        openAction("AddCashCode", "", key);
                         break;
                     }
+
+                    case "createTotal":
+                    case "newTotal": // legacy mapped
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node.folder) { alert("Select a category"); break; }
+                        openAction("CreateTotal", "", key);
+                        break;
+                    }
+
+                    case "createCategory":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node.folder) { alert("Select a category"); break; }
+                        openAction("CreateCategory", "", key);
+                        break;
+                    }
+
+                    case "createCashCode":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        // If current node is a code leaf, create a sibling under its parent
+                        var targetCategory = node.folder ? key : parentKey;
+                        if (!targetCategory)
+                        {
+                            alert("Select a parent category");
+                            break;
+                        }
+                        if (kinds.isCode)
+                        {
+                            // Provide sibling hint if required by server
+                            var rawSibling = (key.indexOf("code:") === 0) ? key.substring(5) : key;
+                            openAction("CreateCashCode", targetCategory, null, { siblingCashCode: rawSibling });
+                        }
+                        else
+                        {
+                            openAction("CreateCashCode", targetCategory);
+                        }
+                        break;
+                    }
+
                     case "toggleEnabled":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
-
                         postJsonGlobal("SetEnabled", { key: key, enabled: makeEnabled })
                             .done(function (res)
                             {
@@ -4197,7 +4634,6 @@ window.CategoryTree = (function ()
                                 {
                                     setNodeEnabledInUi(node, !!makeEnabled, !kinds.isCode);
                                     loadDetails(node);
-                                    refreshTopAnchors();
                                 }
                                 else
                                 {
@@ -4215,63 +4651,14 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-                    case "makePrimary":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!parentKey) { alert("Open from a parent context to make primary."); break; }
-
-                        postJsonGlobal("MakePrimary", { key: key, parentKey: parentKey })
-                        .done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
-                            {
-                                var p = tree.getNodeByKey(parentKey);
-                                reloadIfExpandedNode(p);
-                                refreshTopAnchors();
-                                loadDetails(tree.getActiveNode());
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
-                        break;
-                    }
-
-                    case "setProfitRoot":
-                    case "setVatRoot":
+                    case "move":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node.folder) { alert("Select a category"); break; }
-
-                        var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
-                        if (!confirm("Set " + key + " as the " + kind + " primary root?")) { break; }
-
-                        postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
-                        .done(function (res)
-                        {
-                            alert((res && res.message) || "Not Yet Implemented");
-                            if (res && res.success)
-                            {
-                                refreshTopAnchors();
-                                loadDetails(tree.getActiveNode());
-                            }
-                        }).fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                        openAction("Move", key, parentKey);
                         break;
                     }
-
-                    case "createCategory":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-
-                        // Determine parent target (use current node if folder, otherwise parentKey)
-                        var targetParent = (node && node.folder) ? key : parentKey;
-                        if (!targetParent)
-                        {
-                            alert("Select a parent category");
-                            break;
-                        }
-                        openAction("CreateCategory", "", targetParent);
-                        break;
-                    }
-                                    }
+                }
             });
         }
 
@@ -4711,13 +5098,11 @@ window.CategoryTree = (function ()
                     return;
                 }
 
-                // Normalize key to code: prefix
                 if (codeKey.indexOf("code:") !== 0)
                 {
                     codeKey = "code:" + codeKey;
                 }
 
-                // Update URL (no navigation) so refresh/bookmark preserves selection
                 try
                 {
                     var u = new URL(window.location.href);
@@ -4726,24 +5111,25 @@ window.CategoryTree = (function ()
                     u.searchParams.set("expand", parentKey);
                     history.replaceState({}, "", u.toString());
                 }
-                catch (_)
+                catch (_) {}
+
+                var tree = getTree();
+                if (tree && tree.getNodeByKey(codeKey))
                 {
+                    // Node already present: just activate without pipeline storm
+                    activateNodeFinal(tree.getNodeByKey(codeKey));
+                    return;
                 }
 
-                // Reset internal guards and re-run selection pipeline with current params
                 try
                 {
                     querySelectionApplied = false;
                     selectionRetryCount = 0;
                     applyQuerySelection();
                 }
-                catch (_)
-                {
-                }
+                catch (_) {}
             }
-            catch (_)
-            {
-            }
+            catch (_) {}
         };
 
         // Shim: embedded binder lives in categoryTree.embedded.js and auto-binds at DOMContentLoaded.

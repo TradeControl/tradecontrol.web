@@ -5,49 +5,13 @@
     var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
     Layout = isEmbedded ? null : "_Layout";
 }
-@if (isEmbedded && ViewData["CreatedCashCode"] is string cc && ViewData["ParentKey"] is string parentKey)
-{
-    <div id="tcEmbedResult" data-select="code:@cc" data-expand="@parentKey"></div>
-}
 
 @if (Model.OperationSucceeded && isEmbedded)
 {
-    <div id="createCashCodeResult"
-         data-key="@Model.NewKey"
-         data-parent="@Model.NewParentKey"
-         data-category="@Model.CategoryCode"
-         data-name="@Model.NewName"
-         data-polarity="@Model.NewPolarity"
-         data-categorytype="@Model.NewCategoryType"
-         data-isenabled="@Model.NewIsEnabled"
-         data-cashcode="@Model.NewCashCode"
+    <div id="tcEmbedResult"
+         data-select="code:@Model.NewCashCode"
+         data-expand="@Model.CategoryCode"
          data-node='@Html.Raw(Model.NewNodeJson)'></div>
-
-    <script>
-        (function () {
-            try {
-                var el = document.getElementById("createCashCodeResult");
-                if (!el) return;
-
-                var code = el.getAttribute("data-cashcode") || "";
-                var parentRaw = el.getAttribute("data-parent") || "";
-                var nodeJson = el.getAttribute("data-node") || "";
-                if (!code || !parentRaw || !nodeJson) return;
-
-                // Build candidate parent keys: prefer Cash Code Category (e.g. TC2) over Total (e.g. T2)
-                var candidates = [];
-                var m = /^T(\d+)$/.exec(parentRaw);
-                if (m) {
-                    candidates.push("TC" + m[1]); // likely the category that actually owns codes
-                }
-                candidates.push(parentRaw); // fallback to raw parent
-
-                if (window.CategoryTree && typeof window.CategoryTree.appendAndSelectCreatedCashCode === "function") {
-                    window.CategoryTree.appendAndSelectCreatedCode(code, candidates, nodeJson);
-                }
-            } catch (_) { }
-        })();
-    </script>
 }
 else
 {
@@ -110,8 +74,6 @@ else
                 window.tcTree.bindEmbeddedFormSubmit();
             }
         }
-        catch (_)
-        {
-        }
+        catch (_) { }
     </script>
 }

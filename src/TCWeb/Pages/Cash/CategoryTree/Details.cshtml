@@ -1,13 +1,26 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.CategoryTree.TreeDetailsModel
 @{
-    Layout = null;
+    var isEmbedded = string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
+    if (isEmbedded)
+    {
+        Layout = null;
+    }
 }
-@if (Model.NodeType == "category")
+
+@if (Model == null || string.IsNullOrWhiteSpace(Model.NodeType))
 {
-    @await Html.PartialAsync("_CategoryDetailsCard", Model.Category)
+    <div class="text-muted small px-2 py-1">No selection.</div>
 }
-else if (Model.NodeType == "code")
+else if (Model.NodeType == "code" && Model.Code != null)
 {
-    @await Html.PartialAsync("_CodeDetailsCard", Model.Code)
+    await Html.RenderPartialAsync("_CashCodeDetailsCard", Model.Code);
+}
+else if (Model.NodeType == "category" && Model.Category != null)
+{
+    await Html.RenderPartialAsync("_CategoryDetailsCard", Model.Category);
+}
+else
+{
+    <div class="text-muted small px-2 py-1">No details available.</div>
 }
