@@ -1,11 +1,27 @@
 @page
 @model TradeControl.Web.Pages.Cash.CategoryTree.TreeDetailsModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var isEmbedded = string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
     if (isEmbedded)
     {
         Layout = null;
     }
+}
+
+@if (!isEmbedded)
+{
+    <!-- Anti-forgery token for mobile AJAX (Toggle Enabled) -->
+    <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+    <!-- Load shared handlers when Details is opened standalone (mobile). No site-wide layout change required. -->
+    <script src="~/js/categoryTree.shared.js" asp-append-version="true"></script>
+    <script>
+        // Optional: enable debug in dev to see "[mobile/unified actions] bound"
+        if (window.location.hostname === "localhost") {
+            window.tcTree = window.tcTree || {};
+            window.tcTree.debug = true;
+        }
+    </script>
 }
 
 @if (Model == null || string.IsNullOrWhiteSpace(Model.NodeType))

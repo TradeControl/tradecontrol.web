@@ -1,130 +1,139 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
+using TradeControl.Web.Models;
+
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
     public class EditCashCodeModel : DI_BasePageModel
     {
         public EditCashCodeModel(NodeContext context) : base(context) { }
-        [BindProperty] public string CashCode { get; set; } = "";
-        [BindProperty] public string CashDescription { get; set; } = "";
-        [BindProperty] public bool IsEnabled { get; set; }
-        [BindProperty] public string ParentKey { get; set; } = "";
 
-        // optional: if editing influences title icon, we may track cash type
-        public short CashTypeCode { get; private set; }
+        [BindProperty(SupportsGet = true)]
+        public string CashCode { get; set; } = "";
 
+        [BindProperty]
+        public string CashDescription { get; set; } = "";
+
+        [BindProperty]
+        public string TaxCode { get; set; } = "";
+
+        [BindProperty]
+        public bool IsEnabled { get; set; }
+
+        public string CategoryCode { get; private set; } = "";
+        public SelectList TaxCodes { get; private set; }
         public bool OperationSucceeded { get; private set; }
-        public string ErrorMessage { get; private set; } = "";
 
-        public async Task<IActionResult> OnGetAsync(string key, bool embed = false)
+        // GET
+        public async Task<IActionResult> OnGetAsync()
         {
-            try
+            // Accept either key=code:XYZ or key=XYZ
+            if (string.IsNullOrWhiteSpace(CashCode))
             {
-                if (string.IsNullOrWhiteSpace(key))
+                var keyRaw = Request.Query["key"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(keyRaw))
                 {
-                    ErrorMessage = "Missing key.";
-                    return embed ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
+                    CashCode = keyRaw.StartsWith("code:") ? keyRaw.Substring(5) : keyRaw;
                 }
-
-                var codeRow = await NodeContext.Cash_tbCodes
-                    .Join(NodeContext.Cash_tbCategories,
-                          cd => cd.CategoryCode,
-                          ct => ct.CategoryCode,
-                          (cd, ct) => new { cd, ct })
-                    .Where(x => x.cd.CashCode == key)
-                    .Select(x => new {
-                        x.cd.CashCode,
-                        x.cd.CashDescription,
-                        x.cd.IsEnabled,
-                        Parent = x.cd.CategoryCode,
-                        CashType = x.ct.CashTypeCode
-                    })
-                    .FirstOrDefaultAsync();
-
-                if (codeRow == null)
-                {
-                    ErrorMessage = "Cash code not found.";
-                    return embed ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
-                }
-
-                CashCode = codeRow.CashCode;
-                CashDescription = codeRow.CashDescription;
-                IsEnabled = codeRow.IsEnabled != 0;
-                ParentKey = codeRow.Parent ?? "";
-                CashTypeCode = codeRow.CashType;
-
-                return Page();
             }
-            catch (Exception ex)
-            {
-                await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
-                return embed ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
-            }
+
+            if (string.IsNullOrWhiteSpace(CashCode))
+                return NotFound();
+
+            var code = await NodeContext.Cash_tbCodes
+                .Where(c => c.CashCode == CashCode)
+                .Select(c => new { c.CashCode, c.CashDescription, c.TaxCode, c.IsEnabled, c.CategoryCode })
+                .FirstOrDefaultAsync();
+
+            if (code == null)
+                return NotFound();
+
+            CashDescription = code.CashDescription;
+            TaxCode = code.TaxCode;
+            IsEnabled = code.IsEnabled != 0;
+            CategoryCode = code.CategoryCode;
+
+            await LoadTaxList(code.TaxCode);
+            return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync(bool embed = false)
+        // POST
+        public async Task<IActionResult> OnPostAsync()
         {
+            if (string.IsNullOrWhiteSpace(CashCode))
+            {
+                // Fallback to query/form key again
+                var keyRaw = Request.Query["key"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(keyRaw))
+                    CashCode = keyRaw.StartsWith("code:") ? keyRaw.Substring(5) : keyRaw;
+            }
+
+            if (string.IsNullOrWhiteSpace(CashCode))
+                return NotFound();
+
+            var code = await NodeContext.Cash_tbCodes
+                .Where(c => c.CashCode == CashCode)
+                .FirstOrDefaultAsync();
+
+            if (code == null)
+                return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                await LoadTaxList(TaxCode);
+                return Page();
+            }
+
+            // Validate selected tax
+            if (!await NodeContext.App_tbTaxCodes.AnyAsync(t => t.TaxCode == TaxCode))
+            {
+                ModelState.AddModelError(nameof(TaxCode), "Invalid Tax Code.");
+                await LoadTaxList(TaxCode);
+                return Page();
+            }
+
+            code.CashDescription = CashDescription;
+            code.TaxCode = TaxCode;
+            code.IsEnabled = IsEnabled ? (short)1 : (short)0;
+
+            await NodeContext.SaveChangesAsync();
+            OperationSucceeded = true;
+
+            var nodeKey = "code:" + CashCode;
+            var parentKey = code.CategoryCode;
+
             var isEmbedded =
-                embed
-                || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
-                || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
+                string.Equals(Request.Query["embed"], "1", System.StringComparison.OrdinalIgnoreCase) ||
+                (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", System.StringComparison.OrdinalIgnoreCase));
 
-            try
+            if (isEmbedded)
             {
-                if (string.IsNullOrWhiteSpace(CashCode))
-                {
-                    ErrorMessage = "Missing key.";
-                    return isEmbedded ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
-                }
-
-                var codeRow = await NodeContext.Cash_tbCodes
-                    .FirstOrDefaultAsync(c => c.CashCode == CashCode);
-
-                if (codeRow == null)
-                {
-                    ErrorMessage = "Cash code not found.";
-                    return isEmbedded ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
-                }
-
-                if (!string.IsNullOrWhiteSpace(CashDescription))
-                {
-                    codeRow.CashDescription = CashDescription.Trim();
-                }
-                codeRow.IsEnabled = IsEnabled ? (short)1 : (short)0;
-
-                NodeContext.Attach(codeRow).State = EntityState.Modified;
-                await NodeContext.SaveChangesAsync();
-
-                // resolve current parent + cash type for marker/title
-                var parentType = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == codeRow.CategoryCode)
-                    .Select(c => new { c.CashTypeCode })
-                    .FirstOrDefaultAsync();
-
-                ParentKey = codeRow.CategoryCode;
-                CashTypeCode = parentType?.CashTypeCode ?? 0;
-                OperationSucceeded = true;
-
-                if (isEmbedded)
-                {
-                    return Page();
-                }
-
-                return RedirectToPage("./Index", new { key = "code:" + CashCode, select = "code:" + CashCode, expand = ParentKey });
+                ViewData["EditMarkerKey"] = nodeKey;
+                ViewData["EditMarkerParent"] = parentKey;
+                ViewData["EditMarkerDesc"] = CashDescription;
+                ViewData["EditMarkerEnabled"] = code.IsEnabled;
+                await LoadTaxList(TaxCode); // Keep list for potential re-render
+                return Page();
             }
-            catch (Exception ex)
-            {
-                await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
-                return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
-            }
+
+            // Full page redirect (mobile): include selection hints
+            return RedirectToPage("/Cash/CategoryTree/Index",
+                new { select = nodeKey, expand = parentKey, parentKey = parentKey, key = nodeKey });
+        }
+
+        private async Task LoadTaxList(string selected)
+        {
+            var taxes = await NodeContext.App_tbTaxCodes
+                .OrderBy(t => t.TaxCode)
+                .Select(t => new { t.TaxCode })
+                .ToListAsync();
+            TaxCodes = new SelectList(taxes, "TaxCode", "TaxCode", selected);
         }
     }
 }

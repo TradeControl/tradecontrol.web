@@ -8,10 +8,8 @@ using TradeControl.Web.Models;
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize]
-    public class DeleteTotalModel : DI_BasePageModel
+    public class DeleteTotalModel(NodeContext nodeContext) : DI_BasePageModel(nodeContext)
     {
-        public DeleteTotalModel(NodeContext nodeContext) : base(nodeContext) { }
-
         [BindProperty(SupportsGet = true)]
         public string ParentKey { get; set; }
 

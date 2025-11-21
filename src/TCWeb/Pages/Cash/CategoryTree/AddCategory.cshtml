@@ -33,8 +33,7 @@ else
                   asp-page="./AddCategory"
                   asp-route-parentKey="@Model.ParentKey"
                   asp-route-embed="@(isEmbedded ? "1" : null)"
-                  data-parent="@Model.ParentKey"
-                  data-action="AddExistingCategory">
+                  data-parent="@Model.ParentKey">
                 @Html.AntiForgeryToken()
                 @if (isEmbedded)
                 {
@@ -51,7 +50,7 @@ else
 
                 <div class="mb-3">
                     <label asp-for="ChildKey" class="form-label">Select Total</label>
-                    <select asp-for="ChildKey" asp-items="Model.CategoryList" class="form-select"></select>
+                    <select asp-for="ChildKey" asp-items="Model.CategoryList" class="form-select" autocomplete="off"></select>
                     <span asp-validation-for="ChildKey" class="text-danger small"></span>
                     <div class="form-text">
                         Only enabled Total-type categories not already attached to this parent are listed.
@@ -59,7 +58,7 @@ else
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" @(isCategoryListEmpty ? "disabled" : "")>Add</button>
+                    <button type="submit" class="btn btn-primary" @(isCategoryListEmpty ? "disabled" : "") data-action="addExistingCategorySubmit">Add</button>
                     <a href="#" class="btn btn-secondary" data-embedded-cancel
                        onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
                 </div>
@@ -69,6 +68,17 @@ else
 
     <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
     <script>
+        // Prevent delegated click handler from reloading page when selecting an option.
+        (function () {
+            var sel = document.getElementById('ChildKey');
+            if (!sel) return;
+            sel.addEventListener('click', function (e) {
+                e.stopPropagation();
+            }, true);
+            sel.addEventListener('change', function (e) {
+                e.stopPropagation();
+            }, true);
+        })();
         try { if (window.tcTree?.bindEmbeddedFormSubmit) { window.tcTree.bindEmbeddedFormSubmit(); } } catch(e){}
     </script>
 }

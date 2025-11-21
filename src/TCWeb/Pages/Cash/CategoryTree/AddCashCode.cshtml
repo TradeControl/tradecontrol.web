@@ -9,7 +9,7 @@
 @if (Model.OperationSucceeded && Model.IsEmbedded)
 {
     <div id="addExistingCashCodeResult"
-         data-key="@Model.Code"
+         data-key="@Model.CashCode"
          data-parent="@Model.ParentKey"></div>
 }
 else
@@ -26,8 +26,7 @@ else
             <form method="post"
                   asp-page="./AddCashCode"
                   asp-route-parentKey="@Model.ParentKey"
-                  data-parent="@Model.ParentKey"
-                  data-action="AddExistingCashCode">
+                  data-parent="@Model.ParentKey">
                 @Html.AntiForgeryToken()
                 @if (Model.IsEmbedded)
                 {
@@ -43,14 +42,14 @@ else
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="Code" class="form-label">Select Cash Code</label>
-                    <select asp-for="Code" asp-items="Model.CodeList" class="form-select"></select>
-                    <span asp-validation-for="Code" class="text-danger small"></span>
+                    <label asp-for="CashCode" class="form-label">Select Cash Code</label>
+                    <select asp-for="CashCode" asp-items="Model.CodeList" class="form-select" autocomplete="off"></select>
+                    <span asp-validation-for="CashCode" class="text-danger small"></span>
                     <div class="form-text">Only enabled codes not already under this category are listed.</div>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" @(isListEmpty ? "disabled" : "")>Add</button>
+                    <button type="submit" class="btn btn-primary" @(isListEmpty ? "disabled" : "") data-action="addExistingCashCodeSubmit">Add</button>
                     <a href="#" class="btn btn-secondary" data-embedded-cancel
                        onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
                 </div>
@@ -59,39 +58,19 @@ else
     </div>
 
     <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
-
-    @* Ensure embedded submit interception is active when embedded (no-op otherwise) *@
-    @if (Model.IsEmbedded)
-    {
-        <script>
-            try {
-                if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
-                    window.tcTree.bindEmbeddedFormSubmit();
-                }
-            } catch (e) { }
-        </script>
-    }
-    else
-    {
-        <script>
-            // Also harmless to attempt binding on full page; keep defensive call
-            try {
-                if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
-                    window.tcTree.bindEmbeddedFormSubmit();
-                }
-            } catch (e) { }
-        </script>
-    }
-
     <script>
-        // Guard against any accidental auto-submit on select change (some browsers/plugins)
-        (function(){
-            var form = document.querySelector('form[data-action="AddExistingCashCode"]');
-            if (!form) return;
-            var sel = form.querySelector('select[name="Code"]');
+        // Stop propagation so option clicks don't trigger delegated [data-action] handlers.
+        (function () {
+            var sel = document.querySelector('select[name="CashCode"]');
             if (!sel) return;
-            sel.addEventListener('keydown', function(ev){ ev.stopPropagation(); }, true);
-            sel.addEventListener('change', function(ev){ ev.stopPropagation(); }, true);
+            ['click','change','mousedown'].forEach(function(evt){
+                sel.addEventListener(evt, function(e){ e.stopPropagation(); }, true);
+            });
         })();
+        try {
+            if (window.tcTree && typeof window.tcTree.bindEmbeddedFormSubmit === "function") {
+                window.tcTree.bindEmbeddedFormSubmit();
+            }
+        } catch (e) { }
     </script>
 }

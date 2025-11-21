@@ -2,93 +2,63 @@
 @model TradeControl.Web.Pages.Cash.CategoryTree.EditCashCodeModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    var embed = Request.Query["embed"] == "1" || (Request.HasFormContentType && Request.Form["embed"] == "1");
-    Layout = embed ? null : "_Layout";
+    var isEmbedded = string.Equals(Request.Query["embed"], "1", System.StringComparison.OrdinalIgnoreCase);
+    Layout = isEmbedded ? null : "_Layout";
 }
-@if (Model.OperationSucceeded)
+
+@if (Model.OperationSucceeded && isEmbedded)
 {
-    if (embed)
-    {
-        <div id="editCashCodeResult"
-            data-key="@($"code:{Model.CashCode}")"
-            data-parent="@Model.ParentKey"
-            data-name="@Model.CashDescription"
-            data-isenabled="@(Model.IsEnabled ? "1" : "0")"
-            data-cashtype="@Model.CashTypeCode">
-        </div>
-        <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
-    }
-    else
-    {
-        <div class="container py-3">
-            <div class="alert alert-success mb-3"> Cash Code updated: @Model.CashCode - @Model.CashDescription </div>
-            <a class="btn btn-primary" asp-page="./Index" asp-route-select="@($"code:{Model.CashCode}")" asp-route-expand="@Model.ParentKey">Back to Category Tree</a>
-        </div>
-    }
+    <div id="editCashCodeResult"
+         data-key="code:@Model.CashCode"
+         data-parent="@Model.CategoryCode"
+         data-name="@Model.CashDescription"
+         data-isenabled="@(Model.IsEnabled ? "1" : "0")"></div>
 }
 else
 {
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Edit Cash Code</h5>
-            @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-            {
-                <div class="alert alert-danger py-1 px-2 mb-3 small">@Model.ErrorMessage</div>
-            }
-
             <form method="post"
-                    asp-page="./EditCashCode"
-                    asp-route-key="@Model.CashCode"
-                    asp-route-embed="@(embed ? "1" : null)">
+                  asp-page="./EditCashCode"
+                  asp-route-key="code:@Model.CashCode"
+                  asp-route-embed="@(isEmbedded ? "1" : null)">
                 @Html.AntiForgeryToken()
-
-                @if (embed)
+                @if (isEmbedded)
                 {
                     <input type="hidden" name="embed" value="1" />
                 }
 
-                <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
-                <input type="hidden" name="CashCode" value="@Model.CashCode" />
+                <div asp-validation-summary="All" class="text-danger small mb-2"></div>
 
                 <div class="mb-3">
-                    <label class="form-label">Cash Code</label>
-                    <input class="form-control" value="@Model.CashCode" disabled />
+                    <label asp-for="CashCode" class="form-label">Cash Code</label>
+                    <input asp-for="CashCode" class="form-control" readonly />
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="CashDescription" class="form-label">Description</label>
                     <input asp-for="CashDescription" class="form-control" maxlength="100" />
+                    <span asp-validation-for="CashDescription" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="TaxCode" class="form-label">Tax Code</label>
+                    <select asp-for="TaxCode" class="form-select" asp-items="Model.TaxCodes"></select>
+                    <span asp-validation-for="TaxCode" class="text-danger small"></span>
                 </div>
 
                 <div class="form-check mb-3">
-                    <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+                    <input asp-for="IsEnabled" class="form-check-input" type="checkbox" />
                     <label asp-for="IsEnabled" class="form-check-label">Enabled</label>
                 </div>
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Save</button>
-
-                    @if (embed)
-                    {
-                        <a href="#"
-                            class="btn btn-secondary"
-                            data-embedded-cancel
-                            onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
-                    }
-                    else
-                    {
-                        <a class="btn btn-secondary"
-                            asp-page="./Index"
-                            asp-route-select="@($"code:{Model.CashCode}")"
-                            asp-route-expand="@Model.ParentKey">Cancel</a>
-                    }
-                    </div>
+                    @* Show cancel even when embedded (desktop RHS needs a Cancel) *@
+                    <a href="#" class="btn btn-secondary" data-embedded-cancel data-action="cancel" onclick="return false;">Cancel</a>
+                </div>
             </form>
         </div>
     </div>
-
-    @if (embed)
-    {
-        <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
-    }
 }

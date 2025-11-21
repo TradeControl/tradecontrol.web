@@ -2512,6 +2512,32 @@ function bindEmbeddedFormSubmit()
         try
         {
             var fd = new FormData(form);
+
+            try
+            {
+                var selectNames = [
+                    "ChildKey",              // AddCategory current form
+                    "CategoryKey",           // fallback naming variant
+                    "CategoryCode",          // legacy
+                    "MappedCategoryCode",    // mapping forms
+                    "ChildCategoryCode",     // older AddExisting pattern
+                    "CashCode",              // AddCashCode simple
+                    "ExistingCashCode",      // possible naming
+                    "MappedCashCode",        // mapping variant
+                    "ChildCashCode"          // older pattern
+                ];
+
+                selectNames.forEach(function (nm)
+                {
+                    var sel = form.querySelector("select[name='" + nm + "']");
+                    if (sel && typeof sel.value === "string")
+                    {
+                        fd.set(nm, sel.value);
+                    }
+                });
+            }
+            catch (_){ /* silent */ }
+
             var token =
                 (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
                 || (document.querySelector('meta[name="request-verification-token"]') || {}).content

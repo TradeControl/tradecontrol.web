@@ -1,3 +1,4 @@
+// PATCH: remove unnecessary async from GET handler to clear CS1998 warning.
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,9 +13,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize(Roles = "Administrators")]
     public class CreateTotalModel : DI_BasePageModel
     {
-        public CreateTotalModel(NodeContext context) : base(context)
-        {
-        }
+        public CreateTotalModel(NodeContext context) : base(context) { }
 
         [BindProperty(SupportsGet = true)]
         public string ParentKey { get; set; } = "";
@@ -25,7 +24,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [BindProperty]
         public string Category { get; set; } = "";
 
-        // Hard-coded: Totals are CategoryType == CashTotal, CashType == Trade, Polarity == Neutral
         public short CashTypeCode { get; private set; } = (short)NodeEnum.CashType.Trade;
         public short CashPolarityCode { get; private set; } = (short)NodeEnum.CashPolarity.Neutral;
 
@@ -36,33 +34,25 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string NewKey { get; private set; } = "";
         public string NewParentKey { get; private set; } = "";
 
-        // New marker metadata
         public string NewName { get; private set; } = "";
         public short NewPolarity { get; private set; }
         public short NewCategoryType { get; private set; }
         public short NewIsEnabled { get; private set; }
 
-        public async Task<IActionResult> OnGetAsync()
+        // Synchronous now: no awaited work inside.
+        public IActionResult OnGet()
         {
-            // Ensure fixed values are initialized
             SetFixedValues();
 
-            // SupportsGet already binds ParentKey from querystring when present.
-            // As a defensive fallback, read "parentKey" query if the property is still empty.
             if (string.IsNullOrWhiteSpace(ParentKey))
             {
                 try
                 {
                     var q = HttpContext?.Request?.Query["parentKey"].ToString();
                     if (!string.IsNullOrWhiteSpace(q))
-                    {
                         ParentKey = q;
-                    }
                 }
-                catch
-                {
-                    // swallow
-                }
+                catch { }
             }
 
             return Page();
@@ -70,7 +60,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // Initialize fixed values for POST as well
             SetFixedValues();
 
             if (string.IsNullOrWhiteSpace(CategoryCode) || string.IsNullOrWhiteSpace(Category))
@@ -134,20 +123,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 OperationSucceeded = true;
                 NewKey = CategoryCode;
                 NewParentKey = ParentKey ?? "";
-
-                // Marker metadata (optional for client)
                 NewName = cat.Category;
                 NewPolarity = cat.CashPolarityCode;
                 NewCategoryType = cat.CategoryTypeCode;
                 NewIsEnabled = cat.IsEnabled;
 
-                // Embedded pane only when truly called via AJAX (desktop RHS).
-                // If not AJAX, treat as full-page (mobile or direct) and redirect to Index with selection.
                 bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
                 if (isAjax && Request.Query["embed"] == "1")
-                {
                     return Page();
-                }
 
                 return RedirectToPage("/Cash/CategoryTree/Index", new { key = NewKey, parentKey = NewParentKey });
             }

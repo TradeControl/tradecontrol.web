@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string ParentKey { get; set; }
 
         [BindProperty]
-        public string Code { get; set; }
+        public string CashCode { get; set; }
 
         public bool OperationSucceeded { get; private set; }
         public string ErrorMessage { get; private set; }
@@ -88,17 +88,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 ParentKey = resolvedParent;
                 // Clear any stale model state for Code so the TagHelper uses the property value
-                ModelState.Remove(nameof(Code));
+                ModelState.Remove(nameof(CashCode));
 
-                await PopulateCodesAsync(Code, ParentKey);
+                await PopulateCodesAsync(CashCode, ParentKey);
                 return Page();
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                ModelState.Remove(nameof(Code));
-                await PopulateCodesAsync(Code, parentKey);
+                ModelState.Remove(nameof(CashCode));
+                await PopulateCodesAsync(CashCode, parentKey);
                 return embed ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
         }
@@ -112,22 +112,22 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             IsEmbedded = isEmbedded;
 
-            Code = Code?.Trim();
+            CashCode = CashCode?.Trim();
 
             try
             {
                 if (string.IsNullOrWhiteSpace(ParentKey))
                 {
                     ErrorMessage = "Missing parent key.";
-                    ModelState.Remove(nameof(Code));
-                    await PopulateCodesAsync(Code, ParentKey);
+                    ModelState.Remove(nameof(CashCode));
+                    await PopulateCodesAsync(CashCode, ParentKey);
                     return isEmbedded ? Content("<div class='text-danger small p-2'>Missing parent key</div>") : Page();
                 }
 
-                if (string.IsNullOrWhiteSpace(Code))
+                if (string.IsNullOrWhiteSpace(CashCode))
                 {
                     ErrorMessage = "Select a Code to attach.";
-                    ModelState.Remove(nameof(Code));
+                    ModelState.Remove(nameof(CashCode));
                     await PopulateCodesAsync(null, ParentKey);
                     return Page();
                 }
@@ -140,13 +140,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (parent == null || parent.IsEnabled == 0)
                 {
                     ErrorMessage = "Parent not found or disabled.";
-                    ModelState.Remove(nameof(Code));
-                    await PopulateCodesAsync(Code, ParentKey);
+                    ModelState.Remove(nameof(CashCode));
+                    await PopulateCodesAsync(CashCode, ParentKey);
                     return Page();
                 }
 
                 var codeRow = await NodeContext.Cash_tbCodes
-                    .Where(cd => cd.CashCode == Code)
+                    .Where(cd => cd.CashCode == CashCode)
                     .Select(cd => new {
                         cd.CashCode,
                         cd.CashDescription,
@@ -158,8 +158,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (codeRow == null || codeRow.IsEnabled == 0)
                 {
                     ErrorMessage = "Code not found or disabled.";
-                    ModelState.Remove(nameof(Code));
-                    await PopulateCodesAsync(Code, ParentKey);
+                    ModelState.Remove(nameof(CashCode));
+                    await PopulateCodesAsync(CashCode, ParentKey);
                     return Page();
                 }
 
@@ -171,14 +171,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var rowToUpdate = await NodeContext.Cash_tbCodes
-                    .Where(cd => cd.CashCode == Code)
+                    .Where(cd => cd.CashCode == CashCode)
                     .FirstOrDefaultAsync();
 
                 if (rowToUpdate == null)
                 {
                     ErrorMessage = "Code not found.";
-                    ModelState.Remove(nameof(Code));
-                    await PopulateCodesAsync(Code, ParentKey);
+                    ModelState.Remove(nameof(CashCode));
+                    await PopulateCodesAsync(CashCode, ParentKey);
                     return Page();
                 }
 
@@ -192,14 +192,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                return RedirectToPage("./Index", new { key = "code:" + Code });
+                return RedirectToPage("./Index", new { key = "code:" + CashCode });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                ModelState.Remove(nameof(Code));
-                await PopulateCodesAsync(Code, ParentKey);
+                ModelState.Remove(nameof(CashCode));
+                await PopulateCodesAsync(CashCode, ParentKey);
                 return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
             }
         }
@@ -227,9 +227,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             if (!string.IsNullOrWhiteSpace(selectedCode))
             {
                 // Ensure model property reflects intended selection
-                Code = selectedCode;
+                CashCode = selectedCode;
                 // Remove any stale model state so TagHelper uses Code property
-                ModelState.Remove(nameof(Code));
+                ModelState.Remove(nameof(CashCode));
             }
 
             CodeList = filtered

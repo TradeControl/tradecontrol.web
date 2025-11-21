@@ -51,6 +51,104 @@ window.CategoryTree = (function ()
         const CODE_POLL_INTERVAL_MS = 150;    // unchanged interval, fewer tries
         const BFS_STEP_DELAY_MS = 25;         // existing 25; keep symbolic
 
+        var _cancelReturnKey = "";
+
+
+        // Expose setters if not already present (used by openAction)
+        if (typeof window.tcSetCancelReturn !== "function")
+        {
+            window.tcSetCancelReturn = function (key)
+            {
+                try
+                {
+                    _cancelReturnKey = key || "";
+                }
+                catch (_){}
+            };
+        }
+
+        // Unified cancel action: reselect previous node (handles code: prefix variants)
+        if (typeof window.tcCancel !== "function")
+        {
+            window.tcCancel = function ()
+            {
+                if (!_cancelReturnKey) { return; }
+
+                try
+                {
+                    var tree = getTree();
+                    if (!tree)
+                    {
+                        return;
+                    }
+
+                    var key = _cancelReturnKey;
+                    var variants = [];
+                    if (key.indexOf("code:") === 0)
+                    {
+                        variants = [key, key.substring(5)];
+                    }
+                    else
+                    {
+                        variants = [key, "code:" + key];
+                    }
+
+                    var target = null;
+                    for (var i = 0; i < variants.length; i++)
+                    {
+                        target = tree.getNodeByKey(variants[i]);
+                        if (target) { break; }
+                    }
+
+                    if (!target)
+                    {
+                        // Retry once after a lightweight root/disc reload (case for newly created then cancelled)
+                        refreshTopAnchors();
+                        setTimeout(function ()
+                        {
+                            try
+                            {
+                                for (var j = 0; j < variants.length; j++)
+                                {
+                                    var n = tree.getNodeByKey(variants[j]);
+                                    if (n)
+                                    {
+                                        target = n;
+                                        break;
+                                    }
+                                }
+                                if (target)
+                                {
+                                    target.setActive(true);
+                                    if (isMobile())
+                                    {
+                                        updateActionBar(target);
+                                    }
+                                    else
+                                    {
+                                        loadDetails(target);
+                                    }
+                                }
+                            }
+                            catch (_){}
+                        }, 160);
+                        return;
+                    }
+
+                    target.setActive(true);
+                    if (isMobile())
+                    {
+                        updateActionBar(target);
+                    }
+                    else
+                    {
+                        loadDetails(target);
+                    }
+                }
+                catch (_){}
+            };
+        }
+
         // Capture pristine menu and templates once when DOM ready (before any context mutations)
         $(function ()
         {
@@ -889,6 +987,88 @@ window.CategoryTree = (function ()
 			        }
 		        }
  
+		        function loadUnderDiscUntilKey(targetKey, maxFolders, callback)
+		        {
+			        try
+			        {
+				        var tree = getTree();
+				        if (!tree)
+				        {
+					        callback(false);
+					        return;
+				        }
+				        if (tree.getNodeByKey(targetKey))
+				        {
+					        callback(true);
+					        return;
+				        }
+				        var discNode = tree.getNodeByKey(DISC_KEY);
+				        if (!discNode)
+				        {
+					        callback(false);
+					        return;
+				        }
+
+				        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
+
+				        var queue = [];
+				        var visited = new Set();
+				        function enqueue(n)
+				        {
+					        if (!n || !n.key || visited.has(n.key)) { return; }
+					        visited.add(n.key);
+					        queue.push(n);
+				        }
+
+				        enqueue(discNode);
+
+				        (function step()
+				        {
+					        if (tree.getNodeByKey(targetKey))
+					        {
+						        callback(true);
+						        return;
+					        }
+					        if (queue.length === 0 || visited.size > maxFolders)
+					        {
+						        callback(false);
+						        return;
+					        }
+
+					        var current = queue.shift();
+
+					        if (current.lazy && !current.loaded)
+					        {
+						        try
+						        {
+							        var res = current.load();
+							        var after = function ()
+							        {
+								        try
+                                        {
+                                            (current.children || []).forEach(enqueue);
+                                        }
+                                        catch(_){}
+								        setTimeout(step, 15);
+							        };
+							        if (res && res.then) { res.then(after, after); return; }
+							        if (res && res.done) { res.done(after).fail(after); return; }
+						        }
+						        catch(_){}
+					        }
+					        else
+					        {
+						        try
+                                {
+                                    (current.children || []).forEach(enqueue);
+                                }
+                                catch(_){}
+					        }
+					        setTimeout(step, 15);
+				        })();
+			        }
+			        catch(_){ callback(false); }
+		        }
 
                 function findPreferredParentUnderRoot(parentKey)
                 {
@@ -3396,6 +3576,24 @@ window.CategoryTree = (function ()
             }
         }
 
+        function plainNodeTitle(node)
+        {
+            try
+            {
+                if (!node) { return ""; }
+                var raw = node.title || "";
+                if (!raw) { return node.key || ""; }
+                var div = document.createElement("div");
+                div.innerHTML = raw;
+                var txt = (div.textContent || "").trim();
+                return txt || node.key || "";
+            }
+            catch (_)
+            {
+                return node && node.key ? node.key : "";
+            }
+        }
+
         function showContextMenu(x, y, node)
         {
             if (!node)
@@ -3601,9 +3799,17 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected","collapseSelected");
+                        if (!menuTemplates.items.setProfitRoot)
+                        {
+                            menuTemplates.items.setProfitRoot = "<div class='dropdown-item' data-action='setProfitRoot'>Set Profit Root</div>";
+                        }
+                        if (!menuTemplates.items.setVatRoot)
+                        {
+                            menuTemplates.items.setVatRoot = "<div class='dropdown-item' data-action='setVatRoot'>Set VAT Root</div>";
+                        }
                         pushIf(isAdmin, "setProfitRoot");
                         pushIf(isAdmin, "setVatRoot");
+                        order.push("expandSelected","collapseSelected");
                         renderMenuFromTemplates($menu, order, [3, 6, 9, 13]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
@@ -4274,19 +4480,39 @@ window.CategoryTree = (function ()
                         if (!node.folder) { alert("Select a category"); break; }
 
                         var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
-                        if (!confirm("Set " + key + " as the " + kind + " primary root?")) { break; }
+                        var name = plainNodeTitle(node); // strip markup
+
+                        if (!confirm("Set '" + name + "' as the " + kind + " root?"))
+                        {
+                            break;
+                        }
 
                         postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
                             .done(function (res)
                             {
-                                alert((res && res.message) || "Not Yet Implemented");
                                 if (res && res.success)
                                 {
-                                    refreshTopAnchors();
-                                    loadDetails(tree.getActiveNode());
+                                    try
+                                    {
+                                        refreshTopAnchors();
+                                    }
+                                    catch (_) {}
+                                    try
+                                    {
+                                        loadDetails(node);
+                                    }
+                                    catch (_) {}
+                                    notify(kind + " root updated", "success");
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || ("Failed to set " + kind + " root."));
                                 }
                             })
-                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                            .fail(function (xhr)
+                            {
+                                alert("Server error (" + xhr.status + ")");
+                            });
                         break;
                     }
 
@@ -4511,8 +4737,10 @@ window.CategoryTree = (function ()
             var $pane = $("#detailsPane");
             if ($pane.length === 0) { return; }
 
-            $pane.off("click.detailsActions").on("click.detailsActions", "[data-action]", function ()
+            $pane.off("click.detailsActions").on("click.detailsActions", "[data-action]:not(form)", function ()
             {
+                if (this.tagName === "FORM") { return; }
+
                 var action = $(this).data("action");
                 var tree = getTree();
                 var node = tree && tree.getActiveNode ? tree.getActiveNode() : null;
@@ -4656,6 +4884,49 @@ window.CategoryTree = (function ()
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node.folder) { alert("Select a category"); break; }
                         openAction("Move", key, parentKey);
+                        break;
+                    }
+
+                    case "setProfitRoot":
+                    case "setVatRoot":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node || !node.folder) { alert("Select a category"); break; }
+
+                        var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
+                        var name = plainNodeTitle(node);
+
+                        if (!confirm("Set '" + name + "' as the " + kind + " root?"))
+                        {
+                            break;
+                        }
+
+                        postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
+                            .done(function (res)
+                            {
+                                if (res && res.success)
+                                {
+                                    try
+                                    {
+                                        refreshTopAnchors();
+                                    }
+                                    catch (_) {}
+                                    try
+                                    {
+                                        loadDetails(node);
+                                    }
+                                    catch (_) {}
+                                    notify(kind + " root updated", "success");
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || ("Failed to set " + kind + " root."));
+                                }
+                            })
+                            .fail(function (xhr)
+                            {
+                                alert("Server error (" + xhr.status + ")");
+                            });
                         break;
                     }
                 }

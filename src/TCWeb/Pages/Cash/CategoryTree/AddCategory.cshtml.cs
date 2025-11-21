@@ -19,6 +19,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [BindProperty]
         public string ParentKey { get; set; }
 
+        // Bound selected value from the <select>
         [BindProperty]
         public string ChildKey { get; set; }
 
@@ -29,7 +30,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool OperationSucceeded { get; private set; }
         public string ErrorMessage { get; private set; }
 
-        [BindProperty]
+        // DO NOT bind the list itself (binding was overriding selection)
         public List<SelectListItem> CategoryList { get; private set; } = new();
 
         public async Task<IActionResult> OnGetAsync(string parentKey, bool embed = false)
@@ -53,7 +54,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (parent == null || parent.IsEnabled == 0)
                 {
                     ErrorMessage = "Parent not found or disabled.";
-                    await PopulateOptionsAsync(null, parentKey);
+                    ParentKey = parentKey;
+                    await PopulateOptionsAsync(null);
                     return embed
                         ? Content("<div class='text-danger small p-2'>Parent not found or disabled</div>")
                         : Page();
@@ -62,21 +64,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (parent.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
                 {
                     ErrorMessage = "Parent category type is invalid for this operation.";
-                    await PopulateOptionsAsync(null, parentKey);
+                    ParentKey = parentKey;
+                    await PopulateOptionsAsync(null);
                     return embed
                         ? Content("<div class='text-danger small p-2'>Invalid parent type</div>")
                         : Page();
                 }
 
                 ParentKey = parentKey;
-                await PopulateOptionsAsync(null, parentKey);
+                await PopulateOptionsAsync(null);
                 return Page();
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                await PopulateOptionsAsync(null, parentKey);
+                ParentKey = parentKey;
+                await PopulateOptionsAsync(null);
                 return embed
                     ? Content("<div class='text-danger small p-2'>Server error</div>")
                     : Page();
@@ -90,12 +94,22 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
                 || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
 
+            // Explicitly read posted values to avoid any interference from prior list binding
+            var postedParent = Request.Form["ParentKey"].FirstOrDefault();
+            var postedChild = Request.Form["ChildKey"].FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(postedParent))
+                ParentKey = postedParent;
+
+            if (!string.IsNullOrWhiteSpace(postedChild))
+                ChildKey = postedChild;
+
             try
             {
                 if (string.IsNullOrWhiteSpace(ParentKey))
                 {
                     ErrorMessage = "Missing parent key.";
-                    await PopulateOptionsAsync(ChildKey, ParentKey);
+                    await PopulateOptionsAsync(ChildKey);
                     return isEmbedded
                         ? Content("<div class='text-danger small p-2'>Missing parent key</div>")
                         : Page();
@@ -104,7 +118,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (string.IsNullOrWhiteSpace(ChildKey))
                 {
                     ErrorMessage = "Select a Category to attach.";
-                    await PopulateOptionsAsync(null, ParentKey);
+                    await PopulateOptionsAsync(null);
                     return Page();
                 }
 
@@ -113,7 +127,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (string.Equals(ParentKey, ChildKey, StringComparison.OrdinalIgnoreCase))
                 {
                     ErrorMessage = "Parent and child cannot be the same.";
-                    await PopulateOptionsAsync(ChildKey, ParentKey);
+                    await PopulateOptionsAsync(ChildKey);
                     return Page();
                 }
 
@@ -125,14 +139,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (parent == null || parent.IsEnabled == 0)
                 {
                     ErrorMessage = "Parent not found or disabled.";
-                    await PopulateOptionsAsync(ChildKey, ParentKey);
+                    await PopulateOptionsAsync(ChildKey);
                     return Page();
                 }
 
                 if (parent.CategoryTypeCode != (short)NodeEnum.CategoryType.CashTotal)
                 {
                     ErrorMessage = "Parent category type is invalid for this operation.";
-                    await PopulateOptionsAsync(ChildKey, ParentKey);
+                    await PopulateOptionsAsync(ChildKey);
                     return Page();
                 }
 
@@ -150,40 +164,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (child == null || child.IsEnabled == 0)
                 {
                     ErrorMessage = "Child not found or disabled.";
-                    await PopulateOptionsAsync(ChildKey, ParentKey);
+                    await PopulateOptionsAsync(ChildKey);
                     return Page();
                 }
 
                 if (child.CategoryTypeCode == (short)NodeEnum.CategoryType.Expression)
                 {
                     ErrorMessage = "Child category type is invalid for this operation.";
-                    await PopulateOptionsAsync(ChildKey, ParentKey);
+                    await PopulateOptionsAsync(ChildKey);
                     return Page();
                 }
 
-                // Current attachment
                 var currentLink = await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ChildCode == ChildKey)
                     .Select(t => new { t.ParentCode })
                     .FirstOrDefaultAsync();
 
-                // Idempotent success
-                if (currentLink != null &&
-                    string.Equals(currentLink.ParentCode, ParentKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    ChildName = child.Category;
-                    ChildPolarity = child.CashPolarityCode;
-                    ChildIsEnabled = child.IsEnabled != 0;
-                    OperationSucceeded = true;
-
-                    if (isEmbedded)
-                        return Page();
-
-                    return RedirectToPage("/Cash/CategoryTree/Index",
-                        new { select = ChildKey, parentKey = ParentKey, expand = ParentKey });
-                }
-
-                // Build ancestor map for cycle detection (ParentKey upwards)
+                // If already attached to this parent or cycle detected, treat as success (idempotent)
                 var parentMap = await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ChildCode != null && t.ParentCode != null)
                     .GroupBy(t => t.ChildCode)
@@ -195,7 +192,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 bool cycleDetected = IsAncestor(ChildKey, ParentKey, parentMap);
 
-                if (cycleDetected)
+                if ((currentLink != null &&
+                    string.Equals(currentLink.ParentCode, ParentKey, StringComparison.OrdinalIgnoreCase))
+                    || cycleDetected)
                 {
                     ChildName = child.Category;
                     ChildPolarity = child.CashPolarityCode;
@@ -213,52 +212,42 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (currentLink != null &&
                     !string.Equals(currentLink.ParentCode, ParentKey, StringComparison.OrdinalIgnoreCase))
                 {
-                    using (var tx = await NodeContext.Database.BeginTransactionAsync())
+                    using var txMove = await NodeContext.Database.BeginTransactionAsync();
+
+                    var oldLink = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ParentCode == currentLink.ParentCode && t.ChildCode == ChildKey)
+                        .FirstOrDefaultAsync();
+
+                    if (oldLink != null)
                     {
-                        var oldLink = await NodeContext.Cash_tbCategoryTotals
-                            .Where(t => t.ParentCode == currentLink.ParentCode && t.ChildCode == ChildKey)
-                            .FirstOrDefaultAsync();
-
-                        if (oldLink != null)
-                        {
-                            NodeContext.Cash_tbCategoryTotals.Remove(oldLink);
-                            await NodeContext.SaveChangesAsync();
-                        }
-
-                        var oldSiblings = await NodeContext.Cash_tbCategoryTotals
-                            .Where(t => t.ParentCode == currentLink.ParentCode)
-                            .OrderBy(t => t.DisplayOrder)
-                            .ToListAsync();
-
-                        short reIdx = 1;
-                        foreach (var s in oldSiblings)
-                        {
-                            s.DisplayOrder = reIdx++;
-                        }
+                        NodeContext.Cash_tbCategoryTotals.Remove(oldLink);
                         await NodeContext.SaveChangesAsync();
-
-                        await tx.CommitAsync();
                     }
-                }
 
-                // Normalize display order under new parent
-                var siblingOrders = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ParentCode == ParentKey)
-                    .Select(t => t.DisplayOrder)
-                    .ToListAsync();
-
-                if (siblingOrders.Count > 0 && siblingOrders.Any(o => o == 0))
-                {
-                    var orderedExisting = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == ParentKey)
+                    var oldSiblings = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ParentCode == currentLink.ParentCode)
                         .OrderBy(t => t.DisplayOrder)
                         .ToListAsync();
 
+                    short reIdx = 1;
+                    foreach (var s in oldSiblings)
+                        s.DisplayOrder = reIdx++;
+
+                    await NodeContext.SaveChangesAsync();
+                    await txMove.CommitAsync();
+                }
+
+                // Normalize any zero display orders under new parent
+                var existingUnderNew = await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => t.ParentCode == ParentKey)
+                    .OrderBy(t => t.DisplayOrder)
+                    .ToListAsync();
+
+                if (existingUnderNew.Any(e => e.DisplayOrder == 0))
+                {
                     short i = 1;
-                    foreach (var row in orderedExisting)
-                    {
+                    foreach (var row in existingUnderNew)
                         row.DisplayOrder = i++;
-                    }
                     await NodeContext.SaveChangesAsync();
                 }
 
@@ -288,20 +277,20 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             {
                 await NodeContext.ErrorLog(ex);
                 ErrorMessage = "Server error.";
-                await PopulateOptionsAsync(ChildKey, ParentKey);
+                await PopulateOptionsAsync(ChildKey);
                 return isEmbedded
                     ? Content("<div class='text-danger small p-2'>Server error</div>")
                     : Page();
             }
         }
 
-        private async Task PopulateOptionsAsync(string selectedChildCode = null, string parentKey = null)
+        private async Task PopulateOptionsAsync(string selectedChildCode)
         {
             var attached = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (!string.IsNullOrWhiteSpace(parentKey))
+            if (!string.IsNullOrWhiteSpace(ParentKey))
             {
                 var attachedList = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ParentCode == parentKey)
+                    .Where(t => t.ParentCode == ParentKey)
                     .Select(t => t.ChildCode)
                     .ToListAsync();
                 attached = new HashSet<string>(attachedList, StringComparer.OrdinalIgnoreCase);
@@ -323,7 +312,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                               }).ToListAsync();
 
             rows = rows
-                .Where(r => !string.Equals(r.CategoryCode, parentKey, StringComparison.OrdinalIgnoreCase))
+                .Where(r => !string.Equals(r.CategoryCode, ParentKey, StringComparison.OrdinalIgnoreCase))
                 .Where(r => !attached.Contains(r.CategoryCode))
                 .ToList();
 
