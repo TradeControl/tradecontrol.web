@@ -1,25 +1,27 @@
 @page
 @model TradeControl.Web.Pages.Cash.CategoryTree.CreateExpressionModel
 @{
-    var isEmbedded = Request.Query["embed"] == "1";
-    Layout = isEmbedded ? null : "_Layout";
+    var embed = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    if (embed) { Layout = null; }
 }
+
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title">New Expression Category</h5>
+        <h5 class="card-title"><span class="bi bi-calculator me-1"></span>New Cash Expression</h5>
 
-        <form method="post" asp-page="./CreateExpression" asp-route-embed="@(isEmbedded ? "1" : null)">
+        <form method="post"
+              asp-page="./CreateExpression"
+              asp-route-embed="@(embed ? "1" : null)"
+              asp-route-parentKey="__EXPRESSIONS__">
             @Html.AntiForgeryToken()
-            @if (isEmbedded)
+            @if (embed)
             {
                 <input type="hidden" name="embed" value="1" />
             }
 
-            <div asp-validation-summary="All" class="text-danger small mb-2"></div>
-
             <div class="mb-3">
                 <label asp-for="CategoryCode" class="form-label"></label>
-                <input asp-for="CategoryCode" class="form-control" maxlength="10" autocomplete="off" />
+                <input asp-for="CategoryCode" class="form-control" maxlength="10" />
                 <span asp-validation-for="CategoryCode" class="text-danger small"></span>
             </div>
 
@@ -41,9 +43,9 @@
 
             <div class="mb-3">
                 <label asp-for="Expression" class="form-label"></label>
-                <textarea asp-for="Expression" class="form-control" rows="2" maxlength="256"></textarea>
+                <textarea asp-for="Expression" class="form-control" rows="3" maxlength="256"></textarea>
                 <span asp-validation-for="Expression" class="text-danger small"></span>
-                <div class="form-text small">Excel-style formula (e.g. IF([Sales]=0,0,[Gross Profit]/[Sales])). Use category codes in square brackets.</div>
+                <div class="form-text small">Spreadsheet formula (e.g. IF([Sales]=0,0,[Gross Profit]/[Sales])). Use category codes in square brackets.</div>
             </div>
 
             <div class="mb-3">
@@ -59,29 +61,45 @@
                 <div class="form-text small">Required. Examples: 0%, #,##0.00, #,##0; do not leave blank.</div>
             </div>
 
+            <div class="mb-3">
+                <label asp-for="SyntaxTypeCode" class="form-label"></label>
+                <select asp-for="SyntaxTypeCode" asp-items="Model.SyntaxTypeItems" class="form-select"></select>
+                <span asp-validation-for="SyntaxTypeCode" class="text-danger small"></span>
+                <div class="form-text small">Choose “Both”, “Libre”, or “Excel”.</div>
+            </div>
+
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary btn-sm">Create</button>
-                @if (isEmbedded)
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2-circle"></i> Create
+                </button>
+
+                @if (embed)
                 {
-                    <a href="#" class="btn btn-secondary btn-sm" data-embedded-cancel
-                       onclick="try { if (window.tcCancel) { window.tcCancel(); } } catch(e) {} return false;">Cancel</a>
+                    <button type="button" class="btn btn-secondary" data-embedded-cancel>
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
                 }
                 else
                 {
-                    <a class="btn btn-secondary btn-sm"
-                       href="/Cash/CategoryTree/Index?select=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey&key=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey&expand=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey">
-                        Cancel
+                    <a asp-page="/Cash/CategoryTree/Index"
+                       class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
                     </a>
                 }
             </div>
         </form>
 
-        @if (ViewData["EmbedSelectKey"] != null && ViewData["EmbedExpandKey"] != null)
+        @* Emit the marker when embedded + save succeeded so the tree injects and selects the new node *@
+        @if (embed && Model.OperationSucceeded && ViewData["EmbedSelectKey"] != null && ViewData["EmbedExpandKey"] != null && ViewData["EmbedNodeJson"] != null)
         {
             <div id="tcEmbedResult"
                  data-select="@ViewData["EmbedSelectKey"]"
                  data-expand="@ViewData["EmbedExpandKey"]"
-                 data-node='@ViewData["EmbedNodeJson"]'></div>
+                 data-node='@Html.Raw((string)ViewData["EmbedNodeJson"])'></div>
         }
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

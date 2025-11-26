@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +37,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbCalendarHoliday> App_tbCalendarHolidays { get; set; }
         public virtual DbSet<Cash_tbCategory> Cash_tbCategories { get; set; }
         public virtual DbSet<Cash_tbCategoryExp> Cash_tbCategoryExps { get; set; }
+        public virtual DbSet<Cash_tbCategoryExpSyntax> Cash_tbCategoryExpSyntax { get; set; }
         public virtual DbSet<Cash_tbCategoryTotal> Cash_tbCategoryTotals { get; set; }
         public virtual DbSet<Cash_tbCategoryType> Cash_tbCategoryTypes { get; set; }
         public virtual DbSet<Cash_tbChange> Cash_tbChanges { get; set; }
@@ -744,15 +745,19 @@ namespace TradeControl.Web.Data
                 entity.HasKey(e => e.CategoryCode)
                     .HasName("PK_Cash_tbCategoryExp");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.HasOne(d => d.CategoryCodeNavigation)
                     .WithOne(p => p.TbCategoryExp)
                     .HasForeignKey<Cash_tbCategoryExp>(d => d.CategoryCode)
                     .HasConstraintName("FK_Cash_tbCategoryExp_Cash_tbCategory");
+
+                entity.HasOne(d => d.SyntaxTypeCodeNavigation)
+                    .WithMany(p => p.TbCategoryExps)
+                    .HasForeignKey(d => d.SyntaxTypeCode)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_tbCategoryExp_tbCategoryExpSyntax");
             });
+
+
 
             modelBuilder.Entity<Cash_tbCategoryTotal>(entity =>
             {

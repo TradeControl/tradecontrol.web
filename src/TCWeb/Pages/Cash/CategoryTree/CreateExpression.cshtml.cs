@@ -46,8 +46,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [Display(Name = "Format")]
         public string Format { get; set; } = string.Empty;
 
+        [BindProperty]
+        [Required]
+        [Display(Name = "Syntax Type")]
+        public short? SyntaxTypeCode { get; set; }
+
         public IEnumerable<SelectListItem> CashTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> SyntaxTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
         public IList<string> ExistingFormats { get; private set; } = new List<string>();
+
+        // NEW: success flag so the view can reliably emit tcEmbedResult
+        public bool OperationSucceeded { get; private set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -60,6 +69,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     CashTypeCode = tradeCode;
                 }
+            }
+
+            if (!SyntaxTypeCode.HasValue && SyntaxTypeItems.Any(i => i.Value == "0"))
+            {
+                SyntaxTypeCode = (short)NodeEnum.SyntaxType.Both;
             }
 
             return Page();
@@ -80,6 +94,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     ModelState.AddModelError(nameof(CashTypeCode), "Select a Cash Type.");
                     return Page();
+                }
+
+                if (!SyntaxTypeCode.HasValue)
+                {
+                    SyntaxTypeCode = (short)NodeEnum.SyntaxType.Both;
                 }
 
                 if (string.IsNullOrWhiteSpace(Format))
@@ -130,13 +149,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     Expression = Expression,
                     Format = Format,
                     IsError = false,
-                    ErrorMessage = null
+                    ErrorMessage = null,
+                    SyntaxTypeCode = SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both
                 };
 
                 NodeContext.Cash_tbCategoryExps.Add(exp);
                 await NodeContext.SaveChangesAsync();
 
                 await tx.CommitAsync();
+
+                // mark success so the view emits tcEmbedResult
+                OperationSucceeded = true;
 
                 var exprKey = CategoryTreeModel.MakeExpressionKey(CategoryCode);
 
@@ -149,8 +172,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     });
                 }
 
-                // Embedded: supply node JSON so client can inject and show details immediately
-                // Build a title with calculator icon and expression preview, and mark nodeType as 'expression'.
+                // Embedded: emit tcEmbedResult marker payload
                 string exprPreview = Expression ?? string.Empty;
                 if (exprPreview.Length > 60)
                     exprPreview = exprPreview.Substring(0, 57) + "...";
@@ -172,6 +194,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         cashTypeCode = CashTypeCode,
                         expression = Expression,
                         format = Format,
+                        syntaxTypeCode = SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both,
                         isEnabled = 1,
                         displayOrder = newCat.DisplayOrder
                     }
@@ -201,6 +224,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 Value = t.CashTypeCode.ToString(),
                 Text = $"{t.CashType} ({t.CashTypeCode})",
                 Selected = CashTypeCode.HasValue && CashTypeCode.Value == t.CashTypeCode
+            }).ToList();
+
+            var syntaxes = await NodeContext.Cash_tbCategoryExpSyntax
+                .OrderBy(s => s.SyntaxTypeCode)
+                .Select(s => new { s.SyntaxTypeCode, s.SyntaxType })
+                .ToListAsync();
+
+            SyntaxTypeItems = syntaxes.Select(s => new SelectListItem {
+                Value = s.SyntaxTypeCode.ToString(),
+                Text = s.SyntaxType,
+                Selected = SyntaxTypeCode.HasValue && SyntaxTypeCode.Value == s.SyntaxTypeCode
             }).ToList();
 
             ExistingFormats = await NodeContext.Cash_tbCategoryExps

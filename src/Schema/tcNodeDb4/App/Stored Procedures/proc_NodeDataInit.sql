@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [App].[proc_NodeDataInit]
+CREATE PROCEDURE [App].[proc_NodeDataInit]
 AS
 SET NOCOUNT, XACT_ABORT ON;
 BEGIN TRY
@@ -344,6 +344,12 @@ BEGIN TRY
 		, (1, 'Total')
 		, (2, 'Expression');
 
+    IF NOT EXISTS(SELECT * FROM Cash.tbCategoryExpSyntax)
+        INSERT INTO Cash.tbCategoryExpSyntax (SyntaxTypeCode, SyntaxType)
+        VALUES (0, 'Both')
+        , (1, 'Libre')
+        , (2, 'Excel');
+        
 	IF NOT EXISTS(SELECT * FROM Cash.tbEntryType)
 		INSERT INTO Cash.tbEntryType (CashEntryTypeCode, CashEntryType)
 		VALUES (0, 'Payment')

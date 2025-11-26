@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,6 +29,6 @@ namespace TradeControl.Web.Data
         public enum RoundingCode { Round, Truncate };
         public enum AssetType { Debtors, Creditors, Bank, Cash, CashAccounts, Capital };
         public enum ContentType { Documents, Images, Templates, Invalid };
-        
+        public enum SyntaxType {  Both, LibreOffice, Excel };
     }
 }

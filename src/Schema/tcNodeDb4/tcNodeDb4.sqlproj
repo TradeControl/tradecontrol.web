@@ -644,6 +644,7 @@
     <Build Include="Cash\Views\vwCategoryPrimaryParent.sql" />
     <Build Include="Cash\Functions\fnCategoryNamespaceInContext.sql" />
     <Build Include="Cash\Functions\fnCategoryNamespacePrimary.sql" />
+    <Build Include="Cash\Tables\tbCategoryExpSyntax.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

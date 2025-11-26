@@ -110,6 +110,28 @@ No JavaScript tree logic was refactored beyond necessary form interception for m
 | J2 | Persist | Selection persists | ☑ | ☑ | category-tree.view.persist-selection.ts |
 | J3 | Expand | Expanded set persists | ☑ | ☑ | category-tree.view.persist-expanded.ts |
 
+## Table K — Expressions (Cash Expressions subtree)
+
+| ID | Area | Node context | Scenario | Desktop steps | Mobile steps | Expected result | Desktop | Mobile | Script | Script stub |
+|---|---|---|---|---|---|---|---|---|---|---|
+| K1 | Anchor | `__EXPRESSIONS__` | Menu hidden in mobile action bar; context menu shows only Create Expression | Right-click `__EXPRESSIONS__` | Long-press `__EXPRESSIONS__` | Mobile footer hidden; menu shows “New Expression” only | ☑ | ☑ | ☐ | category-tree.expr.root.ts |
+| K2 | Menu | Expression leaf | Context menu includes View, Edit, Delete, Enable/Disable; Move hidden | Right-click expression | Long-press expression | Actions visible; Move hidden; toggle label reflects current state | ☑ | ☑ | ☐ | category-tree.expr.leaf.menu.ts |
+| K3 | Details | ExpressionDetailsCard | Enable/Disable button visible for admin and reflects state | Select expression (desktop) | Tap expression (mobile) | Toggle button appears; label switches Enable/Disable correctly | ☑ | ☑ | ☐ | category-tree.expr.details.toggle.ts |
+| K4 | Toggle | Expression leaf | Enable/Disable persists and updates UI without full reload | Context menu > Enable/Disable | Same | Node gets `tc-disabled` when disabled; label flips; state saved | ☑ | ☑ | ☐ | category-tree.expr.toggle.enabled.ts |
+| K5 | Action form | Root/Expressions | Create Expression injects node and selects it | Create Expression > Save | Same | New expression injected under `__EXPRESSIONS__`; node selected | ☑ | ☑ | ☐ | category-tree.expr.create.ts |
+| K6 | Action form | Expression leaf | Edit Expression saves and returns to Details; selection preserved | Edit > Save | Same | Details card shown; selection unchanged | ☑ | ☑ | ☐ | category-tree.expr.edit.ts |
+| K7 | Action form | Expression leaf | Delete Expression removes node and selects root | Delete > Confirm | Same | Node removed; `__EXPRESSIONS__` selected | ☑ | ☑ | ☐ | category-tree.expr.delete.ts |
+| K8 | Keyboard | Expressions | Shift+Arrow Up/Down reorders expression siblings | Select expression, Shift+↑/↓ | N/A | Order updated; node moves before/after expression siblings | ☑ | N/A | ☐ | category-tree.expr.keyboard.reorder.ts |
+| K9 | DnD | Expressions | Drag/drop before/after reorders expression siblings only | Drag expression before/after sibling | N/A | Order updated; only expressions allowed in subtree | ☑ | N/A | ☐ | category-tree.expr.dnd.reorder.ts |
+| K10 | View | Expressions | Selecting expression loads `_ExpressionDetailsCard` | Click expression | Tap expression | Details shows expression name, formula, format, type | ☑ | ☑ | ☐ | category-tree.expr.view.details.ts |
+| K11 | Mobile bar | Expressions | Mobile action bar: move hidden; edit/delete/toggle shown per admin | Tap expression | Same | Bar shows view/edit/delete/toggle; move hidden | ☑ | ☑ | ☐ | category-tree.expr.mobile.bar.ts |
+| K12 | Persist | Expressions | Selection and expanded state persist across reloads | Select, reload page | Same | Expression stays selected; expanded set retained | ☑ | ☑ | ☐ | category-tree.expr.view.persist.ts |
+
+Notes:
+- K2/K4 validate toggle label via DOM text and persisted `tc-disabled` class.
+- K6 accepts the current behaviour of returning to Details; selection must remain on the edited expression (no tree reset).
+- Keyboard/DnD (K8/K9) are desktop-only; ensure handlers call `ReorderExpression` and update UI order without page reload.
+
 ---
 
 ### Outstanding Work (Optional Future Refactor – Option B)

@@ -19,44 +19,34 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public EditExpressionModel(NodeContext context) : base(context) { }
 
         // --- Bound fields ---
-        [BindProperty]
-        [Required]
-        [StringLength(10)]
-        [Display(Name = "Category Code")]
+        [BindProperty, Required, StringLength(10), Display(Name = "Category Code")]
         public string CategoryCode { get; set; } = string.Empty;
 
-        [BindProperty]
-        [Required]
-        [StringLength(50)]
-        [Display(Name = "Category")]
+        [BindProperty, Required, StringLength(50), Display(Name = "Category")]
         public string Category { get; set; } = string.Empty;
 
-        [BindProperty]
-        [Required]
-        [Display(Name = "Cash Type")]
+        [BindProperty, Required, Display(Name = "Cash Type")]
         public short? CashTypeCode { get; set; }
 
-        [BindProperty]
-        [Required]
-        [StringLength(256)]
-        [Display(Name = "Expression")]
+        [BindProperty, Required, StringLength(256), Display(Name = "Expression")]
         public string Expression { get; set; } = string.Empty;
 
-        [BindProperty]
-        [Required]
-        [StringLength(100)]
-        [Display(Name = "Format")]
+        [BindProperty, Required, StringLength(100), Display(Name = "Format")]
         public string Format { get; set; } = string.Empty;
+
+        // NEW: Syntax type selection
+        [BindProperty, Required, Display(Name = "Syntax Type")]
+        public short? SyntaxTypeCode { get; set; }
 
         // Lookup lists
         public IEnumerable<SelectListItem> CashTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> SyntaxTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
         public IList<string> ExistingFormats { get; private set; } = new List<string>();
 
         // Evaluation state
         public bool IsError { get; private set; }
         public string? ErrorMessage { get; private set; }
 
-        // Flag set after successful save (can be used in view for toast/UI feedback)
         public bool SaveSucceeded { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(string key)
@@ -73,6 +63,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             var exp = await NodeContext.Cash_tbCategoryExps
                 .Where(e => e.CategoryCode == cat.CategoryCode)
+                .Include(e => e.SyntaxTypeCodeNavigation)
                 .SingleOrDefaultAsync();
 
             CategoryCode = cat.CategoryCode;
@@ -80,6 +71,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             CashTypeCode = cat.CashTypeCode;
             Expression = exp?.Expression ?? string.Empty;
             Format = exp?.Format ?? string.Empty;
+            SyntaxTypeCode = exp?.SyntaxTypeCode ?? 0; // default 'Both'
             IsError = exp?.IsError ?? false;
             ErrorMessage = string.IsNullOrWhiteSpace(exp?.ErrorMessage) ? null : exp!.ErrorMessage;
 
@@ -118,8 +110,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 cat.Category = Category;
                 cat.CashTypeCode = CashTypeCode ?? cat.CashTypeCode;
+
                 exp.Expression = Expression;
                 exp.Format = Format;
+                exp.SyntaxTypeCode = SyntaxTypeCode ?? 0;
 
                 IsError = exp.IsError;
                 ErrorMessage = string.IsNullOrWhiteSpace(exp.ErrorMessage) ? null : exp.ErrorMessage;
@@ -129,50 +123,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 var exprKey = CategoryTreeModel.MakeExpressionKey(catCode);
 
-                // Non-embedded flow: redirect back selecting the node
-                if (Request.Query["embed"] != "1")
+                if (Request.Query["embed"] == "1")
                 {
-                    return RedirectToPage("/Cash/CategoryTree/Index", new {
-                        select = exprKey,
-                        key = exprKey,
-                        expand = CategoryTreeModel.ExpressionsNodeKey
-                    });
+                    return RedirectToPage("/Cash/CategoryTree/Details", new { key = exprKey, embed = "1" });
                 }
 
-                // Embedded flow: provide marker for client injection
-                string exprPreview = Expression;
-                if (exprPreview.Length > 60)
-                    exprPreview = exprPreview.Substring(0, 57) + "...";
-
-                var title =
-                    "<span class='bi bi-calculator me-1'></span>"
-                    + WebUtility.HtmlEncode(Category)
-                    + " (" + WebUtility.HtmlEncode(catCode) + ") "
-                    + "<span class='tc-exp-formula'>= " + WebUtility.HtmlEncode(exprPreview) + "</span>";
-
-                var nodeSpec = new {
+                return RedirectToPage("/Cash/CategoryTree/Index", new {
+                    select = exprKey,
                     key = exprKey,
-                    title,
-                    icon = false,
-                    data = new {
-                        nodeType = "expression",
-                        categoryCode = catCode,
-                        category = Category,
-                        cashTypeCode = CashTypeCode,
-                        expression = Expression,
-                        format = Format,
-                        isEnabled = cat.IsEnabled == 0 ? 0 : 1,
-                        displayOrder = cat.DisplayOrder,
-                        isError = IsError ? 1 : 0,
-                        errorMessage = ErrorMessage
-                    }
-                };
-
-                ViewData["EmbedSelectKey"] = exprKey;
-                ViewData["EmbedExpandKey"] = CategoryTreeModel.ExpressionsNodeKey;
-                ViewData["EmbedNodeJson"] = JsonSerializer.Serialize(nodeSpec);
-
-                return Page();
+                    expand = CategoryTreeModel.ExpressionsNodeKey
+                });
             }
             catch (Exception ex)
             {
@@ -202,6 +162,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 Value = t.CashTypeCode.ToString(),
                 Text = $"{t.CashType} ({t.CashTypeCode})",
                 Selected = CashTypeCode.HasValue && CashTypeCode.Value == t.CashTypeCode
+            }).ToList();
+
+            var syntaxes = await NodeContext.Set<Cash_tbCategoryExpSyntax>()
+                .OrderBy(s => s.SyntaxTypeCode)
+                .Select(s => new { s.SyntaxTypeCode, s.SyntaxType })
+                .ToListAsync();
+
+            SyntaxTypeItems = syntaxes.Select(s => new SelectListItem {
+                Value = s.SyntaxTypeCode.ToString(),
+                Text = s.SyntaxType,
+                Selected = SyntaxTypeCode.HasValue && SyntaxTypeCode.Value == s.SyntaxTypeCode
             }).ToList();
 
             ExistingFormats = await NodeContext.Cash_tbCategoryExps

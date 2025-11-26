@@ -69,6 +69,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     var exp = await (from e in NodeContext.Cash_tbCategoryExps
                                      join c in NodeContext.Cash_tbCategories on e.CategoryCode equals c.CategoryCode
+                                     join s in NodeContext.Cash_tbCategoryExpSyntax on e.SyntaxTypeCode equals s.SyntaxTypeCode
                                      where e.CategoryCode == categoryCode
                                      select new ExpressionDetailsVm {
                                          CategoryCode = e.CategoryCode,
@@ -76,7 +77,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                          Expression = e.Expression,
                                          Format = e.Format,
                                          IsError = e.IsError,
-                                         ErrorMessage = e.ErrorMessage
+                                         ErrorMessage = e.ErrorMessage,
+                                         SyntaxType = s.SyntaxType   // added
                                      }).FirstOrDefaultAsync();
 
                     if (exp == null)

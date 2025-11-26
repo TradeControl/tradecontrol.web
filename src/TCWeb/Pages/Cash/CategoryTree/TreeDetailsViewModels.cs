@@ -54,6 +54,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string Category { get; set; } = string.Empty;
         public string Expression { get; set; } = string.Empty;
         public string Format { get; set; } = string.Empty;
+        public string SyntaxType { get; set; } = string.Empty;
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
     }

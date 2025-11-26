@@ -1,4 +1,4 @@
-﻿#define DEBUG
+#define DEBUG
 
 using System;
 using System.Data;
@@ -141,7 +141,7 @@ namespace TradeControl.Web.Data
                         entry.PaymentStatusCode = (short)NodeEnum.PaymentStatus.Posted;
                         return true;
                     }
-                                     
+
                 }
                 catch (Exception e)
                 {
@@ -343,14 +343,13 @@ namespace TradeControl.Web.Data
                 }
 
                 return _accountName.Value != DBNull.Value ? (string)_accountName.Value : string.Empty;
-                
+
             }
             catch (Exception e)
             {
                 await ErrorLog(e);
                 return string.Empty;
             }
-            
         }
 
         public async Task<string> GetUserId(string aspnetId)
