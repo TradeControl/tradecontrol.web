@@ -24,10 +24,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 HttpContext.Response.Headers["Pragma"] = "no-cache";
                 HttpContext.Response.Headers["Expires"] = "0";
 
-                // Top-level: Root, Disconnected, and "By Cash Type"
+                // Top-level anchors (empty id)
                 if (string.IsNullOrEmpty(id))
                 {
-                    // Determine if any disconnected categories exist
                     var totals = await NodeContext.Cash_tbCategoryTotals
                         .AsNoTracking()
                         .Select(t => new { t.ParentCode, t.ChildCode })
@@ -49,24 +48,34 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                             folder = true,
                             lazy = true,
                             icon = false,
-                            data = new { isRoot = true }
+                            data = new { isRoot = true, nodeType = "rootAnchor" }
                         }
                     };
 
                     if (disconnectedExist)
                     {
-                        nodes.Add(new
-                        {
+                        nodes.Add(new {
                             key = DisconnectedNodeKey,
                             title = "<i class='bi bi-plug tc-disconnected-icon'></i> Disconnected",
                             folder = true,
                             lazy = true,
                             icon = false,
-                            data = new { disconnected = true }
+                            data = new { disconnected = true, nodeType = "disconnectedAnchor" }
                         });
                     }
 
-                    nodes.Add(BuildTypesRootNode()); // Cash Types root
+                    // Cash Types synthetic root
+                    nodes.Add(BuildTypesRootNode());
+
+                    // NEW: Cash Expressions synthetic root (single-level list)
+                    nodes.Add(new {
+                        key = ExpressionsNodeKey,
+                        title = "<i class='bi bi-calculator'></i> Cash Expressions",
+                        folder = true,
+                        lazy = true,
+                        icon = false,
+                        data = new { syntheticKind = "expressionsRoot", nodeType = "expressionsRoot" }
+                    });
 
                     return new JsonResult(nodes);
                 }
@@ -82,6 +91,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     var catNodes = await BuildCategoriesForTypeAsync(typeCode);
                     return new JsonResult(catNodes);
+                }
+
+                // Cash Expressions subtree
+                if (string.Equals(id, ExpressionsNodeKey, StringComparison.Ordinal))
+                {
+                    var exprNodes = await BuildExpressionNodesAsync();
+                    return new JsonResult(exprNodes);
                 }
 
                 // Existing totals-based tree
@@ -109,6 +125,69 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             }
         }
 
+        private async Task<List<object>> BuildExpressionNodesAsync()
+        {
+            short exprType = (short)NodeEnum.CategoryType.Expression;
+
+            var rows = await NodeContext.Cash_tbCategories
+                .Where(c => c.CategoryTypeCode == exprType)
+                .GroupJoin(
+                    NodeContext.Cash_tbCategoryExps,
+                    c => c.CategoryCode,
+                    e => e.CategoryCode,
+                    (c, expGroup) => new {
+                        c.CategoryCode,
+                        c.Category,
+                        c.DisplayOrder,
+                        c.CashTypeCode,
+                        c.IsEnabled,
+                        Exp = expGroup.FirstOrDefault()
+                    }
+                )
+                // Order: non-zero DisplayOrder ascending, then zero (uninitialized), then CategoryCode for stability
+                .OrderBy(r => r.DisplayOrder == 0)
+                .ThenBy(r => r.DisplayOrder)
+                .ThenBy(r => r.CategoryCode)
+                .ToListAsync();
+
+            return rows.Select(r =>
+            {
+                var expression = r.Exp?.Expression ?? "";
+                var format = r.Exp?.Format ?? "";
+                var isError = (r.Exp?.IsError ?? false) ? 1 : 0;
+
+                string exprForTitle = expression;
+                if (exprForTitle.Length > 60)
+                    exprForTitle = exprForTitle.Substring(0, 57) + "...";
+
+                var title =
+                    "<span class='bi bi-calculator me-1'></span>"
+                    + WebUtility.HtmlEncode(r.Category)
+                    + " (" + WebUtility.HtmlEncode(r.CategoryCode) + ") "
+                    + "<span class='tc-exp-formula'>= " + WebUtility.HtmlEncode(exprForTitle) + "</span>";
+
+                return (object)new {
+                    key = MakeExpressionKey(r.CategoryCode),
+                    title = title,
+                    folder = false,
+                    lazy = false,
+                    icon = false, // suppress default icon; we render our own in title
+                    extraClasses = isError == 1 ? "tc-exp-error" : (r.IsEnabled == 0 ? "tc-disabled" : null),
+                    data = new {
+                        nodeType = "expression",
+                        categoryCode = r.CategoryCode,
+                        category = r.Category,
+                        displayOrder = r.DisplayOrder,
+                        cashTypeCode = r.CashTypeCode,
+                        expression = expression,
+                        format = format,
+                        isError = isError,
+                        isEnabled = r.IsEnabled == 0 ? 0 : 1
+                    }
+                };
+            }).ToList();
+        }
+
         private async Task<(List<Cash_tbCategoryTotal> totals, HashSet<string> childCodesSet, HashSet<string> linkedSet)> LoadTotalsAndSetsAsync()
         {
             var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
@@ -130,8 +209,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 ? cats.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Category).ToList()
                 : cats.OrderBy(c => c.CashPolarityCode).ThenBy(c => c.Category).ToList();
 
-            var rootNodes = cats.Select(c => (object)new
-            {
+            var rootNodes = cats.Select(c => (object)new {
                 key = c.CategoryCode,
                 title =
                     $"<span class='tc-cat-icon tc-cat-{PolarityClass(c.CashPolarityCode)}'></span> " +
@@ -140,15 +218,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 lazy = true,
                 icon = false,
                 extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
-                data = new
-                {
+                data = new {
                     cashPolarity = c.CashPolarityCode,
                     categoryType = c.CategoryTypeCode,
                     nodeType = "category",
                     isEnabled = c.IsEnabled == 0 ? 0 : 1
                 }
             }).ToList();
-            
+
             return rootNodes;
         }
 
@@ -169,18 +246,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .ToListAsync();
             var hasCodes = new HashSet<string>(hasCodesSet);
 
-            var nodes = disconnectedCats.Select(c => (object)new
-            {
+            var nodes = disconnectedCats.Select(c => (object)new {
                 key = c.CategoryCode,
                 title =
                     $"<span class='tc-cat-icon tc-cat-{PolarityClass(c.CashPolarityCode)}'></span> " +
                     $"{WebUtility.HtmlEncode(c.Category)} ({WebUtility.HtmlEncode(c.CategoryCode)})",
-                folder = true,                       // was: false
+                folder = true,
                 lazy = hasCodes.Contains(c.CategoryCode),
                 icon = false,
                 extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
-                data = new
-                {
+                data = new {
                     cashPolarity = c.CashPolarityCode,
                     categoryType = c.CategoryTypeCode,
                     nodeType = "category",
@@ -254,7 +329,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .ToListAsync();
             var hasCodes = new HashSet<string>(hasCodesSet);
 
-            // Helper builders to avoid duplicating title/icon logic.
             object BuildCategoryNode(Cash_tbCategory c)
             {
                 var title =
@@ -263,10 +337,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 return new {
                     key = c.CategoryCode,
-                    title = title,
+                    title,
                     folder = true,
                     lazy = hasChildCategory.Contains(c.CategoryCode) || hasCodes.Contains(c.CategoryCode),
-                    icon = false, // we embed the icon HTML ourselves
+                    icon = false,
                     extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
                     data = new {
                         cashPolarity = c.CashPolarityCode,
@@ -279,19 +353,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             object BuildCodeNode(dynamic cd)
             {
-                // Use parent cash type to derive icon (same mapping as CashCodeIconClass)
                 var iconClass = CashCodeIconClass(categoryCashType);
-
                 var title =
                     $"<span class='tc-code-icon bi {iconClass}'></span> " +
                     $"{WebUtility.HtmlEncode(cd.CashCode)} - {WebUtility.HtmlEncode(cd.CashDescription)}";
 
                 return new {
                     key = $"code:{cd.CashCode}",
-                    title = title,
+                    title,
                     folder = false,
                     lazy = false,
-                    icon = false, // icon HTML already in title
+                    icon = false,
                     extraClasses = cd.IsEnabled == 0 ? "tc-disabled" : null,
                     data = new {
                         cashCode = cd.CashCode,
@@ -316,25 +388,19 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             return categoryNodes.Concat(codeNodes).ToList();
         }
 
-        private static string PolarityClass(short polarityCode)
-        {
-            return polarityCode switch
-            {
+        private static string PolarityClass(short polarityCode) =>
+            polarityCode switch {
                 0 => "expense",
                 1 => "income",
                 2 => "neutral",
                 _ => "neutral"
             };
-        }
 
-        private static string CashCodeIconClass(short cashTypeCode)
-        {
-            return cashTypeCode switch
-            {
+        private static string CashCodeIconClass(short cashTypeCode) =>
+            cashTypeCode switch {
                 1 => "bi-file-earmark-text",
                 2 => "bi-bank",
                 _ => "bi-wallet2"
             };
-        }
     }
 }

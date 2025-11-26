@@ -1,0 +1,87 @@
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.CreateExpressionModel
+@{
+    var isEmbedded = Request.Query["embed"] == "1";
+    Layout = isEmbedded ? null : "_Layout";
+}
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">New Expression Category</h5>
+
+        <form method="post" asp-page="./CreateExpression" asp-route-embed="@(isEmbedded ? "1" : null)">
+            @Html.AntiForgeryToken()
+            @if (isEmbedded)
+            {
+                <input type="hidden" name="embed" value="1" />
+            }
+
+            <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="CategoryCode" class="form-label"></label>
+                <input asp-for="CategoryCode" class="form-control" maxlength="10" autocomplete="off" />
+                <span asp-validation-for="CategoryCode" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Category" class="form-label"></label>
+                <input asp-for="Category" class="form-control" maxlength="50" />
+                <span asp-validation-for="Category" class="text-danger small"></span>
+                <div class="form-text small">Display name for the expression category.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="CashTypeCode" class="form-label"></label>
+                <select asp-for="CashTypeCode" asp-items="Model.CashTypeItems" class="form-select">
+                    <option value="">-- select cash type --</option>
+                </select>
+                <span asp-validation-for="CashTypeCode" class="text-danger small"></span>
+                <div class="form-text small">Defaults to TRADE if available.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Expression" class="form-label"></label>
+                <textarea asp-for="Expression" class="form-control" rows="2" maxlength="256"></textarea>
+                <span asp-validation-for="Expression" class="text-danger small"></span>
+                <div class="form-text small">Excel-style formula (e.g. IF([Sales]=0,0,[Gross Profit]/[Sales])). Use category codes in square brackets.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Format" class="form-label"></label>
+                <input asp-for="Format" class="form-control" list="formatList" maxlength="100" />
+                <datalist id="formatList">
+                    @foreach (var f in Model.ExistingFormats)
+                    {
+                        <option value="@f"></option>
+                    }
+                </datalist>
+                <span asp-validation-for="Format" class="text-danger small"></span>
+                <div class="form-text small">Required. Examples: 0%, #,##0.00, #,##0; do not leave blank.</div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                @if (isEmbedded)
+                {
+                    <a href="#" class="btn btn-secondary btn-sm" data-embedded-cancel
+                       onclick="try { if (window.tcCancel) { window.tcCancel(); } } catch(e) {} return false;">Cancel</a>
+                }
+                else
+                {
+                    <a class="btn btn-secondary btn-sm"
+                       href="/Cash/CategoryTree/Index?select=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey&key=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey&expand=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey">
+                        Cancel
+                    </a>
+                }
+            </div>
+        </form>
+
+        @if (ViewData["EmbedSelectKey"] != null && ViewData["EmbedExpandKey"] != null)
+        {
+            <div id="tcEmbedResult"
+                 data-select="@ViewData["EmbedSelectKey"]"
+                 data-expand="@ViewData["EmbedExpandKey"]"
+                 data-node='@ViewData["EmbedNodeJson"]'></div>
+        }
+    </div>
+</div>

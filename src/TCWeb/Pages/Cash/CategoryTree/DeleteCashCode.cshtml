@@ -4,7 +4,6 @@
     var isEmbedded = string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
     if (isEmbedded)
     {
-        // Suppress site layout (navigation bar etc.) when loaded into RHS pane
         Layout = null;
     }
 
@@ -17,8 +16,6 @@
 
 @if (Model.OperationSucceeded && isEmbedded)
 {
-    /* Embedded success: only emit selection/removal marker.
-       JS will remove the child node and activate the parent. */
     <div id="tcEmbedResult"
          data-select="@Model.ParentCategoryCode"
          data-expand="@Model.ParentCategoryCode"
@@ -43,16 +40,29 @@ else if (!Model.OperationSucceeded)
             <input type="hidden" name="embed" value="1" />
         }
         <input type="hidden" name="CashCode" value="@Model.CashCode" />
+        <input type="hidden" name="Key" value="@deletedNodeKey" />
+        <input type="hidden" name="ParentCategoryCode" value="@Model.ParentCategoryCode" />
+
         <p class="small mb-3">@Model.CodeDisplay</p>
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-            <a class="btn btn-secondary btn-sm" href="#" data-embedded-cancel
-               onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+            @if (isEmbedded)
+            {
+                <a class="btn btn-secondary btn-sm" href="#" data-embedded-cancel
+                   onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+            }
+            else
+            {
+                <!-- Mobile/full-page Cancel: return with parent category selected -->
+                <a class="btn btn-secondary btn-sm"
+                   href="/Cash/CategoryTree/Index?select=@Model.ParentCategoryCode&key=@Model.ParentCategoryCode&expand=@Model.ParentCategoryCode&parentKey=@Model.ParentCategoryCode">
+                    Cancel
+                </a>
+            }
         </div>
     </form>
 }
 else
 {
-    /* Non-embedded success should have redirected; minimal fallback (should rarely appear). */
     <div class="text-muted small py-1 px-2">Cash code removed.</div>
 }

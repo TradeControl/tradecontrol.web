@@ -4,6 +4,7 @@
 @{
     var isEmbedded = string.Equals(Request.Query["embed"], "1", System.StringComparison.OrdinalIgnoreCase);
     Layout = isEmbedded ? null : "_Layout";
+    var prefixedKey = $"code:{Model.CashCode}";
 }
 
 @if (Model.OperationSucceeded && isEmbedded)
@@ -28,6 +29,10 @@ else
                 {
                     <input type="hidden" name="embed" value="1" />
                 }
+
+                <!-- Hidden normalized node key to preserve selection pipeline on mobile -->
+                <input type="hidden" name="Key" value="@prefixedKey" />
+                <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
 
                 <div asp-validation-summary="All" class="text-danger small mb-2"></div>
 
@@ -55,8 +60,18 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Save</button>
-                    @* Show cancel even when embedded (desktop RHS needs a Cancel) *@
-                    <a href="#" class="btn btn-secondary" data-embedded-cancel data-action="cancel" onclick="return false;">Cancel</a>
+                    @if (isEmbedded)
+                    {
+                        <a href="#" class="btn btn-secondary" data-embedded-cancel data-action="cancel" onclick="return false;">Cancel</a>
+                    }
+                    else
+                    {
+                        <!-- Mobile/full-page Cancel: return with code selected -->
+                        <a class="btn btn-secondary"
+                           href="/Cash/CategoryTree/Index?select=@prefixedKey&key=@prefixedKey&expand=@Model.CategoryCode&parentKey=@Model.CategoryCode">
+                            Cancel
+                        </a>
+                    }
                 </div>
             </form>
         </div>

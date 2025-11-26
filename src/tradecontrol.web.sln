@@ -5,6 +5,7 @@ VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1B4B-4D74-84AF-4625B851D52B}"
 	ProjectSection(SolutionItems) = preProject
+		..\docs\cash-codes.md = ..\docs\cash-codes.md
 		..\docs\categorytree_test_script.md = ..\docs\categorytree_test_script.md
 		..\changelog.md = ..\changelog.md
 		..\docs\dev_plan.md = ..\docs\dev_plan.md

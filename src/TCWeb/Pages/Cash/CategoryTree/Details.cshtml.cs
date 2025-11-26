@@ -18,7 +18,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
         public string NodeType { get; private set; } = "";
         public CategoryDetailsVm Category { get; private set; }
-        public CodeDetailsVm Code { get; private set; }
+        public CashCodeDetailsVm Code { get; private set; }
+        public ExpressionDetailsVm Expression { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string key, string parentKey = null)
         {
@@ -41,7 +42,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                     join pol in NodeContext.Cash_tbPolaritys on cat.CashPolarityCode equals pol.CashPolarityCode
                                     join typ in NodeContext.Cash_tbTypes on cat.CashTypeCode equals typ.CashTypeCode
                                     where code.CashCode == cashCode
-                                    select new CodeDetailsVm {
+                                    select new CashCodeDetailsVm {
                                         CashCode = code.CashCode,
                                         CashDescription = code.CashDescription,
                                         CategoryCode = cat.CategoryCode,
@@ -61,6 +62,28 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
 
                     Code = vm;
+                }
+                else if (CategoryTreeModel.IsExpressionKey(key))
+                {
+                    var categoryCode = key.Substring(CategoryTreeModel.ExpressionKeyPrefix.Length);
+
+                    var exp = await (from e in NodeContext.Cash_tbCategoryExps
+                                     join c in NodeContext.Cash_tbCategories on e.CategoryCode equals c.CategoryCode
+                                     where e.CategoryCode == categoryCode
+                                     select new ExpressionDetailsVm {
+                                         CategoryCode = e.CategoryCode,
+                                         Category = c.Category,
+                                         Expression = e.Expression,
+                                         Format = e.Format,
+                                         IsError = e.IsError,
+                                         ErrorMessage = e.ErrorMessage
+                                     }).FirstOrDefaultAsync();
+
+                    if (exp == null)
+                        return NotFound();
+
+                    NodeType = "expression";
+                    Expression = exp;
                 }
                 else
                 {

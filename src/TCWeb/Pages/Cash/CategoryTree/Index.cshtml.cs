@@ -288,5 +288,111 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 return new JsonResult(new { success = false, message = e.Message });
             }
         }
+
+        public async Task<JsonResult> OnPostReorderExpressionAsync([FromForm] string key, [FromForm] string anchorKey, [FromForm] string mode)
+        {
+            if (!User.IsInRole(Constants.AdministratorsRole))
+            {
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+            }
+
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(anchorKey) || string.IsNullOrWhiteSpace(mode))
+            {
+                return new JsonResult(new { success = false, message = "Missing parameters" });
+            }
+
+            // Strip expr: if present
+            if (CategoryTreeModel.IsExpressionKey(key))
+            {
+                key = key.Substring(CategoryTreeModel.ExpressionKeyPrefix.Length);
+            }
+            if (CategoryTreeModel.IsExpressionKey(anchorKey))
+            {
+                anchorKey = anchorKey.Substring(CategoryTreeModel.ExpressionKeyPrefix.Length);
+            }
+
+            try
+            {
+                // Fetch both categories
+                var left = await NodeContext.Cash_tbCategories.FirstOrDefaultAsync(c => c.CategoryCode == key);
+                var anchor = await NodeContext.Cash_tbCategories.FirstOrDefaultAsync(c => c.CategoryCode == anchorKey);
+
+                if (left == null || anchor == null)
+                {
+                    return new JsonResult(new { success = false, message = "Category not found" });
+                }
+
+                short exprType = (short)NodeEnum.CategoryType.Expression;
+                if (left.CategoryTypeCode != exprType || anchor.CategoryTypeCode != exprType)
+                {
+                    return new JsonResult(new { success = false, message = "Both nodes must be Expression categories" });
+                }
+
+                // Normalise display order sequence if duplicates or zeros exist.
+                var allExpr = await NodeContext.Cash_tbCategories
+                    .Where(c => c.CategoryTypeCode == exprType)
+                    .OrderBy(c => c.DisplayOrder)
+                    .ToListAsync();
+
+                short rebuild = 1;
+                foreach (var c in allExpr)
+                {
+                    if (c.DisplayOrder != rebuild)
+                    {
+                        c.DisplayOrder = rebuild;
+                    }
+                    rebuild++;
+                }
+                await NodeContext.SaveChangesAsync();
+
+                // Reload entities after potential normalisation
+                left = allExpr.First(c => c.CategoryCode == left.CategoryCode);
+                anchor = allExpr.First(c => c.CategoryCode == anchor.CategoryCode);
+
+                // Reorder: mode = before | after relative to anchor
+                if (mode != "before" && mode != "after")
+                {
+                    return new JsonResult(new { success = false, message = "Invalid mode" });
+                }
+
+                if (left.CategoryCode == anchor.CategoryCode)
+                {
+                    return new JsonResult(new { success = false, message = "Same node" });
+                }
+
+                // Remove 'left' from sequence then re-insert before/after anchor
+                var seq = allExpr.Where(c => c.CategoryCode != left.CategoryCode).ToList();
+                var anchorIndex = seq.FindIndex(c => c.CategoryCode == anchor.CategoryCode);
+
+                if (anchorIndex < 0)
+                {
+                    return new JsonResult(new { success = false, message = "Anchor not in sequence" });
+                }
+
+                var insertIndex = mode == "before" ? anchorIndex : anchorIndex + 1;
+                if (insertIndex < 0) insertIndex = 0;
+                if (insertIndex > seq.Count) insertIndex = seq.Count;
+                seq.Insert(insertIndex, left);
+
+                short order = 1;
+                foreach (var c in seq)
+                {
+                    if (c.DisplayOrder != order)
+                    {
+                        await NodeContext.Cash_tbCategories
+                            .Where(x => x.CategoryCode == c.CategoryCode)
+                            .ExecuteUpdateAsync(s => s.SetProperty(x => x.DisplayOrder, order));
+                    }
+                    order++;
+                }
+
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                await NodeContext.ErrorLog(ex);
+                return new JsonResult(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

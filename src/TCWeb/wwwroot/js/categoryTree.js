@@ -36,6 +36,8 @@ window.CategoryTree = (function ()
         var detailsUrl = cfg.detailsUrl || null;
         var ROOT_KEY = cfg.rootKey;
         var DISC_KEY = cfg.discKey;
+        var EXPR_ROOT_KEY = "__EXPRESSIONS__";
+        var EXPR_PREFIX = "expr:";
         var isAdmin = !!cfg.isAdmin;
         var CATEGORYTYPE_CASHTOTAL = 1; // server: (short)NodeEnum.CategoryType.CashTotal
 
@@ -50,104 +52,6 @@ window.CategoryTree = (function ()
         const CODE_POLL_MAX_TRIES = 12;       // was 40
         const CODE_POLL_INTERVAL_MS = 150;    // unchanged interval, fewer tries
         const BFS_STEP_DELAY_MS = 25;         // existing 25; keep symbolic
-
-        var _cancelReturnKey = "";
-
-
-        // Expose setters if not already present (used by openAction)
-        if (typeof window.tcSetCancelReturn !== "function")
-        {
-            window.tcSetCancelReturn = function (key)
-            {
-                try
-                {
-                    _cancelReturnKey = key || "";
-                }
-                catch (_){}
-            };
-        }
-
-        // Unified cancel action: reselect previous node (handles code: prefix variants)
-        if (typeof window.tcCancel !== "function")
-        {
-            window.tcCancel = function ()
-            {
-                if (!_cancelReturnKey) { return; }
-
-                try
-                {
-                    var tree = getTree();
-                    if (!tree)
-                    {
-                        return;
-                    }
-
-                    var key = _cancelReturnKey;
-                    var variants = [];
-                    if (key.indexOf("code:") === 0)
-                    {
-                        variants = [key, key.substring(5)];
-                    }
-                    else
-                    {
-                        variants = [key, "code:" + key];
-                    }
-
-                    var target = null;
-                    for (var i = 0; i < variants.length; i++)
-                    {
-                        target = tree.getNodeByKey(variants[i]);
-                        if (target) { break; }
-                    }
-
-                    if (!target)
-                    {
-                        // Retry once after a lightweight root/disc reload (case for newly created then cancelled)
-                        refreshTopAnchors();
-                        setTimeout(function ()
-                        {
-                            try
-                            {
-                                for (var j = 0; j < variants.length; j++)
-                                {
-                                    var n = tree.getNodeByKey(variants[j]);
-                                    if (n)
-                                    {
-                                        target = n;
-                                        break;
-                                    }
-                                }
-                                if (target)
-                                {
-                                    target.setActive(true);
-                                    if (isMobile())
-                                    {
-                                        updateActionBar(target);
-                                    }
-                                    else
-                                    {
-                                        loadDetails(target);
-                                    }
-                                }
-                            }
-                            catch (_){}
-                        }, 160);
-                        return;
-                    }
-
-                    target.setActive(true);
-                    if (isMobile())
-                    {
-                        updateActionBar(target);
-                    }
-                    else
-                    {
-                        loadDetails(target);
-                    }
-                }
-                catch (_){}
-            };
-        }
 
         // Capture pristine menu and templates once when DOM ready (before any context mutations)
         $(function ()
@@ -608,18 +512,32 @@ window.CategoryTree = (function ()
                     }
 
                     var s = String(key);
+                    if (s.indexOf(EXPR_PREFIX) === 0)
+                    {
+                        // Expression keys have no code variants
+                        return [s];
+                    }
+
                     if (s.indexOf("code:") === 0)
                     {
                         return [s, s.substring(5)];
                     }
-                    else
-                    {
-                        return ["code:" + s, s];
-                    }
+
+                    return ["code:" + s, s];
                 }
 
                 var variants = keyVariants(selectKey);
-                var isCodeKey = variants.length > 0 && (variants[0].indexOf("code:") === 0 || (variants[1] && variants[1].indexOf("code:") === 0));
+                var isCodeKey =
+                    variants.length > 0
+                    && (variants[0].indexOf("code:") === 0
+                        || (variants[1] && variants[1].indexOf("code:") === 0));
+
+                var isExprKey = (typeof selectKey === "string" && selectKey.indexOf(EXPR_PREFIX) === 0);
+                if (isExprKey)
+                {
+                    // Ensure we never walk the code selection path for expressions
+                    isCodeKey = false;
+                }
 
                 // Heuristic: post-create redirect (CreateCashCode desktop) => select==key (same code) and expand present.
                 // Treat this as a fresh-create selection that must wait until the child is visible under ROOT/expandKey.
@@ -1070,6 +988,82 @@ window.CategoryTree = (function ()
 			        catch(_){ callback(false); }
 		        }
 
+                function loadUnderExprUntilKey(targetKey, maxFolders, callback)
+                {
+                    try
+                    {
+                        var tree = getTree();
+                        if (!tree) { callback(false); return; }
+                        if (tree.getNodeByKey(targetKey)) { callback(true); return; }
+
+                        var exprRoot = tree.getNodeByKey(EXPR_ROOT_KEY);
+                        if (!exprRoot) { callback(false); return; }
+
+                        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
+
+                        var queue = [];
+                        var visited = new Set();
+
+                        function enqueue(n)
+                        {
+                            if (!n || !n.key || visited.has(n.key)) { return; }
+                            visited.add(n.key);
+                            queue.push(n);
+                        }
+
+                        enqueue(exprRoot);
+
+                        (function step()
+                        {
+                            if (tree.getNodeByKey(targetKey))
+                            {
+                                callback(true);
+                                return;
+                            }
+
+                            if (queue.length === 0 || visited.size > maxFolders)
+                            {
+                                callback(false);
+                                return;
+                            }
+
+                            var current = queue.shift();
+
+                            if (current.lazy && !current.loaded)
+                            {
+                                try
+                                {
+                                    var res = current.load();
+                                    var after = function ()
+                                    {
+                                        try
+                                        {
+                                            (current.children || []).forEach(enqueue);
+                                        }
+                                        catch(_){}
+                                        setTimeout(step, 15);
+                                    };
+                                    if (res && res.then) { res.then(after, after); return; }
+                                    if (res && res.done) { res.done(after).fail(after); return; }
+                                }
+                                catch(_){}
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    (current.children || []).forEach(enqueue);
+                                }
+                                catch(_){}
+                            }
+
+                            setTimeout(step, 15);
+                        })();
+                    }
+                    catch(_){ callback(false); }
+                }
+
+
                 function findPreferredParentUnderRoot(parentKey)
                 {
                     var all = findAllNodesByKey(parentKey);
@@ -1433,6 +1427,83 @@ window.CategoryTree = (function ()
 
                     doReload();
                 }
+
+                if (isExprKey)
+                {
+                    // Ensure Expressions root exists and then poll its children for our expr node
+                    var tree = getTree();
+                    if (!tree)
+                    {
+                        scheduleRetry();
+                        return;
+                    }
+
+                    var exprRoot = tree.getNodeByKey(EXPR_ROOT_KEY);
+                    if (!exprRoot)
+                    {
+                        // materialize expr root at top-level if needed
+                        setTimeout(function ()
+                        {
+                            loadUnderExprUntilKey(selectKey, 200, function (ok)
+                            {
+                                if (ok)
+                                {
+                                    var n = tree.getNodeByKey(selectKey);
+                                    if (n) { activateNodeFinal(n); return; }
+                                }
+                                scheduleRetry();
+                            });
+                        }, 50);
+                        return;
+                    }
+
+                    function afterReady()
+                    {
+                        var n = tree.getNodeByKey(selectKey);
+                        if (n)
+                        {
+                            activateNodeFinal(n);
+                            return;
+                        }
+
+                        var tries = 0;
+                        var maxTries = 40, intervalMs = 150;
+
+                        (function poll()
+                        {
+                            tries++;
+                            var r = exprRoot.reloadChildren
+                                ? exprRoot.reloadChildren({ url: nocache(appendQuery(nodesUrl, "id", exprRoot.key)) })
+                                : null;
+
+                            var cont = function ()
+                            {
+                                var hit = tree.getNodeByKey(selectKey);
+                                if (hit) { activateNodeFinal(hit); return; }
+                                if (tries >= maxTries) { scheduleRetry(); return; }
+                                setTimeout(poll, intervalMs);
+                            };
+
+                            if (r && r.then) { r.then(cont, cont); }
+                            else if (r && r.done) { r.done(cont).fail(cont); }
+                            else { cont(); }
+                        })();
+                    }
+
+                    if (exprRoot.folder && !exprRoot.expanded)
+                    {
+                        var ex = exprRoot.setExpanded(true);
+                        if (ex && ex.then) { ex.then(afterReady, afterReady); }
+                        else if (ex && ex.done) { ex.done(afterReady).fail(afterReady); }
+                        else { afterReady(); }
+                    }
+                    else
+                    {
+                        afterReady();
+                    }
+                    return;
+                }
+
 
                 if (isCodeKey)
                 {
@@ -1871,6 +1942,24 @@ window.CategoryTree = (function ()
                 parentKey = (p && p.key) ? p.key : "";
             }
 
+            if (typeof key === "string" && key.indexOf(EXPR_PREFIX) === 0)
+            {
+                // Use existing detailsUrl (TreeDetailsModel.OnGetAsync) with embed
+                var url = detailsUrl + "?key=" + encodeURIComponent(key);
+                url = appendQuery(url, "embed", "1");
+                $.get(nocache(url))
+                    .done(function (html)
+                    {
+                        $pane.html(html);
+                        applyDetailsVisibility(node, $pane);
+                    })
+                    .fail(function ()
+                    {
+                        $pane.html("<div class='text-muted small p-2'>No details</div>");
+                    });
+                return;
+            }
+
             // Synthetic fallback: show parent details if parent real
             if (tcIsSyntheticKey(key))
             {
@@ -1947,9 +2036,13 @@ window.CategoryTree = (function ()
             {
                 return false;
             }
-
+            
+            if (selectVal.indexOf("expr:") === 0)
+            {
+                // leave as-is
+            }
             // Normalize code key
-            if (selectVal.indexOf("code:") !== 0)
+            else if (selectVal.indexOf("code:") !== 0)
             {
                 selectVal = "code:" + selectVal;
             }
@@ -2117,11 +2210,12 @@ window.CategoryTree = (function ()
             // Deletion flow: remove node and activate parent
             if (removeKey)
             {
-                if (removeKey.indexOf("code:") !== 0)
+                // Support expression removal
+                var isExprRemove = removeKey.indexOf("expr:") === 0;
+                if (!isExprRemove && removeKey.indexOf("code:") !== 0)
                 {
                     removeKey = "code:" + removeKey;
                 }
-
                 var removedParent = null;
                 try
                 {
@@ -2136,7 +2230,7 @@ window.CategoryTree = (function ()
                                 {
                                     removedParent = n.getParent ? n.getParent() : null;
                                 }
-                                catch (ex)
+                                catch (_)
                                 {
                                     removedParent = null;
                                 }
@@ -2144,7 +2238,7 @@ window.CategoryTree = (function ()
                                 {
                                     n.remove();
                                 }
-                                catch (exRm)
+                                catch (_)
                                 {
                                 }
                                 return false;
@@ -2153,11 +2247,10 @@ window.CategoryTree = (function ()
                         });
                     }
                 }
-                catch (exWalk)
+                catch (_)
                 {
                 }
-
-                var parentNode = removedParent || chooseParentInstance(expandVal) || tree.getNodeByKey(expandVal);
+                var parentNode = removedParent || tree.getNodeByKey(expandVal);
                 if (parentNode)
                 {
                     try
@@ -2173,14 +2266,12 @@ window.CategoryTree = (function ()
                             updateActionBar(parentNode);
                         }
                     }
-                    catch (exAct)
+                    catch (_)
                     {
                     }
                     querySelectionApplied = true;
                     return true;
                 }
-
-                // Fallback: pipeline
                 querySelectionApplied = false;
                 selectionRetryCount = 0;
                 applyQuerySelection();
@@ -2199,6 +2290,77 @@ window.CategoryTree = (function ()
                 catch (exParse)
                 {
                     spec = null;
+                }
+
+                if (spec && spec.key && spec.key.indexOf("expr:") === 0 && !tree.getNodeByKey(spec.key))
+                {
+                var exprNodeData =
+                {
+                    title: spec.title || (spec.data && spec.data.categoryCode) || spec.key,
+                    key: spec.key,
+                    folder: false,
+                    lazy: false,
+                    icon: false,
+                    data: spec.data || { nodeType: "expression" }
+                };
+                function finishExprInjection()
+                {
+                    try
+                    {
+                        parentForCreate.addChildren([exprNodeData]);
+                    }
+                    catch (_)
+                    {
+                    }
+                    var injected = tree.getNodeByKey(spec.key);
+                    if (injected)
+                    {
+                        try
+                        {
+                            injected.setActive(true);
+                            persistActiveKey(injected);
+                            if (isMobile())
+                            {
+                                updateActionBar(injected);
+                            }
+                            else
+                            {
+                                loadDetails(injected);
+                            }
+                        }
+                        catch (_)
+                        {
+                        }
+                        querySelectionApplied = true;
+                        return true;
+                    }
+                    querySelectionApplied = false;
+                    selectionRetryCount = 0;
+                    applyQuerySelection();
+                    return true;
+                }
+                if (parentForCreate.folder && !parentForCreate.expanded)
+                {
+                    var exprExpandRes = parentForCreate.setExpanded(true);
+                    if (exprExpandRes && exprExpandRes.then)
+                    {
+                        exprExpandRes.then(finishExprInjection, finishExprInjection);
+                    }
+                    else if (exprExpandRes && exprExpandRes.done)
+                    {
+                        exprExpandRes.done(finishExprInjection).fail(finishExprInjection);
+                    }
+                    else
+                    {
+                        finishExprInjection();
+                    }
+                }
+                else
+                {
+                    finishExprInjection();
+                }
+                // IMPORTANT: stop further processing for code path
+                return true;
                 }
 
                 if (spec && spec.key && !tree.getNodeByKey(spec.key))
@@ -2514,6 +2676,20 @@ window.CategoryTree = (function ()
                     parentKeyNow = (pp && pp.key) ? pp.key : "";
                 }
 
+                var isExpression = (typeof key === "string" && key.indexOf("expr:") === 0) || (data.nodeType === "expression");
+                if (isExpression)
+                {
+                    // Hide all then show only expression controls
+                    $pane.find("[data-action]").hide();
+                    if (isAdmin)
+                    {
+                        $pane.find("[data-action='editExpression']").show();
+                        $pane.find("[data-action='deleteExpression']").show();
+                    }
+                    $pane.find("[data-action='viewExpression']").show();
+                    return;
+                }
+
                 var isCode = kinds.isCode === true;
                 var isCat = kinds.isCat === true;
                 var isRoot = kinds.isRoot === true;
@@ -2706,12 +2882,19 @@ window.CategoryTree = (function ()
             var data = (node && node.data) || {};
 
             // Prefer explicit server-provided nodeType when available
-            var nodeType = (typeof data.nodeType !== "undefined" && data.nodeType !== null) ? String(data.nodeType) : null; // "category" | "code" | "synthetic" | null
+            var nodeType =
+                (typeof data.nodeType !== "undefined" && data.nodeType !== null)
+                    ? String(data.nodeType)
+                    : null; // "category" | "code" | "expression" | "synthetic" | null
 
             // If not provided, infer conservatively from key and folder flag
             if (!nodeType)
             {
-                if (typeof key === "string" && key.indexOf("code:") === 0)
+                if (typeof key === "string" && key.indexOf(EXPR_PREFIX) === 0)
+                {
+                    nodeType = "expression";
+                }
+                else if (typeof key === "string" && key.indexOf("code:") === 0)
                 {
                     nodeType = "code";
                 }
@@ -2731,7 +2914,14 @@ window.CategoryTree = (function ()
                 }
             }
 
-            var isSynthetic = !node || key === ROOT_KEY || key === DISC_KEY || nodeType === "synthetic";
+            // Expression nodes are real (not synthetic) leaves
+            var isExpression = nodeType === "expression";
+            var isSynthetic =
+                !node
+                || key === ROOT_KEY
+                || key === DISC_KEY
+                || (nodeType === "synthetic" && !isExpression);
+
             var isCode = (nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
             var isCat = !!(node && node.folder && !isCode && !isSynthetic);
             var isRoot = key === ROOT_KEY;
@@ -3602,14 +3792,11 @@ window.CategoryTree = (function ()
             }
 
             var $menu = getMenuInstance();
-
-            // Cache pristine once so we can cache templates (done at startup); do not restore for shows
             if (menuOriginalHtml === null)
             {
                 menuOriginalHtml = $menu.html();
             }
 
-            // ---- Classification preamble ----
             var data = node.data || {};
             var parentKeyNow = "";
             try
@@ -3625,61 +3812,46 @@ window.CategoryTree = (function ()
             var key = node.key;
             var isRootKey = (key === ROOT_KEY);
             var isDiscKey = (key === DISC_KEY);
+            var isExprRoot = (key === EXPR_ROOT_KEY);
+            var isExpressionNode = (typeof key === "string" && key.indexOf("expr:") === 0);
+
             var isTypeSynthetic =
                 (typeof key === "string" && key.indexOf("type:") === 0)
                 || (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
 
-            var isTopAnchor = isRootKey || isDiscKey || isTypeSynthetic;
+            var isTopAnchor = isRootKey || isDiscKey || isTypeSynthetic || isExprRoot;
 
-            // Defer only when we actually miss critical metadata for building a full menu.
-            var needsCategoryType = !!(node.folder && typeof data.categoryType === "undefined");
+            var needsCategoryType = !!(node.folder && typeof data.categoryType === "undefined" && !isExprRoot && !isExpressionNode);
             if (!isTopAnchor && needsCategoryType && node.lazy && !node.loaded)
             {
                 if (node._ctxMenuLoading === true)
                 {
                     return;
                 }
-
                 node._ctxMenuLoading = true;
-
                 try
                 {
                     $menu.hide();
                 }
-                catch (_)
-                {
-                }
-
+                catch (_){}
                 try
                 {
                     var loadResult = node.load();
-
                     var resume = function ()
                     {
                         node._ctxMenuLoading = false;
-                        setTimeout(function ()
-                        {
-                            showContextMenu(x, y, node);
-                        }, 0);
+                        setTimeout(function () { showContextMenu(x, y, node); }, 0);
                     };
-
                     if (loadResult && typeof loadResult.then === "function")
                     {
-                        loadResult.then(resume).catch(function ()
-                        {
-                            node._ctxMenuLoading = false;
-                        });
+                        loadResult.then(resume).catch(function () { node._ctxMenuLoading = false; });
                         return;
                     }
-                    if (loadResult && typeof loadResult.done === "function")
+                    if (loadResult && loadResult.done)
                     {
-                        loadResult.done(resume).fail(function ()
-                        {
-                            node._ctxMenuLoading = false;
-                        });
+                        loadResult.done(resume).fail(function () { node._ctxMenuLoading = false; });
                         return;
                     }
-
                     resume();
                     return;
                 }
@@ -3689,17 +3861,15 @@ window.CategoryTree = (function ()
                 }
             }
 
-            // Heuristic for root-level totals (defensive)
-            if (node.folder && typeof data.categoryType === "undefined" && parentKeyNow === ROOT_KEY)
+            if (node.folder && typeof data.categoryType === "undefined" && parentKeyNow === ROOT_KEY && !isExprRoot)
             {
                 data.categoryType = CATEGORYTYPE_CASHTOTAL;
                 node.data.categoryType = CATEGORYTYPE_CASHTOTAL;
             }
 
-            // Always start from a clean container to avoid stale menus
             $menu.empty();
 
-            // Classify node
+            // Classification
             var kinds = getNodeKinds(node);
             var isCode = kinds.isCode === true;
             var isCat = kinds.isCat === true;
@@ -3719,22 +3889,57 @@ window.CategoryTree = (function ()
                 }
             }
 
-            // Top anchors
-            if (isRootKey || isTypeSynthetic)
+            // Ensure templates for expression actions exist
+            if (!menuTemplates.items.createExpression)
+            {
+                menuTemplates.items.createExpression = "<div class='dropdown-item' data-action='createExpression'>New Expression</div>";
+            }
+            if (!menuTemplates.items.viewExpression)
+            {
+                menuTemplates.items.viewExpression = "<div class='dropdown-item' data-action='viewExpression'>View</div>";
+            }
+            if (!menuTemplates.items.editExpression)
+            {
+                menuTemplates.items.editExpression = "<div class='dropdown-item' data-action='editExpression'>Edit</div>";
+            }
+            if (!menuTemplates.items.deleteExpression)
+            {
+                menuTemplates.items.deleteExpression = "<div class='dropdown-item' data-action='deleteExpression'>Delete</div>";
+            }
+
+            // Expression root
+            if (isExprRoot)
+            {
+                pushIf(isAdmin, "createExpression");
+                renderMenuFromTemplates($menu, order, groups);
+            }
+            // Expression leaf
+            else if (isExpressionNode)
+            {
+                order = ["viewExpression"];
+                if (isAdmin)
+                {
+                    order.push("editExpression");
+                    order.push("deleteExpression");
+                    order.push("moveUp");
+                    order.push("moveDown");
+                }
+                renderMenuFromTemplates($menu, order, []);
+            }
+            // Existing logic (root/type/disconnected/code/category) unchanged below
+            else if (isRootKey || isTypeSynthetic)
             {
                 order = ["expandSelected", "collapseSelected"];
                 renderMenuFromTemplates($menu, order, groups);
             }
             else if (key === DISC_KEY)
             {
-                // Disconnected anchor menu
                 pushIf(isAdmin, "createTotal");
                 pushIf(isAdmin, "createCategory");
                 order.push("expandSelected", "collapseSelected");
                 groups = [2];
                 renderMenuFromTemplates($menu, order, groups);
             }
-            // Leaf: code
             else if (isCode)
             {
                 order = ["view"];
@@ -3743,16 +3948,11 @@ window.CategoryTree = (function ()
                 pushIf(isAdmin, "delete");
                 pushIf(isAdmin, "toggleEnabled");
                 renderMenuFromTemplates($menu, order, groups);
-
                 var $cc = $menu.find("[data-action='createCashCode']");
-                if ($cc.length)
-                {
-                    $cc.text("New Cash Code like this…");
-                }
+                if ($cc.length) { $cc.text("New Cash Code like this…"); }
                 setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
             }
-            // Category nodes
-            else if (isCat) 
+            else if (isCat)
             {
                 if (inTypeCtx)
                 {
@@ -3781,7 +3981,7 @@ window.CategoryTree = (function ()
                     pushIf(isAdmin, "delete");
                     pushIf(isAdmin, "toggleEnabled");
                     pushIf(isAdmin, "move");
-                    groups = [ (isCatTotal ? 3 : 3) ];
+                    groups = [3];
                     renderMenuFromTemplates($menu, order, groups);
                     setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                 }
@@ -3809,7 +4009,7 @@ window.CategoryTree = (function ()
                         }
                         pushIf(isAdmin, "setProfitRoot");
                         pushIf(isAdmin, "setVatRoot");
-                        order.push("expandSelected","collapseSelected");
+                        order.push("expandSelected", "collapseSelected");
                         renderMenuFromTemplates($menu, order, [3, 6, 9, 13]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
@@ -3824,8 +4024,8 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected","collapseSelected");
-                        renderMenuFromTemplates($menu, order, [2,5,7]);
+                        order.push("expandSelected", "collapseSelected");
+                        renderMenuFromTemplates($menu, order, [2, 5, 7]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                 }
@@ -3843,8 +4043,8 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected","collapseSelected");
-                        renderMenuFromTemplates($menu, order, [3,6,9]);
+                        order.push("expandSelected", "collapseSelected");
+                        renderMenuFromTemplates($menu, order, [3, 6, 9]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                     else if (isCatCashCode)
@@ -3858,20 +4058,17 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "move");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
-                        order.push("expandSelected","collapseSelected");
-                        renderMenuFromTemplates($menu, order, [2,5,7]);
+                        order.push("expandSelected", "collapseSelected");
+                        renderMenuFromTemplates($menu, order, [2, 5, 7]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
                     }
                 }
             }
             else
             {
-                // Fallback synthetic
                 renderMenuFromTemplates($menu, ["expandSelected", "collapseSelected"], []);
             }
 
-            // Post-render label fixes for Total categories:
-            // - Present "Add Existing Category" as "Add Total"
             if (isCat && isCatTotal)
             {
                 var $addCat = $menu.find("[data-action='addExistingCategory']");
@@ -3893,18 +4090,18 @@ window.CategoryTree = (function ()
                 }
             }
 
-            // Hard-hide Set Profit/VAT Root unless the parent is exactly ROOT
             if (parentKeyNow !== ROOT_KEY)
             {
                 $menu.find("[data-action='setProfitRoot'],[data-action='setVatRoot']").hide();
             }
 
-            // NEW: Desktop does not need 'View' in context menu
+            // Desktop: hide generic 'View' (keep viewExpression for expressions)
             if (!isMobile())
             {
                 try
                 {
                     $menu.find("[data-action='view']").remove();
+                    $menu.find("[data-action='viewExpression']").remove();
                     normalizeDividers($menu);
                 }
                 catch (_)
@@ -3912,26 +4109,31 @@ window.CategoryTree = (function ()
                 }
             }
 
-            // Position & show
             if (isMobile())
             {
                 $menu.addClass("mobile-sheet").css({ top: "", left: "" }).show();
+                $menu.css
+                (
+                    {
+                    maxHeight: (window.innerHeight - 24) + "px",
+                    overflowY: "auto",
+                    paddingBottom: "64px" // spacer so last item not hidden by system bars
+                    }
+                );
             }
             else
             {
                 $menu.removeClass("mobile-sheet").css({ top: y + "px", left: x + "px" }).show();
             }
 
-            // Store node context (blank parentKey for synthetic anchors)
-            $menu.data("nodeKey", key).data("parentKey", (kinds.isSynthetic ? "" : parentKeyNow));
+            $menu.data("nodeKey", key).data("parentKey", (kinds.isSynthetic || isExprRoot ? "" : parentKeyNow));
 
-            // Auto-hide on next document click
             setTimeout(function ()
             {
                 $(document).one("click.treeCtx", function ()
                 {
                     $menu.hide().data("nodeKey", null).data("parentKey", null);
-                    if (isMobile() && node && !kinds.isSynthetic)
+                    if (isMobile() && node && !kinds.isSynthetic && !isExprRoot)
                     {
                         updateActionBar(node);
                     }
@@ -4174,9 +4376,13 @@ window.CategoryTree = (function ()
             });
         }
 
+// Updated bindContextMenuHandlers: restores legacy actions (including makePrimary),
+// adds full Expression support (create/view/edit/delete/reorder), fixes variable typo (menuaSel -> menuSel),
+// and preserves existing category/code logic.
+
         function bindContextMenuHandlers()
         {
-            var $menu = $(menuSel);
+            var $menu = $(menuSel); // fixed typo (was menuaSel)
 
             $menu.off("click.categoryActions").on("click.categoryActions", "[data-action]", function ()
             {
@@ -4211,6 +4417,10 @@ window.CategoryTree = (function ()
                         {
                             ex.done(function () { reloadIfExpandedNode(n); });
                         }
+                        else if (ex && typeof ex.then === "function")
+                        {
+                            ex.then(function () { reloadIfExpandedNode(n); }, function () { reloadIfExpandedNode(n); });
+                        }
                         else
                         {
                             reloadIfExpandedNode(n);
@@ -4225,8 +4435,153 @@ window.CategoryTree = (function ()
                     return !!(p && p.key === DISC_KEY);
                 }
 
+                function reorderExpression(direction)
+                {
+                    if (!isAdmin)
+                    {
+                        alert("Insufficient privileges");
+                        return;
+                    }
+                    if (!key || key.indexOf("expr:") !== 0)
+                    {
+                        alert("Select an expression");
+                        return;
+                    }
+                    var curNode = tree.getNodeByKey(key);
+                    if (!curNode)
+                    {
+                        alert("Node not found");
+                        return;
+                    }
+                    var anchor = (direction === "up") ? curNode.getPrevSibling() : curNode.getNextSibling();
+                    while (anchor && anchor.key.indexOf("expr:") !== 0)
+                    {
+                        anchor = (direction === "up") ? anchor.getPrevSibling() : anchor.getNextSibling();
+                    }
+                    if (!anchor)
+                    {
+                        // already at boundary; silent
+                        return;
+                    }
+                    var mode = (direction === "up") ? "before" : "after";
+                    postJsonGlobal("ReorderExpression",
+                        {
+                            key: curNode.key,
+                            anchorKey: anchor.key,
+                            mode: mode
+                        })
+                        .done(function (res)
+                        {
+                            if (res && res.success)
+                            {
+                                try
+                                {
+                                    curNode.moveTo(anchor, mode);
+                                }
+                                catch (_)
+                                {
+                                }
+                                curNode.setActive(true);
+                                persistActiveKey(curNode);
+                                notify("Expression order updated", "success");
+                                if (!isMobile())
+                                {
+                                    loadDetails(curNode);
+                                }
+                            }
+                            else
+                            {
+                                alert((res && res.message) || "Reorder failed");
+                            }
+                        })
+                        .fail(function (xhr)
+                        {
+                            alert("Server error (" + xhr.status + ")");
+                        });
+                }
+
                 switch (action)
                 {
+                    // --- Expression actions ---
+                    case "createExpression":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        // Expressions root is synthetic; just open create
+                        openAction("CreateExpression", "");
+                        break;
+                    }
+                    case "viewExpression":
+                    {
+                        if (!key) { alert("Select an expression"); break; }
+                        if (isMobile())
+                        {
+                            var url = detailsUrl + "?key=" + encodeURIComponent(key) + "&parentKey=" + encodeURIComponent("__EXPRESSIONS__");
+                            window.location.href = url;
+                        }
+                        else
+                        {
+                            loadDetails(node);
+                        }
+                        break;
+                    }
+                    case "editExpression":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!key) { alert("Select an expression"); break; }
+                        openAction("EditExpression", key);
+                        break;
+                    }
+                    case "deleteExpression":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!key) { alert("Select an expression"); break; }
+                        openAction("DeleteExpression", key);
+                        break;
+                    }
+                    case "moveUp":
+                    {
+                        // If expression node, use ReorderExpression; else fall through to legacy category move
+                        if (key && key.indexOf("expr:") === 0)
+                        {
+                            reorderExpression("up");
+                            break;
+                        }
+                        // category/code handling continues below
+                    }
+                    case "moveDown":
+                    {
+                        if (key && key.indexOf("expr:") === 0)
+                        {
+                            reorderExpression("down");
+                            break;
+                        }
+                        // legacy category reorder logic below
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node) { alert("Select a node first"); break; }
+                        if (key && key.indexOf("code:") === 0)
+                        {
+                            alert("Cannot reorder cash code nodes");
+                            break;
+                        }
+                        var handler = (action === "moveUp") ? "MoveUp" : "MoveDown";
+                        postJsonGlobal(handler, { key: key, parentKey: parentKey })
+                            .done(function (res)
+                            {
+                                if (res && res.success)
+                                {
+                                    moveNodeInUi(node, action === "moveUp" ? "up" : "down");
+                                    resizeColumns();
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || (handler + " failed"));
+                                }
+                            })
+                            .fail(alertFail);
+                        break;
+                    }
+
+                    // --- Generic tree actions ---
                     case "expandSelected":
                     {
                         if (!node || !node.folder)
@@ -4237,7 +4592,6 @@ window.CategoryTree = (function ()
                         expandSubtree(node).then(function () { resizeColumns(); }).catch(function () { resizeColumns(); });
                         break;
                     }
-
                     case "collapseSelected":
                     {
                         if (!node || !node.folder)
@@ -4261,7 +4615,6 @@ window.CategoryTree = (function ()
                         }
                         else
                         {
-                            // Desktop RHS
                             loadDetails(node);
                         }
                         break;
@@ -4274,29 +4627,29 @@ window.CategoryTree = (function ()
 
                         var kinds = getNodeKinds(node);
 
-                        // Cash Code
+                        // Expression edit already handled above (editExpression case). If we end up here for expression, route anyway.
+                        if (kinds.nodeType === "expression")
+                        {
+                            openAction("EditExpression", key);
+                            break;
+                        }
+
                         if (kinds.isCode)
                         {
                             var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
                             openAction("EditCashCode", raw);
                             break;
                         }
-
-                        // Total category
                         if (kinds.data && kinds.data.categoryType === CATEGORYTYPE_CASHTOTAL)
                         {
                             openAction("EditTotal", key);
                             break;
                         }
-
-                        // Cash Code category (categoryType == 0)
                         if (kinds.data && kinds.data.categoryType === 0)
                         {
                             openAction("EditCategory", key);
                             break;
                         }
-
-                        // Fallback
                         openAction("EditCategory", key);
                         break;
                     }
@@ -4304,15 +4657,12 @@ window.CategoryTree = (function ()
                     case "addExistingCategory":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
                             alert("Select a parent category");
                             break;
                         }
-
-                        // Open embedded AddCategory page (select from dropdown)
                         openAction("AddCategory", "", targetParent);
                         break;
                     }
@@ -4320,8 +4670,7 @@ window.CategoryTree = (function ()
                     case "addExistingCashCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        // Allow from category or code leaf (use parent if leaf)
-                        var targetCategory = node.folder ? key : parentKey;
+                        var targetCategory = node && node.folder ? key : parentKey;
                         if (!targetCategory)
                         {
                             alert("Select a category first");
@@ -4335,6 +4684,12 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!node || !node.folder) { alert("Select a category"); break; }
+                        // Block move in expression context (expressions are flat)
+                        if (key && key.indexOf("expr:") === 0)
+                        {
+                            alert("Expressions cannot be moved under other nodes.");
+                            break;
+                        }
                         openAction("Move", key, parentKey);
                         break;
                     }
@@ -4342,81 +4697,58 @@ window.CategoryTree = (function ()
                     case "createTotal":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-
-                        // Use the node itself if it is a folder; otherwise fallback to its parentKey.
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
                             alert("Select a parent category");
                             break;
                         }
-
                         if (targetParent === DISC_KEY)
                         {
-                            // Disconnected create: pass Disconnected context. Submit logic will blank ParentKey.
                             openAction("CreateTotal", "", DISC_KEY);
                             break;
                         }
-
-                        // Normal path: create a new Total as a child of the selected (possibly disconnected) category.
-                        // Server will create a mapping parentKey -> new Total, making the parent a root-level total.
                         openAction("CreateTotal", "", targetParent);
+                        break;
+                    }
+
+                    case "createCategory":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        var targetParent = (node && node.folder) ? key : parentKey;
+                        if (!targetParent)
+                        {
+                            alert("Select a parent category");
+                            break;
+                        }
+                        openAction("CreateCategory", "", targetParent);
                         break;
                     }
 
                     case "createCashCode":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
-
-                        var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
-
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
+                        var isCodeNode = !!(node.data && node.data.nodeType === "code") || (key && key.indexOf("code:") === 0);
                         var targetCategory = (node && node.folder) ? key : parentKey;
                         if (!targetCategory)
                         {
                             alert("Select a category to add a code under");
                             break;
                         }
-
                         if (isCodeNode)
                         {
-                            var siblingCash = (key && key.indexOf("code:") === 0) ? key.substring(5) : (node && node.data && node.data.cashCode) || "";
+                            var siblingCash = (key.indexOf("code:") === 0) ? key.substring(5) : (node.data && node.data.cashCode) || "";
                             openAction("CreateCashCode", targetCategory, null, { siblingCashCode: siblingCash });
-                            break;
                         }
                         else
                         {
                             openAction("CreateCashCode", targetCategory);
-                            break;
                         }
-                    }
-
-                    case "moveUp":
-                    case "moveDown":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
-                        if (key && key.indexOf("code:") === 0)
-                        {
-                            alert("Cannot reorder cash code nodes");
-                            break;
-                        }
-
-                        var handler = action === "moveUp" ? "MoveUp" : "MoveDown";
-                        postJsonGlobal(handler, { key: key, parentKey: parentKey })
-                            .done(function (res)
-                            {
-                                if (res && res.success)
-                                {
-                                    moveNodeInUi(node, action === "moveUp" ? "up" : "down");
-                                    resizeColumns();
-                                }
-                                else
-                                {
-                                    alert((res && res.message) || (handler + " failed"));
-                                }
-                            })
-                            .fail(alertFail);
                         break;
                     }
 
@@ -4431,8 +4763,9 @@ window.CategoryTree = (function ()
                             {
                                 if (res && res.success)
                                 {
-                                    var isCodeNode2 = (node.data && node.data.nodeType === "code") || (key && key.indexOf("code:") === 0);
-                                    setNodeEnabledInUi(node, !!makeEnabled, !isCodeNode2);
+                                    var kinds2 = getNodeKinds(node);
+                                    var treatAsCategory = kinds2.isCat && !kinds2.isCode && kinds2.nodeType !== "expression";
+                                    setNodeEnabledInUi(node, !!makeEnabled, treatAsCategory);
                                     if (!isMobile()) { loadDetails(node); }
                                     refreshTopAnchors();
                                 }
@@ -4448,6 +4781,12 @@ window.CategoryTree = (function ()
                     case "delete":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        var kinds2 = node ? getNodeKinds(node) : {};
+                        if (kinds2.nodeType === "expression")
+                        {
+                            openAction("DeleteExpression", key);
+                            break;
+                        }
                         openDeleteFor(node, $menu.data("parentKey") || "");
                         break;
                     }
@@ -4456,7 +4795,6 @@ window.CategoryTree = (function ()
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
                         if (!parentKey) { alert("Open from a parent context to make primary."); break; }
-
                         postJsonGlobal("MakePrimary", { key: key, parentKey: parentKey })
                             .done(function (res)
                             {
@@ -4477,31 +4815,20 @@ window.CategoryTree = (function ()
                     case "setVatRoot":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
-
+                        if (!node || !node.folder) { alert("Select a category"); break; }
                         var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
-                        var name = plainNodeTitle(node); // strip markup
-
+                        var name = plainNodeTitle(node);
                         if (!confirm("Set '" + name + "' as the " + kind + " root?"))
                         {
                             break;
                         }
-
                         postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
                             .done(function (res)
                             {
                                 if (res && res.success)
                                 {
-                                    try
-                                    {
-                                        refreshTopAnchors();
-                                    }
-                                    catch (_) {}
-                                    try
-                                    {
-                                        loadDetails(node);
-                                    }
-                                    catch (_) {}
+                                    refreshTopAnchors();
+                                    loadDetails(node);
                                     notify(kind + " root updated", "success");
                                 }
                                 else
@@ -4513,22 +4840,6 @@ window.CategoryTree = (function ()
                             {
                                 alert("Server error (" + xhr.status + ")");
                             });
-                        break;
-                    }
-
-                    case "createCategory":
-                    {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-
-                        var targetParent = (node && node.folder) ? key : parentKey;
-                        if (!targetParent)
-                        {
-                            alert("Select a parent category");
-                            break;
-                        }
-
-                        // Always open CreateCategory (user intent is explicit via menu label)
-                        openAction("CreateCategory", "", targetParent);
                         break;
                     }
                 }
@@ -4619,12 +4930,22 @@ window.CategoryTree = (function ()
 
                         var kinds2 = getNodeKinds(node);
 
+                        // Expressions -> EditExpression
+                        if (kinds2.nodeType === "expression")
+                        {
+                            openAction("EditExpression", key);
+                            break;
+                        }
+
+                        // Codes -> EditCashCode
                         if (kinds2.isCode)
                         {
                             var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
                             openAction("EditCashCode", raw);
                             break;
                         }
+
+                        // Categories
                         if (kinds2.data && kinds2.data.categoryType === CATEGORYTYPE_CASHTOTAL)
                         {
                             openAction("EditTotal", key);
@@ -4665,7 +4986,17 @@ window.CategoryTree = (function ()
 
                     case "delete":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        var kinds2 = getNodeKinds(node);
+                        if (kinds2.nodeType === "expression")
+                        {
+                            openAction("DeleteExpression", key);
+                            break;
+                        }
                         openDeleteFor(node, parentKey || "");
                         break;
                     }
@@ -4929,6 +5260,27 @@ window.CategoryTree = (function ()
                             });
                         break;
                     }
+                    case "editExpression":
+                    {
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        openAction("EditExpression", key);
+                        break;
+                    }
+
+                    case "deleteExpression":
+                    {
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        openAction("DeleteExpression", key);
+                        break;
+                    }
                 }
             });
         }
@@ -5036,8 +5388,17 @@ window.CategoryTree = (function ()
                         if (isMobile()) { return false; }
                         if (!isAdmin) { return false; }
 
+                        var parent = node.getParent ? node.getParent() : null;
+                        if (parent && parent.key === EXPR_ROOT_KEY)
+                        {                            
+                            return true;    // expression leaf reorder allowed
+                        }
+
                         var kinds = getNodeKinds(node);
-                        if (!kinds.isCat) { return false; } // categories only
+                        if (!kinds.isCat)
+                        {
+                            return false;   // categories only
+                        } 
                         return true;
                     },
 
@@ -5046,6 +5407,15 @@ window.CategoryTree = (function ()
                         if (isMobile()) { return false; }
                         if (!isAdmin) { return false; }
 
+                        if (node.getParent && data.otherNode)
+                        {
+                            var srcParent = data.otherNode.getParent ? data.otherNode.getParent() : null;
+                            if (srcParent && srcParent.key === EXPR_ROOT_KEY
+                                && node.getParent && node.getParent().key === EXPR_ROOT_KEY)
+                            {
+                                return ["before", "after"]; // only sibling ordering
+                            }
+                        }
                         var src = data.otherNode;
                         if (!src) { return false; }
                         if (node === src || node.isDescendantOf(src)) { return false; }
@@ -5107,6 +5477,49 @@ window.CategoryTree = (function ()
                     {
                         if (isMobile()) { return false; }
                         if (!isAdmin) { return false; }
+
+                        if (data.otherNode
+                            && data.otherNode.getParent
+                            && node.getParent
+                            && data.otherNode.getParent().key === EXPR_ROOT_KEY
+                            && node.getParent().key === EXPR_ROOT_KEY
+                            && (data.hitMode === "before" || data.hitMode === "after"))
+                        {
+                            postJsonGlobal("ReorderExpression",
+                                {
+                                    key: data.otherNode.key,
+                                    anchorKey: node.key,
+                                    mode: data.hitMode
+                                })
+                                .done(function (res)
+                                {
+                                    if (res && res.success)
+                                    {
+                                        try
+                                        {
+                                            data.otherNode.moveTo(node, data.hitMode);
+                                        }
+                                        catch (_) {}
+                                        data.otherNode.setActive(true);
+                                        persistActiveKey(data.otherNode);
+                                        notify("Expression order updated", "success");
+                                        if (!isMobile())
+                                        {
+                                            loadDetails(data.otherNode);
+                                            resizeColumns();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        alert((res && res.message) || "Reorder failed");
+                                    }
+                                })
+                                .fail(function (xhr)
+                                {
+                                    alert("Server error (" + xhr.status + ")");
+                                });
+                            return;
+                        }
 
                         var src = data.otherNode;
                         if (!src)

@@ -32,6 +32,8 @@ else
                 <div asp-validation-summary="All" class="text-danger mb-2 small"></div>
 
                 <input asp-for="CategoryCode" type="hidden" />
+                <!-- Hidden prefixed selection key (helps cancel paths keep consistent key normalization) -->
+                <input type="hidden" name="Key" value="@Model.CategoryCode" />
 
                 <div class="mb-3">
                     <label asp-for="CashCode" class="form-label">Cash Code</label>
@@ -58,22 +60,36 @@ else
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Create</button>
-                    <a class="btn btn-secondary" href="#" data-embedded-cancel
-                       onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+                    @if (isEmbedded)
+                    {
+                        <a class="btn btn-secondary" href="#" data-embedded-cancel
+                           onclick="try{ if(window.tcCancel){ window.tcCancel(); } }catch(e){} return false;">Cancel</a>
+                    }
+                    else
+                    {
+                        <!-- Mobile/full-page Cancel: return to tree with category selected -->
+                        <a class="btn btn-secondary"
+                           href="/Cash/CategoryTree/Index?select=@Model.CategoryCode&key=@Model.CategoryCode&expand=@Model.CategoryCode&parentKey=@Model.CategoryCode">
+                            Cancel
+                        </a>
+                    }
                 </div>
             </form>
         </div>
     </div>
 
-    <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
-    <script>
-        try
-        {
-            if (window.tcTree && window.tcTree.bindEmbeddedFormSubmit)
+    @if (isEmbedded)
+    {
+        <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
+        <script>
+            try
             {
-                window.tcTree.bindEmbeddedFormSubmit();
+                if (window.tcTree && window.tcTree.bindEmbeddedFormSubmit)
+                {
+                    window.tcTree.bindEmbeddedFormSubmit();
+                }
             }
-        }
-        catch (_) { }
-    </script>
+            catch (_) { }
+        </script>
+    }
 }

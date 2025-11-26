@@ -34,7 +34,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
     }
 
-    public class CodeDetailsVm
+    public class CashCodeDetailsVm
     {
         public string CashCode { get; set; } = string.Empty;
         public string CashDescription { get; set; } = string.Empty;
@@ -46,5 +46,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsEnabled { get; set; }
         public bool IsCategoryEnabled { get; set; }
         public string Namespace { get; set; } = string.Empty;
+    }
+
+    public class ExpressionDetailsVm
+    {
+        public string CategoryCode { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Expression { get; set; } = string.Empty;
+        public string Format { get; set; } = string.Empty;
+        public bool IsError { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 }

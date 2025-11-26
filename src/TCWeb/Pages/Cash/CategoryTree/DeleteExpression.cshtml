@@ -1,0 +1,63 @@
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.DeleteExpressionModel
+@{
+    var isEmbedded = Request.Query["embed"] == "1";
+    Layout = isEmbedded ? null : "_Layout";
+    var exprKey = TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.MakeExpressionKey(Model.CategoryCode);
+}
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title text-danger">Delete Expression Category</h5>
+
+        <form method="post"
+              asp-page="./DeleteExpression"
+              asp-route-key="@exprKey"
+              asp-route-embed="@(isEmbedded ? "1" : null)">
+            @Html.AntiForgeryToken()
+            @if (isEmbedded)
+            {
+                <input type="hidden" name="embed" value="1" />
+            }
+
+            <p class="small">
+                This will remove the expression category and its expression definition.
+                Any references must be cleared beforehand.
+            </p>
+
+            <dl class="row small">
+                <dt class="col-sm-3">Category Code</dt>
+                <dd class="col-sm-9">@Model.CategoryCode</dd>
+                <dt class="col-sm-3">Category</dt>
+                <dd class="col-sm-9">@Model.Category</dd>
+                <dt class="col-sm-3">Expression</dt>
+                <dd class="col-sm-9">@Model.Expression</dd>
+                <dt class="col-sm-3">Format</dt>
+                <dd class="col-sm-9">@Model.Format</dd>
+            </dl>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                @if (isEmbedded)
+                {
+                    <a href="#" class="btn btn-secondary btn-sm" data-embedded-cancel
+                       onclick="try { if (window.tcCancel) { window.tcCancel(); } } catch(e) {} return false;">Cancel</a>
+                }
+                else
+                {
+                    <a class="btn btn-secondary btn-sm"
+                       href="/Cash/CategoryTree/Index?select=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey&key=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey&expand=@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey">
+                        Cancel
+                    </a>
+                }
+            </div>
+        </form>
+
+        @if (ViewData["EmbedSelectKey"] != null)
+        {
+            <div id="tcEmbedResult"
+                 data-select="@ViewData["EmbedSelectKey"]"
+                 data-expand="@ViewData["EmbedExpandKey"]"
+                 data-remove="@ViewData["EmbedRemoveKey"]"></div>
+        }
+    </div>
+</div>

@@ -11,12 +11,9 @@
 
 @if (!isEmbedded)
 {
-    <!-- Anti-forgery token for mobile AJAX (Toggle Enabled) -->
     <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
-    <!-- Load shared handlers when Details is opened standalone (mobile). No site-wide layout change required. -->
     <script src="~/js/categoryTree.shared.js" asp-append-version="true"></script>
     <script>
-        // Optional: enable debug in dev to see "[mobile/unified actions] bound"
         if (window.location.hostname === "localhost") {
             window.tcTree = window.tcTree || {};
             window.tcTree.debug = true;
@@ -35,6 +32,10 @@ else if (Model.NodeType == "code" && Model.Code != null)
 else if (Model.NodeType == "category" && Model.Category != null)
 {
     await Html.RenderPartialAsync("_CategoryDetailsCard", Model.Category);
+}
+else if (Model.NodeType == "expression" && Model.Expression != null)
+{
+    await Html.RenderPartialAsync("_ExpressionDetailsCard", Model.Expression);
 }
 else
 {

@@ -16,7 +16,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     /// CategoryTree maintenance endpoints and helpers (state-changing logic only).
     /// </summary>
     [Authorize]
-    public partial class CategoryTreeModel : DI_BasePageModel
+    public partial class CategoryTreeModel
     {
         #region Display Order
         /// <summary>

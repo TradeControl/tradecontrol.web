@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
-
-#nullable disable
 
 namespace TradeControl.Web.Models
 {
@@ -14,14 +9,25 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(10)]
         public string CategoryCode { get; set; }
+
         [Required]
         [StringLength(256)]
         public string Expression { get; set; }
+
         [Required]
         [StringLength(100)]
         public string Format { get; set; }
-        [Required]
+
+        // RowVer retained (ignored in application logic; legacy concurrency)
         public byte[] RowVer { get; set; }
+
+        // evaluation status (set by background generator)
+        [Required]
+        public bool IsError { get; set; }
+
+        // full error message (null or empty when IsError = false)
+        [Column(TypeName = "nvarchar(max)")]
+        public string ErrorMessage { get; set; }
 
         [ForeignKey(nameof(CategoryCode))]
         [InverseProperty(nameof(Cash_tbCategory.TbCategoryExp))]
