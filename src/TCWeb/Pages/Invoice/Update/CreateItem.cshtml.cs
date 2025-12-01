@@ -70,34 +70,34 @@ namespace TradeControl.Web.Pages.Invoice.Update
                             return Forbid();
                     }
 
-                    NodeEnum.CashMode cashMode = NodeEnum.CashMode.Neutral;
+                    NodeEnum.CashPolarity cashMode = NodeEnum.CashPolarity.Neutral;
                     
                     switch ((NodeEnum.InvoiceType)Invoice_Header.InvoiceTypeCode)
                     {
                         case NodeEnum.InvoiceType.SalesInvoice:
-                            cashMode = NodeEnum.CashMode.Income;
+                            cashMode = NodeEnum.CashPolarity.Income;
                             break;
                         case NodeEnum.InvoiceType.CreditNote:
-                            cashMode = NodeEnum.CashMode.Income;
+                            cashMode = NodeEnum.CashPolarity.Income;
                             break;
                         case NodeEnum.InvoiceType.PurchaseInvoice:
-                            cashMode = NodeEnum.CashMode.Expense;
+                            cashMode = NodeEnum.CashPolarity.Expense;
                             break;
                         case NodeEnum.InvoiceType.DebitNote:
-                            cashMode = NodeEnum.CashMode.Expense;
+                            cashMode = NodeEnum.CashPolarity.Expense;
                             break;
 
                     };
 
                     var cashDescriptions = from t in NodeContext.Cash_CodeLookup
-                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank && t.CashModeCode == (short)cashMode
+                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank && t.CashPolarityCode == (short)cashMode
                                            orderby t.CashDescription
                                            select t.CashDescription;
 
                     CashDescriptions = new SelectList(await cashDescriptions.ToListAsync());
 
                     string cashCode = await NodeContext.Cash_CodeLookup
-                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Bank && c.CashModeCode == (short)cashMode)
+                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Bank && c.CashPolarityCode == (short)cashMode)
                                                 .OrderBy(c => c.CashCode)
                                                 .Select(c => c.CashCode)
                                                 .FirstAsync();
@@ -165,7 +165,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
                 if (invoiceHeader.InvoicedOn < periods.ActiveStartOn)
                     await periods.Generate();
 
-                Orgs orgs = new(NodeContext, invoiceHeader.AccountCode);
+                Subjects orgs = new(NodeContext, invoiceHeader.SubjectCode);
                 await orgs.Rebuild();
 
                 RouteValueDictionary route = new();

@@ -1,4 +1,5 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.CashCode.IndexModel
 
 @{ ViewData["Title"] = "Cash Codes"; }
@@ -8,22 +9,29 @@
     if (string.IsNullOrEmpty(Model.ReturnUrl) && User.IsInRole(Constants.AdministratorsRole))
     {
         <p>
-            <a asp-page="./Create" class="btn btn-outline-primary">Create New</a>
+            <a asp-page="./Create" class="btn btn-outline-primary w-25" title="Create New">Create New</a>
         </p>
     }
 }
 
-<form class="form-group" method="get">
-    <p>
-        <select asp-for="Category" asp-items="Model.Categories">
-            <option value="">All</option>
-        </select>
-        Description: <input type="text" asp-for="SearchString" />
-        <input type="submit" value="Filter" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="Category" asp-items="Model.Categories" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="visually-hidden" for="SearchString">Description</label>
+            <input type="text" asp-for="SearchString" id="SearchString" class="form-control" placeholder="Description" />
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
-<table class="table">
+<table class="table table-striped">
     <thead>
         <tr>
             <th>
@@ -32,21 +40,26 @@
             <th>
                 @Html.DisplayNameFor(model => model.Cash_Codes[0].CashDescription)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Codes[0].Category)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Codes[0].CashMode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Codes[0].TaxDescription)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Codes[0].CashType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_Codes[0].IsCashEnabled)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Codes[0].Category)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Codes[0].CashPolarity)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Codes[0].TaxDescription)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Codes[0].CashType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_Codes[0].IsCashEnabled)
+                </th>
+            }
+
             <th></th>
         </tr>
     </thead>
@@ -60,35 +73,52 @@
             <td>
                 @Html.DisplayFor(modelItem => item.CashDescription)
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Category)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashMode)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TaxDescription)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.IsCashEnabled)
-            </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.Category)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashPolarity)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TaxDescription)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.IsCashEnabled)
+                </td>
+            }
+
             <td>
                 @{
                     if (!string.IsNullOrEmpty(Model.ReturnUrl))
                     {
-                        <a asp-page="@Model.ReturnUrl" asp-route-cashCode="@item.CashCode" class="btn btn-info">Select</a>
+                        <div class="action-buttons">
+                            <a asp-page="@Model.ReturnUrl" asp-route-cashCode="@item.CashCode" class="btn btn-info" title="Select this item">
+                                <i class="bi bi-check2-square"></i>
+                            </a>
+                        </div>
                     }
                     else
                     {
-                        <a asp-page="./Details" asp-route-cashCode="@item.CashCode" class="btn btn-info"></a>
-                        if (User.IsInRole(Constants.AdministratorsRole))
-                        {
-                            <a asp-page="./Edit" asp-route-cashCode="@item.CashCode" class="btn btn-secondary"></a>
-                            <a asp-page="./Delete" asp-route-cashCode="@item.CashCode" class="btn btn-danger"></a>
-                        }
+                        <div class="action-buttons">
+                            <a asp-page="./Details" asp-route-cashCode="@item.CashCode" class="btn btn-info" title="Details">
+                                <i class="bi bi-info-circle"></i>
+                            </a>
+                            @if (User.IsInRole(Constants.AdministratorsRole))
+                            {
+                                <a asp-page="./Edit" asp-route-cashCode="@item.CashCode" class="btn btn-secondary" title="Edit this item">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a asp-page="./Delete" asp-route-cashCode="@item.CashCode" class="btn btn-danger" title="Delete this item">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+                        </div>
                     }
                 }
             </td>

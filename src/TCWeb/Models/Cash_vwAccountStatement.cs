@@ -14,7 +14,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "Cash Account")]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
         [Column(TypeName = "datetime")]
         [Display(Name = "Start On")]
         public DateTime StartOn { get; set; }
@@ -29,7 +29,7 @@ namespace TradeControl.Web.Models
         public DateTime PaidOn { get; set; }
         [StringLength(255)]
         [Display(Name = "Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         [Display(Name = "Ref.")]
         public string PaymentReference { get; set; }
@@ -59,7 +59,7 @@ namespace TradeControl.Web.Models
         public string UserName { get; set; }
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(10)]
         [Display(Name = "Tax Code")]
         public string TaxCode { get; set; }

@@ -1,0 +1,71 @@
+﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Subject.IndexModel
+
+@{
+    ViewData["Title"] = "Search";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form class="mb-3" method="get">
+    <p>
+        <select asp-for="SubjectType" asp-items="Model.SubjectTypes">
+            <option value="">All</option>
+        </select>
+        Name: <input type="text" asp-for="SearchString" />
+        <input type="submit" value="Filter" class="btn btn-primary" />
+    </p>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectName)
+            </th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].CashPolarity)
+                </th>
+            }
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_SubjectLookup)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.SubjectCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.SubjectName)
+                </td>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.SubjectType)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CashPolarity)
+                    </td>
+                }
+                <td>
+                    <a asp-page="@Model.ReturnUrl" asp-route-accountCode="@item.SubjectCode" class="btn btn-info" title="Select this item">
+                        <i class="bi bi-check2-square me-1" aria-hidden="true"></i>Select
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

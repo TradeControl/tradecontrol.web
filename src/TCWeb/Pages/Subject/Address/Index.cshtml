@@ -1,0 +1,64 @@
+﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Subject.Address.IndexModel
+
+@{
+    ViewData["Title"] = "Organisation Addresses";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
+<h1>@ViewData["Title"]</h1>
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
+<hr />
+
+<p>
+    <a class="btn btn-outline-primary @btnWidthClass" asp-page="Create" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Create New">New Address</a>
+    <a class="btn btn-outline-info @btnWidthClass" asp-page="../Update/Edit" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Edit this account">To Edit</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_AddressList[0].AddressCode)</th>
+            }
+            <th>@Html.DisplayNameFor(model => model.Subject_AddressList[0].Address)</th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_AddressList[0].IsAdminAddress)</th>
+                <th>@Html.DisplayNameFor(model => model.Subject_AddressList[0].InsertedBy)</th>
+            }
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.Subject_AddressList)
+{
+        <tr>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <td>@Html.DisplayFor(modelItem => item.AddressCode)</td>
+            }
+            <td>@Html.DisplayFor(modelItem => item.Address)</td>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <td>@Html.DisplayFor(modelItem => item.IsAdminAddress)</td>
+                <td>@Html.DisplayFor(modelItem => item.InsertedBy)</td>
+            }
+            <td>
+                <a class="btn btn-info" asp-page="./Details" asp-route-addressCode="@item.AddressCode" title="Details">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                </a>
+                <a class="btn btn-secondary" asp-page="./Edit" asp-route-addressCode="@item.AddressCode" title="Edit this item">
+                    <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>
+                </a>
+                <a class="btn btn-danger" asp-page="./Delete" asp-route-addressCode="@item.AddressCode" title="Delete this item">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                </a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

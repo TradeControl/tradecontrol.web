@@ -9,7 +9,7 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Invoice_Type.NextNumber" class="control-label"></label>
                 <input asp-for="Invoice_Type.NextNumber" class="form-control" />
                 <span asp-validation-for="Invoice_Type.NextNumber" class="text-danger"></span>
@@ -17,9 +17,9 @@
 
             <input type="hidden" asp-for="Invoice_Type.InvoiceType" />
             <input type="hidden" asp-for="Invoice_Type.InvoiceTypeCode" />
-            <input type="hidden" asp-for="Invoice_Type.CashModeCode" />
+            <input type="hidden" asp-for="Invoice_Type.CashPolarityCode" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="UPDATE" class="btn btn-primary" />
                 <a asp-page="./Index" class="btn btn-info">To List</a>
             </div>

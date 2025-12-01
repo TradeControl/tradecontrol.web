@@ -4,7 +4,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <div>
-    <h4>@Html.DisplayFor(model => model.Invoice_Detail.AccountName)</h4>
+    <h4>@Html.DisplayFor(model => model.Invoice_Detail.SubjectName)</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
@@ -80,10 +80,10 @@
             @Html.DisplayFor(model => model.Invoice_Detail.Quantity)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Invoice_Detail.IsTask)
+            @Html.DisplayNameFor(model => model.Invoice_Detail.IsProject)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Invoice_Detail.IsTask)
+            @Html.DisplayFor(model => model.Invoice_Detail.IsProject)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Invoice_Detail.Printed)

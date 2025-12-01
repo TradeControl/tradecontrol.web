@@ -13,7 +13,7 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
-//select * from Org.vwCashAccountAssets order by LiquidityLevel;
+//select * from Subject.vwCashAccountAssets order by LiquidityLevel;
 namespace TradeControl.Web.Pages.Cash.AssetEntry
 {
     public class IndexModel : DI_BasePageModel
@@ -21,10 +21,10 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         public SelectList CashAccounts { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
 
         public IList<Cash_vwPaymentsUnposted> Cash_AssetsUnposted { get; set; }
 
@@ -35,25 +35,25 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
             UserManager = userManager;
         }
 
-        public async Task OnGetAsync(string cashAccountName, string cashAccountCode)
+        public async Task OnGetAsync(string cashSubjectName, string cashSubjectCode)
         {
             try
             {
-                var cashAccounts = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
+                var cashAccounts = NodeContext.Subject_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.AccountName);
 
                 CashAccounts = new SelectList(await cashAccounts.ToListAsync());
 
-                if (!string.IsNullOrEmpty(cashAccountName))
-                    CashAccountName = cashAccountName;
-                else if (!string.IsNullOrEmpty(cashAccountCode))
-                    CashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                if (!string.IsNullOrEmpty(cashSubjectName))
+                    AccountName = cashSubjectName;
+                else if (!string.IsNullOrEmpty(cashSubjectCode))
+                    AccountName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                 else if (await cashAccounts.AnyAsync())
-                    CashAccountName = await cashAccounts.FirstOrDefaultAsync();
+                    AccountName = await cashAccounts.FirstOrDefaultAsync();
 
-                if (string.IsNullOrEmpty(cashAccountCode))
-                    CashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == CashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                if (string.IsNullOrEmpty(cashSubjectCode))
+                    AccountCode = await NodeContext.Subject_tbAccounts.Where(t => t.AccountName == AccountName).Select(t => t.AccountCode).FirstOrDefaultAsync();
                 else
-                    CashAccountCode = cashAccountCode;
+                    AccountCode = cashSubjectCode;
 
                 var isAuthorized = User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole);
 
@@ -63,10 +63,10 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                     var user = await UserManager.GetUserAsync(User);
                     string userId = await profile.UserId(user.Id);
 
-                    Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode && t.UserId == userId).ToListAsync();
+                    Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.AccountCode == AccountCode && t.UserId == userId).ToListAsync();
                 }
                 else
-                    Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.CashAccountCode == CashAccountCode).ToListAsync();
+                    Cash_AssetsUnposted = await NodeContext.Cash_PaymentsUnposted.Where(t => t.AccountCode == AccountCode).ToListAsync();
 
 
                 await SetViewData();

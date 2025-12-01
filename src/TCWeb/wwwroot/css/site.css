@@ -1,71 +1,468 @@
-﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
-for details on configuring this project to bundle and minify static web assets. */
+﻿/* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
 
-a.navbar-brand {
-  white-space: normal;
-  text-align: center;
-  word-break: break-all;
-}
-
-/* Provide sufficient contrast against white background */
-a {
-  color: #0366d6;
+/* Header and Navbar */
+header, .navbar, .tc-header {
+    background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
+    color: #fff;
+    border-bottom: 2px solid #e65100;
 }
 
-.btn-primary {
-  color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+nav.navbar {
+    border-bottom: none !important;
+    box-shadow: none !important;
 }
 
-.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
-  color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+.navbar .nav-link.active,
+.navbar .nav-link:focus,
+.navbar .nav-link:hover {
+    color: #fffde7 !important;
+    background-color: transparent;
 }
 
-/* Sticky footer styles
--------------------------------------------------- */
-html {
-  font-size: 14px;
-}
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.border-top {
-  border-top: 1px solid #e5e5e5;
-}
-.border-bottom {
-  border-bottom: 1px solid #e5e5e5;
+/* Keep navbar container flush to the left so logo/brand sit close to screen edge */
+.navbar > .container,
+.navbar > .container-fluid,
+header .navbar > .container,
+header .navbar > .container-fluid {
+    margin-left: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
 }
 
-.box-shadow {
-  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+    /* Styling for navbar links / brand */
+    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
+    header .navbar .navbar-brand {
+        color: #fff !important;
+        transition: color 0.2s;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+    }
+
+        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
+        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
+            color: #ffe0b2 !important;
+        }
+
+/* Company name in navbar */
+header .tc-brand,
+.navbar .tc-brand,
+.navbar .container .tc-brand,
+.nav-link.tc-brand {
+    color: #fffde7 !important;
+    font-weight: 700;
+    font-size: 1.25rem !important;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0 !important;
+    padding-left: 0.125rem !important;
+    margin-right: 0 !important;
+    max-width: calc(100vw - 4rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-button.accept-policy {
-  font-size: 1rem;
-  line-height: inherit;
+header .tc-brand:hover,
+header .tc-brand:focus,
+.navbar .tc-brand:hover,
+.navbar .tc-brand:focus,
+.navbar .container .tc-brand:hover,
+.nav-link.tc-brand:hover,
+.nav-link.tc-brand:focus {
+    color: #ffd54f !important;
+    text-decoration: none;
 }
 
-/* Sticky footer styles
--------------------------------------------------- */
-html {
-  position: relative;
-  min-height: 100%;
+/* Navbar Logo Styles (keeps absolute helper if used) */
+.navbar-logo-absolute {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding-left: 4px;
+    z-index: 101;
 }
 
+    .navbar-logo-absolute img {
+        height: 28px;
+        width: auto;
+        display: block;
+    }
+
+/* Logo sizing used in brand anchor */
+.tc-logo {
+    height: 28px;
+    width: auto;
+    vertical-align: middle;
+    display: inline-block;
+    margin-right: 0.25rem;
+}
+
+/* Auth links: Register, Login, Logout */
+.tc-auth-link {
+    color: #ffd54f !important;
+    font-weight: 500;
+    vertical-align: middle;
+    padding-top: 0.5rem;
+    padding-bottom: 0.25rem;
+    line-height: 1.5;
+    transition: color 0.2s;
+}
+
+    .tc-auth-link:hover,
+    .tc-auth-link:focus {
+        color: #fff !important;
+        text-decoration: none;
+    }
+
+/* Body and Footer */
 body {
-  /* Margin bottom by footer height */
-  margin-bottom: 60px;
+    margin-bottom: 60px;
 }
-.footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  white-space: nowrap;
-  line-height: 60px; /* Vertically center the text there */
+
+footer, .footer, .tc-footer {
+    background: #ff9800;
+    color: #fff;
+    border-top: 2px solid #e65100;
+    font-size: 1.05rem;
+    font-weight: 500;
+    box-shadow: 0 -2px 8px rgba(255, 152, 0, 0.08);
+    text-align: center;
+    line-height: 60px;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    white-space: normal;
+    padding: 0 2rem;
+    z-index: 100;
 }
+
+    footer.text-muted,
+    .footer.text-muted,
+    .tc-footer.text-muted {
+        color: #fff !important;
+    }
+
+/* Headings */
+h1, h2, h3, h4, h5 {
+    color: #ff9800;
+    font-weight: 600;
+}
+
+/* Tables */
+.table {
+    width: 100%;
+    table-layout: auto;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(255, 152, 0, 0.04);
+    background: #fff;
+}
+
+    .table thead {
+        background: #ffe0b2;
+        color: #f57c00;
+        font-weight: 600;
+    }
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: #fffde7;
+}
+
+/* Prefer wrapping at word boundaries. Avoid breaking words in the middle.
+   Use overflow-wrap to allow long unbroken tokens to break if necessary,
+   but keep word-break normal so browsers do not break anywhere (per-character). */
+.table th, .table td {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+    hyphens: auto;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 0.95rem;
+}
+
+/* Keep action buttons horizontal and evenly padded inside table cells */
+.table .action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap; /* keep buttons on one line */
+    white-space: nowrap; /* prevent buttons' text from wrapping */
+    overflow-x: auto; /* allow horizontal scroll instead of forcing line break */
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    margin: 0;
+}
+
+    .table .action-buttons .btn {
+        flex: 0 0 auto; /* don't grow or shrink; keep intrinsic size */
+        white-space: nowrap; /* keep icon+text together */
+        padding: 0.35rem 0.6rem; /* consistent tappable padding */
+    }
+
+/* If a previous rule forces the last table column to nowrap, ensure our container handles it */
+.table td:last-child > .action-buttons,
+.table th:last-child > .action-buttons {
+    min-width: 0 !important;
+}
+
+/* Forms and Buttons */
+select,
+input[type="submit"] {
+    border: 1px solid #ff9800;
+    border-radius: 4px;
+}
+
+    select:focus {
+        border-color: #e65100;
+        box-shadow: none;
+    }
+
+    /* Orange button theme (custom, do not override Bootstrap's btn-warning) */
+    input[type="submit"].tc-btn-orange,
+    button.tc-btn-orange,
+    a.tc-btn-orange {
+        background: #ff9800;
+        color: #fff;
+        font-weight: 500;
+        border: 1px solid #ff9800;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+        input[type="submit"].tc-btn-orange:hover,
+        input[type="submit"].tc-btn-orange:focus,
+        button.tc-btn-orange:hover,
+        button.tc-btn-orange:focus,
+        a.tc-btn-orange:hover,
+        a.tc-btn-orange:focus {
+            background: #f57c00;
+            border-color: #f57c00;
+            color: #fff;
+        }
+
+/* Dropdown menus and select options */
+select,
+.dropdown-menu {
+    background: #fff;
+    color: #f57c00;
+}
+
+    select option {
+        color: #f57c00;
+        background: #fff;
+    }
+
+.dropdown-menu {
+    background: #fff;
+    color: #f57c00;
+    border: 1px solid #e65100;
+}
+
+    .dropdown-menu .nav-link,
+    .dropdown-menu a {
+        color: #f57c00 !important;
+        background: transparent;
+    }
+
+        .dropdown-menu .nav-link:hover,
+        .dropdown-menu a:hover {
+            color: #ff9800 !important;
+            background: #ffe0b2;
+        }
+
+/* Utility: Corporate orange text and border */
+.tc-text-orange {
+    color: #ff9800 !important;
+}
+
+.tc-border-orange {
+    border-color: #ff9800 !important;
+}
+
+/* Accent Section */
+.tc-section {
+    background: #ffe0b2;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.08);
+}
+
+    .tc-section dt {
+        color: #ff9800;
+        font-weight: 600;
+    }
+
+    .tc-section dd {
+        color: #222;
+        font-size: 1.1rem;
+    }
+
+/* Main content container */
+.tc-body-align {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Highlight only the filter dropdown and text input inside the standard filter form
+   (selector targets the pattern used in your pages: form.mb-3 > .row.g-2.align-items-center) */
+form.mb-3 > .row.g-2.align-items-center select.form-control,
+form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
+    border: 1px solid #ff9800;
+    border-radius: 4px;
+    box-shadow: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    /* Focus state: stronger orange outline */
+    form.mb-3 > .row.g-2.align-items-center select.form-control:focus,
+    form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"]:focus {
+        border-color: #e65100;
+        outline: none;
+        box-shadow: 0 0 0 0.15rem rgba(245,124,0,0.15);
+    }
+
+/* Mobile Devices */
+@media (max-width: 420px) {
+
+    footer, .footer, .tc-footer {
+        padding: 0 0.5rem;
+        line-height: 40px;
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+
+    body {
+        margin-bottom: 40px;
+    }
+
+    .tc-body-align {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .table {
+        display: block;
+        font-size: 0.92rem;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+        .table .action-buttons {
+            flex-wrap: wrap;
+            gap: 0.15rem;
+        }
+
+            .table .action-buttons .btn {
+                padding: 0.15rem 0.35rem !important;
+                min-width: 1.6rem !important;
+                font-size: 0.88rem !important;
+            }
+
+                .table .action-buttons .btn i {
+                    vertical-align: middle;
+                    font-size: 1.05em;
+                    margin: 0;
+                }
+
+        .table thead,
+        .table tbody,
+        .table tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .table th,
+        .table td {
+            min-width: 0 !important;
+            white-space: normal !important;
+            overflow-wrap: break-word;
+            word-break: normal;
+            -webkit-hyphens: auto;
+            hyphens: auto;
+        }
+
+            .table th:last-child,
+            .table td:last-child {
+                min-width: 0 !important;
+                white-space: normal !important;
+            }
+
+    /* truncate long company name on very small screens */
+    .tc-brand {
+        max-width: calc(100vw - 5.25rem);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+    }
+
+    /* tighten navbar left gutter on very small screens */
+    .navbar > .container,
+    .navbar > .container-fluid {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .table td:last-child, .table th:last-child {
+        min-width: 80px;
+        white-space: nowrap;
+    }
+
+    .table td .btn {
+        display: inline-block;
+        width: auto;
+        margin-bottom: 0;
+        margin-right: 4px;
+    }
+
+    .table {
+        font-size: 0.92rem;
+    }
+}
+
+/* Category tree polarity icons: small colored dots before the title */
+.tc-cat-icon {
+  display: inline-block;
+  width: 0.66rem;
+  height: 0.66rem;
+  border-radius: 50%;
+  margin-right: 0.45rem;
+  vertical-align: text-bottom;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+}
+
+/* Cash-code icon (no polarity dot). Smaller margin and consistent alignment with category titles */
+.tc-code-icon {
+    margin-right: 0.45rem;
+    font-size: 0.95rem;
+    vertical-align: text-bottom;
+    color: inherit; /* keep same color as surrounding text */
+}
+
+/* Polarity colours:
+   Income -> black
+   Expense -> red
+   Neutral -> blue */
+.tc-cat-income { background-color: #000000; }  /* Income = black */
+.tc-cat-expense { background-color: #e53935; } /* Expense = red */
+.tc-cat-neutral { background-color: #1976d2; } /* Neutral = blue */
+
+/* Ensure Fancytree will render HTML in titles for these pages */
+.fancytree-community .fancytree-title { /* leave default; included for specificity if needed */ }

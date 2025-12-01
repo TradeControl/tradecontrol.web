@@ -1,0 +1,101 @@
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.EditExpressionModel
+@{
+    var embed = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    if (embed) { Layout = null; }
+    var exprKey = TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.MakeExpressionKey(Model.CategoryCode);
+}
+
+<div class="container-fluid p-2">
+    <h5 class="mb-3"><span class="bi bi-calculator me-1"></span>Edit Cash Expression</h5>
+
+    @if (Model.SaveSucceeded && !embed)
+    {
+        <div class="alert alert-success py-2 small mb-3">Expression saved.</div>
+    }
+
+    <form method="post"
+          asp-page="./EditExpression"
+          asp-route-key="@exprKey"
+          asp-route-embed="@(embed ? "1" : null)">
+        @Html.AntiForgeryToken()
+        @if (embed)
+        {
+            <input type="hidden" name="embed" value="1" />
+        }
+        <input type="hidden" name="key" value="@exprKey" />
+        <input type="hidden" asp-for="CategoryCode" />
+
+        <div class="mb-3">
+            <label asp-for="Category" class="form-label"></label>
+            <input asp-for="Category" class="form-control" maxlength="50" />
+            <span asp-validation-for="Category" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="CashTypeCode" class="form-label"></label>
+            <select asp-for="CashTypeCode" asp-items="Model.CashTypeItems" class="form-select"></select>
+            <span asp-validation-for="CashTypeCode" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Expression" class="form-label"></label>
+            <textarea asp-for="Expression" class="form-control" rows="3" maxlength="256"></textarea>
+            <span asp-validation-for="Expression" class="text-danger small"></span>
+            <div class="form-text small">Enter the calculation (max 256 chars).</div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Format" class="form-label"></label>
+            <input asp-for="Format" class="form-control" list="formatList" maxlength="100" />
+            <datalist id="formatList">
+                @foreach (var f in Model.ExistingFormats)
+                {
+                    <option value="@f"></option>
+                }
+            </datalist>
+            <span asp-validation-for="Format" class="text-danger small"></span>
+            <div class="form-text small">Type a new format or pick an existing one.</div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="SyntaxTypeCode" class="form-label"></label>
+            <select asp-for="SyntaxTypeCode" asp-items="Model.SyntaxTypeItems" class="form-select"></select>
+            <span asp-validation-for="SyntaxTypeCode" class="text-danger small"></span>
+            <div class="form-text small">Choose the target expression engine (Both, Libre, Excel).</div>
+        </div>
+
+        @if (Model.IsError && !string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="alert alert-warning small py-1">
+                <strong>Evaluation Error:</strong> @Model.ErrorMessage
+            </div>
+        }
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Save
+            </button>
+
+            @if (embed)
+            {
+                <button type="button" class="btn btn-secondary" data-embedded-cancel>
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+            }
+            else
+            {
+                <a asp-page="/Cash/CategoryTree/Index"
+                   asp-route-select="@exprKey"
+                   asp-route-expand="@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey"
+                   class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            }
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,96 @@
+﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Subject.Enquiry.StatementModel
+
+@{
+    ViewData["Title"] = "Statement";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
+
+<form method="get" class="mb-3">
+    <div class="row g-2 align-items-center">
+        <input type="hidden" name="accountCode" value="@Model.Subject_Account.SubjectCode" />
+        <div class="col-auto">
+            <input type="hidden" name="PageNumber" value="1" />
+            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Rows per page" onchange="this.form.submit()"></select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </div>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Subject_Statement[0].TransactedOn)</th>
+            <th>@Html.DisplayNameFor(model => model.Subject_Statement[0].Reference)</th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_Statement[0].StatementType)</th>
+                <th>@Html.DisplayNameFor(model => model.Subject_Statement[0].Charge)</th>
+            }
+            <th>@Html.DisplayNameFor(model => model.Subject_Statement[0].Balance)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Statement)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.TransactedOn)</td>
+                <td>@Html.DisplayFor(modelItem => item.Reference)</td>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.StatementType)</td>
+                    <td>@Html.DisplayFor(modelItem => item.Charge)</td>
+                }
+                <td>@Html.DisplayFor(modelItem => item.Balance)</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Statement"
+                   asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Statement"
+                       asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Statement"
+                   asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+<p>
+    <a class="btn btn-info @btnWidthClass" asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Back to list">To List</a>
+</p>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

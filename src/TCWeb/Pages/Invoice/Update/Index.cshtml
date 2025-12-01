@@ -1,7 +1,43 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Update.IndexModel
 @{ ViewData["Title"] = "Invoice Management"; }
 <h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-page="./Create" asp-route-InvoiceType="@Model.InvoiceType" class="btn btn-outline-primary w-25" title="New Entry">New Entry</a>
+</p>
+
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select asp-for="PeriodName" asp-items="Model.PeriodNames" class="form-control">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <!-- reset to first page when page size changes; preserve current filters -->
+            <input type="hidden" name="PageNumber" value="1" />
+            <input type="hidden" name="AccountCode" value="@Model.AccountCode" />
+            <input type="hidden" name="Printed" value="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : "")" />
+            <input type="hidden" name="InvoiceNumber" value="@Model.InvoiceNumber" />
+            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Rows per page" onchange="this.form.submit()"></select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </div>
+
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
+</form>
 
 <table class="table table-striped">
     <thead>
@@ -9,24 +45,42 @@
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceNumber)
             </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceStatus)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceType)
+                </th>
+            }
+
             <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceStatus)
+                @Html.DisplayNameFor(model => model.Invoice_Headers[0].SubjectName)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].AccountName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Headers[0].Printed)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].Printed)
+                </th>
+            }
+
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoicedOn)
             </th>
+
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_Headers[0].InvoiceValue)
             </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_Headers[0].TotalPaidValue)
+                </th>
+            }
 
             <th></th>
         </tr>
@@ -38,44 +92,107 @@
             <td>
                 @Html.DisplayFor(modelItem => item.InvoiceNumber)
             </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceStatus)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.InvoiceType)
+                </td>
+            }
+
             <td>
-                @Html.DisplayFor(modelItem => item.InvoiceStatus)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.InvoiceType)
-            </td>
-            <td>
-                <a asp-page="./Index" asp-route-accountCode="@item.AccountCode">
-                    @Html.DisplayFor(modelItem => item.AccountName)
+                <a asp-page="./Index" asp-route-accountCode="@item.SubjectCode" title="Open subject @item.SubjectName">
+                    @Html.DisplayFor(modelItem => item.SubjectName)
                 </a>
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Printed)
-            </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.Printed)
+                </td>
+            }
+
             <td>
                 @Html.DisplayFor(modelItem => item.InvoicedOn)
             </td>
+
             <td>
                 @Html.DisplayFor(modelItem => item.TotalInvoiceValue)
             </td>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalPaidValue)
+                </td>
+            }
+
             <td>
-                @Html.DisplayFor(modelItem => item.TotalPaidValue)
-            </td>
-            <td>
-                <a asp-page="/Org/Enquiry/Details" asp-route-accountCode="@item.AccountCode" class="btn btn-info"></a>
-                <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
-                <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger"></a>
-                <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning"></a>
+                <div class="action-buttons" role="group" aria-label="Invoice actions">
+                    <a asp-page="/Subject/Enquiry/Details" asp-route-accountCode="@item.SubjectCode" class="btn btn-info" title="Subject details for @item.SubjectName" aria-label="Subject details for @item.SubjectName"></a>
+                    <a asp-page="./Edit" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary" title="Edit invoice @item.InvoiceNumber" aria-label="Edit invoice @item.InvoiceNumber"></a>
+                    <a asp-page="./Delete" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-danger" title="Delete invoice @item.InvoiceNumber" aria-label="Delete invoice @item.InvoiceNumber"></a>
+                    <a asp-page="./EmailConfirm" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-warning" title="Send invoice @item.InvoiceNumber by email" aria-label="Send invoice @item.InvoiceNumber by email"></a>
+                </div>
             </td>
         </tr>
         }
     </tbody>
 </table>
 
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-accountCode="@Model.AccountCode"
+                   asp-route-Printed="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : null)"
+                   asp-route-invoiceNumber="@Model.InvoiceNumber"
+                   asp-route-PeriodName="@Model.PeriodName"
+                   asp-route-InvoiceType="@Model.InvoiceType"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Index"
+                       asp-route-accountCode="@Model.AccountCode"
+                       asp-route-Printed="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : null)"
+                       asp-route-invoiceNumber="@Model.InvoiceNumber"
+                       asp-route-PeriodName="@Model.PeriodName"
+                       asp-route-InvoiceType="@Model.InvoiceType"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-accountCode="@Model.AccountCode"
+                   asp-route-Printed="@(Model.Printed.HasValue ? Model.Printed.Value.ToString().ToLowerInvariant() : null)"
+                   asp-route-invoiceNumber="@Model.InvoiceNumber"
+                   asp-route-PeriodName="@Model.PeriodName"
+                   asp-route-InvoiceType="@Model.InvoiceType"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
+
 <form method="post">
-    <p>
-        <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary">Mark all as sent</button>
-    </p>
+    <div class="row g-2">
+        <div class="col-12 col-sm-auto">
+            <button type="submit" asp-page-handler="MarkAllAsSent" class="btn btn-outline-primary w-100" title="Mark all invoices as sent">Mark all invoices as sent</button>
+        </div>
+    </div>
 </form>
 
 @section Scripts {

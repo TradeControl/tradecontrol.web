@@ -14,7 +14,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [Column(TypeName = "ntext")]
         [Display(Name = "Address")]

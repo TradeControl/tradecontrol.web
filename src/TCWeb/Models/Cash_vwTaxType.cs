@@ -30,9 +30,9 @@ namespace TradeControl.Web.Models
         [Display(Name = "Recurrence")]
         public string Recurrence { get; set; }
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Display(Name = "Offset Days")]
         public short OffsetDays { get; set; }        
     }

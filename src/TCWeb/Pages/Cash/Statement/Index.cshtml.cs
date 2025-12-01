@@ -13,17 +13,19 @@ using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
+using Wangkanai.Extensions;
 
 namespace TradeControl.Web.Pages.Cash.Statement
 {
     public class IndexModel : DI_BasePageModel
     {
 
-        [BindProperty]
-        public string CashAccountName { get; set; }
-        public SelectList CashAccountNames { get; set; }
+        // bind from query string (GET) so the select posts back work
+        [BindProperty(SupportsGet = true)]
+        public string AccountName { get; set; }
+        public SelectList AccountNames { get; set; }
 
-        [BindProperty]
+        [BindProperty(SupportsGet = true)]
         public string PeriodName { get; set; }
         public SelectList PeriodNames { get; set; }
 
@@ -31,11 +33,22 @@ namespace TradeControl.Web.Pages.Cash.Statement
         public IList<Cash_vwAccountStatement> Cash_AccountStatement { get; set; }
 
         [BindProperty]
-        public Org_vwCashAccount Org_CashAccount { get; set; }
+        public Subject_vwCashAccount Subject_CashAccount { get; set; }
+
+        // Pagination
+        [BindProperty(SupportsGet = true)]
+        public int PageSize { get; set; } = 50;    // default 50
+
+        [BindProperty(SupportsGet = true)]
+        public int PageNumber { get; set; } = 1;
+
+        public int TotalItems { get; set; }
+        public int TotalPages { get; set; }
+        public SelectList PageSizeOptions { get; set; }
 
         public IndexModel(NodeContext context) : base(context) { }
 
-        public async Task OnGetAsync(string cashAccountCode, string cashAccountName, string periodName, string paymentCode, short mode)
+        public async Task OnGetAsync(string cashSubjectCode, string cashSubjectName, string periodName, string paymentCode, short mode)
         {
             try
             {
@@ -43,20 +56,24 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                 DateTime startOn = DateTime.Today;
 
-                var accounts = from tb in NodeContext.Org_tbAccounts
+                var accounts = from tb in NodeContext.Subject_tbAccounts
                                where !tb.AccountClosed
-                               orderby tb.AccountTypeCode, tb.CashAccountName
-                               select tb.CashAccountName;
+                               orderby tb.AccountTypeCode, tb.AccountName
+                               select tb.AccountName;
 
-                CashAccountNames = new SelectList(await accounts.ToListAsync());
+                // supply a selected value so the select shows the current choice
+                AccountNames = new SelectList(await accounts.ToListAsync(), AccountName ?? cashSubjectName);
 
                 var periodNames = from tb in NodeContext.App_Periods
                                   where tb.CashStatusCode == (short)NodeEnum.CashStatus.Current || tb.CashStatusCode == (short)NodeEnum.CashStatus.Closed
                                   orderby tb.StartOn descending
                                   select tb.Description;
 
-                PeriodNames = new SelectList(await periodNames.ToListAsync());
+                PeriodNames = new SelectList(await periodNames.ToListAsync(), periodName ?? PeriodName);
 
+                // If the UI submitted AccountName (query string), prefer that value
+                if (string.IsNullOrEmpty(cashSubjectName) && !string.IsNullOrEmpty(AccountName))
+                    cashSubjectName = AccountName;
 
                 if (!string.IsNullOrEmpty(paymentCode))
                 {
@@ -64,24 +81,24 @@ namespace TradeControl.Web.Pages.Cash.Statement
 
                     if (payment != null)
                     {
-                        cashAccountCode = payment.CashAccountCode;
+                        cashSubjectCode = payment.AccountCode;
                         startOn = payment.StartOn;
                         periodName = await NodeContext.App_Periods.Where(t => t.StartOn == startOn).Select(t => t.Description).FirstOrDefaultAsync();
-                        cashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                        cashSubjectName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                     }
                 }
-                else if (!string.IsNullOrEmpty(cashAccountCode))
+                else if (!string.IsNullOrEmpty(cashSubjectCode))
                 {
-                    cashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                    cashSubjectName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                 }
-                else if (string.IsNullOrEmpty(cashAccountName))
+                else if (string.IsNullOrEmpty(cashSubjectName))
                 {
                     CashAccounts cashAccounts = new(NodeContext);
-                    cashAccountCode = await cashAccounts.CurrentAccount();
-                    cashAccountName = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountCode == cashAccountCode).Select(t => t.CashAccountName).FirstOrDefaultAsync();
+                    cashSubjectCode = await cashAccounts.CurrentAccount();
+                    cashSubjectName = await NodeContext.Subject_tbAccounts.Where(t => t.AccountCode == cashSubjectCode).Select(t => t.AccountName).FirstOrDefaultAsync();
                 }
                 else
-                    cashAccountCode = await NodeContext.Org_tbAccounts.Where(t => t.CashAccountName == cashAccountName).Select(t => t.CashAccountCode).FirstOrDefaultAsync();
+                    cashSubjectCode = await NodeContext.Subject_tbAccounts.Where(t => t.AccountName == cashSubjectName).Select(t => t.AccountCode).FirstOrDefaultAsync();
 
                 if (string.IsNullOrEmpty(periodName))
                 {
@@ -92,27 +109,41 @@ namespace TradeControl.Web.Pages.Cash.Statement
                 else
                     startOn = await NodeContext.App_Periods.Where(t => t.Description == periodName).Select(t => t.StartOn).FirstOrDefaultAsync();
 
-                CashAccountName = cashAccountName;
+                AccountName = cashSubjectName;
 
-                Org_CashAccount = await NodeContext.Org_CashAccounts.Where(t => t.CashAccountCode == cashAccountCode).FirstOrDefaultAsync();
+                Subject_CashAccount = await NodeContext.Subject_CashAccounts.Where(t => t.AccountCode == cashSubjectCode).FirstOrDefaultAsync();
 
                 PeriodName = periodName;
 
-                var statement = from tb in NodeContext.Cash_AccountStatements
-                                where tb.CashAccountCode == cashAccountCode && tb.StartOn == startOn
-                                select tb;
+                // Page size options (10,50,100)
+                PageSizeOptions = new SelectList(new[] { "10", "50", "100" }, PageSize.ToString());
+                if (PageSize <= 0) PageSize = 50;
 
-                Cash_AccountStatement = mode switch
+                // Base query for statements (filtered by account and optionally period)
+                IQueryable<Cash_vwAccountStatement> statements = mode == 1
+                    ? NodeContext.Cash_AccountStatements.Where(t => t.AccountCode == cashSubjectCode)
+                    : NodeContext.Cash_AccountStatements.Where(t => t.AccountCode == cashSubjectCode && t.StartOn == startOn);
+
+                // compute totals for pager
+                TotalItems = await statements.CountAsync();
+                TotalPages = (int)Math.Ceiling(TotalItems / (double)PageSize);
+                if (TotalPages == 0) TotalPages = 1;
+
+                if (PageNumber < 1) PageNumber = 1;
+                if (PageNumber > TotalPages) PageNumber = TotalPages;
+
+                try
                 {
-                    1 => await NodeContext.Cash_AccountStatements
-                                    .Where(t => t.CashAccountCode == cashAccountCode)
-                                    .OrderBy(t => t.EntryNumber)
-                                    .ToListAsync(),
-                    _ => await NodeContext.Cash_AccountStatements
-                                    .Where(t => t.CashAccountCode == cashAccountCode && t.StartOn == startOn)
-                                    .OrderBy(t => t.EntryNumber)
-                                    .ToListAsync(),
-                };
+                    Cash_AccountStatement = await statements
+                        .OrderByDescending(t => t.PaidOn)
+                        .Skip((PageNumber - 1) * PageSize)
+                        .Take(PageSize)
+                        .ToListAsync();
+                }
+                catch
+                {
+                    Cash_AccountStatement = new List<Cash_vwAccountStatement>();
+                }
             }
             catch (Exception e)
             {

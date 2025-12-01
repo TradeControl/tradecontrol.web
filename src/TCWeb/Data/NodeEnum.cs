@@ -1,20 +1,20 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace TradeControl.Web.Data
 {
-    public class NodeEnum
+    public static class NodeEnum
     {
         public enum CashAccountType { Cash, Dummy, Asset }
         public enum OpStatus { Pending, InProgress, Complete }
-        public enum OrgStatus { Pending, Active, Hot, Dead };
+        public enum SubjectStatus { Pending, Active, Hot, Dead };
         public enum CategoryType { CashCode, CashTotal, Expression };
-        public enum CashMode { Expense, Income, Neutral };
+        public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, Tax, Bank };
         public enum CashStatus { Forecast, Current, Closed, Archived};
-        public enum TaskStatus { Pending, Opened, Closed, Charged, Cancelled, Archived };
+        public enum ProjectStatus { Pending, Opened, Closed, Charged, Cancelled, Archived };
         public enum DocType { Quotation, SalesOrder, Enquiry, PurchaseOrder, SalesInvoice, CreditNote, DebitNote };
         public enum DocClassCode { Product, Money };
         public enum InvoiceType { SalesInvoice, CreditNote, PurchaseInvoice, DebitNote };
@@ -29,6 +29,6 @@ namespace TradeControl.Web.Data
         public enum RoundingCode { Round, Truncate };
         public enum AssetType { Debtors, Creditors, Bank, Cash, CashAccounts, Capital };
         public enum ContentType { Documents, Images, Templates, Invalid };
-        
+        public enum SyntaxType {  Both, LibreOffice, Excel };
     }
 }

@@ -1,0 +1,100 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Contact.DetailsModel
+@{ ViewData["Title"] = "Contact"; }
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Contact.ContactName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.NameTitle)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.NameTitle)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.NickName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.NickName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.JobTitle)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.JobTitle)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.MobileNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.MobileNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.PhoneNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.PhoneNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.HomeNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.HomeNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.EmailAddress)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.EmailAddress)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.Department)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.Department)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.Information)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.Information)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.SubjectName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.SubjectName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.SubjectStatus)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.SubjectStatus)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.SubjectType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.SubjectType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Contact.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Contact.InsertedOn)
+        </dd>
+
+    </dl>
+</div>
+
+<p>
+    <a asp-page="./Index" asp-route-accountcode=@Model.Contact.SubjectCode class="btn btn-info">To Listing</a>
+</p>

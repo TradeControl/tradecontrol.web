@@ -10,16 +10,16 @@
 
 <dl class="row">
     <dt class="col-sm-2">
-        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
-    </dt>
-    <dd class="col-sm-10">
-        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountCode)
-    </dd>
-    <dt class="col-sm-2">
         @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.AccountCode)
     </dt>
     <dd class="col-sm-10">
         @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountCode)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.SubjectCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_PaymentsUnposted.SubjectCode)
     </dd>
 </dl>
 
@@ -30,8 +30,8 @@
 
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UserId" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.PaymentCode" />
+            <input type="hidden" asp-for="Cash_PaymentsUnposted.SubjectCode" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.AccountCode" />
-            <input type="hidden" asp-for="Cash_PaymentsUnposted.CashAccountCode" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.IsProfitAndLoss" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.CashCode" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.TaxCode" />
@@ -40,28 +40,28 @@
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedBy" />
             <input type="hidden" asp-for="Cash_PaymentsUnposted.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidOn" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidOn" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidOn" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidInValue" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidInValue" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidInValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaidOutValue" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaidOutValue" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaidOutValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.PaymentReference" class="control-label"></label>
                 <input asp-for="Cash_PaymentsUnposted.PaymentReference" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaymentReference" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.CashCode" class="control-label"></label>
                 <p>
                     <button type="submit" asp-page-handler="GetCashCode" class="btn btn-outline-info">Select</button>
@@ -78,7 +78,7 @@
                 <span asp-validation-for="CashDescription" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_PaymentsUnposted.TaxCode" class="control-label"></label>
                 <p>
                     <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
@@ -95,9 +95,9 @@
                 <span asp-validation-for="TaxDescription" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
-                <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">To List</a>
+                <a asp-page="./Index" asp-route-cashSubjectCode="@Model.Cash_PaymentsUnposted.AccountCode" class="btn btn-info">To List</a>
             </div>
         </form>
     </div>

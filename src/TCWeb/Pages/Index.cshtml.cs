@@ -12,7 +12,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -58,7 +57,10 @@ namespace TradeControl.Web.Pages
                 {
                     NodeSettings nodeSettings = new NodeSettings(NodeContext);
 
-                    if (nodeSettings.IsFirstUse || !nodeSettings.IsInitialised)
+                    if (nodeSettings.IsFirstUse)
+                        await NodeContext.InitializeNode();
+                    
+                    if (!nodeSettings.IsInitialised)
                         return RedirectToPage("/Admin/Setup/Config");
                     else
                         throw new Exception("Initialisation error");

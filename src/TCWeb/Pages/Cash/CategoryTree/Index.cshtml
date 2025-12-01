@@ -1,0 +1,100 @@
+@page
+@using TradeControl.Web.Pages.Cash.CategoryCode
+@using Microsoft.Extensions.Hosting
+@model TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@{
+    ViewData["Title"] = "Cash Configuration";
+    var isAdmin = User.IsInRole(Constants.AdministratorsRole);
+}
+<link href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/skin-win8/ui.fancytree.min.css" rel="stylesheet" />
+<link href="~/css/categoryTree.css" rel="stylesheet" />
+<meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+
+<div class="mb-3 d-flex align-items-center gap-2">
+    <div>
+        <h1 class="mb-0">@ViewData["Title"]</h1>
+    </div>
+</div>
+
+<!-- Wrapper for Split.js (flex) -->
+<div class="tc-tree-split">
+    <div id="leftCol" class="tc-pane tc-initial-left">
+        <div id="categoryTree" class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;"></div>
+    </div>
+    <div id="rightCol" class="tc-pane tc-initial-right d-none d-lg-flex">
+        <div id="detailsPane" class="flex-grow-1 border rounded p-2 bg-light"></div>
+    </div>
+</div>
+
+<partial name="_MobileActionBar" />
+<partial name="_TreeContextMenu" />
+
+<div id="categoryTreeConfig"
+     data-is-admin="@(isAdmin ? "true" : "false")"
+     data-base-url="/Cash/CategoryTree"
+     data-details-url="/Cash/CategoryTree/Details"
+     data-nodes-url="/Cash/CategoryTree?handler=Nodes"
+     data-root="@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.RootNodeKey"
+     data-disc="@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.DisconnectedNodeKey">
+</div>
+
+@section Scripts {
+    @if (Env.IsDevelopment())
+    {
+        <script>
+            window.tcTree = window.tcTree || {};
+            window.tcTree.debug = true;
+        </script>
+    }
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/jquery.fancytree-all.min.js"></script>
+    <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
+    <script src="~/js/categoryTree.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.page.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.move.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.embedded.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.delete.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>
+    <script src="~/js/categoryTree.shared.js" asp-append-version="true"></script>
+    <script>
+        (function initSplit() {
+            if (!window.matchMedia("(min-width: 992px)").matches) return;
+            if (!window.Split) return;
+
+            // Remove initial sizing classes once Split is applied
+            function dropInitialClasses() {
+                document.getElementById('leftCol')?.classList.remove('tc-initial-left');
+                document.getElementById('rightCol')?.classList.remove('tc-initial-right');
+            }
+
+            const saved = (function () {
+                try {
+                    const arr = JSON.parse(localStorage.getItem("tcTreeSplit") || "[]");
+                    if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50) return arr;
+                } catch { }
+                return [33, 67];
+            })();
+
+            Split(["#leftCol", "#rightCol"], {
+                sizes: saved,
+                minSize: [240, 320],
+                gutterSize: 6,
+                snapOffset: 0,
+                elementStyle: function (dimension, size) {
+                    // Use flex-basis so flexbox and Split cooperate
+                    return { flexBasis: size + '%', maxWidth: size + '%' };
+                },
+                gutterStyle: function (dimension, gutterSize) {
+                    return { flexBasis: gutterSize + 'px' };
+                },
+                onDragEnd: function (sizes) {
+                    localStorage.setItem("tcTreeSplit", JSON.stringify(sizes));
+                }
+            });
+            dropInitialClasses();
+        })();
+    </script>
+}

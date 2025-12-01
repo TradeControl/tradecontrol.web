@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -20,16 +20,16 @@ namespace TradeControl.Web.Data
         public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
 
         #region Tables
-        public virtual DbSet<Org_tbAccount> Org_tbAccounts { get; set; }
-        public virtual DbSet<Org_tbAccountType> Org_tbAccountTypes { get; set; }
-        public virtual DbSet<Activity_tbActivity> Activity_tbActivities { get; set; }
-        public virtual DbSet<Org_tbAddress> Org_tbAddresses { get; set; }
-        public virtual DbSet<Task_tbAllocation> Task_tbAllocations { get; set; }
-        public virtual DbSet<Task_tbAllocationEvent> Task_tbAllocationEvents { get; set; }
+        public virtual DbSet<Subject_tbAccount> Subject_tbAccounts { get; set; }
+        public virtual DbSet<Subject_tbAccountType> Subject_tbAccountTypes { get; set; }
+        public virtual DbSet<Object_tbObject> Object_tbActivities { get; set; }
+        public virtual DbSet<Subject_tbAddress> Subject_tbAddresses { get; set; }
+        public virtual DbSet<Project_tbAllocation> Project_tbAllocations { get; set; }
+        public virtual DbSet<Project_tbAllocationEvent> Project_tbAllocationEvents { get; set; }
         public virtual DbSet<Cash_tbAssetType> Cash_tbAssetTypes { get; set; }
-        public virtual DbSet<Activity_tbAttribute> Activity_tbAttributes { get; set; }
-        public virtual DbSet<Task_tbAttribute> Task_tbAttributes { get; set; }
-        public virtual DbSet<Activity_tbAttributeType> Activity_tbAttributeTypes { get; set; }
+        public virtual DbSet<Object_tbAttribute> Object_tbAttributes { get; set; }
+        public virtual DbSet<Project_tbAttribute> Project_tbAttributes { get; set; }
+        public virtual DbSet<Object_tbAttributeType> Object_tbAttributeTypes { get; set; }
         public virtual DbSet<App_tbBucket> App_tbBuckets { get; set; }
         public virtual DbSet<App_tbBucketInterval> App_tbBucketIntervals { get; set; }
         public virtual DbSet<App_tbBucketType> App_tbBucketTypes { get; set; }
@@ -37,22 +37,23 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbCalendarHoliday> App_tbCalendarHolidays { get; set; }
         public virtual DbSet<Cash_tbCategory> Cash_tbCategories { get; set; }
         public virtual DbSet<Cash_tbCategoryExp> Cash_tbCategoryExps { get; set; }
+        public virtual DbSet<Cash_tbCategoryExpSyntax> Cash_tbCategoryExpSyntax { get; set; }
         public virtual DbSet<Cash_tbCategoryTotal> Cash_tbCategoryTotals { get; set; }
         public virtual DbSet<Cash_tbCategoryType> Cash_tbCategoryTypes { get; set; }
         public virtual DbSet<Cash_tbChange> Cash_tbChanges { get; set; }
         public virtual DbSet<Invoice_tbChangeLog> Invoice_tbChangeLogs { get; set; }
-        public virtual DbSet<Task_tbChangeLog> Task_tbChangeLogs { get; set; }
+        public virtual DbSet<Project_tbChangeLog> Project_tbChangeLogs { get; set; }
         public virtual DbSet<Cash_tbChangeReference> Cash_tbChangeReferences { get; set; }
         public virtual DbSet<Cash_tbChangeStatus> Cash_tbChangeStatuses { get; set; }
         public virtual DbSet<Cash_tbChangeType> Cash_tbChangeTypes { get; set; }
         public virtual DbSet<Cash_tbCode> Cash_tbCodes { get; set; }
         public virtual DbSet<App_tbCodeExclusion> App_tbCodeExclusions { get; set; }
         public virtual DbSet<Cash_tbCoinType> Cash_tbCoinTypes { get; set; }
-        public virtual DbSet<Org_tbContact> Org_tbContacts { get; set; }
-        public virtual DbSet<Task_tbCostSet> Task_tbCostSets { get; set; }
+        public virtual DbSet<Subject_tbContact> Subject_tbContacts { get; set; }
+        public virtual DbSet<Project_tbCostSet> Project_tbCostSets { get; set; }
         public virtual DbSet<App_tbDoc> App_tbDocs { get; set; }
-        public virtual DbSet<Org_tbDoc> Org_tbDocs { get; set; }
-        public virtual DbSet<Task_tbDoc> Task_tbDocs { get; set; }
+        public virtual DbSet<Subject_tbDoc> Subject_tbDocs { get; set; }
+        public virtual DbSet<Project_tbDoc> Project_tbDocs { get; set; }
         public virtual DbSet<App_tbDocClass> App_tbDocClasses { get; set; }
         public virtual DbSet<App_tbDocSpool> App_tbDocSpools { get; set; }
         public virtual DbSet<App_tbDocType> App_tbDocTypes { get; set; }
@@ -61,8 +62,8 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbEth> App_tbEths { get; set; }
         public virtual DbSet<App_tbEventLog> App_tbEventLogs { get; set; }
         public virtual DbSet<App_tbEventType> App_tbEventTypes { get; set; }
-        public virtual DbSet<Activity_tbFlow> Activity_tbFlows { get; set; }
-        public virtual DbSet<Task_tbFlow> Task_tbFlows { get; set; }
+        public virtual DbSet<Object_tbFlow> Object_tbFlows { get; set; }
+        public virtual DbSet<Project_tbFlow> Project_tbFlows { get; set; }
         public virtual DbSet<App_tbInstall> App_tbInstalls { get; set; }
         public virtual DbSet<Usr_tbInterface> Usr_tbInterfaces { get; set; }
         public virtual DbSet<Invoice_tbInvoice> Invoice_tbInvoices { get; set; }
@@ -73,47 +74,47 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Usr_tbMenuOpenMode> Usr_tbMenuOpenModes { get; set; }
         public virtual DbSet<Usr_tbMenuUser> Usr_tbMenuUsers { get; set; }
         public virtual DbSet<Usr_tbMenuView> Usr_tbMenuViews { get; set; }
-        public virtual DbSet<Activity_tbMirror> Activity_tbMirrors { get; set; }
+        public virtual DbSet<Object_tbMirror> Object_tbMirrors { get; set; }
         public virtual DbSet<Cash_tbMirror> Cash_tbMirrors { get; set; }
         public virtual DbSet<Invoice_tbMirror> Invoice_tbMirrors { get; set; }
         public virtual DbSet<Invoice_tbMirrorEvent> Invoice_tbMirrorEvents { get; set; }
         public virtual DbSet<Invoice_tbMirrorItem> Invoice_tbMirrorItems { get; set; }
         public virtual DbSet<Invoice_tbMirrorReference> Invoice_tbMirrorReferences { get; set; }
-        public virtual DbSet<Invoice_tbMirrorTask> Invoice_tbMirrorTasks { get; set; }
-        public virtual DbSet<Cash_tbMode> Cash_tbModes { get; set; }
+        public virtual DbSet<Invoice_tbMirrorProject> Invoice_tbMirrorProjects { get; set; }
+        public virtual DbSet<Cash_tbPolarity> Cash_tbPolaritys { get; set; }
         public virtual DbSet<App_tbMonth> App_tbMonths { get; set; }
-        public virtual DbSet<Activity_tbOp> Activity_tbOps { get; set; }
-        public virtual DbSet<Task_tbOp> Task_tbOps { get; set; }
-        public virtual DbSet<Task_tbOpStatus> Task_tbOpStatuses { get; set; }
+        public virtual DbSet<Object_tbOp> Object_tbOps { get; set; }
+        public virtual DbSet<Project_tbOp> Project_tbOps { get; set; }
+        public virtual DbSet<Project_tbOpStatus> Project_tbOpStatuses { get; set; }
         public virtual DbSet<App_tbOption> App_tbOptions { get; set; }
-        public virtual DbSet<Org_tbOrg> Org_tbOrgs { get; set; }
+        public virtual DbSet<Subject_tbSubject> Subject_tbSubjects { get; set; }
         public virtual DbSet<Cash_tbPayment> Cash_tbPayments { get; set; }
         public virtual DbSet<Cash_tbPaymentStatus> Cash_tbPaymentStatuses { get; set; }
         public virtual DbSet<App_tbPeriod> App_tbPeriods { get; set; }
-        public virtual DbSet<Task_tbQuote> Task_tbQuotes { get; set; }
+        public virtual DbSet<Project_tbQuote> Project_tbQuotes { get; set; }
         public virtual DbSet<App_tbRecurrence> App_tbRecurrences { get; set; }
         public virtual DbSet<App_tbRegister> App_tbRegisters { get; set; }
         public virtual DbSet<App_tbRounding> App_tbRoundings { get; set; }
-        public virtual DbSet<Org_tbSector> Org_tbSectors { get; set; }
+        public virtual DbSet<Subject_tbSector> Subject_tbSectors { get; set; }
         public virtual DbSet<Cash_tbStatus> Cash_tbStatuses { get; set; }
         public virtual DbSet<Invoice_tbStatus> Invoice_tbStatuses { get; set; }
-        public virtual DbSet<Org_tbStatus> Org_tbStatuses { get; set; }
-        public virtual DbSet<Task_tbStatus> Task_tbStatuses { get; set; }
-        public virtual DbSet<Activity_tbSyncType> Activity_tbSyncTypes { get; set; }
-        public virtual DbSet<Invoice_tbTask> Invoice_tbTasks { get; set; }
-        public virtual DbSet<Task_tbTask> Task_tbTasks { get; set; }
+        public virtual DbSet<Subject_tbStatus> Subject_tbStatuses { get; set; }
+        public virtual DbSet<Project_tbStatus> Project_tbStatuses { get; set; }
+        public virtual DbSet<Object_tbSyncType> Object_tbSyncTypes { get; set; }
+        public virtual DbSet<Invoice_tbProject> Invoice_tbProjects { get; set; }
+        public virtual DbSet<Project_tbProject> Project_tbProjects { get; set; }
         public virtual DbSet<App_tbTaxCode> App_tbTaxCodes { get; set; }
         public virtual DbSet<Cash_tbTaxType> Cash_tbTaxTypes { get; set; }
         public virtual DbSet<App_tbTemplate> App_tbTemplates { get; set; }
         public virtual DbSet<App_tbText> App_tbTexts { get; set; }
-        public virtual DbSet<Org_tbTransmitStatus> Org_tbTransmitStatuses { get; set; }
+        public virtual DbSet<Subject_tbTransmitStatus> Subject_tbTransmitStatuses { get; set; }
         public virtual DbSet<Cash_tbTx> Cash_tbTxs { get; set; }
         public virtual DbSet<Cash_tbTxReference> Cash_tbTxReferences { get; set; }
         public virtual DbSet<Cash_tbTxStatus> Cash_tbTxStatuses { get; set; }
         public virtual DbSet<Cash_tbType> Cash_tbTypes { get; set; }
         public virtual DbSet<Invoice_tbType> Invoice_tbTypes { get; set; }
         public virtual DbSet<Invoice_vwType> Invoice_Types { get; set; }
-        public virtual DbSet<Org_tbType> Org_tbTypes { get; set; }
+        public virtual DbSet<Subject_tbType> Subject_tbTypes { get; set; }
         public virtual DbSet<App_tbUoc> App_tbUocs { get; set; }
         public virtual DbSet<App_tbUom> App_tbUoms { get; set; }
         public virtual DbSet<Usr_tbUser> Usr_tbUsers { get; set; }
@@ -136,10 +137,11 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Views
-        public virtual DbSet<Org_vwAccountLookup> Org_AccountLookup { get; set; }
-        public virtual DbSet<Org_vwAccountLookupAll> Org_AccountLookupAll { get; set; }
-        public virtual DbSet<Org_vwEmailAddress> Org_EmailAddresses { get; set; }
-        public virtual DbSet<Org_vwAccountSource> Org_AccountSources { get; set; }
+        public virtual DbSet<Cash_vwCategoryPrimaryParent> Cash_vwCategoryPrimaryParents { get; set; }
+        public virtual DbSet<Subject_vwSubjectLookup> Subject_SubjectLookup { get; set; }
+        public virtual DbSet<Subject_vwSubjectLookupAll> Subject_SubjectLookupAll { get; set; }
+        public virtual DbSet<Subject_vwEmailAddress> Subject_EmailAddresses { get; set; }
+        public virtual DbSet<Subject_vwSubjectSource> Subject_SubjectSources { get; set; }
         public virtual DbSet<Cash_vwAccountStatement> Cash_AccountStatements { get; set; }
         public virtual DbSet<Cash_vwAccountStatementListing> Cash_AccountStatementListings { get; set; }
         public virtual DbSet<Cash_vwBalanceSheet> Cash_BalanceSheet { get; set; }
@@ -148,30 +150,30 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwAccountsMode> Invoice_AccountsMode { get; set; }
         public virtual DbSet<App_vwHost> App_Host { get; set; }
         public virtual DbSet<App_tbHost> App_tbHosts { get; set; }
-        public virtual DbSet<Task_vwActiveDatum> Task_ActiveData { get; set; }
+        public virtual DbSet<Project_vwActiveDatum> Project_ActiveData { get; set; }
         public virtual DbSet<App_vwActivePeriod> App_ActivePeriods { get; set; }
-        public virtual DbSet<Task_vwActiveStatusCode> Task_ActiveStatusCodes { get; set; }
+        public virtual DbSet<Project_vwActiveStatusCode> Project_ActiveStatusCodes { get; set; }
         public virtual DbSet<Invoice_vwAgedDebtPurchase> Invoice_AgedDebtPurchases { get; set; }
         public virtual DbSet<Invoice_vwAgedDebtSale> Invoice_AgedDebtSales { get; set; }
-        public virtual DbSet<Task_vwAllocationSvD> Task_AllocationSvD { get; set; }
-        public virtual DbSet<Org_vwAreaCode> Org_AreaCodes { get; set; }
-        public virtual DbSet<Org_vwAssetStatementAudit> Org_AssetStatementAudits { get; set; }
-        public virtual DbSet<Task_vwAttributeDescription> Task_AttributeDescriptions { get; set; }
-        public virtual DbSet<Task_vwAttributesForOrder> Task_AttributesForOrders { get; set; }
-        public virtual DbSet<Task_vwAttributesForQuote> Task_AttributesForQuotes { get; set; }
-        public virtual DbSet<Org_vwBalanceSheetAudit> Org_BalanceSheetAudits { get; set; }
+        public virtual DbSet<Project_vwAllocationSvD> Project_AllocationSvD { get; set; }
+        public virtual DbSet<Subject_vwAreaCode> Subject_AreaCodes { get; set; }
+        public virtual DbSet<Subject_vwAssetStatementAudit> Subject_AssetStatementAudits { get; set; }
+        public virtual DbSet<Project_vwAttributeDescription> Project_AttributeDescriptions { get; set; }
+        public virtual DbSet<Project_vwAttributesForOrder> Project_AttributesForOrders { get; set; }
+        public virtual DbSet<Project_vwAttributesForQuote> Project_AttributesForQuotes { get; set; }
+        public virtual DbSet<Subject_vwBalanceSheetAudit> Subject_BalanceSheetAudits { get; set; }
         public virtual DbSet<Cash_vwBankCashCode> Cash_BankCashCodes { get; set; }
         public virtual DbSet<Cash_vwBudget> Cash_Budget { get; set; }
         public virtual DbSet<Cash_vwBudgetDataEntry> Cash_BudgetDataEntries { get; set; }
-        public virtual DbSet<Activity_wCandidateCashCode> Activity_CandidateCashCodes { get; set; }
+        public virtual DbSet<Object_wCandidateCashCode> Object_CandidateCashCodes { get; set; }
         public virtual DbSet<App_vwCandidateCategoryCode> App_CandidateCategoryCodes { get; set; }
         public virtual DbSet<Invoice_vwCandidateCredit> Invoice_CandidateCredits { get; set; }
         public virtual DbSet<Invoice_vwCandidateDebit> Invoice_CandidateDebits { get; set; }
         public virtual DbSet<App_vwCandidateHomeAccount> App_CandidateHomeAccounts { get; set; }
         public virtual DbSet<Invoice_vwCandidatePurchase> Invoice_CandidatePurchases { get; set; }
         public virtual DbSet<Invoice_vwCandidateSale> Invoice_CandidateSales { get; set; }
-        public virtual DbSet<Org_vwCashAccountAsset> Org_CashAccountAssets { get; set; }
-        public virtual DbSet<Org_vwCashAccount> Org_CashAccounts { get; set; }
+        public virtual DbSet<Subject_vwCashAccountAsset> Subject_CashAccountAssets { get; set; }
+        public virtual DbSet<Subject_vwCashAccount> Subject_CashAccounts { get; set; }
         public virtual DbSet<Cash_vwCashFlowType> Cash_FlowTypes { get; set; }
         public virtual DbSet<Cash_vwFlowCategory> Cash_FlowCategories { get; set; }
         public virtual DbSet<Cash_vwFlowCategoryByPeriod> Cash_FlowCategoryByPeriods { get; set; }
@@ -181,23 +183,23 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwCategoryTotalCandidate> Cash_CategoryTotalCandidates { get; set; }
         public virtual DbSet<Cash_vwCategoryTrade> Cash_CategoryTrades { get; set; }
         public virtual DbSet<Invoice_vwChangeLog> Invoice_ChangeLog { get; set; }
-        public virtual DbSet<Task_vwChangeLog> Task_ChangeLog { get; set; }
-        public virtual DbSet<Activity_vwCode> Activity_Codes { get; set; }
+        public virtual DbSet<Project_vwChangeLog> Project_ChangeLog { get; set; }
+        public virtual DbSet<Object_vwCode> Object_Codes { get; set; }
         public virtual DbSet<Cash_vwCodeLookup> Cash_CodeLookup { get; set; }
         public virtual DbSet<Cash_vwCode> Cash_Codes { get; set; }
-        public virtual DbSet<Org_vwCompanyHeader> Org_CompanyHeaders { get; set; }
-        public virtual DbSet<Org_vwCompanyLogo> Org_CompanyLogos { get; set; }
-        public virtual DbSet<Org_vwContact> Org_Contacts { get; set; }
-        public virtual DbSet<Org_vwCurrentAccount> Org_CurrentAccounts { get; set; }
+        public virtual DbSet<Subject_vwCompanyHeader> Subject_CompanyHeaders { get; set; }
+        public virtual DbSet<Subject_vwCompanyLogo> Subject_CompanyLogos { get; set; }
+        public virtual DbSet<Subject_vwContact> Subject_Contacts { get; set; }
+        public virtual DbSet<Subject_vwCurrentAccount> Subject_CurrentAccounts { get; set; }
 
-        public virtual DbSet<Org_vwAddressList> Org_AddressList { get; set; }
-        public virtual DbSet<Task_vwCostSet> Task_CostSet { get; set; }
+        public virtual DbSet<Subject_vwAddressList> Subject_AddressList { get; set; }
+        public virtual DbSet<Project_vwCostSet> Project_CostSet { get; set; }
         public virtual DbSet<Invoice_vwCreditNoteSpool> Invoice_CreditNoteSpool { get; set; }
         public virtual DbSet<Invoice_vwCreditSpoolByItem> Invoice_CreditSpoolByItem { get; set; }
-        public virtual DbSet<Org_vwDatasheet> Org_Datasheet { get; set; }
+        public virtual DbSet<Subject_vwDatasheet> Subject_Datasheet { get; set; }
         public virtual DbSet<Invoice_vwDebitNoteSpool> Invoice_DebitNoteSpool { get; set; }
-        public virtual DbSet<Activity_vwDefaultText> Activity_DefaultText { get; set; }
-        public virtual DbSet<Org_vwDepartment> Org_Departments { get; set; }
+        public virtual DbSet<Object_vwDefaultText> Object_DefaultText { get; set; }
+        public virtual DbSet<Subject_vwDepartment> Subject_Departments { get; set; }
         public virtual DbSet<Usr_vwDoc> Usr_Doc { get; set; }
         public virtual DbSet<Invoice_vwDoc> Invoice_Doc { get; set; }
         public virtual DbSet<Invoice_vwDocDetail> Invoice_DocDetails { get; set; }
@@ -210,80 +212,80 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_vwDocSalesInvoice> App_DocSalesInvoices { get; set; }
         public virtual DbSet<App_vwDocSalesOrder> App_DocSalesOrders { get; set; }
         public virtual DbSet<App_vwEventLog> App_EventLogs { get; set; }
-        public virtual DbSet<Activity_vwExpenseCashCode> Activity_ExpenseCashCodes { get; set; }
+        public virtual DbSet<Object_vwExpenseCashCode> Object_ExpenseCashCodes { get; set; }
         public virtual DbSet<Cash_vwExternalCodesLookup> Cash_ExternalCodesLookup { get; set; }
-        public virtual DbSet<Task_vwFlow> Task_Flow { get; set; }
+        public virtual DbSet<Project_vwFlow> Project_Flow { get; set; }
         public virtual DbSet<App_vwGraphBankBalance> App_GraphBankBalances { get; set; }
-        public virtual DbSet<App_vwGraphTaskActivity> App_GraphTaskActivities { get; set; }
+        public virtual DbSet<App_vwGraphProjectObject> App_GraphProjectActivities { get; set; }
         public virtual DbSet<Invoice_vwHistoryCashCode> Invoice_HistoryCashCodes { get; set; }
         public virtual DbSet<Invoice_vwHistoryPurchase> Invoice_HistoryPurchases { get; set; }
         public virtual DbSet<Invoice_vwHistoryPurchaseItem> Invoice_HistoryPurchaseItems { get; set; }
         public virtual DbSet<Invoice_vwHistorySale> Invoice_HistorySales { get; set; }
         public virtual DbSet<Invoice_vwHistorySalesItem> Invoice_HistorySalesItems { get; set; }
         public virtual DbSet<App_vwIdentity> App_Identity { get; set; }
-        public virtual DbSet<Activity_wIncomeCashCode> VwIncomeCashCodes { get; set; }
-        public virtual DbSet<Org_vwInvoiceItem> Org_InvoiceItems { get; set; }
-        public virtual DbSet<Org_vwInvoiceSummary> Org_InvoiceSummaries { get; set; }
-        public virtual DbSet<Org_vwInvoiceTask> Org_InvoiceTasks { get; set; }
+        public virtual DbSet<Object_wIncomeCashCode> VwIncomeCashCodes { get; set; }
+        public virtual DbSet<Subject_vwInvoiceItem> Subject_InvoiceItems { get; set; }
+        public virtual DbSet<Subject_vwInvoiceSummary> Subject_InvoiceSummaries { get; set; }
+        public virtual DbSet<Subject_vwInvoiceProject> Subject_InvoiceProjects { get; set; }
         public virtual DbSet<Invoice_vwItem> Invoice_Items { get; set; }
         public virtual DbSet<Invoice_vwEntry> Invoice_Entries { get; set; }
-        public virtual DbSet<Org_vwJobTitle> Org_JobTitles { get; set; }
-        public virtual DbSet<Org_vwListActive> Org_ListActive { get; set; }
-        public virtual DbSet<Org_vwListAll> Org_ListAll { get; set; }
+        public virtual DbSet<Subject_vwJobTitle> Subject_JobTitles { get; set; }
+        public virtual DbSet<Subject_vwListActive> Subject_ListActive { get; set; }
+        public virtual DbSet<Subject_vwListAll> Subject_ListAll { get; set; }
         public virtual DbSet<Invoice_vwMirror> Invoice_Mirrors { get; set; }
         public virtual DbSet<Invoice_vwMirrorDetail> Invoice_MirrorDetails { get; set; }
         public virtual DbSet<Invoice_vwMirrorEvent> Invoice_MirrorEvents { get; set; }
-        public virtual DbSet<Org_vwNameTitle> Org_NameTitles { get; set; }
-        public virtual DbSet<Task_vwNetworkAllocation> Task_NetworkAllocations { get; set; }
+        public virtual DbSet<Subject_vwNameTitle> Subject_NameTitles { get; set; }
+        public virtual DbSet<Project_vwNetworkAllocation> Project_NetworkAllocations { get; set; }
         public virtual DbSet<Invoice_vwNetworkChangeLog> Invoice_NetworkChangeLog { get; set; }
-        public virtual DbSet<Task_vwNetworkChangeLog> Task_NetworkChangeLogs { get; set; }
-        public virtual DbSet<Task_vwNetworkEvent> Task_NetworkEvents { get; set; }
-        public virtual DbSet<Task_vwNetworkEventLog> Task_NetworkEventLog { get; set; }
-        public virtual DbSet<Task_vwNetworkQuotation> Task_NetworkQuotations { get; set; }
-        public virtual DbSet<Task_vwOp> Task_Ops { get; set; }
+        public virtual DbSet<Project_vwNetworkChangeLog> Project_NetworkChangeLogs { get; set; }
+        public virtual DbSet<Project_vwNetworkEvent> Project_NetworkEvents { get; set; }
+        public virtual DbSet<Project_vwNetworkEventLog> Project_NetworkEventLog { get; set; }
+        public virtual DbSet<Project_vwNetworkQuotation> Project_NetworkQuotations { get; set; }
+        public virtual DbSet<Project_vwOp> Project_Ops { get; set; }
         public virtual DbSet<Cash_vwPayment> Cash_Payments { get; set; }
-        public virtual DbSet<Org_vwPaymentTerm> Org_PaymentTerms { get; set; }
+        public virtual DbSet<Subject_vwPaymentTerm> Subject_PaymentTerms { get; set; }
         public virtual DbSet<Cash_vwPaymentsListing> Cash_PaymentsListing { get; set; }
         public virtual DbSet<Cash_vwPaymentsUnposted> Cash_PaymentsUnposted { get; set; }
         public virtual DbSet<App_vwPeriod> App_Periods { get; set; }
         public virtual DbSet<App_vwPeriodEndListing> App_PeriodEndListings { get; set; }
-        public virtual DbSet<Task_vwProfit> Task_Profit { get; set; }
-        public virtual DbSet<Task_vwProfitToDate> Task_ProfitToDate { get; set; }
-        public virtual DbSet<Task_vwPurchase> Task_Purchases { get; set; }
-        public virtual DbSet<Task_vwPurchaseEnquiryDeliverySpool> Task_PurchaseEnquiryDeliverySpool { get; set; }
-        public virtual DbSet<Task_vwPurchaseEnquirySpool> Task_PurchaseEnquirySpool { get; set; }
-        public virtual DbSet<Task_vwPurchaseOrderDeliverySpool> Task_PurchaseOrderDeliverySpool { get; set; }
-        public virtual DbSet<Task_vwPurchaseOrderSpool> Task_PurchaseOrderSpool { get; set; }
-        public virtual DbSet<Task_vwQuotationSpool> Task_QuotationSpool { get; set; }
-        public virtual DbSet<Task_vwQuote> Task_Quotes { get; set; }
+        public virtual DbSet<Project_vwProfit> Project_Profit { get; set; }
+        public virtual DbSet<Project_vwProfitToDate> Project_ProfitToDate { get; set; }
+        public virtual DbSet<Project_vwPurchase> Project_Purchases { get; set; }
+        public virtual DbSet<Project_vwPurchaseEnquiryDeliverySpool> Project_PurchaseEnquiryDeliverySpool { get; set; }
+        public virtual DbSet<Project_vwPurchaseEnquirySpool> Project_PurchaseEnquirySpool { get; set; }
+        public virtual DbSet<Project_vwPurchaseOrderDeliverySpool> Project_PurchaseOrderDeliverySpool { get; set; }
+        public virtual DbSet<Project_vwPurchaseOrderSpool> Project_PurchaseOrderSpool { get; set; }
+        public virtual DbSet<Project_vwQuotationSpool> Project_QuotationSpool { get; set; }
+        public virtual DbSet<Project_vwQuote> Project_Quotes { get; set; }
         public virtual DbSet<Invoice_vwRegister> Invoice_Register { get; set; }
         public virtual DbSet<Invoice_vwRegisterCashCode> Invoice_RegisterCashCodes { get; set; }
         public virtual DbSet<Invoice_vwRegisterDetail> Invoice_RegisterDetails { get; set; }
         public virtual DbSet<Invoice_vwRegisterExpense> Invoice_RegisterExpenses { get; set; }
         public virtual DbSet<Invoice_vwRegisterItem> Invoice_RegisterItems { get; set; }
         public virtual DbSet<Invoice_vwRegisterPurchase> Invoice_RegisterPurchases { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchaseTask> Invoice_RegisterPurchaseTasks { get; set; }
+        public virtual DbSet<Invoice_vwRegisterPurchaseProject> Invoice_RegisterPurchaseProjects { get; set; }
         public virtual DbSet<Invoice_vwRegisterPurchasesOverdue> Invoice_RegisterPurchasesOverdue { get; set; }
         public virtual DbSet<Invoice_vwRegisterOverdue> Invoice_RegisterOverdue { get; set; }
         public virtual DbSet<Invoice_vwRegisterSale> Invoice_RegisterSales { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSaleTask> Invoice_RegisterSaleTasks { get; set; }
+        public virtual DbSet<Invoice_vwRegisterSaleProject> Invoice_RegisterSaleProjects { get; set; }
         public virtual DbSet<Invoice_vwRegisterSalesOverdue> Invoice_RegisterSalesOverdues { get; set; }
-        public virtual DbSet<Org_vwReserveAccount> Org_ReserveAccounts { get; set; }
-        public virtual DbSet<Task_vwSale> Task_Sales { get; set; }
+        public virtual DbSet<Subject_vwReserveAccount> Subject_ReserveAccounts { get; set; }
+        public virtual DbSet<Project_vwSale> Project_Sales { get; set; }
         public virtual DbSet<Invoice_vwSalesInvoiceSpool> Invoice_SalesInvoiceSpool { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByActivity> Invoice_SalesInvoiceSpoolByActivity { get; set; }
+        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByObject> Invoice_SalesInvoiceSpoolByObject { get; set; }
         public virtual DbSet<Invoice_vwSalesInvoiceSpoolByItem> Invoice_SalesInvoiceSpoolByItem { get; set; }
-        public virtual DbSet<Task_vwSalesOrderSpool> Task_SalesOrderSpool { get; set; }
+        public virtual DbSet<Project_vwSalesOrderSpool> Project_SalesOrderSpool { get; set; }
         public virtual DbSet<Cash_vwStatement> Cash_Statement { get; set; }
-        public virtual DbSet<Org_vwStatement> Org_Statement { get; set; }
-        public virtual DbSet<Org_vwStatementReport> Org_StatementReport { get; set; }
+        public virtual DbSet<Subject_vwStatement> Subject_Statement { get; set; }
+        public virtual DbSet<Subject_vwStatementReport> Subject_StatementReport { get; set; }
         public virtual DbSet<Cash_vwStatementReserve> Cash_StatementReserves { get; set; }
         public virtual DbSet<Cash_vwStatementWhatIf> Cash_StatementWhatIf { get; set; }
-        public virtual DbSet<Org_vwStatusReport> Org_StatusReport { get; set; }
+        public virtual DbSet<Subject_vwStatusReport> Subject_StatusReport { get; set; }
         public virtual DbSet<Cash_vwSummary> Cash_Summary { get; set; }
         public virtual DbSet<Invoice_vwSummary> Invoice_Summary { get; set; }
-        public virtual DbSet<Org_vwTask> Org_Tasks { get; set; }
-        public virtual DbSet<Task_vwTask> Task_Tasks { get; set; }
+        public virtual DbSet<Subject_vwProject> Subject_Projects { get; set; }
+        public virtual DbSet<Project_vwProject> Project_Projects { get; set; }
         public virtual DbSet<App_vwTaxCode> App_TaxCodes { get; set; }
         public virtual DbSet<Cash_vwTaxType> App_TaxTypes { get; set; }
         public virtual DbSet<App_vwTaxCodeType> App_TaxCodeTypes { get; set; }
@@ -298,19 +300,19 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwTaxVatStatement> Cash_TaxVatStatement { get; set; }
         public virtual DbSet<Cash_vwTaxVatSummary> Cash_TaxVatSummary { get; set; }
         public virtual DbSet<Cash_vwTaxVatTotal> Cash_TaxVatTotals { get; set; }
-        public virtual DbSet<Task_vwTitle> Task_Titles { get; set; }
+        public virtual DbSet<Project_vwTitle> Project_Titles { get; set; }
         public virtual DbSet<Cash_vwTransferCodeLookup> Cash_TransferCodeLookup { get; set; }
         public virtual DbSet<Cash_vwTransfersUnposted> Cash_TransfersUnposted { get; set; }
-        public virtual DbSet<Org_vwTypeLookup> Org_TypeLookup { get; set; }
-        public virtual DbSet<Activity_vwUnMirrored> Activity_UnMirrored { get; set; }
+        public virtual DbSet<Subject_vwTypeLookup> Subject_TypeLookup { get; set; }
+        public virtual DbSet<Object_vwUnMirrored> Object_UnMirrored { get; set; }
         public virtual DbSet<Cash_vwUnMirrored> Cash_UnMirrored { get; set; }
         public virtual DbSet<Usr_vwUserMenu> Usr_UserMenus { get; set; }
         public virtual DbSet<Usr_vwUserMenuList> Usr_UserMenuLists { get; set; }
         public virtual DbSet<Cash_vwVatcode> Cash_Vatcodes { get; set; }
         public virtual DbSet<App_vwVersion> App_Version { get; set; }
         public virtual DbSet<App_vwHomeAccount> App_HomeAccount { get; set; }
-        public virtual DbSet<App_vwWarehouseOrg> App_WarehouseOrgs { get; set; }
-        public virtual DbSet<App_vwWarehouseTask> App_WarehouseTasks { get; set; }
+        public virtual DbSet<App_vwWarehouseSubject> App_WarehouseSubjects { get; set; }
+        public virtual DbSet<App_vwWarehouseProject> App_WarehouseProjects { get; set; }
         public virtual DbSet<App_vwYearPeriod> App_YearPeriods { get; set; }
         public virtual DbSet<Usr_vwCredential> Usr_Credentials { get; set; }
         public virtual DbSet<Web_vwAttachmentInvoice> Web_AttachmentInvoices { get; set; }
@@ -333,12 +335,12 @@ namespace TradeControl.Web.Data
             });
             #endregion
 
-            modelBuilder.Entity<Org_tbAccount>(entity =>
+            modelBuilder.Entity<Subject_tbAccount>(entity =>
             {
-                entity.HasKey(e => e.CashAccountCode)
-                    .HasName("PK_Org_tbAccount");
+                entity.HasKey(e => e.AccountCode)
+                    .HasName("PK_Subject_tbAccount");
 
-                entity.HasIndex(e => new { e.AccountCode, e.CashAccountCode }, "IX_Org_tbAccount")
+                entity.HasIndex(e => new { e.SubjectCode, e.AccountCode }, "IX_Subject_tbAccount")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
@@ -356,42 +358,42 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbAccounts)
-                    .HasForeignKey(d => d.AccountCode)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Org_tbAccount_Org_tb");
+                    .HasConstraintName("FK_Subject_tbAccount_Subject_tb");
 
                 entity.HasOne(d => d.AccountTypeCodeNavigation)
                     .WithMany(p => p.TbAccounts)
                     .HasForeignKey(d => d.AccountTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Org_tbAccount_Org_tbAccountType");
+                    .HasConstraintName("FK_Subject_tbAccount_Subject_tbAccountType");
 
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbAccounts)
                     .HasForeignKey(d => d.CashCode)
-                    .HasConstraintName("FK_Org_tbAccount_Cash_tbCode");
+                    .HasConstraintName("FK_Subject_tbAccount_Cash_tbCode");
 
                 entity.HasOne(d => d.CoinTypeCodeNavigation)
                     .WithMany(p => p.TbAccounts)
                     .HasForeignKey(d => d.CoinTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Org_tbAccount_Cash_tbCoinType");
+                    .HasConstraintName("FK_Subject_tbAccount_Cash_tbCoinType");
             });
 
-            modelBuilder.Entity<Org_tbAccountType>(entity =>
+            modelBuilder.Entity<Subject_tbAccountType>(entity =>
             {
                 entity.HasKey(e => e.AccountTypeCode)
-                    .HasName("PK_Org_tbAccountType");
+                    .HasName("PK_Subject_tbAccountType");
 
                 entity.Property(e => e.AccountTypeCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Activity_tbActivity>(entity =>
+            modelBuilder.Entity<Object_tbObject>(entity =>
             {
-                entity.HasKey(e => e.ActivityCode)
-                    .HasName("PK_Activity_tbActivityCode")
+                entity.HasKey(e => e.ObjectCode)
+                    .HasName("PK_Object_tbObjectCode")
                     .IsClustered(false);
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
@@ -402,7 +404,7 @@ namespace TradeControl.Web.Data
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
-                entity.Property(e => e.TaskStatusCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.ProjectStatusCode).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -411,26 +413,26 @@ namespace TradeControl.Web.Data
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbActivities)
                     .HasForeignKey(d => d.CashCode)
-                    .HasConstraintName("FK_Activity_tbActivity_Cash_tbCode");
+                    .HasConstraintName("FK_Object_tbObject_Cash_tbCode");
 
                 entity.HasOne(d => d.RegisterNameNavigation)
                     .WithMany(p => p.TbActivities)
                     .HasForeignKey(d => d.RegisterName)
-                    .HasConstraintName("FK_Activity_tbActivity_App_tbRegister");
+                    .HasConstraintName("FK_Object_tbObject_App_tbRegister");
 
                 entity.HasOne(d => d.UnitOfMeasureNavigation)
                     .WithMany(p => p.TbActivities)
                     .HasForeignKey(d => d.UnitOfMeasure)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbActivity_App_tbUom");
+                    .HasConstraintName("FK_Object_tbObject_App_tbUom");
             });
 
-            modelBuilder.Entity<Org_tbAddress>(entity =>
+            modelBuilder.Entity<Subject_tbAddress>(entity =>
             {
                 entity.HasKey(e => e.AddressCode)
-                    .HasName("PK_Org_tbAddress");
+                    .HasName("PK_Subject_tbAddress");
 
-                entity.HasIndex(e => new { e.AccountCode, e.AddressCode }, "IX_Org_tbAddress")
+                entity.HasIndex(e => new { e.SubjectCode, e.AddressCode }, "IX_Subject_tbAddress")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
@@ -446,16 +448,16 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbAddresses)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Org_tbAddress_Org_tb");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbAddress_Subject_tb");
             });
 
-            modelBuilder.Entity<Task_tbAllocation>(entity =>
+            modelBuilder.Entity<Project_tbAllocation>(entity =>
             {
                 entity.HasKey(e => e.ContractAddress)
-                    .HasName("PK_Task_tbAllocation");
+                    .HasName("PK_Project_tbAllocation");
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
@@ -463,28 +465,28 @@ namespace TradeControl.Web.Data
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbAllocations)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Task_tbAllocation_AccountCode");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Project_tbAllocation_SubjectCode");
 
-                entity.HasOne(d => d.CashModeCodeNavigation)
+                entity.HasOne(d => d.CashPolarityCodeNavigation)
                     .WithMany(p => p.TbAllocations)
-                    .HasForeignKey(d => d.CashModeCode)
+                    .HasForeignKey(d => d.CashPolarityCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbAllocation_CashModeCode");
+                    .HasConstraintName("FK_Project_tbAllocation_CashPolarityCode");
 
-                entity.HasOne(d => d.TaskStatusCodeNavigation)
+                entity.HasOne(d => d.ProjectStatusCodeNavigation)
                     .WithMany(p => p.TbAllocations)
-                    .HasForeignKey(d => d.TaskStatusCode)
+                    .HasForeignKey(d => d.ProjectStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbAllocation_TaskStatusCode");
+                    .HasConstraintName("FK_Project_tbAllocation_ProjectStatusCode");
             });
 
-            modelBuilder.Entity<Task_tbAllocationEvent>(entity =>
+            modelBuilder.Entity<Project_tbAllocationEvent>(entity =>
             {
                 entity.HasKey(e => new { e.ContractAddress, e.LogId })
-                    .HasName("PK_Task_tbAllocationEvent");
+                    .HasName("PK_Project_tbAllocationEvent");
 
                 entity.Property(e => e.LogId).ValueGeneratedOnAdd();
 
@@ -497,19 +499,19 @@ namespace TradeControl.Web.Data
                 entity.HasOne(d => d.ContractAddressNavigation)
                     .WithMany(p => p.TbAllocationEvents)
                     .HasForeignKey(d => d.ContractAddress)
-                    .HasConstraintName("FK_Task_tbAllocationEvent_tbAllocation");
+                    .HasConstraintName("FK_Project_tbAllocationEvent_tbAllocation");
 
                 entity.HasOne(d => d.EventTypeCodeNavigation)
                     .WithMany(p => p.TbAllocationEvents)
                     .HasForeignKey(d => d.EventTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbAllocationEvent_App_tbEventType");
+                    .HasConstraintName("FK_Project_tbAllocationEvent_App_tbEventType");
 
-                entity.HasOne(d => d.TaskStatusCodeNavigation)
+                entity.HasOne(d => d.ProjectStatusCodeNavigation)
                     .WithMany(p => p.TbAllocationEvents)
-                    .HasForeignKey(d => d.TaskStatusCode)
+                    .HasForeignKey(d => d.ProjectStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbAllocationEvent_Task_tbStatus");
+                    .HasConstraintName("FK_Project_tbAllocationEvent_Project_tbStatus");
             });
 
             modelBuilder.Entity<Cash_tbAssetType>(entity =>
@@ -520,21 +522,21 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.AssetTypeCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Activity_tbAttribute>(entity =>
+            modelBuilder.Entity<Object_tbAttribute>(entity =>
             {
-                entity.HasKey(e => new { e.ActivityCode, e.Attribute })
-                    .HasName("PK_Activity_tbAttribute");
+                entity.HasKey(e => new { e.ObjectCode, e.Attribute })
+                    .HasName("PK_Object_tbAttribute");
 
-                entity.HasIndex(e => e.Attribute, "IX_Activity_tbAttribute")
+                entity.HasIndex(e => e.Attribute, "IX_Object_tbAttribute")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.DefaultText, "IX_Activity_tbAttribute_DefaultText")
+                entity.HasIndex(e => e.DefaultText, "IX_Object_tbAttribute_DefaultText")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.ActivityCode, e.PrintOrder, e.Attribute }, "IX_Activity_tbAttribute_OrderBy")
+                entity.HasIndex(e => new { e.ObjectCode, e.PrintOrder, e.Attribute }, "IX_Object_tbAttribute_OrderBy")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.ActivityCode, e.AttributeTypeCode, e.PrintOrder }, "IX_Activity_tbAttribute_Type_OrderBy")
+                entity.HasIndex(e => new { e.ObjectCode, e.AttributeTypeCode, e.PrintOrder }, "IX_Object_tbAttribute_Type_OrderBy")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
@@ -551,33 +553,33 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.ActivityCodeNavigation)
+                entity.HasOne(d => d.ObjectCodeNavigation)
                     .WithMany(p => p.TbAttributes)
-                    .HasForeignKey(d => d.ActivityCode)
-                    .HasConstraintName("FK_Activity_tbAttribute_tbActivity");
+                    .HasForeignKey(d => d.ObjectCode)
+                    .HasConstraintName("FK_Object_tbAttribute_tbObject");
 
                 entity.HasOne(d => d.AttributeTypeCodeNavigation)
                     .WithMany(p => p.TbAttributes)
                     .HasForeignKey(d => d.AttributeTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbAttribute_Activity_tbAttributeType");
+                    .HasConstraintName("FK_Object_tbAttribute_Object_tbAttributeType");
             });
 
-            modelBuilder.Entity<Task_tbAttribute>(entity =>
+            modelBuilder.Entity<Project_tbAttribute>(entity =>
             {
-                entity.HasKey(e => new { e.TaskCode, e.Attribute })
-                    .HasName("PK_Task_tbTaskAttribute");
+                entity.HasKey(e => new { e.ProjectCode, e.Attribute })
+                    .HasName("PK_Project_tbProjectAttribute");
 
-                entity.HasIndex(e => e.TaskCode, "IX_Task_tbAttribute")
+                entity.HasIndex(e => e.ProjectCode, "IX_Project_tbAttribute")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.Attribute, e.AttributeDescription }, "IX_Task_tbAttribute_Description")
+                entity.HasIndex(e => new { e.Attribute, e.AttributeDescription }, "IX_Project_tbAttribute_Description")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.TaskCode, e.PrintOrder, e.Attribute }, "IX_Task_tbAttribute_OrderBy")
+                entity.HasIndex(e => new { e.ProjectCode, e.PrintOrder, e.Attribute }, "IX_Project_tbAttribute_OrderBy")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.TaskCode, e.AttributeTypeCode, e.PrintOrder }, "IX_Task_tbAttribute_Type_OrderBy")
+                entity.HasIndex(e => new { e.ProjectCode, e.AttributeTypeCode, e.PrintOrder }, "IX_Project_tbAttribute_Type_OrderBy")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
@@ -598,18 +600,18 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbAttribute1s)
                     .HasForeignKey(d => d.AttributeTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbAttribute_Activity_tbAttributeType");
+                    .HasConstraintName("FK_Project_tbAttribute_Object_tbAttributeType");
 
-                entity.HasOne(d => d.TaskCodeNavigation)
+                entity.HasOne(d => d.ProjectCodeNavigation)
                     .WithMany(p => p.TbAttribute1s)
-                    .HasForeignKey(d => d.TaskCode)
-                    .HasConstraintName("FK_Task_tbAttrib_Task_tb");
+                    .HasForeignKey(d => d.ProjectCode)
+                    .HasConstraintName("FK_Project_tbAttrib_Project_tb");
             });
 
-            modelBuilder.Entity<Activity_tbAttributeType>(entity =>
+            modelBuilder.Entity<Object_tbAttributeType>(entity =>
             {
                 entity.HasKey(e => e.AttributeTypeCode)
-                    .HasName("PK_Activity_tbAttributeType");
+                    .HasName("PK_Object_tbAttributeType");
 
                 entity.Property(e => e.AttributeTypeCode).ValueGeneratedNever();
             });
@@ -701,7 +703,7 @@ namespace TradeControl.Web.Data
                 entity.HasIndex(e => new { e.CategoryTypeCode, e.DisplayOrder, e.Category }, "IX_Cash_tbCategory_TypeOrderCategory")
                     .HasFillFactor((byte)90);
 
-                //entity.Property(e => e.CashModeCode).HasDefaultValueSql("((1))");
+                //entity.Property(e => e.CashPolarityCode).HasDefaultValueSql("((1))");
 
                 //entity.Property(e => e.CashTypeCode).HasDefaultValueSql("((0))");
 
@@ -721,10 +723,10 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.CashModeCodeNavigation)
+                entity.HasOne(d => d.CashPolarityCodeNavigation)
                     .WithMany(p => p.TbCategories)
-                    .HasForeignKey(d => d.CashModeCode)
-                    .HasConstraintName("FK_Cash_tbCategory_Cash_tbMode");
+                    .HasForeignKey(d => d.CashPolarityCode)
+                    .HasConstraintName("FK_Cash_tbCategory_Cash_tbPolarity");
 
                 entity.HasOne(d => d.CashTypeCodeNavigation)
                     .WithMany(p => p.TbCategories)
@@ -743,15 +745,19 @@ namespace TradeControl.Web.Data
                 entity.HasKey(e => e.CategoryCode)
                     .HasName("PK_Cash_tbCategoryExp");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.HasOne(d => d.CategoryCodeNavigation)
                     .WithOne(p => p.TbCategoryExp)
                     .HasForeignKey<Cash_tbCategoryExp>(d => d.CategoryCode)
                     .HasConstraintName("FK_Cash_tbCategoryExp_Cash_tbCategory");
+
+                entity.HasOne(d => d.SyntaxTypeCodeNavigation)
+                    .WithMany(p => p.TbCategoryExps)
+                    .HasForeignKey(d => d.SyntaxTypeCode)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_tbCategoryExp_tbCategoryExpSyntax");
             });
+
+
 
             modelBuilder.Entity<Cash_tbCategoryTotal>(entity =>
             {
@@ -830,10 +836,10 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_Invoice_tbChangeLog_TrasmitStatusCode");
             });
 
-            modelBuilder.Entity<Task_tbChangeLog>(entity =>
+            modelBuilder.Entity<Project_tbChangeLog>(entity =>
             {
-                entity.HasKey(e => new { e.TaskCode, e.LogId })
-                    .HasName("PK_Task_tbChangeLog");
+                entity.HasKey(e => new { e.ProjectCode, e.LogId })
+                    .HasName("PK_Project_tbChangeLog");
 
                 entity.Property(e => e.LogId).ValueGeneratedOnAdd();
 
@@ -846,10 +852,10 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
                 entity.HasOne(d => d.TransmitStatusCodeNavigation)
-                    .WithMany(p => p.TbTaskChangeLogs)
+                    .WithMany(p => p.TbProjectChangeLogs)
                     .HasForeignKey(d => d.TransmitStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbChangeLog_TrasmitStatusCode");
+                    .HasConstraintName("FK_Project_tbChangeLog_TrasmitStatusCode");
             });
 
             modelBuilder.Entity<Cash_tbChangeReference>(entity =>
@@ -932,22 +938,22 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.CoinTypeCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Org_tbContact>(entity =>
+            modelBuilder.Entity<Subject_tbContact>(entity =>
             {
-                entity.HasKey(e => new { e.AccountCode, e.ContactName })
-                    .HasName("PK_Org_tbContact")
+                entity.HasKey(e => new { e.SubjectCode, e.ContactName })
+                    .HasName("PK_Subject_tbContact")
                     .IsClustered(false);
 
-                entity.HasIndex(e => e.Department, "IX_Org_tbContactDepartment")
+                entity.HasIndex(e => e.Department, "IX_Subject_tbContactDepartment")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.JobTitle, "IX_Org_tbContactJobTitle")
+                entity.HasIndex(e => e.JobTitle, "IX_Subject_tbContactJobTitle")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.NameTitle, "IX_Org_tbContactNameTitle")
+                entity.HasIndex(e => e.NameTitle, "IX_Subject_tbContactNameTitle")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.AccountCode, "IX_Org_tbContact_AccountCode")
+                entity.HasIndex(e => e.SubjectCode, "IX_Subject_tbContact_SubjectCode")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
@@ -964,16 +970,16 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbContacts)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Org_tbContact_AccountCode");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbContact_SubjectCode");
             });
 
-            modelBuilder.Entity<Task_tbCostSet>(entity =>
+            modelBuilder.Entity<Project_tbCostSet>(entity =>
             {
-                entity.HasKey(e => new { e.TaskCode, e.UserId })
-                    .HasName("PK_Task_tbCostSet");
+                entity.HasKey(e => new { e.ProjectCode, e.UserId })
+                    .HasName("PK_Project_tbCostSet");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -983,15 +989,15 @@ namespace TradeControl.Web.Data
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
-                entity.HasOne(d => d.TaskCodeNavigation)
+                entity.HasOne(d => d.ProjectCodeNavigation)
                     .WithMany(p => p.TbCostSets)
-                    .HasForeignKey(d => d.TaskCode)
-                    .HasConstraintName("FK_Task_tbCostSet_Task_tbTask");
+                    .HasForeignKey(d => d.ProjectCode)
+                    .HasConstraintName("FK_Project_tbCostSet_Project_tbProject");
 
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.TbCostSets)
                     .HasForeignKey(d => d.UserId)
-                    .HasConstraintName("FK_Task_tbCostSet_Usr_tbUser");
+                    .HasConstraintName("FK_Project_tbCostSet_Usr_tbUser");
             });
 
             modelBuilder.Entity<App_tbDoc>(entity =>
@@ -1012,16 +1018,16 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_App_tbDoc_Usr_tbMenuOpenMode");
             });
 
-            modelBuilder.Entity<Org_tbDoc>(entity =>
+            modelBuilder.Entity<Subject_tbDoc>(entity =>
             {
-                entity.HasKey(e => new { e.AccountCode, e.DocumentName })
-                    .HasName("PK_Org_tbDoc")
+                entity.HasKey(e => new { e.SubjectCode, e.DocumentName })
+                    .HasName("PK_Subject_tbDoc")
                     .IsClustered(false);
 
-                entity.HasIndex(e => e.AccountCode, "IX_Org_tbDoc_AccountCode")
+                entity.HasIndex(e => e.SubjectCode, "IX_Subject_tbDoc_SubjectCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.DocumentName, e.AccountCode }, "IX_Org_tbDoc_DocName_AccountCode")
+                entity.HasIndex(e => new { e.DocumentName, e.SubjectCode }, "IX_Subject_tbDoc_DocName_SubjectCode")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
@@ -1037,16 +1043,16 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbDocs)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Org_tbDoc_AccountCode");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbDoc_SubjectCode");
             });
 
-            modelBuilder.Entity<Task_tbDoc>(entity =>
+            modelBuilder.Entity<Project_tbDoc>(entity =>
             {
-                entity.HasKey(e => new { e.TaskCode, e.DocumentName })
-                    .HasName("PK_Task_tbDoc");
+                entity.HasKey(e => new { e.ProjectCode, e.DocumentName })
+                    .HasName("PK_Project_tbDoc");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -1060,11 +1066,11 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.TaskCodeNavigation)
+                entity.HasOne(d => d.ProjectCodeNavigation)
                     .WithMany(p => p.TbDocs)
-                    .HasForeignKey(d => d.TaskCode)
+                    .HasForeignKey(d => d.ProjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbDoc_Task_tb");
+                    .HasConstraintName("FK_Project_tbDoc_Project_tb");
             });
 
             modelBuilder.Entity<App_tbDocClass>(entity =>
@@ -1116,7 +1122,7 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Invoice_tbEntry>(entity =>
             {
-                entity.HasKey(e => new { e.AccountCode, e.CashCode })
+                entity.HasKey(e => new { e.SubjectCode, e.CashCode })
                     .HasName("PK_Invoice_tbEntry");
 
                 entity.Property(e => e.InvoicedOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
@@ -1125,11 +1131,11 @@ namespace TradeControl.Web.Data
                 //    .IsRowVersion()
                 //    .IsConcurrencyToken();
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbEntries)
-                    .HasForeignKey(d => d.AccountCode)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Invoice_tbEntry_Org_tb");
+                    .HasConstraintName("FK_Invoice_tbEntry_Subject_tb");
 
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbEntries)
@@ -1199,17 +1205,17 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.EventTypeCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Activity_tbFlow>(entity =>
+            modelBuilder.Entity<Object_tbFlow>(entity =>
             {
                 entity.HasKey(e => new { e.ParentCode, e.StepNumber })
-                    .HasName("PK_Activity_tbFlow")
+                    .HasName("PK_Object_tbFlow")
                     .IsClustered(false);
 
-                entity.HasIndex(e => new { e.ChildCode, e.ParentCode }, "IX_Activity_tbFlow_ChildParent")
+                entity.HasIndex(e => new { e.ChildCode, e.ParentCode }, "IX_Object_tbFlow_ChildParent")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.ParentCode, e.ChildCode }, "IX_Activity_tbFlow_ParentChild")
+                entity.HasIndex(e => new { e.ParentCode, e.ChildCode }, "IX_Object_tbFlow_ParentChild")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
@@ -1233,31 +1239,31 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbFlowChildCodeNavigations)
                     .HasForeignKey(d => d.ChildCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbFlow_Activity_tbChild");
+                    .HasConstraintName("FK_Object_tbFlow_Object_tbChild");
 
                 entity.HasOne(d => d.ParentCodeNavigation)
                     .WithMany(p => p.TbFlowParentCodeNavigations)
                     .HasForeignKey(d => d.ParentCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbFlow_tbActivityParent");
+                    .HasConstraintName("FK_Object_tbFlow_tbObjectParent");
 
                 entity.HasOne(d => d.SyncTypeCodeNavigation)
-                    .WithMany(p => p.TbActivityFlows)
+                    .WithMany(p => p.TbObjectFlows)
                     .HasForeignKey(d => d.SyncTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbFlow_Activity_tbSyncType");
+                    .HasConstraintName("FK_Object_tbFlow_Object_tbSyncType");
             });
 
-            modelBuilder.Entity<Task_tbFlow>(entity =>
+            modelBuilder.Entity<Project_tbFlow>(entity =>
             {
-                entity.HasKey(e => new { e.ParentTaskCode, e.StepNumber })
-                    .HasName("PK_Task_tbFlow");
+                entity.HasKey(e => new { e.ParentProjectCode, e.StepNumber })
+                    .HasName("PK_Project_tbFlow");
 
-                entity.HasIndex(e => new { e.ChildTaskCode, e.ParentTaskCode }, "IX_Task_tbFlow_ChildParent")
+                entity.HasIndex(e => new { e.ChildProjectCode, e.ParentProjectCode }, "IX_Project_tbFlow_ChildParent")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.ParentTaskCode, e.ChildTaskCode }, "IX_Task_tbFlow_ParentChild")
+                entity.HasIndex(e => new { e.ParentProjectCode, e.ChildProjectCode }, "IX_Project_tbFlow_ParentChild")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
@@ -1277,22 +1283,22 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UsedOnQuantity).HasDefaultValueSql("((1))");
 
-                entity.HasOne(d => d.ChildTaskCodeNavigation)
-                    .WithMany(p => p.TbFlowChildTaskCodeNavigations)
-                    .HasForeignKey(d => d.ChildTaskCode)
-                    .HasConstraintName("FK_Task_tbFlow_Task_tb_Child");
+                entity.HasOne(d => d.ChildProjectCodeNavigation)
+                    .WithMany(p => p.TbFlowChildProjectCodeNavigations)
+                    .HasForeignKey(d => d.ChildProjectCode)
+                    .HasConstraintName("FK_Project_tbFlow_Project_tb_Child");
 
-                entity.HasOne(d => d.ParentTaskCodeNavigation)
-                    .WithMany(p => p.TbFlowParentTaskCodeNavigations)
-                    .HasForeignKey(d => d.ParentTaskCode)
+                entity.HasOne(d => d.ParentProjectCodeNavigation)
+                    .WithMany(p => p.TbFlowParentProjectCodeNavigations)
+                    .HasForeignKey(d => d.ParentProjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbFlow_Task_tb_Parent");
+                    .HasConstraintName("FK_Project_tbFlow_Project_tb_Parent");
 
                 entity.HasOne(d => d.SyncTypeCodeNavigation)
-                    .WithMany(p => p.TbTaskFlows)
+                    .WithMany(p => p.TbProjectFlows)
                     .HasForeignKey(d => d.SyncTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbFlow_Activity_tbSyncType");
+                    .HasConstraintName("FK_Project_tbFlow_Object_tbSyncType");
             });
 
             modelBuilder.Entity<App_tbInstall>(entity =>
@@ -1322,7 +1328,7 @@ namespace TradeControl.Web.Data
                 entity.HasKey(e => e.InvoiceNumber)
                     .HasName("PK_Invoice_tbInvoicePK");
 
-                entity.HasIndex(e => new { e.AccountCode, e.InvoicedOn }, "IX_Invoice_tb_AccountCode")
+                entity.HasIndex(e => new { e.SubjectCode, e.InvoicedOn }, "IX_Invoice_tb_SubjectCode")
                     .HasFillFactor((byte)90);
 
                 entity.HasIndex(e => new { e.InvoiceStatusCode, e.InvoicedOn }, "IX_Invoice_tb_Status")
@@ -1337,11 +1343,11 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InvoicedOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbInvoices)
-                    .HasForeignKey(d => d.AccountCode)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Invoice_tb_Org_tb");
+                    .HasConstraintName("FK_Invoice_tb_Subject_tb");
 
                 entity.HasOne(d => d.InvoiceStatusCodeNavigation)
                     .WithMany(p => p.TbInvoices)
@@ -1490,10 +1496,10 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.MenuViewCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Activity_tbMirror>(entity =>
+            modelBuilder.Entity<Object_tbMirror>(entity =>
             {
-                entity.HasKey(e => new { e.ActivityCode, e.AccountCode, e.AllocationCode })
-                    .HasName("PK_Activity_tbMirror");
+                entity.HasKey(e => new { e.ObjectCode, e.SubjectCode, e.AllocationCode })
+                    .HasName("PK_Object_tbMirror");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -1507,26 +1513,26 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbMirrors)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Activity_tbMirror_tbOrg");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Object_tbMirror_tbSubject");
 
-                entity.HasOne(d => d.ActivityCodeNavigation)
+                entity.HasOne(d => d.ObjectCodeNavigation)
                     .WithMany(p => p.TbMirrors)
-                    .HasForeignKey(d => d.ActivityCode)
-                    .HasConstraintName("FK_Activity_tbMirror_tbActivity");
+                    .HasForeignKey(d => d.ObjectCode)
+                    .HasConstraintName("FK_Object_tbMirror_tbObject");
 
                 entity.HasOne(d => d.TransmitStatusCodeNavigation)
-                    .WithMany(p => p.TbActivityMirrors)
+                    .WithMany(p => p.TbObjectMirrors)
                     .HasForeignKey(d => d.TransmitStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbMirror_tbTransmitStatus");
+                    .HasConstraintName("FK_Object_tbMirror_tbTransmitStatus");
             });
 
             modelBuilder.Entity<Cash_tbMirror>(entity =>
             {
-                entity.HasKey(e => new { e.CashCode, e.AccountCode, e.ChargeCode })
+                entity.HasKey(e => new { e.CashCode, e.SubjectCode, e.ChargeCode })
                     .HasName("PK_Cash_tbMirror");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
@@ -1541,11 +1547,11 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbCashMirror)
-                    .HasForeignKey(d => d.AccountCode)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Cash_tbMirror_tbOrg");
+                    .HasConstraintName("FK_Cash_tbMirror_tbSubject");
 
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbMirrors)
@@ -1571,11 +1577,11 @@ namespace TradeControl.Web.Data
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbInvoiceMirror)
-                    .HasForeignKey(d => d.AccountCode)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Invoice_tbMirror_tbOrg");
+                    .HasConstraintName("FK_Invoice_tbMirror_tbSubject");
 
                 entity.HasOne(d => d.InvoiceStatusCodeNavigation)
                     .WithMany(p => p.TbMirror)
@@ -1646,27 +1652,27 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_Invoice_tbMirrorReference_tbInvoice");
             });
 
-            modelBuilder.Entity<Invoice_tbMirrorTask>(entity =>
+            modelBuilder.Entity<Invoice_tbMirrorProject>(entity =>
             {
-                entity.HasKey(e => new { e.ContractAddress, e.TaskCode })
-                    .HasName("PK_Invoice_tbMirrorTask");
+                entity.HasKey(e => new { e.ContractAddress, e.ProjectCode })
+                    .HasName("PK_Invoice_tbMirrorProject");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
                 entity.HasOne(d => d.ContractAddressNavigation)
-                    .WithMany(p => p.TbMirrorTasks)
+                    .WithMany(p => p.TbMirrorProjects)
                     .HasForeignKey(d => d.ContractAddress)
-                    .HasConstraintName("FK_Invoice_tbMirrorTask_ContractAddress");
+                    .HasConstraintName("FK_Invoice_tbMirrorProject_ContractAddress");
             });
 
-            modelBuilder.Entity<Cash_tbMode>(entity =>
+            modelBuilder.Entity<Cash_tbPolarity>(entity =>
             {
-                entity.HasKey(e => e.CashModeCode)
-                    .HasName("PK_Cash_tbMode");
+                entity.HasKey(e => e.CashPolarityCode)
+                    .HasName("PK_Cash_tbPolarity");
 
-                entity.Property(e => e.CashModeCode).ValueGeneratedNever();
+                entity.Property(e => e.CashPolarityCode).ValueGeneratedNever();
             });
 
             modelBuilder.Entity<App_tbMonth>(entity =>
@@ -1677,12 +1683,12 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.MonthNumber).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Activity_tbOp>(entity =>
+            modelBuilder.Entity<Object_tbOp>(entity =>
             {
-                entity.HasKey(e => new { e.ActivityCode, e.OperationNumber })
-                    .HasName("PK_Activity_tbOp");
+                entity.HasKey(e => new { e.ObjectCode, e.OperationNumber })
+                    .HasName("PK_Object_tbOp");
 
-                entity.HasIndex(e => e.Operation, "IX_Activity_tbOp_Operation")
+                entity.HasIndex(e => e.Operation, "IX_Object_tbOp_Operation")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.Duration).HasDefaultValueSql("((0))");
@@ -1701,27 +1707,27 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.ActivityCodeNavigation)
+                entity.HasOne(d => d.ObjectCodeNavigation)
                     .WithMany(p => p.TbOps)
-                    .HasForeignKey(d => d.ActivityCode)
-                    .HasConstraintName("FK_Activity_tbOp_tbActivity");
+                    .HasForeignKey(d => d.ObjectCode)
+                    .HasConstraintName("FK_Object_tbOp_tbObject");
 
                 entity.HasOne(d => d.SyncTypeCodeNavigation)
-                    .WithMany(p => p.TbActivityOps)
+                    .WithMany(p => p.TbObjectOps)
                     .HasForeignKey(d => d.SyncTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Activity_tbOp_Activity_tbSyncType");
+                    .HasConstraintName("FK_Object_tbOp_Object_tbSyncType");
             });
 
-            modelBuilder.Entity<Task_tbOp>(entity =>
+            modelBuilder.Entity<Project_tbOp>(entity =>
             {
-                entity.HasKey(e => new { e.TaskCode, e.OperationNumber })
-                    .HasName("PK_Task_tbOp");
+                entity.HasKey(e => new { e.ProjectCode, e.OperationNumber })
+                    .HasName("PK_Project_tbOp");
 
-                entity.HasIndex(e => new { e.OpStatusCode, e.StartOn }, "IX_Task_tbOp_OpStatusCode")
+                entity.HasIndex(e => new { e.OpStatusCode, e.StartOn }, "IX_Project_tbOp_OpStatusCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.UserId, e.OpStatusCode, e.StartOn }, "IX_Task_tbOp_UserIdOpStatus")
+                entity.HasIndex(e => new { e.UserId, e.OpStatusCode, e.StartOn }, "IX_Project_tbOp_UserIdOpStatus")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.Duration).HasDefaultValueSql("((0))");
@@ -1746,30 +1752,30 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbOps)
                     .HasForeignKey(d => d.OpStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbOp_Task_tbOpStatus");
+                    .HasConstraintName("FK_Project_tbOp_Project_tbOpStatus");
 
                 entity.HasOne(d => d.SyncTypeCodeNavigation)
-                    .WithMany(p => p.TbTaskOps)
+                    .WithMany(p => p.TbProjectOps)
                     .HasForeignKey(d => d.SyncTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbOp_Activity_tbSyncType");
+                    .HasConstraintName("FK_Project_tbOp_Object_tbSyncType");
 
-                entity.HasOne(d => d.TaskCodeNavigation)
+                entity.HasOne(d => d.ProjectCodeNavigation)
                     .WithMany(p => p.TbOps)
-                    .HasForeignKey(d => d.TaskCode)
-                    .HasConstraintName("FK_Task_tbOp_Task_tb");
+                    .HasForeignKey(d => d.ProjectCode)
+                    .HasConstraintName("FK_Project_tbOp_Project_tb");
 
                 entity.HasOne(d => d.User)
                     .WithMany(p => p.TbOps)
                     .HasForeignKey(d => d.UserId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tbOp_Usr_tb");
+                    .HasConstraintName("FK_Project_tbOp_Usr_tb");
             });
 
-            modelBuilder.Entity<Task_tbOpStatus>(entity =>
+            modelBuilder.Entity<Project_tbOpStatus>(entity =>
             {
                 entity.HasKey(e => e.OpStatusCode)
-                    .HasName("PK_Task_tbOpStatus");
+                    .HasName("PK_Project_tbOpStatus");
 
                 entity.Property(e => e.OpStatusCode).ValueGeneratedNever();
             });
@@ -1797,11 +1803,11 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
-                    .WithMany(p => p.TbOptionAccountCodeNavigations)
-                    .HasForeignKey(d => d.AccountCode)
+                entity.HasOne(d => d.SubjectCodeNavigation)
+                    .WithMany(p => p.TbOptionSubjectCodeNavigations)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_App_tbOptions_Org_tb");
+                    .HasConstraintName("FK_App_tbOptions_Subject_tb");
 
                 entity.HasOne(d => d.BucketIntervalCodeNavigation)
                     .WithMany(p => p.TbOptions)
@@ -1824,7 +1830,7 @@ namespace TradeControl.Web.Data
                 entity.HasOne(d => d.MinerAccountCodeNavigation)
                     .WithMany(p => p.TbOptionMinerAccountCodeNavigations)
                     .HasForeignKey(d => d.MinerAccountCode)
-                    .HasConstraintName("FK_App_tbOptions_Org_tbOrg");
+                    .HasConstraintName("FK_App_tbOptions_Subject_tbSubject");
 
                 entity.HasOne(d => d.MinerFeeCodeNavigation)
                     .WithMany(p => p.TbOptions)
@@ -1853,62 +1859,62 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_App_tbOptions_App_tbHost");
             });
 
-            modelBuilder.Entity<Org_tbOrg>(entity =>
+            modelBuilder.Entity<Subject_tbSubject>(entity =>
             {
-                entity.HasKey(e => e.AccountCode)
-                    .HasName("PK_Org_tbOrg")
+                entity.HasKey(e => e.SubjectCode)
+                    .HasName("PK_Subject_tbSubject")
                     .IsClustered(false);
 
-                entity.HasIndex(e => e.AccountName, "IX_Org_tb_AccountName")
+                entity.HasIndex(e => e.SubjectName, "IX_Subject_tb_SubjectName")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.AccountSource, "IX_Org_tb_AccountSource")
+                entity.HasIndex(e => e.SubjectSource, "IX_Subject_tb_SubjectSource")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.AreaCode, "IX_Org_tb_AreaCode")
+                entity.HasIndex(e => e.AreaCode, "IX_Subject_tb_AreaCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.OrganisationStatusCode, "IX_Org_tb_OrganisationStatusCode")
+                entity.HasIndex(e => e.SubjectStatusCode, "IX_Subject_tb_SubjectStatusCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.OrganisationTypeCode, "IX_Org_tb_OrganisationTypeCode")
+                entity.HasIndex(e => e.SubjectTypeCode, "IX_Subject_tb_SubjectTypeCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.PaymentTerms, "IX_Org_tb_PaymentTerms")
+                entity.HasIndex(e => e.PaymentTerms, "IX_Subject_tb_PaymentTerms")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.OrganisationStatusCode, e.AccountName }, "IX_Org_tb_Status_AccountCode")
+                entity.HasIndex(e => new { e.SubjectStatusCode, e.SubjectName }, "IX_Subject_tb_Status_SubjectCode")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
                 entity.HasOne(d => d.AddressCodeNavigation)
-                    .WithMany(p => p.TbOrgs)
+                    .WithMany(p => p.TbSubjects)
                     .HasForeignKey(d => d.AddressCode)
-                    .HasConstraintName("FK_Org_tb_Org_tbAddress");
+                    .HasConstraintName("FK_Subject_tb_Subject_tbAddress");
 
-                entity.HasOne(d => d.OrganisationStatusCodeNavigation)
-                    .WithMany(p => p.TbOrgs)
-                    .HasForeignKey(d => d.OrganisationStatusCode)
+                entity.HasOne(d => d.SubjectStatusCodeNavigation)
+                    .WithMany(p => p.TbSubjects)
+                    .HasForeignKey(d => d.SubjectStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("tbOrg_FK00");
+                    .HasConstraintName("tbSubject_FK00");
 
-                entity.HasOne(d => d.OrganisationTypeCodeNavigation)
-                    .WithMany(p => p.TbOrgs)
-                    .HasForeignKey(d => d.OrganisationTypeCode)
+                entity.HasOne(d => d.SubjectTypeCodeNavigation)
+                    .WithMany(p => p.TbSubjects)
+                    .HasForeignKey(d => d.SubjectTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("tbOrg_FK01");
+                    .HasConstraintName("tbSubject_FK01");
 
                 entity.HasOne(d => d.TaxCodeNavigation)
-                    .WithMany(p => p.TbOrgs)
+                    .WithMany(p => p.TbSubjects)
                     .HasForeignKey(d => d.TaxCode)
-                    .HasConstraintName("FK_Org_tb_App_tbTaxCode");
+                    .HasConstraintName("FK_Subject_tb_App_tbTaxCode");
 
                 entity.HasOne(d => d.TransmitStatusCodeNavigation)
-                    .WithMany(p => p.TbOrgs)
+                    .WithMany(p => p.TbSubjects)
                     .HasForeignKey(d => d.TransmitStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Org_tbOrg_tbTransmitStatus");
+                    .HasConstraintName("FK_Subject_tbSubject_tbTransmitStatus");
             });
 
             modelBuilder.Entity<Cash_tbPayment>(entity =>
@@ -1932,17 +1938,17 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
+                entity.HasOne(d => d.SubjectCodeNavigation)
+                    .WithMany(p => p.TbPayments)
+                    .HasForeignKey(d => d.SubjectCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Cash_tbPayment_tbSubject");
+
                 entity.HasOne(d => d.AccountCodeNavigation)
                     .WithMany(p => p.TbPayments)
                     .HasForeignKey(d => d.AccountCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Cash_tbPayment_tbOrg");
-
-                entity.HasOne(d => d.CashAccountCodeNavigation)
-                    .WithMany(p => p.TbPayments)
-                    .HasForeignKey(d => d.CashAccountCode)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Cash_tbPayment_Org_tbAccount");
+                    .HasConstraintName("FK_Cash_tbPayment_Subject_tbAccount");
 
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbPayments)
@@ -1996,10 +2002,10 @@ namespace TradeControl.Web.Data
                 //    .HasConstraintName("FK_Cash_tbPeriod_App_tbYearPeriod");
             });
 
-            modelBuilder.Entity<Task_tbQuote>(entity =>
+            modelBuilder.Entity<Project_tbQuote>(entity =>
             {
-                entity.HasKey(e => new { e.TaskCode, e.Quantity })
-                    .HasName("PK_Task_tbQuote");
+                entity.HasKey(e => new { e.ProjectCode, e.Quantity })
+                    .HasName("PK_Project_tbQuote");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -2013,10 +2019,10 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.TaskCodeNavigation)
+                entity.HasOne(d => d.ProjectCodeNavigation)
                     .WithMany(p => p.TbQuotes)
-                    .HasForeignKey(d => d.TaskCode)
-                    .HasConstraintName("FK_Task_tbQuote_Task_tb");
+                    .HasForeignKey(d => d.ProjectCode)
+                    .HasConstraintName("FK_Project_tbQuote_Project_tb");
             });
 
             modelBuilder.Entity<App_tbRecurrence>(entity =>
@@ -2044,22 +2050,22 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.RoundingCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Org_tbSector>(entity =>
+            modelBuilder.Entity<Subject_tbSector>(entity =>
             {
-                entity.HasKey(e => new { e.AccountCode, e.IndustrySector })
-                    .HasName("PK_Org_tbSector");
+                entity.HasKey(e => new { e.SubjectCode, e.IndustrySector })
+                    .HasName("PK_Subject_tbSector");
 
-                entity.HasIndex(e => e.IndustrySector, "IX_Org_tbSector_IndustrySector")
+                entity.HasIndex(e => e.IndustrySector, "IX_Subject_tbSector_IndustrySector")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbSectors)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Org_tbSector_Org_tb");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbSector_Subject_tb");
             });
 
             modelBuilder.Entity<Cash_tbStatus>(entity =>
@@ -2079,42 +2085,42 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.InvoiceStatusCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Org_tbStatus>(entity =>
+            modelBuilder.Entity<Subject_tbStatus>(entity =>
             {
-                entity.HasKey(e => e.OrganisationStatusCode)
-                    .HasName("PK_Org_tbStatus")
+                entity.HasKey(e => e.SubjectStatusCode)
+                    .HasName("PK_Subject_tbStatus")
                     .IsClustered(false);
 
-                entity.Property(e => e.OrganisationStatusCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.SubjectStatusCode).HasDefaultValueSql("((1))");
             });
 
-            modelBuilder.Entity<Task_tbStatus>(entity =>
+            modelBuilder.Entity<Project_tbStatus>(entity =>
             {
-                entity.HasKey(e => e.TaskStatusCode)
-                    .HasName("PK_Task_tbStatus")
+                entity.HasKey(e => e.ProjectStatusCode)
+                    .HasName("PK_Project_tbStatus")
                     .IsClustered(false);
 
-                entity.HasIndex(e => e.TaskStatus, "IX_Task_tbStatus_TaskStatus")
+                entity.HasIndex(e => e.ProjectStatus, "IX_Project_tbStatus_ProjectStatus")
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
-                entity.Property(e => e.TaskStatusCode).ValueGeneratedNever();
+                entity.Property(e => e.ProjectStatusCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Activity_tbSyncType>(entity =>
+            modelBuilder.Entity<Object_tbSyncType>(entity =>
             {
                 entity.HasKey(e => e.SyncTypeCode)
-                    .HasName("PK_Activity_tbSyncType");
+                    .HasName("PK_Object_tbSyncType");
 
                 entity.Property(e => e.SyncTypeCode).ValueGeneratedNever();
             });
 
-            modelBuilder.Entity<Invoice_tbTask>(entity =>
+            modelBuilder.Entity<Invoice_tbProject>(entity =>
             {
-                entity.HasKey(e => new { e.InvoiceNumber, e.TaskCode })
-                    .HasName("PK_Invoice_tbTask");
+                entity.HasKey(e => new { e.InvoiceNumber, e.ProjectCode })
+                    .HasName("PK_Invoice_tbProject");
 
-                entity.HasIndex(e => new { e.CashCode, e.InvoiceNumber }, "IX_Invoice_tbTask_CashCode")
+                entity.HasIndex(e => new { e.CashCode, e.InvoiceNumber }, "IX_Invoice_tbProject_CashCode")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.RowVer)
@@ -2122,70 +2128,70 @@ namespace TradeControl.Web.Data
                     .IsConcurrencyToken();
 
                 entity.HasOne(d => d.CashCodeNavigation)
-                    .WithMany(p => p.TbInvoiceTasks)
+                    .WithMany(p => p.TbInvoiceProjects)
                     .HasForeignKey(d => d.CashCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Invoice_tbTask_Cash_tbCode");
+                    .HasConstraintName("FK_Invoice_tbProject_Cash_tbCode");
 
                 entity.HasOne(d => d.InvoiceNumberNavigation)
-                    .WithMany(p => p.TbTasks)
+                    .WithMany(p => p.TbProjects)
                     .HasForeignKey(d => d.InvoiceNumber)
-                    .HasConstraintName("FK_Invoice_tbTask_Invoice_tb");
+                    .HasConstraintName("FK_Invoice_tbProject_Invoice_tb");
 
-                entity.HasOne(d => d.TaskCodeNavigation)
-                    .WithMany(p => p.TbTasks)
-                    .HasForeignKey(d => d.TaskCode)
+                entity.HasOne(d => d.ProjectCodeNavigation)
+                    .WithMany(p => p.TbProjects)
+                    .HasForeignKey(d => d.ProjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Invoice_tbTask_Task_tb");
+                    .HasConstraintName("FK_Invoice_tbProject_Project_tb");
 
                 entity.HasOne(d => d.TaxCodeNavigation)
-                    .WithMany(p => p.TbInvoiceTasks)
+                    .WithMany(p => p.TbInvoiceProjects)
                     .HasForeignKey(d => d.TaxCode)
-                    .HasConstraintName("FK_Invoice_tbTask_App_tbTaxCode");
+                    .HasConstraintName("FK_Invoice_tbProject_App_tbTaxCode");
             });
 
-            modelBuilder.Entity<Task_tbTask>(entity =>
+            modelBuilder.Entity<Project_tbProject>(entity =>
             {
-                entity.HasKey(e => e.TaskCode)
-                    .HasName("PK_Task_tbTask");
+                entity.HasKey(e => e.ProjectCode)
+                    .HasName("PK_Project_tbProject");
 
-                entity.HasIndex(e => e.AccountCode, "IX_Task_tb_AccountCode")
+                entity.HasIndex(e => e.SubjectCode, "IX_Project_tb_SubjectCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.AccountCode, e.ActionOn }, "IX_Task_tb_AccountCodeByActionOn")
+                entity.HasIndex(e => new { e.SubjectCode, e.ActionOn }, "IX_Project_tb_SubjectCodeByActionOn")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.AccountCode, e.TaskStatusCode, e.ActionOn }, "IX_Task_tb_AccountCodeByStatus")
+                entity.HasIndex(e => new { e.SubjectCode, e.ProjectStatusCode, e.ActionOn }, "IX_Project_tb_SubjectCodeByStatus")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.ActionById, e.TaskStatusCode, e.ActionOn }, "IX_Task_tb_ActionBy")
+                entity.HasIndex(e => new { e.ActionById, e.ProjectStatusCode, e.ActionOn }, "IX_Project_tb_ActionBy")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.ActionById, "IX_Task_tb_ActionById")
+                entity.HasIndex(e => e.ActionById, "IX_Project_tb_ActionById")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.ActionOn, "IX_Task_tb_ActionOn")
+                entity.HasIndex(e => e.ActionOn, "IX_Project_tb_ActionOn")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.TaskStatusCode, e.ActionOn, e.AccountCode }, "IX_Task_tb_ActionOnStatus")
+                entity.HasIndex(e => new { e.ProjectStatusCode, e.ActionOn, e.SubjectCode }, "IX_Project_tb_ActionOnStatus")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.ActivityCode, "IX_Task_tb_ActivityCode")
+                entity.HasIndex(e => e.ObjectCode, "IX_Project_tb_ObjectCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.ActivityCode, e.TaskTitle }, "IX_Task_tb_ActivityCodeTaskTitle")
+                entity.HasIndex(e => new { e.ObjectCode, e.ProjectTitle }, "IX_Project_tb_ObjectCodeProjectTitle")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.TaskStatusCode, e.ActionOn, e.AccountCode }, "IX_Task_tb_ActivityStatusCode")
+                entity.HasIndex(e => new { e.ProjectStatusCode, e.ActionOn, e.SubjectCode }, "IX_Project_tb_ObjectStatusCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.CashCode, e.TaskStatusCode, e.ActionOn }, "IX_Task_tb_CashCode")
+                entity.HasIndex(e => new { e.CashCode, e.ProjectStatusCode, e.ActionOn }, "IX_Project_tb_CashCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.TaskStatusCode, "IX_Task_tb_TaskStatusCode")
+                entity.HasIndex(e => e.ProjectStatusCode, "IX_Project_tb_ProjectStatusCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.UserId, "IX_Task_tb_UserId")
+                entity.HasIndex(e => e.UserId, "IX_Project_tb_UserId")
                     .HasFillFactor((byte)90);
 
                 entity.Property(e => e.ActionOn).HasDefaultValueSql("(getdate())");
@@ -2204,55 +2210,55 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
-                    .WithMany(p => p.TbTasks)
-                    .HasForeignKey(d => d.AccountCode)
+                entity.HasOne(d => d.SubjectCodeNavigation)
+                    .WithMany(p => p.TbProjects)
+                    .HasForeignKey(d => d.SubjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("Activity_tb_FK02");
+                    .HasConstraintName("Object_tb_FK02");
 
                 entity.HasOne(d => d.ActionBy)
-                    .WithMany(p => p.TbTaskActionBys)
+                    .WithMany(p => p.TbProjectActionBys)
                     .HasForeignKey(d => d.ActionById)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tb_Usr_tb_ActionById");
+                    .HasConstraintName("FK_Project_tb_Usr_tb_ActionById");
 
-                entity.HasOne(d => d.ActivityCodeNavigation)
-                    .WithMany(p => p.TbTasks)
-                    .HasForeignKey(d => d.ActivityCode)
+                entity.HasOne(d => d.ObjectCodeNavigation)
+                    .WithMany(p => p.TbProjects)
+                    .HasForeignKey(d => d.ObjectCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("Activity_tb_FK00");
+                    .HasConstraintName("Object_tb_FK00");
 
                 entity.HasOne(d => d.AddressCodeFromNavigation)
-                    .WithMany(p => p.TbTaskAddressCodeFromNavigations)
+                    .WithMany(p => p.TbProjectAddressCodeFromNavigations)
                     .HasForeignKey(d => d.AddressCodeFrom)
-                    .HasConstraintName("FK_Task_tb_Org_tbAddress_From");
+                    .HasConstraintName("FK_Project_tb_Subject_tbAddress_From");
 
                 entity.HasOne(d => d.AddressCodeToNavigation)
-                    .WithMany(p => p.TbTaskAddressCodeToNavigations)
+                    .WithMany(p => p.TbProjectAddressCodeToNavigations)
                     .HasForeignKey(d => d.AddressCodeTo)
-                    .HasConstraintName("FK_Task_tb_Org_tbAddress_To");
+                    .HasConstraintName("FK_Project_tb_Subject_tbAddress_To");
 
                 entity.HasOne(d => d.CashCodeNavigation)
-                    .WithMany(p => p.TbTasks)
+                    .WithMany(p => p.TbProjects)
                     .HasForeignKey(d => d.CashCode)
-                    .HasConstraintName("FK_Task_tb_Cash_tbCode");
+                    .HasConstraintName("FK_Project_tb_Cash_tbCode");
 
-                entity.HasOne(d => d.TaskStatusCodeNavigation)
-                    .WithMany(p => p.TbTasks)
-                    .HasForeignKey(d => d.TaskStatusCode)
+                entity.HasOne(d => d.ProjectStatusCodeNavigation)
+                    .WithMany(p => p.TbProjects)
+                    .HasForeignKey(d => d.ProjectStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("Activity_tb_FK01");
+                    .HasConstraintName("Object_tb_FK01");
 
                 entity.HasOne(d => d.TaxCodeNavigation)
-                    .WithMany(p => p.TbTasks)
+                    .WithMany(p => p.TbProjects)
                     .HasForeignKey(d => d.TaxCode)
-                    .HasConstraintName("FK_Task_tb_App_tbTaxCode");
+                    .HasConstraintName("FK_Project_tb_App_tbTaxCode");
 
                 entity.HasOne(d => d.User)
-                    .WithMany(p => p.TbTaskUsers)
+                    .WithMany(p => p.TbProjectUsers)
                     .HasForeignKey(d => d.UserId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Task_tb_Usr_tb");
+                    .HasConstraintName("FK_Project_tb_Usr_tb");
             });
 
             modelBuilder.Entity<App_tbTaxCode>(entity =>
@@ -2299,10 +2305,10 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.RecurrenceCode).HasDefaultValueSql("((1))");
 
-                entity.HasOne(d => d.AccountCodeNavigation)
+                entity.HasOne(d => d.SubjectCodeNavigation)
                     .WithMany(p => p.TbTaxTypes)
-                    .HasForeignKey(d => d.AccountCode)
-                    .HasConstraintName("FK_Cash_tbTaxType_Org_tb");
+                    .HasForeignKey(d => d.SubjectCode)
+                    .HasConstraintName("FK_Cash_tbTaxType_Subject_tb");
 
                 entity.HasOne(d => d.CashCodeNavigation)
                     .WithMany(p => p.TbTaxTypes)
@@ -2340,7 +2346,7 @@ namespace TradeControl.Web.Data
                     .HasName("PK_App_tbTemplateName");
             });
 
-            modelBuilder.Entity<Org_tbTransmitStatus>(entity =>
+            modelBuilder.Entity<Subject_tbTransmitStatus>(entity =>
             {
                 entity.HasKey(e => e.TransmitStatusCode)
                     .HasName("PK_App_tbTransmitStatus");
@@ -2419,26 +2425,26 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.NextNumber).HasDefaultValueSql("((1000))");
 
 
-                entity.HasOne(d => d.CashModeCodeNavigation)
+                entity.HasOne(d => d.CashPolarityCodeNavigation)
                     .WithMany(p => p.TbInvoiceType)
-                    .HasForeignKey(d => d.CashModeCode)
+                    .HasForeignKey(d => d.CashPolarityCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Invoice_tbType_Cash_tbMode");
+                    .HasConstraintName("FK_Invoice_tbType_Cash_tbPolarity");
             });
 
-            modelBuilder.Entity<Org_tbType>(entity =>
+            modelBuilder.Entity<Subject_tbType>(entity =>
             {
-                entity.HasKey(e => e.OrganisationTypeCode)
-                    .HasName("PK_Org_tbType")
+                entity.HasKey(e => e.SubjectTypeCode)
+                    .HasName("PK_Subject_tbType")
                     .IsClustered(false);
 
-                entity.Property(e => e.OrganisationTypeCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.SubjectTypeCode).HasDefaultValueSql("((1))");
 
-                entity.HasOne(d => d.CashModeCodeNavigation)
-                    .WithMany(p => p.TbOrgType)
-                    .HasForeignKey(d => d.CashModeCode)
+                entity.HasOne(d => d.CashPolarityCodeNavigation)
+                    .WithMany(p => p.TbSubjectType)
+                    .HasForeignKey(d => d.CashPolarityCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Org_tbType_Cash_tbMode");
+                    .HasConstraintName("FK_Subject_tbType_Cash_tbPolarity");
             });
 
             modelBuilder.Entity<App_tbUoc>(entity =>
@@ -2467,7 +2473,7 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.LogonName).HasDefaultValueSql("(suser_sname())");
 
-                entity.Property(e => e.NextTaskNumber).HasDefaultValueSql("((1))");
+                entity.Property(e => e.NextProjectNumber).HasDefaultValueSql("((1))");
 
                 //entity.Property(e => e.RowVer)
                 //    .IsRowVersion()
@@ -2593,26 +2599,26 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_tbAttachmentInvoice_tbType");
             });
 
-            modelBuilder.Entity<Org_vwAccountLookup>(entity =>
+            modelBuilder.Entity<Subject_vwSubjectLookup>(entity =>
             {
-                entity.HasKey(e => new { e.AccountCode });
-                entity.ToView("vwAccountLookup", "Org");
+                entity.HasKey(e => new { e.SubjectCode });
+                entity.ToView("vwSubjectLookup", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwAccountLookupAll>(entity =>
+            modelBuilder.Entity<Subject_vwSubjectLookupAll>(entity =>
             {
-                entity.HasKey(e => new { e.AccountCode });
-                entity.ToView("vwAccountLookupAll", "Org");
+                entity.HasKey(e => new { e.SubjectCode });
+                entity.ToView("vwSubjectLookupAll", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwEmailAddress>(entity =>
+            modelBuilder.Entity<Subject_vwEmailAddress>(entity =>
             {
-                entity.ToView("vwEmailAddresses", "Org");
+                entity.ToView("vwEmailAddresses", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwAccountSource>(entity =>
+            modelBuilder.Entity<Subject_vwSubjectSource>(entity =>
             {
-                entity.ToView("vwAccountSources", "Org");
+                entity.ToView("vwSubjectSources", "Subject");
             });
 
             modelBuilder.Entity<App_vwYear>(entity =>
@@ -2649,9 +2655,9 @@ namespace TradeControl.Web.Data
                     .IsConcurrencyToken();
             });
 
-            modelBuilder.Entity<Task_vwActiveDatum>(entity =>
+            modelBuilder.Entity<Project_vwActiveDatum>(entity =>
             {
-                entity.ToView("vwActiveData", "Task");
+                entity.ToView("vwActiveData", "Project");
             });
 
             modelBuilder.Entity<App_vwActivePeriod>(entity =>
@@ -2659,9 +2665,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwActivePeriod", "App");
             });
 
-            modelBuilder.Entity<Task_vwActiveStatusCode>(entity =>
+            modelBuilder.Entity<Project_vwActiveStatusCode>(entity =>
             {
-                entity.ToView("vwActiveStatusCodes", "Task");
+                entity.ToView("vwActiveStatusCodes", "Project");
             });
 
             modelBuilder.Entity<App_vwHost>(entity =>
@@ -2685,34 +2691,34 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwAgedDebtSales", "Invoice");
             });
 
-            modelBuilder.Entity<Task_vwAllocationSvD>(entity =>
+            modelBuilder.Entity<Project_vwAllocationSvD>(entity =>
             {
-                entity.ToView("vwAllocationSvD", "Task");
+                entity.ToView("vwAllocationSvD", "Project");
             });
 
-            modelBuilder.Entity<Org_vwAreaCode>(entity =>
+            modelBuilder.Entity<Subject_vwAreaCode>(entity =>
             {
-                entity.ToView("vwAreaCodes", "Org");
+                entity.ToView("vwAreaCodes", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwAssetStatementAudit>(entity =>
+            modelBuilder.Entity<Subject_vwAssetStatementAudit>(entity =>
             {
-                entity.ToView("vwAssetStatementAudit", "Org");
+                entity.ToView("vwAssetStatementAudit", "Subject");
             });
 
-            modelBuilder.Entity<Task_vwAttributeDescription>(entity =>
+            modelBuilder.Entity<Project_vwAttributeDescription>(entity =>
             {
-                entity.ToView("vwAttributeDescriptions", "Task");
+                entity.ToView("vwAttributeDescriptions", "Project");
             });
 
-            modelBuilder.Entity<Task_vwAttributesForOrder>(entity =>
+            modelBuilder.Entity<Project_vwAttributesForOrder>(entity =>
             {
-                entity.ToView("vwAttributesForOrder", "Task");
+                entity.ToView("vwAttributesForOrder", "Project");
             });
 
-            modelBuilder.Entity<Task_vwAttributesForQuote>(entity =>
+            modelBuilder.Entity<Project_vwAttributesForQuote>(entity =>
             {
-                entity.ToView("vwAttributesForQuote", "Task");
+                entity.ToView("vwAttributesForQuote", "Project");
             });
 
             modelBuilder.Entity<Cash_vwProfitAndLossByPeriod>(entity =>
@@ -2730,9 +2736,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwBalanceSheet", "Cash");
             });
 
-            modelBuilder.Entity<Org_vwBalanceSheetAudit>(entity =>
+            modelBuilder.Entity<Subject_vwBalanceSheetAudit>(entity =>
             {
-                entity.ToView("vwBalanceSheetAudit", "Org");
+                entity.ToView("vwBalanceSheetAudit", "Subject");
             });
 
             modelBuilder.Entity<Cash_vwBankCashCode>(entity =>
@@ -2754,9 +2760,9 @@ namespace TradeControl.Web.Data
                     .IsConcurrencyToken();
             });
 
-            modelBuilder.Entity<Activity_wCandidateCashCode>(entity =>
+            modelBuilder.Entity<Object_wCandidateCashCode>(entity =>
             {
-                entity.ToView("vwCandidateCashCodes", "Activity");
+                entity.ToView("vwCandidateCashCodes", "Object");
             });
 
             modelBuilder.Entity<App_vwCandidateCategoryCode>(entity =>
@@ -2789,14 +2795,14 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwCandidateSales", "Invoice");
             });
 
-            modelBuilder.Entity<Org_vwCashAccountAsset>(entity =>
+            modelBuilder.Entity<Subject_vwCashAccountAsset>(entity =>
             {
-                entity.ToView("vwCashAccountAssets", "Org");
+                entity.ToView("vwCashAccountAssets", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwCashAccount>(entity =>
+            modelBuilder.Entity<Subject_vwCashAccount>(entity =>
             {
-                entity.ToView("vwCashAccounts", "Org");
+                entity.ToView("vwCashAccounts", "Subject");
             });
 
             modelBuilder.Entity<Cash_vwCashFlowType>(entity =>
@@ -2856,14 +2862,14 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwChangeLog", "Invoice");
             });
 
-            modelBuilder.Entity<Task_vwChangeLog>(entity =>
+            modelBuilder.Entity<Project_vwChangeLog>(entity =>
             {
-                entity.ToView("vwChangeLog", "Task");
+                entity.ToView("vwChangeLog", "Project");
             });
 
-            modelBuilder.Entity<Activity_vwCode>(entity =>
+            modelBuilder.Entity<Object_vwCode>(entity =>
             {
-                entity.ToView("vwCodes", "Activity");
+                entity.ToView("vwCodes", "Object");
             });
 
             modelBuilder.Entity<Cash_vwCodeLookup>(entity =>
@@ -2878,29 +2884,29 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwCode", "Cash");
             });
 
-            modelBuilder.Entity<Org_vwCompanyHeader>(entity =>
+            modelBuilder.Entity<Subject_vwCompanyHeader>(entity =>
             {
-                entity.ToView("vwCompanyHeader", "Org");
+                entity.ToView("vwCompanyHeader", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwCompanyLogo>(entity =>
+            modelBuilder.Entity<Subject_vwCompanyLogo>(entity =>
             {
-                entity.ToView("vwCompanyLogo", "Org");
+                entity.ToView("vwCompanyLogo", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwContact>(entity =>
+            modelBuilder.Entity<Subject_vwContact>(entity =>
             {
-                entity.ToView("vwContacts", "Org");
+                entity.ToView("vwContacts", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwAddressList>(entity =>
+            modelBuilder.Entity<Subject_vwAddressList>(entity =>
             {
-                entity.ToView("vwAddressList", "Org");
+                entity.ToView("vwAddressList", "Subject");
             });
 
-            modelBuilder.Entity<Task_vwCostSet>(entity =>
+            modelBuilder.Entity<Project_vwCostSet>(entity =>
             {
-                entity.ToView("vwCostSet", "Task");
+                entity.ToView("vwCostSet", "Project");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
@@ -2923,9 +2929,9 @@ namespace TradeControl.Web.Data
             });
 
 
-            modelBuilder.Entity<Org_vwDatasheet>(entity =>
+            modelBuilder.Entity<Subject_vwDatasheet>(entity =>
             {
-                entity.ToView("vwDatasheet", "Org");
+                entity.ToView("vwDatasheet", "Subject");
             });
 
             modelBuilder.Entity<Invoice_vwDebitNoteSpool>(entity =>
@@ -2933,14 +2939,14 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwDebitNoteSpool", "Invoice");
             });
 
-            modelBuilder.Entity<Activity_vwDefaultText>(entity =>
+            modelBuilder.Entity<Object_vwDefaultText>(entity =>
             {
-                entity.ToView("vwDefaultText", "Activity");
+                entity.ToView("vwDefaultText", "Object");
             });
 
-            modelBuilder.Entity<Org_vwDepartment>(entity =>
+            modelBuilder.Entity<Subject_vwDepartment>(entity =>
             {
-                entity.ToView("vwDepartments", "Org");
+                entity.ToView("vwDepartments", "Subject");
             });
 
             modelBuilder.Entity<Invoice_vwDoc>(entity =>
@@ -3032,9 +3038,9 @@ namespace TradeControl.Web.Data
 
             });
 
-            modelBuilder.Entity<Activity_vwExpenseCashCode>(entity =>
+            modelBuilder.Entity<Object_vwExpenseCashCode>(entity =>
             {
-                entity.ToView("vwExpenseCashCodes", "Activity");
+                entity.ToView("vwExpenseCashCodes", "Object");
             });
 
             modelBuilder.Entity<Cash_vwExternalCodesLookup>(entity =>
@@ -3042,9 +3048,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwExternalCodesLookup", "Cash");
             });
 
-            modelBuilder.Entity<Task_vwFlow>(entity =>
+            modelBuilder.Entity<Project_vwFlow>(entity =>
             {
-                entity.ToView("vwFlow", "Task");
+                entity.ToView("vwFlow", "Project");
             });
 
             modelBuilder.Entity<App_vwGraphBankBalance>(entity =>
@@ -3052,9 +3058,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwGraphBankBalance", "App");
             });
 
-            modelBuilder.Entity<App_vwGraphTaskActivity>(entity =>
+            modelBuilder.Entity<App_vwGraphProjectObject>(entity =>
             {
-                entity.ToView("vwGraphTaskActivity", "App");
+                entity.ToView("vwGraphProjectObject", "App");
             });
 
             modelBuilder.Entity<Invoice_vwHistoryCashCode>(entity =>
@@ -3087,24 +3093,24 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwIdentity", "App");
             });
 
-            modelBuilder.Entity<Activity_wIncomeCashCode>(entity =>
+            modelBuilder.Entity<Object_wIncomeCashCode>(entity =>
             {
-                entity.ToView("vwIncomeCashCodes", "Activity");
+                entity.ToView("vwIncomeCashCodes", "Object");
             });
 
-            modelBuilder.Entity<Org_vwInvoiceItem>(entity =>
+            modelBuilder.Entity<Subject_vwInvoiceItem>(entity =>
             {
-                entity.ToView("vwInvoiceItems", "Org");
+                entity.ToView("vwInvoiceItems", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwInvoiceSummary>(entity =>
+            modelBuilder.Entity<Subject_vwInvoiceSummary>(entity =>
             {
-                entity.ToView("vwInvoiceSummary", "Org");
+                entity.ToView("vwInvoiceSummary", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwInvoiceTask>(entity =>
+            modelBuilder.Entity<Subject_vwInvoiceProject>(entity =>
             {
-                entity.ToView("vwInvoiceTasks", "Org");
+                entity.ToView("vwInvoiceProjects", "Subject");
             });
 
             modelBuilder.Entity<Invoice_vwItem>(entity =>
@@ -3117,19 +3123,19 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwEntry", "Invoice");
             });
 
-            modelBuilder.Entity<Org_vwJobTitle>(entity =>
+            modelBuilder.Entity<Subject_vwJobTitle>(entity =>
             {
-                entity.ToView("vwJobTitles", "Org");
+                entity.ToView("vwJobTitles", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwListActive>(entity =>
+            modelBuilder.Entity<Subject_vwListActive>(entity =>
             {
-                entity.ToView("vwListActive", "Org");
+                entity.ToView("vwListActive", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwListAll>(entity =>
+            modelBuilder.Entity<Subject_vwListAll>(entity =>
             {
-                entity.ToView("vwListAll", "Org");
+                entity.ToView("vwListAll", "Subject");
             });
 
             modelBuilder.Entity<Invoice_vwMirror>(entity =>
@@ -3160,9 +3166,9 @@ namespace TradeControl.Web.Data
             });
 
 
-            modelBuilder.Entity<Task_vwNetworkAllocation>(entity =>
+            modelBuilder.Entity<Project_vwNetworkAllocation>(entity =>
             {
-                entity.ToView("vwNetworkAllocations", "Task");
+                entity.ToView("vwNetworkAllocations", "Project");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
@@ -3178,43 +3184,43 @@ namespace TradeControl.Web.Data
                     .IsConcurrencyToken();
             });
 
-            modelBuilder.Entity<Task_vwNetworkChangeLog>(entity =>
+            modelBuilder.Entity<Project_vwNetworkChangeLog>(entity =>
             {
-                entity.ToView("vwNetworkChangeLog", "Task");
+                entity.ToView("vwNetworkChangeLog", "Project");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
             });
 
-            modelBuilder.Entity<Task_vwNetworkEvent>(entity =>
+            modelBuilder.Entity<Project_vwNetworkEvent>(entity =>
             {
-                entity.ToView("vwNetworkEvents", "Task");
+                entity.ToView("vwNetworkEvents", "Project");
             });
 
-            modelBuilder.Entity<Task_vwNetworkEventLog>(entity =>
+            modelBuilder.Entity<Project_vwNetworkEventLog>(entity =>
             {
-                entity.ToView("vwNetworkEventLog", "Task");
+                entity.ToView("vwNetworkEventLog", "Project");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
             });
 
-            modelBuilder.Entity<Task_vwNetworkQuotation>(entity =>
+            modelBuilder.Entity<Project_vwNetworkQuotation>(entity =>
             {
-                entity.ToView("vwNetworkQuotations", "Task");
+                entity.ToView("vwNetworkQuotations", "Project");
             });
 
-            modelBuilder.Entity<Task_vwOp>(entity =>
+            modelBuilder.Entity<Project_vwOp>(entity =>
             {
-                entity.ToView("vwOps", "Task");
+                entity.ToView("vwOps", "Project");
 
                 entity.Property(e => e.OpRowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
 
-                entity.Property(e => e.TaskRowVer)
+                entity.Property(e => e.ProjectRowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
             });
@@ -3224,9 +3230,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwPayments", "Cash");
             });
 
-            modelBuilder.Entity<Org_vwPaymentTerm>(entity =>
+            modelBuilder.Entity<Subject_vwPaymentTerm>(entity =>
             {
-                entity.ToView("vwPaymentTerms", "Org");
+                entity.ToView("vwPaymentTerms", "Subject");
             });
 
             modelBuilder.Entity<Cash_vwPaymentsListing>(entity =>
@@ -3251,49 +3257,49 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwPeriodEndListing", "App");
             });
 
-            modelBuilder.Entity<Task_vwProfit>(entity =>
+            modelBuilder.Entity<Project_vwProfit>(entity =>
             {
-                entity.ToView("vwProfit", "Task");
+                entity.ToView("vwProfit", "Project");
             });
 
-            modelBuilder.Entity<Task_vwProfitToDate>(entity =>
+            modelBuilder.Entity<Project_vwProfitToDate>(entity =>
             {
-                entity.ToView("vwProfitToDate", "Task");
+                entity.ToView("vwProfitToDate", "Project");
             });
 
-            modelBuilder.Entity<Task_vwPurchase>(entity =>
+            modelBuilder.Entity<Project_vwPurchase>(entity =>
             {
-                entity.ToView("vwPurchases", "Task");
+                entity.ToView("vwPurchases", "Project");
             });
 
-            modelBuilder.Entity<Task_vwPurchaseEnquiryDeliverySpool>(entity =>
+            modelBuilder.Entity<Project_vwPurchaseEnquiryDeliverySpool>(entity =>
             {
-                entity.ToView("vwPurchaseEnquiryDeliverySpool", "Task");
+                entity.ToView("vwPurchaseEnquiryDeliverySpool", "Project");
             });
 
-            modelBuilder.Entity<Task_vwPurchaseEnquirySpool>(entity =>
+            modelBuilder.Entity<Project_vwPurchaseEnquirySpool>(entity =>
             {
-                entity.ToView("vwPurchaseEnquirySpool", "Task");
+                entity.ToView("vwPurchaseEnquirySpool", "Project");
             });
 
-            modelBuilder.Entity<Task_vwPurchaseOrderDeliverySpool>(entity =>
+            modelBuilder.Entity<Project_vwPurchaseOrderDeliverySpool>(entity =>
             {
-                entity.ToView("vwPurchaseOrderDeliverySpool", "Task");
+                entity.ToView("vwPurchaseOrderDeliverySpool", "Project");
             });
 
-            modelBuilder.Entity<Task_vwPurchaseOrderSpool>(entity =>
+            modelBuilder.Entity<Project_vwPurchaseOrderSpool>(entity =>
             {
-                entity.ToView("vwPurchaseOrderSpool", "Task");
+                entity.ToView("vwPurchaseOrderSpool", "Project");
             });
 
-            modelBuilder.Entity<Task_vwQuotationSpool>(entity =>
+            modelBuilder.Entity<Project_vwQuotationSpool>(entity =>
             {
-                entity.ToView("vwQuotationSpool", "Task");
+                entity.ToView("vwQuotationSpool", "Project");
             });
 
-            modelBuilder.Entity<Task_vwQuote>(entity =>
+            modelBuilder.Entity<Project_vwQuote>(entity =>
             {
-                entity.ToView("vwQuotes", "Task");
+                entity.ToView("vwQuotes", "Project");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
@@ -3330,9 +3336,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwRegisterPurchases", "Invoice");
             });
 
-            modelBuilder.Entity<Invoice_vwRegisterPurchaseTask>(entity =>
+            modelBuilder.Entity<Invoice_vwRegisterPurchaseProject>(entity =>
             {
-                entity.ToView("vwRegisterPurchaseTasks", "Invoice");
+                entity.ToView("vwRegisterPurchaseProjects", "Invoice");
             });
 
             modelBuilder.Entity<Invoice_vwRegisterPurchasesOverdue>(entity =>
@@ -3350,9 +3356,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwRegisterSales", "Invoice");
             });
 
-            modelBuilder.Entity<Invoice_vwRegisterSaleTask>(entity =>
+            modelBuilder.Entity<Invoice_vwRegisterSaleProject>(entity =>
             {
-                entity.ToView("vwRegisterSaleTasks", "Invoice");
+                entity.ToView("vwRegisterSaleProjects", "Invoice");
             });
 
             modelBuilder.Entity<Invoice_vwRegisterSalesOverdue>(entity =>
@@ -3360,19 +3366,19 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwRegisterSalesOverdue", "Invoice");
             });
 
-            modelBuilder.Entity<Org_vwReserveAccount>(entity =>
+            modelBuilder.Entity<Subject_vwReserveAccount>(entity =>
             {
                 entity.ToView("vwReserveAccount", "Cash");
             });
 
-            modelBuilder.Entity<Org_vwCurrentAccount>(entity =>
+            modelBuilder.Entity<Subject_vwCurrentAccount>(entity =>
             {
                 entity.ToView("vwCurrentAccount", "Cash");
             });
 
-            modelBuilder.Entity<Task_vwSale>(entity =>
+            modelBuilder.Entity<Project_vwSale>(entity =>
             {
-                entity.ToView("vwSales", "Task");
+                entity.ToView("vwSales", "Project");
             });
 
             modelBuilder.Entity<Invoice_vwSalesInvoiceSpool>(entity =>
@@ -3380,9 +3386,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwSalesInvoiceSpool", "Invoice");
             });
 
-            modelBuilder.Entity<Invoice_vwSalesInvoiceSpoolByActivity>(entity =>
+            modelBuilder.Entity<Invoice_vwSalesInvoiceSpoolByObject>(entity =>
             {
-                entity.ToView("vwSalesInvoiceSpoolByActivity", "Invoice");
+                entity.ToView("vwSalesInvoiceSpoolByObject", "Invoice");
             });
 
             modelBuilder.Entity<Invoice_vwSalesInvoiceSpoolByItem>(entity =>
@@ -3390,9 +3396,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwSalesInvoiceSpoolByItem", "Invoice");
             });
 
-            modelBuilder.Entity<Task_vwSalesOrderSpool>(entity =>
+            modelBuilder.Entity<Project_vwSalesOrderSpool>(entity =>
             {
-                entity.ToView("vwSalesOrderSpool", "Task");
+                entity.ToView("vwSalesOrderSpool", "Project");
             });
 
             modelBuilder.Entity<Cash_vwStatement>(entity =>
@@ -3400,14 +3406,14 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwStatement", "Cash");
             });
 
-            modelBuilder.Entity<Org_vwStatement>(entity =>
+            modelBuilder.Entity<Subject_vwStatement>(entity =>
             {
-                entity.ToView("vwStatement", "Org");
+                entity.ToView("vwStatement", "Subject");
             });
 
-            modelBuilder.Entity<Org_vwStatementReport>(entity =>
+            modelBuilder.Entity<Subject_vwStatementReport>(entity =>
             {
-                entity.ToView("vwStatementReport", "Org");
+                entity.ToView("vwStatementReport", "Subject");
             });
 
             modelBuilder.Entity<Cash_vwStatementReserve>(entity =>
@@ -3420,9 +3426,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwStatementWhatIf", "Cash");
             });
 
-            modelBuilder.Entity<Org_vwStatusReport>(entity =>
+            modelBuilder.Entity<Subject_vwStatusReport>(entity =>
             {
-                entity.ToView("vwStatusReport", "Org");
+                entity.ToView("vwStatusReport", "Subject");
             });
 
             modelBuilder.Entity<Cash_vwSummary>(entity =>
@@ -3435,14 +3441,14 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwSummary", "Invoice");
             });
 
-            modelBuilder.Entity<Org_vwTask>(entity =>
+            modelBuilder.Entity<Subject_vwProject>(entity =>
             {
-                entity.ToView("vwTasks", "Org");
+                entity.ToView("vwProjects", "Subject");
             });
 
-            modelBuilder.Entity<Task_vwTask>(entity =>
+            modelBuilder.Entity<Project_vwProject>(entity =>
             {
-                entity.ToView("vwTasks", "Task");
+                entity.ToView("vwProjects", "Project");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
@@ -3521,9 +3527,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwTaxVatTotals", "Cash");
             });
 
-            modelBuilder.Entity<Task_vwTitle>(entity =>
+            modelBuilder.Entity<Project_vwTitle>(entity =>
             {
-                entity.ToView("vwTitles", "Task");
+                entity.ToView("vwTitles", "Project");
             });
 
             modelBuilder.Entity<Cash_vwTransferCodeLookup>(entity =>
@@ -3536,14 +3542,14 @@ namespace TradeControl.Web.Data
                 entity.HasKey(e => e.PaymentCode);
             });
 
-            modelBuilder.Entity<Org_vwTypeLookup>(entity =>
+            modelBuilder.Entity<Subject_vwTypeLookup>(entity =>
             {
-                entity.ToView("vwTypeLookup", "Org");
+                entity.ToView("vwTypeLookup", "Subject");
             });
 
-            modelBuilder.Entity<Activity_vwUnMirrored>(entity =>
+            modelBuilder.Entity<Object_vwUnMirrored>(entity =>
             {
-                entity.ToView("vwUnMirrored", "Activity");
+                entity.ToView("vwUnMirrored", "Object");
             });
 
             modelBuilder.Entity<Cash_vwUnMirrored>(entity =>
@@ -3578,18 +3584,18 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.VersionString).IsUnicode(false);
             });
 
-            modelBuilder.Entity<App_vwWarehouseOrg>(entity =>
+            modelBuilder.Entity<App_vwWarehouseSubject>(entity =>
             {
-                entity.ToView("vwWarehouseOrg", "App");
+                entity.ToView("vwWarehouseSubject", "App");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()
                     .IsConcurrencyToken();
             });
 
-            modelBuilder.Entity<App_vwWarehouseTask>(entity =>
+            modelBuilder.Entity<App_vwWarehouseProject>(entity =>
             {
-                entity.ToView("vwWarehouseTask", "App");
+                entity.ToView("vwWarehouseProject", "App");
 
                 entity.Property(e => e.RowVer)
                     .IsRowVersion()

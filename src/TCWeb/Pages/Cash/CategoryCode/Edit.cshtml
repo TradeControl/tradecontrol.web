@@ -7,41 +7,41 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_tbCategory.CategoryCode" class="control-label"></label>
                 <input asp-for="Cash_tbCategory.CategoryCode" class="form-control" />
                 <span asp-validation-for="Cash_tbCategory.CategoryCode" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_tbCategory.Category" class="control-label"></label>
                 <input asp-for="Cash_tbCategory.Category" class="form-control" />
                 <span asp-validation-for="Cash_tbCategory.Category" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_tbCategory.DisplayOrder" class="control-label"></label>
                 <input asp-for="Cash_tbCategory.DisplayOrder" class="form-control" />
                 <span asp-validation-for="Cash_tbCategory.DisplayOrder" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Cash_tbCategory.CashModeCode" class="control-label"></label>
+            <div class="mb-3">
+                <label asp-for="Cash_tbCategory.CashPolarityCode" class="control-label"></label>
                 <p>
-                    <select asp-for="CashMode" asp-items="Model.CashModes" class="form-control"></select>
+                    <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-control"></select>
                 </p>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_tbCategory.CashTypeCode" class="control-label"></label>
                 <p>
                     <select asp-for="CashType" asp-items="Model.CashTypes" class="form-control"></select>
                 </p>
             </div>
-            <div class="form-group form-check">
+            <div class="mb-3 form-check">
                 <label class="form-check-label">
                     <input asp-for="IsEnabled" class="form-check-input" /> @Html.DisplayNameFor(model => model.Cash_tbCategory.IsEnabled)
                 </label>
                 <span asp-validation-for="IsEnabled" class="text-danger"></span>
             </div>
 
-            <input type="hidden" asp-for="Cash_tbCategory.CashModeCode" />
+            <input type="hidden" asp-for="Cash_tbCategory.CashPolarityCode" />
             <input type="hidden" asp-for="Cash_tbCategory.CashTypeCode" />
             <input type="hidden" asp-for="Cash_tbCategory.CategoryTypeCode" />
             <input type="hidden" asp-for="Cash_tbCategory.InsertedBy" />
@@ -49,7 +49,7 @@
             <input type="hidden" asp-for="Cash_tbCategory.UpdatedBy" />
             <input type="hidden" asp-for="Cash_tbCategory.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="UPDATE" class="btn btn-primary" />
                 <a asp-page="./Index" asp-route-cashTypeCode="@Model.Cash_tbCategory.CashTypeCode" class="btn btn-info">To List</a>
             </div>

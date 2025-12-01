@@ -1,0 +1,71 @@
+﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Subject.Contact.IndexModel
+
+@{
+    ViewData["Title"] = "Contacts";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
+<h1>@ViewData["Title"]</h1>
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
+<hr />
+
+<p>
+    <a class="btn btn-outline-primary @btnWidthClass" asp-page="Create" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Create New">New Contact</a>
+    <a class="btn btn-outline-info @btnWidthClass" asp-page="../Update/Edit" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Edit this account">To edit</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Subject_Contacts[0].ContactName)</th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_Contacts[0].MobileNumber)</th>
+                <th>@Html.DisplayNameFor(model => model.Subject_Contacts[0].PhoneNumber)</th>
+            }
+            <th>@Html.DisplayNameFor(model => model.Subject_Contacts[0].EmailAddress)</th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_Contacts[0].JobTitle)</th>
+            }
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Contacts)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.ContactName)</td>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.MobileNumber)</td>
+                    <td>@Html.DisplayFor(modelItem => item.PhoneNumber)</td>
+                }
+                <td>@Html.DisplayFor(modelItem => item.EmailAddress)</td>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.JobTitle)</td>
+                }
+                <td>
+                    <div class="action-buttons">
+                        <a class="btn btn-info" asp-page="./Details" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" title="Details">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span class="visually-hidden">Details</span>
+                        </a>
+                        <a class="btn btn-secondary" asp-page="./Edit" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" title="Edit this item">
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                            <span class="visually-hidden">Edit</span>
+                        </a>
+                        <a class="btn btn-danger" asp-page="./Delete" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" title="Delete this item">
+                            <i class="bi bi-trash" aria-hidden="true"></i>
+                            <span class="visually-hidden">Delete</span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

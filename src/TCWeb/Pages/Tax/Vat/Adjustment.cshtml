@@ -10,14 +10,14 @@
     <div class="col-md-4">
         <form method="post">
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_VatTotal.VatAdjustment" class="control-label"></label>
                 <input asp-for="VatAdjustment" class="form-control" />
                 <input type="hidden"  asp-for="StartOn" />
                 <span asp-validation-for="VatAdjustment" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="ADJUST" class="btn btn-primary" />
                 <a asp-page="./Index" class="btn btn-info">To List</a>
             </div>

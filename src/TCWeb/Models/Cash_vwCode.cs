@@ -22,10 +22,10 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         [Display(Name = "Category")]
         public string Category { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [StringLength(10)]
-        [Display(Name = "Mode")]
-        public string CashMode { get; set; }
+        [Display(Name = "Polarity")]
+        public string CashPolarity { get; set; }
         [Required]
         [StringLength(10)]
         [Display(Name = "Tax Code")]

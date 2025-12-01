@@ -1,0 +1,3 @@
+wwwroot/lib/**
+**/*.min.js
+**/bundle*.js

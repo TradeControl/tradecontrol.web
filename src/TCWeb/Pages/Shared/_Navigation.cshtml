@@ -1,158 +1,172 @@
-﻿<header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+﻿@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+
+<header>
+    @{
+        // If the device is a mobile device, don't add the "navbar-expand-*" class
+        // so the navbar always stays collapsed and shows the hamburger.
+        var expandClass = (Detection?.Device?.Type == Device.Mobile) ? "" : "navbar-expand-sm";
+    }
+    <nav class="navbar @expandClass navbar-light bg-white box-shadow mb-3">
         <div class="container">
-            <a class="nav-link text-black-50" asp-area="" asp-page="/Index">@ViewData["CompanyName"]</a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+            <a asp-area="" asp-page="/Index" class="navbar-brand">
+                <img src="~/content/images/icon.svg" alt="Company Logo" class="tc-logo me-2" />
+            </a>
+            <a class="navbar-brand tc-brand" asp-area="" asp-page="/Index">@ViewData["CompanyName"]</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar"
                     aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
-                <partial name="_LoginPartial" />
-                <ul class="navbar-nav flex-grow-1">
-                    <li class="dropdown">
-                        <a data-toggle="dropdown" class="nav-link text-dark" asp-page="">Cash Accounts<span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/PaymentEntry/Index">Payment Entry</a>
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownCash" role="button" data-bs-toggle="dropdown" aria-expanded="false">Cash Accounts</a>
+                        <ul class="dropdown-menu" aria-labelledby="navDropdownCash">
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/PaymentEntry/Index">Payment Entry</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/AssetEntry/Index">Asset Entry</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/AssetEntry/Index">Asset Entry</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Transfer/Index">Bank Transfers</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/Transfer/Index">Bank Transfers</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Statement/Index">Statements</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/Statement/Index">Statements</a>
                             </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Org/CashAccount/Index">Maintenance</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Subject/CashAccount/Index">Maintenance</a>
                                     </li>
                                 }
                             }
                         </ul>
                     </li>
-                    <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Invoicing<span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Raise/Index">Raise</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownInvoicing" role="button" data-bs-toggle="dropdown" aria-expanded="false">Invoicing</a>
+                        <ul class="dropdown-menu" aria-labelledby="navDropdownInvoicing">
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Invoice/Raise/Index">Raise</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Register/Index">Register</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Invoice/Register/Index">Register</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Register/Summary">Summary</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Invoice/Register/Summary">Summary</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Register/Unpaid">Unpaid</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Invoice/Register/Unpaid">Unpaid</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
                             </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Settings/Index">Numbering</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Invoice/Settings/Index">Numbering</a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Invoice/Template/Index">Email Templates</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Invoice/Template/Index">Email Templates</a>
                                     </li>
                                 }
                             }
                         </ul>
                     </li>
-                    <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Organisations<span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Update/Index">Maintenance</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownSubjects" role="button" data-bs-toggle="dropdown" aria-expanded="false">Subjects</a>
+                        <ul class="dropdown-menu" aria-labelledby="navDropdownSubjects">
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Update/Index">Maintenance</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Enquiry/Index">Enquiries</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Enquiry/Index">Enquiries</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Org/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
                             </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Org/Type/Index">Types</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Subject/Type/Index">Types</a>
                                     </li>
                                 }
                             }
                         </ul>
                     </li>
-                    <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">Accounts<span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Periods/Index">Financial Periods</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownAccounts" role="button" data-bs-toggle="dropdown" aria-expanded="false">Accounts</a>
+                        <ul class="dropdown-menu" aria-labelledby="navDropdownAccounts">
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Admin/Periods/Index">Financial Periods</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Accounts/BalanceSheet">Balance Sheet</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/Accounts/BalanceSheet">Balance Sheet</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Accounts/ProfitAndLoss">Profit and Loss</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/Accounts/ProfitAndLoss">Profit and Loss</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Vat/Index">VAT</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Tax/Vat/Index">VAT</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Company/Index">Company Tax</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Tax/Company/Index">Company Tax</a>
                             </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Tax/Settings/Index">Tax Settings</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Tax/Settings/Index">Tax Settings</a>
                                     </li>
                                 }
                             }
-                            </ul>
+                        </ul>
                     </li>
 
-                    <li class="dropdown">
-                        <a data-toggle="dropdown" role="button" class="nav-link text-dark" asp-page="">System<span class="caret"></span></a>
-                        <ul class="dropdown-menu">
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Tax/TaxCode/Index">Tax Codes</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownSystem" role="button" data-bs-toggle="dropdown" aria-expanded="false">System</a>
+                        <ul class="dropdown-menu" aria-labelledby="navDropdownSystem">
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Tax/TaxCode/Index">Tax Codes</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/CategoryCode/Index">Cash Categories</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/CategoryTree/Index">Cash Configuration</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/CashCode/Index">Cash Codes</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Cash/CashCode/Index">Cash Codes</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Cash/Totals/Index">Cash Totals</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
                             </li>
                             @{
                                 if (User.IsInRole(Constants.AdministratorsRole))
                                 {
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Host/Index">Mail Settings</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Host/Index">Mail Settings</a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/FileTransfer/Index">File Transfer</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/FileTransfer/Index">File Transfer</a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Setup/Index">Initialisation</a>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Setup/Index">Initialisation</a>
                                     </li>
+                                    //MIS Implementation of Calendars has been deferred
+                                    // <li class="nav-item">
+                                    //     <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Calendar/Index">Calendars</a>
+                                    // </li>
                                 }
                             }
                         </ul>
                     </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <partial name="_LoginPartial" />
                 </ul>
             </div>
         </div>

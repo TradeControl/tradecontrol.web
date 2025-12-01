@@ -19,7 +19,7 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(10)]
         [Display(Name = "A/c")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Key]
         [StringLength(50)]
         [Display(Name = "Cash Code")]
@@ -47,9 +47,9 @@ namespace TradeControl.Web.Models
         //[Required]
         //public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbEntries))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [ForeignKey(nameof(SubjectCode))]
+        [InverseProperty(nameof(Subject_tbSubject.TbEntries))]
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbEntries))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

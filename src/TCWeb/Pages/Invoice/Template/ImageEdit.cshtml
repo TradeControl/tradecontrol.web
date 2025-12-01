@@ -8,13 +8,13 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Web_tbImage.ImageTag" class="control-label"></label>
                 <input asp-for="Web_tbImage.ImageTag" class="form-control" />
                 <span asp-validation-for="Web_tbImage.ImageTag" class="text-danger"></span>
             </div>
             <input type="hidden" asp-for="Web_tbImage.ImageFileName" />
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="UPDATE" class="btn btn-primary" />
                 <a asp-page="./Images" asp-route-templateId="@Model.TemplateId" class="btn btn-info">To List</a>
             </div>

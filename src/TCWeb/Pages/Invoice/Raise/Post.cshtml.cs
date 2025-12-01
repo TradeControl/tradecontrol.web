@@ -35,7 +35,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (accountCode == null || cashCode == null)
                     return NotFound();
 
-                Entry = await NodeContext.Invoice_Entries.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.CashCode == cashCode);
+                Entry = await NodeContext.Invoice_Entries.FirstOrDefaultAsync(m => m.SubjectCode == accountCode && m.CashCode == cashCode);
 
                 if (Entry == null)
                     return NotFound();
@@ -71,7 +71,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (!ModelState.IsValid)
                     return Page();
 
-                return await PostInvoice(Entry.AccountCode, Entry.CashCode);
+                return await PostInvoice(Entry.SubjectCode, Entry.CashCode);
             }
             catch (Exception e)
             {
@@ -87,7 +87,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (!ModelState.IsValid)
                     return Page();
 
-                return await PostInvoice(Entry.AccountCode);
+                return await PostInvoice(Entry.SubjectCode);
             }
             catch (Exception e)
             {

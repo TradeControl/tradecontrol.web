@@ -1,28 +1,43 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Invoice.Register.UnpaidModel
 @{ ViewData["Title"] = "Unpaid Invoices"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
-    <p>
-        <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes">
-            <option value="">All</option>
-        </select>
-        <input type="submit" value="Filter" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="InvoiceType" asp-items="Model.InvoiceTypes" class="form-control" onchange="this.form.submit()">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <!-- reset to first page when page size changes -->
+            <input type="hidden" name="PageNumber" value="1" />
+            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Rows per page" onchange="this.form.submit()"></select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </div>
+    </div>
 </form>
 
 <table class="table table-striped">
     <thead>
         <tr>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].InvoiceNumber)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].InvoiceType)
+                </th>
+            }
             <th>
-                @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].InvoiceNumber)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].InvoiceType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].AccountName)
+                @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].SubjectName)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].ExpectedOn)
@@ -33,7 +48,6 @@
             <th>
                 @Html.DisplayNameFor(model => model.Invoice_RegisterOverdue[0].UnpaidValue)
             </th>
-
             <th></th>
         </tr>
     </thead>
@@ -41,15 +55,18 @@
         @foreach (var item in Model.Invoice_RegisterOverdue)
         {
             <tr>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.InvoiceNumber)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.InvoiceType)
+                    </td>
+                }
                 <td>
-                    @Html.DisplayFor(modelItem => item.InvoiceNumber)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.InvoiceType)
-                </td>
-                <td>
-                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
                 <td>
@@ -62,14 +79,56 @@
                     @Html.DisplayFor(modelItem => item.UnpaidValue)
                 </td>
                 <td>
-                    <a asp-page="./UnpaidDetail" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-info"></a>
-                    <a asp-page="/Invoice/Update/Index" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary"></a>
-                    <a asp-page="/Cash/PaymentEntry/Create" asp-route-accountCode="@item.AccountCode" asp-route-mode="0" asp-route-returnUrl="/Invoice/Register/Unpaid" class="btn btn-outline-primary"></a>                    
+                    <div class="action-buttons">
+                        <a asp-page="./UnpaidDetail" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-info" title="Details">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span class="visually-hidden">Details</span>
+                        </a>
+                        <a asp-page="/Invoice/Update/Index" asp-route-invoiceNumber="@item.InvoiceNumber" class="btn btn-secondary" title="Edit">
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                            <span class="visually-hidden">Edit</span>
+                        </a>
+                        <a asp-page="/Cash/PaymentEntry/Create" asp-route-accountCode="@item.SubjectCode" asp-route-mode="0" asp-route-returnUrl="/Invoice/Register/Unpaid" class="btn btn-outline-primary" title="Create Payment">
+                            <i class="bi bi-credit-card" aria-hidden="true"></i>
+                            <span class="visually-hidden">Create Payment</span>
+                        </a>
+                    </div>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Unpaid"
+                   asp-route-InvoiceType="@Model.InvoiceType"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Unpaid"
+                       asp-route-InvoiceType="@Model.InvoiceType"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Unpaid"
+                   asp-route-InvoiceType="@Model.InvoiceType"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
 
 <div>
     <dl class="row">
@@ -88,7 +147,7 @@
     </dl>
 </div>
 
-<a asp-page="/Cash/PaymentEntry/Index" class="btn btn-info">Post Payments</a>
+<a asp-page="/Cash/PaymentEntry/Index" class="btn btn-info w-25" title="Post Payments">Post Payments</a>
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}

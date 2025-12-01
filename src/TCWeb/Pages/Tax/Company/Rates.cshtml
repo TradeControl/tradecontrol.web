@@ -8,23 +8,23 @@
     <div class="col-md-4">
         <form method="post">
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="StartOn" class="control-label"></label>
                 <input asp-for="StartOn" class="form-control" />
                 <span asp-validation-for="StartOn" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="EndOn" class="control-label"></label>
                 <input asp-for="EndOn" class="form-control" />
                 <span asp-validation-for="EndOn" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="CorporationTaxRate" class="control-label"></label>
                 <input asp-for="CorporationTaxRate" class="form-control" />
                 <span asp-validation-for="CorporationTaxRate" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="SET RATE" class="btn btn-primary" />
                 <a asp-page="./Index" class="btn btn-info">To List</a>
             </div>

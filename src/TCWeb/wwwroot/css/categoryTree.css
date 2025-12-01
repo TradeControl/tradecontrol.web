@@ -1,0 +1,195 @@
+/* Strikethrough/muted for disabled nodes (including active/selected states) */
+.fancytree-container .fancytree-node.tc-disabled .fancytree-title,
+.fancytree-container .fancytree-node.tc-disabled.fancytree-active .fancytree-title,
+.fancytree-container .fancytree-node.tc-disabled.fancytree-selected .fancytree-title {
+    text-decoration: line-through;
+    opacity: .6;
+}
+
+/* Color variables */
+:root {
+  --tc-orange: #ff7a00; /* adjust to your brand */
+  --tc-orange-600: #e66e00;
+  --tc-on-orange: #ffffff;
+}
+
+/* Disconnected root icon */
+.tc-disconnected-icon {
+    margin-right: 6px;
+    color: var(--tc-muted, #6c757d);
+    font-size: 1.05em;
+    vertical-align: -0.06em;
+}
+
+.tc-code-icon {
+    margin-right: 6px;
+    font-size: 0.95em;
+    vertical-align: -0.08em;
+    color: var(--tc-muted, #6c757d);
+}
+
+@media (min-width: 992px) {
+    .tc-tree-split {
+        display: flex;
+        width: 100%;
+        align-items: stretch;
+        gap: 0; /* gutter handled by Split.js */
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+        .tc-tree-split .tc-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+    /* Initial (pre-Split) 33/67 sizing; removed after Split initializes */
+    #leftCol.tc-initial-left {
+        flex: 0 1 33.333%;
+        max-width: 33.333%;
+    }
+
+    #rightCol.tc-initial-right {
+        flex: 1 1 66.667%;
+        max-width: 66.667%;
+    }
+
+    /* Gutter styling (Split.js injects a div.gutter) */
+    .gutter {
+        flex: 0 0 6px;
+        background: #e0e0e0;
+        cursor: col-resize;
+        position: relative;
+    }
+
+        .gutter:hover {
+            background: #d0d0d0;
+        }
+}
+/* Bottom-sheet menu for mobile */
+@media (max-width: 991.98px) {
+  #treeContextMenu.mobile-sheet {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    display: block;
+    width: 100%;
+    max-height: 60vh;
+    overflow-y: auto;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,.25);
+    transform: translateY(0);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 2000;
+  }
+  #treeContextMenu.mobile-sheet .dropdown-item {
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
+}
+
+/* Mobile action bar */
+.tc-mobile-actionbar {
+  display: none; /* JS toggles this on mobile */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--tc-orange, #ff7a00);
+  color: var(--tc-on-orange, #fff);
+  z-index: 2050; /* below sheet (2000+) but above tree */
+  box-shadow: 0 -4px 16px rgba(0,0,0,.25);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+}
+@media (max-width: 991.98px) {
+  .tc-mobile-actionbar.tc-visible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+  }
+  .tc-mobile-actionbar .btn-action {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: .95rem;
+    padding: 10px 8px;
+    line-height: 1.2;
+    border-radius: 6px;
+    min-width: 64px;
+  }
+  .tc-mobile-actionbar .btn-action:active {
+    background: rgba(255,255,255,0.15);
+  }
+  .tc-mobile-actionbar .btn-action i {
+    margin-right: 6px;
+  }
+}
+
+/* Optional: slightly larger tap target for tree rows on mobile */
+@media (max-width: 991.98px) {
+  .fancytree-container .fancytree-title {
+    padding: 10px 8px;
+  }
+}
+
+/* Ensure columns can shrink inside flex row without causing horizontal scroll */
+#leftCol, #rightCol { min-width: 0; }
+
+/* Make both panes scroll inside their boxes instead of growing */
+#categoryTree,
+#detailsPane {
+    overflow: auto;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+
+/* Critical: let the inner Fancytree container fill the pane height */
+#categoryTree .fancytree-container {
+  height: 100% !important;
+  overflow: auto;
+}
+
+/* Avoid horizontal scrollbar from nowrap rows */
+.row.flex-nowrap { overflow: hidden; }
+
+/* Hide actions that are not applicable in the "By Cash Type" subtree */
+#treeContextMenu.type-ctx [data-action="addExistingCategory"],
+#treeContextMenu.type-ctx [data-action="addExistingCashCode"],
+#treeContextMenu.type-ctx [data-action="createTotal"],
+#treeContextMenu.type-ctx [data-action="createCashCode"],
+#treeContextMenu.type-ctx [data-action="move"],
+#treeContextMenu.type-ctx [data-action="delete"] {
+    display: none !important;
+}
+
+/* Root/Type nodes: hide all actions except expand/collapse */
+#treeContextMenu.synthetic-ctx .dropdown-item { display: none !important; }
+#treeContextMenu.synthetic-ctx [data-action="expandSelected"],
+#treeContextMenu.synthetic-ctx [data-action="collapseSelected"] { display: block !important; }
+
+/* Ensure embedded pages can't inject a second context menu */
+#detailsPane #treeContextMenu {
+    display: none !important;
+}
+
+/* Utility class to disable CSS transitions/animations during programmatic tree updates (prevents flicker) */
+.tc-no-transition .fancytree-container,
+.tc-no-transition .fancytree-node,
+.tc-no-transition .fancytree-expander,
+.tc-no-transition .fancytree-title,
+.tc-no-transition .fancytree-node .fancytree-icon {
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    transition: none !important;
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    animation: none !important;
+}

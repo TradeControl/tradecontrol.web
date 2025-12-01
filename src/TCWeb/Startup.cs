@@ -60,14 +60,7 @@ namespace TradeControl.Web
         {
             services.AddRazorPages();
 
-            services.AddDetection(options =>
-            {
-                options.Responsive.DefaultTablet = Device.Desktop;
-                options.Responsive.DefaultMobile = Device.Mobile;
-                options.Responsive.DefaultDesktop = Device.Desktop;
-                options.Responsive.IncludeWebApi = false;
-                options.Responsive.Disable = false;
-            });
+            services.AddDetection();
 
             services.AddSession(options =>
             {
@@ -94,6 +87,17 @@ namespace TradeControl.Web
             }
 
             app.UseHttpsRedirection();
+            
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.Equals("/favicon.ico", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.Redirect("/favicon.svg", permanent: false);
+                    return;
+                }
+                await next();
+            });
+
             app.UseStaticFiles();
 
             app.UseDetection();

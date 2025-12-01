@@ -15,16 +15,16 @@
             @Html.DisplayFor(model => model.Cash_PaymentsUnposted.UserName)
         </dd>
         <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.SubjectName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.SubjectName)
+        </dd>
+        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.AccountName)
         </dt>
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Cash_PaymentsUnposted.AccountName)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashAccountName)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Cash_PaymentsUnposted.CashAccountName)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.CashDescription)
@@ -78,7 +78,7 @@
 </div>
 <div>
     <a asp-page="./Edit" asp-route-paymentCode="@Model.Cash_PaymentsUnposted.PaymentCode" class="btn btn-secondary">Edit</a>
-    <a asp-page="./Index" asp-route-cashAccountCode="@Model.Cash_PaymentsUnposted.CashAccountCode" class="btn btn-info">To List</a>
+    <a asp-page="./Index" asp-route-cashSubjectCode="@Model.Cash_PaymentsUnposted.AccountCode" class="btn btn-info">To List</a>
 </div>
 
 @section Scripts {

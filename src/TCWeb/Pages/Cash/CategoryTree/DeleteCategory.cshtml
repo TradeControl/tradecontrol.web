@@ -1,0 +1,51 @@
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.DeleteCategoryModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var isEmbedded = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
+    Layout = isEmbedded ? null : "_Layout";
+
+    var key = (Request.Query["key"].Count > 0) ? Request.Query["key"].ToString()
+                                                : (Request.HasFormContentType ? Request.Form["key"].ToString() : "");
+    var display = Model.CategoryDisplay ?? key;
+}
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title text-danger">Delete Category</h5>
+
+        <div class="mb-3">
+            <p class="mb-2">
+                You are about to delete the category and its descendant categories:
+            </p>
+
+            <dl class="row">
+                <dt class="col-sm-3">Category</dt>
+                <dd class="col-sm-9"><code>@display</code></dd>
+            </dl>
+
+            <div class="alert alert-warning" role="alert">
+                <strong>Warning:</strong> This operation is <em>recursive</em> and will remove the category and all its child category mappings.
+                The operation will be refused if any Cash Codes exist in the category tree — remove or reassign codes first.
+            </div>
+        </div>
+
+        <form id="deleteCategoryForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteCategory", key = key })">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="key" value="@key" />
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="confirmDelete" />
+                <label class="form-check-label" for="confirmDelete">I understand this will delete the category and all child mappings</label>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="btnDelete" type="submit" class="btn btn-danger" disabled>Delete</button>
+                <a class="btn btn-secondary" href="javascript:void(0)" data-embedded-cancel>Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="~/js/categoryTree.delete.js" asp-append-version="true"></script>
+<script src="~/js/categoryTree.cancel.js" asp-append-version="true"></script>

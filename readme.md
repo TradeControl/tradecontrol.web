@@ -1,32 +1,41 @@
-# Trade Control - Web Interface
+# TradeControl.Web
 
-Using ASP.NET Core to web enable the [Accounts](https://tradecontrol.github.io/accounts) and [MIS](https://tradecontrol.github.io/mis) interface on desktops and mobiles.
+An AI‑native ASP.NET interface to the **Business Entity** node.  
+Originally published in 2021, now undergoing schema migration and AI‑assisted redevelopment.
+
+---
 
 ## Publications
 
-| Release | Published |
-| - | - |
-| Accounts Mode | 1 July 2021 |
+| Release        | Published   |
+|----------------|-------------|
+| Accounts Mode  | 1 July 2021 |
 
-## Development
+## Handover Note
 
-- [implementation plan](docs/dev_plan.md)
-- [change log](changelog.md)
+Development of this application is being transitioned from human authorship to AI‑assisted agents.  The 2021 release remains available for reference, but all future work will be guided by schema migration and AI‑native processes. This marks the shift from prototype to a new era of automated stewardship.
 
-## Documentation
+---
 
-- [overview](https://tradecontrol.github.io)
-- [installation](https://tradecontrol.github.io/tutorials/installing-web)
-- [tutorial](https://tradecontrol.github.io/tutorials/cash-book-web)
+## 🌐 Website
+For ongoing development and updates, visit: [tradecontrol.github.io](https://tradecontrol.github.io)
+
+## Change Log
+See [changelog.md](./docs/changelog.md) for details of updates and migration notes.
+
+See [changelog-schema.md](./docs/changelog-schema.md) for details of schema changes.
+
 
 ## Versioning
-
-[SemVer](http://semver.org/)
-
-## Donations
-
-[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=C55YGUTBJ4N36)
+[Semantic Versioning](http://semver.org/)
 
 ## Licence
+The Trade Control Code licence is issued by Trade Control Ltd under a  
+[GNU General Public Licence v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
-The Trade Control Code licence is issued by Trade Control Ltd under a [GNU General Public Licence v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) 
+## 🚧 Status
+- Working release available (Accounts Mode, July 2021)  
+- Current branch in **active redevelopment**: Accounts + MIS integration  
+- Development is being transitioned to AI agents  
+- ⚠️ Not production‑ready on the new schema — features and APIs may change without notice
+

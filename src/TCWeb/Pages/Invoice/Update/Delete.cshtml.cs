@@ -80,7 +80,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
                     Invoices invoices = new(NodeContext);
                     if (await invoices.CancelPending(invoice.UserId))
                     {
-                        Orgs orgs = new(NodeContext, invoice.AccountCode);
+                        Subjects orgs = new(NodeContext, invoice.SubjectCode);
                         await orgs.Rebuild();
                         return RedirectToPage("./Index");
                     }

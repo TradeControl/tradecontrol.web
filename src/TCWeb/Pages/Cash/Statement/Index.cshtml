@@ -1,42 +1,72 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Cash.Statement.IndexModel
 @{ ViewData["Title"] = "Cash Statements"; }
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group" method="get">
-    <p>
-        <select asp-for="CashAccountName" asp-items="Model.CashAccountNames"></select>
-        <select asp-for="PeriodName" asp-items="Model.PeriodNames">
-            @*<option value="">All</option>*@
-        </select>
-        <input type="submit" value="Filter" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="AccountName" asp-items="Model.AccountNames" class="form-control" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-auto">
+            <select asp-for="PeriodName" asp-items="Model.PeriodNames" class="form-control" onchange="this.form.submit()">
+                @*<option value="">All</option>*@
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <input type="hidden" name="PageNumber" value="1" />
+            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Rows per page" onchange="this.form.submit()"></select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </div>
+    </div>
 </form>
 
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].EntryNumber)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].EntryNumber)
+                </th>
+            }
             <th>
                 @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].AccountName)
+                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].SubjectName)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaymentReference)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOutValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidInValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidBalance)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaymentReference)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOutValue)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidInValue)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidBalance)
+                </th>
+            }
+            else
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidInValue)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_AccountStatement[0].PaidOutValue)
+                </th>
+                <th></th>
+            }
 
             <th></th>
         </tr>
@@ -45,35 +75,64 @@
         @foreach (var item in Model.Cash_AccountStatement)
         {
             <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.EntryNumber)
-                </td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.EntryNumber)
+                    </td>
+                }
                 <td>
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaymentReference)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidOutValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidInValue)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaidBalance)
-                </td>
+
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaymentReference)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaidOutValue)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaidInValue)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaidBalance)
+                    </td>
+                }
+                else
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaidInValue)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaidOutValue)
+                    </td>
+                    <td></td>
+                }
+
                 <td>
                     @if (item.EntryNumber != 0)
                     {
-                        <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>
-                        <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
-                        <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+                        <div class="action-buttons">
+                            <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info" title="Details">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span class="visually-hidden">Details</span>
+                            </a>
+                            <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary" title="Edit">
+                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                <span class="visually-hidden">Edit</span>
+                            </a>
+                            <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger" title="Delete">
+                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                <span class="visually-hidden">Delete</span>
+                            </a>
+                        </div>
                     }
                 </td>
             </tr>
@@ -81,57 +140,109 @@
     </tbody>
 </table>
 
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-AccountName="@Model.AccountName"
+                   asp-route-PeriodName="@Model.PeriodName"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Index"
+                       asp-route-AccountName="@Model.AccountName"
+                       asp-route-PeriodName="@Model.PeriodName"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-AccountName="@Model.AccountName"
+                   asp-route-PeriodName="@Model.PeriodName"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
+
 <table class="table">
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.OrganisationType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.SortCode)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.AccountNumber)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Org_CashAccount.CurrentBalance)
+                @Html.DisplayNameFor(model => model.Subject_CashAccount.SubjectName)
             </th>
 
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.SubjectType)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.SortCode)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountNumber)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.CurrentBalance)
+                </th>
+            }
+            else
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Subject_CashAccount.CurrentBalance)
+                </th>
+            }
         </tr>
     </thead>
     <tbody>
         <tr>
             <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.AccountName)
-            </td>
-            <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.AccountType)
-            </td>
-            <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.OrganisationType)
-            </td>
-            <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.SortCode)
-            </td>
-            <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.AccountNumber)
-            </td>
-            <td>
-                @Html.DisplayFor(model => model.Org_CashAccount.CurrentBalance)
+                @Html.DisplayFor(model => model.Subject_CashAccount.SubjectName)
             </td>
 
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <td>
+                    @Html.DisplayFor(model => model.Subject_CashAccount.AccountType)
+                </td>
+                <td>
+                    @Html.DisplayFor(model => model.Subject_CashAccount.SubjectType)
+                </td>
+                <td>
+                    @Html.DisplayFor(model => model.Subject_CashAccount.SortCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(model => model.Subject_CashAccount.AccountNumber)
+                </td>
+                <td>
+                    @Html.DisplayFor(model => model.Subject_CashAccount.CurrentBalance)
+                </td>
+            }
+            else
+            {
+                <td>
+                    @Html.DisplayFor(model => model.Subject_CashAccount.CurrentBalance)
+                </td>
+            }
         </tr>
     </tbody>
 </table>
 
 <div>
-    <a asp-page="./Index" asp-route-cashAccountName="@Model.CashAccountName" asp-route-mode="1" class="btn btn-info">Show All</a>
+    <a asp-page="./Index" asp-route-cashSubjectName="@Model.AccountName" asp-route-mode="1" class="btn btn-info w-25" title="Show All">Show All</a>
 </div>
 
 @section Scripts {

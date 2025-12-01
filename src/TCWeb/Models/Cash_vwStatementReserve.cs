@@ -22,10 +22,10 @@ namespace TradeControl.Web.Models
         public string ReferenceCode { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         public double PayOut { get; set; }
         public double PayIn { get; set; }
         public double Balance { get; set; }

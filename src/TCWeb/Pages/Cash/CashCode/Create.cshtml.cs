@@ -154,7 +154,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
                     TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == taxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
                 else if (string.IsNullOrEmpty(TaxDescription))
                 {
-                    Orgs orgs = new(NodeContext, await profile.CompanyAccountCode());
+                    Subjects orgs = new(NodeContext, await profile.CompanySubjectCode());
                     taxCode = await orgs.DefaultTaxCode();
                     TaxDescription = await NodeContext.App_tbTaxCodes.Where(t => t.TaxCode == taxCode).Select(t => t.TaxDescription).FirstOrDefaultAsync();
                 }                
@@ -165,7 +165,7 @@ namespace TradeControl.Web.Pages.Cash.CashCode
                 {
                     Category = await NodeContext.Cash_tbCategories
                                         .Where(c => c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode 
-                                                && c.CashModeCode == (short)NodeEnum.CashMode.Income
+                                                && c.CashPolarityCode == (short)NodeEnum.CashPolarity.Income
                                                 && c.CashTypeCode == (short)NodeEnum.CashType.Trade)
                                         .OrderBy(c => c.CategoryCode)
                                         .Select(c => c.Category)

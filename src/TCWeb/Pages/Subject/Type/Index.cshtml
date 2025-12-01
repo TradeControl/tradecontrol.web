@@ -1,0 +1,63 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Type.IndexModel
+@{ ViewData["Title"] = "Organisation Types"; }
+<h1>@ViewData["Title"]</h1>
+
+@{
+    if (User.IsInRole(Constants.AdministratorsRole))
+    {
+        <p>
+            <a asp-page="./Create" class="btn btn-outline-primary">New Type</a>
+        </p>
+    }
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Types[0].SubjectType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Types[0].CashPolarity)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Types)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.SubjectType)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CashPolarity)
+                </td>
+                <td>
+                    @{
+                        if (User.IsInRole(Constants.AdministratorsRole))
+                        {
+                            <div class="action-buttons">
+                                <a asp-page="./Edit" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-secondary" title="Edit">
+                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Edit</span>
+                                </a>
+                                <a asp-page="./Delete" asp-route-SubjectTypeCode="@item.SubjectTypeCode" class="btn btn-danger" title="Delete">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Delete</span>
+                                </a>
+                            </div>
+                        }
+                    }
+                </td>
+
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

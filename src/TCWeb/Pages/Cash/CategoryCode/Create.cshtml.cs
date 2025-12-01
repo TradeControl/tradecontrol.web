@@ -38,8 +38,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         public Cash_tbCategory Cash_tbCategory { get; set; }
             
         [BindProperty]       
-        public string CashMode { get; set; }
-        public SelectList CashModes { get; set; }
+        public string CashPolarity { get; set; }
+        public SelectList CashPolaritys { get; set; }
 
         [BindProperty]
         public string CashType { get; set; }
@@ -54,9 +54,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                 if (!string.IsNullOrEmpty(returnUrl))
                     ReturnUrl = returnUrl;
 
-                var modes = NodeContext.Cash_tbModes.OrderBy(m => m.CashModeCode).Select(m => m.CashMode);
-                CashModes = new SelectList(await modes.ToListAsync());
-                CashMode = await modes.FirstAsync();
+                var modes = NodeContext.Cash_tbPolaritys.OrderBy(m => m.CashPolarityCode).Select(m => m.CashPolarity);
+                CashPolaritys = new SelectList(await modes.ToListAsync());
+                CashPolarity = await modes.FirstAsync();
 
                 var types = NodeContext.Cash_tbTypes.OrderBy(t => t.CashTypeCode).Select(t => t.CashType);
                 CashTypes = new SelectList(await types.ToListAsync());
@@ -70,7 +70,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                     CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode,
                     DisplayOrder = 0,
                     IsEnabled = 1,
-                    CashModeCode = (short)NodeEnum.CashMode.Expense,
+                    CashPolarityCode = (short)NodeEnum.CashPolarity.Expense,
                     CashTypeCode = (short)NodeEnum.CashType.Trade,
                     InsertedBy = userName,
                     InsertedOn = DateTime.Now,
@@ -95,7 +95,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                     return Page();
 
                 Cash_tbCategory.CashTypeCode = await NodeContext.Cash_tbTypes.Where(t => t.CashType == CashType).Select(t => t.CashTypeCode).FirstAsync();
-                Cash_tbCategory.CashModeCode = await NodeContext.Cash_tbModes.Where(m => m.CashMode == CashMode).Select(m => m.CashModeCode).FirstAsync();
+                Cash_tbCategory.CashPolarityCode = await NodeContext.Cash_tbPolaritys.Where(m => m.CashPolarity == CashPolarity).Select(m => m.CashPolarityCode).FirstAsync();
 
                 NodeContext.Cash_tbCategories.Add(Cash_tbCategory);
                 await NodeContext.SaveChangesAsync();

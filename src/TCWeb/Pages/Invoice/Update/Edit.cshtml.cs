@@ -130,7 +130,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await NodeContext.Invoice_tbInvoices.AnyAsync(e => e.AccountCode == Invoice_tbInvoice.InvoiceNumber))
+                    if (!await NodeContext.Invoice_tbInvoices.AnyAsync(e => e.SubjectCode == Invoice_tbInvoice.InvoiceNumber))
                         return NotFound();
                     else
                         throw;
@@ -146,7 +146,7 @@ namespace TradeControl.Web.Pages.Invoice.Update
 
                     if (orgRebuild)
                     {
-                        Orgs orgs = new(NodeContext, Invoice_tbInvoice.AccountCode);
+                        Subjects orgs = new(NodeContext, Invoice_tbInvoice.SubjectCode);
                         orgRebuild = await orgs.Rebuild();
                     }
                 }

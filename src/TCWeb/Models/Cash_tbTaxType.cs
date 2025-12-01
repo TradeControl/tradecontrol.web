@@ -27,12 +27,12 @@ namespace TradeControl.Web.Models
         public short MonthNumber { get; set; }
         public short RecurrenceCode { get; set; }
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         public short OffsetDays { get; set; }
 
-        [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbTaxTypes))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [ForeignKey(nameof(SubjectCode))]
+        [InverseProperty(nameof(Subject_tbSubject.TbTaxTypes))]
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbTaxTypes))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }

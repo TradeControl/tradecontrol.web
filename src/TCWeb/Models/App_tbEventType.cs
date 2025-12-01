@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         public App_tbEventType()
         {
-            TbAllocationEvents = new HashSet<Task_tbAllocationEvent>();
+            TbAllocationEvents = new HashSet<Project_tbAllocationEvent>();
             TbEventLogs = new HashSet<App_tbEventLog>();
             TbMirrorEvents = new HashSet<Invoice_tbMirrorEvent>();
         }
@@ -24,8 +24,8 @@ namespace TradeControl.Web.Models
         [StringLength(15)]
         public string EventType { get; set; }
 
-        [InverseProperty(nameof(Task_tbAllocationEvent.EventTypeCodeNavigation))]
-        public virtual ICollection<Task_tbAllocationEvent> TbAllocationEvents { get; set; }
+        [InverseProperty(nameof(Project_tbAllocationEvent.EventTypeCodeNavigation))]
+        public virtual ICollection<Project_tbAllocationEvent> TbAllocationEvents { get; set; }
         [InverseProperty(nameof(App_tbEventLog.EventTypeCodeNavigation))]
         public virtual ICollection<App_tbEventLog> TbEventLogs { get; set; }
         [InverseProperty(nameof(Invoice_tbMirrorEvent.EventTypeCodeNavigation))]

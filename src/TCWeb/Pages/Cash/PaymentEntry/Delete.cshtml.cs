@@ -76,7 +76,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 }
 
                 RouteValueDictionary route = new();
-                route.Add("CashAccountCode", payment.CashAccountCode);
+                route.Add("AccountCode", payment.AccountCode);
 
                 return RedirectToPage("./Index", route);
             }

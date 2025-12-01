@@ -17,7 +17,7 @@ namespace TradeControl.Web.Pages.Admin.Host
     {
         UserManager<TradeControlWebUser> UserManager { get; }
 
-        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context) 
+        public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
             UserManager = userManager;
         }
@@ -60,8 +60,11 @@ namespace TradeControl.Web.Pages.Admin.Host
                 Profile profile = new(NodeContext);
                 App_tbHost.InsertedBy = await profile.UserName(UserManager.GetUserId(User));
                 App_tbHost.InsertedOn = DateTime.Now;
-                
-                Encrypt encrypt = new(NodeSettings.SymmetricKey, NodeSettings.SymmetricVector);
+
+                NodeSettings nodeSettings = new(NodeContext);
+                var (key, iv) = await nodeSettings.GetOrCreateSymmetricAsync();
+
+                Encrypt encrypt = new (key, iv);
                 App_tbHost.EmailPassword = encrypt.EncryptString(App_tbHost.EmailPassword);
 
                 NodeContext.Attach(App_tbHost).State = EntityState.Modified;

@@ -1,0 +1,132 @@
+﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Subject.Enquiry.IndexModel
+
+@{
+    ViewData["Title"] = "Organisation Enquiries";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="SubjectType" asp-items="Model.SubjectTypes" class="form-control"></select>
+        </div>
+        <div class="col-auto">
+            <label class="visually-hidden" for="SearchString">Name</label>
+            <input type="text" asp-for="SearchString" id="SearchString" class="form-control"
+                placeholder="Name" />
+        </div>
+        <div class="col-auto">
+            <input type="hidden" name="PageNumber" value="1" />
+            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Results per page" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectCode)</th>
+            }
+            <th>@Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectName)</th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].SubjectType)</th>
+                <th>@Html.DisplayNameFor(model => model.Subject_SubjectLookup[0].CashPolarity)</th>
+            }
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_SubjectLookup)
+        {
+            <tr>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.SubjectCode)</td>
+                }
+                <td>
+                    <a asp-page="/Subject/Update/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
+                    </a>
+                </td>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.SubjectType)</td>
+                    <td>@Html.DisplayFor(modelItem => item.CashPolarity)</td>
+                }
+                <td>
+                    <div class="action-buttons">
+                        <a class="btn btn-info" asp-page="./Details" asp-route-accountCode="@item.SubjectCode"
+                            title="Details">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span class="visually-hidden">Details</span>
+                        </a>
+                        <a class="btn btn-warning" asp-page="./Invoices" asp-route-accountCode="@item.SubjectCode"
+                            title="View invoices">
+                            <i class="bi bi-list" aria-hidden="true"></i>
+                            <span class="visually-hidden">Invoices</span>
+                        </a>
+                        <a class="btn btn-success" asp-page="./Payments" asp-route-accountCode="@item.SubjectCode"
+                            title="View payments">
+                            <i class="bi bi-currency-dollar" aria-hidden="true"></i>
+                            <span class="visually-hidden">Payments</span>
+                        </a>
+                        <a class="btn btn-dark" asp-page="./Statement" asp-route-accountCode="@item.SubjectCode"
+                            title="View statement">
+                            <i class="bi bi-list" aria-hidden="true"></i>
+                            <span class="visually-hidden">Statement</span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-SubjectType="@Model.SubjectType"
+                   asp-route-SearchString="@Model.SearchString"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Index"
+                       asp-route-SubjectType="@Model.SubjectType"
+                       asp-route-SearchString="@Model.SearchString"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index"
+                   asp-route-SubjectType="@Model.SubjectType"
+                   asp-route-SearchString="@Model.SearchString"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

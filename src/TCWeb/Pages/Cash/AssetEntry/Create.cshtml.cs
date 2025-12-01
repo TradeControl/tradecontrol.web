@@ -27,31 +27,31 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         [BindProperty]
         public Cash_vwPaymentsUnposted Cash_AssetsUnposted { get; set; }
 
-        public SelectList CashAccountNames { get; set; }
+        public SelectList AccountNames { get; set; }
         [BindProperty] 
-        public string CashAccountName { get; set; }
+        public string AccountName { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string cashAccountName)
+        public async Task<IActionResult> OnGetAsync(string cashSubjectName)
         {
             try
             {
-                var cashAccountList = NodeContext.Org_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.CashAccountName);
+                var cashAccountList = NodeContext.Subject_CashAccountAssets.Where(t => !t.AccountClosed).OrderBy(t => t.LiquidityLevel).Select(t => t.AccountName);
 
-                CashAccountNames = new SelectList(await cashAccountList.ToListAsync());
+                AccountNames = new SelectList(await cashAccountList.ToListAsync());
 
-                if (string.IsNullOrEmpty(cashAccountName))
-                    cashAccountName = await cashAccountList.FirstOrDefaultAsync();
+                if (string.IsNullOrEmpty(cashSubjectName))
+                    cashSubjectName = await cashAccountList.FirstOrDefaultAsync();
 
                 Profile profile = new(NodeContext);
                 CashAccounts cashAccounts = new(NodeContext);
 
-                var cashAccount = await NodeContext.Org_CashAccountAssets.Where(t => t.CashAccountName == cashAccountName).FirstAsync();
+                var cashAccount = await NodeContext.Subject_CashAccountAssets.Where(t => t.AccountName == cashSubjectName).FirstAsync();
 
                 Cash_AssetsUnposted = new Cash_vwPaymentsUnposted
                 {
-                    CashAccountCode = cashAccount.CashAccountCode,
-                    PaymentCode = await cashAccounts.NextPaymentCode(),
                     AccountCode = cashAccount.AccountCode,
+                    PaymentCode = await cashAccounts.NextPaymentCode(),
+                    SubjectCode = cashAccount.SubjectCode,
                     CashCode = cashAccount.CashCode,
                     TaxCode = cashAccount.TaxCode,
                     PaidOn = DateTime.Today,
@@ -77,9 +77,9 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
         {
             try
             {
-                Cash_AssetsUnposted.CashAccountCode = await NodeContext.Org_CashAccountAssets
-                                                    .Where(t => t.CashAccountName == CashAccountName)
-                                                    .Select(t => t.CashAccountCode)
+                Cash_AssetsUnposted.AccountCode = await NodeContext.Subject_CashAccountAssets
+                                                    .Where(t => t.AccountName == AccountName)
+                                                    .Select(t => t.AccountCode)
                                                     .SingleAsync();
 
                 Cash_AssetsUnposted.UpdatedOn = DateTime.Now;
@@ -92,7 +92,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                 await NodeContext.SaveChangesAsync();
 
                 RouteValueDictionary route = new();
-                route.Add("CashAccountCode", Cash_AssetsUnposted.CashAccountCode);
+                route.Add("AccountCode", Cash_AssetsUnposted.AccountCode);
 
                 return RedirectToPage("./Index", route);
             }

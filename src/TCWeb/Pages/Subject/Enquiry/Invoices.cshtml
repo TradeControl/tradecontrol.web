@@ -1,0 +1,135 @@
+﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Subject.Enquiry.InvoicesModel
+
+@{
+    ViewData["Title"] = "Invoices";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
+
+<div class="row g-2 mb-3">
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="/Invoice/Update/Index"
+           asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+           class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center"
+           title="Edit invoices">
+            <span class="text-truncate">Edit</span>
+        </a>
+    </div>
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="/Invoice/Register/Index"
+           asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+           class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+           title="Register invoice">
+            <span class="text-truncate">Register</span>
+        </a>
+    </div>
+
+    <div class="col-12 col-sm-3 d-flex">
+        <form method="get" class="w-100 d-flex align-items-center justify-content-center">
+            <input type="hidden" name="accountCode" value="@Model.Subject_Account.SubjectCode" />
+            <input type="hidden" name="PageNumber" value="1" />
+            <select asp-for="PageSize"
+                    asp-items="Model.PageSizeOptions"
+                    class="form-control w-50"
+                    aria-label="Rows per page"
+                    onchange="this.form.submit()">
+            </select>
+            <noscript>
+                <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
+            </noscript>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Subject_Invoices[0].InvoiceNumber)</th>
+            <th>@Html.DisplayNameFor(model => model.Subject_Invoices[0].InvoiceType)</th>
+            <th>@Html.DisplayNameFor(model => model.Subject_Invoices[0].InvoicedOn)</th>
+            <th>@Html.DisplayNameFor(model => model.Subject_Invoices[0].InvoiceValue)</th>
+            @if (Detection?.Device?.Type != Device.Mobile)
+            {
+                <th>@Html.DisplayNameFor(model => model.Subject_Invoices[0].TaxValue)</th>
+                <th>@Html.DisplayNameFor(model => model.Subject_Invoices[0].InvoiceStatus)</th>
+            }
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Invoices)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.InvoiceNumber)</td>
+                <td>@Html.DisplayFor(modelItem => item.InvoiceType)</td>
+                <td>@Html.DisplayFor(modelItem => item.InvoicedOn)</td>
+                <td>@Html.DisplayFor(modelItem => item.InvoiceValue)</td>
+                @if (Detection?.Device?.Type != Device.Mobile)
+                {
+                    <td>@Html.DisplayFor(modelItem => item.TaxValue)</td>
+                    <td>@Html.DisplayFor(modelItem => item.InvoiceStatus)</td>
+                }
+                <td>
+                    <div class="action-buttons">
+                        <a class="btn btn-info" asp-page="/Invoice/Register/Index" asp-route-InvoiceNumber="@item.InvoiceNumber" title="Register invoice">
+                            <i class="bi bi-plus-square" aria-hidden="true"></i>
+                            <span class="visually-hidden">Register</span>
+                        </a>
+                        <a class="btn btn-secondary" asp-page="/Invoice/Update/Edit" asp-route-InvoiceNumber="@item.InvoiceNumber" title="Edit invoice">
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                            <span class="visually-hidden">Edit</span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Invoices"
+                   asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+            </li>
+
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link" asp-page="./Invoices"
+                       asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                       asp-route-PageSize="@Model.PageSize"
+                       asp-route-PageNumber="@i">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Invoices"
+                   asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+                   asp-route-PageSize="@Model.PageSize"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+<div class="row g-2 mt-3">
+    <div class="col-12 col-sm-3 d-flex">
+        <a class="btn btn-info w-100 d-flex align-items-center justify-content-center" asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Back to list">
+            <span class="text-truncate">To List</span>
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

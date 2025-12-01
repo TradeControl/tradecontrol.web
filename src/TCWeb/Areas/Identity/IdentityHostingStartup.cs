@@ -1,15 +1,16 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TradeControl.Web.Areas.Identity.Data;
-using TradeControl.Web.Data;
-using TradeControl.Web.Authorization;
+using System;
 using System.Globalization;
+using TradeControl.Web.Areas.Identity.Data;
+using TradeControl.Web.Authorization;
+using TradeControl.Web.Data;
 
 [assembly: HostingStartup(typeof(TradeControl.Web.Areas.Identity.IdentityHostingStartup))]
 namespace TradeControl.Web.Areas.Identity
@@ -87,6 +88,10 @@ namespace TradeControl.Web.Areas.Identity
                     options.Cookie.IsEssential = true;
                 });
 
+                services.Configure<MvcOptions>(options =>
+                {
+                    options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+                });
             });
         }
     }

@@ -17,7 +17,7 @@ namespace TradeControl.Web.Models
         public bool IsInitialised { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(50)]
         public string RegisterName { get; set; }
@@ -37,6 +37,21 @@ namespace TradeControl.Web.Models
         public string MinerAccountCode { get; set; }
         public short CoinTypeCode { get; set; }
         public int? HostId { get; set; }
+
+        /// <summary>
+        /// AES symmetric key used by the application to encrypt secrets.
+        /// Stored as VARBINARY(32) in the database (AES-256).
+        /// </summary>
+        [Column(TypeName = "varbinary(32)")]
+        public byte[] SymmetricKey { get; set; }
+
+        /// <summary>
+        /// Initialization Vector used by AES encryption.
+        /// Stored as VARBINARY(16) in the database.
+        /// </summary>
+        [Column(TypeName = "varbinary(16)")]
+        public byte[] SymmetricIV { get; set; }
+
         [Required]
         [StringLength(50)]
         public string InsertedBy { get; set; }
@@ -48,9 +63,9 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
         [StringLength(5)]
-        [ForeignKey(nameof(AccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbOptionAccountCodeNavigations))]
-        public virtual Org_tbOrg AccountCodeNavigation { get; set; }
+        [ForeignKey(nameof(SubjectCode))]
+        [InverseProperty(nameof(Subject_tbSubject.TbOptionSubjectCodeNavigations))]
+        public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
         [ForeignKey(nameof(BucketIntervalCode))]
         [InverseProperty(nameof(App_tbBucketInterval.TbOptions))]
         public virtual App_tbBucketInterval BucketIntervalCodeNavigation { get; set; }
@@ -61,8 +76,8 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Cash_tbCoinType.TbOptions))]
         public virtual Cash_tbCoinType CoinTypeCodeNavigation { get; set; }
         [ForeignKey(nameof(MinerAccountCode))]
-        [InverseProperty(nameof(Org_tbOrg.TbOptionMinerAccountCodeNavigations))]
-        public virtual Org_tbOrg MinerAccountCodeNavigation { get; set; }
+        [InverseProperty(nameof(Subject_tbSubject.TbOptionMinerAccountCodeNavigations))]
+        public virtual Subject_tbSubject MinerAccountCodeNavigation { get; set; }
         [ForeignKey(nameof(MinerFeeCode))]
         [InverseProperty(nameof(Cash_tbCode.TbOptions))]
         public virtual Cash_tbCode MinerFeeCodeNavigation { get; set; }

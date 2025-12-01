@@ -21,7 +21,7 @@
         <input type="hidden" asp-for="Web_AttachmentInvoice.InvoiceType" />
         <input type="hidden" asp-for="Web_AttachmentInvoice.InvoiceTypeCode" />
 
-        <div class="form-group">
+        <div class="mb-3">
             <input type="submit" value="DELETE" class="btn btn-danger" />
             <a asp-page="./Images" asp-route-invoiceType="@Model.InvoiceType" class="btn btn-info">To List</a>
         </div>

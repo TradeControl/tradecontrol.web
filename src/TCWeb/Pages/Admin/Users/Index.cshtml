@@ -1,19 +1,32 @@
 ﻿@page
 @model TradeControl.Web.Pages.Admin.Users.IndexModel
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@{ViewData["Title"] = "User Registrations";}
 
-@{
-    ViewData["Title"] = "User Registrations";
-}
 <h1>@ViewData["Title"]</h1>
 
-<form class="form-group">
-    <p>
-        <label class="text-body">Confirmed?</label>
-        <select asp-for="ConfirmFilterOption" asp-items="Model.ConfirmFilterOptions">
-            <option value="">All</option>
-        </select>
-        <input type="submit" value="Filter" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <label class="visually-hidden" for="ConfirmFilterOption">Confirmed?</label>
+            <select asp-for="ConfirmFilterOption"
+                    asp-items="Model.ConfirmFilterOptions"
+                    id="ConfirmFilterOption"
+                    class="form-control"
+                    onchange="this.form.submit()">
+                <option value="">All</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <!-- reset to first page when changing the filter -->
+            <input type="hidden" name="PageNumber" value="1" />
+            <noscript>
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </noscript>
+        </div>
+    </div>
 </form>
 <table class="table">
     <thead>
@@ -24,18 +37,21 @@
             <th>
                 @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].UserName)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsConfirmed)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsRegistered)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsAdministrator)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsManager)
-            </th>
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsConfirmed)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsRegistered)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsAdministrator)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsManager)
+                </th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -58,34 +74,45 @@
                         }
                     }
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.IsConfirmed)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.IsRegistered)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.IsAdministrator)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.IsManager)
-                </td>
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.IsConfirmed)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.IsRegistered)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.IsAdministrator)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.IsManager)
+                    </td>
+                }
                 <td>
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Delete)).Succeeded)
                     {
-                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-danger">Delete</a>
+                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-danger" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
                     {
-                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-warning">Confirm</a>
+                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-warning" title="Confirm">
+                            <i class="bi bi-check2-circle"></i>
+                        </a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
                     {
-                        <a asp-page="./Role" asp-route-id="@item.Id" class="btn btn-secondary">Role</a>
+                        <a asp-page="./Role" asp-route-id="@item.Id" class="btn btn-secondary" title="Role">
+                            <i class="bi bi-person-badge"></i>
+                        </a>
                     }
                     @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && !item.IsRegistered)
                     {
-                        <a asp-page="./Create" asp-route-id="@item.Id" class="btn btn-primary">Create</a>
+                        <a asp-page="./Create" asp-route-id="@item.Id" class="btn btn-primary" title="Create">
+                            <i class="bi bi-person-plus"></i>
+                        </a>
                     }
                 </td>
             </tr>

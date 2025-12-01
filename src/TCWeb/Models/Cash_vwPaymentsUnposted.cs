@@ -27,12 +27,12 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
 
         [Required]
         [StringLength(10)]
         [Display(Name = "Cash Account")]
-        public string CashAccountCode { get; set; }
+        public string AccountCode { get; set; }
 
         [StringLength(50)]
         [Display(Name = "Cash Code")]

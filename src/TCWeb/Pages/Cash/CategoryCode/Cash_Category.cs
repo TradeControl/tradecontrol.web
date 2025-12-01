@@ -25,8 +25,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
         [Display(Name = "Cash Type")]
         public string CashType { get; set; }
         [StringLength(10)]
-        [Display(Name = "Mode")]
-        public string CashMode { get; set; }
+        [Display(Name = "Polarity")]
+        public string CashPolarity { get; set; }
         [Display(Name = "Enabled?")]
         public bool IsEnabled { get; set; }
     }

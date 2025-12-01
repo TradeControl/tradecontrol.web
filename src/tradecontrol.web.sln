@@ -1,17 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30413.136
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1B4B-4D74-84AF-4625B851D52B}"
 	ProjectSection(SolutionItems) = preProject
-		..\changelog.md = ..\changelog.md
-		..\docs\dev_plan.md = ..\docs\dev_plan.md
+		..\docs\categorytree_test_script.md = ..\docs\categorytree_test_script.md
+		..\docs\changelog-schema.md = ..\docs\changelog-schema.md
+		..\docs\changelog.md = ..\docs\changelog.md
 		..\readme.md = ..\readme.md
 		..\docs\template_tags.md = ..\docs\template_tags.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCWeb", "TCWeb\TCWeb.csproj", "{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "schema", "schema", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "tcNodeDb4", "Schema\tcNodeDb4\tcNodeDb4.sqlproj", "{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,9 +40,30 @@ Global
 		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhone.Build.0 = Release|Any CPU
 		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|iPhone.Deploy.0 = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Debug|iPhoneSimulator.Deploy.0 = Debug|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhone.Build.0 = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhone.Deploy.0 = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhoneSimulator.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}

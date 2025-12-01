@@ -19,10 +19,10 @@ namespace TradeControl.Web.Models
         public string UserName { get; set; }
         [StringLength(10)]
         [Display(Name = "A/c")]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [StringLength(255)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         [Display(Name = "Cash Code")]
         public string CashCode { get; set; }

@@ -1,0 +1,276 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Enquiry.DetailsModel
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+
+@{
+    ViewData["Title"] = "Organisation Details";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.SubjectCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.SubjectCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.SubjectType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.SubjectType)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.SubjectStatus)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.SubjectStatus)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PhoneNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PhoneNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.EmailAddress)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.EmailAddress)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.WebSite)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.WebSite)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.Address)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.Address)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.TaxDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.TaxDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PaymentTerms)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PaymentTerms)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PaymentDays)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PaymentDays)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.ExpectedDays)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.ExpectedDays)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PayDaysFromMonthEnd)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PayDaysFromMonthEnd)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.PayBalance)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.PayBalance)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.Eujurisdiction)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.Eujurisdiction)
+        </dd>
+    </dl>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="./Index"
+           asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+           class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center"
+           title="Back to list">
+            <i class="bi bi-list me-1" aria-hidden="true"></i>
+            <span class="text-truncate">List</span>
+        </a>
+    </div>
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="./Invoices"
+           asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+           class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center"
+           title="View invoices">
+            <i class="bi bi-receipt me-1" aria-hidden="true"></i>
+            <span class="text-truncate">Invoices</span>
+        </a>
+    </div>
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="./Payments"
+           asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+           class="btn btn-outline-success w-100 d-flex align-items-center justify-content-center"
+           title="View payments">
+            <i class="bi bi-currency-dollar me-1" aria-hidden="true"></i>
+            <span class="text-truncate">Payments</span>
+        </a>
+    </div>
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="./Statement"
+           asp-route-accountCode="@Model.Subject_Account.SubjectCode"
+           class="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center"
+           title="View statement">
+            <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
+            <span class="text-truncate">Statement</span>
+        </a>
+    </div>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                Additional Addresses
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Addresses)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Address)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Subject_Contacts[0].ContactName)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Subject_Contacts)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ContactName)
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <a class="btn btn-info" asp-page="../Contact/Details" asp-route-accountCode="@item.SubjectCode" asp-route-contactName="@item.ContactName" title="Details">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span class="visually-hidden">Details</span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h2>Extended Data</h2>
+
+<div>
+    <h4>@Html.DisplayFor(model => model.Subject_Account.SubjectName)</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.IndustrySector)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.IndustrySector)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.AreaCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.AreaCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.SubjectSource)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.SubjectSource)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.CompanyNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.CompanyNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.VatNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.VatNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.NumberOfEmployees)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.NumberOfEmployees)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.OpeningBalance)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.OpeningBalance)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.Turnover)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.Turnover)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.BusinessDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.BusinessDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.InsertedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.InsertedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.InsertedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.InsertedOn)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Subject_Account.UpdatedOn)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Subject_Account.UpdatedOn)
+        </dd>
+    </dl>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

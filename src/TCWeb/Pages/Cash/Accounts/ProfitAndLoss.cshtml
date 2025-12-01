@@ -7,13 +7,16 @@
     <a asp-page="./ProfitAndLossByPeriod" class="btn btn-outline-info">Monthly Statements</a>
 </p>
 
-<form class="form-group" method="get">
-    <p>
-        <select asp-for="YearName" asp-items="Model.YearNames">
-        </select>
-
-        <input type="submit" value="Generate" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <label class="visually-hidden" for="YearName">Year</label>
+            <select asp-for="YearName" asp-items="Model.YearNames" id="YearName" class="form-control"></select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Generate" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
 <h3>Accounts</h3>

@@ -1,0 +1,43 @@
+@page
+@model TradeControl.Web.Pages.Cash.CategoryTree.TreeDetailsModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var isEmbedded = string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
+    if (isEmbedded)
+    {
+        Layout = null;
+    }
+}
+
+@if (!isEmbedded)
+{
+    <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+    <script src="~/js/categoryTree.shared.js" asp-append-version="true"></script>
+    <script>
+        if (window.location.hostname === "localhost") {
+            window.tcTree = window.tcTree || {};
+            window.tcTree.debug = true;
+        }
+    </script>
+}
+
+@if (Model == null || string.IsNullOrWhiteSpace(Model.NodeType))
+{
+    <div class="text-muted small px-2 py-1">No selection.</div>
+}
+else if (Model.NodeType == "code" && Model.Code != null)
+{
+    await Html.RenderPartialAsync("_CashCodeDetailsCard", Model.Code);
+}
+else if (Model.NodeType == "category" && Model.Category != null)
+{
+    await Html.RenderPartialAsync("_CategoryDetailsCard", Model.Category);
+}
+else if (Model.NodeType == "expression" && Model.Expression != null)
+{
+    await Html.RenderPartialAsync("_ExpressionDetailsCard", Model.Expression);
+}
+else
+{
+    <div class="text-muted small px-2 py-1">No details available.</div>
+}

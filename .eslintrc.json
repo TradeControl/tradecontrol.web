@@ -1,0 +1,97 @@
+{
+    "env": {
+        "browser": true,
+        "es6": false
+    },
+    "parserOptions": { "ecmaVersion": 2015 },
+    "rules": {
+        "brace-style": [
+            "error",
+            "allman",
+            { "allowSingleLine": false }
+        ],
+        "curly": [ "error", "all" ],
+        "max-statements-per-line": [
+            "error",
+            { "max": 1 }
+        ],
+        "nonblock-statement-body-position": [ "error", "below" ],
+        "one-var": [ "error", "never" ],
+        "no-mixed-spaces-and-tabs": "error",
+        "no-trailing-spaces": "error",
+        "quotes": [
+            "error",
+            "double",
+            { "avoidEscape": true }
+        ],
+        "semi": [ "error", "always" ],
+        "indent": [
+            "error",
+            4,
+            { "SwitchCase": 1 }
+        ],
+        "block-spacing": [ "error", "never" ],
+        "keyword-spacing": [
+            "error",
+            {
+                "before": true,
+                "after": true
+            }
+        ],
+        "space-before-function-paren": [
+            "error",
+            {
+                "anonymous": "never",
+                "named": "never",
+                "async": "never"
+            }
+        ],
+        "space-in-parens": [ "error", "never" ],
+        "array-bracket-spacing": [ "error", "never" ],
+        "object-curly-spacing": [ "error", "never" ],
+        "comma-spacing": [
+            "error",
+            {
+                "before": false,
+                "after": true
+            }
+        ],
+        "no-multiple-empty-lines": [
+            "error",
+            {
+                "max": 2,
+                "maxEOF": 1
+            }
+        ],
+        "eol-last": [ "error", "always" ],
+        "no-redeclare": "error",
+        "no-unused-vars": [
+            "error",
+            {
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_",
+                "ignoreRestSiblings": true
+            }
+        ],
+        "no-implicit-globals": "error",
+        "no-undef": "error",
+        "consistent-return": "error",
+        "eqeqeq": [
+            "error",
+            "always",
+            { "null": "ignore" }
+        ],
+        "no-fallthrough": "error",
+        "no-shadow": "warn",
+        "padded-blocks": [ "error", "never" ],
+        "no-empty": [
+            "error",
+            { "allowEmptyCatch": true }
+        ],
+        "spaced-comment": [
+            "error",
+            "always",
+            { "exceptions": [ "-", "*" ] }
+        ]
+    }
+}

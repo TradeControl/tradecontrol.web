@@ -71,10 +71,10 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                 {
                     await NodeContext.SaveChangesAsync();
 
-                    string cashAccountCode = await NodeContext.Cash_tbPayments.Where(t => t.PaymentCode == paymentCode).Select(t => t.CashAccountCode).FirstAsync();
+                    string cashSubjectCode = await NodeContext.Cash_tbPayments.Where(t => t.PaymentCode == paymentCode).Select(t => t.AccountCode).FirstAsync();
 
                     RouteValueDictionary route = new();
-                    route.Add("CashAccountCode", cashAccountCode);
+                    route.Add("AccountCode", cashSubjectCode);
 
                     return RedirectToPage("./Index", route);
                 }

@@ -43,12 +43,12 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 if (string.IsNullOrEmpty(accountCode) || string.IsNullOrEmpty(cashCode))
                     return NotFound();
 
-                Entry_Header = await NodeContext.Invoice_Entries.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.CashCode == cashCode);
+                Entry_Header = await NodeContext.Invoice_Entries.FirstOrDefaultAsync(m => m.SubjectCode == accountCode && m.CashCode == cashCode);
 
                 if (Entry_Header == null)
                     return NotFound();
 
-                Invoice_Entry = await NodeContext.Invoice_tbEntries.FirstOrDefaultAsync(m => m.AccountCode == accountCode && m.CashCode == cashCode);
+                Invoice_Entry = await NodeContext.Invoice_tbEntries.FirstOrDefaultAsync(m => m.SubjectCode == accountCode && m.CashCode == cashCode);
 
                 if ((User.IsInRole(Constants.ManagersRole) || User.IsInRole(Constants.AdministratorsRole)) == false)
                 {
@@ -92,7 +92,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!await NodeContext.Invoice_Entries.AnyAsync(e => e.AccountCode == Invoice_Entry.AccountCode && e.CashCode == Invoice_Entry.CashCode))
+                    if (!await NodeContext.Invoice_Entries.AnyAsync(e => e.SubjectCode == Invoice_Entry.SubjectCode && e.CashCode == Invoice_Entry.CashCode))
                         return NotFound();
                     else
                         throw;

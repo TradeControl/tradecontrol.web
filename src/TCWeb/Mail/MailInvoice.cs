@@ -29,11 +29,11 @@ namespace TradeControl.Web.Mail
             {
                 string accountCode = await NodeContext.Invoice_tbInvoices
                                         .Where(i => i.InvoiceNumber == InvoiceNumber)
-                                        .Select(i => i.AccountCode)
+                                        .Select(i => i.SubjectCode)
                                         .FirstAsync();
 
-                var invoiceHeader = from c in NodeContext.Org_EmailAddresses
-                                    where c.AccountCode == accountCode && c.EmailAddress == emailAddress
+                var invoiceHeader = from c in NodeContext.Subject_EmailAddresses
+                                    where c.SubjectCode == accountCode && c.EmailAddress == emailAddress
                                     select new
                                     {
                                         Name = c.ContactName,
@@ -118,8 +118,8 @@ namespace TradeControl.Web.Mail
 
             Document.Subject = invoice.InvoiceType;
             Document.Arguments.Add("InvoiceType", invoice.InvoiceType);
-            Document.Arguments.Add("AccountCode", invoice.AccountCode);
-            Document.Arguments.Add("AccountName", invoice.AccountName);
+            Document.Arguments.Add("SubjectCode", invoice.SubjectCode);
+            Document.Arguments.Add("SubjectName", invoice.SubjectName);
             Document.Arguments.Add("EmailAddress", invoice.EmailAddress ?? string.Empty);
             Document.Arguments.Add("InvoiceNumber", invoice.InvoiceNumber);
             Document.Arguments.Add("UserName", invoice.UserName);

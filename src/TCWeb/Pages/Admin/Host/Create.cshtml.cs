@@ -25,7 +25,7 @@ namespace TradeControl.Web.Pages.Admin.Host
 
         UserManager<TradeControlWebUser> UserManager { get; }
 
-        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context) 
+        public CreateModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
             UserManager = userManager;
         }
@@ -62,17 +62,20 @@ namespace TradeControl.Web.Pages.Admin.Host
                 if (!ModelState.IsValid)
                     return Page();
 
-                Encrypt encrypt = new(NodeSettings.SymmetricKey, NodeSettings.SymmetricVector);
+                NodeSettings nodeSettings = new(NodeContext);
+                var (key, iv) = await nodeSettings.GetOrCreateSymmetricAsync();
+
+                Encrypt encrypt = new (key, iv);
                 App_tbHost.EmailPassword = encrypt.EncryptString(App_tbHost.EmailPassword);
 
                 NodeContext.App_tbHosts.Add(App_tbHost);
 
                 await NodeContext.SaveChangesAsync();
-                
+
                 if (await NodeContext.App_tbHosts.AnyAsync())
                 {
                     int hostId = await NodeContext.App_tbHosts.Select(h => h.HostId).FirstAsync();
-                    NodeSettings nodeSettings = new(NodeContext);
+
                     if (!await nodeSettings.SetHost(hostId))
                         return RedirectToPage("/Admin/EventLog/Index");
                 }

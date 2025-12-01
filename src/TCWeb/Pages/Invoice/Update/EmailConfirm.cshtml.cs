@@ -82,8 +82,8 @@ namespace TradeControl.Web.Pages.Invoice.Update
                     if (TemplateFileNames.Any())
                         TemplateFileName = TemplateFileNames.First().Text;
 
-                    var emailAddresses = from tb in NodeContext.Org_EmailAddresses
-                                         where tb.AccountCode == Invoice_Header.AccountCode
+                    var emailAddresses = from tb in NodeContext.Subject_EmailAddresses
+                                         where tb.SubjectCode == Invoice_Header.SubjectCode
                                          orderby tb.EmailAddress
                                          select tb;
 

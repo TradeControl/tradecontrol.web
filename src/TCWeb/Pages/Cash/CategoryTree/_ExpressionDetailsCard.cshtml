@@ -1,0 +1,59 @@
+@model TradeControl.Web.Pages.Cash.CategoryTree.ExpressionDetailsVm
+@{
+    var isEmbedded = string.Equals(Context.Request.Query["embed"], "1", System.StringComparison.Ordinal);
+}
+<div id="expressionDetails"
+     class="card shadow-sm mb-3"
+     data-node-type="expression"
+     data-key="expr:@Model.CategoryCode">
+    <div class="card-body">
+        <h5 class="card-title mb-1">
+            @Model.Category (@Model.CategoryCode)
+            <span class="ms-2 text-secondary"><i class="bi bi-calculator"></i></span>
+        </h5>
+        <div class="small text-muted mb-2">Cash Expression</div>
+
+        <div class="mb-2">
+            <div class="text-muted small">Expression</div>
+            <code class="small">@Model.Expression</code>
+        </div>
+        <div class="mb-2">
+            <div class="text-muted small">Format</div>
+            <span class="small">@Model.Format</span>
+        </div>
+
+        <div class="mb-2">
+            <div class="text-muted small">Syntax</div>
+            <span class="small">@Model.SyntaxType</span>
+        </div>
+
+        <div class="mb-2">
+            <div class="text-muted small">Status</div>
+            @if (Model.IsError)
+            {
+                <span class="badge bg-danger">Error</span>
+                if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger mt-2 small mb-0">@Model.ErrorMessage</div>
+                }
+            }
+            else
+            {
+                <span class="badge bg-success">OK</span>
+            }
+        </div>
+
+        <div class="mt-3 d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-action="editExpression">Edit</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-action="deleteExpression">Delete</button>
+            @if (!isEmbedded)
+            {
+                <button type="button" class="btn btn-sm btn-secondary" data-action="cancel"
+                        data-return-key="expr:@Model.CategoryCode"
+                        data-return-parent="@TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel.ExpressionsNodeKey">
+                    Back
+                </button>
+            }
+        </div>
+    </div>
+</div>

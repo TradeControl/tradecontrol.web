@@ -1,0 +1,96 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.CashAccount.EditModel
+@{ ViewData["Title"] = "New Cash Account"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<dl class="row">
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Subject_CashAccount.SubjectCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.OrganisationName)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountTypeCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.AccountType)
+    </dd>
+</dl>
+
+    <div class="row">
+        <div class="col-md-4">
+            <form method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="mb-3">
+                    <label asp-for="Subject_CashAccount.AccountCode" class="control-label"></label>
+                    <input asp-for="Subject_CashAccount.AccountCode" class="form-control" />
+                    <span asp-validation-for="Subject_CashAccount.AccountCode" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Subject_CashAccount.AccountName" class="control-label"></label>
+                    <input asp-for="Subject_CashAccount.AccountName" class="form-control" />
+                    <span asp-validation-for="Subject_CashAccount.AccountName" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Subject_CashAccount.CashCode" class="control-label"></label>
+                    <p>
+                        <select asp-for="CashDescription" asp-items="Model.CashCodes" class="form-control"></select>
+                    </p>
+                    <input type="hidden" asp-for="Subject_CashAccount.CashCode" />
+                    <span asp-validation-for="Subject_CashAccount.CashCode" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Subject_CashAccount.LiquidityLevel" class="control-label"></label>
+                    <input asp-for="Subject_CashAccount.LiquidityLevel" class="form-control" />
+                    <span asp-validation-for="Subject_CashAccount.LiquidityLevel" class="text-danger"></span>
+                </div>
+                @{ 
+                    if (Model.Subject_CashAccount.AccountTypeCode == 0)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Subject_CashAccount.AccountNumber" class="control-label"></label>
+                            <input asp-for="Subject_CashAccount.AccountNumber" class="form-control" />
+                            <span asp-validation-for="Subject_CashAccount.AccountNumber" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Subject_CashAccount.SortCode" class="control-label"></label>
+                            <input asp-for="Subject_CashAccount.SortCode" class="form-control" />
+                            <span asp-validation-for="Subject_CashAccount.SortCode" class="text-danger"></span>
+                        </div>
+                    }
+                }
+                <div class="mb-3">
+                    <label asp-for="Subject_CashAccount.OpeningBalance" class="control-label"></label>
+                    <input asp-for="Subject_CashAccount.OpeningBalance" class="form-control" />
+                    <span asp-validation-for="Subject_CashAccount.OpeningBalance" class="text-danger"></span>
+                </div>
+                <div class="mb-3 form-check">
+                    <label class="form-check-label">
+                        <input asp-for="Subject_CashAccount.AccountClosed" class="form-check-input" /> @Html.DisplayNameFor(model => model.Subject_CashAccount.AccountClosed)
+                    </label>
+                    <span asp-validation-for="Subject_CashAccount.AccountClosed" class="text-danger"></span>
+                </div>
+
+                <input type="hidden" asp-for="Subject_CashAccount.SubjectCode" />
+                <input type="hidden" asp-for="Subject_CashAccount.AccountTypeCode" />
+                <input type="hidden" asp-for="Subject_CashAccount.CoinTypeCode" />
+                <input type="hidden" asp-for="Subject_CashAccount.CurrentBalance" />
+                <input type="hidden" asp-for="Subject_CashAccount.InsertedBy" />
+                <input type="hidden" asp-for="Subject_CashAccount.InsertedOn" />
+                <input type="hidden" asp-for="Subject_CashAccount.UpdatedBy" />
+                <input type="hidden" asp-for="Subject_CashAccount.UpdatedOn" />
+
+                <div class="mb-3">
+                    <input type="submit" value="UPDATE ACCOUNT" class="btn btn-primary" />
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    @section Scripts {
+        @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    }
+

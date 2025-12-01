@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "lint": "eslint \"**/wwwroot/js/**/*.js\"",
+    "lint:fix": "eslint --fix \"**/wwwroot/js/**/*.js\""
+  }
+}

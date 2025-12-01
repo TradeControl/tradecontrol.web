@@ -1,0 +1,36 @@
+﻿@page
+@model TradeControl.Web.Pages.Subject.Type.EditModel
+@{ ViewData["Title"] = "Edit Organisation Type"; }
+<h1>@ViewData["Title"]</h1>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Subject_tbType.SubjectType" class="control-label"></label>
+                <input asp-for="Subject_tbType.SubjectType" class="form-control" />
+                <span asp-validation-for="Subject_tbType.SubjectType" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Subject_tbType.CashPolarityCode" class="control-label"></label>
+                <p>
+                    <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-control"></select>
+                </p>
+            </div>
+
+            <input type="hidden" asp-for="Subject_tbType.SubjectTypeCode" />
+            <input type="hidden" asp-for="Subject_tbType.CashPolarityCode" />
+
+            <div class="mb-3">
+                <input type="submit" value="UPDATE" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-info">To List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

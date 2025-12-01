@@ -62,7 +62,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
                     App_Initialisation = new()
                     {
                         TemplateName = TemplateNames.FirstOrDefault().Text,
-                        AccountName = company.CompanyName,
+                        SubjectName = company.CompanyName,
                         BusinessAddress = company.CompanyAddress,
                         UserName = await profile.UserName(UserManager.GetUserId(User)),
                         PhoneNumber = company.CompanyPhoneNumber,
@@ -71,7 +71,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         CompanyNumber = company.CompanyNumber,
                         VatNumber = company.VatNumber,
                         BankName = company.BankName,
-                        CurrentAccountName = company.CurrentAccountName,
+                        CurrentSubjectName = company.CurrentSubjectName,
                         CAAccountNumber = company.BankAccountNumber,
                         CASortCode = company.BankSortCode,
                         CalendarCode = await NodeContext.App_tbCalendars.OrderBy(c => c.CalendarCode).Select(c => c.CalendarCode).SingleOrDefaultAsync(),
@@ -79,27 +79,27 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == options.UnitOfCharge).Select(u => u.UocName).SingleOrDefaultAsync()
                     };
 
-                    var bankAddr = await (  from ca in NodeContext.Org_CurrentAccounts
-                                            join addr in NodeContext.Org_tbAddresses
-                                            on ca.AccountCode equals addr.AccountCode
+                    var bankAddr = await (  from ca in NodeContext.Subject_CurrentAccounts
+                                            join addr in NodeContext.Subject_tbAddresses
+                                            on ca.SubjectCode equals addr.SubjectCode
                                             select addr.Address).FirstOrDefaultAsync();
 
                     App_Initialisation.BankAddress = bankAddr != null ? bankAddr : string.Empty;
 
-                    var reserveAccount = await NodeContext.Org_ReserveAccounts.OrderBy(r => r.CashAccountCode).FirstOrDefaultAsync();
+                    var reserveAccount = await NodeContext.Subject_ReserveAccounts.OrderBy(r => r.AccountCode).FirstOrDefaultAsync();
 
                     if (reserveAccount != null)
                     {
-                        App_Initialisation.ReserveAccountName = reserveAccount.CashAccountName;
+                        App_Initialisation.ReserveSubjectName = reserveAccount.AccountName;
                         App_Initialisation.RAAccountNumber = reserveAccount.AccountNumber;
                         App_Initialisation.RASortCode = reserveAccount.SortCode;
                     }
 
                     var gov = await (from t in NodeContext.Cash_tbTaxTypes
-                                     join o in NodeContext.Org_tbOrgs
-                                       on t.AccountCode equals o.AccountCode
-                                     orderby t.AccountCode
-                                     select o.AccountName).FirstOrDefaultAsync();
+                                     join o in NodeContext.Subject_tbSubjects
+                                       on t.SubjectCode equals o.SubjectCode
+                                     orderby t.SubjectCode
+                                     select o.SubjectName).FirstOrDefaultAsync();
 
                     if (gov != null)
                         App_Initialisation.Government = gov;
@@ -131,8 +131,8 @@ namespace TradeControl.Web.Pages.Admin.Setup
             var user = await UserManager.GetUserAsync(User);
 
             await NodeContext.ConfigureNode(
-                accountCode: App_Initialisation.AccountCode,
-                businessName: App_Initialisation.AccountName,
+                accountCode: App_Initialisation.SubjectCode,
+                businessName: App_Initialisation.SubjectName,
                 fullName: App_Initialisation.UserName,
                 businessAddress: App_Initialisation.BusinessAddress,
                 businessEmailAddress: App_Initialisation.EmailAddress,
@@ -152,14 +152,14 @@ namespace TradeControl.Web.Pages.Admin.Setup
             await NodeContext.InstallBasicSetup(
                 templateName: App_Initialisation.TemplateName,
                 financialMonth: monthNumber,
-                govAccountName: App_Initialisation.Government,
+                govSubjectName: App_Initialisation.Government,
                 bankName: App_Initialisation.BankName,
                 bankAddress: App_Initialisation.BankAddress,
-                dummyAccount: App_Initialisation.DummyAccountName,
-                currentAccount: App_Initialisation.CurrentAccountName,
+                dummyAccount: App_Initialisation.DummySubjectName,
+                currentAccount: App_Initialisation.CurrentSubjectName,
                 ca_SortCode: App_Initialisation.CASortCode,
                 ca_AccountNumber: App_Initialisation.CAAccountNumber,
-                reserveAccount: App_Initialisation.ReserveAccountName,
+                reserveAccount: App_Initialisation.ReserveSubjectName,
                 ra_SortCode: App_Initialisation.RASortCode,
                 ra_AccountNumber: App_Initialisation.RAAccountNumber);
 
@@ -188,11 +188,11 @@ namespace TradeControl.Web.Pages.Admin.Setup
         [Required]
         [StringLength(10)]
         [Display(Name = "Account Code")]
-        public string AccountCode { get; set; } = "HOME";
+        public string SubjectCode { get; set; } = "HOME";
         [Required]
         [StringLength(255)]
         [Display(Name = "Business Name")]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [Display(Name = "Business Address")]
         public string BusinessAddress { get; set; }
@@ -229,7 +229,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
         [Required]
         [StringLength(50)]
         [Display(Name = "Current Account Name")]
-        public string CurrentAccountName { get; set; }
+        public string CurrentSubjectName { get; set; }
         [Required]
         [StringLength(10)]
         [Display(Name = "Sort Code")]
@@ -240,7 +240,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
         public string CAAccountNumber { get; set; }
         [StringLength(50)]
         [Display(Name = "Reserve Account Name")]
-        public string ReserveAccountName { get; set; }
+        public string ReserveSubjectName { get; set; }
         [StringLength(10)]
         [Display(Name = "Sort Code")]
         public string RASortCode { get; set; }
@@ -249,7 +249,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
         public string RAAccountNumber { get; set; }
         [StringLength(50)]
         [Display(Name = "Dummy Account")]
-        public string DummyAccountName { get; set; } = "ADJUSTMENTS";
+        public string DummySubjectName { get; set; } = "ADJUSTMENTS";
         [Required]
         [StringLength(10)]
         [Display(Name = "Calendar Code")]

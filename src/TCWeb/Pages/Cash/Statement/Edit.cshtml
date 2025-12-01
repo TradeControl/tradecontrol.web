@@ -9,16 +9,16 @@
 
 <dl class="row">
     <dt class="col-sm-2">
-        @Html.DisplayNameFor(model => model.Cash_Payment.CashAccountCode)
-    </dt>
-    <dd class="col-sm-10">
-        @Html.DisplayFor(model => model.Cash_Payment.CashAccountCode)
-    </dd>
-    <dt class="col-sm-2">
         @Html.DisplayNameFor(model => model.Cash_Payment.AccountCode)
     </dt>
     <dd class="col-sm-10">
         @Html.DisplayFor(model => model.Cash_Payment.AccountCode)
+    </dd>
+    <dt class="col-sm-2">
+        @Html.DisplayNameFor(model => model.Cash_Payment.SubjectCode)
+    </dt>
+    <dd class="col-sm-10">
+        @Html.DisplayFor(model => model.Cash_Payment.SubjectCode)
     </dd>
 </dl>
 
@@ -30,8 +30,8 @@
             <input type="hidden" asp-for="Cash_Payment.UserId" />
             <input type="hidden" asp-for="Cash_Payment.PaymentCode" />
             <input type="hidden" asp-for="Cash_Payment.PaymentStatusCode" />
+            <input type="hidden" asp-for="Cash_Payment.SubjectCode" />
             <input type="hidden" asp-for="Cash_Payment.AccountCode" />
-            <input type="hidden" asp-for="Cash_Payment.CashAccountCode" />
             <input type="hidden" asp-for="Cash_Payment.CashCode" />
             <input type="hidden" asp-for="Cash_Payment.TaxCode" />
             <input type="hidden" asp-for="Cash_Payment.IsProfitAndLoss" />
@@ -40,29 +40,29 @@
             <input type="hidden" asp-for="Cash_Payment.UpdatedBy" />
             <input type="hidden" asp-for="Cash_Payment.UpdatedOn" />
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_Payment.PaidOn" class="control-label"></label>
                 <input asp-for="Cash_Payment.PaidOn" class="form-control" />
                 <span asp-validation-for="Cash_Payment.PaidOn" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_Payment.PaidInValue" class="control-label"></label>
                 <input asp-for="Cash_Payment.PaidInValue" class="form-control" />
                 <span asp-validation-for="Cash_Payment.PaidInValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_Payment.PaidOutValue" class="control-label"></label>
                 <input asp-for="Cash_Payment.PaidOutValue" class="form-control" />
                 <span asp-validation-for="Cash_Payment.PaidOutValue" class="text-danger"></span>
             </div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Cash_Payment.PaymentReference" class="control-label"></label>
                 <input asp-for="Cash_Payment.PaymentReference" class="form-control" />
                 <span asp-validation-for="Cash_Payment.PaymentReference" class="text-danger"></span>
             </div>
             @if (Model.CashCodeIsEditable)
             {
-                <div class="form-group">
+                <div class="mb-3">
                     <label asp-for="Cash_Payment.CashCode" class="control-label"></label>
                     <p>
                         <button type="submit" asp-page-handler="GetCashCode" class="btn btn-outline-info">Select</button>
@@ -77,7 +77,7 @@
                         <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-control"></select>
                     </p>
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     <label asp-for="Cash_Payment.TaxCode" class="control-label"></label>
                     <p>
                         <button type="submit" asp-page-handler="GetTaxCode" class="btn btn-outline-info">Select</button>
@@ -93,7 +93,7 @@
                     </p>
                 </div>
             }
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="SAVE" class="btn btn-primary" />
                 <a asp-page="./Index" asp-route-paymentCode=@Model.Cash_Payment.PaymentCode class="btn btn-info">To List</a>
             </div>

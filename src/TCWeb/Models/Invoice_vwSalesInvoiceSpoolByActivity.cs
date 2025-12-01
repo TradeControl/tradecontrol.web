@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Invoice_vwSalesInvoiceSpoolByActivity
+    public partial class Invoice_vwSalesInvoiceSpoolByObject
     {
         [Required]
         [StringLength(20)]
@@ -23,10 +23,10 @@ namespace TradeControl.Web.Models
         public string UserName { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [StringLength(50)]
         public string InvoiceStatus { get; set; }
         [Column(TypeName = "datetime")]
@@ -47,19 +47,19 @@ namespace TradeControl.Web.Models
         public string AddressCode { get; set; }
         [Required]
         [StringLength(50)]
-        public string ActivityCode { get; set; }
+        public string ObjectCode { get; set; }
         [Required]
         [StringLength(15)]
         public string UnitOfMeasure { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime FirstActionedOn { get; set; }
         [Column(TypeName = "decimal(38, 4)")]
-        public decimal ActivityQuantity { get; set; }
+        public decimal ObjectQuantity { get; set; }
         [StringLength(10)]
         public string TaxCode { get; set; }
         [Column(TypeName = "decimal(38, 5)")]
-        public decimal ActivityInvoiceValue { get; set; }
+        public decimal ObjectInvoiceValue { get; set; }
         [Column(TypeName = "decimal(38, 5)")]
-        public decimal ActivityTaxValue { get; set; }
+        public decimal ObjectTaxValue { get; set; }
     }
 }

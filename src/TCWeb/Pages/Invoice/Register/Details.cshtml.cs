@@ -28,12 +28,12 @@ namespace TradeControl.Web.Pages.Invoice.Register
         [BindProperty]
         public string PeriodName { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string invoiceNumber, string taskCode)
+        public async Task<IActionResult> OnGetAsync(string invoiceNumber, string projectCode)
         {
-            if (invoiceNumber == null || taskCode == null)
+            if (invoiceNumber == null || projectCode == null)
                 return NotFound();
 
-            Invoice_Detail = await NodeContext.Invoice_RegisterDetails.FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber && i.TaskCode == taskCode);
+            Invoice_Detail = await NodeContext.Invoice_RegisterDetails.FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber && i.ProjectCode == projectCode);
 
             if (Invoice_Detail == null)
                 return NotFound();

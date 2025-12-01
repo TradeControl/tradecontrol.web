@@ -1,25 +1,45 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Admin.FileTransfer.IndexModel
-@{ ViewData["Title"] = "File Transfer"; }
+
+@{
+    ViewData["Title"] = "File Transfer";
+    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+}
+
 <h1>@ViewData["Title"]</h1>
 
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div class="form-group">
-                <input type="hidden" asp-for="@Model.ContentType" />
-                <a asp-page="./Upload" asp-route-contentType="@Model.ContentType" class="btn btn-outline-primary">UPLOAD</a>
-                <button type="submit" asp-page-handler="SyncFiles" class="btn btn-outline-success">SYNC</button>
-            </div>
+<div class="row g-2 mb-3">
+    <div class="col-12 col-sm-3 d-flex">
+        <a asp-page="./Upload" asp-route-contentType="@Model.ContentType"
+           class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+           title="Upload files">
+            <span class="text-truncate">Upload</span>
+        </a>
+    </div>
+
+    <div class="col-12 col-sm-3 d-flex">
+        <form method="post" class="w-100 d-flex align-items-center justify-content-center">
+            <input type="hidden" asp-for="ContentType" />
+            <button type="submit" asp-page-handler="SyncFiles"
+                    class="btn btn-outline-success w-100"
+                    title="Synchronise files">
+                <span class="text-truncate">Sync</span>
+            </button>
         </form>
     </div>
 </div>
 
-<form class="form-group" method="get">
-    <p>
-        <select asp-for="ContentType" asp-items="Model.ContentTypes"></select>
-        <input type="submit" value="SELECT" />
-    </p>
+<form class="mb-3" method="get">
+    <div class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select asp-for="ContentType" asp-items="Model.ContentTypes" class="form-control"></select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Select" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
 <table class="table table-striped">
@@ -39,8 +59,14 @@
                     @Html.DisplayFor(modelItem => item)
                 </td>
                 <td>
-                    <a asp-page-handler="Download" asp-route-fileName="@item"  class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-fileName="@item" asp-route-contentType="@Model.ContentType" class="btn btn-danger"></a>
+                    <a asp-page-handler="Download" asp-route-fileName="@item" class="btn btn-secondary" title="Download">
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                        <span class="visually-hidden">Download</span>
+                    </a>
+                    <a asp-page="./Delete" asp-route-fileName="@item" asp-route-contentType="@Model.ContentType" class="btn btn-danger" title="Delete">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                        <span class="visually-hidden">Delete</span>
+                    </a>
                 </td>
 
             </tr>

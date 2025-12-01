@@ -1,0 +1,35 @@
+<div id="treeContextMenu" class="dropdown-menu" style="position:absolute; display:none; z-index:2000;">
+    <button type="button" class="dropdown-item" data-action="expandSelected">Expand Selected</button>
+    <button type="button" class="dropdown-item" data-action="collapseSelected">Collapse Selected</button>
+    <div class="dropdown-divider"></div>
+
+    <!-- Mobile-only via JS -->
+    <button type="button" class="dropdown-item" data-action="view">View</button>
+    <div class="dropdown-divider"></div>
+
+    <!-- Category actions (admin-only) -->
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="createTotal">New Total...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="createCategory">New Category...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="createCashCode">New Cash Code...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="addExistingCategory">Add Category...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="addExistingCashCode" data-hide-on-total="1">Add Cash Code...</button>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="move">Move...</button>
+    <div class="dropdown-divider admin-only cat-only"></div>
+    <button type="button" class="dropdown-item admin-only cat-only" data-action="edit">Edit...</button>
+
+    <!-- Code actions (admin-only) -->
+    <div class="dropdown-divider admin-only code-only"></div>
+    <button type="button" class="dropdown-item admin-only code-only" data-action="edit">Edit...</button>
+    <button type="button" class="dropdown-item admin-only code-only" data-action="move">Move...</button>
+
+    <div class="dropdown-divider"></div>
+    <!-- Reorder -->
+    <button type="button" class="dropdown-item admin-only" data-action="moveUp">Move Up</button>
+    <button type="button" class="dropdown-item admin-only" data-action="moveDown">Move Down</button>
+
+    <div class="dropdown-divider admin-only"></div>
+    <!-- Single toggle item; label set dynamically -->
+    <button type="button" class="dropdown-item admin-only" data-action="toggleEnabled">Enable</button>
+    <button type="button" class="dropdown-item admin-only" data-action="delete">Delete</button>
+
+</div>

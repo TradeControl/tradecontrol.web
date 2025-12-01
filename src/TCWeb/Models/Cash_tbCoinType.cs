@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         public Cash_tbCoinType()
         {
-            TbAccounts = new HashSet<Org_tbAccount>();
+            TbAccounts = new HashSet<Subject_tbAccount>();
             TbOptions = new HashSet<App_tbOption>();
         }
 
@@ -23,8 +23,8 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         public string CoinType { get; set; }
 
-        [InverseProperty(nameof(Org_tbAccount.CoinTypeCodeNavigation))]
-        public virtual ICollection<Org_tbAccount> TbAccounts { get; set; }
+        [InverseProperty(nameof(Subject_tbAccount.CoinTypeCodeNavigation))]
+        public virtual ICollection<Subject_tbAccount> TbAccounts { get; set; }
         [InverseProperty(nameof(App_tbOption.CoinTypeCodeNavigation))]
         public virtual ICollection<App_tbOption> TbOptions { get; set; }
     }

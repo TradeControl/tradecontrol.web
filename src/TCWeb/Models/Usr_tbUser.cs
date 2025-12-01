@@ -17,14 +17,14 @@ namespace TradeControl.Web.Models
     {
         public Usr_tbUser()
         {
-            TbCostSets = new HashSet<Task_tbCostSet>();
+            TbCostSets = new HashSet<Project_tbCostSet>();
             TbEntries = new HashSet<Invoice_tbEntry>();
             TbInvoices = new HashSet<Invoice_tbInvoice>();
             TbMenuUsers = new HashSet<Usr_tbMenuUser>();
-            TbOps = new HashSet<Task_tbOp>();
+            TbOps = new HashSet<Project_tbOp>();
             TbPayments = new HashSet<Cash_tbPayment>();
-            TbTaskActionBys = new HashSet<Task_tbTask>();
-            TbTaskUsers = new HashSet<Task_tbTask>();
+            TbProjectActionBys = new HashSet<Project_tbProject>();
+            TbProjectUsers = new HashSet<Project_tbProject>();
         }
 
         [Key]
@@ -63,7 +63,7 @@ namespace TradeControl.Web.Models
         public bool IsAdministrator { get; set; }
         [Display(Name = "Enabled?")]
         public short IsEnabled { get; set; }
-        public int NextTaskNumber { get; set; }
+        public int NextProjectNumber { get; set; }
         [Required]
         [StringLength(50)]
         [Display(Name = "Inserted By")]
@@ -86,21 +86,21 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(MenuViewCode))]
         [InverseProperty(nameof(Usr_tbMenuView.TbUsers))]
         public virtual Usr_tbMenuView MenuViewCodeNavigation { get; set; }
-        [InverseProperty(nameof(Task_tbCostSet.User))]
-        public virtual ICollection<Task_tbCostSet> TbCostSets { get; set; }
+        [InverseProperty(nameof(Project_tbCostSet.User))]
+        public virtual ICollection<Project_tbCostSet> TbCostSets { get; set; }
         [InverseProperty(nameof(Invoice_tbEntry.User))]
         public virtual ICollection<Invoice_tbEntry> TbEntries { get; set; }
         [InverseProperty(nameof(Invoice_tbInvoice.User))]
         public virtual ICollection<Invoice_tbInvoice> TbInvoices { get; set; }
         [InverseProperty(nameof(Usr_tbMenuUser.User))]
         public virtual ICollection<Usr_tbMenuUser> TbMenuUsers { get; set; }
-        [InverseProperty(nameof(Task_tbOp.User))]
-        public virtual ICollection<Task_tbOp> TbOps { get; set; }
+        [InverseProperty(nameof(Project_tbOp.User))]
+        public virtual ICollection<Project_tbOp> TbOps { get; set; }
         [InverseProperty(nameof(Cash_tbPayment.User))]
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
-        [InverseProperty(nameof(Task_tbTask.ActionBy))]
-        public virtual ICollection<Task_tbTask> TbTaskActionBys { get; set; }
-        [InverseProperty(nameof(Task_tbTask.User))]
-        public virtual ICollection<Task_tbTask> TbTaskUsers { get; set; }
+        [InverseProperty(nameof(Project_tbProject.ActionBy))]
+        public virtual ICollection<Project_tbProject> TbProjectActionBys { get; set; }
+        [InverseProperty(nameof(Project_tbProject.User))]
+        public virtual ICollection<Project_tbProject> TbProjectUsers { get; set; }
     }
 }

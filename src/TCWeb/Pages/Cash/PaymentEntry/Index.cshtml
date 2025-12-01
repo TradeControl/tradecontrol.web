@@ -1,21 +1,57 @@
 ﻿@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.PaymentEntry.IndexModel
 
 @{ ViewData["Title"] = "Payment Entry"; }
 <h1>@ViewData["Title"]</h1>
 
-<p>
-    <a asp-page="./Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-primary w-25">Pay Invoices</a>
-    <a asp-page="./Create" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="1" class="btn btn-outline-primary w-25">Miscellaneous Payment</a>
-    <a asp-page="/Cash/Statement/Index" asp-route-cashAccountCode="@Model.CashAccountCode" asp-route-mode="0" class="btn btn-outline-info w-25">Statement</a>
-</p>
+@{
+    if (User.IsInRole(Constants.AdministratorsRole))
+    {
+        <div class="row g-2 mb-3">
+            <div class="col-12 col-sm-4 d-flex">
+                <a asp-page="./Create"
+                   asp-route-cashSubjectCode="@Model.AccountCode"
+                   asp-route-mode="0"
+                   class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+                   title="Pay Invoices">
+                    <span class="text-truncate">Pay Invoices</span>
+                </a>
+            </div>
+            <div class="col-12 col-sm-4 d-flex">
+                <a asp-page="./Create"
+                   asp-route-cashSubjectCode="@Model.AccountCode"
+                   asp-route-mode="1"
+                   class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+                   title="Miscellaneous Payment">
+                    <span class="d-none d-sm-inline text-truncate">Miscellaneous Payment</span>
+                    <span class="d-inline d-sm-none">Misc. Payment</span>
+                </a>
+            </div>
+            <div class="col-12 col-sm-4 d-flex">
+                <a asp-page="/Cash/Statement/Index"
+                   asp-route-cashSubjectCode="@Model.AccountCode"
+                   asp-route-mode="0"
+                   class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center"
+                   title="View Statement">
+                    <span class="text-truncate">Statement</span>
+                </a>
+            </div>
+        </div>
+    }
+}
 
-<form class="form-group">
-    <p>
-        <select asp-for="CashAccountName" asp-items="Model.CashAccountNames"></select>
-        <input type="submit" value="Filter" />
-    </p>
+<form class="mb-3">
+    <div class="row align-items-center">
+        <div class="col-auto">
+            <select asp-for="AccountName" asp-items="Model.AccountNames" class="form-control"></select>
+        </div>
+        <div class="col-auto">
+            <input type="submit" value="Filter" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
+
 <table class="table  table-striped">
     <thead>
         <tr>
@@ -23,22 +59,27 @@
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOn)
             </th>
             <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].AccountName)
+                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].SubjectName)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaymentReference)
-            </th>
+
+            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+            {
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaymentReference)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashDescription)
+                </th>
+                <th>
+                    @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].TaxDescription)
+                </th>
+            }
+
             <th>
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidInValue)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].PaidOutValue)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].CashDescription)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted[0].TaxDescription)
             </th>
             <th></th>
         </tr>
@@ -51,13 +92,24 @@
                     @Html.DisplayFor(modelItem => item.PaidOn)
                 </td>
                 <td>
-                    <a asp-page="/Org/Enquiry/Index" asp-route-accountCode="@item.AccountCode">
-                        @Html.DisplayFor(modelItem => item.AccountName)
+                    <a asp-page="/Subject/Enquiry/Index" asp-route-accountCode="@item.SubjectCode">
+                        @Html.DisplayFor(modelItem => item.SubjectName)
                     </a>
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.PaymentReference)
-                </td>
+
+                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                {
+                    <td>
+                        @Html.DisplayFor(modelItem => item.PaymentReference)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.CashDescription)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.TaxDescription)
+                    </td>
+                }
+
                 <td>
                     @Html.DisplayFor(modelItem => item.PaidInValue)
                 </td>
@@ -65,24 +117,32 @@
                     @Html.DisplayFor(modelItem => item.PaidOutValue)
                 </td>
                 <td>
-                    @Html.DisplayFor(modelItem => item.CashDescription)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.TaxDescription)
-                </td>
-                <td>
-                    <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info"></a>
-                    <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary"></a>
-                    <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger"></a>
+                    <div class="action-buttons">
+                        <a asp-page="./Details" asp-route-paymentCode="@item.PaymentCode" class="btn btn-info" title="Details">
+                            <i class="bi bi-info-circle"></i>
+                        </a>
+                        @if (User.IsInRole(Constants.AdministratorsRole))
+                        {
+                            <a asp-page="./Edit" asp-route-paymentCode="@item.PaymentCode" class="btn btn-secondary" title="Edit this entry">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a asp-page="./Delete" asp-route-paymentCode="@item.PaymentCode" class="btn btn-danger" title="Delete this entry">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        }
+                    </div>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
 <form method="post">
-    <p>
-        <input type="submit" value="Post" class="btn btn-primary" />
-    </p>
+    <div class="row g-2">
+        <div class="col-auto">
+            <input type="submit" value="Post" class="btn btn-primary" />
+        </div>
+    </div>
 </form>
 
 @section Scripts {

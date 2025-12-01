@@ -4,7 +4,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <div>
-    <h4>@Html.DisplayFor(model => model.Invoice_Header.AccountName)</h4>
+    <h4>@Html.DisplayFor(model => model.Invoice_Header.SubjectName)</h4>
     <hr />
     <dl class="row">
         <dt class="col-sm-2">
@@ -38,7 +38,7 @@
     <div class="col-md-4">
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Invoice_Item.CashCode" class="control-label"></label>
                 <p>
                     <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-control"></select>
@@ -46,7 +46,7 @@
                 <span asp-validation-for="CashDescription" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Invoice_Item.TaxCode" class="control-label"></label>
                 <p>
                     <select asp-for="TaxDescription" asp-items="Model.TaxDescriptions" class="form-control"></select>
@@ -54,19 +54,19 @@
                 <span asp-validation-for="TaxDescription" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Invoice_Item.TotalValue" class="control-label"></label>
                 <input asp-for="Invoice_Item.TotalValue" class="form-control" />
                 <span asp-validation-for="Invoice_Item.TotalValue" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Invoice_Item.InvoiceValue" class="control-label"></label>
                 <input asp-for="Invoice_Item.InvoiceValue" class="form-control" />
                 <span asp-validation-for="Invoice_Item.InvoiceValue" class="text-danger"></span>
             </div>
 
-            <div class="form-group">
+            <div class="mb-3">
                 <label asp-for="Invoice_Item.ItemReference" class="control-label"></label>
                 <input asp-for="Invoice_Item.ItemReference" class="form-control" />
                 <span asp-validation-for="Invoice_Item.ItemReference" class="text-danger"></span>
@@ -77,7 +77,7 @@
             <input type="hidden" asp-for="Invoice_Item.TaxCode" />
 
 
-            <div class="form-group">
+            <div class="mb-3">
                 <input type="submit" value="ADD" class="btn btn-primary" />
                 <a asp-page="./Edit" asp-route-invoiceNumber="@Model.Invoice_Item.InvoiceNumber" class="btn btn-info">To Header</a>
             </div>

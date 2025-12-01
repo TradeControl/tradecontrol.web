@@ -43,7 +43,7 @@ namespace TradeControl.Web.Models
         public string BankName { get; set; }
         [StringLength(50)]
         [Display(Name = "Current Account")]
-        public string CurrentAccountName { get; set; }
+        public string CurrentSubjectName { get; set; }
         [StringLength(306)]
         [Display(Name = "Bank Account")]
         public string BankAccount { get; set; }

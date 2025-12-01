@@ -16,10 +16,10 @@ namespace TradeControl.Web.Models
         public string ContractAddress { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         public bool IsMirrored { get; set; }
         [StringLength(20)]
         public string InvoiceNumber { get; set; }
@@ -30,7 +30,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(20)]
         public string InvoiceType { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         public short InvoiceStatusCode { get; set; }
         [StringLength(50)]
         public string InvoiceStatus { get; set; }

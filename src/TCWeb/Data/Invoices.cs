@@ -26,9 +26,9 @@ namespace TradeControl.Web.Data
         }
 
         #region methods
-        public async Task<bool> Raise(string taskCode, NodeEnum.InvoiceType invoiceType, DateTime invoicedOn)
+        public async Task<bool> Raise(string projectCode, NodeEnum.InvoiceType invoiceType, DateTime invoicedOn)
         {
-            InvoiceNumber = await _context.InvoiceRaise(taskCode, invoiceType, invoicedOn);
+            InvoiceNumber = await _context.InvoiceRaise(projectCode, invoiceType, invoicedOn);
             return InvoiceNumber.Length > 0;
         }
 
@@ -44,11 +44,11 @@ namespace TradeControl.Web.Data
             return InvoiceNumber.Length > 0;
         }
 
-        public async Task<bool> AddTask(string taskCode)
+        public async Task<bool> AddProject(string projectCode)
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_AddTask @p0, @p1", parameters: new[] { InvoiceNumber, taskCode });
+                int result = await _context.Database.ExecuteSqlRawAsync("Invoice.proc_AddProject @p0, @p1", parameters: new[] { InvoiceNumber, projectCode });
                 return result != 0;
             }
             catch (Exception e)
@@ -148,7 +148,7 @@ namespace TradeControl.Web.Data
 
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,
@@ -204,7 +204,7 @@ namespace TradeControl.Web.Data
 
                 var _accountCode = new SqlParameter()
                 {
-                    ParameterName = "@AccountCode",
+                    ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 10,

@@ -14,10 +14,10 @@ namespace TradeControl.Web.Models
         public int LogId { get; set; }
         [Required]
         [StringLength(10)]
-        public string AccountCode { get; set; }
+        public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]
-        public string AccountName { get; set; }
+        public string SubjectName { get; set; }
         [Required]
         [StringLength(20)]
         public string InvoiceNumber { get; set; }
@@ -32,9 +32,9 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(20)]
         public string TransmitStatus { get; set; }
-        public short CashModeCode { get; set; }
+        public short CashPolarityCode { get; set; }
         [StringLength(10)]
-        public string CashMode { get; set; }
+        public string CashPolarity { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime DueOn { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
