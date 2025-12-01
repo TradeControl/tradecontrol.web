@@ -6,7 +6,7 @@ Changes to 3.33.1, released February 2021. Previous releases are logged in the [
 
 The purpose of Version 4 is to bring the schema naming conventions into alignment with the apps underlying [Production Theory](https://tradecontrol.github.io/articles/tc_production/). In consequence, all associated repositories will need to be updated before it can be published. 
 
-[Sql Server project tcNodeDb4](https://github.com/TradeControl/tradecontrol.web/tree/master/src/schema/tcNodeDb4)
+[Sql Server project tcNodeDb4](https://github.com/TradeControl/tradecontrol.web/tree/HEAD/src/Schema/tcNodeDb4)
 
 ### 4.1.1
 
