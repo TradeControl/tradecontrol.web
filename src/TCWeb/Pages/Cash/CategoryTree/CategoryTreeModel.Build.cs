@@ -231,14 +231,19 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
         private async Task<List<object>> BuildDisconnectedNodesAsync(HashSet<string> linkedSet)
         {
+            // Exclude Expression categories from Disconnected
+            short exprType = (short)NodeEnum.CategoryType.Expression;
+
             var disconnectedCats = await NodeContext.Cash_tbCategories
-                .Where(c => !linkedSet.Contains(c.CategoryCode))
+                .Where(c => !linkedSet.Contains(c.CategoryCode)
+                            && c.CategoryTypeCode != exprType) // filter out expressions here
                 .OrderBy(c => c.CashPolarityCode)
                 .ThenBy(c => c.DisplayOrder)
                 .ThenBy(c => c.Category)
                 .ToListAsync();
 
             var discCatCodes = disconnectedCats.Select(c => c.CategoryCode).ToArray();
+
             var hasCodesSet = await NodeContext.Cash_tbCodes
                 .Where(code => discCatCodes.Contains(code.CategoryCode))
                 .GroupBy(code => code.CategoryCode)
@@ -252,7 +257,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     $"<span class='tc-cat-icon tc-cat-{PolarityClass(c.CashPolarityCode)}'></span> " +
                     $"{WebUtility.HtmlEncode(c.Category)} ({WebUtility.HtmlEncode(c.CategoryCode)})",
                 folder = true,
-                lazy = hasCodes.Contains(c.CategoryCode),
+                lazy = hasCodes.Contains(c.CategoryCode), // only lazy if we know codes exist
                 icon = false,
                 extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
                 data = new {

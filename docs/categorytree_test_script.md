@@ -1,26 +1,5 @@
 # CategoryTree Test Script
 
-## Current Status (All Previously Reported Mobile Failures Resolved)
-
-The earlier mobile failures (B1, G2, G3, I3, D3, D4) have been fixed by applying the Option A patch (Razor-only changes).  
-Key changes implemented:
-- Root Set Profit / VAT Root: replaced non‑embedded buttons with POST forms including anti‑forgery and mobile confirmation; redirects now preserve selection (`select`, `key`, `expand`).
-- Cash Code Create / Edit / Delete Razor pages: deterministic Cancel anchors with full query parameter set for reselection; hidden normalized keys added.
-- “New Cash Code like this…” now reliably passes `siblingCashCode`.
-- Disconnected creation flows (D3, D4) now operate correctly on mobile (forms and redirect selection preserved).
-- Cancel semantics (I3) on mobile return to the correct node/category every time.
-
-No JavaScript tree logic was refactored beyond necessary form interception for mobile Set Root confirmation. Option B (centralized URL helper / JS consolidation) remains available for future enhancement.
-
-## Validation Summary
-1. Mobile Create Cash Code → Cancel: returns with parent category selected. (Pass)
-2. Mobile Edit Cash Code → Cancel: returns with original code selected. (Pass)
-3. Mobile Delete Cash Code → Cancel: returns with parent category selected; node still present until deletion. (Pass)
-4. Mobile Set Profit/VAT Root → Confirm: redirects selecting the same category; glyph updates after refresh. (Pass)
-5. Disconnected creates (Total / Category) materialize under `__DISCONNECTED__` and reselection persists. (Pass)
-
----
-
 ## Table A — Top anchors and basics
 
 | ID | Area | Node context | Scenario | Desktop steps | Mobile steps | Expected result | Desktop | Mobile | Script | Script stub |

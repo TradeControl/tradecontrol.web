@@ -22,8 +22,8 @@
 | Tag Name |
 | - | 
 | [InvoiceType]
-| [AccountCode]
-| [AccountName]
+| [SubjectCode]
+| [SubjectName]
 | [EmailAddress]
 | [InvoiceNumber]
 | [UserName]

@@ -5276,7 +5276,320 @@ window.CategoryTree = (function ()
                 dnd5: {
                     autoExpandMS: 300,
                     multiSource: false,
-                    // ... unchanged ...
+
+                    dragStart: function (node, data)
+                    {
+                        if (isMobile()) { return false; }
+                        if (!isAdmin) { return false; }
+
+                        var parent = node.getParent ? node.getParent() : null;
+                        if (parent && parent.key === EXPR_ROOT_KEY)
+                        {                            
+                            return true;    // expression leaf reorder allowed
+                        }
+
+                        var kinds = getNodeKinds(node);
+                        if (!kinds.isCat)
+                        {
+                            return false;   // categories only
+                        } 
+                        return true;
+                    },
+
+                    dragEnter: function (node, data)
+                    {
+                        if (isMobile()) { return false; }
+                        if (!isAdmin) { return false; }
+
+                        if (node.getParent && data.otherNode)
+                        {
+                            var srcParent = data.otherNode.getParent ? data.otherNode.getParent() : null;
+                            if (srcParent && srcParent.key === EXPR_ROOT_KEY
+                                && node.getParent && node.getParent().key === EXPR_ROOT_KEY)
+                            {
+                                return ["before", "after"]; // only sibling ordering
+                            }
+                        }
+                        var src = data.otherNode;
+                        if (!src) { return false; }
+                        if (node === src || node.isDescendantOf(src)) { return false; }
+
+                        var srcKinds = getNodeKinds(src);
+                        var tgtKinds = getNodeKinds(node);
+                        if (!srcKinds.isCat || !tgtKinds.isCat) { return false; }
+
+                        // Same parent in Type or non-Type context => allow sibling reordering
+                        var srcParent = src.getParent ? src.getParent() : null;
+                        var tgtParent = node.getParent ? node.getParent() : null;
+
+                        function isTypeContainer(p)
+                        {
+                            if (!p) { return false; }
+                            var d = p.data || {};
+                            var k = p.key || "";
+                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
+                                    || (typeof k === "string" && k.indexOf("type:") === 0);
+                        }
+
+                        // Cash Type siblings
+                        if (srcParent && tgtParent && srcParent === tgtParent && isTypeContainer(tgtParent))
+                        {
+                            return ["before", "after"];
+                        }
+
+                        // Totals/Disconnected siblings
+                        if (srcParent && tgtParent && srcParent === tgtParent && !isTypeContainer(tgtParent))
+                        {
+                            return ["before", "after"];
+                        }
+
+                        // Otherwise, consider child drop (over). Only allow "over" when target is a Total category.
+                        try
+                        {
+                            var tgtData = node.data || {};
+                            if (typeof tgtData.categoryType !== "undefined")
+                            {
+                                if (Number(tgtData.categoryType) === CATEGORYTYPE_CASHTOTAL)
+                                {
+                                    return ["over"];
+                                }
+                                // target is not a Total -> do not allow child drops
+                                return false;
+                            }
+
+                            // No explicit categoryType (synthetic/roots) — disallow child drops to be safe
+                            return false;
+                        }
+                        catch (ex)
+                        {
+                            // conservative fallback: disallow child drops
+                            return false;
+                        }
+                    },
+
+                    dragDrop: function (node, data)
+                    {
+                        if (isMobile()) { return false; }
+                        if (!isAdmin) { return false; }
+
+                        if (data.otherNode
+                            && data.otherNode.getParent
+                            && node.getParent
+                            && data.otherNode.getParent().key === EXPR_ROOT_KEY
+                            && node.getParent().key === EXPR_ROOT_KEY
+                            && (data.hitMode === "before" || data.hitMode === "after"))
+                        {
+                            postJsonGlobal("ReorderExpression",
+                                {
+                                    key: data.otherNode.key,
+                                    anchorKey: node.key,
+                                    mode: data.hitMode
+                                })
+                                .done(function (res)
+                                {
+                                    if (res && res.success)
+                                    {
+                                        try
+                                        {
+                                            data.otherNode.moveTo(node, data.hitMode);
+                                        }
+                                        catch (_) {}
+                                        data.otherNode.setActive(true);
+                                        persistActiveKey(data.otherNode);
+                                        notify("Expression order updated", "success");
+                                        if (!isMobile())
+                                        {
+                                            loadDetails(data.otherNode);
+                                            resizeColumns();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        alert((res && res.message) || "Reorder failed");
+                                    }
+                                })
+                                .fail(function (xhr)
+                                {
+                                    alert("Server error (" + xhr.status + ")");
+                                });
+                            return;
+                        }
+
+                        var src = data.otherNode;
+                        if (!src)
+                        {
+                            return false;
+                        }
+
+                        if (node === src || node.isDescendantOf(src))
+                        {
+                            alert("Invalid move: cannot move a category under itself or its descendant.");
+                            return false;
+                        }
+
+                        // Prevent dropping a CashCode-category under a non-Total category (extra safety server-side)
+                        if (data.hitMode === "over")
+                        {
+                            try
+                            {
+                                var tgtData = node.data || {};
+                                if (typeof tgtData.categoryType !== "undefined" && Number(tgtData.categoryType) !== CATEGORYTYPE_CASHTOTAL)
+                                {
+                                    alert("Invalid move: only Total-type categories may have child categories.");
+                                    return false;
+                                }
+                            }
+                            catch (ex)
+                            {
+                                alert("Invalid move: cannot determine target category type.");
+                                return false;
+                            }
+                        }
+
+                        // Ensure we have tree reference for reloads
+                        var t = getTree();
+
+                        // Helper: detect synthetic/type container parents
+                        function isTypeContainer(p)
+                        {
+                            if (!p) { return false; }
+                            var d = p.data || {};
+                            var k = p.key || "";
+                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
+                                    || (typeof k === "string" && k.indexOf("type:") === 0);
+                        }
+
+                        // Sibling reordering (before/after)
+                        if (data.hitMode === "before" || data.hitMode === "after")
+                        {
+                            var parent = node.getParent ? node.getParent() : null;
+
+                            // Cash Type sibling reorder -> ReorderType
+                            if (parent && isTypeContainer(parent))
+                            {
+                                postJsonGlobal("ReorderType", { key: src.key, anchorKey: node.key, mode: data.hitMode })
+                                .done(function (res)
+                                {
+                                    if (res && res.success)
+                                    {
+                                        try
+                                        {
+                                            src.moveTo(node, data.hitMode);
+                                        }
+                                        catch (ex)
+                                        {
+                                            // swallow
+                                        }
+
+                                        reloadIfExpandedNode(parent);
+
+                                        src.setActive(true);
+                                        persistActiveKey(src);
+                                        announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
+                                        notify("Order updated", "success");
+
+                                        if (!isMobile())
+                                        {
+                                            loadDetails(src);
+                                            resizeColumns();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        alert((res && res.message) || "Reorder failed");
+                                    }
+                                }).fail(function (xhr)
+                                {
+                                    alert("Server error (" + xhr.status + ")");
+                                });
+
+                                return;
+                            }
+
+                            // Totals/Disconnected sibling reorder -> ReorderSiblings
+                            if (parent && !isTypeContainer(parent))
+                            {
+                                postJsonGlobal("ReorderSiblings", { parentKey: parent.key || "", key: src.key, anchorKey: node.key, mode: data.hitMode })
+                                .done(function (res)
+                                {
+                                    if (res && res.success)
+                                    {
+                                        try
+                                        {
+                                            src.moveTo(node, data.hitMode);
+                                        }
+                                        catch (ex)
+                                        {
+                                        }
+
+                                        reloadIfExpandedNode(parent);
+
+                                        src.setActive(true);
+                                        persistActiveKey(src);
+                                        announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
+                                        notify("Order updated", "success");
+
+                                        refreshTopAnchors();
+
+                                        if (!isMobile())
+                                        {
+                                            loadDetails(src);
+                                            resizeColumns();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        alert((res && res.message) || "Reorder failed");
+                                    }
+                                }).fail(function (xhr)
+                                {
+                                    alert("Server error (" + xhr.status + ")");
+                                });
+
+                                return;
+                            }
+                        }
+
+                        // Fallback: child drop (move under parent) - call Move handler when hitMode === "over"
+                        if (data.hitMode !== "over") { return false; }
+
+                        postJsonGlobal("Move", { key: src.key, targetParentKey: node.key })
+                        .done(function (res)
+                        {
+                            if (res && res.success)
+                            {
+                                try
+                                {
+                                    src.moveTo(node, "child");
+                                }
+                                catch (ex)
+                                {
+                                }
+
+                                // reload relevant parents
+                                reloadIfExpandedNode(src.getParent ? (src.getParent() && src.getParent().key) || "" : "");
+                                reloadIfExpandedNode(node.key);
+
+                                refreshTopAnchors();
+
+                                src.setActive(true);
+                                persistActiveKey(src);
+
+                                if (!isMobile()) { loadDetails(src); resizeColumns(); }
+                                notify("Moved", "success");
+                                announce("Moved " + (src.title || src.key) + " under " + (node.title || node.key));
+                            }
+                            else
+                            {
+                                alert((res && res.message) || "Move failed");
+                            }
+                        }).fail(function (xhr)
+                        {
+                            alert("Server error (" + xhr.status + ")");
+                        });
+
+                        return;
+                    }
                 }
             });
 
