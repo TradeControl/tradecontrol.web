@@ -6,7 +6,7 @@ Changes to 1.1.0, first released 1 July 2021.
 
 [Sql node version 4.0.0]
 
-- Major schema migration to Version 4 (see [Schema/changelog.md](../src/schema/changelog.md) for details)
+- Major schema migration to Version 4 (see [Schema/changelog.md](changelog-schema.md) for details)
 - [SqlNode](https://github.com/tradecontrol/sqlnode) absorbed into the current repository 
 - Updated .NET and packages to latest versions
 - Mapped to new schema conventions (eg. Organisation → Subject, Task → Project)

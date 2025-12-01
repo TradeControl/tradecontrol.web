@@ -21,7 +21,10 @@ Development of this application is being transitioned from human authorship to A
 For ongoing development and updates, visit: [tradecontrol.github.io](https://tradecontrol.github.io)
 
 ## Change Log
-See [CHANGELOG.md](./docs/changelog.md) for details of updates and migration notes.
+See [changelog.md](./docs/changelog.md) for details of updates and migration notes.
+
+See [changelog-schema.md](./docs/changelog-schema.md) for details of schema changes.
+
 
 ## Versioning
 [Semantic Versioning](http://semver.org/)
