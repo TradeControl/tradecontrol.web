@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.CategoryCode.DeleteModel
 @{ ViewData["Title"] = "Delete Category"; }
 <h1>@ViewData["Title"]</h1>
@@ -50,9 +50,3 @@
         <a asp-page="./Index" asp-route-cashTypeCode="@Model.Cash_Category.CashTypeCode" class="btn btn-info">To List</a>
     </form>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-
-

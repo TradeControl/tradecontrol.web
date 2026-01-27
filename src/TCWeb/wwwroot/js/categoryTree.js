@@ -1785,6 +1785,42 @@ window.CategoryTree = (function ()
             });
         }
 
+        function resetExpressionError(key, onDone)
+        {
+            postJsonGlobal("ResetExpressionError", { key: key })
+                .done(function (res)
+                {
+                    if (!res || res.success === false)
+                    {
+                        var message = (res && res.message) ? res.message : "Failed to reset expression error.";
+                        notify(message, "warning");
+
+                        if (typeof onDone === "function")
+                        {
+                            onDone(false, res);
+                        }
+
+                        return;
+                    }
+
+                    notify("Expression error status reset.", "success");
+
+                    if (typeof onDone === "function")
+                    {
+                        onDone(true, res);
+                    }
+                })
+                .fail(function ()
+                {
+                    notify("Failed to reset expression error.", "warning");
+
+                    if (typeof onDone === "function")
+                    {
+                        onDone(false, null);
+                    }
+                });
+        }
+
         function getEffectiveParentKey(node, menuParentKey)
         {
             if (typeof menuParentKey === "string" && menuParentKey) { return menuParentKey; }
@@ -2577,11 +2613,12 @@ window.CategoryTree = (function ()
                     // Hide all then show expression-specific controls
                     $pane.find("[data-action]").hide();
 
-                    // Admin controls: Edit / Delete / Toggle
+                    // Admin controls: Edit / Delete / Toggle / Reset Error
                     if (isAdmin)
                     {
                         $pane.find("[data-action='editExpression']").show();
                         $pane.find("[data-action='deleteExpression']").show();
+                        $pane.find("[data-action='resetExpressionError']").show();
 
                         // Ensure Toggle button exists in the card for expressions
                         var $toggle = $pane.find("[data-action='toggleEnabled']");
@@ -5171,6 +5208,59 @@ window.CategoryTree = (function ()
                             break;
                         }
                         openAction("DeleteExpression", key);
+                        break;
+                    }
+
+                    case "resetExpressionError":
+                    {
+                        var $btn = $(this);
+                        var $card = $btn.closest("#expressionDetails");
+                        var key = $card.length ? $card.data("key") : null;
+
+                        if (!key)
+                        {
+                            notify("Expression key not found.", "warning");
+                            break;
+                        }
+
+                        resetExpressionError(key, function (ok)
+                        {
+                            if (!ok)
+                            {
+                                return;
+                            }
+
+                            try
+                            {
+                                var tree = getTree();
+
+                                if (!tree)
+                                {
+                                    return;
+                                }
+
+                                var node = tree.getNodeByKey(key);
+
+                                if (!node)
+                                {
+                                    return;
+                                }
+
+                                if (isMobile())
+                                {
+                                    updateActionBar(node);
+                                }
+                                else
+                                {
+                                    loadDetails(node);
+                                }
+                            }
+                            catch (_)
+                            {
+                                // swallow
+                            }
+                        });
+
                         break;
                     }
                 }

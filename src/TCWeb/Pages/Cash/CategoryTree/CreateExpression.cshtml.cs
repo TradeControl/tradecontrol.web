@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
-using System.Net;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
@@ -41,7 +41,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string Expression { get; set; } = string.Empty;
 
         [BindProperty]
-        [Required]
         [StringLength(100)]
         [Display(Name = "Format")]
         public string Format { get; set; } = string.Empty;
@@ -54,8 +53,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public IEnumerable<SelectListItem> CashTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> SyntaxTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
         public IList<string> ExistingFormats { get; private set; } = new List<string>();
+        public IEnumerable<SelectListItem> FormatTemplateItems { get; private set; } = Enumerable.Empty<SelectListItem>();
 
-        // NEW: success flag so the view can reliably emit tcEmbedResult
         public bool OperationSucceeded { get; private set; }
 
         public async Task<IActionResult> OnGetAsync()
@@ -66,15 +65,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             {
                 short tradeCode = (short)NodeEnum.CashType.Trade;
                 if (CashTypeItems.Any(i => i.Value == tradeCode.ToString()))
-                {
                     CashTypeCode = tradeCode;
-                }
             }
 
             if (!SyntaxTypeCode.HasValue && SyntaxTypeItems.Any(i => i.Value == "0"))
-            {
                 SyntaxTypeCode = (short)NodeEnum.SyntaxType.Both;
-            }
 
             return Page();
         }
@@ -86,9 +81,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 await LoadLookupsAsync();
 
                 if (!ModelState.IsValid)
-                {
                     return Page();
-                }
 
                 if (!CashTypeCode.HasValue)
                 {
@@ -97,41 +90,57 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 if (!SyntaxTypeCode.HasValue)
-                {
                     SyntaxTypeCode = (short)NodeEnum.SyntaxType.Both;
-                }
 
-                if (string.IsNullOrWhiteSpace(Format))
-                {
-                    ModelState.AddModelError(nameof(Format), "Format is required.");
-                    return Page();
-                }
+                var syntax = (NodeEnum.SyntaxType)SyntaxTypeCode.Value;
 
                 short expressionTypeCode = (short)NodeEnum.CategoryType.Expression;
 
-                var existingCategory = await NodeContext.Cash_tbCategories
+                var categoryExists = await NodeContext.Cash_tbCategories
                     .AnyAsync(c => c.CategoryCode == CategoryCode);
 
-                if (existingCategory)
+                if (categoryExists)
                 {
                     ModelState.AddModelError(nameof(CategoryCode),
                         "Category Code already exists. Expression categories cannot reuse an existing category.");
                     return Page();
                 }
 
-                var existingExpression = await NodeContext.Cash_tbCategoryExps
+                var expressionExists = await NodeContext.Cash_tbCategoryExps
                     .AnyAsync(e => e.CategoryCode == CategoryCode);
 
-                if (existingExpression)
+                if (expressionExists)
                 {
                     ModelState.AddModelError(nameof(CategoryCode),
                         "Expression already exists for this Category Code.");
                     return Page();
                 }
 
+                if (syntax == NodeEnum.SyntaxType.Both || syntax == NodeEnum.SyntaxType.LibreOffice)
+                {
+                    if (string.IsNullOrWhiteSpace(Format))
+                    {
+                        ModelState.AddModelError(nameof(Format),
+                            "A format template is required for LibreOffice or Both syntax types.");
+                        return Page();
+                    }
+
+                    var existsTemplate = await NodeContext.Set<Cash_tbCategoryExprFormat>()
+                        .AsNoTracking()
+                        .AnyAsync(t => t.TemplateCode == Format);
+
+                    if (!existsTemplate)
+                    {
+                        ModelState.AddModelError(nameof(Format),
+                            "Format must be a valid format template code.");
+                        return Page();
+                    }
+                }
+                // Excel: Format is free text and optional.
+
                 await using var tx = await NodeContext.Database.BeginTransactionAsync();
 
-                var newCat = new Cash_tbCategory {
+                var newCategory = new Cash_tbCategory {
                     CategoryCode = CategoryCode,
                     Category = Category,
                     CategoryTypeCode = expressionTypeCode,
@@ -141,24 +150,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     IsEnabled = 1
                 };
 
-                NodeContext.Cash_tbCategories.Add(newCat);
+                NodeContext.Cash_tbCategories.Add(newCategory);
                 await NodeContext.SaveChangesAsync();
 
-                var exp = new Cash_tbCategoryExp {
+                var expression = new Cash_tbCategoryExp {
                     CategoryCode = CategoryCode,
                     Expression = Expression,
-                    Format = Format,
+                    Format = Format ?? string.Empty,
                     IsError = false,
                     ErrorMessage = null,
                     SyntaxTypeCode = SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both
                 };
 
-                NodeContext.Cash_tbCategoryExps.Add(exp);
+                NodeContext.Cash_tbCategoryExps.Add(expression);
                 await NodeContext.SaveChangesAsync();
 
                 await tx.CommitAsync();
 
-                // mark success so the view emits tcEmbedResult
                 OperationSucceeded = true;
 
                 var exprKey = CategoryTreeModel.MakeExpressionKey(CategoryCode);
@@ -172,20 +180,19 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     });
                 }
 
-                // Embedded: emit tcEmbedResult marker payload
                 string exprPreview = Expression ?? string.Empty;
                 if (exprPreview.Length > 60)
-                    exprPreview = exprPreview.Substring(0, 57) + "...";
+                    exprPreview = exprPreview[..57] + "...";
 
                 var title =
-                    "<span class='bi bi-calculator me-1'></span>"
-                    + WebUtility.HtmlEncode(Category)
-                    + " (" + WebUtility.HtmlEncode(CategoryCode) + ") "
-                    + "<span class='tc-exp-formula'>= " + WebUtility.HtmlEncode(exprPreview) + "</span>";
+                    "<span class='bi bi-calculator me-1'></span>" +
+                    WebUtility.HtmlEncode(Category) +
+                    " (" + WebUtility.HtmlEncode(CategoryCode) + ") " +
+                    "<span class='tc-exp-formula'>= " + WebUtility.HtmlEncode(exprPreview) + "</span>";
 
                 var nodeSpec = new {
                     key = exprKey,
-                    title = title,
+                    title,
                     icon = false,
                     data = new {
                         nodeType = "expression",
@@ -193,10 +200,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         category = Category,
                         cashTypeCode = CashTypeCode,
                         expression = Expression,
-                        format = Format,
+                        format = Format ?? string.Empty,
                         syntaxTypeCode = SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both,
                         isEnabled = 1,
-                        displayOrder = newCat.DisplayOrder
+                        displayOrder = newCategory.DisplayOrder
                     }
                 };
 
@@ -243,6 +250,26 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .Distinct()
                 .OrderBy(f => f)
                 .ToListAsync();
+
+            var templates = await NodeContext.Set<Cash_tbCategoryExprFormat>()
+                .OrderBy(t => t.TemplateCode)
+                .Select(t => new { t.TemplateCode, t.Template, t.TemplateDescription })
+                .ToListAsync();
+
+            FormatTemplateItems = templates.Select(t => new SelectListItem
+            {
+                Value = t.TemplateCode,
+                Text = string.IsNullOrWhiteSpace(t.TemplateDescription)
+                    ? $"{t.TemplateCode} - {t.Template}"
+                    : t.TemplateDescription
+            }).ToList();
+
+            var templateMap = templates.ToDictionary(
+                t => t.TemplateCode,
+                t => t.Template
+            );
+
+            ViewData["FormatTemplateMap"] = JsonSerializer.Serialize(templateMap);
         }
 
         private async Task<short> NextExpressionDisplayOrderAsync()

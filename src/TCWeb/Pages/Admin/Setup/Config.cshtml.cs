@@ -24,9 +24,11 @@ namespace TradeControl.Web.Pages.Admin.Setup
         public SelectList UocNames { get; set; }
         public SelectList MonthNames { get; set; }
 
+        public Dictionary<string, string> TemplateDescriptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
         UserManager<TradeControlWebUser> UserManager { get; }
 
-        public ConfigModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context) 
+        public ConfigModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
             UserManager = userManager;
         }
@@ -35,16 +37,20 @@ namespace TradeControl.Web.Pages.Admin.Setup
         {
             try
             {
-                TemplateNames = new SelectList(await NodeContext.App_tbTemplates
-                                        .OrderBy(t => t.TemplateName)
-                                        .Select(t => t.TemplateName)
-                                        .ToListAsync());                
+                var templates = await NodeContext.App_tbTemplates
+                    .OrderBy(t => t.TemplateName)
+                    .Select(t => new { t.TemplateName, t.TemplateDescription })
+                    .ToListAsync();
+
+                TemplateNames = new SelectList(templates.Select(t => t.TemplateName).ToList());
+
+                TemplateDescriptions = templates
+                    .ToDictionary(t => t.TemplateName, t => t.TemplateDescription ?? string.Empty, StringComparer.OrdinalIgnoreCase);
 
                 MonthNames = new SelectList(await NodeContext.App_tbMonths.OrderBy(m => m.MonthNumber).Select(m => m.MonthName).ToListAsync());
 
                 UocNames = new SelectList(await NodeContext.App_tbUocs.OrderBy(u => u.UocName).Select(u => u.UocName).ToListAsync());
 
-                
                 Profile profile = new(NodeContext);
 
                 if (await NodeContext.Usr_Doc.AnyAsync() && await NodeContext.App_tbOptions.AnyAsync())
@@ -59,8 +65,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
 
                     string userName = await profile.UserName(UserManager.GetUserId(User));
 
-                    App_Initialisation = new()
-                    {
+                    App_Initialisation = new() {
                         TemplateName = TemplateNames.FirstOrDefault().Text,
                         SubjectName = company.CompanyName,
                         BusinessAddress = company.CompanyAddress,
@@ -71,7 +76,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         CompanyNumber = company.CompanyNumber,
                         VatNumber = company.VatNumber,
                         BankName = company.BankName,
-                        CurrentSubjectName = company.CurrentSubjectName,
+                        CurrentSubjectName = company.CurrentAccountName,
                         CAAccountNumber = company.BankAccountNumber,
                         CASortCode = company.BankSortCode,
                         CalendarCode = await NodeContext.App_tbCalendars.OrderBy(c => c.CalendarCode).Select(c => c.CalendarCode).SingleOrDefaultAsync(),
@@ -79,10 +84,11 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == options.UnitOfCharge).Select(u => u.UocName).SingleOrDefaultAsync()
                     };
 
-                    var bankAddr = await (  from ca in NodeContext.Subject_CurrentAccounts
-                                            join addr in NodeContext.Subject_tbAddresses
-                                            on ca.SubjectCode equals addr.SubjectCode
-                                            select addr.Address).FirstOrDefaultAsync();
+                    var bankAddr =
+                        await (from ca in NodeContext.Subject_CurrentAccounts
+                               join addr in NodeContext.Subject_tbAddresses
+                               on ca.SubjectCode equals addr.SubjectCode
+                               select addr.Address).FirstOrDefaultAsync();
 
                     App_Initialisation.BankAddress = bankAddr != null ? bankAddr : string.Empty;
 
@@ -105,14 +111,12 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         App_Initialisation.Government = gov;
                 }
                 else
-                    App_Initialisation = new()
-                    {
+                    App_Initialisation = new() {
                         TemplateName = TemplateNames.FirstOrDefault().Text,
                         MonthName = await NodeContext.App_tbMonths.Where(m => m.MonthNumber == 4).Select(m => m.MonthName).SingleAsync(),
                         UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == "GBP").Select(u => u.UocName).SingleAsync()
                     };
-                
-                
+
                 return Page();
             }
             catch (Exception e)
@@ -120,7 +124,6 @@ namespace TradeControl.Web.Pages.Admin.Setup
                 await NodeContext.ErrorLog(e);
                 throw;
             }
-
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -164,7 +167,6 @@ namespace TradeControl.Web.Pages.Admin.Setup
                 ra_AccountNumber: App_Initialisation.RAAccountNumber);
 
             return RedirectToPage("/Index");
-
         }
     }
 
@@ -176,7 +178,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
         public string TemplateName { get; set; }
         [Required]
         [StringLength(100)]
-        [Display(Name ="Unit of Account")]
+        [Display(Name = "Unit of Account")]
         public string UocName { get; set; }
         [Required]
         [Display(Name = "Financial Year")]
@@ -212,7 +214,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
         public string EmailAddress { get; set; }
         [StringLength(255)]
         [Display(Name = "Web Site")]
-        [DataType(DataType.Url)] 
+        [DataType(DataType.Url)]
         public string WebSite { get; set; }
         [StringLength(20)]
         [Display(Name = "Company Number")]
@@ -254,8 +256,5 @@ namespace TradeControl.Web.Pages.Admin.Setup
         [StringLength(10)]
         [Display(Name = "Calendar Code")]
         public string CalendarCode { get; set; } = "OFFICE";
-
-
     }
-
 }

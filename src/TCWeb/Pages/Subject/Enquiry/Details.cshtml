@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Subject.Enquiry.DetailsModel
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
@@ -270,7 +270,3 @@
         </dd>
     </dl>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

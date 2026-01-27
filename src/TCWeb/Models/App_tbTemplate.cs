@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -14,8 +14,11 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(100)]
         public string TemplateName { get; set; }
+
         [Required]
         [StringLength(100)]
         public string StoredProcedure { get; set; }
+
+        public string TemplateDescription { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.CashCode.IndexModel
 
@@ -126,7 +126,3 @@
         }
     </tbody>
 </table>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

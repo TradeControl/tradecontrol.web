@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.AssetEntry.IndexModel
 @{ ViewData["Title"] = "Unposted Assets"; }
@@ -77,7 +77,3 @@
         }
     </tbody>
 </table>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

@@ -646,6 +646,9 @@
     <Build Include="Cash\Functions\fnCategoryNamespaceInContext.sql" />
     <Build Include="Cash\Functions\fnCategoryNamespacePrimary.sql" />
     <Build Include="Cash\Tables\tbCategoryExpSyntax.sql" />
+    <Build Include="Cash\Stored Procedures\proc_CategoryExprStatusSet.sql" />
+    <Build Include="Cash\Tables\tbCategoryExprFormat.sql" />
+    <Build Include="tbCategoryExp.Trigger.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

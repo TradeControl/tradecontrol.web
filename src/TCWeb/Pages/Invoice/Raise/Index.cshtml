@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Raise.IndexModel
 @{ ViewData["Title"] = "Raise Invoices"; }
@@ -117,7 +117,3 @@
         </div>
     </div>
 </form>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

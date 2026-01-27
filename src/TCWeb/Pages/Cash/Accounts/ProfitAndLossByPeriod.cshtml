@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.Accounts.ProfitAndLossByPeriodModel
 @{ ViewData["Title"] = "P&L By Month"; }
 <h1>@ViewData["Title"]</h1>
@@ -108,8 +108,4 @@
             <a asp-page="./ProfitAndLossByPeriod" asp-route-mode="0" asp-route-PeriodName="@Model.PeriodName" class="btn btn-info">Show Details</a>
         </div>
     }
-}
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }

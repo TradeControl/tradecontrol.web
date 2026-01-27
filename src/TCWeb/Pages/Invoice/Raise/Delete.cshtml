@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Invoice.Raise.DeleteModel
 @{ ViewData["Title"] = "Delete Entry"; }
 <h1>@ViewData["Title"]</h1>
@@ -88,8 +88,3 @@
     <input type="submit" value="DELETE" class="btn btn-danger" />
     <a asp-page="./Index" class="btn btn-info">To List</a>
 </form>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-

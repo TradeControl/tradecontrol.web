@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Invoice.Raise.DetailsModel
 @{ ViewData["Title"] = "Proposed Entry"; }
 <h1>@ViewData["Title"]</h1>
@@ -85,7 +85,3 @@
 <p>
     <a asp-page="./Index" class="btn btn-info">To Listing</a>
 </p>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

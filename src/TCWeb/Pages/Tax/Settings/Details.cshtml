@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Tax.Settings.DetailsModel
 @{ ViewData["Title"] = "Tax Setting"; }
 <h1>@ViewData["Title"]</h1>
@@ -42,7 +42,3 @@
 <div>
     <a asp-page="./Index" class="btn btn-info">To List</a>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

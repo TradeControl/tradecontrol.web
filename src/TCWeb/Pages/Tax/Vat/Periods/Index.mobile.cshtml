@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Tax.Vat.Periods.IndexModel
 @{ ViewData["Title"] = "Period Vat"; }
 <h1>@ViewData["Title"]</h1>
@@ -54,7 +54,3 @@
 <p>
     <a asp-page="../Index" class="btn btn-outline-info">Totals</a>
 </p>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

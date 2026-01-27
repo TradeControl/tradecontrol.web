@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Invoice.Template.IndexModel
 @{ ViewData["Title"] = "Email Templates"; }
 <h1>@ViewData["Title"]</h1>
@@ -59,9 +59,3 @@
         </form>
     </div>
 </div>
-
-
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

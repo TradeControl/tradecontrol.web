@@ -446,6 +446,77 @@
                 }
             }
 
+                // Handle EditExpression embedded result: update expr: node and reload details
+            (function ()
+            {
+                try
+                {
+                    var exprResult = document.getElementById("editExpressionResult");
+                    if (!exprResult)
+                    {
+                        return;
+                    }
+
+                    var key = exprResult.dataset.key || "";             // e.g. "expr:SALES"
+                    var category = exprResult.dataset.category || "";   // new Category text
+                    var categoryCode = exprResult.dataset.categorycode || "";
+
+                    if (!key)
+                    {
+                        return;
+                    }
+
+                    var tree = getTree();
+                    if (!tree)
+                    {
+                        return;
+                    }
+
+                    var node = tree.getNodeByKey(key);
+                    if (!node)
+                    {
+                        return;
+                    }
+
+                    // Build title consistent with expression nodes: "Category (Code)"
+                    var title = category && categoryCode
+                        ? (category + " (" + categoryCode + ")")
+                        : node.title;
+
+                    try
+                    {
+                        node.setTitle(title);
+                    }
+                    catch (e)
+                    {
+                        // swallow
+                    }
+
+                    try
+                    {
+                        activateNode(key);
+                    }
+                    catch (e)
+                    {
+                        // swallow
+                    }
+
+                    // Reload details for this expression into the RHS pane (embed=1)
+                    try
+                    {
+                        loadDetailsFor(key);
+                    }
+                    catch (e)
+                    {
+                        // swallow
+                    }
+                }
+                catch (e)
+                {
+                    // swallow
+                }
+            })();
+
             // Use recorded key if available (set by openAction), otherwise active key
             var retKey = (_tcCancelReturnKey && typeof _tcCancelReturnKey === "string") ? _tcCancelReturnKey : _getActiveKey();
 

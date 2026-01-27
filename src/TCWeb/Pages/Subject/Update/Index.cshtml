@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Subject.Update.IndexModel
@@ -134,8 +134,3 @@
         </ul>
     </nav>
 }
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-

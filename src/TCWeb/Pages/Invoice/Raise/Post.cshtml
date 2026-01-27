@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Invoice.Raise.PostModel
 @{ ViewData["Title"] = "Post Invoice"; }
 <h1>@ViewData["Title"]</h1>
@@ -91,8 +91,3 @@
     <button type="submit" asp-page-handler="Account" asp-route-accountCode="Entry.SubjectCode" class="btn btn-primary">Account</button>
     <a asp-page="./Index" class="btn btn-info">To List</a>
 </form>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-

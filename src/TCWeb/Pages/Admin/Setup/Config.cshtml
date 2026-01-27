@@ -1,6 +1,8 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Admin.Setup.ConfigModel
-@{ ViewData["Title"] = "Business Setup"; }
+@{
+    ViewData["Title"] = "Business Setup";
+}
 <h1>@ViewData["Title"]</h1>
 <hr />
 <div class="row">
@@ -10,8 +12,9 @@
             <div class="mb-3">
                 <label asp-for="App_Initialisation.TemplateName" class="control-label"></label>
                 <p>
-                    <select asp-for="App_Initialisation.TemplateName" asp-items="Model.TemplateNames" class="form-control"></select>
+                    <select asp-for="App_Initialisation.TemplateName" asp-items="Model.TemplateNames" class="form-control" id="templateName"></select>
                 </p>
+                <div class="alert alert-info" role="note" id="templateDescription"></div>
             </div>
             <div class="mb-3">
                 <label asp-for="App_Initialisation.SubjectCode" class="control-label"></label>
@@ -124,7 +127,22 @@
     </div>
 </div>
 
+<script>
+    (function ()
+    {
+        const descriptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TemplateDescriptions));
+        const select = document.getElementById("templateName");
+        const box = document.getElementById("templateDescription");
 
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
+        function setDescription()
+        {
+            const name = select.value;
+            const text = descriptions[name] || "";
+            box.textContent = text;
+            box.style.display = text.length > 0 ? "" : "none";
+        }
+
+        select.addEventListener("change", setDescription);
+        setDescription();
+    })();
+</script>

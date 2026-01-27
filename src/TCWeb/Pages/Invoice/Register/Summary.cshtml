@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Register.SummaryModel
 @{ ViewData["Title"] = "Invoice Summary"; }
@@ -129,8 +129,3 @@
         </dd>
     </dl>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-

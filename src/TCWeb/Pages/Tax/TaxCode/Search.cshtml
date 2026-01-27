@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Tax.TaxCode.SearchModel
@@ -61,8 +61,3 @@
         }
     </tbody>
 </table>
-
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

@@ -11,7 +11,7 @@ namespace TradeControl.Web.Models
         public string CategoryCode { get; set; }
 
         [Required]
-        [StringLength(256)]
+        [Column(TypeName = "nvarchar(max)")]
         public string Expression { get; set; }
 
         [Required]

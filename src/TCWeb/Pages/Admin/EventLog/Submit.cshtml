@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Admin.EventLog.SubmitModel
 @{ ViewData["Title"] = "Submit Error"; }
 <h1>@ViewData["Title"]</h1>
@@ -44,7 +44,3 @@
     <input type="submit" value="SEND" class="btn btn-warning" />
     <a asp-page="./Index" class="btn btn-info">To List</a>
 </form>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

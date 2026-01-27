@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Subject.CashAccount.DetailsModel
 @{ ViewData["Title"] = "Cash Account"; }
 
@@ -98,7 +98,3 @@
     <a asp-page="./Edit" asp-route-cashSubjectCode="@Model.Subject_CashAccount.AccountCode" class="btn btn-secondary">Edit</a>
     <a asp-page="./Index" asp-route-accountType=@Model.Subject_CashAccount.AccountType class="btn btn-info">To List</a>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

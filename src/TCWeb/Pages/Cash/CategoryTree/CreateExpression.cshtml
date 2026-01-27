@@ -3,6 +3,11 @@
 @{
     var embed = (Request.Query["embed"] == "1") || (Request.HasFormContentType && Request.Form["embed"] == "1");
     if (embed) { Layout = null; }
+
+    var syntaxValue = Model.SyntaxTypeCode ?? (short)TradeControl.Web.Data.NodeEnum.SyntaxType.Both;
+    bool isBothOrLibre = syntaxValue == (short)TradeControl.Web.Data.NodeEnum.SyntaxType.Both
+                         || syntaxValue == (short)TradeControl.Web.Data.NodeEnum.SyntaxType.LibreOffice;
+    bool isExcel = syntaxValue == (short)TradeControl.Web.Data.NodeEnum.SyntaxType.Excel;
 }
 
 <div class="card">
@@ -14,6 +19,7 @@
               asp-route-embed="@(embed ? "1" : null)"
               asp-route-parentKey="__EXPRESSIONS__">
             @Html.AntiForgeryToken()
+
             @if (embed)
             {
                 <input type="hidden" name="embed" value="1" />
@@ -45,27 +51,63 @@
                 <label asp-for="Expression" class="form-label"></label>
                 <textarea asp-for="Expression" class="form-control" rows="3" maxlength="256"></textarea>
                 <span asp-validation-for="Expression" class="text-danger small"></span>
-                <div class="form-text small">Spreadsheet formula (e.g. IF([Sales]=0,0,[Gross Profit]/[Sales])). Use category codes in square brackets.</div>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Format" class="form-label"></label>
-                <input asp-for="Format" class="form-control" list="formatList" maxlength="100" />
-                <datalist id="formatList">
-                    @foreach (var f in Model.ExistingFormats)
-                    {
-                        <option value="@f"></option>
-                    }
-                </datalist>
-                <span asp-validation-for="Format" class="text-danger small"></span>
-                <div class="form-text small">Required. Examples: 0%, #,##0.00, #,##0; do not leave blank.</div>
+                <div class="form-text small">
+                    Spreadsheet formula (for example IF([Sales]=0,0,[Gross Profit]/[Sales])).
+                    Use category codes in square brackets.
+                </div>
             </div>
 
             <div class="mb-3">
                 <label asp-for="SyntaxTypeCode" class="form-label"></label>
-                <select asp-for="SyntaxTypeCode" asp-items="Model.SyntaxTypeItems" class="form-select"></select>
+                <select asp-for="SyntaxTypeCode"
+                        asp-items="Model.SyntaxTypeItems"
+                        class="form-select"
+                        id="syntaxType">
+                </select>
                 <span asp-validation-for="SyntaxTypeCode" class="text-danger small"></span>
-                <div class="form-text small">Choose “Both”, “Libre”, or “Excel”.</div>
+                <div class="form-text small">
+                    Choose the target expression engine: Both, LibreOffice, or Excel.
+                </div>
+            </div>
+
+            <!-- Format via TemplateCode (Both / LibreOffice) -->
+            <div class="mb-3" data-role="format-template" style="display:@(isBothOrLibre ? "block" : "none")">
+                <label asp-for="Format" class="form-label"></label>
+                <select asp-for="Format" class="form-select" id="formatTemplate">
+                    <option value="">-- select format template --</option>
+                    @foreach (var item in Model.FormatTemplateItems)
+                    {
+                        var selected = string.Equals(item.Value, Model.Format, StringComparison.OrdinalIgnoreCase);
+                        <option value="@item.Value" selected="@(selected ? "selected" : null)">
+                            @item.Text
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="Format" class="text-danger small"></span>
+                <div class="form-text small">
+                    For Both or LibreOffice, select a format template.
+                    The underlying template code is stored in the Format field and must exist in Cash.tbCategoryExprFormat.
+                </div>
+            </div>
+
+            <!-- Format as free text (Excel) -->
+            <div class="mb-3" data-role="format-freetext" style="display:@(isExcel ? "block" : "none")">
+                <label asp-for="Format" class="form-label"></label>
+                <input asp-for="Format" class="form-control" list="formatList" maxlength="100" id="formatFreeText" />
+                <datalist id="formatList">
+                    @foreach (var f in Model.ExistingFormats)
+                    {
+                        if (!string.IsNullOrWhiteSpace(f))
+                        {
+                            <option value="@f">@f</option>
+                        }
+                    }
+                </datalist>
+                <span asp-validation-for="Format" class="text-danger small"></span>
+                <div class="form-text small">
+                    For Excel, enter any spreadsheet format string (for example 0.00, 0%, #,##0.00).
+                    Excel validates the format when the expression is rendered.
+                </div>
             </div>
 
             <div class="d-flex gap-2">
@@ -89,17 +131,68 @@
             </div>
         </form>
 
-        @* Emit the marker when embedded + save succeeded so the tree injects and selects the new node *@
-        @if (embed && Model.OperationSucceeded && ViewData["EmbedSelectKey"] != null && ViewData["EmbedExpandKey"] != null && ViewData["EmbedNodeJson"] != null)
+        @if (embed && Model.OperationSucceeded &&
+                ViewData["EmbedSelectKey"] != null &&
+                ViewData["EmbedExpandKey"] != null &&
+                ViewData["EmbedNodeJson"] != null)
         {
             <div id="tcEmbedResult"
                  data-select="@ViewData["EmbedSelectKey"]"
                  data-expand="@ViewData["EmbedExpandKey"]"
-                 data-node='@Html.Raw((string)ViewData["EmbedNodeJson"])'></div>
+                 data-node='@Html.Raw((string)ViewData["EmbedNodeJson"])'>
+            </div>
         }
     </div>
 </div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+<script>
+    (function () {
+        // TemplateCode -> Template (format string), supplied by the page model via ViewData
+        var templateMap = @Html.Raw((string)(ViewData["FormatTemplateMap"] ?? "{}"));
+
+        function updateFormatEditors(selectElement) {
+            var syntaxSelect = selectElement || document.getElementById('syntaxType');
+            if (!syntaxSelect) return;
+
+            var value = syntaxSelect.value;
+            var isBothOrLibre = (value === '0' || value === '1'); // Both, LibreOffice
+            var isExcel = (value === '2');                        // Excel
+
+            var templateDiv = document.querySelector('[data-role="format-template"]');
+            var freeTextDiv = document.querySelector('[data-role="format-freetext"]');
+            var templateSelect = document.getElementById('formatTemplate');
+            var freeTextInput = document.getElementById('formatFreeText');
+
+            // If switching from template mode to Excel, copy the template format string into free text.
+            if (templateDiv && freeTextDiv && templateSelect && freeTextInput) {
+                var currentlyTemplateVisible = templateDiv.style.display !== 'none';
+                if (currentlyTemplateVisible && isExcel) {
+                    var code = templateSelect.value;
+                    if (code && templateMap && templateMap[code]) {
+                        freeTextInput.value = templateMap[code]; // Template string (e.g. 0.00%)
+                    } else if (code) {
+                        // Fallback: if we don't know the template, at least propagate the code.
+                        freeTextInput.value = code;
+                    }
+                }
+            }
+
+            if (templateDiv) {
+                templateDiv.style.display = isBothOrLibre ? 'block' : 'none';
+            }
+
+            if (freeTextDiv) {
+                freeTextDiv.style.display = isExcel ? 'block' : 'none';
+            }
+        }
+
+        var syntaxSelect = document.getElementById('syntaxType');
+        if (syntaxSelect) {
+            syntaxSelect.addEventListener('change', function () {
+                updateFormatEditors(this);
+            });
+
+            updateFormatEditors(syntaxSelect);
+        }
+    })();
+</script>

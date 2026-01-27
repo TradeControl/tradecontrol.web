@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Invoice.Register.IndexModel
 @{ ViewData["Title"] = "Invoice Register"; }
@@ -160,8 +160,4 @@
             </li>
         </ul>
     </nav>
-}
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }

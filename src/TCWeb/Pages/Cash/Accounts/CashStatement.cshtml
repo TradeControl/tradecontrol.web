@@ -1,0 +1,26 @@
+@page
+@model TradeControl.Web.Pages.Cash.Accounts.CashStatementModel
+@{
+    ViewData["Title"] = "Cash Statement (Excel)";
+}
+<h1>@ViewData["Title"]</h1>
+
+<form method="post" class="mb-3">
+    <div class="row g-2">
+        <div class="col-auto">
+            <label class="form-label">Command Timeout (secs)</label>
+            <input asp-for="CommandTimeout" class="form-control" />
+        </div>
+        <div class="col-12 mt-2">
+            <div class="form-check"><input class="form-check-input" asp-for="IncludeActivePeriods" /><label class="form-check-label" asp-for="IncludeActivePeriods">Include Active Periods</label></div>
+            <div class="form-check"><input class="form-check-input" asp-for="IncludeOrderBook" /><label class="form-check-label" asp-for="IncludeOrderBook">Include Order Book</label></div>
+            <div class="form-check"><input class="form-check-input" asp-for="IncludeTaxAccruals" /><label class="form-check-label" asp-for="IncludeTaxAccruals">Include Tax Accruals</label></div>
+            <div class="form-check"><input class="form-check-input" asp-for="IncludeVatDetails" /><label class="form-check-label" asp-for="IncludeVatDetails">Include VAT Details</label></div>
+            <div class="form-check"><input class="form-check-input" asp-for="IncludeBankBalances" /><label class="form-check-label" asp-for="IncludeBankBalances">Include Bank Balances</label></div>
+            <div class="form-check"><input class="form-check-input" asp-for="IncludeBalanceSheet" /><label class="form-check-label" asp-for="IncludeBalanceSheet">Include Balance Sheet</label></div>
+        </div>
+        <div class="col-12 mt-3">
+            <button type="submit" class="btn btn-primary">Generate Excel</button>
+        </div>
+    </div>
+</form>

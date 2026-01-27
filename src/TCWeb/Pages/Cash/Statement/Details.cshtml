@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.Statement.DetailsModel
 @{ ViewData["Title"] = "Payment Details"; }
 
@@ -81,7 +81,3 @@
     <a asp-page="./Edit" asp-route-paymentCode="@Model.Cash_Payment.PaymentCode" class="btn btn-secondary">Edit</a>
     <a asp-page="./Index" asp-route-paymentCode=@Model.Cash_Payment.PaymentCode class="btn btn-info">To List</a>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

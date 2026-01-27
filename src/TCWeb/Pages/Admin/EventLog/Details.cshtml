@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Admin.EventLog.DetailsModel
 @{ ViewData["Title"] = "Log Event"; }
 <h1>@ViewData["Title"]</h1>
@@ -43,7 +43,3 @@
        asp-route-PageSize="@Model.PageSize"
        class="btn btn-info">Back to Listing</a>
 </p>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

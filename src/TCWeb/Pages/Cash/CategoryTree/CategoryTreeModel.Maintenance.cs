@@ -205,6 +205,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         private static JsonResult NotImplemented(string action, string key, string parentKey, string nodeType = null) =>
             new(new { success = false, message = $"Not Yet Implemented: {action}", key, parentKey, nodeType });
 
+        #region Posting Helpers
         // View is allowed for all authenticated users (useful for mobile)
         public Task<JsonResult> OnPostViewAsync([FromForm] string key, [FromForm] string parentKey)
             => Task.FromResult(NotImplemented("View", key, parentKey, key != null && key.StartsWith("code:", StringComparison.OrdinalIgnoreCase) ? "code" : "category"));
@@ -770,5 +771,52 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 return new JsonResult(new { success = false, message = "Server error." });
             }
         }
+
+        /// <summary>
+        /// Clears the error state for an expression (Cash.tbCategoryExp.IsError and ErrorMessage).
+        /// Expects key in the usual expression form (e.g. "expr:XYZ" or a raw CategoryCode).
+        /// </summary>       
+        public async Task<JsonResult> OnPostResetExpressionErrorAsync([FromForm] string key)
+        {
+            try
+            {
+                if (!User.IsInRole(Constants.AdministratorsRole))
+                    return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+                if (string.IsNullOrWhiteSpace(key))
+                    return new JsonResult(new { success = false, message = "Missing key" });
+
+                // Normalise "expr:CODE" to "CODE" if required
+                string categoryCode = key;
+                if (CategoryTreeModel.IsExpressionKey(key))
+                    categoryCode = key.Substring(CategoryTreeModel.ExpressionKeyPrefix.Length);
+
+                var exp = await NodeContext.Cash_tbCategoryExps
+                    .SingleOrDefaultAsync(e => e.CategoryCode == categoryCode);
+
+                if (exp == null)
+                    return new JsonResult(new { success = false, message = "Expression not found." });
+
+                exp.IsError = false;
+                exp.ErrorMessage = null;
+
+                await NodeContext.SaveChangesAsync();
+
+                return new JsonResult(new {
+                    success = true,
+                    key = CategoryTreeModel.MakeExpressionKey(categoryCode),
+                    isError = exp.IsError,
+                    errorMessage = exp.ErrorMessage
+                });
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                return new JsonResult(new { success = false, message = e.Message });
+            }
+        }
+        #endregion
+
+
     }
 }

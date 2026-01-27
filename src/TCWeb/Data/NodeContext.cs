@@ -38,6 +38,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_tbCategory> Cash_tbCategories { get; set; }
         public virtual DbSet<Cash_tbCategoryExp> Cash_tbCategoryExps { get; set; }
         public virtual DbSet<Cash_tbCategoryExpSyntax> Cash_tbCategoryExpSyntax { get; set; }
+        public virtual DbSet<Cash_tbCategoryExprFormat> Cash_tbCategoryExprFormats { get; set; }
         public virtual DbSet<Cash_tbCategoryTotal> Cash_tbCategoryTotals { get; set; }
         public virtual DbSet<Cash_tbCategoryType> Cash_tbCategoryTypes { get; set; }
         public virtual DbSet<Cash_tbChange> Cash_tbChanges { get; set; }

@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Cash.Statement.IndexModel
@@ -244,7 +244,3 @@
 <div>
     <a asp-page="./Index" asp-route-cashSubjectName="@Model.AccountName" asp-route-mode="1" class="btn btn-info w-25" title="Show All">Show All</a>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

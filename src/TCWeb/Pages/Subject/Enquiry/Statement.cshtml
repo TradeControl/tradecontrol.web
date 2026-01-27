@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Subject.Enquiry.StatementModel
@@ -89,8 +89,3 @@
 <p>
     <a class="btn btn-info @btnWidthClass" asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Back to list">To List</a>
 </p>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-

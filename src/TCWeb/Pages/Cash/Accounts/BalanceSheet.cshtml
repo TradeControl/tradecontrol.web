@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.Accounts.BalanceSheetModel
 @{ ViewData["Title"] = "Balance Sheet"; }
 <h1>@ViewData["Title"]</h1>
@@ -45,7 +45,3 @@
         }
     </tbody>
 </table>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

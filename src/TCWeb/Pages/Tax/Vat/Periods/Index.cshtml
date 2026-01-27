@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Tax.Vat.Periods.IndexModel
@@ -125,7 +125,3 @@
 <p>
     <a asp-page="../Index" class="btn btn-outline-info @btnWidthClass">Totals</a>
 </p>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

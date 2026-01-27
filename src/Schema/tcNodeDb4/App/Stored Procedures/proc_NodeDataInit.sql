@@ -68,11 +68,12 @@ BEGIN TRY
 		, (3, 'Processed')
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbTemplate])
-			INSERT INTO [App].[tbTemplate] ([TemplateName], [StoredProcedure])
+			INSERT INTO [App].[tbTemplate] ([TemplateName], [StoredProcedure], [TemplateDescription])
 			VALUES
-		('Basic Company Setup', 'App.proc_TemplateCompanyGeneral')
-		, ('HMRC Company Accounts', 'App.proc_TemplateCompanyHMRC2021')
-		, ('MIS Tutorials', 'App.proc_TemplateTutorials')
+		('Basic Company Setup', 'App.proc_TemplateCompanyGeneral', N'Creates a basic UK company setup with a starter Category Tree, Cash Codes, and defaults suitable for getting started.')
+		, ('HMRC Company Accounts', 'App.proc_TemplateCompanyHMRC2021', N'Installs a UK company accounts-oriented Category Tree and Cash Codes aligned to the HMRC-style template baseline (2021).')
+		, ('MIS Tutorials', 'App.proc_TemplateTutorials', N'Adds tutorial/sample data intended for learning and demonstration (MIS-oriented).')
+
 
 	IF NOT EXISTS (SELECT * FROM [Subject].[tbAccountType])
 			INSERT INTO [Subject].[tbAccountType] ([AccountTypeCode], [AccountType])
@@ -349,6 +350,19 @@ BEGIN TRY
         VALUES (0, 'Both')
         , (1, 'Libre')
         , (2, 'Excel');
+
+      IF NOT EXISTS(SELECT * FROM Cash.tbCategoryExprFormat)
+        INSERT INTO Cash.tbCategoryExprFormat (TemplateCode, Template, TemplateDescription)
+        VALUES ('Cash0', '#,##0;[Red](#,##0);_-', 'Accounting style, 0 decimal places')
+		, ('Cash2', '#,##0.00;[Red](#,##0.00);_-', 'Accounting style, 2 decimal places')
+		, ('Free', 'Excel', 'Free Text Excel Format String')
+		, ('Num0', '0', 'Number, 0 decimal places')
+		, ('Num1', '0.0', 'Number, 1 decimal place')
+		, ('Num2', '0.00', 'Number, 2 decimal places')
+		, ('Pct0', '0%', 'Percentage, 0 decimal places')
+		, ('Pct1', '0.0%', 'Percentage, 1 decimal place')
+		, ('Pct2', '0.00%', 'Percentage, 2 decimal places')
+		, ('Text', '@', 'Text format');
         
 	IF NOT EXISTS(SELECT * FROM Cash.tbEntryType)
 		INSERT INTO Cash.tbEntryType (CashEntryTypeCode, CashEntryType)

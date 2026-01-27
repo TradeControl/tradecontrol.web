@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -43,7 +43,7 @@ namespace TradeControl.Web.Models
         public string BankName { get; set; }
         [StringLength(50)]
         [Display(Name = "Current Account")]
-        public string CurrentSubjectName { get; set; }
+        public string CurrentAccountName { get; set; }
         [StringLength(306)]
         [Display(Name = "Bank Account")]
         public string BankAccount { get; set; }

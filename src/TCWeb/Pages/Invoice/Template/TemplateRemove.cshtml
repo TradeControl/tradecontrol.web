@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Invoice.Template.TemplateRemoveModel
 @{ ViewData["Title"] = "Unassign Template"; }
 <h1>@ViewData["Title"]</h1>
@@ -35,8 +35,3 @@
 
     </form>
 </div>
-
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

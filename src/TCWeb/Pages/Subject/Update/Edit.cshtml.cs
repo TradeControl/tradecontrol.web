@@ -114,5 +114,32 @@ namespace TradeControl.Web.Pages.Subject.Update
                 throw;
             }
         }
+
+        public async Task<IActionResult> OnPostRebuildAsync(string accountCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(accountCode))
+                    return NotFound();
+
+                Subjects subject = new(NodeContext, accountCode);
+
+                if (await subject.Rebuild())
+                {
+                    RouteValueDictionary route = new();
+                    route.Add("accountCode", accountCode);
+                    return RedirectToPage("./Edit", route);
+                }
+                else
+                {
+                    return RedirectToPage("/Admin/EventLog/Index");
+                }
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                throw;
+            }
+        }
     }
 }

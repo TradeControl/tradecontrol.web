@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Tax.Vat.Periods.DetailsModel
 @{ ViewData["Title"] = "Vat Period Totals"; }
 
@@ -73,7 +73,3 @@
 <div>
     <a asp-page="./Index" asp-route-periodName="@Model.PeriodName" class="btn btn-info">To List</a>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Invoice.Register.UnpaidDetailModel
 @{ ViewData["Title"] = "Unpaid Invoice"; }
 <h1>@ViewData["Title"]</h1>
@@ -85,8 +85,3 @@
 <p>
     <a asp-page="./Unpaid"  class="btn btn-info">To Listing</a>
 </p>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-

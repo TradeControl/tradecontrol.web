@@ -1,4 +1,4 @@
-﻿@page
+@page
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @model TradeControl.Web.Pages.Cash.CategoryCode.IndexModel
 @{ ViewData["Title"] = "Categories"; }
@@ -119,7 +119,3 @@
         }
     </tbody>
 </table>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

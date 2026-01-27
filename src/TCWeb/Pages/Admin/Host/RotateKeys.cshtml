@@ -1,11 +1,11 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Admin.Host.RotateKeysModel
 @{ ViewData["Title"] = "Rotate Symmetric Keys"; }
 
 <h1>@ViewData["Title"]</h1>
 
 <div class="alert alert-warning">
-    <h5>Important — Backup first</h5>
+    <h5>Important � Backup first</h5>
     <ul>
         <li>This operation rotates the AES key and IV used to encrypt secrets (mail host passwords).</li>
         <li>It will attempt to decrypt each host password with the current key and re-encrypt with the new key.</li>
@@ -32,8 +32,4 @@
     <div class="alert @(Model.Success ? "alert-success" : "alert-danger")" role="alert">
         @Model.ResultMessage
     </div>
-}
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }

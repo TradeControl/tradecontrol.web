@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.Accounts.ProfitAndLossModel
 @{ ViewData["Title"] = "Profit and Loss"; }
 <h1>@ViewData["Title"]</h1>
@@ -108,8 +108,4 @@
             <a asp-page="./ProfitAndLoss" asp-route-mode="0" asp-route-YearName="@Model.YearName" class="btn btn-info">Show Details</a>
         </div>
     }
-}
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }

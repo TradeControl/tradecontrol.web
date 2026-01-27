@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Subject.Update.EditModel
 @{
     ViewData["Title"] = "Edit Organisation";
@@ -24,6 +24,12 @@
             <div>
                 <a asp-page="/Subject/Address/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Addresses</a>
                 <a asp-page="/Subject/Contact/Index" asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode" class="btn btn-secondary">Contacts</a>
+                <button type="submit"
+                        asp-page-handler="Rebuild"
+                        asp-route-accountCode="@Model.Subject_tbSubject.SubjectCode"
+                        class="btn btn-outline-success">
+                    Rebuild
+                </button>
             </div>
             <p />
 

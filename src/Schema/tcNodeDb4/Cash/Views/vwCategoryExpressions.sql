@@ -1,8 +1,17 @@
-﻿
-CREATE   VIEW Cash.vwCategoryExpressions
+
+
+CREATE VIEW [Cash].[vwCategoryExpressions]
 AS
-	SELECT     TOP 100 PERCENT Cash.tbCategory.DisplayOrder, Cash.tbCategory.CategoryCode, Cash.tbCategory.Category, Cash.tbCategoryExp.Expression, 
-						  Cash.tbCategoryExp.Format
-	FROM         Cash.tbCategory INNER JOIN
-						  Cash.tbCategoryExp ON Cash.tbCategory.CategoryCode = Cash.tbCategoryExp.CategoryCode
-	WHERE     (Cash.tbCategory.CategoryTypeCode = 2)
+	SELECT cat.DisplayOrder
+		, cat.CategoryCode
+		, cat.Category
+		, expr.Expression
+		, expr.Format
+		, expr.SyntaxTypeCode
+		, temp.Template
+	FROM Cash.tbCategory cat
+		JOIN Cash.tbCategoryExp expr
+			ON cat.CategoryCode = expr.CategoryCode
+		LEFT JOIN Cash.tbCategoryExprFormat temp
+			ON expr.Format = temp.TemplateCode
+	WHERE (cat.CategoryTypeCode = 2) and (cat.IsEnabled != 0)

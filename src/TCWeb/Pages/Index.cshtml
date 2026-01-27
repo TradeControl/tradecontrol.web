@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model IndexModel
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
@@ -56,7 +56,3 @@
         </dl>
     </div>
 </div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

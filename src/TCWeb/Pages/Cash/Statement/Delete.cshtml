@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Cash.Statement.DeleteModel
 @{ ViewData["Title"] = "Payment Details"; }
 
@@ -75,7 +75,3 @@
     <input type="submit" value="DELETE" class="btn btn-danger" />
     <a asp-page="./Index" asp-route-paymentCode=@Model.Cash_Payment.PaymentCode class="btn btn-info">To List</a>
 </form>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
