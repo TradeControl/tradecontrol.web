@@ -1,0 +1,95 @@
+@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@model TradeControl.Web.Pages.Admin.Manager.IndexModel
+@{
+    ViewData["Title"] = "Configuration Manager";
+    var companyName = (ViewData["CompanyName"] as string) ?? "Business";
+}
+
+<link href="~/css/blazorTree.css" rel="stylesheet" />
+
+<div class="tc-tree-workspace">
+    <div class="mb-3 d-flex align-items-center gap-2">
+        <div>
+            <h1 class="mb-0">@ViewData["Title"]</h1>
+        </div>
+    </div>
+
+    <component type="typeof(TradeControl.Web.Pages.Admin.Manager.ManagerShell)"
+               render-mode="ServerPrerendered"
+               param-CompanyName="companyName" />
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
+    <script>
+        window.adminManager = window.adminManager || {};
+
+        window.adminManager.updateHeaderOffset = function ()
+        {
+            const header = document.querySelector('header');
+            const bottom = header ? header.getBoundingClientRect().bottom : 0;
+            document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
+        };
+
+        window.adminManager.initSplit = function ()
+        {
+            if (!window.matchMedia("(min-width: 992px)").matches) return;
+            if (!window.Split) return;
+
+            const left = document.getElementById('leftCol');
+            const right = document.getElementById('rightCol');
+            if (!left || !right) return;
+
+            function dropInitialClasses()
+            {
+                left.classList.remove('tc-initial-left');
+                right.classList.remove('tc-initial-right');
+            }
+
+            const saved = (function ()
+            {
+                try
+                {
+                    const arr = JSON.parse(localStorage.getItem("tcAdminManagerSplit") || "[]");
+                    if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50) return arr;
+                }
+                catch { }
+                return [33, 67];
+            })();
+
+            Split(["#leftCol", "#rightCol"],
+            {
+                sizes: saved,
+                minSize: [240, 320],
+                gutterSize: 6,
+                snapOffset: 0,
+                elementStyle: function (dimension, size)
+                {
+                    return { flexBasis: size + '%', maxWidth: size + '%' };
+                },
+                gutterStyle: function (dimension, gutterSize)
+                {
+                    return { flexBasis: gutterSize + 'px' };
+                },
+                onDragEnd: function (sizes)
+                {
+                    localStorage.setItem("tcAdminManagerSplit", JSON.stringify(sizes));
+                }
+            });
+
+            dropInitialClasses();
+        };
+
+        (function ()
+        {
+            window.adminManager.updateHeaderOffset();
+            window.adminManager.initSplit();
+
+            window.addEventListener('resize', window.adminManager.updateHeaderOffset);
+        })();
+    </script>
+
+    <script src="/_framework/blazor.server.js"></script>
+}

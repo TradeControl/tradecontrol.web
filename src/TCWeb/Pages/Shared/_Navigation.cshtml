@@ -62,17 +62,6 @@
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
                             </li>
-                            @{
-                                if (User.IsInRole(Constants.AdministratorsRole))
-                                {
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Invoice/Settings/Index">Numbering</a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Invoice/Template/Index">Email Templates</a>
-                                    </li>
-                                }
-                            }
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -87,14 +76,6 @@
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Subject/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
                             </li>
-                            @{
-                                if (User.IsInRole(Constants.AdministratorsRole))
-                                {
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Subject/Type/Index">Types</a>
-                                    </li>
-                                }
-                            }
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -115,26 +96,20 @@
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Tax/Vat/Index">VAT</a>
                             </li>
-                            <li>
-                                <a class="dropdown-item" asp-area="" asp-page="/Tax/Company/Index">Company Tax</a>
-                            </li>
-                            @{
-                                if (User.IsInRole(Constants.AdministratorsRole))
-                                {
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Tax/Settings/Index">Tax Settings</a>
-                                    </li>
-                                }
-                            }
                         </ul>
                     </li>
 
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownSystem" role="button" data-bs-toggle="dropdown" aria-expanded="false">System</a>
                         <ul class="dropdown-menu" aria-labelledby="navDropdownSystem">
-                            <li>
-                                <a class="dropdown-item" asp-area="" asp-page="/Tax/TaxCode/Index">Tax Codes</a>
-                            </li>
+                            @{
+                                if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Manager/Index">Business Manager</a>
+                                    </li>
+                                }
+                            }
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Cash/CategoryTree/Index">Cash Configuration</a>
                             </li>
@@ -144,27 +119,6 @@
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Admin/EventLog/Index">Event Log</a>
                             </li>
-                            @{
-                                if (User.IsInRole(Constants.AdministratorsRole))
-                                {
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Host/Index">Mail Settings</a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/FileTransfer/Index">File Transfer</a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Users/Index">Registrations</a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/Setup/Index">Initialisation</a>
-                                    </li>
-                                    //MIS Implementation of Calendars has been deferred
-                                    // <li class="nav-item">
-                                    //     <a class="nav-link text-dark" asp-area="" asp-page="/Admin/Calendar/Index">Calendars</a>
-                                    // </li>
-                                }
-                            }
                         </ul>
                     </li>
                 </ul>

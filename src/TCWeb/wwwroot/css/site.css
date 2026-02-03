@@ -1,4 +1,4 @@
-﻿/* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
+/* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
 
 /* Header and Navbar */
 header, .navbar, .tc-header {
@@ -120,8 +120,12 @@ header .tc-brand:focus,
     }
 
 /* Body and Footer */
+:root {
+    --tc-footer-height: 60px;
+}
+
 body {
-    margin-bottom: 60px;
+    margin-bottom: var(--tc-footer-height);
 }
 
 footer, .footer, .tc-footer {
@@ -132,7 +136,7 @@ footer, .footer, .tc-footer {
     font-weight: 500;
     box-shadow: 0 -2px 8px rgba(255, 152, 0, 0.08);
     text-align: center;
-    line-height: 60px;
+    line-height: var(--tc-footer-height);
     position: fixed;
     left: 0;
     bottom: 0;
@@ -336,16 +340,18 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
 
 /* Mobile Devices */
 @media (max-width: 420px) {
+    :root {
+        --tc-footer-height: 40px;
+    }
 
     footer, .footer, .tc-footer {
         padding: 0 0.5rem;
-        line-height: 40px;
         font-size: 0.95rem;
         margin-bottom: 0;
     }
 
     body {
-        margin-bottom: 40px;
+        margin-bottom: var(--tc-footer-height);
     }
 
     .tc-body-align {

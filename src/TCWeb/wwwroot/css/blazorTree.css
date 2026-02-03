@@ -1,0 +1,134 @@
+/* Generic Tree Manager shell (reusable across Admin Manager, Subject Namespaces, etc.)
+   CategoryTree-compatible approach:
+   - Do NOT size to 100vh (site layout owns scrolling)
+   - Provide a clean framed component surface
+   - Split panes scroll internally
+*/
+
+/* Component wrapper */
+.tc-tree-manager {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Optional outer frame in markup - MUST stretch for full-height layouts */
+.tc-tree-manager-frame {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+/* ---- Desktop split ---- */
+@media (min-width: 992px) {
+    .tc-tree-split {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        align-items: stretch;
+        gap: 0; /* gutter handled by Split.js */
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .tc-tree-split .tc-pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        box-sizing: border-box;
+    }
+
+    /* Make the bordered pane contents fill pane height */
+    #leftCol > div,
+    #rightCol > div {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        box-sizing: border-box;
+    }
+
+    /* Initial (pre-Split) 33/67 sizing; removed after Split initializes */
+    #leftCol.tc-initial-left {
+        flex: 0 1 33.333%;
+        max-width: 33.333%;
+    }
+
+    #rightCol.tc-initial-right {
+        flex: 1 1 66.667%;
+        max-width: 66.667%;
+    }
+
+    /* Split.js gutter */
+    .gutter {
+        flex: 0 0 6px;
+        background: #e0e0e0;
+        cursor: col-resize;
+        position: relative;
+    }
+
+        .gutter:hover {
+            background: #d0d0d0;
+        }
+}
+
+/* Utility: ensure columns can shrink inside flex row without causing horizontal scroll */
+#leftCol, #rightCol {
+    min-width: 0;
+}
+
+/* ---- Fixed workspace between header and fixed footer (Explorer-style).
+   Header height is provided per-page via --tc-header-offset. ---- */
+:root {
+    --tc-header-offset: 0px;              /* set by page JS */
+    --tc-workspace-gap: 12px;             /* fixed margin all around */
+    --tc-tree-manager-footer: var(--tc-footer-height, 60px);
+}
+
+.tc-tree-workspace {
+    position: fixed;
+    left: var(--tc-workspace-gap);
+    right: var(--tc-workspace-gap);
+    top: calc(var(--tc-header-offset) + var(--tc-workspace-gap));
+    bottom: calc(var(--tc-tree-manager-footer) + var(--tc-workspace-gap));
+    overflow: hidden; /* no page scrolling; internal scrolling only */
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Make the tree manager consume the remaining workspace height */
+.tc-tree-workspace .tc-tree-manager {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ---- Generic tree context menu (Blazor) ---- */
+.tc-tree-ctx-backdrop {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 2000;
+}
+
+.tc-tree-ctx-menu {
+    position: fixed;
+    min-width: 180px;
+    z-index: 2010;
+}
+
+.tc-tree-ctx-menu .dropdown-item {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    padding: 0.45rem 0.85rem;
+}
+
+.tc-tree-ctx-menu .dropdown-item:hover {
+    background: #f8f9fa;
+}

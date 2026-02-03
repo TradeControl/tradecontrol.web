@@ -1,0 +1,160 @@
+@using System.Threading
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="tc-tree-host"
+     tabindex="0"
+     @onkeydown="OnKeyDown">
+    <div class="tc-admin-manager-tree"
+         @oncontextmenu="OnContextMenuAsync"
+         @oncontextmenu:preventDefault="true"
+         @onpointerdown="OnPointerDown"
+         @onpointerup="OnPointerUp"
+         @onpointercancel="OnPointerCancel">
+        <button type="button"
+                class="btn btn-link text-start w-100 px-2 py-1 fw-semibold"
+                @onclick="SelectRootAsync"
+                aria-expanded="@_rootExpanded">
+            <i class="bi bi-building me-2" aria-hidden="true"></i>
+            <span class="me-2">@(_rootExpanded ? "▾" : "▸")</span>
+            <span class="@(_selected == ManagerNode.Root ? "text-decoration-underline" : "")">@RootLabel</span>
+        </button>
+
+        @if (_rootExpanded)
+        {
+            <div class="ps-4">
+                <button type="button"
+                        class="btn btn-link text-start w-100 px-2 py-1"
+                        @onclick="SelectSetupAsync">
+                    <i class="bi bi-gear me-2" aria-hidden="true"></i>
+                    <span class="@(_selected == ManagerNode.Setup ? "text-decoration-underline" : "")">Setup</span>
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (_ctx.IsOpen)
+    {
+        <div class="tc-tree-ctx-backdrop"
+             @onclick="CloseContextMenu"></div>
+
+        <div class="tc-tree-ctx-menu border rounded shadow bg-white py-1"
+             style="left:@($"{_ctx.X}px"); top:@($"{_ctx.Y}px");"
+             role="menu"
+             aria-label="Tree actions">
+            <button type="button" class="dropdown-item" @onclick="ExpandAllAsync">Expand all</button>
+            <button type="button" class="dropdown-item" @onclick="CollapseAllAsync">Collapse all</button>
+        </div>
+    }
+</div>
+
+@code {
+    public enum ManagerNode
+    {
+        Root,
+        Setup
+    }
+
+    [Parameter] public string RootLabel { get; set; } = "Business";
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback<ManagerNode> OnNodeSelected { get; set; }
+
+    private bool _rootExpanded = true;
+    private ManagerNode _selected = ManagerNode.Root;
+
+    private ContextMenuState _ctx = new();
+    private CancellationTokenSource? _pressCts;
+
+    private async Task SelectRootAsync()
+    {
+        _selected = ManagerNode.Root;
+        _rootExpanded = true;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(ManagerNode.Root);
+    }
+
+    private async Task SelectSetupAsync()
+    {
+        _selected = ManagerNode.Setup;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(ManagerNode.Setup);
+    }
+
+    private Task OnContextMenuAsync(MouseEventArgs e)
+    {
+        if (IsMobile)
+            return Task.CompletedTask; // skip menu on mobile for now
+
+        _ctx = new ContextMenuState
+        {
+            IsOpen = true,
+            X = (int)e.ClientX,
+            Y = (int)e.ClientY
+        };
+
+        return Task.CompletedTask;
+    }
+
+    private Task ExpandAllAsync()
+    {
+        _rootExpanded = true;
+        CloseContextMenu();
+        return Task.CompletedTask;
+    }
+
+    private Task CollapseAllAsync()
+    {
+        _rootExpanded = false;
+        CloseContextMenu();
+        return Task.CompletedTask;
+    }
+
+    private void CloseContextMenu()
+    {
+        if (_ctx.IsOpen)
+            _ctx = _ctx with { IsOpen = false };
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            CloseContextMenu();
+    }
+
+    private void OnPointerDown(PointerEventArgs e)
+    {
+        if (!IsMobile)
+            return;
+
+        _pressCts?.Cancel();
+        _pressCts = new CancellationTokenSource();
+
+        var x = (int)e.ClientX;
+        var y = (int)e.ClientY;
+
+        _ = LongPressOpenAsync(x, y, _pressCts.Token);
+    }
+
+    private void OnPointerUp(PointerEventArgs e) => _pressCts?.Cancel();
+    private void OnPointerCancel(PointerEventArgs e) => _pressCts?.Cancel();
+
+    private async Task LongPressOpenAsync(int x, int y, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(550, token);
+            _ctx = _ctx with { IsOpen = true, X = x, Y = y };
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private record ContextMenuState
+    {
+        public bool IsOpen { get; init; }
+        public int X { get; init; }
+        public int Y { get; init; }
+    }
+}

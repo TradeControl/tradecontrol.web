@@ -1,4 +1,4 @@
-﻿/**************************************************************************************
+/**************************************************************************************
 Trade Control
 ASP.NET Core Web Interface
 
@@ -60,6 +60,9 @@ namespace TradeControl.Web
         {
             services.AddRazorPages();
 
+            // Blazor Server (for Admin/Manager tree host)
+            services.AddServerSideBlazor();
+
             services.AddDetection();
 
             services.AddSession(options =>
@@ -114,6 +117,10 @@ namespace TradeControl.Web
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+                // Blazor Server endpoint
+                endpoints.MapBlazorHub();
+
                 endpoints.MapRazorPages();
             });            
         }

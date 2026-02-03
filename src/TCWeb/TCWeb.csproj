@@ -1,71 +1,71 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>TradeControl.Web</RootNamespace>
-    <AssemblyName>TradeControl.Web</AssemblyName>
-    <Authors>iam</Authors>
-    <Company>Trade Control Ltd</Company>
-    <Product>Trade Control</Product>
-    <Description>Web interface for Accounts and MIS for SMEs.</Description>
-    <Copyright>Copyright © Trade Control 2020-25</Copyright>
-    <PackageProjectUrl>https://tradecontrol.github.io</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/tradecontrol/tradecontrol.web</RepositoryUrl>
-    <UserSecretsId>80b1d6ff-f6e4-4ee3-aca9-0d0bb63c6992</UserSecretsId>
-    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <RootNamespace>TradeControl.Web</RootNamespace>
+        <AssemblyName>TradeControl.Web</AssemblyName>
+        <Authors>iam</Authors>
+        <Company>Trade Control Ltd</Company>
+        <Product>Trade Control</Product>
+        <Description>Web interface for Accounts and MIS for SMEs.</Description>
+        <Copyright>Copyright © Trade Control 2020-25</Copyright>
+        <PackageProjectUrl>https://tradecontrol.github.io</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/tradecontrol/tradecontrol.web</RepositoryUrl>
+        <UserSecretsId>80b1d6ff-f6e4-4ee3-aca9-0d0bb63c6992</UserSecretsId>
+        <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;7022;RCS1003;IDE0011</NoWarn>
-  </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+        <NoWarn>1701;1702;7022;RCS1003;IDE0011</NoWarn>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1701;1702;0011</NoWarn>
-  </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <NoWarn>1701;1702;0011</NoWarn>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Content Remove="wwwroot\content\templates\invoice_expense_standard.html" />
-    <Content Remove="wwwroot\content\templates\support_request.html" />
-  </ItemGroup>
+    <ItemGroup>
+        <Content Remove="wwwroot\content\templates\invoice_expense_standard.html" />
+        <Content Remove="wwwroot\content\templates\support_request.html" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MailKit" Version="4.14.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.9">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
-    <PackageReference Include="Wangkanai.Detection" Version="8.20.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="MailKit" Version="4.14.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.9">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
+        <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
+        <PackageReference Include="Wangkanai.Detection" Version="8.20.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Wangkanai.Detection">
-      <HintPath>Lib\Wangkanai.Detection.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+    <ItemGroup>
+        <Reference Include="Wangkanai.Detection">
+            <HintPath>Lib\Wangkanai.Detection.dll</HintPath>
+        </Reference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Include="wwwroot\content\templates\invoice_expense_standard.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="wwwroot\content\templates\support_request.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="wwwroot\content\templates\invoice_income_standard.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="wwwroot\js\categoryTree.embedded.js" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="wwwroot\content\templates\invoice_expense_standard.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="wwwroot\content\templates\support_request.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="wwwroot\content\templates\invoice_income_standard.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="wwwroot\js\categoryTree.embedded.js" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\TCExports\src\TCExports.Generator\TCExports.Generator.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\TCExports\src\TCExports.Generator\TCExports.Generator.csproj" />
+    </ItemGroup>
 
 </Project>

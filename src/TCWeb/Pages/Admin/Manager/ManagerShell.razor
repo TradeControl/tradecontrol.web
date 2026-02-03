@@ -1,0 +1,118 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+
+<div class="tc-tree-manager">
+    <div class="tc-tree-manager-frame border rounded bg-white p-2">
+        @if (_isMobile)
+        {
+            <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                <div class="flex-grow-1 border rounded bg-white p-2" style="min-height:0;">
+                    <ManagerTreeHost RootLabel="@_companyName"
+                                     IsMobile="true"
+                                     OnNodeSelected="HandleNodeSelectedAsync" />
+                </div>
+            </div>
+
+            <div class="mt-2">
+                <div id="adminManagerMobileBar" class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary flex-grow-1" disabled>Actions</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="tc-tree-split">
+                <div id="leftCol" class="tc-pane tc-initial-left">
+                    <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
+                        <ManagerTreeHost RootLabel="@_companyName"
+                                         IsMobile="false"
+                                         OnNodeSelected="HandleNodeSelectedAsync" />
+                    </div>
+                </div>
+
+                <div id="rightCol" class="tc-pane tc-initial-right d-none d-lg-flex">
+                    <div class="flex-grow-1 border rounded p-2 bg-light">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="fw-semibold">
+                                <i class="bi bi-building me-2" aria-hidden="true"></i>@_companyName
+                            </div>
+                        </div>
+
+                        @if (_selected == ManagerTreeHost.ManagerNode.Root)
+                        {
+                            <div class="bg-white border rounded p-3">
+                                <h2 class="h6 mb-2">Setup</h2>
+                                <p class="text-muted mb-3">Select a section to configure the business.</p>
+                                <div class="d-grid gap-2">
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Setup)">
+                                        <i class="bi bi-gear me-2" aria-hidden="true"></i>Setup
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <iframe class="w-100 border rounded bg-white"
+                                    style="min-height:60vh;"
+                                    title="Details"
+                                    src="@_iframeSrc"></iframe>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string CompanyName { get; set; } = "Business";
+
+    private bool _isMobile;
+    private string _companyName = "Business";
+    private ManagerTreeHost.ManagerNode _selected = ManagerTreeHost.ManagerNode.Root;
+    private string? _iframeSrc;
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        _companyName = CompanyName;
+        _isMobile = Detection?.Device?.Type == Wangkanai.Detection.Models.Device.Mobile;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isMobile)
+        {
+            await JSRuntime.InvokeVoidAsync("adminManager.initSplit");
+        }
+    }
+
+    private Task HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode node)
+    {
+        _selected = node;
+
+        if (_isMobile)
+        {
+            if (node == ManagerTreeHost.ManagerNode.Setup)
+                NavigationManager.NavigateTo("/Admin/Setup/Index", forceLoad: true);
+
+            return Task.CompletedTask;
+        }
+
+        if (node == ManagerTreeHost.ManagerNode.Root)
+        {
+            _iframeSrc = null;
+            return Task.CompletedTask;
+        }
+
+        if (node == ManagerTreeHost.ManagerNode.Setup)
+            _iframeSrc = "/Admin/Setup/Index?embedded=1";
+
+        return Task.CompletedTask;
+    }
+}
