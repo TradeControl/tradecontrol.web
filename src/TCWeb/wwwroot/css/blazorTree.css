@@ -1,24 +1,104 @@
-/* Generic Tree Manager shell (reusable across Admin Manager, Subject Namespaces, etc.)
-   CategoryTree-compatible approach:
-   - Do NOT size to 100vh (site layout owns scrolling)
-   - Provide a clean framed component surface
-   - Split panes scroll internally
+/* Admin Manager / Blazor tree manager shell
+   - Desktop split panes using Split.js
+   - Fixed viewport workspace between header and fixed footer
+   - RHS iframe fills remaining height under the selected-node header
+   - Admin Manager tree styles (Explorer-like density)
 */
+
+:root {
+    --tc-header-offset: 0px; /* set by Admin/Manager/Index.cshtml JS */
+    --tc-workspace-gap: 12px; /* fixed margin around the workspace */
+    --tc-tree-manager-footer: var(--tc-footer-height, 60px);
+    --tc-tree-font-size: 0.95rem;
+    --tc-tree-row-pad-y: 0.25rem;
+    --tc-tree-row-pad-x: 0.5rem;
+    --tc-tree-row-radius: 4px;
+    --tc-tree-selected-bg: #ffe0b2; /* aligns with site table header accent */
+    --tc-tree-selected-fg: #e65100;
+    --tc-tree-hover-bg: #fffde7;
+    --tc-tree-icon-muted: #6c757d;
+}
+
+/* Fixed workspace between header and footer (Explorer-style) */
+.tc-tree-workspace {
+    position: fixed;
+    left: var(--tc-workspace-gap);
+    right: var(--tc-workspace-gap);
+    top: calc(var(--tc-header-offset) + var(--tc-workspace-gap));
+    bottom: calc(var(--tc-tree-manager-footer) + var(--tc-workspace-gap));
+    overflow: hidden;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
 
 /* Component wrapper */
 .tc-tree-manager {
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 100%;
+    min-height: 0;
+    flex: 1 1 auto; /* fill tc-tree-workspace */
     box-sizing: border-box;
 }
 
-/* Optional outer frame in markup - MUST stretch for full-height layouts */
+/* Outer frame (border/rounded/padding applied in markup) must stretch */
 .tc-tree-manager-frame {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1 1 auto;
     min-height: 0;
     box-sizing: border-box;
+}
+
+/* ---- Admin Manager tree (Explorer-like) ---- */
+.tc-admin-manager-tree {
+    font-size: var(--tc-tree-font-size);
+    line-height: 1.25;
+}
+
+.tc-tree-row {
+    padding: var(--tc-tree-row-pad-y) var(--tc-tree-row-pad-x);
+    border-radius: var(--tc-tree-row-radius);
+    color: inherit;
+    text-decoration: none;
+}
+
+    .tc-tree-row:hover {
+        background: var(--tc-tree-hover-bg);
+        text-decoration: none;
+    }
+
+.tc-tree-expander {
+    display: inline-flex;
+    width: 1.1rem;
+    justify-content: center;
+    margin-right: 0.25rem;
+    color: var(--tc-tree-icon-muted);
+}
+
+.tc-tree-icon {
+    color: var(--tc-tree-icon-muted);
+}
+
+.tc-tree-icon-root {
+    color: #f57c00; /* subtle brand tint */
+}
+
+.tc-tree-icon-setup {
+    color: #1976d2; /* slight functional tint */
+}
+
+.tc-tree-label {
+    display: inline-block;
+    padding: 0.06rem 0.25rem;
+    border-radius: var(--tc-tree-row-radius);
+}
+
+.tc-tree-label-selected {
+    background: var(--tc-tree-selected-bg);
+    color: var(--tc-tree-selected-fg);
 }
 
 /* ---- Desktop split ---- */
@@ -26,7 +106,7 @@
     .tc-tree-split {
         display: flex;
         width: 100%;
-        height: 100%;
+        flex: 1 1 auto;
         min-height: 0;
         align-items: stretch;
         gap: 0; /* gutter handled by Split.js */
@@ -34,24 +114,36 @@
         overflow: hidden;
     }
 
-    .tc-tree-split .tc-pane {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        min-height: 0;
-        box-sizing: border-box;
-    }
+        .tc-tree-split .tc-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            box-sizing: border-box;
+        }
 
-    /* Make the bordered pane contents fill pane height */
+    /* Inner bordered pane content must fill height and scroll internally */
     #leftCol > div,
     #rightCol > div {
+        display: flex;
+        flex-direction: column;
         flex: 1 1 auto;
         min-height: 0;
-        overflow: auto;
+        overflow: hidden;
         box-sizing: border-box;
     }
 
-    /* Initial (pre-Split) 33/67 sizing; removed after Split initializes */
+    /* If the pane contains scrollable content, scroll inside it */
+    #leftCol > div {
+        overflow: auto;
+    }
+
+    /* RHS: header + iframe/card; keep it a flex column and let children size correctly */
+    #rightCol > div {
+        overflow: hidden;
+    }
+
+    /* Split.js initial sizing (removed after init) */
     #leftCol.tc-initial-left {
         flex: 0 1 33.333%;
         max-width: 33.333%;
@@ -73,38 +165,22 @@
         .gutter:hover {
             background: #d0d0d0;
         }
+
+    /* RHS iframe: fill the remaining height UNDER the selected-node header */
+    .tc-details-frame {
+        display: block;
+        flex: 1 1 auto;
+        width: 100%;
+        min-height: 0;
+        height: auto; /* do not use 100% in a flex column with a header above */
+        border: 0; /* border is provided by markup class 'border rounded' */
+    }
 }
 
-/* Utility: ensure columns can shrink inside flex row without causing horizontal scroll */
-#leftCol, #rightCol {
+/* Utility: allow columns to shrink without horizontal scroll */
+#leftCol,
+#rightCol {
     min-width: 0;
-}
-
-/* ---- Fixed workspace between header and fixed footer (Explorer-style).
-   Header height is provided per-page via --tc-header-offset. ---- */
-:root {
-    --tc-header-offset: 0px;              /* set by page JS */
-    --tc-workspace-gap: 12px;             /* fixed margin all around */
-    --tc-tree-manager-footer: var(--tc-footer-height, 60px);
-}
-
-.tc-tree-workspace {
-    position: fixed;
-    left: var(--tc-workspace-gap);
-    right: var(--tc-workspace-gap);
-    top: calc(var(--tc-header-offset) + var(--tc-workspace-gap));
-    bottom: calc(var(--tc-tree-manager-footer) + var(--tc-workspace-gap));
-    overflow: hidden; /* no page scrolling; internal scrolling only */
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-/* Make the tree manager consume the remaining workspace height */
-.tc-tree-workspace .tc-tree-manager {
-    flex: 1 1 auto;
-    min-height: 0;
 }
 
 /* ---- Generic tree context menu (Blazor) ---- */

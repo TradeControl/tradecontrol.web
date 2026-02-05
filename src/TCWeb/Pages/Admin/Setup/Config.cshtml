@@ -2,129 +2,233 @@
 @model TradeControl.Web.Pages.Admin.Setup.ConfigModel
 @{
     ViewData["Title"] = "Business Setup";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? string.Empty)
+        : string.Empty;
+
+    var done = false;
+    if (Request?.Query.ContainsKey("done") == true)
+    {
+        done = string.Equals(Request.Query["done"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["done"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var cancelHref = embedded
+        ? (!string.IsNullOrWhiteSpace(returnNode)
+            ? $"/Admin/Setup/Index?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}"
+            : "/Admin/Setup/Index?embedded=1")
+        : (!string.IsNullOrWhiteSpace(returnNode)
+            ? $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}"
+            : "/Admin/Manager/Index");
 }
-<h1>@ViewData["Title"]</h1>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.TemplateName" class="control-label"></label>
-                <p>
-                    <select asp-for="App_Initialisation.TemplateName" asp-items="Model.TemplateNames" class="form-control" id="templateName"></select>
-                </p>
-                <div class="alert alert-info" role="note" id="templateDescription"></div>
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+    }
+
+    <form method="post" class="tc-setup-form">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-6 d-flex">
+                <div class="card shadow-sm h-100 w-100">
+                    <div class="card-header bg-white">
+                        <div class="fw-semibold">Template</div>
+                        <div class="text-muted small">Select a template to pre-configure defaults.</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="App_Initialisation.TemplateName" class="form-label"></label>
+                            <select asp-for="App_Initialisation.TemplateName"
+                                    asp-items="Model.TemplateNames"
+                                    class="form-control"
+                                    id="templateName"></select>
+                            <div class="alert alert-info mt-2 mb-0" role="note" id="templateDescription"></div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.UocName" class="form-label"></label>
+                                <select asp-for="App_Initialisation.UocName" asp-items="Model.UocNames" class="form-control"></select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.MonthName" class="form-label"></label>
+                                <select asp-for="App_Initialisation.MonthName" asp-items="Model.MonthNames" class="form-control"></select>
+                            </div>
+                        </div>
+
+                        <input asp-for="App_Initialisation.CalendarCode" type="hidden" />
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.SubjectCode" class="control-label"></label>
-                <input asp-for="App_Initialisation.SubjectCode" class="form-control" />
-                <span asp-validation-for="App_Initialisation.SubjectCode" class="text-danger"></span>
+
+            <div class="col-12 col-lg-6 d-flex">
+                <div class="card shadow-sm h-100 w-100">
+                    <div class="card-header bg-white">
+                        <div class="fw-semibold">Business</div>
+                        <div class="text-muted small">Core identity and contact information.</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label asp-for="App_Initialisation.SubjectCode" class="form-label"></label>
+                                <input asp-for="App_Initialisation.SubjectCode" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.SubjectCode" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-8">
+                                <label asp-for="App_Initialisation.SubjectName" class="form-label"></label>
+                                <input asp-for="App_Initialisation.SubjectName" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.SubjectName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="App_Initialisation.BusinessAddress" class="form-label"></label>
+                                <textarea rows="4" asp-for="App_Initialisation.BusinessAddress" class="form-control"></textarea>
+                                <span asp-validation-for="App_Initialisation.BusinessAddress" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.UserName" class="form-label"></label>
+                                <input asp-for="App_Initialisation.UserName" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.UserName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.PhoneNumber" class="form-label"></label>
+                                <input asp-for="App_Initialisation.PhoneNumber" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.PhoneNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.EmailAddress" class="form-label"></label>
+                                <input asp-for="App_Initialisation.EmailAddress" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.EmailAddress" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.WebSite" class="form-label"></label>
+                                <input asp-for="App_Initialisation.WebSite" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.WebSite" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.SubjectName" class="control-label"></label>
-                <input asp-for="App_Initialisation.SubjectName" class="form-control" />
-                <span asp-validation-for="App_Initialisation.SubjectName" class="text-danger"></span>
+
+            <div class="col-12 col-lg-6 d-flex">
+                <div class="card shadow-sm h-100 w-100">
+                    <div class="card-header bg-white">
+                        <div class="fw-semibold">Registration & Tax</div>
+                        <div class="text-muted small">Optional registration identifiers and government entity.</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.CompanyNumber" class="form-label"></label>
+                                <input asp-for="App_Initialisation.CompanyNumber" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.CompanyNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.VatNumber" class="form-label"></label>
+                                <input asp-for="App_Initialisation.VatNumber" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.VatNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="App_Initialisation.Government" class="form-label"></label>
+                                <input asp-for="App_Initialisation.Government" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.Government" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.BusinessAddress" class="control-label"></label>
-                <textarea rows="5" asp-for="App_Initialisation.BusinessAddress" class="form-control"></textarea>
-                <span asp-validation-for="App_Initialisation.BusinessAddress" class="text-danger"></span>
+
+            <div class="col-12 col-lg-6 d-flex">
+                <div class="card shadow-sm h-100 w-100">
+                    <div class="card-header bg-white">
+                        <div class="fw-semibold">Banking</div>
+                        <div class="text-muted small">Current and reserve accounts used by the system.</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="App_Initialisation.BankName" class="form-label"></label>
+                                <input asp-for="App_Initialisation.BankName" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.BankName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="App_Initialisation.BankAddress" class="form-label"></label>
+                                <textarea rows="3" asp-for="App_Initialisation.BankAddress" class="form-control"></textarea>
+                                <span asp-validation-for="App_Initialisation.BankAddress" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.CurrentSubjectName" class="form-label"></label>
+                                <input asp-for="App_Initialisation.CurrentSubjectName" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.CurrentSubjectName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label asp-for="App_Initialisation.CASortCode" class="form-label"></label>
+                                <input asp-for="App_Initialisation.CASortCode" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.CASortCode" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label asp-for="App_Initialisation.CAAccountNumber" class="form-label"></label>
+                                <input asp-for="App_Initialisation.CAAccountNumber" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.CAAccountNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label asp-for="App_Initialisation.ReserveSubjectName" class="form-label"></label>
+                                <input asp-for="App_Initialisation.ReserveSubjectName" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.ReserveSubjectName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label asp-for="App_Initialisation.RASortCode" class="form-label"></label>
+                                <input asp-for="App_Initialisation.RASortCode" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.RASortCode" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label asp-for="App_Initialisation.RAAccountNumber" class="form-label"></label>
+                                <input asp-for="App_Initialisation.RAAccountNumber" class="form-control" />
+                                <span asp-validation-for="App_Initialisation.RAAccountNumber" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.UserName" class="control-label"></label>
-                <input asp-for="App_Initialisation.UserName" class="form-control" />
-                <span asp-validation-for="App_Initialisation.UserName" class="text-danger"></span>
+
+            <div class="col-12">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Initialise</button>
+                    <a href="@cancelHref" class="btn btn-outline-secondary">Cancel</a>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.PhoneNumber" class="control-label"></label>
-                <input asp-for="App_Initialisation.PhoneNumber" class="form-control" />
-                <span asp-validation-for="App_Initialisation.PhoneNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.EmailAddress" class="control-label"></label>
-                <input asp-for="App_Initialisation.EmailAddress" class="form-control" />
-                <span asp-validation-for="App_Initialisation.EmailAddress" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.WebSite" class="control-label"></label>
-                <input asp-for="App_Initialisation.WebSite" class="form-control" />
-                <span asp-validation-for="App_Initialisation.WebSite" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.CompanyNumber" class="control-label"></label>
-                <input asp-for="App_Initialisation.CompanyNumber" class="form-control" />
-                <span asp-validation-for="App_Initialisation.CompanyNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.VatNumber" class="control-label"></label>
-                <input asp-for="App_Initialisation.VatNumber" class="form-control" />
-                <span asp-validation-for="App_Initialisation.VatNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.Government" class="control-label"></label>
-                <input asp-for="App_Initialisation.Government" class="form-control" />
-                <span asp-validation-for="App_Initialisation.Government" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.UocName" class="control-label"></label>
-                <p>
-                    <select asp-for="App_Initialisation.UocName" asp-items="Model.UocNames" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.MonthName" class="control-label"></label>
-                <p>
-                    <select asp-for="App_Initialisation.MonthName" asp-items="Model.MonthNames" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.BankName" class="control-label"></label>
-                <input asp-for="App_Initialisation.BankName" class="form-control" />
-                <span asp-validation-for="App_Initialisation.BankName" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.BankAddress" class="control-label"></label>
-                <textarea rows="5" asp-for="App_Initialisation.BankAddress" class="form-control"></textarea>
-                <span asp-validation-for="App_Initialisation.BankAddress" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.CurrentSubjectName" class="control-label"></label>
-                <input asp-for="App_Initialisation.CurrentSubjectName" class="form-control" />
-                <span asp-validation-for="App_Initialisation.CurrentSubjectName" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.CAAccountNumber" class="control-label"></label>
-                <input asp-for="App_Initialisation.CAAccountNumber" class="form-control" />
-                <span asp-validation-for="App_Initialisation.CAAccountNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.CASortCode" class="control-label"></label>
-                <input asp-for="App_Initialisation.CASortCode" class="form-control" />
-                <span asp-validation-for="App_Initialisation.CASortCode" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.ReserveSubjectName" class="control-label"></label>
-                <input asp-for="App_Initialisation.ReserveSubjectName" class="form-control" />
-                <span asp-validation-for="App_Initialisation.ReserveSubjectName" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.RAAccountNumber" class="control-label"></label>
-                <input asp-for="App_Initialisation.RAAccountNumber" class="form-control" />
-                <span asp-validation-for="App_Initialisation.RAAccountNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_Initialisation.RASortCode" class="control-label"></label>
-                <input asp-for="App_Initialisation.RASortCode" class="form-control" />
-                <span asp-validation-for="App_Initialisation.RASortCode" class="text-danger"></span>
-            </div>
-            <input asp-for="App_Initialisation.CalendarCode" type="hidden" />
-            <div class="mb-3">
-                <input type="submit" value="Initialise" class="btn btn-primary" />
-                <a asp-page="/Index" class="btn btn-info">Back</a>
-            </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
 <script>
@@ -133,6 +237,7 @@
         const descriptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TemplateDescriptions));
         const select = document.getElementById("templateName");
         const box = document.getElementById("templateDescription");
+        if (!select || !box) return;
 
         function setDescription()
         {
@@ -144,5 +249,23 @@
 
         select.addEventListener("change", setDescription);
         setDescription();
+    })();
+
+    (function ()
+    {
+        const embedded = @((embedded ? "true" : "false"));
+        const done = @((done ? "true" : "false"));
+
+        if (!embedded || !done)
+            return;
+
+        if (window.top && window.top !== window)
+        {
+            window.top.location = "/Index";
+        }
+        else
+        {
+            window.location = "/Index";
+        }
     })();
 </script>

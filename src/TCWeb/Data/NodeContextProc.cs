@@ -2334,6 +2334,7 @@ namespace TradeControl.Web.Data
                 {
                     command.CommandText = "App.proc_NodeDataInit";
                     command.CommandType = CommandType.StoredProcedure;
+                    command.CommandTimeout = 300;
                     await command.ExecuteNonQueryAsync();
                 }
 

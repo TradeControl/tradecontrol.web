@@ -12,22 +12,139 @@
          @onpointerup="OnPointerUp"
          @onpointercancel="OnPointerCancel">
         <button type="button"
-                class="btn btn-link text-start w-100 px-2 py-1 fw-semibold"
+                class="btn btn-link text-start w-100 tc-tree-row"
                 @onclick="SelectRootAsync"
                 aria-expanded="@_rootExpanded">
-            <i class="bi bi-building me-2" aria-hidden="true"></i>
-            <span class="me-2">@(_rootExpanded ? "▾" : "▸")</span>
-            <span class="@(_selected == ManagerNode.Root ? "text-decoration-underline" : "")">@RootLabel</span>
+            <span class="tc-tree-expander" aria-hidden="true">
+                <i class="bi @(_rootExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+            </span>
+            <i class="bi bi-building me-2 tc-tree-icon tc-tree-icon-root" aria-hidden="true"></i>
+            <span class="tc-tree-label @(_selected == ManagerNode.Root ? "tc-tree-label-selected" : "")">@RootLabel</span>
         </button>
 
         @if (_rootExpanded)
         {
-            <div class="ps-4">
+            <div class="ps-3">
                 <button type="button"
-                        class="btn btn-link text-start w-100 px-2 py-1"
+                        class="btn btn-link text-start w-100 tc-tree-row"
                         @onclick="SelectSetupAsync">
-                    <i class="bi bi-gear me-2" aria-hidden="true"></i>
-                    <span class="@(_selected == ManagerNode.Setup ? "text-decoration-underline" : "")">Setup</span>
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-gear me-2 tc-tree-icon tc-tree-icon-setup" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.Setup ? "tc-tree-label-selected" : "")">Setup</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Periods)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-calendar3 me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.Periods ? "tc-tree-label-selected" : "")">Periods</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.FileTransfer)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-upload me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.FileTransfer ? "tc-tree-label-selected" : "")">File Transfer</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Host)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-envelope-at me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.Host ? "tc-tree-label-selected" : "")">Email Host</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Users)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-people me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.Users ? "tc-tree-label-selected" : "")">Users</span>
+                </button>
+
+                <div class="mt-2 ps-0">
+                    <div class="text-uppercase small text-muted px-2" style="letter-spacing:0.06em;">Invoicing</div>
+                </div>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.InvoiceTemplate)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-filetype-html me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.InvoiceTemplate ? "tc-tree-label-selected" : "")">Templates</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.InvoiceSettings)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-hash me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.InvoiceSettings ? "tc-tree-label-selected" : "")">Invoice Settings</span>
+                </button>
+
+                <div class="mt-2 ps-0">
+                    <div class="text-uppercase small text-muted px-2" style="letter-spacing:0.06em;">Tax</div>
+                </div>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxSettings)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-sliders me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.TaxSettings ? "tc-tree-label-selected" : "")">Tax Settings</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCode)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-receipt me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.TaxCode ? "tc-tree-label-selected" : "")">VAT Tax Codes</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCompany)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-bank me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.TaxCompany ? "tc-tree-label-selected" : "")">Corporation Tax</span>
+                </button>
+
+                <div class="mt-2 ps-0">
+                    <div class="text-uppercase small text-muted px-2" style="letter-spacing:0.06em;">Subjects</div>
+                </div>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.SubjectType)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-tags me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.SubjectType ? "tc-tree-label-selected" : "")">Subject Types</span>
                 </button>
             </div>
         }
@@ -52,7 +169,21 @@
     public enum ManagerNode
     {
         Root,
-        Setup
+        Setup,
+
+        Periods,
+        FileTransfer,
+        Host,
+        Users,
+
+        InvoiceTemplate,
+        InvoiceSettings,
+
+        TaxSettings,
+        TaxCode,
+        TaxCompany,
+
+        SubjectType
     }
 
     [Parameter] public string RootLabel { get; set; } = "Business";
@@ -82,10 +213,18 @@
             await OnNodeSelected.InvokeAsync(ManagerNode.Setup);
     }
 
+    private async Task SelectPlaceholderAsync(ManagerNode node)
+    {
+        _selected = node;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(node);
+    }
+
     private Task OnContextMenuAsync(MouseEventArgs e)
     {
         if (IsMobile)
-            return Task.CompletedTask; // skip menu on mobile for now
+            return Task.CompletedTask;
 
         _ctx = new ContextMenuState
         {

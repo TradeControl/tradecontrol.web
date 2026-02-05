@@ -65,7 +65,8 @@ namespace TradeControl.Web.Pages.Admin.Setup
 
                     string userName = await profile.UserName(UserManager.GetUserId(User));
 
-                    App_Initialisation = new() {
+                    App_Initialisation = new()
+                    {
                         TemplateName = TemplateNames.FirstOrDefault().Text,
                         SubjectName = company.CompanyName,
                         BusinessAddress = company.CompanyAddress,
@@ -111,7 +112,8 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         App_Initialisation.Government = gov;
                 }
                 else
-                    App_Initialisation = new() {
+                    App_Initialisation = new()
+                    {
                         TemplateName = TemplateNames.FirstOrDefault().Text,
                         MonthName = await NodeContext.App_tbMonths.Where(m => m.MonthNumber == 4).Select(m => m.MonthName).SingleAsync(),
                         UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == "GBP").Select(u => u.UocName).SingleAsync()
@@ -131,7 +133,28 @@ namespace TradeControl.Web.Pages.Admin.Setup
             if (!ModelState.IsValid)
                 return Page();
 
+            var embedded = false;
+            if (Request?.Query.ContainsKey("embedded") == true)
+            {
+                embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+            }
+
+            var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+                ? (Request.Query["returnNode"].ToString() ?? string.Empty)
+                : string.Empty;
+
+            var reinit = false;
+            if (Request?.Query.ContainsKey("reinit") == true)
+            {
+                reinit = string.Equals(Request.Query["reinit"], "1", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Request.Query["reinit"], "true", StringComparison.OrdinalIgnoreCase);
+            }
+
             var user = await UserManager.GetUserAsync(User);
+
+            if (reinit)
+                await NodeContext.InitializeNode();
 
             await NodeContext.ConfigureNode(
                 accountCode: App_Initialisation.SubjectCode,
@@ -139,7 +162,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
                 fullName: App_Initialisation.UserName,
                 businessAddress: App_Initialisation.BusinessAddress,
                 businessEmailAddress: App_Initialisation.EmailAddress,
-                userEmailAddress: user.Email,
+                userEmailAddress: user != null ? user.Email : App_Initialisation.EmailAddress,
                 phoneNumber: App_Initialisation.PhoneNumber,
                 companyNumber: App_Initialisation.CompanyNumber,
                 vatNumber: App_Initialisation.VatNumber,
@@ -148,9 +171,9 @@ namespace TradeControl.Web.Pages.Admin.Setup
                 );
 
             var monthNumber = await NodeContext.App_tbMonths
-                                .Where(m => m.MonthName == App_Initialisation.MonthName)
-                                .Select(m => m.MonthNumber)
-                                .SingleAsync();
+                            .Where(m => m.MonthName == App_Initialisation.MonthName)
+                            .Select(m => m.MonthNumber)
+                            .SingleAsync();
 
             await NodeContext.InstallBasicSetup(
                 templateName: App_Initialisation.TemplateName,
@@ -165,6 +188,11 @@ namespace TradeControl.Web.Pages.Admin.Setup
                 reserveAccount: App_Initialisation.ReserveSubjectName,
                 ra_SortCode: App_Initialisation.RASortCode,
                 ra_AccountNumber: App_Initialisation.RAAccountNumber);
+
+            if (embedded)
+            {
+                return Redirect($"/Admin/Setup/Config?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}&reinit={(reinit ? "1" : "0")}&done=1");
+            }
 
             return RedirectToPage("/Index");
         }

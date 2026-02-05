@@ -13,12 +13,6 @@
                                      OnNodeSelected="HandleNodeSelectedAsync" />
                 </div>
             </div>
-
-            <div class="mt-2">
-                <div id="adminManagerMobileBar" class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary flex-grow-1" disabled>Actions</button>
-                </div>
-            </div>
         }
         else
         {
@@ -32,10 +26,10 @@
                 </div>
 
                 <div id="rightCol" class="tc-pane tc-initial-right d-none d-lg-flex">
-                    <div class="flex-grow-1 border rounded p-2 bg-light">
+                    <div class="flex-grow-1 border rounded p-2 bg-light d-flex flex-column">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="fw-semibold">
-                                <i class="bi bi-building me-2" aria-hidden="true"></i>@_companyName
+                                <i class="bi bi-building me-2" aria-hidden="true"></i>@RightHeader
                             </div>
                         </div>
 
@@ -55,8 +49,7 @@
                         }
                         else
                         {
-                            <iframe class="w-100 border rounded bg-white"
-                                    style="min-height:60vh;"
+                            <iframe class="w-100 border rounded bg-white tc-details-frame"
                                     title="Details"
                                     src="@_iframeSrc"></iframe>
                         }
@@ -75,6 +68,13 @@
     private ManagerTreeHost.ManagerNode _selected = ManagerTreeHost.ManagerNode.Root;
     private string? _iframeSrc;
 
+    private string RightHeader => _selected switch
+    {
+        ManagerTreeHost.ManagerNode.Root => _companyName,
+        ManagerTreeHost.ManagerNode.Setup => $"{_companyName} / Setup",
+        _ => _companyName
+    };
+
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
@@ -82,6 +82,19 @@
     {
         _companyName = CompanyName;
         _isMobile = Detection?.Device?.Type == Wangkanai.Detection.Models.Device.Mobile;
+
+        // Allow deep-linking / returning to the last selected node (mobile Cancel flows).
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var qs = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (qs.TryGetValue("node", out var nodeValue))
+        {
+            if (Enum.TryParse<ManagerTreeHost.ManagerNode>(nodeValue.ToString(), ignoreCase: true, out var node))
+                _selected = node;
+        }
+
+        if (!_isMobile && _selected == ManagerTreeHost.ManagerNode.Setup)
+            _iframeSrc = "/Admin/Setup/Index?embedded=1";
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -92,6 +105,13 @@
         }
     }
 
+    private Task CancelMobileAsync()
+    {
+        // Return to whichever node we were on (or Root if unknown)
+        NavigationManager.NavigateTo($"/Admin/Manager/Index?node={_selected}", forceLoad: true);
+        return Task.CompletedTask;
+    }
+
     private Task HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode node)
     {
         _selected = node;
@@ -99,7 +119,7 @@
         if (_isMobile)
         {
             if (node == ManagerTreeHost.ManagerNode.Setup)
-                NavigationManager.NavigateTo("/Admin/Setup/Index", forceLoad: true);
+                NavigationManager.NavigateTo($"/Admin/Setup/Index?returnNode={node}", forceLoad: true);
 
             return Task.CompletedTask;
         }
