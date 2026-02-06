@@ -1,0 +1,88 @@
+@page
+@model TradeControl.Web.Pages.Admin.FileTransfer.DetailsModel
+
+@{
+    ViewData["Title"] = $"File Details - {Model.FileName}";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? string.Empty)
+        : string.Empty;
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backHref = embedded
+        ? $"/Admin/FileTransfer/Index?embedded=1&contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}"
+        : $"/Admin/FileTransfer/Index?contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <div class="fw-semibold">Properties</div>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Content Type</dt>
+                <dd class="col-sm-9">@Model.ContentType</dd>
+
+                <dt class="col-sm-3">Name</dt>
+                <dd class="col-sm-9 text-break">@Model.FileInfo.Name</dd>
+
+                <dt class="col-sm-3">Physical Path</dt>
+                <dd class="col-sm-9 text-break">@Model.FileInfo.PhysicalPath</dd>
+
+                <dt class="col-sm-3">Size (bytes)</dt>
+                <dd class="col-sm-9">@Model.FileInfo.Length.ToString("N0")</dd>
+
+                <dt class="col-sm-3">Last Modified</dt>
+                <dd class="col-sm-9">
+                    @if (Model.FileInfo.LastModified != default)
+                    {
+                        @Model.FileInfo.LastModified.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")
+                    }
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="/Admin/Manager/Index?node=FileTransferContentType&contentType=@Uri.EscapeDataString(Model.ContentType)&pageSize=@Model.PageSize&pageNumber=@Model.PageNumber"
+           class="btn btn-outline-secondary">
+            Back
+        </a>
+
+        <a asp-page="./Index"
+           asp-page-handler="Download"
+           asp-route-contentType="@Model.ContentType"
+           asp-route-fileName="@Model.FileInfo.Name"
+           asp-route-embedded="@(embedded ? "1" : null)"
+           asp-route-returnNode="@returnNode"
+           class="btn btn-secondary">
+            Download
+        </a>
+
+        <a asp-page="./Delete"
+           asp-route-contentType="@Model.ContentType"
+           asp-route-fileName="@Model.FileInfo.Name"
+           asp-route-embedded="@(embedded ? "1" : null)"
+           asp-route-returnNode="@returnNode"
+           class="btn btn-danger">
+            Delete
+        </a>
+    </div>
+</div>

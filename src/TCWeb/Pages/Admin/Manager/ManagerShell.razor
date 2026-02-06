@@ -8,9 +8,14 @@
         {
             <div class="d-flex flex-column" style="min-height:0; height:100%;">
                 <div class="flex-grow-1 border rounded bg-white p-2" style="min-height:0;">
+                    @* Mobile *@
                     <ManagerTreeHost RootLabel="@_companyName"
                                      IsMobile="true"
-                                     OnNodeSelected="HandleNodeSelectedAsync" />
+                                     InitialSelectedNode="@_selected"
+                                     InitialContentType="@_selectedContentType"
+                                     OnNodeSelected="HandleNodeSelectedAsync"
+                                     OnNodeSelectedEx="HandleNodeSelectedExAsync"
+                                     OnTreeAction="HandleTreeActionAsync" />
                 </div>
             </div>
         }
@@ -19,9 +24,14 @@
             <div class="tc-tree-split">
                 <div id="leftCol" class="tc-pane tc-initial-left">
                     <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
+                        @* Desktop *@
                         <ManagerTreeHost RootLabel="@_companyName"
                                          IsMobile="false"
-                                         OnNodeSelected="HandleNodeSelectedAsync" />
+                                         InitialSelectedNode="@_selected"
+                                         InitialContentType="@_selectedContentType"
+                                         OnNodeSelected="HandleNodeSelectedAsync"
+                                         OnNodeSelectedEx="HandleNodeSelectedExAsync"
+                                         OnTreeAction="HandleTreeActionAsync" />
                     </div>
                 </div>
 
@@ -36,13 +46,19 @@
                         @if (_selected == ManagerTreeHost.ManagerNode.Root)
                         {
                             <div class="bg-white border rounded p-3">
-                                <h2 class="h6 mb-2">Setup</h2>
+                                <h2 class="h6 mb-2">Configuration</h2>
                                 <p class="text-muted mb-3">Select a section to configure the business.</p>
                                 <div class="d-grid gap-2">
                                     <button type="button"
                                             class="btn btn-outline-primary text-start"
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Setup)">
                                         <i class="bi bi-gear me-2" aria-hidden="true"></i>Setup
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.FileTransfer)">
+                                        <i class="bi bi-upload me-2" aria-hidden="true"></i>File Transfer
                                     </button>
                                 </div>
                             </div>
@@ -66,12 +82,17 @@
     private bool _isMobile;
     private string _companyName = "Business";
     private ManagerTreeHost.ManagerNode _selected = ManagerTreeHost.ManagerNode.Root;
+    private string? _selectedContentType;
     private string? _iframeSrc;
+
+    private int _fileTransferPageSize = 25;
 
     private string RightHeader => _selected switch
     {
         ManagerTreeHost.ManagerNode.Root => _companyName,
         ManagerTreeHost.ManagerNode.Setup => $"{_companyName} / Setup",
+        ManagerTreeHost.ManagerNode.FileTransfer => $"{_companyName} / File Transfer",
+        ManagerTreeHost.ManagerNode.FileTransferContentType => $"{_companyName} / File Transfer / {_selectedContentType}",
         _ => _companyName
     };
 
@@ -83,7 +104,6 @@
         _companyName = CompanyName;
         _isMobile = Detection?.Device?.Type == Wangkanai.Detection.Models.Device.Mobile;
 
-        // Allow deep-linking / returning to the last selected node (mobile Cancel flows).
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var qs = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
 
@@ -93,8 +113,26 @@
                 _selected = node;
         }
 
-        if (!_isMobile && _selected == ManagerTreeHost.ManagerNode.Setup)
-            _iframeSrc = "/Admin/Setup/Index?embedded=1";
+        if (qs.TryGetValue("pageSize", out var pageSizeValue))
+        {
+            if (int.TryParse(pageSizeValue.ToString(), out var ps) && ps > 0)
+                _fileTransferPageSize = ps;
+        }
+
+        if (qs.TryGetValue("contentType", out var ct))
+            _selectedContentType = ct.ToString();
+
+        if (!_isMobile)
+        {
+            _iframeSrc = _selected switch
+            {
+                ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
+                ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
+                ManagerTreeHost.ManagerNode.FileTransferContentType when !string.IsNullOrWhiteSpace(_selectedContentType)
+                    => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}",
+                _ => _iframeSrc
+            };
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -102,14 +140,28 @@
         if (firstRender && !_isMobile)
         {
             await JSRuntime.InvokeVoidAsync("adminManager.initSplit");
+
+            await RefreshFileTransferPageSizeAsync();
+
+            if (_selected == ManagerTreeHost.ManagerNode.FileTransfer)
+                _iframeSrc = $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}";
+            else if (_selected == ManagerTreeHost.ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType))
+                _iframeSrc = $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}";
+
+            StateHasChanged();
         }
     }
 
-    private Task CancelMobileAsync()
+    private async Task RefreshFileTransferPageSizeAsync()
     {
-        // Return to whichever node we were on (or Root if unknown)
-        NavigationManager.NavigateTo($"/Admin/Manager/Index?node={_selected}", forceLoad: true);
-        return Task.CompletedTask;
+        try
+        {
+            _fileTransferPageSize = await JSRuntime.InvokeAsync<int>("adminManager.getFileTransferPageSize");
+        }
+        catch
+        {
+            _fileTransferPageSize = 25;
+        }
     }
 
     private Task HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode node)
@@ -121,6 +173,9 @@
             if (node == ManagerTreeHost.ManagerNode.Setup)
                 NavigationManager.NavigateTo($"/Admin/Setup/Index?returnNode={node}", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.FileTransfer)
+                NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&pageSize={_fileTransferPageSize}", forceLoad: true);
+
             return Task.CompletedTask;
         }
 
@@ -130,9 +185,68 @@
             return Task.CompletedTask;
         }
 
-        if (node == ManagerTreeHost.ManagerNode.Setup)
-            _iframeSrc = "/Admin/Setup/Index?embedded=1";
+        _iframeSrc = node switch
+        {
+            ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
+            ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
+            _ => _iframeSrc
+        };
 
         return Task.CompletedTask;
+    }
+
+    private async Task HandleNodeSelectedExAsync((ManagerTreeHost.ManagerNode Node, string? ContentType) selection)
+    {
+        _selected = selection.Node;
+        _selectedContentType = selection.ContentType;
+
+        await RefreshFileTransferPageSizeAsync();
+
+        if (_selected == ManagerTreeHost.ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType))
+        {
+            var contentType = Uri.EscapeDataString(_selectedContentType);
+
+            if (_isMobile)
+            {
+                NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&contentType={contentType}&pageSize={_fileTransferPageSize}", forceLoad: true);
+                return;
+            }
+
+            _iframeSrc = $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={contentType}&pageSize={_fileTransferPageSize}";
+        }
+    }
+
+    private async Task HandleTreeActionAsync(ManagerTreeHost.TreeAction action)
+    {
+        await RefreshFileTransferPageSizeAsync();
+
+        if (action.ActionType == ManagerTreeHost.TreeActionType.FileTransferSync)
+        {
+            var contentType = !string.IsNullOrWhiteSpace(_selectedContentType)
+                ? Uri.EscapeDataString(_selectedContentType)
+                : "All";
+
+            if (_isMobile)
+            {
+                NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?handler=SyncFiles&returnNode=FileTransfer&contentType={contentType}&pageNumber=1&pageSize={_fileTransferPageSize}", forceLoad: true);
+                return;
+            }
+
+            _iframeSrc = $"/Admin/FileTransfer/Index?handler=SyncFiles&embedded=1&returnNode=FileTransfer&contentType={contentType}&pageNumber=1&pageSize={_fileTransferPageSize}";
+            return;
+        }
+
+        if (action.ActionType == ManagerTreeHost.TreeActionType.FileTransferUpload && !string.IsNullOrWhiteSpace(action.ContentType))
+        {
+            if (_isMobile)
+            {
+                NavigationManager.NavigateTo($"/Admin/FileTransfer/Upload?returnNode=FileTransfer&contentType={Uri.EscapeDataString(action.ContentType)}", forceLoad: true);
+                return;
+            }
+
+            _selected = ManagerTreeHost.ManagerNode.FileTransferContentType;
+            _selectedContentType = action.ContentType;
+            _iframeSrc = $"/Admin/FileTransfer/Upload?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(action.ContentType)}";
+        }
     }
 }

@@ -59,13 +59,23 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
             }
         }
 
-        public async Task<IActionResult> OnPost(string contentType, string fileName)
+        public async Task<IActionResult> OnPost(string contentType, string fileName, int pageNumber, int pageSize)
         {
             if (string.IsNullOrEmpty(contentType) || string.IsNullOrEmpty(fileName))
                 return Page();
 
+            var embedded = Request?.Form.ContainsKey("embedded") == true
+                && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+            var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                ? (Request.Form["returnNode"].ToString() ?? string.Empty)
+                : string.Empty;
+
+            ContentType = contentType;
+
             var contentTypeCode = TemplateManager.GetContentTypeFromString(ContentType);
-            
+
             TemplateManager templateManager = new(NodeContext, FileProvider);
             RemoveFile = templateManager.GetFileInfo(contentTypeCode, fileName);
 
@@ -74,8 +84,21 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
                 System.IO.File.Delete(RemoveFile.PhysicalPath);
                 await templateManager.RemoveFile(contentTypeCode, fileName);
             }
+
             RouteValueDictionary route = new();
             route.Add("contentType", ContentType);
+
+            if (pageNumber > 0)
+                route.Add("pageNumber", pageNumber);
+
+            if (pageSize > 0)
+                route.Add("pageSize", pageSize);
+
+            if (embedded)
+                route.Add("embedded", "1");
+
+            if (!string.IsNullOrWhiteSpace(returnNode))
+                route.Add("returnNode", returnNode);
 
             return RedirectToPage("./Index", route);
         }

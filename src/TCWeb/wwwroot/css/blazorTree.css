@@ -17,20 +17,34 @@
     --tc-tree-selected-fg: #e65100;
     --tc-tree-hover-bg: #fffde7;
     --tc-tree-icon-muted: #6c757d;
+    --tc-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --tc-safe-top: env(safe-area-inset-top, 0px);
+    --tc-viewport-height: 100dvh; /* JS overwrites with px value on mobile */
 }
 
 /* Fixed workspace between header and footer (Explorer-style) */
+html, body {
+    height: 100%;
+}
+
 .tc-tree-workspace {
-    position: fixed;
+    position: absolute;
     left: var(--tc-workspace-gap);
     right: var(--tc-workspace-gap);
-    top: calc(var(--tc-header-offset) + var(--tc-workspace-gap));
-    bottom: calc(var(--tc-tree-manager-footer) + var(--tc-workspace-gap));
+    top: calc(var(--tc-header-offset) + var(--tc-workspace-gap) + var(--tc-safe-top));
+    height: calc( var(--tc-viewport-height) - var(--tc-header-offset) - var(--tc-tree-manager-footer) - (var(--tc-workspace-gap) * 2) - var(--tc-safe-top) - var(--tc-safe-bottom) );
     overflow: hidden;
     z-index: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+
+/* iOS Safari friendly viewport */
+@supports (height: 100dvh) {
+    html, body {
+        min-height: 100dvh;
+    }
 }
 
 /* Component wrapper */
@@ -88,6 +102,14 @@
 
 .tc-tree-icon-setup {
     color: #1976d2; /* slight functional tint */
+}
+
+.tc-tree-icon-filetransfer {
+    color: #198754; /* Bootstrap 'success' tone to match transfer/action */
+}
+
+.tc-tree-icon-contenttype {
+    color: #fbc02d; /* folder yellow */
 }
 
 .tc-tree-label {
@@ -208,3 +230,32 @@
 .tc-tree-ctx-menu .dropdown-item:hover {
     background: #f8f9fa;
 }
+
+@media (max-width: 991.98px) {
+    :root {
+        --tc-tree-manager-footer: 0px;
+    }
+
+    .tc-tree-workspace {
+        z-index: auto;
+    }
+}
+
+.tc-ft-topbtn {
+    min-height: 44px; /* iOS-friendly tap target */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tc-ft-upload-hint {
+    min-height: 1.25rem; /* reserves one text line so button heights stay aligned */
+    line-height: 1.25rem;
+}
+
+
+
+
+
+
+

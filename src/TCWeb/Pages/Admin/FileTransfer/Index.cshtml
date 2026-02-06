@@ -5,71 +5,296 @@
 
 @{
     ViewData["Title"] = "File Transfer";
-    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? string.Empty)
+        : string.Empty;
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var prevDisabled = Model.PageNumber <= 1;
+    var nextDisabled = Model.PageNumber >= Model.TotalPages;
+
+    var isAll = string.Equals(Model.ContentType, "All", StringComparison.OrdinalIgnoreCase);
+
+    var cancelHref = "/Admin/Manager/Index";
+    if (!string.IsNullOrWhiteSpace(returnNode))
+    {
+        if (!isAll)
+        {
+            cancelHref = $"/Admin/Manager/Index?node=FileTransferContentType&contentType={Uri.EscapeDataString(Model.ContentType)}&pageSize={Model.PageSize}&pageNumber={Model.PageNumber}";
+        }
+        else
+        {
+            cancelHref = $"/Admin/Manager/Index?node=FileTransfer&pageSize={Model.PageSize}&pageNumber={Model.PageNumber}";
+        }
+    }
 }
 
-<h1>@ViewData["Title"]</h1>
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+    }
 
-<div class="row g-2 mb-3">
-    <div class="col-12 col-sm-3 d-flex">
-        <a asp-page="./Upload" asp-route-contentType="@Model.ContentType"
-           class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
-           title="Upload files">
-            <span class="text-truncate">Upload</span>
-        </a>
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-lg-2 d-flex flex-column">
+            <form method="get" asp-page="./Upload" class="w-100 h-100">
+                <input type="hidden" name="contentType" value="@Model.ContentType" />
+                <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
+                <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
+
+                <button type="submit"
+                        class="btn btn-outline-primary w-100 tc-ft-topbtn"
+                        disabled="@(isAll)">
+                    Upload
+                </button>
+            </form>
+
+            <div class="tc-ft-upload-hint small text-muted mt-1">
+                @if (isAll)
+                {
+                    <span>Select a specific content type to upload.</span>
+                }
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-2 d-flex">
+            <form method="post" class="w-100 h-100">
+                <input type="hidden" asp-for="ContentType" />
+                <input type="hidden" asp-for="PageNumber" />
+                <input type="hidden" asp-for="PageSize" />
+                <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
+
+                <button type="submit"
+                        asp-page-handler="SyncFiles"
+                        class="btn btn-outline-success w-100 tc-ft-topbtn">
+                    Sync
+                </button>
+            </form>
+        </div>
+
+        <div class="col-12 col-lg-auto ms-lg-auto d-flex">
+            @if (!embedded)
+            {
+                <a href="@cancelHref" class="btn btn-outline-secondary w-100">Back</a>
+            }
+        </div>
     </div>
 
-    <div class="col-12 col-sm-3 d-flex">
-        <form method="post" class="w-100 d-flex align-items-center justify-content-center">
-            <input type="hidden" asp-for="ContentType" />
-            <button type="submit" asp-page-handler="SyncFiles"
-                    class="btn btn-outline-success w-100"
-                    title="Synchronise files">
-                <span class="text-truncate">Sync</span>
-            </button>
-        </form>
-    </div>
+    <form class="mb-3" method="get" id="contentTypeForm">
+        <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+        <input type="hidden" name="returnNode" value="@returnNode" />
+        <input type="hidden" name="pageNumber" value="1" />
+
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-auto">
+                <label class="form-label mb-0 me-2" for="contentTypeSelect">Content Type</label>
+            </div>
+
+            <div class="col-12 col-md-auto">
+                <select asp-for="ContentType"
+                        asp-items="Model.ContentTypes"
+                        class="form-control"
+                        id="contentTypeSelect"></select>
+            </div>
+
+            <div class="col-12 col-md-auto">
+                <label class="form-label mb-0 me-2" for="pageSizeSelect">Page Size</label>
+            </div>
+
+            <div class="col-12 col-md-auto">
+                <select asp-for="PageSize"
+                        asp-items="Model.PageSizes"
+                        class="form-control"
+                        id="pageSizeSelect"></select>
+            </div>
+
+            <div class="col-12 col-md-auto text-muted small">
+                @Model.TotalItems.ToString("N0") item(s)
+            </div>
+        </div>
+    </form>
+
+    @if (Model.FileNames == null || Model.FileNames.Count == 0)
+    {
+        <div class="alert alert-info mb-0" role="status">
+            No files found for the selected content type.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="text-muted small">
+                Page @Model.PageNumber of @Model.TotalPages
+            </div>
+
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary @(prevDisabled ? "disabled" : "")"
+                   aria-disabled="@(prevDisabled ? "true" : "false")"
+                   asp-page="./Index"
+                   asp-route-contentType="@Model.ContentType"
+                   asp-route-pageNumber="@(Model.PageNumber - 1)"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-embedded="@(embedded ? "1" : null)"
+                   asp-route-returnNode="@returnNode"
+                   title="Previous Page">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+
+                <a class="btn btn-outline-secondary @(nextDisabled ? "disabled" : "")"
+                   aria-disabled="@(nextDisabled ? "true" : "false")"
+                   asp-page="./Index"
+                   asp-route-contentType="@Model.ContentType"
+                   asp-route-pageNumber="@(Model.PageNumber + 1)"
+                   asp-route-pageSize="@Model.PageSize"
+                   asp-route-embedded="@(embedded ? "1" : null)"
+                   asp-route-returnNode="@returnNode"
+                   title="Next Page">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>@Html.DisplayNameFor(model => model.FileNames)</th>
+                    <th style="width:1%; white-space:nowrap;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.FileNames)
+                {
+                    <tr>
+                        <td class="text-break">@item</td>
+                        <td>
+                            <div class="action-buttons">
+                                @if (!isAll)
+                                {
+                                    <a asp-page="./Details"
+                                       asp-route-fileName="@item"
+                                       asp-route-contentType="@Model.ContentType"
+                                       asp-route-pageNumber="@Model.PageNumber"
+                                       asp-route-pageSize="@Model.PageSize"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-info"
+                                       title="Details">
+                                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                    </a>
+
+                                    <a asp-page-handler="Download"
+                                       asp-route-fileName="@item"
+                                       asp-route-contentType="@Model.ContentType"
+                                       asp-route-pageNumber="@Model.PageNumber"
+                                       asp-route-pageSize="@Model.PageSize"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-secondary"
+                                       title="Download">
+                                        <i class="bi bi-download" aria-hidden="true"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button type="button"
+                                            class="btn btn-info"
+                                            disabled
+                                            title="Select a specific content type to view details.">
+                                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-secondary"
+                                            disabled
+                                            title="Select a specific content type to download.">
+                                        <i class="bi bi-download" aria-hidden="true"></i>
+                                    </button>
+                                }
+
+                                <a asp-page="./Delete"
+                                   asp-route-fileName="@item"
+                                   asp-route-contentType="@Model.ContentType"
+                                   asp-route-pageNumber="@Model.PageNumber"
+                                   asp-route-pageSize="@Model.PageSize"
+                                   asp-route-embedded="@(embedded ? "1" : null)"
+                                   asp-route-returnNode="@returnNode"
+                                   class="btn btn-danger"
+                                   title="Delete">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 </div>
 
-<form class="mb-3" method="get">
-    <div class="row g-2 align-items-center">
-        <div class="col-auto">
-            <select asp-for="ContentType" asp-items="Model.ContentTypes" class="form-control"></select>
-        </div>
-        <div class="col-auto">
-            <input type="submit" value="Select" class="btn btn-primary" />
-        </div>
-    </div>
-</form>
+<script>
+    (function ()
+    {
+        const form = document.getElementById("contentTypeForm");
+        const contentType = document.getElementById("contentTypeSelect");
+        const pageSize = document.getElementById("pageSizeSelect");
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.FileNames)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.FileNames)
+        if (!form || !contentType || !pageSize)
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item)
-                </td>
-                <td>
-                    <a asp-page-handler="Download" asp-route-fileName="@item" class="btn btn-secondary" title="Download">
-                        <i class="bi bi-download" aria-hidden="true"></i>
-                        <span class="visually-hidden">Download</span>
-                    </a>
-                    <a asp-page="./Delete" asp-route-fileName="@item" asp-route-contentType="@Model.ContentType" class="btn btn-danger" title="Delete">
-                        <i class="bi bi-trash" aria-hidden="true"></i>
-                        <span class="visually-hidden">Delete</span>
-                    </a>
-                </td>
-
-            </tr>
+            return;
         }
-    </tbody>
-</table>
+
+        function persistPageSize()
+        {
+            try
+            {
+                localStorage.setItem("tcFileTransferPageSize", pageSize.value);
+            }
+            catch
+            {
+            }
+        }
+
+        function submit()
+        {
+            persistPageSize();
+            form.submit();
+        }
+
+        contentType.addEventListener("change", submit);
+
+        pageSize.addEventListener("change", function ()
+        {
+            persistPageSize();
+            submit();
+        });
+    })();
+
+    (function ()
+    {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("sync") !== "1")
+        {
+            return;
+        }
+
+        alert("File System synchronised");
+
+        url.searchParams.delete("sync");
+        window.history.replaceState({}, document.title, url.toString());
+    })();
+</script>

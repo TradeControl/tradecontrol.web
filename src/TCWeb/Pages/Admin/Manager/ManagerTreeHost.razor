@@ -1,6 +1,7 @@
 @using System.Threading
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
+@using TradeControl.Web.Mail
 
 <div class="tc-tree-host"
      tabindex="0"
@@ -14,6 +15,7 @@
         <button type="button"
                 class="btn btn-link text-start w-100 tc-tree-row"
                 @onclick="SelectRootAsync"
+                @onpointerdown="() => SetPressTarget(ManagerNode.Root)"
                 aria-expanded="@_rootExpanded">
             <span class="tc-tree-expander" aria-hidden="true">
                 <i class="bi @(_rootExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
@@ -27,7 +29,8 @@
             <div class="ps-3">
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="SelectSetupAsync">
+                        @onclick="SelectSetupAsync"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.Setup)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -35,9 +38,52 @@
                     <span class="tc-tree-label @(_selected == ManagerNode.Setup ? "tc-tree-label-selected" : "")">Setup</span>
                 </button>
 
+                @* File Transfer: separate expander (expand/collapse) from selection (navigate) *@
+                <div class="d-flex align-items-center">
+                    <button type="button"
+                            class="btn btn-link text-start tc-tree-row p-0"
+                            style="width:1.6rem;"
+                            @onclick="ToggleFileTransferExpandAsync"
+                            @onpointerdown="() => SetPressTarget(ManagerNode.FileTransfer)"
+                            aria-expanded="@_fileTransferExpanded"
+                            title="Expand">
+                        <span class="tc-tree-expander" aria-hidden="true">
+                            <i class="bi @(_fileTransferExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                        </span>
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-link text-start w-100 tc-tree-row"
+                            @onclick="SelectFileTransferAsync"
+                            @onpointerdown="() => SetPressTarget(ManagerNode.FileTransfer)">
+                        <i class="bi bi-upload me-2 tc-tree-icon tc-tree-icon-filetransfer" aria-hidden="true"></i>
+                        <span class="tc-tree-label @(_selected == ManagerNode.FileTransfer ? "tc-tree-label-selected" : "")">File Transfer</span>
+                    </button>
+                </div>
+
+                @if (_fileTransferExpanded)
+                {
+                    <div class="ps-3">
+                        @foreach (var ct in TemplateManager.ContentTypes)
+                        {
+                            <button type="button"
+                                    class="btn btn-link text-start w-100 tc-tree-row"
+                                    @onclick="() => SelectContentTypeAsync(ct)"
+                                    @onpointerdown="() => SetPressTarget(ManagerNode.FileTransferContentType, ct)">
+                                <span class="tc-tree-expander" aria-hidden="true">
+                                    <i class="bi bi-dot"></i>
+                                </span>
+                                <i class="bi bi-folder2-open me-2 tc-tree-icon tc-tree-icon-contenttype" aria-hidden="true"></i>
+                                <span class="tc-tree-label @(_selected == ManagerNode.FileTransferContentType && string.Equals(_selectedContentType, ct, StringComparison.OrdinalIgnoreCase) ? "tc-tree-label-selected" : "")">@ct</span>
+                            </button>
+                        }
+                    </div>
+                }
+
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Periods)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Periods)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.Periods)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -47,17 +93,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.FileTransfer)">
-                    <span class="tc-tree-expander" aria-hidden="true">
-                        <i class="bi bi-dot"></i>
-                    </span>
-                    <i class="bi bi-upload me-2 tc-tree-icon" aria-hidden="true"></i>
-                    <span class="tc-tree-label @(_selected == ManagerNode.FileTransfer ? "tc-tree-label-selected" : "")">File Transfer</span>
-                </button>
-
-                <button type="button"
-                        class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Host)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Host)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.Host)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -67,7 +104,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Users)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.Users)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.Users)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -81,7 +119,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.InvoiceTemplate)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.InvoiceTemplate)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.InvoiceTemplate)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -91,7 +130,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.InvoiceSettings)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.InvoiceSettings)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.InvoiceSettings)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -105,7 +145,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxSettings)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxSettings)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.TaxSettings)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -115,7 +156,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCode)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCode)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.TaxCode)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -125,7 +167,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCompany)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCompany)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.TaxCompany)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -139,7 +182,8 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.SubjectType)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.SubjectType)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.SubjectType)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
@@ -159,13 +203,27 @@
              style="left:@($"{_ctx.X}px"); top:@($"{_ctx.Y}px");"
              role="menu"
              aria-label="Tree actions">
+
+            @if (_ctx.Target == ManagerNode.FileTransfer)
+            {
+                <button type="button" class="dropdown-item" @onclick="SyncFileTransferAsync">Sync</button>
+                <div class="dropdown-divider my-1"></div>
+            }
+            else if (_ctx.Target == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType))
+            {
+                <button type="button" class="dropdown-item" @onclick="SyncFileTransferAsync">Sync</button>
+                <button type="button" class="dropdown-item" @onclick="UploadContentTypeAsync">Upload</button>
+                <div class="dropdown-divider my-1"></div>
+            }
+
             <button type="button" class="dropdown-item" @onclick="ExpandAllAsync">Expand all</button>
             <button type="button" class="dropdown-item" @onclick="CollapseAllAsync">Collapse all</button>
         </div>
     }
 </div>
 
-@code {
+@code
+{
     public enum ManagerNode
     {
         Root,
@@ -173,6 +231,7 @@
 
         Periods,
         FileTransfer,
+        FileTransferContentType,
         Host,
         Users,
 
@@ -186,39 +245,140 @@
         SubjectType
     }
 
+    public enum TreeActionType
+    {
+        FileTransferSync,
+        FileTransferUpload
+    }
+
+    public record TreeAction(TreeActionType ActionType, string? ContentType);
+
     [Parameter] public string RootLabel { get; set; } = "Business";
     [Parameter] public bool IsMobile { get; set; }
+
+    [Parameter] public ManagerNode InitialSelectedNode { get; set; } = ManagerNode.Root;
+    [Parameter] public string? InitialContentType { get; set; }
+
     [Parameter] public EventCallback<ManagerNode> OnNodeSelected { get; set; }
+    [Parameter] public EventCallback<(ManagerNode Node, string? ContentType)> OnNodeSelectedEx { get; set; }
+    [Parameter] public EventCallback<TreeAction> OnTreeAction { get; set; }
 
     private bool _rootExpanded = true;
+    private bool _fileTransferExpanded;
     private ManagerNode _selected = ManagerNode.Root;
+    private string? _selectedContentType;
+
+    private ManagerNode _pressTarget = ManagerNode.Root;
+    private string? _pressContentType;
 
     private ContextMenuState _ctx = new();
     private CancellationTokenSource? _pressCts;
+
+    protected override void OnParametersSet()
+    {
+        // Allow the parent (ManagerShell) to dictate initial selection when navigating back in.
+        // Do not force events here; just set visual state.
+        _selected = InitialSelectedNode;
+
+        if (_selected == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(InitialContentType))
+            _selectedContentType = InitialContentType;
+
+        if (_selected == ManagerNode.FileTransfer || _selected == ManagerNode.FileTransferContentType)
+        {
+            _rootExpanded = true;
+            _fileTransferExpanded = true;
+        }
+    }
+
+    private void SetPressTarget(ManagerNode node) => SetPressTarget(node, null);
+
+    private void SetPressTarget(ManagerNode node, string? contentType)
+    {
+        _pressTarget = node;
+        _pressContentType = contentType;
+    }
 
     private async Task SelectRootAsync()
     {
         _selected = ManagerNode.Root;
         _rootExpanded = true;
+        _selectedContentType = null;
 
         if (OnNodeSelected.HasDelegate)
             await OnNodeSelected.InvokeAsync(ManagerNode.Root);
+
+        if (OnNodeSelectedEx.HasDelegate)
+            await OnNodeSelectedEx.InvokeAsync((ManagerNode.Root, null));
     }
 
     private async Task SelectSetupAsync()
     {
         _selected = ManagerNode.Setup;
+        _selectedContentType = null;
 
         if (OnNodeSelected.HasDelegate)
             await OnNodeSelected.InvokeAsync(ManagerNode.Setup);
+
+        if (OnNodeSelectedEx.HasDelegate)
+            await OnNodeSelectedEx.InvokeAsync((ManagerNode.Setup, null));
     }
 
     private async Task SelectPlaceholderAsync(ManagerNode node)
     {
         _selected = node;
+        _selectedContentType = null;
 
         if (OnNodeSelected.HasDelegate)
             await OnNodeSelected.InvokeAsync(node);
+
+        if (OnNodeSelectedEx.HasDelegate)
+            await OnNodeSelectedEx.InvokeAsync((node, null));
+    }
+
+    private Task ToggleFileTransferExpandAsync()
+    {
+        _fileTransferExpanded = !_fileTransferExpanded;
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectFileTransferAsync()
+    {
+        _selected = ManagerNode.FileTransfer;
+        _selectedContentType = null;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(ManagerNode.FileTransfer);
+
+        if (OnNodeSelectedEx.HasDelegate)
+            await OnNodeSelectedEx.InvokeAsync((ManagerNode.FileTransfer, null));
+    }
+
+    private async Task SelectContentTypeAsync(string contentType)
+    {
+        _selected = ManagerNode.FileTransferContentType;
+        _selectedContentType = contentType;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(ManagerNode.FileTransferContentType);
+
+        if (OnNodeSelectedEx.HasDelegate)
+            await OnNodeSelectedEx.InvokeAsync((ManagerNode.FileTransferContentType, contentType));
+    }
+
+    private async Task SyncFileTransferAsync()
+    {
+        CloseContextMenu();
+
+        if (OnTreeAction.HasDelegate)
+            await OnTreeAction.InvokeAsync(new TreeAction(TreeActionType.FileTransferSync, _selectedContentType));
+    }
+
+    private async Task UploadContentTypeAsync()
+    {
+        CloseContextMenu();
+
+        if (OnTreeAction.HasDelegate)
+            await OnTreeAction.InvokeAsync(new TreeAction(TreeActionType.FileTransferUpload, _selectedContentType));
     }
 
     private Task OnContextMenuAsync(MouseEventArgs e)
@@ -229,6 +389,7 @@
         _ctx = new ContextMenuState
         {
             IsOpen = true,
+            Target = _selected,
             X = (int)e.ClientX,
             Y = (int)e.ClientY
         };
@@ -239,6 +400,7 @@
     private Task ExpandAllAsync()
     {
         _rootExpanded = true;
+        _fileTransferExpanded = true;
         CloseContextMenu();
         return Task.CompletedTask;
     }
@@ -246,6 +408,7 @@
     private Task CollapseAllAsync()
     {
         _rootExpanded = false;
+        _fileTransferExpanded = false;
         CloseContextMenu();
         return Task.CompletedTask;
     }
@@ -284,7 +447,19 @@
         try
         {
             await Task.Delay(550, token);
-            _ctx = _ctx with { IsOpen = true, X = x, Y = y };
+
+            if (_pressTarget == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_pressContentType))
+            {
+                _selected = ManagerNode.FileTransferContentType;
+                _selectedContentType = _pressContentType;
+            }
+            else if (_pressTarget == ManagerNode.FileTransfer)
+            {
+                _selected = ManagerNode.FileTransfer;
+                _selectedContentType = null;
+            }
+
+            _ctx = _ctx with { IsOpen = true, X = x, Y = y, Target = _pressTarget };
             await InvokeAsync(StateHasChanged);
         }
         catch (TaskCanceledException) { }
@@ -293,6 +468,7 @@
     private record ContextMenuState
     {
         public bool IsOpen { get; init; }
+        public ManagerNode Target { get; init; }
         public int X { get; init; }
         public int Y { get; init; }
     }

@@ -353,3 +353,6 @@ tests/ui/.cache/
 **/tests/ui/**/*.trace.zip
 **/tests/ui/**/*.png
 **/tests/ui/**/*.webm
+
+# Ignore runtime-uploaded web content (File Transfer store)
+src/TCWeb/wwwroot/content/

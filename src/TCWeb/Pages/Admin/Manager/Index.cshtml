@@ -23,6 +23,7 @@
 
 @section Scripts {
     <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
+    <script src="~/js/adminManager.js"></script>
     <script>
         window.adminManager = window.adminManager || {};
 
@@ -82,12 +83,30 @@
             dropInitialClasses();
         };
 
+        window.adminManager.updateViewportHeight = function ()
+        {
+            const h = window.innerHeight || document.documentElement.clientHeight || 0;
+            document.documentElement.style.setProperty('--tc-viewport-height', h + 'px');
+        };
+
         (function ()
         {
-            window.adminManager.updateHeaderOffset();
+            function refreshSoon()
+            {
+                window.adminManager.updateViewportHeight();
+                window.adminManager.updateHeaderOffset();
+
+                setTimeout(window.adminManager.updateViewportHeight, 50);
+                setTimeout(window.adminManager.updateHeaderOffset, 50);
+                setTimeout(window.adminManager.updateViewportHeight, 250);
+                setTimeout(window.adminManager.updateHeaderOffset, 250);
+            }
+
+            refreshSoon();
             window.adminManager.initSplit();
 
-            window.addEventListener('resize', window.adminManager.updateHeaderOffset);
+            window.addEventListener('resize', refreshSoon);
+            window.addEventListener('orientationchange', refreshSoon);
         })();
     </script>
 

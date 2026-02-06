@@ -24,9 +24,9 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
 
         [Display(Name = "Maximum Bytes")]
         [BindProperty]
-        public string MaxFileSizeMb 
-        { 
-            get 
+        public string MaxFileSizeMb
+        {
+            get
             {
                 var megabyteSizeLimit = maxFileSize / 1048576;
                 return $"{megabyteSizeLimit:N1} MB";
@@ -35,8 +35,8 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
 
         [Display(Name = "Permitted Extensions")]
         [BindProperty]
-        public string FileExtensions 
-        { 
+        public string FileExtensions
+        {
             get
             {
                 string extTag = string.Empty;
@@ -50,7 +50,6 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
             }
         }
 
-
         [Required]
         [Display(Name = "File")]
         public List<IFormFile> FormFiles { get; set; }
@@ -59,7 +58,6 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
         [BindProperty]
         public string ContentType { get; set; }
 
-        
         public string Result { get; private set; }
 
         public UploadModel(NodeContext context, IFileProvider fileProvider, IConfiguration config) : base(context)
@@ -71,7 +69,7 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
         public async Task<IActionResult> OnGetAsync(string contentType)
         {
             try
-            {                
+            {
                 ContentType = contentType;
 
                 var contentTypeCode = TemplateManager.GetContentTypeFromString(ContentType);
@@ -107,16 +105,27 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
                 case NodeEnum.ContentType.Templates:
                     permittedExtensions.Add(".html");
                     break;
-            };
+            }
+            ;
 
             return permittedExtensions;
         }
 
         public async Task<IActionResult> OnPostUploadAsync(string contentType)
         {
+            var embedded = Request?.Form.ContainsKey("embedded") == true
+                && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+            var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                ? (Request.Form["returnNode"].ToString() ?? string.Empty)
+                : string.Empty;
+
             if (!ModelState.IsValid)
             {
                 Result = "Invalid upload";
+                await SetViewData();
+                ContentType = contentType;
                 return Page();
             }
 
@@ -131,8 +140,10 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
                 if (!ModelState.IsValid)
                 {
                     Result = "Invalid upload";
+                    await SetViewData();
+                    ContentType = contentType;
                     return Page();
-                }                
+                }
 
                 string filePath = templateManager.GetFilePath(contentTypeCode, formFile.FileName);
 
@@ -148,9 +159,13 @@ namespace TradeControl.Web.Pages.Admin.FileTransfer
             RouteValueDictionary route = new();
             route.Add("contentType", ContentType);
 
+            if (embedded)
+                route.Add("embedded", "1");
+
+            if (!string.IsNullOrWhiteSpace(returnNode))
+                route.Add("returnNode", returnNode);
+
             return RedirectToPage("./Index", route);
         }
-
     }
-
 }

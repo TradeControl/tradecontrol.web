@@ -1,45 +1,82 @@
 @page
 @model TradeControl.Web.Pages.Admin.FileTransfer.UploadModel
 
-@{ ViewData["Title"] = $"Upload {Model.ContentType}"; }
-<h1>@ViewData["Title"]</h1>
+@{
+    ViewData["Title"] = $"Upload {Model.ContentType}";
 
-<div>
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MaxFileSizeMb)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MaxFileSizeMb)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.FileExtensions)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.FileExtensions)
-        </dd>
-    </dl>
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? string.Empty)
+        : string.Empty;
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backHref = embedded
+        ? $"/Admin/FileTransfer/Index?embedded=1&contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}"
+        : $"/Admin/FileTransfer/Index?contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+    }
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="fw-semibold">Upload Rules</div>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.MaxFileSizeMb)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.MaxFileSizeMb)</dd>
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.FileExtensions)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.FileExtensions)</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form enctype="multipart/form-data" method="post" class="border rounded bg-light p-3">
+        <div class="mb-3">
+            <label asp-for="FormFiles" class="form-label"></label>
+            <input asp-for="FormFiles" type="file" multiple class="form-control" />
+            <div class="mt-1">
+                <span asp-validation-for="FormFiles" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            @if (!string.IsNullOrWhiteSpace(Model.Result))
+            {
+                <div class="alert alert-info mb-0" role="status">@Model.Result</div>
+            }
+        </div>
+
+        <input type="hidden" asp-for="@Model.ContentType" />
+        <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+        <input type="hidden" name="returnNode" value="@returnNode" />
+
+        <div class="d-flex flex-wrap gap-2">
+            <button asp-page-handler="Upload"
+                    class="btn btn-primary"
+                    type="submit">
+                Upload Files
+            </button>
+
+            <a href="@backHref" class="btn btn-outline-secondary">Back</a>
+        </div>
+    </form>
 </div>
-
-<form enctype="multipart/form-data" method="post">
-    <dl>
-        <dt>
-            <label asp-for="FormFiles"></label>
-        </dt>
-        <dd>
-            <input asp-for="FormFiles" type="file" multiple />
-        </dd>
-    </dl>
-    <dl>
-        <dt class-result>
-            @Model.Result
-        </dt>
-        <dd>
-            <span asp-validation-for="FormFiles"></span>
-        </dd>
-    </dl>
-    <input type="hidden" asp-for="@Model.ContentType" />
-
-    <input asp-page-handler="Upload" class="btn btn-primary" type="submit" value="Upload Files" />
-    <a asp-page="./Index" asp-route-contentType="@Model.ContentType" class="btn btn-info">To List</a>
-</form>
