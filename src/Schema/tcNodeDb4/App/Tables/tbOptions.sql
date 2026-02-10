@@ -1,4 +1,4 @@
-﻿CREATE TABLE [App].[tbOptions] (
+CREATE TABLE [App].[tbOptions] (
     [Identifier]         NVARCHAR (4)   NOT NULL,
     [IsInitialised]      BIT            CONSTRAINT [DF_App_tbOptions_IsIntialised] DEFAULT ((0)) NOT NULL,
     [SubjectCode]        NVARCHAR (10)  NOT NULL,
@@ -17,6 +17,8 @@
     [HostId]             INT            NULL,
     [SymmetricKey]       VARBINARY (32) NULL,
     [SymmetricIV]        VARBINARY (16) NULL,
+    [SupportRequestTemplateId]      INT NULL,
+    [UserRegistrationTemplateId]    INT NULL,
     [InsertedBy]         NVARCHAR (50)  CONSTRAINT [DF_App_tbOptions_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
     [InsertedOn]         DATETIME       CONSTRAINT [DF_App_tbOptions_InsertedOn] DEFAULT (getdate()) NOT NULL,
     [UpdatedBy]          NVARCHAR (50)  CONSTRAINT [DF_App_tbOptions_UpdatedBy] DEFAULT (suser_sname()) NOT NULL,
@@ -32,7 +34,12 @@
     CONSTRAINT [FK_App_tbOptions_Cash_tbCoinType] FOREIGN KEY ([CoinTypeCode]) REFERENCES [Cash].[tbCoinType] ([CoinTypeCode]),
     CONSTRAINT [FK_App_tbOptions_Subject_tb] FOREIGN KEY ([SubjectCode]) REFERENCES [Subject].[tbSubject] ([SubjectCode]) ON UPDATE CASCADE,
     CONSTRAINT [FK_App_tbOptions_Subject_tbSubject] FOREIGN KEY ([MinerAccountCode]) REFERENCES [Subject].[tbSubject] ([SubjectCode]),
-    CONSTRAINT [FK_App_tbUoc_UnitOfCharge] FOREIGN KEY ([UnitOfCharge]) REFERENCES [App].[tbUoc] ([UnitOfCharge])
+    CONSTRAINT [FK_App_tbUoc_UnitOfCharge] FOREIGN KEY ([UnitOfCharge]) REFERENCES [App].[tbUoc] ([UnitOfCharge]),
+    CONSTRAINT [FK_App_tbOptions_Web_tbTemplate_SupportRequest]
+        FOREIGN KEY ([SupportRequestTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId]),
+    CONSTRAINT [FK_App_tbOptions_Web_tbTemplate_UserRegistration]
+        FOREIGN KEY ([UserRegistrationTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId])
+
 );
 
 

@@ -66,10 +66,9 @@ namespace TradeControl.Web.Pages.Admin.EventLog
             {
                 TemplateManager templateManager = new(NodeContext, FileProvider);
 
-                string templateFileName = Configuration.GetSection("Settings")["SupportRequestTemplate"];
                 string emailAddress = Configuration.GetSection("Settings")["SupportEmailAddress"];
 
-                MailDocument doc = await templateManager.GetSupportRequest(templateFileName);
+                MailDocument doc = await templateManager.GetSupportRequest();
                 MailSupport mailSupport = new(NodeContext, doc, App_EventLog.LogCode);
 
                 if (!string.IsNullOrEmpty(Note))

@@ -1,6 +1,8 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.JSInterop
+@using TradeControl.Web.AppServices
 @inject Wangkanai.Detection.Services.IDetectionService Detection
+@inject IInvoiceTypeLookup InvoiceTypeLookup
 
 <div class="tc-tree-manager">
     <div class="tc-tree-manager-frame border rounded bg-white p-2">
@@ -15,7 +17,8 @@
                                      InitialContentType="@_selectedContentType"
                                      OnNodeSelected="HandleNodeSelectedAsync"
                                      OnNodeSelectedEx="HandleNodeSelectedExAsync"
-                                     OnTreeAction="HandleTreeActionAsync" />
+                                     OnTreeAction="HandleTreeActionAsync"
+                                     OnTemplateSelection="HandleTemplateSelectionAsync" />
                 </div>
             </div>
         }
@@ -31,7 +34,8 @@
                                          InitialContentType="@_selectedContentType"
                                          OnNodeSelected="HandleNodeSelectedAsync"
                                          OnNodeSelectedEx="HandleNodeSelectedExAsync"
-                                         OnTreeAction="HandleTreeActionAsync" />
+                                         OnTreeAction="HandleTreeActionAsync"
+                                         OnTemplateSelection="HandleTemplateSelectionAsync" />
                     </div>
                 </div>
 
@@ -59,6 +63,36 @@
                                             class="btn btn-outline-primary text-start"
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.FileTransfer)">
                                         <i class="bi bi-upload me-2" aria-hidden="true"></i>File Transfer
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Templates)">
+                                        <i class="bi bi-filetype-html me-2" aria-hidden="true"></i>Templates
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else if (_selected == ManagerTreeHost.ManagerNode.Templates)
+                        {
+                            <div class="bg-white border rounded p-3">
+                                <h2 class="h6 mb-2">Templates</h2>
+                                <p class="text-muted mb-3">
+                                    Templates are HTML documents that include tags like <code>[CompanyName]</code> and <code>[InvoiceDetails]</code>.
+                                    When an email is sent, Trade Control replaces tags with data from the relevant document and embeds any referenced images.
+                                </p>
+
+                                <div class="d-grid gap-2">
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TemplateInvoices)">
+                                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>Invoices
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TemplateSystem)">
+                                        <i class="bi bi-gear me-2" aria-hidden="true"></i>System
                                     </button>
                                 </div>
                             </div>
@@ -93,6 +127,9 @@
         ManagerTreeHost.ManagerNode.Setup => $"{_companyName} / Setup",
         ManagerTreeHost.ManagerNode.FileTransfer => $"{_companyName} / File Transfer",
         ManagerTreeHost.ManagerNode.FileTransferContentType => $"{_companyName} / File Transfer / {_selectedContentType}",
+        ManagerTreeHost.ManagerNode.Templates => $"{_companyName} / Templates",
+        ManagerTreeHost.ManagerNode.TemplateInvoices => $"{_companyName} / Templates / Invoices",
+        ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
         _ => _companyName
     };
 
@@ -127,9 +164,19 @@
             _iframeSrc = _selected switch
             {
                 ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
-                ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
-                ManagerTreeHost.ManagerNode.FileTransferContentType when !string.IsNullOrWhiteSpace(_selectedContentType)
-                    => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}",
+
+                ManagerTreeHost.ManagerNode.FileTransfer =>
+                    $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
+
+                ManagerTreeHost.ManagerNode.FileTransferContentType when !string.IsNullOrWhiteSpace(_selectedContentType) =>
+                    $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}",
+
+                ManagerTreeHost.ManagerNode.TemplateInvoices =>
+                    "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
+
+                ManagerTreeHost.ManagerNode.TemplateSystem =>
+                    "/Admin/Template/System?embedded=1&returnNode=Templates",
+
                 _ => _iframeSrc
             };
         }
@@ -176,6 +223,15 @@
             if (node == ManagerTreeHost.ManagerNode.FileTransfer)
                 NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&pageSize={_fileTransferPageSize}", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.Templates)
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Templates", forceLoad: true);
+
+            if (node == ManagerTreeHost.ManagerNode.TemplateInvoices)
+                NavigationManager.NavigateTo("/Admin/Template/Invoices?returnNode=Templates", forceLoad: true);
+
+            if (node == ManagerTreeHost.ManagerNode.TemplateSystem)
+                NavigationManager.NavigateTo("/Admin/Template/System?returnNode=Templates", forceLoad: true);
+
             return Task.CompletedTask;
         }
 
@@ -189,6 +245,8 @@
         {
             ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
             ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
+            ManagerTreeHost.ManagerNode.TemplateInvoices => "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
+            ManagerTreeHost.ManagerNode.TemplateSystem => "/Admin/Template/System?embedded=1&returnNode=Templates",
             _ => _iframeSrc
         };
 
@@ -248,5 +306,53 @@
             _selectedContentType = action.ContentType;
             _iframeSrc = $"/Admin/FileTransfer/Upload?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(action.ContentType)}";
         }
+    }
+
+    private async Task HandleTemplateSelectionAsync(ManagerTreeHost.TemplateSelection selection)
+    {
+        _selected = ManagerTreeHost.ManagerNode.TemplateInvoices;
+
+        var url = await GetTemplateUrlAsync(selection, embedded: !_isMobile);
+
+        if (_isMobile)
+        {
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            return;
+        }
+
+        _iframeSrc = url;
+    }
+
+    private async Task<string> GetTemplateUrlAsync(ManagerTreeHost.TemplateSelection selection, bool embedded)
+    {
+        var embeddedQs = embedded ? "embedded=1&" : string.Empty;
+        var returnQs = "returnNode=Templates&";
+
+        if (selection.InvoiceTypeCode.HasValue)
+        {
+            var invoiceType = await InvoiceTypeLookup.GetInvoiceTypeNameAsync(selection.InvoiceTypeCode.Value);
+
+            if (!string.IsNullOrWhiteSpace(invoiceType))
+            {
+                var invoiceTypeQs = $"invoiceType={Uri.EscapeDataString(invoiceType)}&";
+
+                if (selection.Kind is "AttachmentsFolder" or "Attachment")
+                    return $"/Admin/Template/Attachments?{embeddedQs}{returnQs}{invoiceTypeQs}";
+
+                if (selection.Kind is "InvoiceType" or "TemplatesFolder")
+                    return $"/Admin/Template/Invoices?{embeddedQs}{returnQs}{invoiceTypeQs}";
+            }
+        }
+
+        return selection.Kind switch
+        {
+            "Template" or "ImagesFolder" when selection.TemplateId.HasValue
+                => $"/Admin/Template/Images?{embeddedQs}{returnQs}templateId={selection.TemplateId.Value}",
+
+            "Image" when selection.TemplateId.HasValue && !string.IsNullOrWhiteSpace(selection.ImageTag)
+                => $"/Admin/Template/ImageEdit?{embeddedQs}{returnQs}templateId={selection.TemplateId.Value}&imageTag={Uri.EscapeDataString(selection.ImageTag)}",
+
+            _ => $"/Admin/Template/Invoices?{embeddedQs}{returnQs}"
+        };
     }
 }

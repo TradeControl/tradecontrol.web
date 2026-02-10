@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -20,11 +20,25 @@ namespace TradeControl.Web.Models
 
         [Key]
         public int TemplateId { get; set; }
+
         [StringLength(256)]
         public string TemplateFileName { get; set; }
 
+        public short TemplateStatusCode { get; set; }
+
+        [Column(TypeName = "datetime")]
+        public DateTime? ParsedOn { get; set; }
+
+        [StringLength(512)]
+        public string ParseMessage { get; set; }
+
+        [ForeignKey(nameof(TemplateStatusCode))]
+        [InverseProperty(nameof(Web_tbTemplateStatus.tbTemplates))]
+        public virtual Web_tbTemplateStatus TemplateStatusCodeNavigation { get; set; }
+
         [InverseProperty(nameof(Web_tbTemplateImage.Template))]
         public virtual ICollection<Web_tbTemplateImage> tbTemplateImages { get; set; }
+
         [InverseProperty(nameof(Web_tbTemplateInvoice.Template))]
         public virtual ICollection<Web_tbTemplateInvoice> tbTemplateInvoices { get; set; }
     }

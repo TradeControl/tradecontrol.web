@@ -1,0 +1,121 @@
+@page
+@model TradeControl.Web.Pages.Admin.Template.AttachmentsModel
+
+@{
+    ViewData["Title"] = "Invoice Attachments";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? "Templates")
+        : "Templates";
+
+    var backHref = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-2">@ViewData["Title"]</h1>
+        <div class="text-muted mb-3">@Model.InvoiceType</div>
+    }
+    else
+    {
+        <div class="d-flex align-items-start justify-content-between mb-2">
+            <div>
+                <div class="fw-semibold">@ViewData["Title"]</div>
+                <div class="text-muted small">@Model.InvoiceType</div>
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">Assigned documents</div>
+
+            @if (!embedded)
+            {
+                <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
+            }
+        </div>
+
+        <div class="card-body p-0">
+            @if (Model.Web_AttachmentInvoices == null || Model.Web_AttachmentInvoices.Count == 0)
+            {
+                <div class="p-3 text-muted">No attachments are assigned to this invoice type.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th class="text-end" style="width:1%;white-space:nowrap;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Web_AttachmentInvoices)
+                            {
+                                <tr>
+                                    <td class="text-break">@item.AttachmentFileName</td>
+                                    <td class="text-end">
+                                        <div class="action-buttons justify-content-end">
+                                            <a asp-page="./AttachmentRemove"
+                                               asp-route-invoiceType="@Model.InvoiceType"
+                                               asp-route-attachmentId="@item.AttachmentId"
+                                               asp-route-embedded="@(embedded ? "1" : null)"
+                                               asp-route-returnNode="@returnNode"
+                                               class="btn btn-outline-danger btn-sm">
+                                                Remove
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <div class="fw-semibold">Assign a new document</div>
+        </div>
+        <div class="card-body">
+            @if (Model.AttachmentFileNames == null || !Model.AttachmentFileNames.Any())
+            {
+                <div class="text-muted">No available documents to assign.</div>
+            }
+            else
+            {
+                <form method="post" class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-6">
+                        <label asp-for="AttachmentFileName" class="form-label"></label>
+                        <select asp-for="AttachmentFileName" asp-items="Model.AttachmentFileNames" class="form-select"></select>
+                    </div>
+
+                    <div class="col-12 col-lg-auto">
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </div>
+
+                    @* Preserve UX context *@
+                    <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                    <input type="hidden" name="returnNode" value="@returnNode" />
+                </form>
+            }
+        </div>
+    </div>
+</div>

@@ -1,11 +1,12 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 
 using TradeControl.Web.Data;
@@ -17,6 +18,10 @@ namespace TradeControl.Web.Mail
     {
         private NodeContext NodeContext { get; }
         private IFileProvider FileProvider { get; }
+
+        private const short TemplateStatusUnknown = 0;
+        private const short TemplateStatusValid = 1;
+        private const short TemplateStatusInvalid = 2;
 
         #region initialise
         public TemplateManager(NodeContext nodeContext) : this(nodeContext, null) { }
@@ -35,7 +40,7 @@ namespace TradeControl.Web.Mail
                 throw new Exception("FileProvider must be specified for this action");
 
             var templates = GetTemplates();
-            
+
             foreach (var template in templates)
             {
                 if (!await NodeContext.Web_tbTemplates.Where(t => t.TemplateFileName == template.Name).AnyAsync())
@@ -48,7 +53,7 @@ namespace TradeControl.Web.Mail
 
             var tbTemplates = await NodeContext.Web_tbTemplates.ToListAsync();
 
-            foreach(var tbTemplate in tbTemplates)
+            foreach (var tbTemplate in tbTemplates)
             {
                 if (!templates.Any(t => t.Name == tbTemplate.TemplateFileName))
                 {
@@ -58,7 +63,7 @@ namespace TradeControl.Web.Mail
             }
 
             var documents = GetDocuments();
-            
+
             foreach (var document in documents)
             {
                 if (!await NodeContext.Web_tbAttachments.Where(t => t.AttachmentFileName == document.Name).AnyAsync())
@@ -81,13 +86,12 @@ namespace TradeControl.Web.Mail
             }
 
             var images = GetImages();
-            
+
             foreach (var image in images)
             {
                 if (!await NodeContext.Web_tbImages.Where(t => t.ImageFileName == image.Name).AnyAsync())
-                {                    
-                    Web_tbImage tbImage = new()
-                    {
+                {
+                    Web_tbImage tbImage = new() {
                         ImageTag = await DefaultImageTag(),
                         ImageFileName = image.Name
                     };
@@ -164,8 +168,8 @@ namespace TradeControl.Web.Mail
         async Task<string> GetDocumentFromId(int attachmentId)
         {
             var attachment = await NodeContext.Web_tbAttachments.FirstOrDefaultAsync(t => t.AttachmentId == attachmentId);
-            var fileInfo = FileProvider.GetFileInfo(Path.Combine(DocumentsSubFolder, attachment.AttachmentFileName));               
-            return fileInfo.Exists ? fileInfo.PhysicalPath : string.Empty;                        
+            var fileInfo = FileProvider.GetFileInfo(Path.Combine(DocumentsSubFolder, attachment.AttachmentFileName));
+            return fileInfo.Exists ? fileInfo.PhysicalPath : string.Empty;
         }
 
         IList<IFileInfo> GetFiles(string folderName)
@@ -181,8 +185,7 @@ namespace TradeControl.Web.Mail
         {
             if (await NodeContext.Web_tbAttachments.Where(t => t.AttachmentFileName == attachmentFileName).AnyAsync())
             {
-                Web_tbAttachmentInvoice attachmentInvoice = new()
-                {
+                Web_tbAttachmentInvoice attachmentInvoice = new() {
                     InvoiceTypeCode = (short)invoiceType,
                     AttachmentId = await NodeContext.Web_tbAttachments.Where(t => t.AttachmentFileName == attachmentFileName).Select(t => t.AttachmentId).SingleAsync()
                 };
@@ -209,8 +212,7 @@ namespace TradeControl.Web.Mail
         {
             if (await NodeContext.Web_tbTemplates.Where(t => t.TemplateFileName == templateFileName).AnyAsync())
             {
-                Web_tbTemplateInvoice templateInvoice = new()
-                {
+                Web_tbTemplateInvoice templateInvoice = new() {
                     InvoiceTypeCode = (short)invoiceType,
                     TemplateId = await NodeContext.Web_tbTemplates.Where(t => t.TemplateFileName == templateFileName).Select(t => t.TemplateId).SingleAsync()
                 };
@@ -239,8 +241,7 @@ namespace TradeControl.Web.Mail
 
             if (!await NodeContext.Web_tbTemplateImages.Where(t => t.TemplateId == templateId && t.ImageTag == imageTag).AnyAsync())
             {
-                Web_tbTemplateImage templateImage = new()
-                {
+                Web_tbTemplateImage templateImage = new() {
                     TemplateId = templateId,
                     ImageTag = imageTag
                 };
@@ -299,8 +300,7 @@ namespace TradeControl.Web.Mail
             {
                 var fileInfo = await GetImageFromTag(imageTag);
 
-                MailImage mailImage = new()
-                {
+                MailImage mailImage = new() {
                     Tag = imageTag,
                     FileName = fileInfo.PhysicalPath
                 };
@@ -318,8 +318,7 @@ namespace TradeControl.Web.Mail
             if (!nodeSettings.HasMailHost)
                 return null;
 
-            MailText mailText = new()
-            {
+            MailText mailText = new() {
                 Name = name,
                 EmailTo = emailTo,
                 Subject = subject,
@@ -330,45 +329,60 @@ namespace TradeControl.Web.Mail
             return mailText;
         }
 
-        public async Task<MailDocument> GetSupportRequest(string templateFileName)
+        public async Task<MailDocument> GetSupportRequest()
         {
-            NodeSettings nodeSettings = new(NodeContext);
-
-            if (!nodeSettings.HasMailHost)
-                throw new Exception("Mail host needs configuring");
-            else if (FileProvider == null)
-                throw new Exception("FileProvider not specified");
-
-            int templateId = await NodeContext.Web_tbTemplates
-                                                .Where(t => templateFileName == t.TemplateFileName)
-                                                .Select(t => t.TemplateId)
-                                                .SingleAsync();
-
-            var templateFile = await GetTemplateFromId(templateId);
-
-            MailDocument mailDocument = new() { TemplateFileName = templateFile.PhysicalPath };
-            mailDocument.Settings = await nodeSettings.MailHost();
-
-            var images = await NodeContext.Web_tbTemplateImages
-                        .Where(t => t.TemplateId == templateId)
-                        .Select(t => t.ImageTag).ToListAsync();
-
-            foreach (string imageTag in images)
+            try
             {
-                var fileInfo = await GetImageFromTag(imageTag);
+                NodeSettings nodeSettings = new(NodeContext);
 
-                MailImage mailImage = new()
-                {
-                    Tag = imageTag,
-                    FileName = fileInfo.PhysicalPath
-                };
+                if (!nodeSettings.HasMailHost)
+                    throw new Exception("Mail host needs configuring");
+                else if (FileProvider == null)
+                    throw new Exception("FileProvider not specified");
 
-                mailDocument.Images.Add(mailImage);
+                var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
+                if (options == null || options.SupportRequestTemplateId == null)
+                    throw new Exception("Support request template not configured.");
+
+                var fileInfo = await GetTemplateFromId(options.SupportRequestTemplateId.Value);
+                MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
+                mailDocument.Settings = await nodeSettings.MailHost();
+                return mailDocument;
             }
-
-            return mailDocument;
-
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                throw;
+            }
         }
+
+        public async Task<MailDocument> GetUserRegistration()
+        {
+            try
+            {
+                NodeSettings nodeSettings = new(NodeContext);
+
+                if (!nodeSettings.HasMailHost)
+                    throw new Exception("Mail host needs configuring");
+                else if (FileProvider == null)
+                    throw new Exception("FileProvider not specified");
+
+                var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
+                if (options == null || options.UserRegistrationTemplateId == null)
+                    throw new Exception("User registration template not configured.");
+
+                var fileInfo = await GetTemplateFromId(options.UserRegistrationTemplateId.Value);
+                MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
+                mailDocument.Settings = await nodeSettings.MailHost();
+                return mailDocument;
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                throw;
+            }
+        }
+
         #endregion
 
         #region usage
@@ -385,7 +399,7 @@ namespace TradeControl.Web.Mail
 
         #endregion
 
-        #region content types       
+        #region content types
         public static List<string> ContentTypes
         {
             get
@@ -396,8 +410,7 @@ namespace TradeControl.Web.Mail
 
         public static NodeEnum.ContentType GetContentTypeFromString(string contentType)
         {
-            return contentType switch
-            {
+            return contentType switch {
                 "Documents" => NodeEnum.ContentType.Documents,
                 "Images" => NodeEnum.ContentType.Images,
                 "Templates" => NodeEnum.ContentType.Templates,
@@ -410,8 +423,7 @@ namespace TradeControl.Web.Mail
         #region maintenance
         public string GetFilePath(NodeEnum.ContentType contentType, string fileName)
         {
-            return contentType switch
-            {
+            return contentType switch {
                 NodeEnum.ContentType.Documents => FileProvider.GetFileInfo(Path.Combine(DocumentsSubFolder, fileName)).PhysicalPath,
                 NodeEnum.ContentType.Images => FileProvider.GetFileInfo(Path.Combine(ImagesSubFolder, fileName)).PhysicalPath,
                 NodeEnum.ContentType.Templates => FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, fileName)).PhysicalPath,
@@ -421,8 +433,7 @@ namespace TradeControl.Web.Mail
 
         public IFileInfo GetFileInfo(NodeEnum.ContentType contentType, string fileName)
         {
-            return contentType switch
-            {
+            return contentType switch {
                 NodeEnum.ContentType.Documents => FileProvider.GetFileInfo(Path.Combine(DocumentsSubFolder, fileName)),
                 NodeEnum.ContentType.Images => FileProvider.GetFileInfo(Path.Combine(ImagesSubFolder, fileName)),
                 NodeEnum.ContentType.Templates => FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, fileName)),
@@ -444,7 +455,7 @@ namespace TradeControl.Web.Mail
                     break;
                 case NodeEnum.ContentType.Images:
                     Web_tbImage tbImage = new() { ImageTag = await DefaultImageTag(), ImageFileName = fileName };
-                    NodeContext.Add(tbImage); 
+                    NodeContext.Add(tbImage);
                     break;
             }
 
@@ -464,11 +475,105 @@ namespace TradeControl.Web.Mail
                     NodeContext.Web_tbAttachments.Remove(tbAttachment);
                     break;
                 case NodeEnum.ContentType.Images:
-                    Web_tbImage tbImage = await NodeContext.Web_tbImages.SingleAsync(t => t.ImageFileName == fileName); 
-                    NodeContext.Remove(tbImage); 
+                    Web_tbImage tbImage = await NodeContext.Web_tbImages.SingleAsync(t => t.ImageFileName == fileName);
+                    NodeContext.Remove(tbImage);
                     break;
             }
 
+            await NodeContext.SaveChangesAsync();
+        }
+
+        public async Task ParseInvoiceTemplateAsync(int templateId)
+        {
+            if (FileProvider == null)
+                throw new Exception("FileProvider must be specified for this action");
+
+            var template = await NodeContext.Web_tbTemplates.SingleAsync(t => t.TemplateId == templateId);
+            var fileInfo = FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, template.TemplateFileName));
+            if (!fileInfo.Exists)
+            {
+                await UpdateTemplateParseStatusAsync(template, TemplateStatusInvalid, "Template file not found.");
+                return;
+            }
+
+            string html;
+            using (var stream = fileInfo.CreateReadStream())
+            using (var sr = new StreamReader(stream))
+                html = await sr.ReadToEndAsync();
+
+            var tokens = ExtractSquareBracketTokens(html);
+            var cidTokens = ExtractCidImageTokens(html);
+
+            var imageTags = await NodeContext.Web_tbImages.Select(i => i.ImageTag).ToListAsync();
+            var imageTagSet = new HashSet<string>(imageTags, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var cid in cidTokens)
+            {
+                if (!imageTagSet.Contains(cid))
+                {
+                    await UpdateTemplateParseStatusAsync(template, TemplateStatusInvalid, $"Unknown image tag: [{cid}]");
+                    return;
+                }
+            }
+
+            foreach (var token in tokens)
+            {
+                if (cidTokens.Contains(token))
+                    continue;
+
+                if (!MailInvoice.AllowedTemplateTags.Contains(token))
+                {
+                    await UpdateTemplateParseStatusAsync(template, TemplateStatusInvalid, $"Unknown field tag: [{token}]");
+                    return;
+                }
+            }
+
+            await UpdateTemplateParseStatusAsync(template, TemplateStatusValid, null);
+        }
+
+        private static HashSet<string> ExtractSquareBracketTokens(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var matches = Regex.Matches(html, @"\[(?<tag>[A-Za-z0-9_]+)\]");
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (Match m in matches)
+            {
+                var tag = m.Groups["tag"]?.Value?.Trim();
+                if (!string.IsNullOrWhiteSpace(tag))
+                    set.Add(tag);
+            }
+
+            return set;
+        }
+
+        private static HashSet<string> ExtractCidImageTokens(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var matches = Regex.Matches(html, @"cid:\[(?<tag>[A-Za-z0-9_]+)\]", RegexOptions.IgnoreCase);
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (Match m in matches)
+            {
+                var tag = m.Groups["tag"]?.Value?.Trim();
+                if (!string.IsNullOrWhiteSpace(tag))
+                    set.Add(tag);
+            }
+
+            return set;
+        }
+
+        private async Task UpdateTemplateParseStatusAsync(Web_tbTemplate template, short statusCode, string message)
+        {
+            template.TemplateStatusCode = statusCode;
+            template.ParsedOn = DateTime.Now;
+            template.ParseMessage = string.IsNullOrWhiteSpace(message) ? null : message;
+
+            NodeContext.Attach(template).State = EntityState.Modified;
             await NodeContext.SaveChangesAsync();
         }
 

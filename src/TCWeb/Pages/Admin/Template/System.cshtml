@@ -1,0 +1,92 @@
+@page
+@model TradeControl.Web.Pages.Admin.Template.SystemModel
+@{
+    ViewData["Title"] = "System Templates";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var done = false;
+    if (Request?.Query.ContainsKey("done") == true)
+    {
+        done = string.Equals(Request.Query["done"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["done"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    // Mobile back target (always Templates node)
+    var backHref = "/Admin/Manager/Index?node=Templates";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <div class="fw-semibold">Assignments</div>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <label asp-for="SupportRequestTemplateId" class="form-label"></label>
+                    <select asp-for="SupportRequestTemplateId"
+                            asp-items="Model.TemplateOptions"
+                            class="form-select">
+                        <option value="">(not set)</option>
+                    </select>
+                    <div class="form-text">
+                        Template used for support request emails sent to the business (system-generated).
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <label asp-for="UserRegistrationTemplateId" class="form-label"></label>
+                    <select asp-for="UserRegistrationTemplateId"
+                            asp-items="Model.TemplateOptions"
+                            class="form-select">
+                        <option value="">(not set)</option>
+                    </select>
+                    <div class="form-text">
+                        Template used for user registration/verification emails (system-generated).
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+                    <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+
+                    <button type="submit" class="btn btn-primary">
+                        Save
+                    </button>
+
+                    @if (done)
+                    {
+                        <span class="text-success">Successfully saved.</span>
+                    }
+
+                    @* Back is mobile-only *@
+                    @if (!embedded)
+                    {
+                        <a class="btn btn-outline-secondary ms-auto" href="@backHref">
+                            Back
+                        </a>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert alert-info mb-0" role="status">
+        System templates are stored in the database as assignments to HTML files in <code>wwwroot/content/templates</code>.
+    </div>
+</div>

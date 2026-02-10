@@ -1,0 +1,171 @@
+@page
+@model TradeControl.Web.Pages.Admin.Template.InvoicesModel
+
+@{
+    ViewData["Title"] = "Invoice Templates";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? "Templates")
+        : "Templates";
+
+    var backHref = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-2">@ViewData["Title"]</h1>
+        <div class="text-muted mb-3">Assign HTML templates and attachments to each invoice type.</div>
+    }
+    else
+    {
+        <div class="d-flex align-items-start justify-content-between mb-2">
+            <div>
+                <div class="fw-semibold">@ViewData["Title"]</div>
+                <div class="text-muted small">Assign templates and attachments per invoice type</div>
+            </div>
+            <div class="text-muted small">@Model.InvoiceType</div>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="fw-semibold">Invoice type</div>
+
+            <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+                @if (!embedded)
+                {
+                    <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
+                }
+            </div>
+        </div>
+
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-12 col-lg-6">
+                    <label class="form-label mb-1">Invoice type</label>
+                    <select asp-for="InvoiceType"
+                            asp-items="Model.InvoiceTypes"
+                            class="form-select"
+                            onchange="this.form.submit()"></select>
+                </div>
+
+                @* preserve context *@
+                <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
+            </form>
+
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+                <a asp-page="./Attachments"
+                   asp-route-invoiceType="@Model.InvoiceType"
+                   asp-route-embedded="@(embedded ? "1" : null)"
+                   asp-route-returnNode="@returnNode"
+                   class="btn btn-outline-info">
+                    Manage attachments
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <div class="fw-semibold">Assigned templates</div>
+        </div>
+
+        <div class="card-body p-0">
+            @if (Model.Web_TemplateInvoices == null || Model.Web_TemplateInvoices.Count == 0)
+            {
+                <div class="p-3 text-muted">
+                    No templates are assigned to <strong>@Model.InvoiceType</strong>.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Template</th>
+                                <th>Last used</th>
+                                <th class="text-end" style="width:1%;white-space:nowrap;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Web_TemplateInvoices)
+                            {
+                                <tr>
+                                    <td class="text-break">
+                                        <a asp-page="./Images"
+                                           asp-route-templateId="@item.TemplateId"
+                                           asp-route-embedded="@(embedded ? "1" : null)"
+                                           asp-route-returnNode="@returnNode">
+                                            @item.TemplateFileName
+                                        </a>
+                                    </td>
+                                    <td>@item.LastUsedOn</td>
+                                    <td class="text-end">
+                                        <div class="action-buttons justify-content-end">
+                                            <a asp-page="./TemplateRemove"
+                                               asp-route-invoiceType="@Model.InvoiceType"
+                                               asp-route-templateId="@item.TemplateId"
+                                               asp-route-embedded="@(embedded ? "1" : null)"
+                                               asp-route-returnNode="@returnNode"
+                                               class="btn btn-outline-danger btn-sm">
+                                                Remove
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <div class="fw-semibold">Assign a new template</div>
+        </div>
+        <div class="card-body">
+            @if (Model.TemplateFileNames == null || !Model.TemplateFileNames.Any())
+            {
+                <div class="text-muted">
+                    No available templates to assign.
+                </div>
+            }
+            else
+            {
+                <form method="post" class="row g-2 align-items-end">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="col-12 col-lg-6">
+                        <label asp-for="TemplateFileName" class="form-label"></label>
+                        <select asp-for="TemplateFileName" asp-items="Model.TemplateFileNames" class="form-select"></select>
+                    </div>
+
+                    <div class="col-12 col-lg-auto">
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </div>
+
+                    @* preserve context *@
+                    <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                    <input type="hidden" name="returnNode" value="@returnNode" />
+                </form>
+            }
+        </div>
+    </div>
+</div>

@@ -11,34 +11,11 @@ using TradeControl.Web.Data;
 using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Invoice.Template
+namespace TradeControl.Web.Pages.Admin.Template
 {
     [Authorize(Roles = "Administrators")]
     public class ImageEditModel : DI_BasePageModel
     {
-        /*
-        const string SessionKeyTemplateId = "_TemplateId";
-
-        public int TemplateId
-        {
-            get
-            {
-                try
-                {
-                    int templateId = (int)HttpContext.Session.GetInt32(SessionKeyTemplateId);
-                    return templateId;
-                }
-                catch
-                {
-                    return -1;
-                }
-            }
-            set
-            {
-                HttpContext.Session.SetInt32(SessionKeyTemplateId, value);
-            }
-        }
-        */
         [BindProperty]
         public Web_tbImage Web_tbImage { get; set; }
 
@@ -80,13 +57,20 @@ namespace TradeControl.Web.Pages.Invoice.Template
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Templates")
+                    : "Templates";
+
                 TemplateManager manager = new(NodeContext);
                 await manager.ImageTag(ImageTag, Web_tbImage.ImageTag);
 
-                RouteValueDictionary route = new();
-                route.Add("templateId", TemplateId);
+                var embeddedQs = embedded ? "embedded=1&" : string.Empty;
 
-                return RedirectToPage("./Images", route);
+                return Redirect($"/Admin/Template/Images?{embeddedQs}returnNode={Uri.EscapeDataString(returnNode)}&templateId={TemplateId}");
             }
             catch (Exception e)
             {

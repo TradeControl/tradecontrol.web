@@ -14,7 +14,7 @@ using TradeControl.Web.Data;
 using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Invoice.Template
+namespace TradeControl.Web.Pages.Admin.Template
 {
     [Authorize(Roles = "Administrators")]
     public class AttachmentsModel : DI_BasePageModel
@@ -100,15 +100,22 @@ namespace TradeControl.Web.Pages.Invoice.Template
 
                 await templateManager.AssignAttatchmentToInvoice(InvoiceTypeCode, attachmentFileName);
 
-                RouteValueDictionary route = new();
                 var invoiceType = await NodeContext.Invoice_tbTypes
-                                        .Where(t => t.InvoiceTypeCode == (short)InvoiceTypeCode)
-                                        .Select(t => t.InvoiceType)
-                                        .SingleAsync();
+                    .Where(t => t.InvoiceTypeCode == (short)InvoiceTypeCode)
+                    .Select(t => t.InvoiceType)
+                    .SingleAsync();
 
-                route.Add("InvoiceType", invoiceType);
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
 
-                return RedirectToPage("./Attachments", route);
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Templates")
+                    : "Templates";
+
+                var embeddedQs = embedded ? "embedded=1&" : string.Empty;
+
+                return Redirect($"/Admin/Template/Attachments?{embeddedQs}returnNode={Uri.EscapeDataString(returnNode)}&invoiceType={Uri.EscapeDataString(invoiceType)}");
             }
             catch (Exception e)
             {

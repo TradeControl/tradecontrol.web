@@ -552,6 +552,13 @@ BEGIN TRY
 		VALUES (0, 'Accounts')
 		, (1, 'MIS');
 
+    IF NOT EXISTS(SELECT * FROM Web.tbTemplateStatus)
+        INSERT INTO Web.tbTemplateStatus (TemplateStatusCode, TemplateStatus)
+        VALUES
+            (0, 'Unknown'),
+            (1, 'Valid'),
+            (2, 'Invalid');
+
 	IF NOT EXISTS(SELECT * FROM App.tbText)
 	BEGIN
 		INSERT INTO App.tbText (TextId, Message, Arguments)

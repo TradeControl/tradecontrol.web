@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,11 +12,43 @@ namespace TradeControl.Web.Mail
 {
     public class MailInvoice : MailService
     {
+        public static IReadOnlySet<string> AllowedTemplateTags { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "CompanyName",
+            "CompanyAddress",
+            "CompanyEmailAddress",
+            "CompanyWebsite",
+            "CompanyPhoneNumber",
+            "CompanyNumber",
+            "VatNumber",
+            "BankAccount",
+            "BankSortCode",
+            "BankAccountNumber",
+
+            "InvoiceType",
+            "SubjectCode",
+            "SubjectName",
+            "EmailAddress",
+            "InvoiceNumber",
+            "UserName",
+            "InvoicedOn",
+            "DueOn",
+            "Notes",
+            "PaymentTerms",
+            "InvoiceAddress",
+            "InvoiceValue",
+            "TaxValue",
+            "TotalValue",
+
+            "InvoiceDetails",
+            "TaxSummary"
+        };
+
         public string InvoiceNumber { get; }
         NodeContext NodeContext { get; }
         MailDocument Document { get; }
 
-        public MailInvoice(NodeContext nodeContext, MailDocument mailDocument, string invoiceNumber) : base() 
+        public MailInvoice(NodeContext nodeContext, MailDocument mailDocument, string invoiceNumber) : base()
         {
             NodeContext = nodeContext;
             InvoiceNumber = invoiceNumber;
@@ -34,8 +67,7 @@ namespace TradeControl.Web.Mail
 
                 var invoiceHeader = from c in NodeContext.Subject_EmailAddresses
                                     where c.SubjectCode == accountCode && c.EmailAddress == emailAddress
-                                    select new
-                                    {
+                                    select new {
                                         Name = c.ContactName,
                                         EmailTo = c.EmailAddress
                                     };
@@ -49,14 +81,14 @@ namespace TradeControl.Web.Mail
 
                     await SendInvoice();
 
-                    Invoices invoices = new (NodeContext, InvoiceNumber);
+                    Invoices invoices = new(NodeContext, InvoiceNumber);
                     await invoices.SetToPrinted();
 
                 }
                 else
                     throw new Exception($"{emailAddress} is not registered to {accountCode}");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 await NodeContext.ErrorLog(e);
                 throw;
@@ -98,7 +130,7 @@ namespace TradeControl.Web.Mail
 
         private async Task WriteCompanyDetails()
         {
-            var company = await NodeContext.Usr_Doc.Take(1).SingleOrDefaultAsync();            
+            var company = await NodeContext.Usr_Doc.Take(1).SingleOrDefaultAsync();
 
             Document.Arguments.Add("CompanyName", company.CompanyName);
             Document.Arguments.Add("CompanyAddress", company.CompanyAddress);
@@ -136,7 +168,7 @@ namespace TradeControl.Web.Mail
         private async Task WriteInvoiceDetails()
         {
 
-            StringBuilder invoiceItems = new ();
+            StringBuilder invoiceItems = new();
             invoiceItems.AppendLine(@"<table class=""DataGrid"">");
             invoiceItems.AppendLine(@"<thead class=""DataGridHeader""><tr>");
 
@@ -144,14 +176,14 @@ namespace TradeControl.Web.Mail
             invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ItemDescription")}</th>");
             invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ItemReference")}</th>");
             invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("TaxCode")}</th>");
-            /* 
+            /*
             invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ActionedOn")}</th>");
             invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("Quantity")}</th>");
             invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("UnitOfMeasure")}</th>");
             */
             invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwDocDetail>("InvoiceValue")}</th>"));
             invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwDocDetail>("TaxValue")}</th>"));
-            invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{ GetDisplayName<Invoice_vwDocDetail>("TotalValue")}</th>"));
+            invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwDocDetail>("TotalValue")}</th>"));
 
             invoiceItems.AppendLine("</tr></thead>");
 
@@ -170,10 +202,10 @@ namespace TradeControl.Web.Mail
                 invoiceItems.AppendLine($"<td>{detail.ItemDescription}</td>");
                 invoiceItems.AppendLine($"<td>{detail.ItemReference}</td>");
                 invoiceItems.AppendLine($"<td>{detail.TaxCode}</td>");
-                /* 
+                /*
                 invoiceItems.AppendLine($"<td>{detail.ActionedOn.ToLongDateString()}</td>");
                 invoiceItems.AppendLine($"<td>{detail.Quantity}</td>");
-                invoiceItems.AppendLine($"<td>{detail.UnitOfMeasure}</td>");                                
+                invoiceItems.AppendLine($"<td>{detail.UnitOfMeasure}</td>");
                 */
                 invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{detail.InvoiceValue:C2}</td>"));
                 invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{detail.TaxValue:C2}</td>"));

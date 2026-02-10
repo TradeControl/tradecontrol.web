@@ -11,7 +11,7 @@ using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
 
-namespace TradeControl.Web.Pages.Invoice.Template
+namespace TradeControl.Web.Pages.Admin.Template
 {
     [Authorize(Roles = "Administrators")]
     public class ImageRemoveModel : DI_BasePageModel
@@ -44,13 +44,20 @@ namespace TradeControl.Web.Pages.Invoice.Template
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Templates")
+                    : "Templates";
+
                 TemplateManager templateManager = new TemplateManager(NodeContext);
                 await templateManager.UnassignImageToTemplate(Web_TemplateImage.TemplateId, Web_TemplateImage.ImageTag);
 
-                RouteValueDictionary route = new();
-                route.Add("templateId", Web_TemplateImage.TemplateId);
+                var embeddedQs = embedded ? "embedded=1&" : string.Empty;
 
-                return RedirectToPage("./Images", route);
+                return Redirect($"/Admin/Template/Images?{embeddedQs}returnNode={Uri.EscapeDataString(returnNode)}&templateId={Web_TemplateImage.TemplateId}");
             }
             catch (Exception e)
             {

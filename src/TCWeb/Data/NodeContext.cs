@@ -123,6 +123,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_vwYear> App_Years { get; set; }
         public virtual DbSet<App_tbYearPeriod> App_tbYearPeriods { get; set; }
         public virtual DbSet<Web_tbTemplate> Web_tbTemplates { get; set; }
+        public virtual DbSet<Web_tbTemplateStatus> Web_tbTemplateStatuses { get; set; }
         public virtual DbSet<Web_tbTemplateImage> Web_tbTemplateImages { get; set; }
         public virtual DbSet<Web_tbTemplateInvoice> Web_tbTemplateInvoices { get; set; }
         public virtual DbSet<Web_tbImage> Web_tbImages { get; set; }

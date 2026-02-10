@@ -1,0 +1,144 @@
+@page
+@model TradeControl.Web.Pages.Admin.Template.ImagesModel
+
+@{
+    ViewData["Title"] = "Template Images";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? "Templates")
+        : "Templates";
+
+    // Mobile-only back target (embedded pages don't show global nav anyway)
+    var backHref = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-2">@ViewData["Title"]</h1>
+        <div class="text-muted mb-3">@Model.TemplateFileName</div>
+    }
+    else
+    {
+        <div class="d-flex align-items-start justify-content-between mb-2">
+            <div>
+                <div class="fw-semibold">@ViewData["Title"]</div>
+                <div class="text-muted small">@Model.TemplateFileName</div>
+            </div>
+            <div class="small text-muted">TemplateId: @Model.TemplateId</div>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">Assigned images</div>
+
+            @if (!embedded)
+            {
+                <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
+            }
+        </div>
+
+        <div class="card-body p-0">
+            @if (Model.Web_TemplateImages == null || Model.Web_TemplateImages.Count == 0)
+            {
+                <div class="p-3 text-muted">
+                    No images are assigned to this template yet.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Image file</th>
+                                <th>Tag</th>
+                                <th class="text-end" style="width:1%;white-space:nowrap;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Web_TemplateImages)
+                            {
+                                <tr>
+                                    <td class="text-break">
+                                        @item.ImageFileName
+                                    </td>
+                                    <td class="text-break">
+                                        <code>@item.ImageTag</code>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="action-buttons justify-content-end">
+                                            <a asp-page="./ImageEdit"
+                                               asp-route-templateId="@item.TemplateId"
+                                               asp-route-imageTag="@item.ImageTag"
+                                               asp-route-embedded="@(embedded ? "1" : null)"
+                                               asp-route-returnNode="@returnNode"
+                                               class="btn btn-outline-primary btn-sm">
+                                                Edit tag
+                                            </a>
+
+                                            <a asp-page="./ImageRemove"
+                                               asp-route-templateId="@item.TemplateId"
+                                               asp-route-imageTag="@item.ImageTag"
+                                               asp-route-embedded="@(embedded ? "1" : null)"
+                                               asp-route-returnNode="@returnNode"
+                                               class="btn btn-outline-danger btn-sm">
+                                                Remove
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <div class="fw-semibold">Assign a new image</div>
+        </div>
+        <div class="card-body">
+            @if (Model.ImageFileNames == null || !Model.ImageFileNames.Any())
+            {
+                <div class="text-muted">
+                    No available images to assign.
+                </div>
+            }
+            else
+            {
+                <form method="post" class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-6">
+                        <label asp-for="ImageFileName" class="form-label"></label>
+                        <select asp-for="ImageFileName" asp-items="Model.ImageFileNames" class="form-select"></select>
+                    </div>
+
+                    <div class="col-12 col-lg-auto">
+                        <button type="submit" class="btn btn-primary">
+                            Assign
+                        </button>
+                    </div>
+
+                    @* Preserve embedding context on post-backs *@
+                    <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                    <input type="hidden" name="returnNode" value="@returnNode" />
+                </form>
+            }
+        </div>
+    </div>
+</div>

@@ -30,6 +30,7 @@ using Wangkanai.Detection.Models;
 using TradeControl.Web.Data;
 using System.Globalization;
 using Microsoft.Extensions.FileProviders;
+using TradeControl.Web.AppServices;
 
 namespace TradeControl.Web
 {
@@ -73,8 +74,7 @@ namespace TradeControl.Web
             });
 
             services.AddSingleton<IFileProvider>(new PhysicalFileProvider(_env.WebRootPath));
-
-            //ServiceTool.Create(services);
+            services.AddAdminManagerServices();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

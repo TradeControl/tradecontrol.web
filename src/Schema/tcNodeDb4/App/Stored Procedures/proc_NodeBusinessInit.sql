@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [App].[proc_NodeBusinessInit]
+CREATE PROCEDURE [App].[proc_NodeBusinessInit]
 (
 	@SubjectCode NVARCHAR(10),
 	@BusinessName NVARCHAR(255),
@@ -32,8 +32,48 @@ BEGIN TRY
 	VALUES (CONCAT(LEFT(@FullName, 1), SUBSTRING(@FullName, CHARINDEX(' ', @FullName) + 1, 1)), @FullName, 
 		SUSER_NAME() , 1, 1, @CalendarCode, @UserEmailAddress, @PhoneNumber);
 
-	INSERT INTO App.tbOptions (Identifier, IsInitialised, SubjectCode, RegisterName, DefaultPrintMode, BucketIntervalCode, BucketTypeCode, TaxHorizon, IsAutoOffsetDays, UnitOfCharge)
-	VALUES ('TC', 0, @SubjectCode, 'Event Log', 2, 1, 1, 730, 0, @UnitOfCharge);
+	IF NOT EXISTS (SELECT 1 FROM Web.tbTemplate WHERE TemplateFileName = 'support_request.html')
+		INSERT INTO Web.tbTemplate (TemplateFileName) VALUES ('support_request.html');
+
+	IF NOT EXISTS (SELECT 1 FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration.html')
+		INSERT INTO Web.tbTemplate (TemplateFileName) VALUES ('user_registration.html');
+
+	DECLARE @SupportRequestTemplateId INT =
+		(SELECT TemplateId FROM Web.tbTemplate WHERE TemplateFileName = 'support_request.html');
+
+	DECLARE @UserRegistrationTemplateId INT =
+		(SELECT TemplateId FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration.html');
+
+	INSERT INTO App.tbOptions
+	(
+		Identifier,
+		IsInitialised,
+		SubjectCode,
+		RegisterName,
+		DefaultPrintMode,
+		BucketIntervalCode,
+		BucketTypeCode,
+		TaxHorizon,
+		IsAutoOffsetDays,
+		UnitOfCharge,
+		SupportRequestTemplateId,
+		UserRegistrationTemplateId
+	)
+	VALUES
+	(
+		'TC',
+		0,
+		@SubjectCode,
+		'Event Log',
+		2,
+		1,
+		1,
+		730,
+		0,
+		@UnitOfCharge,
+		@SupportRequestTemplateId,
+		@UserRegistrationTemplateId
+	);
 
 	SET IDENTITY_INSERT [Usr].[tbMenu] ON;
 	INSERT INTO [Usr].[tbMenu] ([MenuId], [MenuName], [InterfaceCode])

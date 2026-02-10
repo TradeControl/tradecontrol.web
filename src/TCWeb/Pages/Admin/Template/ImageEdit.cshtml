@@ -1,0 +1,90 @@
+@page
+@model TradeControl.Web.Pages.Admin.Template.ImageEditModel
+
+@{
+    ViewData["Title"] = "Edit Image Tag";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? "Templates")
+        : "Templates";
+
+    var backHref = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-2">@ViewData["Title"]</h1>
+        <div class="text-muted mb-3">@Model.Web_tbImage.ImageFileName</div>
+    }
+    else
+    {
+        <div class="d-flex align-items-start justify-content-between mb-2">
+            <div>
+                <div class="fw-semibold">@ViewData["Title"]</div>
+                <div class="text-muted small">@Model.Web_tbImage.ImageFileName</div>
+            </div>
+            <div class="small text-muted">TemplateId: @Model.TemplateId</div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">Image tag</div>
+
+            @if (!embedded)
+            {
+                <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
+            }
+        </div>
+
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="col-12 col-lg-6">
+                    <label asp-for="Web_tbImage.ImageTag" class="form-label"></label>
+                    <input asp-for="Web_tbImage.ImageTag" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="Web_tbImage.ImageTag" class="text-danger"></span>
+
+                    <div class="form-text">
+                        This tag is referenced inside the HTML template (for example: <code>[Logo]</code>).
+                    </div>
+                </div>
+
+                @* Preserve required identity for the handler *@
+                <input type="hidden" asp-for="Web_tbImage.ImageFileName" />
+                <input type="hidden" asp-for="TemplateId" />
+                <input type="hidden" asp-for="ImageTag" />
+
+                @* Preserve UX context *@
+                <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
+
+                <div class="col-12 d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary">Save</button>
+
+                    <a asp-page="./Images"
+                       asp-route-templateId="@Model.TemplateId"
+                       asp-route-embedded="@(embedded ? "1" : null)"
+                       asp-route-returnNode="@returnNode"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -11,7 +11,7 @@ using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
 
-namespace TradeControl.Web.Pages.Invoice.Template
+namespace TradeControl.Web.Pages.Admin.Template
 {
     [Authorize(Roles = "Administrators")]
     public class AttachmentRemoveModel : DI_BasePageModel
@@ -48,17 +48,25 @@ namespace TradeControl.Web.Pages.Invoice.Template
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Templates")
+                    : "Templates";
+
                 TemplateManager templateManager = new TemplateManager(NodeContext);
                 NodeEnum.InvoiceType invoiceType = (NodeEnum.InvoiceType)await NodeContext.Invoice_tbTypes
-                                    .Where(t => t.InvoiceType == InvoiceType)
-                                    .Select(t => t.InvoiceTypeCode).SingleAsync();
+                    .Where(t => t.InvoiceType == InvoiceType)
+                    .Select(t => t.InvoiceTypeCode)
+                    .SingleAsync();
 
                 await templateManager.UnassignAttatchmentToInvoice(invoiceType, Web_AttachmentInvoice.AttachmentId);
 
-                RouteValueDictionary route = new();
-                route.Add("invoiceType", InvoiceType);
+                var embeddedQs = embedded ? "embedded=1&" : string.Empty;
 
-                return RedirectToPage("./Attachments", route);
+                return Redirect($"/Admin/Template/Attachments?{embeddedQs}returnNode={Uri.EscapeDataString(returnNode)}&invoiceType={Uri.EscapeDataString(InvoiceType)}");
             }
             catch (Exception e)
             {

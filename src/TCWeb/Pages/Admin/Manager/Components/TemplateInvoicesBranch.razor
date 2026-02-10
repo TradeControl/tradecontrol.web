@@ -1,0 +1,68 @@
+@using TradeControl.Web.AppServices
+@inject ITemplateTreeProvider TreeProvider
+
+@if (_loading)
+{
+    <div class="ps-3 py-1 text-muted small">Loading…</div>
+}
+else if (_loadError != null)
+{
+    <div class="ps-3 py-1 text-danger small">@_loadError</div>
+}
+else if (_nodes.Count == 0)
+{
+    <div class="ps-3 py-1 text-muted small">(no invoice types)</div>
+}
+else
+{
+    <div class="ps-3">
+        @foreach (var node in _nodes)
+        {
+            <button type="button"
+                    class="btn btn-link text-start w-100 tc-tree-row"
+                    @onclick="() => OnNodeSelected.InvokeAsync(node)">
+                <span class="tc-tree-expander" aria-hidden="true">
+                    <i class="bi bi-dot"></i>
+                </span>
+                <i class="bi bi-file-earmark-text me-2 tc-tree-icon" aria-hidden="true"></i>
+                <span class="tc-tree-label">@node.Text</span>
+            </button>
+        }
+    </div>
+}
+
+@code
+{
+    [Parameter] public bool IsExpanded { get; set; }
+    [Parameter] public EventCallback<TemplateTreeNode> OnNodeSelected { get; set; }
+
+    private bool _loaded;
+    private bool _loading;
+    private string? _loadError;
+    private List<TemplateTreeNode> _nodes = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsExpanded || _loaded || _loading)
+            return;
+
+        try
+        {
+            _loading = true;
+            _loadError = null;
+
+            var nodes = await TreeProvider.GetInvoiceTypeNodesAsync();
+            _nodes = nodes.ToList();
+
+            _loaded = true;
+        }
+        catch (System.Exception ex)
+        {
+            _loadError = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

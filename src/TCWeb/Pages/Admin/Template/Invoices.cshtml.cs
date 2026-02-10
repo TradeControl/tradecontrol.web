@@ -14,10 +14,10 @@ using TradeControl.Web.Data;
 using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Invoice.Template
+namespace TradeControl.Web.Pages.Admin.Template
 {
     [Authorize(Roles = "Administrators")]
-    public class IndexModel : DI_BasePageModel
+    public class InvoicesModel : DI_BasePageModel
     {
         const string SessionKeyInvoiceType = "_InvoiceType";
 
@@ -53,7 +53,7 @@ namespace TradeControl.Web.Pages.Invoice.Template
         public string TemplateFileName { get; set; }
         public SelectList TemplateFileNames { get; set; }
 
-        public IndexModel(NodeContext context) : base(context) { }
+        public InvoicesModel(NodeContext context) : base(context) { }
 
         public async Task OnGetAsync(string invoiceType)
         {
@@ -102,18 +102,24 @@ namespace TradeControl.Web.Pages.Invoice.Template
             try
             {
                 TemplateManager templateManager = new TemplateManager(NodeContext);
-
                 await templateManager.AssignTemplateToInvoice(InvoiceTypeCode, templateFileName);
 
-                RouteValueDictionary route = new();
                 var invoiceType = await NodeContext.Invoice_tbTypes
-                                        .Where(t => t.InvoiceTypeCode == (short)InvoiceTypeCode)
-                                        .Select(t => t.InvoiceType)
-                                        .SingleAsync();
+                    .Where(t => t.InvoiceTypeCode == (short)InvoiceTypeCode)
+                    .Select(t => t.InvoiceType)
+                    .SingleAsync();
 
-                route.Add("InvoiceType", invoiceType);
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
 
-                return RedirectToPage("./Index", route);
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Templates")
+                    : "Templates";
+
+                var embeddedQs = embedded ? "embedded=1&" : string.Empty;
+
+                return Redirect($"/Admin/Template/Invoices?{embeddedQs}returnNode={Uri.EscapeDataString(returnNode)}&invoiceType={Uri.EscapeDataString(invoiceType)}");
             }
             catch (Exception e)
             {

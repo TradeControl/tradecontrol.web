@@ -112,6 +112,38 @@ html, body {
     color: #fbc02d; /* folder yellow */
 }
 
+/* Template/document icons (Bootstrap icons) */
+.tc-admin-manager-tree i.bi-filetype-html {
+    color: #6f42c1; /* purple */
+}
+
+.tc-admin-manager-tree i.bi-files {
+    color: #0d6efd; /* blue */
+}
+
+.tc-admin-manager-tree i.bi-images,
+.tc-admin-manager-tree i.bi-image {
+    color: #d63384; /* pink */
+}
+
+.tc-admin-manager-tree i.bi-paperclip {
+    color: #20c997; /* teal */
+}
+
+.tc-admin-manager-tree i.bi-file-earmark,
+.tc-admin-manager-tree i.bi-file-earmark-text {
+    color: #fd7e14; /* orange */
+}
+
+/* Templates module icons (<i class="bi ..."> used in ManagerTreeHost.razor) */
+.tc-admin-manager-tree i.bi-receipt {
+    color: #0d6efd; /* blue (Invoices) */
+}
+
+.tc-admin-manager-tree i.bi-gear {
+    color: #495057; /* dark gray (System) */
+}
+
 .tc-tree-label {
     display: inline-block;
     padding: 0.06rem 0.25rem;

@@ -649,6 +649,7 @@
     <Build Include="Cash\Stored Procedures\proc_CategoryExprStatusSet.sql" />
     <Build Include="Cash\Tables\tbCategoryExprFormat.sql" />
     <Build Include="tbCategoryExp.Trigger.sql" />
+    <Build Include="Web\Tables\tbTemplateStatus.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

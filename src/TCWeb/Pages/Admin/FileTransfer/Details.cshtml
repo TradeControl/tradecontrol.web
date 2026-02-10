@@ -21,8 +21,8 @@
     }
 
     var backHref = embedded
-        ? $"/Admin/FileTransfer/Index?embedded=1&contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}"
-        : $"/Admin/FileTransfer/Index?contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}";
+        ? $"/Admin/FileTransfer/Index?embedded=1&contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}&pageNumber={Model.PageNumber}&pageSize={Model.PageSize}"
+        : $"/Admin/FileTransfer/Index?contentType={Uri.EscapeDataString(Model.ContentType)}&returnNode={Uri.EscapeDataString(returnNode)}&pageNumber={Model.PageNumber}&pageSize={Model.PageSize}";
 }
 
 <div class="container-fluid py-2">
@@ -61,7 +61,7 @@
     </div>
 
     <div class="d-flex flex-wrap gap-2">
-        <a href="/Admin/Manager/Index?node=FileTransferContentType&contentType=@Uri.EscapeDataString(Model.ContentType)&pageSize=@Model.PageSize&pageNumber=@Model.PageNumber"
+        <a href="@backHref"
            class="btn btn-outline-secondary">
             Back
         </a>
@@ -72,6 +72,8 @@
            asp-route-fileName="@Model.FileInfo.Name"
            asp-route-embedded="@(embedded ? "1" : null)"
            asp-route-returnNode="@returnNode"
+           asp-route-pageNumber="@Model.PageNumber"
+           asp-route-pageSize="@Model.PageSize"
            class="btn btn-secondary">
             Download
         </a>
@@ -81,6 +83,8 @@
            asp-route-fileName="@Model.FileInfo.Name"
            asp-route-embedded="@(embedded ? "1" : null)"
            asp-route-returnNode="@returnNode"
+           asp-route-pageNumber="@Model.PageNumber"
+           asp-route-pageSize="@Model.PageSize"
            class="btn btn-danger">
             Delete
         </a>

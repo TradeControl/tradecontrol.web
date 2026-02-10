@@ -1,0 +1,194 @@
+@using Microsoft.AspNetCore.Components.Web
+@using TradeControl.Web.AppServices
+
+@if (IsRoot)
+{
+    foreach (var node in RootNodes)
+    {
+        <TemplateTreeBranch Node="node"
+                            GetChildren="GetChildren"
+                            OnLeafSelected="OnLeafSelected"
+                            SelectedKey="SelectedKey"
+                            OnNodeSelected="OnNodeSelected"
+                            OnNodeContextMenu="OnNodeContextMenu"
+                            RefreshToken="RefreshToken" />
+    }
+}
+else if (Node != null)
+{
+    <div class="d-flex align-items-center">
+        @if (HasExpander(Node))
+        {
+            <button type="button"
+                    class="btn btn-link text-start tc-tree-row p-0"
+                    style="width:1.6rem;"
+                    @onclick="ToggleExpandAsync"
+                    aria-expanded="@_expanded"
+                    title="Expand">
+                <span class="tc-tree-expander" aria-hidden="true">
+                    <i class="bi @(_expanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                </span>
+            </button>
+        }
+        else
+        {
+            <span class="tc-tree-expander" aria-hidden="true" style="display:inline-block;width:1.6rem;">
+                <i class="bi bi-dot"></i>
+            </span>
+        }
+
+        <button type="button"
+                class="btn btn-link text-start w-100 tc-tree-row"
+                @onclick="OnClickAsync"
+                @oncontextmenu="OnContextMenuAsync"
+                @oncontextmenu:preventDefault="true">
+            <i class="bi @IconClass(Node) me-2 tc-tree-icon" aria-hidden="true"></i>
+            <span class="tc-tree-label @(string.Equals(SelectedKey, Node.Key, StringComparison.OrdinalIgnoreCase) ? "tc-tree-label-selected" : "")">@Node.Text</span>
+        </button>
+    </div>
+
+    @if (_expanded)
+    {
+        <div class="ps-3">
+            @if (_loading)
+            {
+                <div class="py-1 text-muted small">Loading…</div>
+            }
+            else if (_error != null)
+            {
+                <div class="py-1 text-danger small">@_error</div>
+            }
+            else
+            {
+                @foreach (var child in _children)
+                {
+                    <TemplateTreeBranch Node="child"
+                                        GetChildren="GetChildren"
+                                        OnLeafSelected="OnLeafSelected"
+                                        SelectedKey="SelectedKey"
+                                        OnNodeSelected="OnNodeSelected"
+                                        OnNodeContextMenu="OnNodeContextMenu"
+                                        RefreshToken="RefreshToken" />
+                }
+            }
+        </div>
+    }
+}
+
+@code
+{
+    [Parameter] public bool IsRoot { get; set; }
+    [Parameter] public IReadOnlyList<TemplateTreeNode> RootNodes { get; set; } = [];
+    [Parameter] public TemplateTreeNode? Node { get; set; }
+
+    [Parameter] public Func<TemplateTreeNode, Task<IReadOnlyList<TemplateTreeNode>>> GetChildren { get; set; } = default!;
+    [Parameter] public EventCallback<TemplateTreeNode> OnLeafSelected { get; set; }
+
+    [Parameter] public string? SelectedKey { get; set; }
+    [Parameter] public EventCallback<TemplateTreeNode> OnNodeSelected { get; set; }
+
+    [Parameter] public long RefreshToken { get; set; }
+
+    [Parameter] public EventCallback<(MouseEventArgs Args, TemplateTreeNode Node)> OnNodeContextMenu { get; set; }
+
+    private long _lastRefreshToken;
+
+    private bool _expanded;
+    private bool _loading;
+    private bool _loaded;
+    private string? _error;
+    private List<TemplateTreeNode> _children = [];
+
+    protected override void OnParametersSet()
+    {
+        if (_lastRefreshToken != RefreshToken)
+        {
+            _lastRefreshToken = RefreshToken;
+            _loaded = false;
+            _loading = false;
+            _error = null;
+            _children.Clear();
+
+            if (_expanded)
+                _ = EnsureChildrenLoadedAsync();
+        }
+    }
+
+    private static bool HasExpander(TemplateTreeNode node) =>
+        node.Kind is TemplateTreeNodeKind.InvoiceType
+            or TemplateTreeNodeKind.TemplatesFolder
+            or TemplateTreeNodeKind.Template
+            or TemplateTreeNodeKind.ImagesFolder
+            or TemplateTreeNodeKind.AttachmentsFolder;
+
+    private static string IconClass(TemplateTreeNode node) => node.Kind switch
+    {
+        TemplateTreeNodeKind.InvoiceType => "bi-file-earmark-text",
+        TemplateTreeNodeKind.TemplatesFolder => "bi-files",
+        TemplateTreeNodeKind.Template => "bi-filetype-html",
+        TemplateTreeNodeKind.ImagesFolder => "bi-images",
+        TemplateTreeNodeKind.Image => "bi-image",
+        TemplateTreeNodeKind.AttachmentsFolder => "bi-paperclip",
+        TemplateTreeNodeKind.Attachment => "bi-file-earmark",
+        _ => "bi-dot"
+    };
+
+    private async Task ToggleExpandAsync()
+    {
+        _expanded = !_expanded;
+
+        if (_expanded)
+            await EnsureChildrenLoadedAsync();
+    }
+
+    private async Task EnsureChildrenLoadedAsync()
+    {
+        if (_loaded || _loading || Node == null)
+            return;
+
+        try
+        {
+            _loading = true;
+            _error = null;
+
+            var children = await GetChildren(Node);
+            _children = children.ToList();
+            _loaded = true;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnClickAsync()
+    {
+        if (Node == null)
+            return;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(Node);
+
+        if (!HasExpander(Node))
+        {
+            if (OnLeafSelected.HasDelegate)
+                await OnLeafSelected.InvokeAsync(Node);
+
+            return;
+        }
+
+        await ToggleExpandAsync();
+    }
+
+    private async Task OnContextMenuAsync(MouseEventArgs e)
+    {
+        if (Node == null || !OnNodeContextMenu.HasDelegate)
+            return;
+
+        await OnNodeContextMenu.InvokeAsync((e, Node));
+    }
+}
