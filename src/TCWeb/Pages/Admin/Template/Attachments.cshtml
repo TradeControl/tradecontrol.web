@@ -20,7 +20,9 @@
         ? (Request.Query["returnNode"].ToString() ?? "Templates")
         : "Templates";
 
-    var backHref = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+    var templateKey = $"invoiceType:{(short)Model.InvoiceTypeCode}:attachments";
+    var backHref = $"/Admin/Manager/Index?node=TemplateInvoices&templateKey={Uri.EscapeDataString(templateKey)}";
+
 }
 
 <div class="container-fluid py-2">
@@ -29,8 +31,7 @@
         <h1 class="h4 mb-2">@ViewData["Title"]</h1>
         <div class="text-muted mb-3">@Model.InvoiceType</div>
     }
-    else
-    {
+    else{
         <div class="d-flex align-items-start justify-content-between mb-2">
             <div>
                 <div class="fw-semibold">@ViewData["Title"]</div>
@@ -119,3 +120,26 @@
         </div>
     </div>
 </div>
+
+@if (embedded)
+{
+    <script>
+        (function ()
+        {
+            try
+            {
+                window.parent.postMessage(
+                    {
+                        type: "tc.template.refresh",
+                        scope: "invoiceType.attachments",
+                        invoiceTypeCode: @((short)Model.InvoiceTypeCode)
+                    },
+                    "*"
+                );
+            }
+            catch
+            {
+            }
+        })();
+    </script>
+}

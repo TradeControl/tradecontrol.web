@@ -23,6 +23,40 @@ namespace TradeControl.Web.Mail
         private const short TemplateStatusValid = 1;
         private const short TemplateStatusInvalid = 2;
 
+        #region template parsing contracts
+        public sealed record TemplateParseReport(
+            IReadOnlyList<string> InvalidFieldTags,
+            IReadOnlyList<string> MissingEmbedDirectives,
+            IReadOnlyList<string> MissingEmbedTemplates,
+            IReadOnlyList<string> InvalidEmbedTemplates,
+            IReadOnlyList<string> MissingRequiredOutputTags,
+            IReadOnlyList<string> ImageTagsWithoutAssignment,
+            IReadOnlyList<string> AssignedImageTagsWithoutUsage,
+            IReadOnlyList<string> AssignedImagesMissingFiles,
+            IReadOnlyList<string> UnusedAvailableFields)
+        {
+            public bool HasErrors =>
+                InvalidFieldTags.Count > 0
+                || MissingEmbedDirectives.Count > 0
+                || MissingEmbedTemplates.Count > 0
+                || InvalidEmbedTemplates.Count > 0
+                || MissingRequiredOutputTags.Count > 0
+                || ImageTagsWithoutAssignment.Count > 0
+                || AssignedImagesMissingFiles.Count > 0;
+
+            public bool HasWarnings =>
+                AssignedImageTagsWithoutUsage.Count > 0
+                || UnusedAvailableFields.Count > 0;
+        }
+
+        public interface ITemplateParseProfile
+        {
+            IReadOnlySet<string> AllowedFieldTags { get; }
+            IReadOnlySet<string> RequiredEmbeds { get; } // e.g. { "Details", "Tax" }
+            IReadOnlySet<string> RequiredOutputTags { get; } // e.g. { "InvoiceDetailsHtml", "TaxSummaryHtml" }
+        }
+        #endregion
+
         #region initialise
         public TemplateManager(NodeContext nodeContext) : this(nodeContext, null) { }
 
@@ -130,12 +164,10 @@ namespace TradeControl.Web.Mail
         }
         #endregion
 
-
         #region get files
         public static string ImagesSubFolder { get; } = @"content\\images";
         public static string TemplatesSubFolder { get; } = @"content\\templates";
         public static string DocumentsSubFolder { get; } = @"content\\documents";
-
 
         IList<IFileInfo> GetTemplates()
         {
@@ -147,7 +179,6 @@ namespace TradeControl.Web.Mail
             var template = await NodeContext.Web_tbTemplates.FirstOrDefaultAsync(t => t.TemplateId == templateId);
             return FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, template.TemplateFileName));
         }
-
 
         IList<IFileInfo> GetImages()
         {
@@ -483,7 +514,7 @@ namespace TradeControl.Web.Mail
             await NodeContext.SaveChangesAsync();
         }
 
-        public async Task ParseInvoiceTemplateAsync(int templateId)
+        public async Task<TemplateParseReport> ParseTemplateAsync(int templateId, ITemplateParseProfile profile)
         {
             if (FileProvider == null)
                 throw new Exception("FileProvider must be specified for this action");
@@ -493,7 +524,16 @@ namespace TradeControl.Web.Mail
             if (!fileInfo.Exists)
             {
                 await UpdateTemplateParseStatusAsync(template, TemplateStatusInvalid, "Template file not found.");
-                return;
+                return new TemplateParseReport(
+                    InvalidFieldTags: Array.Empty<string>(),
+                    MissingEmbedDirectives: Array.Empty<string>(),
+                    MissingEmbedTemplates: Array.Empty<string>(),
+                    InvalidEmbedTemplates: Array.Empty<string>(),
+                    MissingRequiredOutputTags: Array.Empty<string>(),
+                    ImageTagsWithoutAssignment: Array.Empty<string>(),
+                    AssignedImageTagsWithoutUsage: Array.Empty<string>(),
+                    AssignedImagesMissingFiles: Array.Empty<string>(),
+                    UnusedAvailableFields: Array.Empty<string>());
             }
 
             string html;
@@ -501,34 +541,192 @@ namespace TradeControl.Web.Mail
             using (var sr = new StreamReader(stream))
                 html = await sr.ReadToEndAsync();
 
-            var tokens = ExtractSquareBracketTokens(html);
-            var cidTokens = ExtractCidImageTokens(html);
+            var fieldTokens = ExtractSquareBracketTokens(html);
 
-            var imageTags = await NodeContext.Web_tbImages.Select(i => i.ImageTag).ToListAsync();
-            var imageTagSet = new HashSet<string>(imageTags, StringComparer.OrdinalIgnoreCase);
+            var imgCidTags = ExtractImgCidImageTags(html);
+            var imgCidTagSet = new HashSet<string>(imgCidTags, StringComparer.OrdinalIgnoreCase);
 
-            foreach (var cid in cidTokens)
+            fieldTokens.ExceptWith(imgCidTagSet);
+
+            var embeds = ExtractEmbedDirectives(html); // embedName -> templateKey
+
+            var missingEmbedDirectives = profile.RequiredEmbeds
+                .Where(req => !embeds.ContainsKey(req))
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var missingEmbedTemplates = new List<string>();
+            foreach (var req in profile.RequiredEmbeds)
             {
-                if (!imageTagSet.Contains(cid))
-                {
-                    await UpdateTemplateParseStatusAsync(template, TemplateStatusInvalid, $"Unknown image tag: [{cid}]");
-                    return;
-                }
-            }
-
-            foreach (var token in tokens)
-            {
-                if (cidTokens.Contains(token))
+                if (!embeds.TryGetValue(req, out var key) || string.IsNullOrWhiteSpace(key))
                     continue;
 
-                if (!MailInvoice.AllowedTemplateTags.Contains(token))
-                {
-                    await UpdateTemplateParseStatusAsync(template, TemplateStatusInvalid, $"Unknown field tag: [{token}]");
-                    return;
-                }
+                var embeddedFileName = $"{key}.tpl";
+                var embeddedFile = FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, embeddedFileName));
+                if (!embeddedFile.Exists)
+                    missingEmbedTemplates.Add(embeddedFileName);
+            }
+            missingEmbedTemplates.Sort(StringComparer.OrdinalIgnoreCase);
+
+            var invalidEmbedTemplates = new List<string>();
+            foreach (var req in profile.RequiredEmbeds.OrderBy(s => s, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!embeds.TryGetValue(req, out var key) || string.IsNullOrWhiteSpace(key))
+                    continue;
+
+                var embeddedFileName = $"{key}.tpl";
+
+                if (missingEmbedTemplates.Contains(embeddedFileName))
+                    continue;
+
+                var embeddedFile = FileProvider.GetFileInfo(Path.Combine(TemplatesSubFolder, embeddedFileName));
+                if (!embeddedFile.Exists)
+                    continue;
+
+                string embeddedHtml;
+                using (var stream = embeddedFile.CreateReadStream())
+                using (var sr = new StreamReader(stream))
+                    embeddedHtml = await sr.ReadToEndAsync();
+
+                var failures = ValidateEmbeddedTemplateHtml(embeddedFileName, embeddedHtml);
+                if (failures.Count > 0)
+                    invalidEmbedTemplates.AddRange(failures);
+            }
+            invalidEmbedTemplates = invalidEmbedTemplates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            invalidEmbedTemplates.Sort(StringComparer.OrdinalIgnoreCase);
+
+            var invalidFieldTags = fieldTokens
+                .Where(t => !IsEmbedDirectiveToken(t) && !profile.AllowedFieldTags.Contains(t))
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var missingRequiredOutputTags = profile.RequiredOutputTags
+                .Where(t => !fieldTokens.Contains(t))
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var unusedAvailableFields = profile.AllowedFieldTags
+                .Where(a => !profile.RequiredOutputTags.Contains(a))
+                .Where(a => !fieldTokens.Contains(a))
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var assignedImageTags = await NodeContext.Web_tbTemplateImages
+                .Where(ti => ti.TemplateId == templateId)
+                .Select(ti => ti.ImageTag)
+                .ToListAsync();
+
+            var assignedImageTagSet = new HashSet<string>(assignedImageTags, StringComparer.OrdinalIgnoreCase);
+
+            var imageTagsWithoutAssignment = imgCidTagSet
+                .Where(t => !assignedImageTagSet.Contains(t))
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var assignedImageTagsWithoutUsage = assignedImageTagSet
+                .Where(t => !imgCidTagSet.Contains(t))
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var assignedImagesMissingFiles = new List<string>();
+            foreach (var tag in assignedImageTagSet)
+            {
+                var imageFile = await GetImageFromTag(tag);
+                if (imageFile == null || !imageFile.Exists)
+                    assignedImagesMissingFiles.Add(tag);
+            }
+            assignedImagesMissingFiles.Sort(StringComparer.OrdinalIgnoreCase);
+
+            var report = new TemplateParseReport(
+                InvalidFieldTags: invalidFieldTags,
+                MissingEmbedDirectives: missingEmbedDirectives,
+                MissingEmbedTemplates: missingEmbedTemplates,
+                InvalidEmbedTemplates: invalidEmbedTemplates,
+                MissingRequiredOutputTags: missingRequiredOutputTags,
+                ImageTagsWithoutAssignment: imageTagsWithoutAssignment,
+                AssignedImageTagsWithoutUsage: assignedImageTagsWithoutUsage,
+                AssignedImagesMissingFiles: assignedImagesMissingFiles,
+                UnusedAvailableFields: unusedAvailableFields);
+
+            var status = report.HasErrors ? TemplateStatusInvalid : TemplateStatusValid;
+            var message = report.HasErrors
+                ? BuildFirstErrorMessage(report)
+                : null;
+
+            await UpdateTemplateParseStatusAsync(template, status, message);
+
+            return report;
+        }
+
+        private static IReadOnlyList<string> ValidateEmbeddedTemplateHtml(string embeddedFileName, string embeddedHtml)
+        {
+            var failures = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(embeddedHtml))
+            {
+                failures.Add($"{embeddedFileName}: empty template");
+                return failures;
             }
 
-            await UpdateTemplateParseStatusAsync(template, TemplateStatusValid, null);
+            var startOk = embeddedHtml.IndexOf("<!--ITEM-->", StringComparison.OrdinalIgnoreCase) >= 0;
+            var endOk = embeddedHtml.IndexOf("<!--/ITEM-->", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!startOk || !endOk)
+                failures.Add($"{embeddedFileName}: missing repeating block markers <!--ITEM--> and <!--/ITEM-->");
+
+            if (embeddedHtml.IndexOf("[Items]", StringComparison.OrdinalIgnoreCase) < 0)
+                failures.Add($"{embeddedFileName}: missing [Items] placeholder");
+
+            return failures;
+        }
+
+        private static string BuildFirstErrorMessage(TemplateParseReport report)
+        {
+            if (report.InvalidFieldTags.Count > 0)
+                return $"Unknown field tag: [{report.InvalidFieldTags[0]}]";
+
+            if (report.MissingEmbedDirectives.Count > 0)
+                return $"Missing embedded template directive: [Embed:{report.MissingEmbedDirectives[0]}=...]";
+
+            if (report.MissingEmbedTemplates.Count > 0)
+                return $"Embedded template not found: {report.MissingEmbedTemplates[0]}";
+
+            if (report.InvalidEmbedTemplates.Count > 0)
+                return $"Embedded template invalid: {report.InvalidEmbedTemplates[0]}";
+
+            if (report.MissingRequiredOutputTags.Count > 0)
+                return $"Required output tag missing from template: [{report.MissingRequiredOutputTags[0]}]";
+
+            if (report.ImageTagsWithoutAssignment.Count > 0)
+                return $"Image tag not assigned to template: [{report.ImageTagsWithoutAssignment[0]}]";
+
+            if (report.AssignedImagesMissingFiles.Count > 0)
+                return $"Assigned image file not found for tag: [{report.AssignedImagesMissingFiles[0]}]";
+
+            return "Template parse failed.";
+        }
+
+        private static bool IsEmbedDirectiveToken(string token)
+        {
+            return token.StartsWith("Embed:", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static Dictionary<string, string> ExtractEmbedDirectives(string html)
+        {
+            var embeds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(html))
+                return embeds;
+
+            // [Embed:Details=invoice_template_std_details]
+            var matches = Regex.Matches(html, @"\[\s*Embed:(?<name>[A-Za-z0-9_]+)\s*=\s*(?<key>[A-Za-z0-9_\-\/]+)\s*\]", RegexOptions.IgnoreCase);
+            foreach (Match m in matches)
+            {
+                var name = m.Groups["name"]?.Value?.Trim();
+                var key = m.Groups["key"]?.Value?.Trim();
+                if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(key))
+                    embeds[name] = key;
+            }
+
+            return embeds;
         }
 
         private static HashSet<string> ExtractSquareBracketTokens(string html)
@@ -536,7 +734,7 @@ namespace TradeControl.Web.Mail
             if (string.IsNullOrWhiteSpace(html))
                 return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var matches = Regex.Matches(html, @"\[(?<tag>[A-Za-z0-9_]+)\]");
+            var matches = Regex.Matches(html, @"\[(?<tag>[A-Za-z0-9_:]+)(?:=[^\]]+)?\]");
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (Match m in matches)
@@ -549,22 +747,27 @@ namespace TradeControl.Web.Mail
             return set;
         }
 
-        private static HashSet<string> ExtractCidImageTokens(string html)
+        private static List<string> ExtractImgCidImageTags(string html)
         {
             if (string.IsNullOrWhiteSpace(html))
-                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                return new List<string>();
 
-            var matches = Regex.Matches(html, @"cid:\[(?<tag>[A-Za-z0-9_]+)\]", RegexOptions.IgnoreCase);
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Only count img tags, because image validity should reflect "will render"
+            // Matches: <img ... src="cid:[LOGO]" ...> (single or double quotes)
+            var matches = Regex.Matches(
+                html,
+                @"<img\b[^>]*\bsrc\s*=\s*(?:""cid:\[(?<tag>[A-Za-z0-9_]+)\]""|'cid:\[(?<tag>[A-Za-z0-9_]+)\]')[^>]*>",
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
+            var list = new List<string>();
             foreach (Match m in matches)
             {
                 var tag = m.Groups["tag"]?.Value?.Trim();
                 if (!string.IsNullOrWhiteSpace(tag))
-                    set.Add(tag);
+                    list.Add(tag);
             }
 
-            return set;
+            return list;
         }
 
         private async Task UpdateTemplateParseStatusAsync(Web_tbTemplate template, short statusCode, string message)

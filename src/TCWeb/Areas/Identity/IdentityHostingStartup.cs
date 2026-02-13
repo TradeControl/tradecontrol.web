@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
@@ -23,6 +23,10 @@ namespace TradeControl.Web.Areas.Identity
                 services.AddDbContext<NodeContext>(options =>
                     options.UseSqlServer(
                         context.Configuration.GetConnectionString("TCNodeContext")));
+
+                //services.AddPooledDbContextFactory<NodeContext>(options =>
+                //    options.UseSqlServer(
+                //        context.Configuration.GetConnectionString("TCNodeContext")));
 
                 services.AddDefaultIdentity<TradeControlWebUser>(options => 
                     options.SignIn.RequireConfirmedAccount = true)

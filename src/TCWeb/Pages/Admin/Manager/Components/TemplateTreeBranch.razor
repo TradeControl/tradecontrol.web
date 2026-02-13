@@ -8,9 +8,9 @@
         <TemplateTreeBranch Node="node"
                             GetChildren="GetChildren"
                             OnLeafSelected="OnLeafSelected"
-                            SelectedKey="SelectedKey"
+                            SelectedKey="@SelectedKey"
+                            ExpandToKey="@ExpandToKey"
                             OnNodeSelected="OnNodeSelected"
-                            OnNodeContextMenu="OnNodeContextMenu"
                             RefreshToken="RefreshToken" />
     }
 }
@@ -39,11 +39,9 @@ else if (Node != null)
 
         <button type="button"
                 class="btn btn-link text-start w-100 tc-tree-row"
-                @onclick="OnClickAsync"
-                @oncontextmenu="OnContextMenuAsync"
-                @oncontextmenu:preventDefault="true">
+                @onclick="OnClickAsync">
             <i class="bi @IconClass(Node) me-2 tc-tree-icon" aria-hidden="true"></i>
-            <span class="tc-tree-label @(string.Equals(SelectedKey, Node.Key, StringComparison.OrdinalIgnoreCase) ? "tc-tree-label-selected" : "")">@Node.Text</span>
+            <span class="tc-tree-label @(IsSelected(Node, SelectedKey) ? "tc-tree-label-selected" : "")">@Node.Text</span>
         </button>
     </div>
 
@@ -65,9 +63,9 @@ else if (Node != null)
                     <TemplateTreeBranch Node="child"
                                         GetChildren="GetChildren"
                                         OnLeafSelected="OnLeafSelected"
-                                        SelectedKey="SelectedKey"
+                                        SelectedKey="@SelectedKey"
+                                        ExpandToKey="@ExpandToKey"
                                         OnNodeSelected="OnNodeSelected"
-                                        OnNodeContextMenu="OnNodeContextMenu"
                                         RefreshToken="RefreshToken" />
                 }
             }
@@ -85,11 +83,11 @@ else if (Node != null)
     [Parameter] public EventCallback<TemplateTreeNode> OnLeafSelected { get; set; }
 
     [Parameter] public string? SelectedKey { get; set; }
+    [Parameter] public string? ExpandToKey { get; set; }
+
     [Parameter] public EventCallback<TemplateTreeNode> OnNodeSelected { get; set; }
 
     [Parameter] public long RefreshToken { get; set; }
-
-    [Parameter] public EventCallback<(MouseEventArgs Args, TemplateTreeNode Node)> OnNodeContextMenu { get; set; }
 
     private long _lastRefreshToken;
 
@@ -112,6 +110,40 @@ else if (Node != null)
             if (_expanded)
                 _ = EnsureChildrenLoadedAsync();
         }
+
+        if (Node != null && !_expanded && ShouldAutoExpand(Node, ExpandToKey))
+        {
+            _expanded = true;
+            _ = EnsureChildrenLoadedAsync();
+        }
+    }
+
+    private static string? NormalizeKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        // Ensure querystring-decoded values match DB-generated keys exactly
+        return key.Trim();
+    }
+
+    private static bool IsSelected(TemplateTreeNode node, string? selectedKey)
+    {
+        var a = NormalizeKey(selectedKey);
+        var b = NormalizeKey(node.Key);
+        return a != null && b != null && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldAutoExpand(TemplateTreeNode node, string? expandToKey)
+    {
+        var target = NormalizeKey(expandToKey);
+        if (target == null)
+            return false;
+
+        if (!HasExpander(node))
+            return false;
+
+        return target.StartsWith(node.Key, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasExpander(TemplateTreeNode node) =>
@@ -162,6 +194,7 @@ else if (Node != null)
         finally
         {
             _loading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -182,13 +215,5 @@ else if (Node != null)
         }
 
         await ToggleExpandAsync();
-    }
-
-    private async Task OnContextMenuAsync(MouseEventArgs e)
-    {
-        if (Node == null || !OnNodeContextMenu.HasDelegate)
-            return;
-
-        await OnNodeContextMenu.InvokeAsync((e, Node));
     }
 }

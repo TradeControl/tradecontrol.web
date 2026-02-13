@@ -55,18 +55,32 @@ namespace TradeControl.Web.Pages.Admin.Template
 
         public InvoicesModel(NodeContext context) : base(context) { }
 
-        public async Task OnGetAsync(string invoiceType)
+        public async Task OnGetAsync(string invoiceType, short? invoiceTypeCode)
         {
             try
             {
-                InvoiceTypes = new SelectList(await NodeContext.Invoice_tbTypes.OrderBy(t => t.InvoiceTypeCode).Select(t => t.InvoiceType).ToListAsync());
+                InvoiceTypes = new SelectList(await NodeContext.Invoice_tbTypes
+                    .OrderBy(t => t.InvoiceTypeCode)
+                    .Select(t => t.InvoiceType)
+                    .ToListAsync());
 
                 var templateInvoices = from tb in NodeContext.Web_TemplateInvoices select tb;
 
-                if (!string.IsNullOrEmpty(invoiceType))
-                    InvoiceType = invoiceType;
-                else
-                    InvoiceType = InvoiceTypes.First().Text;
+                if (invoiceTypeCode.HasValue)
+                {
+                    InvoiceType = await NodeContext.Invoice_tbTypes
+                        .Where(t => t.InvoiceTypeCode == invoiceTypeCode.Value)
+                        .Select(t => t.InvoiceType)
+                        .SingleOrDefaultAsync();
+                }
+
+                if (string.IsNullOrWhiteSpace(InvoiceType))
+                {
+                    if (!string.IsNullOrEmpty(invoiceType))
+                        InvoiceType = invoiceType;
+                    else
+                        InvoiceType = InvoiceTypes.First().Text;
+                }
 
                 InvoiceTypeCode = await NodeContext.Invoice_tbTypes
                             .Where(t => t.InvoiceType == InvoiceType)
@@ -74,20 +88,20 @@ namespace TradeControl.Web.Pages.Admin.Template
                             .FirstAsync();
 
                 templateInvoices = templateInvoices.Where(i => i.InvoiceType == InvoiceType);
-                    
+
                 Web_TemplateInvoices = await templateInvoices.OrderBy(i => i.LastUsedOn).ToListAsync();
 
                 var templateFileNames = NodeContext.Web_tbTemplates
                                                     .OrderBy(t => t.TemplateFileName)
                                                     .Select(t => t.TemplateFileName)
                                                     .Except(NodeContext.Web_TemplateInvoices
-                                                        .Where(i => i.InvoiceType == InvoiceType) 
+                                                        .Where(i => i.InvoiceType == InvoiceType)
                                                         .Select(i => i.TemplateFileName));
 
                 TemplateFileNames = new SelectList(await templateFileNames.ToListAsync());
                 if (TemplateFileNames.Any())
                     TemplateFileName = TemplateFileNames.First().Text;
-                                                    
+
                 await SetViewData();
             }
             catch (Exception e)

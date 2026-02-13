@@ -11,10 +11,12 @@
             <div class="d-flex flex-column" style="min-height:0; height:100%;">
                 <div class="flex-grow-1 border rounded bg-white p-2" style="min-height:0;">
                     @* Mobile *@
-                    <ManagerTreeHost RootLabel="@_companyName"
+                    <ManagerTreeHost @ref="_treeHost"
+                                     RootLabel="@_companyName"
                                      IsMobile="true"
                                      InitialSelectedNode="@_selected"
                                      InitialContentType="@_selectedContentType"
+                                     InitialTemplateKey="@_initialTemplateKey"
                                      OnNodeSelected="HandleNodeSelectedAsync"
                                      OnNodeSelectedEx="HandleNodeSelectedExAsync"
                                      OnTreeAction="HandleTreeActionAsync"
@@ -28,10 +30,12 @@
                 <div id="leftCol" class="tc-pane tc-initial-left">
                     <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
                         @* Desktop *@
-                        <ManagerTreeHost RootLabel="@_companyName"
+                        <ManagerTreeHost @ref="_treeHost"
+                                         RootLabel="@_companyName"
                                          IsMobile="false"
                                          InitialSelectedNode="@_selected"
                                          InitialContentType="@_selectedContentType"
+                                         InitialTemplateKey="@_initialTemplateKey"
                                          OnNodeSelected="HandleNodeSelectedAsync"
                                          OnNodeSelectedEx="HandleNodeSelectedExAsync"
                                          OnTreeAction="HandleTreeActionAsync"
@@ -119,6 +123,8 @@
     private string? _selectedContentType;
     private string? _iframeSrc;
 
+    private string? _initialTemplateKey;
+
     private int _fileTransferPageSize = 25;
 
     private string RightHeader => _selected switch
@@ -135,6 +141,9 @@
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private ManagerTreeHost? _treeHost;
+    private DotNetObjectReference<ManagerShell>? _dotNetRef;
 
     protected override void OnParametersSet()
     {
@@ -158,6 +167,9 @@
 
         if (qs.TryGetValue("contentType", out var ct))
             _selectedContentType = ct.ToString();
+
+        if (qs.TryGetValue("templateKey", out var tk))
+            _initialTemplateKey = tk.ToString();
 
         if (!_isMobile)
         {
@@ -186,8 +198,10 @@
     {
         if (firstRender && !_isMobile)
         {
-            await JSRuntime.InvokeVoidAsync("adminManager.initSplit");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("adminManager.registerTemplateRefreshListener", _dotNetRef);
 
+            await JSRuntime.InvokeVoidAsync("adminManager.initSplit");
             await RefreshFileTransferPageSizeAsync();
 
             if (_selected == ManagerTreeHost.ManagerNode.FileTransfer)
@@ -197,6 +211,38 @@
 
             StateHasChanged();
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (!_isMobile)
+                await JSRuntime.InvokeVoidAsync("adminManager.unregisterTemplateRefreshListener");
+        }
+        catch
+        {
+        }
+
+        _dotNetRef?.Dispose();
+    }
+
+    [JSInvokable]
+    public void RefreshInvoiceTypeTemplates(short invoiceTypeCode)
+    {
+        _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
+    }
+
+    [JSInvokable]
+    public void RefreshInvoiceTypeAttachments(short invoiceTypeCode)
+    {
+        _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
+    }
+
+    [JSInvokable]
+    public void RefreshTemplateImages(int templateId)
+    {
+        _treeHost?.RequestRefreshTemplatesForInvoiceType(0);
     }
 
     private async Task RefreshFileTransferPageSizeAsync()

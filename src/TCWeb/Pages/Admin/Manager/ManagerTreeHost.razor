@@ -2,9 +2,7 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using TradeControl.Web.Mail
-@using TradeControl.Web.AppServices
 @using TradeControl.Web.Pages.Admin.Manager.Components
-@inject ITemplateTreeProvider TemplateTreeProvider
 
 <div class="tc-tree-host"
      tabindex="0"
@@ -165,17 +163,11 @@
                             </button>
                         </div>
 
-                        @if (_templateInvoicesExpanded)
-                        {
-                            <TemplateTreeBranch IsRoot="true"
-                                                RootNodes="@InvoiceTypeRootNodes"
-                                                GetChildren="GetInvoiceTreeChildrenAsync"
-                                                OnLeafSelected="OnTemplateLeafSelectedAsync"
-                                                SelectedKey="@_selectedTemplateKey"
-                                                OnNodeSelected="OnTemplateNodeSelectedAsync"
-                                                OnNodeContextMenu="OnTemplateNodeContextMenuAsync"
-                                                RefreshToken="@_templateRefreshToken" />
-                        }
+                        <TemplateInvoicesBranch @ref="_templateInvoicesBranch"
+                                                IsExpanded="@_templateInvoicesExpanded"
+                                                InitialSelectedKey="@_templateKeyToRestore"
+                                                OnTemplateSelection="OnTemplateSelection"
+                                                OnTemplateTreeAction="OnTemplateTreeAction" />
 
                         <button type="button"
                                 class="btn btn-link text-start w-100 tc-tree-row"
@@ -269,46 +261,59 @@
             @if (_ctx.Target == ManagerNode.FileTransfer)
             {
                 <button type="button" class="dropdown-item" @onclick="SyncFileTransferAsync">Sync</button>
-                <div class="dropdown-divider my-1"></div>
             }
             else if (_ctx.Target == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType))
             {
                 <button type="button" class="dropdown-item" @onclick="SyncFileTransferAsync">Sync</button>
                 <button type="button" class="dropdown-item" @onclick="UploadContentTypeAsync">Upload</button>
-                <div class="dropdown-divider my-1"></div>
             }
-
-            <button type="button" class="dropdown-item" @onclick="ExpandAllAsync">Expand all</button>
-            <button type="button" class="dropdown-item" @onclick="CollapseAllAsync">Collapse all</button>
-        </div>
-    }
-
-    @if (_templateCtxIsOpen)
-    {
-        <div class="tc-tree-ctx-backdrop" @onclick="CloseTemplateContextMenu"></div>
-
-        <div class="tc-tree-ctx-menu border rounded shadow bg-white py-1"
-             style="left:@($"{_templateCtxX}px"); top:@($"{_templateCtxY}px");"
-             role="menu"
-             aria-label="Template actions">
-
-            <button type="button" class="dropdown-item" @onclick="TemplateCtxOpenAsync">Open</button>
-
-            @if (_templateCtxNode != null && CanRemove(_templateCtxNode))
-            {
-                <button type="button" class="dropdown-item text-danger" @onclick="TemplateCtxRemoveAsync">
-                    @RemoveLabel(_templateCtxNode)
-                </button>
-            }
-
-            <div class="dropdown-divider my-1"></div>
-            <button type="button" class="dropdown-item" @onclick="TemplateCtxRefreshAsync">Refresh tree</button>
         </div>
     }
 </div>
 
 @code
 {
+    private TemplateInvoicesBranch? _templateInvoicesBranch;
+
+    [Parameter] public string? InitialTemplateKey { get; set; }
+
+    private string? _templateKeyToRestore;
+
+    protected override void OnParametersSet()
+    {
+        _templateKeyToRestore = InitialTemplateKey;
+
+        _selected = InitialSelectedNode;
+
+        if (_selected == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(InitialContentType))
+            _selectedContentType = InitialContentType;
+
+        if (_selected == ManagerNode.FileTransfer || _selected == ManagerNode.FileTransferContentType)
+        {
+            _rootExpanded = true;
+            _fileTransferExpanded = true;
+        }
+
+        if (_selected == ManagerNode.Templates || _selected == ManagerNode.TemplateInvoices || _selected == ManagerNode.TemplateSystem)
+        {
+            _rootExpanded = true;
+            _templatesExpanded = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_templateKeyToRestore))
+        {
+            _rootExpanded = true;
+            _templatesExpanded = true;
+            _templateInvoicesExpanded = true;
+            _selected = ManagerNode.TemplateInvoices;
+        }
+    }
+
+    public void RequestRefreshTemplatesForInvoiceType(short invoiceTypeCode)
+    {
+        _templateInvoicesBranch?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
+    }
+
     public enum ManagerNode
     {
         Root,
@@ -347,57 +352,7 @@
         Remove
     }
 
-    public record TemplateTreeAction(TemplateTreeActionType ActionType, TemplateTreeNode Node);
-
-    private static class TemplateKey
-    {
-        public static bool TryGetInvoiceTypeCode(string key, out short invoiceTypeCode)
-        {
-            invoiceTypeCode = default;
-
-            if (string.IsNullOrWhiteSpace(key))
-                return false;
-
-            // invoiceType:{code}
-            // invoiceType:{code}:templates
-            // invoiceType:{code}:attachments
-            // invoiceType:{code}:template:{templateId}
-            if (!key.StartsWith("invoiceType:", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            var parts = key.Split(':');
-            if (parts.Length < 2)
-                return false;
-
-            return short.TryParse(parts[1], out invoiceTypeCode);
-        }
-
-        public static bool TryGetTemplateId(string key, out int templateId)
-        {
-            templateId = default;
-
-            if (string.IsNullOrWhiteSpace(key))
-                return false;
-
-            // invoiceType:{code}:template:{templateId}
-            // invoiceType:{code}:template:{templateId}:images
-            if (!key.Contains(":template:", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            var parts = key.Split(':');
-            for (var i = 0; i < parts.Length - 1; i++)
-            {
-                if (string.Equals(parts[i], "template", StringComparison.OrdinalIgnoreCase)
-                    && int.TryParse(parts[i + 1], out templateId))
-                {
-                    return true;
-                }
-            }
-
-            templateId = default;
-            return false;
-        }
-    }
+    public record TemplateTreeAction(TemplateTreeActionType ActionType, TradeControl.Web.AppServices.TemplateTreeNode Node);
 
     public record TemplateSelection(
         string Kind,
@@ -424,10 +379,6 @@
     private bool _templatesExpanded;
     private bool _templateInvoicesExpanded;
 
-    private List<TemplateTreeNode> InvoiceTypeRootNodes { get; set; } = [];
-
-    private string? _selectedTemplateKey;
-
     private ManagerNode _selected = ManagerNode.Root;
     private string? _selectedContentType;
 
@@ -436,182 +387,6 @@
 
     private ContextMenuState _ctx = new();
     private CancellationTokenSource? _pressCts;
-
-    private long _templateRefreshToken;
-
-    private TemplateTreeNode? _templateCtxNode;
-
-    protected override void OnParametersSet()
-    {
-        _selected = InitialSelectedNode;
-
-        if (_selected == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(InitialContentType))
-            _selectedContentType = InitialContentType;
-
-        if (_selected == ManagerNode.FileTransfer || _selected == ManagerNode.FileTransferContentType)
-        {
-            _rootExpanded = true;
-            _fileTransferExpanded = true;
-        }
-
-        if (_selected == ManagerNode.Templates || _selected == ManagerNode.TemplateInvoices || _selected == ManagerNode.TemplateSystem)
-        {
-            _rootExpanded = true;
-            _templatesExpanded = true;
-        }
-    }
-
-    private async Task OnTemplateNodeSelectedAsync(TemplateTreeNode node)
-    {
-        _selectedTemplateKey = node.Key;
-
-        // keep existing selection callback behavior
-        if (OnTemplateSelection.HasDelegate)
-        {
-            short? invoiceTypeCode = null;
-            int? templateId = null;
-            string? imageTag = null;
-            int? attachmentId = null;
-
-            if (TemplateKey.TryGetInvoiceTypeCode(node.Key, out var invCode))
-                invoiceTypeCode = invCode;
-
-            if (TemplateKey.TryGetTemplateId(node.Key, out var tid))
-                templateId = tid;
-
-            if (node.Kind == TemplateTreeNodeKind.Image)
-            {
-                var parts = node.Key.Split(':');
-                if (parts.Length >= 4)
-                {
-                    if (int.TryParse(parts[1], out var parsedTemplateId))
-                        templateId = parsedTemplateId;
-
-                    imageTag = parts[3];
-                }
-            }
-
-            if (node.Kind == TemplateTreeNodeKind.Attachment)
-            {
-                var parts = node.Key.Split(':');
-                if (parts.Length >= 4 && int.TryParse(parts[^1], out var aid))
-                    attachmentId = aid;
-            }
-
-            await OnTemplateSelection.InvokeAsync(new TemplateSelection(
-                Kind: node.Kind.ToString(),
-                Key: node.Key,
-                InvoiceTypeCode: invoiceTypeCode,
-                TemplateId: templateId,
-                ImageTag: imageTag,
-                AttachmentId: attachmentId));
-        }
-    }
-
-    private Task OnTemplateLeafSelectedAsync(TemplateTreeNode leaf) => Task.CompletedTask;
-
-    private Task OpenTemplateContextMenuAsync(MouseEventArgs e, TemplateTreeNode node)
-    {
-        if (IsMobile)
-            return Task.CompletedTask;
-
-        _templateCtxNode = node;
-
-        _ctx = _ctx with
-        {
-            IsOpen = true,
-            Target = _selected,
-            X = (int)e.ClientX,
-            Y = (int)e.ClientY
-        };
-
-        return Task.CompletedTask;
-    }
-
-    private Task RefreshTemplateTreeAsync()
-    {
-        _templateRefreshToken++;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private bool _templateCtxIsOpen;
-    private int _templateCtxX;
-    private int _templateCtxY;
-
-    private async Task OnTemplateNodeContextMenuAsync((MouseEventArgs Args, TemplateTreeNode Node) ctx)
-    {
-        if (IsMobile)
-            return;
-
-        _templateCtxNode = ctx.Node;
-        _templateCtxIsOpen = true;
-        _templateCtxX = (int)ctx.Args.ClientX;
-        _templateCtxY = (int)ctx.Args.ClientY;
-
-        // Ensure selection follows right-click (helps menu behavior)
-        _selectedTemplateKey = ctx.Node.Key;
-
-        // Close the generic menu if it is open
-        CloseContextMenu();
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private void CloseTemplateContextMenu()
-    {
-        _templateCtxIsOpen = false;
-    }
-
-    private async Task TemplateCtxOpenAsync()
-    {
-        CloseTemplateContextMenu();
-
-        if (_templateCtxNode != null && OnTemplateSelection.HasDelegate)
-            await OnTemplateNodeSelectedAsync(_templateCtxNode);
-    }
-
-    private async Task TemplateCtxRemoveAsync()
-    {
-        if (_templateCtxNode == null)
-            return;
-
-        CloseTemplateContextMenu();
-
-        if (OnTemplateTreeAction.HasDelegate)
-            await OnTemplateTreeAction.InvokeAsync(new TemplateTreeAction(TemplateTreeActionType.Remove, _templateCtxNode));
-    }
-
-    private Task TemplateCtxRefreshAsync()
-    {
-        CloseTemplateContextMenu();
-        return RefreshTemplateTreeAsync();
-    }
-
-    private static bool CanRemove(TemplateTreeNode node) =>
-        node.Kind is TemplateTreeNodeKind.Template
-            or TemplateTreeNodeKind.Image
-            or TemplateTreeNodeKind.Attachment;
-
-    private static string RemoveLabel(TemplateTreeNode node) => node.Kind switch
-    {
-        TemplateTreeNodeKind.Template => "Remove template assignment",
-        TemplateTreeNodeKind.Image => "Remove image",
-        TemplateTreeNodeKind.Attachment => "Remove attachment",
-        _ => "Remove"
-    };
-
-    private async Task RemoveSelectedTemplateNodeAsync()
-    {
-        if (_templateCtxNode == null)
-            return;
-
-        CloseContextMenu();
-
-        // Navigation-only: RHS will show the remove confirmation page
-        if (OnTemplateTreeAction.HasDelegate)
-            await OnTemplateTreeAction.InvokeAsync(new TemplateTreeAction(TemplateTreeActionType.Remove, _templateCtxNode));
-    }
 
     private async Task SelectRootAsync()
     {
@@ -697,67 +472,7 @@
     private Task ToggleTemplateInvoicesExpandAsync()
     {
         _templateInvoicesExpanded = !_templateInvoicesExpanded;
-
-        if (_templateInvoicesExpanded && InvoiceTypeRootNodes.Count == 0)
-            _ = LoadInvoiceTreeRootAsync();
-
         return Task.CompletedTask;
-    }
-
-    private async Task LoadInvoiceTreeRootAsync()
-    {
-        var nodes = await TemplateTreeProvider.GetInvoiceTypeNodesAsync();
-        InvoiceTypeRootNodes = nodes.ToList();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task<IReadOnlyList<TemplateTreeNode>> GetInvoiceTreeChildrenAsync(TemplateTreeNode parent)
-    {
-        if (parent.Kind == TemplateTreeNodeKind.InvoiceType)
-        {
-            if (!TemplateKey.TryGetInvoiceTypeCode(parent.Key, out var code))
-                return [];
-
-            return
-            [
-                new TemplateTreeNode($"invoiceType:{code}:templates", "Templates", TemplateTreeNodeKind.TemplatesFolder),
-                new TemplateTreeNode($"invoiceType:{code}:attachments", "Attachments", TemplateTreeNodeKind.AttachmentsFolder),
-            ];
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.TemplatesFolder)
-        {
-            if (!TemplateKey.TryGetInvoiceTypeCode(parent.Key, out var code))
-                return [];
-
-            return await TemplateTreeProvider.GetInvoiceTemplateNodesAsync(code);
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.Template)
-        {
-            return
-            [
-                new TemplateTreeNode($"{parent.Key}:images", "Images", TemplateTreeNodeKind.ImagesFolder),
-            ];
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.ImagesFolder)
-        {
-            if (!TemplateKey.TryGetTemplateId(parent.Key, out var templateId))
-                return [];
-
-            return await TemplateTreeProvider.GetTemplateImageNodesAsync(templateId);
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.AttachmentsFolder)
-        {
-            if (!TemplateKey.TryGetInvoiceTypeCode(parent.Key, out var code))
-                return [];
-
-            return await TemplateTreeProvider.GetInvoiceAttachmentNodesAsync(code);
-        }
-
-        return [];
     }
 
     private async Task SelectTemplatesAsync()
@@ -793,6 +508,16 @@
         if (IsMobile)
             return Task.CompletedTask;
 
+        var hasItems =
+            _selected == ManagerNode.FileTransfer
+            || (_selected == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType));
+
+        if (!hasItems)
+        {
+            CloseContextMenu();
+            return Task.CompletedTask;
+        }
+
         _ctx = new ContextMenuState
         {
             IsOpen = true,
@@ -801,26 +526,6 @@
             Y = (int)e.ClientY
         };
 
-        return Task.CompletedTask;
-    }
-
-    private Task ExpandAllAsync()
-    {
-        _rootExpanded = true;
-        _fileTransferExpanded = true;
-        _templatesExpanded = true;
-        _templateInvoicesExpanded = true;
-        CloseContextMenu();
-        return Task.CompletedTask;
-    }
-
-    private Task CollapseAllAsync()
-    {
-        _rootExpanded = false;
-        _fileTransferExpanded = false;
-        _templatesExpanded = false;
-        _templateInvoicesExpanded = false;
-        CloseContextMenu();
         return Task.CompletedTask;
     }
 
@@ -869,6 +574,14 @@
                 _selected = ManagerNode.FileTransfer;
                 _selectedContentType = null;
             }
+
+            // Only open if this node would have menu items
+            var hasItems =
+                _pressTarget == ManagerNode.FileTransfer
+                || (_pressTarget == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType));
+
+            if (!hasItems)
+                return;
 
             _ctx = _ctx with { IsOpen = true, X = x, Y = y, Target = _pressTarget };
             await InvokeAsync(StateHasChanged);

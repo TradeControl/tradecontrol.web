@@ -88,3 +88,26 @@
         </div>
     </div>
 </div>
+
+@if (embedded)
+{
+    <script>
+        (function ()
+        {
+            try
+            {
+                window.parent.postMessage(
+                    {
+                        type: "tc.template.refresh",
+                        scope: "template.images",
+                        templateId: @Model.TemplateId
+                    },
+                    "*"
+                );
+            }
+            catch
+            {
+            }
+        })();
+    </script>
+}

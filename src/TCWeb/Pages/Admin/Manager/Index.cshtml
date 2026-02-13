@@ -23,7 +23,6 @@
 
 @section Scripts {
     <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
-    <script src="~/js/adminManager.js"></script>
     <script>
         window.adminManager = window.adminManager || {};
 
@@ -111,4 +110,9 @@
     </script>
 
     <script src="/_framework/blazor.server.js"></script>
+
+    @* Admin Manager uses a small amount of JS for:
+       - Split.js pane resizing persistence
+       - bridging iframe postMessage events (embedded Razor Pages) back into Blazor for LHS refresh *@
+    <script src="~/js/adminManager.js" asp-append-version="true"></script>
 }

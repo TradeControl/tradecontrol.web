@@ -20,8 +20,14 @@
         ? (Request.Query["returnNode"].ToString() ?? "Templates")
         : "Templates";
 
-    // Mobile-only back target (embedded pages don't show global nav anyway)
-    var backHref = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+    // Prefer coming back to the invoice type context when available.
+    // The invoice type string isn't available on this page model, so use the code value
+    // (Invoices page can resolve it from code in its OnGet).
+    var invoiceTypeCode = Model.InvoiceTypeCode;
+
+    var backHref = invoiceTypeCode.HasValue
+        ? $"/Admin/Template/Invoices?invoiceTypeCode={invoiceTypeCode.Value}&embedded={(embedded ? "1" : "0")}&returnNode={Uri.EscapeDataString(returnNode)}"
+        : $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
 }
 
 <div class="container-fluid py-2">
@@ -29,6 +35,10 @@
     {
         <h1 class="h4 mb-2">@ViewData["Title"]</h1>
         <div class="text-muted mb-3">@Model.TemplateFileName</div>
+
+        <div class="mb-2">
+            <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
+        </div>
     }
     else
     {
@@ -39,16 +49,15 @@
             </div>
             <div class="small text-muted">TemplateId: @Model.TemplateId</div>
         </div>
+
+        <div class="mb-2">
+            <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
+        </div>
     }
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white d-flex align-items-center justify-content-between">
             <div class="fw-semibold">Assigned images</div>
-
-            @if (!embedded)
-            {
-                <a class="btn btn-outline-secondary btn-sm" href="@backHref">Back</a>
-            }
         </div>
 
         <div class="card-body p-0">
@@ -142,3 +151,26 @@
         </div>
     </div>
 </div>
+
+@if (embedded)
+{
+    <script>
+        (function ()
+        {
+            try
+            {
+                window.parent.postMessage(
+                    {
+                        type: "tc.template.refresh",
+                        scope: "template.images",
+                        templateId: @Model.TemplateId
+                    },
+                    "*"
+                );
+            }
+            catch
+            {
+            }
+        })();
+    </script>
+}

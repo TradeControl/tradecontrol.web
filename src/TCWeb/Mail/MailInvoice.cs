@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
+using System.Text.RegularExpressions;
 
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -40,9 +42,13 @@ namespace TradeControl.Web.Mail
             "TaxValue",
             "TotalValue",
 
-            "InvoiceDetails",
-            "TaxSummary"
+            "InvoiceDetailsHtml",
+            "TaxSummaryHtml"
         };
+
+        private const string EmbedDirectivePrefix = "Embed:";
+        private const string DetailsEmbedName = "Details";
+        private const string TaxEmbedName = "Tax";
 
         public string InvoiceNumber { get; }
         NodeContext NodeContext { get; }
@@ -124,8 +130,38 @@ namespace TradeControl.Web.Mail
         {
             await WriteCompanyDetails();
             await WriteInvoiceHeader();
-            await WriteInvoiceDetails();
-            await WriteTaxSummary();
+            await WriteInvoiceDetailsFromEmbeddedTemplateAsync();
+            await WriteTaxSummaryFromEmbeddedTemplateAsync();
+        }
+
+        private static string StripEmbedDirectives(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return string.Empty;
+
+            return Regex.Replace(
+                html,
+                @"\[\s*Embed:(?<name>[A-Za-z0-9_]+)\s*=\s*(?<key>[A-Za-z0-9_\-\/]+)\s*\]\s*",
+                string.Empty,
+                RegexOptions.IgnoreCase);
+        }
+
+        protected override async Task<string> DocumentHtml(MailDocument mailDocument)
+        {
+            string htmlBody;
+
+            using (StreamReader streamReader = new(mailDocument.TemplateFileName))
+            {
+                htmlBody = await streamReader.ReadToEndAsync();
+                streamReader.Close();
+            }
+
+            htmlBody = StripEmbedDirectives(htmlBody);
+
+            foreach (var argument in mailDocument.Arguments)
+                htmlBody = htmlBody.Replace($"[{argument.Key}]", argument.Value);
+
+            return htmlBody;
         }
 
         private async Task WriteCompanyDetails()
@@ -165,101 +201,173 @@ namespace TradeControl.Web.Mail
             Document.Arguments.Add("TotalValue", invoice.TotalValue.ToString("C2"));
         }
 
-        private async Task WriteInvoiceDetails()
+        private async Task WriteInvoiceDetailsFromEmbeddedTemplateAsync()
         {
-
-            StringBuilder invoiceItems = new();
-            invoiceItems.AppendLine(@"<table class=""DataGrid"">");
-            invoiceItems.AppendLine(@"<thead class=""DataGridHeader""><tr>");
-
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ItemCode")}</th>");
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ItemDescription")}</th>");
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ItemReference")}</th>");
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("TaxCode")}</th>");
-            /*
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("ActionedOn")}</th>");
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("Quantity")}</th>");
-            invoiceItems.AppendLine($"<th>{GetDisplayName<Invoice_vwDocDetail>("UnitOfMeasure")}</th>");
-            */
-            invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwDocDetail>("InvoiceValue")}</th>"));
-            invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwDocDetail>("TaxValue")}</th>"));
-            invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwDocDetail>("TotalValue")}</th>"));
-
-            invoiceItems.AppendLine("</tr></thead>");
+            var key = await GetEmbeddedTemplateKeyAsync(DetailsEmbedName);
+            var embeddedHtml = await LoadEmbeddedTemplateHtmlAsync(key);
 
             var details = await NodeContext.Invoice_DocDetails
-                        .Where(i => i.InvoiceNumber == InvoiceNumber)
-                        .OrderBy(i => i.ItemCode)
-                        .ToListAsync();
+                .Where(i => i.InvoiceNumber == InvoiceNumber)
+                .OrderBy(i => i.ItemCode)
+                .ToListAsync();
 
-            invoiceItems.AppendLine("<tbody>");
+            string rendered = RenderRepeatingBlockTemplate(
+                templateKey: key,
+                templateHtml: embeddedHtml,
+                itemStartMarker: "<!--ITEM-->",
+                itemEndMarker: "<!--/ITEM-->",
+                applyShellTokens: shell => shell
+                    .Replace("[Col_ItemCode]", GetDisplayName<Invoice_vwDocDetail>("ItemCode"))
+                    .Replace("[Col_ItemDescription]", GetDisplayName<Invoice_vwDocDetail>("ItemDescription"))
+                    .Replace("[Col_ItemReference]", GetDisplayName<Invoice_vwDocDetail>("ItemReference"))
+                    .Replace("[Col_TaxCode]", GetDisplayName<Invoice_vwDocDetail>("TaxCode"))
+                    .Replace("[Col_InvoiceValue]", GetDisplayName<Invoice_vwDocDetail>("InvoiceValue"))
+                    .Replace("[Col_TaxValue]", GetDisplayName<Invoice_vwDocDetail>("TaxValue"))
+                    .Replace("[Col_TotalValue]", GetDisplayName<Invoice_vwDocDetail>("TotalValue")),
+                items: details,
+                renderItem: (itemTemplate, d) => {
+                    return itemTemplate
+                        .Replace("[ItemCode]", d.ItemCode ?? string.Empty)
+                        .Replace("[ItemDescription]", d.ItemDescription ?? string.Empty)
+                        .Replace("[ItemReference]", d.ItemReference ?? string.Empty)
+                        .Replace("[TaxCode]", d.TaxCode ?? string.Empty)
+                        .Replace("[InvoiceValue]", d.InvoiceValue.ToString("C2"))
+                        .Replace("[TaxValue]", d.TaxValue.ToString("C2"))
+                        .Replace("[TotalValue]", d.TotalValue.ToString("C2"));
+                }
+            );
 
-            foreach (var detail in details)
-            {
-                invoiceItems.AppendLine(@"<tr class=""DataGridItem"">");
-
-                invoiceItems.AppendLine($"<td>{detail.ItemCode}</td>");
-                invoiceItems.AppendLine($"<td>{detail.ItemDescription}</td>");
-                invoiceItems.AppendLine($"<td>{detail.ItemReference}</td>");
-                invoiceItems.AppendLine($"<td>{detail.TaxCode}</td>");
-                /*
-                invoiceItems.AppendLine($"<td>{detail.ActionedOn.ToLongDateString()}</td>");
-                invoiceItems.AppendLine($"<td>{detail.Quantity}</td>");
-                invoiceItems.AppendLine($"<td>{detail.UnitOfMeasure}</td>");
-                */
-                invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{detail.InvoiceValue:C2}</td>"));
-                invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{detail.TaxValue:C2}</td>"));
-                invoiceItems.AppendLine(string.Concat(@"<th align=""right"">", $"{detail.TotalValue:C2}</td>"));
-
-                invoiceItems.AppendLine("</tr>");
-            }
-
-            invoiceItems.AppendLine("</tbody>");
-            invoiceItems.AppendLine("</table>");
-
-            Document.Arguments.Add("InvoiceDetails", invoiceItems.ToString());
+            Document.Arguments.Add("InvoiceDetailsHtml", rendered);
         }
 
-        private async Task WriteTaxSummary()
+        private async Task WriteTaxSummaryFromEmbeddedTemplateAsync()
         {
-
-            StringBuilder taxItems = new();
-
-            taxItems.AppendLine(@"<table class=""DataGrid"">");
-            taxItems.AppendLine(@"<thead class=""DataGridHeader""><tr>");
-
-            taxItems.AppendLine($"<th>{GetDisplayName<Invoice_vwTaxSummary>("TaxCode")}</th>");
-            taxItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwTaxSummary>("InvoiceValueTotal")}</th>"));
-            taxItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwTaxSummary>("TaxValueTotal")}</th>"));
-            taxItems.AppendLine(string.Concat(@"<th align=""right"">", $"{GetDisplayName<Invoice_vwTaxSummary>("TaxRate")}</th>"));
-
-            taxItems.AppendLine("</tr></thead>");
+            var key = await GetEmbeddedTemplateKeyAsync(TaxEmbedName);
+            var embeddedHtml = await LoadEmbeddedTemplateHtmlAsync(key);
 
             var taxes = await NodeContext.Invoice_TaxSummary
-                            .Where(i => i.InvoiceNumber == InvoiceNumber)
-                            .OrderBy(i => i.TaxCode)
-                            .ToListAsync();
+                .Where(i => i.InvoiceNumber == InvoiceNumber)
+                .OrderBy(i => i.TaxCode)
+                .ToListAsync();
 
-            taxItems.AppendLine("<tbody>");
+            string rendered = RenderRepeatingBlockTemplate(
+                templateKey: key,
+                templateHtml: embeddedHtml,
+                itemStartMarker: "<!--ITEM-->",
+                itemEndMarker: "<!--/ITEM-->",
+                applyShellTokens: shell => shell
+                    .Replace("[Col_TaxCode]", GetDisplayName<Invoice_vwTaxSummary>("TaxCode"))
+                    .Replace("[Col_InvoiceValueTotal]", GetDisplayName<Invoice_vwTaxSummary>("InvoiceValueTotal"))
+                    .Replace("[Col_TaxValueTotal]", GetDisplayName<Invoice_vwTaxSummary>("TaxValueTotal"))
+                    .Replace("[Col_TaxRate]", GetDisplayName<Invoice_vwTaxSummary>("TaxRate")),
+                items: taxes,
+                renderItem: (itemTemplate, t) => {
+                    return itemTemplate
+                        .Replace("[TaxCode]", t.TaxCode ?? string.Empty)
+                        .Replace("[InvoiceValueTotal]", t.InvoiceValueTotal.ToString("C2"))
+                        .Replace("[TaxValueTotal]", t.TaxValueTotal.ToString("C2"))
+                        .Replace("[TaxRate]", t.TaxRate.ToString("P2"));
+                }
+            );
 
-            foreach (var tax in taxes)
+            Document.Arguments.Add("TaxSummaryHtml", rendered);
+        }
+
+        private async Task<string> GetEmbeddedTemplateKeyAsync(string embedName)
+        {
+            if (string.IsNullOrWhiteSpace(Document.TemplateFileName) || !File.Exists(Document.TemplateFileName))
+                throw new Exception("Invoice template file not found.");
+
+            string html;
+            using (StreamReader sr = new(Document.TemplateFileName))
+                html = await sr.ReadToEndAsync();
+
+            var tagName = $"{EmbedDirectivePrefix}{embedName}";
+            var key = ExtractDirectiveValue(html, tagName);
+            if (string.IsNullOrWhiteSpace(key))
+                throw new Exception($"Missing embedded template directive: [{tagName}=...]");
+
+            return key;
+        }
+
+        private static string ExtractDirectiveValue(string html, string directiveName)
+        {
+            if (string.IsNullOrWhiteSpace(html) || string.IsNullOrWhiteSpace(directiveName))
+                return string.Empty;
+
+            var matches = Regex.Match(
+                html,
+                $@"\[\s*{Regex.Escape(directiveName)}\s*=\s*(?<value>[A-Za-z0-9_\-\/]+)\s*\]",
+                RegexOptions.IgnoreCase);
+
+            var value = matches.Success ? matches.Groups["value"]?.Value?.Trim() : string.Empty;
+            return value ?? string.Empty;
+        }
+
+        private async Task<string> LoadEmbeddedTemplateHtmlAsync(string templateKey)
+        {
+            var embeddedFileName = $"{templateKey}.tpl";
+
+            var dir = Path.GetDirectoryName(Document.TemplateFileName);
+            if (string.IsNullOrWhiteSpace(dir))
+                throw new Exception("Invoice template folder could not be resolved.");
+
+            var filePath = Path.Combine(dir, embeddedFileName);
+            if (!File.Exists(filePath))
+                throw new Exception($"Embedded template not found: {embeddedFileName}");
+
+            using StreamReader sr = new(filePath);
+            return await sr.ReadToEndAsync();
+        }
+
+        private static string RenderRepeatingBlockTemplate<T>(
+            string templateKey,
+            string templateHtml,
+            string itemStartMarker,
+            string itemEndMarker,
+            Func<string, string> applyShellTokens,
+            IReadOnlyList<T> items,
+            Func<string, T, string> renderItem)
+        {
+            int startIndex = templateHtml.IndexOf(itemStartMarker, StringComparison.OrdinalIgnoreCase);
+            int endIndex = templateHtml.IndexOf(itemEndMarker, StringComparison.OrdinalIgnoreCase);
+
+            if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex)
+                throw new Exception($"{templateKey}.tpl must contain a single repeating block delimited by {itemStartMarker} and {itemEndMarker}");
+
+            int itemTemplateStart = startIndex + itemStartMarker.Length;
+            string itemTemplate = templateHtml.Substring(itemTemplateStart, endIndex - itemTemplateStart);
+
+            string shell = templateHtml.Remove(startIndex, (endIndex + itemEndMarker.Length) - startIndex);
+            shell = applyShellTokens(shell);
+
+            StringBuilder renderedItems = new();
+            foreach (var item in items)
             {
-                taxItems.AppendLine(@"<tr class=""DataGridItem"">");
-
-                taxItems.AppendLine($"<td>{tax.TaxCode}</td>");
-                taxItems.AppendLine(string.Concat(@"<th align=""right"">", $"{tax.InvoiceValueTotal:C2}</td>"));
-                taxItems.AppendLine(string.Concat(@"<th align=""right"">", $"{tax.TaxValueTotal:C2}</td>"));
-                taxItems.AppendLine(string.Concat(@"<th align=""right"">", $"{tax.TaxRate:P2}</td>"));
-
-                taxItems.AppendLine("</tr>");
+                renderedItems.Append(renderItem(itemTemplate, item));
             }
 
-            taxItems.AppendLine("</tbody>");
-            taxItems.AppendLine("</table>");
-
-            Document.Arguments.Add("TaxSummary", taxItems.ToString());
+            return shell.Replace("[Items]", renderedItems.ToString(), StringComparison.OrdinalIgnoreCase);
         }
         #endregion
-    }
 
+        public sealed class InvoiceTemplateParseProfile : TemplateManager.ITemplateParseProfile
+        {
+            public IReadOnlySet<string> AllowedFieldTags => AllowedTemplateTags;
+
+            public IReadOnlySet<string> RequiredEmbeds { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Details",
+                "Tax"
+            };
+
+            public IReadOnlySet<string> RequiredOutputTags { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "InvoiceDetailsHtml",
+                "TaxSummaryHtml"
+            };
+        }
+
+        public static TemplateManager.ITemplateParseProfile ParseProfile { get; } = new InvoiceTemplateParseProfile();
+    }
 }

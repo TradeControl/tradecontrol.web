@@ -89,3 +89,26 @@
         </div>
     </div>
 </div>
+
+@if (embedded)
+{
+    <script>
+        (function ()
+        {
+            try
+            {
+                window.parent.postMessage(
+                    {
+                        type: "tc.template.refresh",
+                        scope: "invoiceType.templates",
+                        invoiceTypeCode: @((short)Model.Web_TemplateInvoice.InvoiceTypeCode)
+                    },
+                    "*"
+                );
+            }
+            catch
+            {
+            }
+        })();
+    </script>
+}

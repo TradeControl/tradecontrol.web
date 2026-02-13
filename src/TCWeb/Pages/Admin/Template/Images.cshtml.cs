@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Admin.Template
     [Authorize(Roles = "Administrators")]
     public class ImagesModel : DI_BasePageModel
     {
-        const string SessionKeyTemplateId= "_TemplateId";
+        const string SessionKeyTemplateId = "_TemplateId";
 
         public int TemplateId
         {
@@ -40,6 +40,9 @@ namespace TradeControl.Web.Pages.Admin.Template
                 HttpContext.Session.SetInt32(SessionKeyTemplateId, value);
             }
         }
+
+        public short? InvoiceTypeCode { get; set; }
+
         public IList<Web_vwTemplateImage> Web_TemplateImages { get; set; }
         public string TemplateFileName { get; set; }
 
@@ -58,22 +61,28 @@ namespace TradeControl.Web.Pages.Admin.Template
                     return NotFound();
 
                 TemplateId = (int)templateId;
+
                 TemplateFileName = await NodeContext.Web_tbTemplates
-                                        .Where(t => t.TemplateId == templateId)
-                                        .Select(t => t.TemplateFileName)
-                                        .SingleOrDefaultAsync();
+                    .Where(t => t.TemplateId == templateId)
+                    .Select(t => t.TemplateFileName)
+                    .SingleOrDefaultAsync();
+
+                InvoiceTypeCode = await NodeContext.Web_tbTemplateInvoices
+                    .Where(ti => ti.TemplateId == templateId)
+                    .Select(ti => (short?)ti.InvoiceTypeCode)
+                    .FirstOrDefaultAsync();
 
                 Web_TemplateImages = await NodeContext.Web_TemplateImages
-                                        .Where(i => i.TemplateId == templateId)
-                                        .OrderBy(i => i.ImageFileName)
-                                        .ToListAsync();                
+                    .Where(i => i.TemplateId == templateId)
+                    .OrderBy(i => i.ImageFileName)
+                    .ToListAsync();
 
                 var imageFileNames = NodeContext.Web_tbImages
-                                        .OrderBy(t => t.ImageFileName)
-                                        .Select(t => t.ImageFileName)
-                                        .Except(NodeContext.Web_TemplateImages
-                                            .Where(i => i.TemplateId == templateId)
-                                            .Select(i => i.ImageFileName));
+                    .OrderBy(t => t.ImageFileName)
+                    .Select(t => t.ImageFileName)
+                    .Except(NodeContext.Web_TemplateImages
+                        .Where(i => i.TemplateId == templateId)
+                        .Select(i => i.ImageFileName));
 
                 ImageFileNames = new SelectList(await imageFileNames.ToListAsync());
 

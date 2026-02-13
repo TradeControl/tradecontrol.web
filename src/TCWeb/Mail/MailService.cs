@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,7 +40,7 @@ namespace TradeControl.Web.Mail
     public class MailText : MailHeader
     {
         public string Body { get; set; }
-        public bool IsHtml { get; set; } = false;        
+        public bool IsHtml { get; set; } = false;
     }
 
     public class MailSettings
@@ -68,7 +68,7 @@ namespace TradeControl.Web.Mail
             }
 
             await Send(mailDocument.Settings, bodyBuilder, mailDocument);
-        }        
+        }
 
         protected async Task<string> PreviewDocument(MailDocument mailDocument, string fileName = "")
         {
@@ -91,7 +91,7 @@ namespace TradeControl.Web.Mail
             return htmlBody;
         }
 
-        protected async Task<string> DocumentHtml(MailDocument mailDocument)
+        protected virtual async Task<string> DocumentHtml(MailDocument mailDocument)
         {
             string htmlBody = string.Empty;
 
@@ -106,7 +106,6 @@ namespace TradeControl.Web.Mail
 
             return htmlBody;
         }
-
 
         protected async Task SendText(MailText mailText)
         {
@@ -129,8 +128,7 @@ namespace TradeControl.Web.Mail
 
                     var stream = File.OpenRead(fileInfo.FullName);
 
-                    var formFile = new FormFile(stream, 0, stream.Length, fileInfo.Name, fileInfo.FullName)
-                    {
+                    var formFile = new FormFile(stream, 0, stream.Length, fileInfo.Name, fileInfo.FullName) {
                         Headers = new HeaderDictionary(),
                         ContentType = new($"application/{fileInfo.Extension}")
                     };

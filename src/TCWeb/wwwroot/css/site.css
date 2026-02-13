@@ -472,3 +472,35 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
 
 /* Ensure Fancytree will render HTML in titles for these pages */
 .fancytree-community .fancytree-title { /* leave default; included for specificity if needed */ }
+
+/* Cards with p-0 body + tables: remove any perceived gap between card-header and table header */
+.card > .card-body.p-0 {
+    padding-top: 0 !important;
+}
+
+    .card > .card-body.p-0 > .table-responsive {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+        .card > .card-body.p-0 > .table-responsive > table.table {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+/* On very small screens we flip .table to display:block; keep card tables behaving normally */
+@media (max-width: 420px) {
+    .card > .card-body.p-0 > .table-responsive > table.table {
+        display: table !important;
+    }
+
+        .card > .card-body.p-0 > .table-responsive > table.table thead,
+        .card > .card-body.p-0 > .table-responsive > table.table tbody,
+        .card > .card-body.p-0 > .table-responsive > table.table tr {
+            display: table-row-group;
+        }
+
+        .card > .card-body.p-0 > .table-responsive > table.table tr {
+            display: table-row;
+        }
+}
