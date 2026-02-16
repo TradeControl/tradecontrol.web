@@ -1,51 +1,58 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Admin.Host.DeleteModel
-@{ ViewData["Title"] = "Delete Host"; }
-<h1>@ViewData["Title"]</h1>
-<hr />
+@{
+    ViewData["Title"] = "Delete Host";
 
-<div>
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_tbHost.HostDescription)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_tbHost.HostDescription)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_tbHost.EmailAddress)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_tbHost.EmailAddress)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_tbHost.HostName)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_tbHost.HostName)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_tbHost.HostPort)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_tbHost.HostPort)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_tbHost.InsertedBy)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_tbHost.InsertedBy)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_tbHost.InsertedOn)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_tbHost.InsertedOn)
-        </dd>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Host";
+
+    var cancelUrl = embedded
+        ? $"/Admin/Host/Index?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}"
+        : "/Admin/Host/Index";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+}
+
+@if (!embedded)
+{
+    <h1>@ViewData["Title"]</h1>
+    <hr />
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="alert alert-warning py-2">
+        This will permanently remove the selected mail host.
+    </div>
+
+    <dl class="row mb-3">
+        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.App_tbHost.HostDescription)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_tbHost.HostDescription)</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.App_tbHost.EmailAddress)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_tbHost.EmailAddress)</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.App_tbHost.HostName)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_tbHost.HostName)</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.App_tbHost.HostPort)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_tbHost.HostPort)</dd>
     </dl>
+
     <form method="post">
         <input type="hidden" asp-for="@Model.App_tbHost.HostId" />
-        <input type="submit" value="DELETE" class="btn btn-danger" />
-        <a asp-page="./Index" class="btn btn-info">To List</a>
+        <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+        <input type="hidden" name="returnNode" value="@returnNode" />
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-danger">Delete</button>
+            <a href="@cancelUrl" class="btn btn-outline-secondary">Cancel</a>
+        </div>
     </form>
 </div>

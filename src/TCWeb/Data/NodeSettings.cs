@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -326,14 +326,14 @@ namespace TradeControl.Web.Data
 
                 if (defaultHost == null)
                     return null;
-                else
-                    return new()
-                    {
-                        HostName = defaultHost.HostName,
-                        UserName = defaultHost.HostName ?? defaultHost.HostName, // preserve original mapping if needed
-                        Password = encrypt.DecryptString(defaultHost.HostPort == 0 ? string.Empty : defaultHost.HostName), // placeholder-safe access
-                        Port = defaultHost.HostPort
-                    };
+
+                return new() {
+                    HostName = defaultHost.HostName,
+                    UserName = defaultHost.EmailAddress,
+                    Password = encrypt.DecryptString(defaultHost.EmailPassword),
+                    Port = defaultHost.HostPort,
+                    IsSmtpAuth = defaultHost.IsSmtpAuth
+                };
             }
             catch (Exception e)
             {

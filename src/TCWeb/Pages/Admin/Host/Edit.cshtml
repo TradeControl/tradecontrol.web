@@ -1,49 +1,105 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Admin.Host.EditModel
-@{ ViewData["Title"] = "Edit Host"; }
-<h1>@ViewData["Title"]</h1>
-<hr />
+@{
+    ViewData["Title"] = "Edit Host";
 
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Host";
 
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    var cancelUrl = embedded
+        ? $"/Admin/Host/Index?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}"
+        : "/Admin/Host/Index";
 
-            <div class="mb-3">
-                <label asp-for="App_tbHost.HostDescription" class="control-label"></label>
-                <input asp-for="App_tbHost.HostDescription" class="form-control" />
-                <span asp-validation-for="App_tbHost.HostDescription" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbHost.EmailAddress" class="control-label"></label>
-                <input asp-for="App_tbHost.EmailAddress" class="form-control" />
-                <span asp-validation-for="App_tbHost.EmailAddress" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbHost.EmailPassword" class="control-label"></label>
-                <input asp-for="App_tbHost.EmailPassword" class="form-control" />
-                <span asp-validation-for="App_tbHost.EmailPassword" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbHost.HostName" class="control-label"></label>
-                <input asp-for="App_tbHost.HostName" class="form-control" />
-                <span asp-validation-for="App_tbHost.HostName" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbHost.HostPort" class="control-label"></label>
-                <input asp-for="App_tbHost.HostPort" class="form-control" />
-                <span asp-validation-for="App_tbHost.HostPort" class="text-danger"></span>
-            </div>
-            <input type="hidden" asp-for="App_tbHost.HostId" />
-            <input type="hidden" asp-for="App_tbHost.InsertedBy" />
-            <input type="hidden" asp-for="App_tbHost.InsertedOn" />
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+}
 
-            <div class="mb-3">
-                <input type="submit" value="UPDATE" class="btn btn-primary" />
-                <a asp-page="./Index" class="btn btn-info">To List</a>
-            </div>
-        </form>
+@if (!embedded)
+{
+    <h1>@ViewData["Title"]</h1>
+    <hr />
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="row">
+        <div class="col-12 col-md-7 col-lg-5">
+            <form method="post" autocomplete="off">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbHost.HostDescription" class="form-label"></label>
+                    <input asp-for="App_tbHost.HostDescription" class="form-control" />
+                    <span asp-validation-for="App_tbHost.HostDescription" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbHost.EmailAddress" class="form-label"></label>
+                    <input asp-for="App_tbHost.EmailAddress" class="form-control" />
+                    <span asp-validation-for="App_tbHost.EmailAddress" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 border rounded p-2">
+                    <div class="form-check">
+                        <input class="form-check-input" asp-for="App_tbHost.IsSmtpAuth" id="isSmtpAuth" />
+                        <label class="form-check-label" asp-for="App_tbHost.IsSmtpAuth"></label>
+                    </div>
+                    <div class="form-text mb-0">Clear this for internal relay where SMTP auth is not required.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbHost.EmailPassword" class="form-label"></label>
+                    <input asp-for="App_tbHost.EmailPassword" class="form-control" id="emailPassword" />
+                    <span asp-validation-for="App_tbHost.EmailPassword" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbHost.HostName" class="form-label"></label>
+                    <input asp-for="App_tbHost.HostName" class="form-control" placeholder="e.g. smtp.gmail.com" />
+                    <span asp-validation-for="App_tbHost.HostName" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbHost.HostPort" class="form-label"></label>
+                    <input asp-for="App_tbHost.HostPort" class="form-control" placeholder="e.g. 587" />
+                    <span asp-validation-for="App_tbHost.HostPort" class="text-danger"></span>
+                </div>
+
+                <input type="hidden" asp-for="App_tbHost.HostId" />
+                <input type="hidden" asp-for="App_tbHost.InsertedBy" />
+                <input type="hidden" asp-for="App_tbHost.InsertedOn" />
+
+                <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <a href="@cancelUrl" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
+@section Scripts {
+    <script>
+        (function () {
+            const auth = document.getElementById('isSmtpAuth');
+            const pwd  = document.getElementById('emailPassword');
+            if (!auth || !pwd) return;
+
+            function apply() {
+                const enabled = !!auth.checked;
+                pwd.disabled = !enabled;
+                if (!enabled) pwd.value = '';
+            }
+            auth.addEventListener('change', apply);
+            apply();
+        })();
+    </script>
+}

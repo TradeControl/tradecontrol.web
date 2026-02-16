@@ -56,6 +56,7 @@
                             <div class="bg-white border rounded p-3">
                                 <h2 class="h6 mb-2">Configuration</h2>
                                 <p class="text-muted mb-3">Select a section to configure the business.</p>
+
                                 <div class="d-grid gap-2">
                                     <button type="button"
                                             class="btn btn-outline-primary text-start"
@@ -73,6 +74,44 @@
                                             class="btn btn-outline-primary text-start"
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Templates)">
                                         <i class="bi bi-filetype-html me-2" aria-hidden="true"></i>Templates
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Host)">
+                                        <i class="bi bi-envelope-at me-2" aria-hidden="true"></i>Mail Host
+                                    </button>
+                                </div>
+
+                                <hr class="my-3" />
+
+                                <div class="d-grid gap-2 mt-2">
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Financial Periods
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-people me-2" aria-hidden="true"></i>Users
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-hash me-2" aria-hidden="true"></i>Invoice Settings
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-sliders me-2" aria-hidden="true"></i>Tax Settings
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>VAT Codes
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-bank me-2" aria-hidden="true"></i>Corporation Tax
+                                    </button>
+
+                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                        <i class="bi bi-tags me-2" aria-hidden="true"></i>Subject Types
                                     </button>
                                 </div>
                             </div>
@@ -103,9 +142,7 @@
                         }
                         else
                         {
-                            <iframe class="w-100 border rounded bg-white tc-details-frame"
-                                    title="Details"
-                                    src="@_iframeSrc"></iframe>
+                            @RenderRightPane()
                         }
                     </div>
                 </div>
@@ -122,7 +159,6 @@
     private ManagerTreeHost.ManagerNode _selected = ManagerTreeHost.ManagerNode.Root;
     private string? _selectedContentType;
     private string? _iframeSrc;
-
     private string? _initialTemplateKey;
 
     private int _fileTransferPageSize = 25;
@@ -133,10 +169,23 @@
         ManagerTreeHost.ManagerNode.Setup => $"{_companyName} / Setup",
         ManagerTreeHost.ManagerNode.FileTransfer => $"{_companyName} / File Transfer",
         ManagerTreeHost.ManagerNode.FileTransferContentType => $"{_companyName} / File Transfer / {_selectedContentType}",
+        ManagerTreeHost.ManagerNode.Host => $"{_companyName} / Mail Host",
         ManagerTreeHost.ManagerNode.Templates => $"{_companyName} / Templates",
         ManagerTreeHost.ManagerNode.TemplateInvoices => $"{_companyName} / Templates / Invoices",
         ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
         _ => _companyName
+    };
+
+    private RenderFragment RenderRightPane() => _selected switch
+    {
+        _ when !string.IsNullOrWhiteSpace(_iframeSrc) =>
+            @<iframe class="w-100 border rounded bg-white tc-details-frame"
+                     title="Details"
+                     src="@_iframeSrc"></iframe>,
+
+        _ => @<div class="bg-white border rounded p-3">
+                 <div class="text-muted">Not implemented in Admin Manager yet.</div>
+             </div>
     };
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
@@ -183,13 +232,16 @@
                 ManagerTreeHost.ManagerNode.FileTransferContentType when !string.IsNullOrWhiteSpace(_selectedContentType) =>
                     $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}",
 
+                ManagerTreeHost.ManagerNode.Host =>
+                    "/Admin/Host/Index?embedded=1&returnNode=Host",
+
                 ManagerTreeHost.ManagerNode.TemplateInvoices =>
                     "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
 
                 ManagerTreeHost.ManagerNode.TemplateSystem =>
                     "/Admin/Template/System?embedded=1&returnNode=Templates",
 
-                _ => _iframeSrc
+                _ => null
             };
         }
     }
@@ -228,22 +280,13 @@
     }
 
     [JSInvokable]
-    public void RefreshInvoiceTypeTemplates(short invoiceTypeCode)
-    {
-        _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
-    }
+    public void RefreshInvoiceTypeTemplates(short invoiceTypeCode) => _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
 
     [JSInvokable]
-    public void RefreshInvoiceTypeAttachments(short invoiceTypeCode)
-    {
-        _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
-    }
+    public void RefreshInvoiceTypeAttachments(short invoiceTypeCode) => _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
 
     [JSInvokable]
-    public void RefreshTemplateImages(int templateId)
-    {
-        _treeHost?.RequestRefreshTemplatesForInvoiceType(0);
-    }
+    public void RefreshTemplateImages(int templateId) => _treeHost?.RequestRefreshTemplatesForInvoiceType(0);
 
     private async Task RefreshFileTransferPageSizeAsync()
     {
@@ -269,6 +312,9 @@
             if (node == ManagerTreeHost.ManagerNode.FileTransfer)
                 NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&pageSize={_fileTransferPageSize}", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.Host)
+                NavigationManager.NavigateTo("/Admin/Host/Index?returnNode=Host", forceLoad: true);
+
             if (node == ManagerTreeHost.ManagerNode.Templates)
                 NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Templates", forceLoad: true);
 
@@ -291,9 +337,10 @@
         {
             ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
             ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
+            ManagerTreeHost.ManagerNode.Host => "/Admin/Host/Index?embedded=1&returnNode=Host",
             ManagerTreeHost.ManagerNode.TemplateInvoices => "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
             ManagerTreeHost.ManagerNode.TemplateSystem => "/Admin/Template/System?embedded=1&returnNode=Templates",
-            _ => _iframeSrc
+            _ => null
         };
 
         return Task.CompletedTask;

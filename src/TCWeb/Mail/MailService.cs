@@ -49,6 +49,8 @@ namespace TradeControl.Web.Mail
         public string Password { get; set; }
         public string HostName { get; set; }
         public int Port { get; set; }
+
+        public bool IsSmtpAuth { get; set; } = true;
     }
 
     public abstract class MailService
@@ -58,7 +60,6 @@ namespace TradeControl.Web.Mail
             BodyBuilder bodyBuilder = new();
             bodyBuilder.HtmlBody = await DocumentHtml(mailDocument);
 
-            //e.g <img src="cid:[logo]" alt="logo">
             foreach (var image in mailDocument.Images)
             {
                 var contentId = MimeUtils.GenerateMessageId();
@@ -128,13 +129,14 @@ namespace TradeControl.Web.Mail
 
                     var stream = File.OpenRead(fileInfo.FullName);
 
-                    var formFile = new FormFile(stream, 0, stream.Length, fileInfo.Name, fileInfo.FullName) {
+                    var formFile = new FormFile(stream, 0, stream.Length, fileInfo.Name, fileInfo.FullName)
+                    {
                         Headers = new HeaderDictionary(),
                         ContentType = new($"application/{fileInfo.Extension}")
                     };
 
                     using MemoryStream memoryStream = new();
-                    formFile.CopyTo(memoryStream);
+                    await formFile.CopyToAsync(memoryStream);
 
                     bodyBuilder.Attachments.Add(fileInfo.Name, memoryStream.ToArray(), ContentType.Parse(formFile.ContentType));
                 }
@@ -142,17 +144,22 @@ namespace TradeControl.Web.Mail
 
             MimeMessage message = new();
 
+            // Set From as well (some servers reject messages with only Sender set)
+            message.From.Add(MailboxAddress.Parse(settings.UserName));
             message.Sender = MailboxAddress.Parse(settings.UserName);
+
             message.To.Add(new MailboxAddress(mailHeader.Name, mailHeader.EmailTo));
             message.Subject = mailHeader.Subject;
             message.Body = bodyBuilder.ToMessageBody();
 
-            SmtpClient smtpClient = new();
-            smtpClient.Connect(settings.HostName, settings.Port, SecureSocketOptions.Auto);
-            smtpClient.Authenticate(settings.UserName, settings.Password);
-            await smtpClient.SendAsync(message);
-            smtpClient.Disconnect(true);
+            using var smtpClient = new SmtpClient();
+            await smtpClient.ConnectAsync(settings.HostName, settings.Port, SecureSocketOptions.Auto);
 
+            if (settings.IsSmtpAuth)
+                await smtpClient.AuthenticateAsync(settings.UserName, settings.Password);
+
+            await smtpClient.SendAsync(message);
+            await smtpClient.DisconnectAsync(true);
         }
 
         protected string GetDisplayName<T>(string propertyName)

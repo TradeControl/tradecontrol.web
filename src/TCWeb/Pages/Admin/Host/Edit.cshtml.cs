@@ -25,6 +25,12 @@ namespace TradeControl.Web.Pages.Admin.Host
         [BindProperty]
         public App_tbHost App_tbHost { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string? ReturnNode { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public int? Embedded { get; set; }
+
         public async Task<IActionResult> OnGetAsync(int? hostId)
         {
             try
@@ -32,16 +38,13 @@ namespace TradeControl.Web.Pages.Admin.Host
                 if (hostId == null)
                     return NotFound();
 
-
                 App_tbHost = await NodeContext.App_tbHosts.Where(h => h.HostId == hostId).FirstOrDefaultAsync();
 
                 if (App_tbHost == null)
                     return NotFound();
-                else
-                {
-                    await SetViewData();
-                    return Page();
-                }
+
+                await SetViewData();
+                return Page();
             }
             catch (Exception e)
             {
@@ -64,8 +67,12 @@ namespace TradeControl.Web.Pages.Admin.Host
                 NodeSettings nodeSettings = new(NodeContext);
                 var (key, iv) = await nodeSettings.GetOrCreateSymmetricAsync();
 
-                Encrypt encrypt = new (key, iv);
-                App_tbHost.EmailPassword = encrypt.EncryptString(App_tbHost.EmailPassword);
+                Encrypt encrypt = new(key, iv);
+
+                if (App_tbHost.IsSmtpAuth)
+                    App_tbHost.EmailPassword = encrypt.EncryptString(App_tbHost.EmailPassword);
+                else
+                    App_tbHost.EmailPassword = string.Empty;
 
                 NodeContext.Attach(App_tbHost).State = EntityState.Modified;
 
@@ -77,9 +84,12 @@ namespace TradeControl.Web.Pages.Admin.Host
                 {
                     if (!await NodeContext.App_tbHosts.AnyAsync(e => e.HostId == App_tbHost.HostId))
                         return base.NotFound();
-                    else
-                        throw;
+
+                    throw;
                 }
+
+                if (Embedded == 1)
+                    return Redirect($"/Admin/Host/Index?embedded=1&returnNode={Uri.EscapeDataString(ReturnNode ?? "Host")}");
 
                 return RedirectToPage("./Index");
             }
@@ -91,4 +101,3 @@ namespace TradeControl.Web.Pages.Admin.Host
         }
     }
 }
-

@@ -2,13 +2,10 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
-
 
 namespace TradeControl.Web.Pages.Admin.Host
 {
@@ -19,6 +16,12 @@ namespace TradeControl.Web.Pages.Admin.Host
 
         public App_tbHost App_tbHost { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string? ReturnNode { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public int? Embedded { get; set; }
+
         public async Task<IActionResult> OnGetAsync(int? hostId)
         {
             try
@@ -26,16 +29,13 @@ namespace TradeControl.Web.Pages.Admin.Host
                 if (hostId == null)
                     return NotFound();
 
-
                 App_tbHost = await NodeContext.App_tbHosts.Where(h => h.HostId == hostId).FirstOrDefaultAsync();
 
                 if (App_tbHost == null)
                     return NotFound();
-                else
-                {
-                    await SetViewData();
-                    return Page();
-                }
+
+                await SetViewData();
+                return Page();
             }
             catch (Exception e)
             {
@@ -68,6 +68,9 @@ namespace TradeControl.Web.Pages.Admin.Host
                 var tbHost = await NodeContext.App_tbHosts.FindAsync(hostId);
                 NodeContext.App_tbHosts.Remove(tbHost);
                 await NodeContext.SaveChangesAsync();
+
+                if (Embedded == 1)
+                    return Redirect($"/Admin/Host/Index?embedded=1&returnNode={Uri.EscapeDataString(ReturnNode ?? "Host")}");
 
                 return RedirectToPage("./Index");
             }

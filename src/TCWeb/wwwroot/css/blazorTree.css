@@ -144,6 +144,10 @@ html, body {
     color: #495057; /* dark gray (System) */
 }
 
+.tc-admin-manager-tree i.bi-envelope-at {
+    color: #0dcaf0; /* Bootstrap 'info' tone for email */
+}
+
 .tc-tree-label {
     display: inline-block;
     padding: 0.06rem 0.25rem;
@@ -284,6 +288,8 @@ html, body {
     min-height: 1.25rem; /* reserves one text line so button heights stay aligned */
     line-height: 1.25rem;
 }
+
+
 
 
 

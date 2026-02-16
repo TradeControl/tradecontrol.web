@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -29,5 +29,7 @@ namespace TradeControl.Web.Models
         public string HostName { get; set; }
         [Display(Name = "Port")]
         public int HostPort { get; set; }
+        [Display(Name = "Is Smtp Auth?")]
+        public bool IsSmtpAuth { get; set; }
     }
 }

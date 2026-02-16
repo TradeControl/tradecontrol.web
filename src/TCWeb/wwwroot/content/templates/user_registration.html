@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>User registration</title>
+    <style>
+        :root {
+            --brand: #1e5aa8;
+            --border: #e5e7eb;
+            --muted: #6b7280;
+            --panel: #f8fafc;
+            --text: #111827;
+            --bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: var(--panel);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .card {
+            max-width: 720px;
+            margin: 0 auto;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 4px solid var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .body {
+            padding: 18px 20px 10px 20px;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: #fff;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .footer {
+            padding: 12px 20px 18px 20px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1 class="title">User registration</h1>
+            <span class="pill">System notification</span>
+        </div>
+
+        <div class="body">
+            <p class="muted" style="margin-top: 0;">
+                A new user registration requires review.
+            </p>
+
+            <p style="margin: 0;">
+                Email address:
+                <strong>[EmailAddress]</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            This is an automated message sent by Trade Control.
+        </div>
+    </div>
+</body>
+</html>

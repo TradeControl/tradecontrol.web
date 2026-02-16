@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>[InvoiceType] [InvoiceNumber]</title>
+    <style>
+        :root {
+            --brand: #1e5aa8;
+            --border: #e5e7eb;
+            --muted: #6b7280;
+            --bg: #ffffff;
+            --panel: #f8fafc;
+            --text: #111827;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: var(--panel);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .page {
+            max-width: 920px;
+            margin: 0 auto;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 20px 24px;
+            border-bottom: 4px solid var(--brand);
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: block;
+            max-width: 280px;
+            height: auto;
+        }
+
+        .company {
+            margin-top: 8px;
+            color: var(--muted);
+            white-space: pre-line;
+        }
+
+        .title-block {
+            text-align: right;
+            min-width: 240px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .invoice-no {
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        .meta {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+            .meta strong {
+                color: var(--text);
+                font-weight: 600;
+            }
+
+        .content {
+            padding: 20px 24px 8px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 14px 12px 14px;
+            background: #fff;
+        }
+
+            .panel h2 {
+                margin: 0 0 8px 0;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                color: var(--muted);
+            }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 6px 10px;
+            font-size: 13px;
+        }
+
+            .kv .k {
+                color: var(--muted);
+            }
+
+            .kv .v {
+                color: var(--text);
+                font-weight: 500;
+                white-space: pre-line;
+            }
+
+        .section {
+            margin-top: 16px;
+        }
+
+        .section-title {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+        }
+
+        .notes {
+            border-left: 3px solid var(--brand);
+            padding: 10px 12px;
+            background: #f8fafc;
+            color: var(--text);
+            white-space: pre-line;
+        }
+
+        .footer {
+            padding: 14px 24px 18px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 12.5px;
+        }
+
+            .footer a {
+                color: var(--muted);
+                text-decoration: none;
+            }
+
+                .footer a:hover {
+                    text-decoration: underline;
+                }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .title-block {
+                text-align: left;
+                min-width: 0;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    [Embed:Details=invoice_template_std_details]
+    [Embed:Tax=invoice_template_std_tax]
+
+    <div class="page">
+        <div class="header">
+            <div>
+                <img class="logo" src="cid:[LOGO]" alt="Company logo" />
+                <div class="company">
+                    [CompanyName]
+                    [CompanyAddress]
+                </div>
+            </div>
+
+            <div class="title-block">
+                <h1 class="title">[InvoiceType]</h1>
+                <div class="invoice-no">Invoice no: [InvoiceNumber]</div>
+                <div class="meta">
+                    <div><strong>Date:</strong> [InvoicedOn]</div>
+                    <div><strong>Due:</strong> [DueOn]</div>
+                    <div class="pill" style="margin-top:8px;">Subject: [SubjectCode] — [SubjectName]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="grid">
+                <div class="panel">
+                    <h2>Bill to</h2>
+                    <div class="kv">
+                        <div class="k">Name</div><div class="v">[SubjectName]</div>
+                        <div class="k">Address</div><div class="v">[InvoiceAddress]</div>
+                        <div class="k">Email</div><div class="v">[EmailAddress]</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>Seller details</h2>
+                    <div class="kv">
+                        <div class="k">Company no</div><div class="v">[CompanyNumber]</div>
+                        <div class="k">VAT no</div><div class="v">[VatNumber]</div>
+                        <div class="k">Issued by</div><div class="v">[UserName]</div>
+                        <div class="k">Reference</div><div class="v">[SubjectCode]</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Items</h2>
+                [InvoiceDetailsHtml]
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">VAT summary</h2>
+                [TaxSummaryHtml]
+            </div>
+
+            <div class="section">
+                <div class="grid">
+                    <div>
+                        <h2 class="section-title">Notes</h2>
+                        <div class="notes">[Notes]</div>
+                    </div>
+
+                    <div class="panel">
+                        <h2>Totals</h2>
+                        <div class="kv" style="grid-template-columns: 160px 1fr;">
+                            <div class="k">Net</div><div class="v">[InvoiceValue]</div>
+                            <div class="k">VAT</div><div class="v">[TaxValue]</div>
+                            <div class="k"><strong>Total</strong></div><div class="v" style="font-weight:700;">[TotalValue]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Payment</h2>
+                <div class="panel">
+                    <div class="kv" style="grid-template-columns: 160px 1fr;">
+                        <div class="k">Payment terms</div><div class="v">[PaymentTerms]</div>
+                        <div class="k">Bank</div><div class="v">[BankAccount]</div>
+                        <div class="k">Sort code</div><div class="v">[BankSortCode]</div>
+                        <div class="k">Account no</div><div class="v">[BankAccountNumber]</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>
+                <span class="pill">Email: [CompanyEmailAddress]</span>
+                <span class="pill">Tel: [CompanyPhoneNumber]</span>
+            </div>
+            <div>
+                <a href="[CompanyWebsite]">[CompanyWebsite]</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
