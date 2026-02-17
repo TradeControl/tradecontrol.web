@@ -1,67 +1,194 @@
 @page
 @model TradeControl.Web.Pages.Admin.Users.CreateModel
-@{ ViewData["Title"] = "Create User"; }
+@{
+    ViewData["Title"] = "Create User";
 
-<h1>@ViewData["Title"]</h1>
-<hr />
-<dl class="row">
-    <dd class="col-sm-10">
-        @Html.DisplayFor(model => model.Usr_tbUser.EmailAddress)
-    </dd>
-</dl>
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="mb-3">
-                <label asp-for="Usr_tbUser.UserId" class="control-label"></label>
-                <input asp-for="Usr_tbUser.UserId" class="form-control" />
-                <span asp-validation-for="Usr_tbUser.UserId" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Usr_tbUser.UserName" class="control-label"></label>
-                <input asp-for="Usr_tbUser.UserName" class="form-control" />
-                <span asp-validation-for="Usr_tbUser.UserName" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Usr_tbUser.PhoneNumber" class="control-label"></label>
-                <input asp-for="Usr_tbUser.PhoneNumber" class="form-control" inputmode="tel" />
-                <span asp-validation-for="Usr_tbUser.PhoneNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Usr_tbUser.MobileNumber" class="control-label"></label>
-                <input asp-for="Usr_tbUser.MobileNumber" class="form-control" inputmode="tel" />
-                <span asp-validation-for="Usr_tbUser.MobileNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Usr_tbUser.Address" class="control-label"></label>
-                <input asp-for="Usr_tbUser.Address" class="form-control" />
-                <span asp-validation-for="Usr_tbUser.Address" class="text-danger"></span>
-            </div>
-            <div class="mb-3 form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="Usr_tbUser.IsAdministrator" /> @Html.DisplayNameFor(model => model.Usr_tbUser.IsAdministrator)
-                </label>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Usr_tbUser.CalendarCode" class="control-label"></label>
-                <p>
-                    <select asp-for="Usr_tbUser.CalendarCode" asp-items="Model.CalendarCodes" class="form-control"></select>
-                </p>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Users";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="border rounded bg-light p-3">
+                <div class="text-muted small">Email</div>
+                <div class="fw-semibold">@Model.Usr_tbUser.EmailAddress</div>
             </div>
 
-            <input type="hidden" asp-for="Usr_tbUser.LogonName" />
-            <input type="hidden" asp-for="Usr_tbUser.EmailAddress" />
-            <input type="hidden" asp-for="Usr_tbUser.IsEnabled" />
-            <input type="hidden" asp-for="Usr_tbUser.InsertedBy" />
-            <input type="hidden" asp-for="Usr_tbUser.InsertedOn" />
-            <input type="hidden" asp-for="Usr_tbUser.UpdatedBy" />
-            <input type="hidden" asp-for="Usr_tbUser.UpdatedOn" />
+            <form method="post" class="mt-3" autocomplete="off">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            <div class="mb-3">
-                <input type="submit" value="CREATE" class="btn btn-primary" />
-                <a asp-page="./Index" class="btn btn-info">To List</a>
-            </div>
-        </form>
+                <div class="mb-3">
+                    <label asp-for="Usr_tbUser.UserName" class="form-label"></label>
+                    <input asp-for="Usr_tbUser.UserName" class="form-control" />
+                    <span asp-validation-for="Usr_tbUser.UserName" class="text-danger"></span>
+                </div>
+
+                <div class="mb-2 form-check">
+                    <input class="form-check-input" type="checkbox" id="autoUserId" checked />
+                    <label class="form-check-label" for="autoUserId">Auto-generate User ID from Name</label>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Usr_tbUser.UserId" class="form-label"></label>
+                    <input asp-for="Usr_tbUser.UserId" class="form-control" />
+                    <div class="form-text text-muted">
+                        If left blank, a default will be created from the Name (e.g. first 6 letters / first+last initials), and made unique.
+                    </div>
+                    <span asp-validation-for="Usr_tbUser.UserId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Usr_tbUser.PhoneNumber" class="form-label"></label>
+                    <input asp-for="Usr_tbUser.PhoneNumber" class="form-control" inputmode="tel" />
+                    <span asp-validation-for="Usr_tbUser.PhoneNumber" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Usr_tbUser.MobileNumber" class="form-label"></label>
+                    <input asp-for="Usr_tbUser.MobileNumber" class="form-control" inputmode="tel" />
+                    <span asp-validation-for="Usr_tbUser.MobileNumber" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Usr_tbUser.Address" class="form-label"></label>
+                    <input asp-for="Usr_tbUser.Address" class="form-control" />
+                    <span asp-validation-for="Usr_tbUser.Address" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input class="form-check-input" asp-for="Usr_tbUser.IsAdministrator" />
+                    <label class="form-check-label" asp-for="Usr_tbUser.IsAdministrator"></label>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Usr_tbUser.CalendarCode" class="form-label"></label>
+                    <select asp-for="Usr_tbUser.CalendarCode" asp-items="Model.CalendarCodes" class="form-select"></select>
+                </div>
+
+                <input type="hidden" asp-for="Usr_tbUser.LogonName" />
+                <input type="hidden" asp-for="Usr_tbUser.EmailAddress" />
+                <input type="hidden" asp-for="Usr_tbUser.IsEnabled" />
+                <input type="hidden" asp-for="Usr_tbUser.InsertedBy" />
+                <input type="hidden" asp-for="Usr_tbUser.InsertedOn" />
+                <input type="hidden" asp-for="Usr_tbUser.UpdatedBy" />
+                <input type="hidden" asp-for="Usr_tbUser.UpdatedOn" />
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">Create</button>
+
+                    <a asp-page="./Index"
+                       asp-route-embedded="@(embedded ? "1" : null)"
+                       asp-route-returnNode="@returnNode"
+                       class="btn btn-outline-secondary"
+                       style="min-width:7.5rem;">
+                        Back to Users
+                    </a>
+
+                    @if (!embedded)
+                    {
+                        <a href="@backToManagerUrl"
+                           class="btn btn-outline-secondary"
+                           style="min-width:7.5rem;">
+                            Back
+                        </a>
+                    }
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+    (function ()
+    {
+        const userNameInput = document.getElementById("Usr_tbUser_UserName");
+        const userIdInput = document.getElementById("Usr_tbUser_UserId");
+        const autoUserId = document.getElementById("autoUserId");
+
+        if (!userNameInput || !userIdInput || !autoUserId)
+        {
+            return;
+        }
+
+        function isBlank(value)
+        {
+            return !value || value.trim().length === 0;
+        }
+
+        async function refreshUserIdSuggestion()
+        {
+            if (!autoUserId.checked)
+            {
+                return;
+            }
+
+            if (!isBlank(userIdInput.value))
+            {
+                return;
+            }
+
+            const name = userNameInput.value.trim();
+            if (isBlank(name))
+            {
+                return;
+            }
+
+            const url = `${window.location.pathname}?handler=DefaultUserId&userName=${encodeURIComponent(name)}${window.location.search.includes("embedded=1") ? "&embedded=1" : ""}`;
+
+            const response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
+            if (!response.ok)
+            {
+                return;
+            }
+
+            const data = await response.json();
+            if (!data || data.ok !== true)
+            {
+                return;
+            }
+
+            if (isBlank(userIdInput.value))
+            {
+                userIdInput.value = data.userId || "";
+            }
+        }
+
+        userNameInput.addEventListener("blur", async function ()
+        {
+            await refreshUserIdSuggestion();
+        });
+
+        userIdInput.addEventListener("input", function ()
+        {
+            if (!isBlank(userIdInput.value))
+            {
+                autoUserId.checked = false;
+            }
+        });
+
+        autoUserId.addEventListener("change", async function ()
+        {
+            if (autoUserId.checked && isBlank(userIdInput.value))
+            {
+                await refreshUserIdSuggestion();
+            }
+        });
+    })();
+</script>

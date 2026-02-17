@@ -58,7 +58,31 @@
                         <option value="">(not set)</option>
                     </select>
                     <div class="form-text">
-                        Template used for user registration/verification emails (system-generated).
+                        Template used for user registration (system-generated).
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <label asp-for="UserRegistrationConfirmTemplateId" class="form-label"></label>
+                    <select asp-for="UserRegistrationConfirmTemplateId"
+                            asp-items="Model.TemplateOptions"
+                            class="form-select">
+                        <option value="">(not set)</option>
+                    </select>
+                    <div class="form-text">
+                        Template used for the email sent to the registrant containing the confirmation link.
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <label asp-for="UserRegistrationAdminNotifyTemplateId" class="form-label"></label>
+                    <select asp-for="UserRegistrationAdminNotifyTemplateId"
+                            asp-items="Model.TemplateOptions"
+                            class="form-select">
+                        <option value="">(not set)</option>
+                    </select>
+                    <div class="form-text">
+                        Template used to notify Administrators after a registrant confirms their email address.
                     </div>
                 </div>
 

@@ -1,0 +1,13 @@
+@page
+@model TradeControl.Web.Areas.Identity.Pages.Account.ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirm email";
+}
+
+<h1>@ViewData["Title"]</h1>
+<div class="alert alert-info" role="status">
+    @Model.StatusMessage
+</div>
+<p>
+    <a asp-page="./Login">Continue to login</a>
+</p>

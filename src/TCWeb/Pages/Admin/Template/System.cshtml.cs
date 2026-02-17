@@ -23,6 +23,14 @@ namespace TradeControl.Web.Pages.Admin.Template
         [Display(Name = "User registration template")]
         public int? UserRegistrationTemplateId { get; set; }
 
+        [BindProperty]
+        [Display(Name = "User registration confirmation template")]
+        public int? UserRegistrationConfirmTemplateId { get; set; }
+
+        [BindProperty]
+        [Display(Name = "User registration admin notification template")]
+        public int? UserRegistrationAdminNotifyTemplateId { get; set; }
+
         public SystemModel(NodeContext context) : base(context) { }
 
         public async Task<IActionResult> OnGetAsync()
@@ -57,6 +65,8 @@ namespace TradeControl.Web.Pages.Admin.Template
 
                 options.SupportRequestTemplateId = SupportRequestTemplateId;
                 options.UserRegistrationTemplateId = UserRegistrationTemplateId;
+                options.UserRegistrationConfirmTemplateId = UserRegistrationConfirmTemplateId;
+                options.UserRegistrationAdminNotifyTemplateId = UserRegistrationAdminNotifyTemplateId;
 
                 NodeContext.Attach(options).State = EntityState.Modified;
                 await NodeContext.SaveChangesAsync();
@@ -91,6 +101,8 @@ namespace TradeControl.Web.Pages.Admin.Template
             {
                 SupportRequestTemplateId = options.SupportRequestTemplateId;
                 UserRegistrationTemplateId = options.UserRegistrationTemplateId;
+                UserRegistrationConfirmTemplateId = options.UserRegistrationConfirmTemplateId;
+                UserRegistrationAdminNotifyTemplateId = options.UserRegistrationAdminNotifyTemplateId;
             }
         }
     }

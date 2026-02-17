@@ -68,14 +68,31 @@ namespace TradeControl.Web.Pages.Admin.Host
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request.Query.TryGetValue("embedded", out var emb) && emb == "1";
+                var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Host";
+
                 int hostId = await NodeContext.App_tbHosts.Where(h => h.HostDescription == HostDescription).Select(h => h.HostId).FirstAsync();
 
                 NodeSettings settings = new(NodeContext);
 
                 if (await settings.SetHost(hostId))
-                    return RedirectToPage("./Index");
+                {
+                    if (embedded)
+                    {
+                        return Redirect($"/Admin/Host/Index?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}");
+                    }
+
+                    return RedirectToPage("./Index", new { returnNode });
+                }
                 else
+                {
+                    if (embedded)
+                    {
+                        return Redirect("/Admin/EventLog/Index?embedded=1&returnNode=Host");
+                    }
+
                     return RedirectToPage("/Admin/EventLog/Index");
+                }
             }
             catch (Exception e)
             {

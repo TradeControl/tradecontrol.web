@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirm your email</title>
+    <style>
+        :root {
+            --brand: #1e5aa8;
+            --border: #e5e7eb;
+            --muted: #6b7280;
+            --panel: #f8fafc;
+            --text: #111827;
+            --bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: var(--panel);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .card {
+            max-width: 720px;
+            margin: 0 auto;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 18px 20px;
+            border-bottom: 4px solid var(--brand);
+        }
+
+        .title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .body {
+            padding: 18px 20px 6px 20px;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1 class="title">Confirm your email</h1>
+        </div>
+
+        <div class="body">
+            <p class="muted" style="margin-top:0;">
+                You (or someone using your email address) requested access to [CompanyName].
+            </p>
+
+            <p style="margin:0 0 14px 0;">
+                Email address:
+                <strong>[EmailAddress]</strong>
+            </p>
+
+            <!-- Outlook-safe button (table + inline styles) -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px 0;">
+                <tr>
+                    <td bgcolor="#1e5aa8" style="border-radius:8px;">
+                        <a href="[ConfirmUrl]"
+                           style="display:inline-block; padding:10px 14px; color:#ffffff; text-decoration:none; font-weight:600; font-family:Segoe UI, Arial, sans-serif;">
+                            Confirm email address
+                        </a>
+                    </td>
+                </tr>
+            </table>
+
+            <p class="muted" style="margin:0;">
+                If the button doesn’t work, copy and paste this link into your browser:
+                <br />
+                <span style="word-break:break-all;">[ConfirmUrl]</span>
+            </p>
+        </div>
+
+        <div style="padding: 12px 20px 18px 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12.5px;">
+            This is an automated message sent by Trade Control.
+        </div>
+    </div>
+</body>
+</html>

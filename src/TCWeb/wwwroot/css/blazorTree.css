@@ -148,6 +148,10 @@ html, body {
     color: #0dcaf0; /* Bootstrap 'info' tone for email */
 }
 
+.tc-tree-icon-users {
+    color: #0d6efd; /* Bootstrap primary blue */
+}
+
 .tc-tree-label {
     display: inline-block;
     padding: 0.06rem 0.25rem;

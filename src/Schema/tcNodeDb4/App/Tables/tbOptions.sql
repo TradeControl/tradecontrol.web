@@ -19,6 +19,8 @@ CREATE TABLE [App].[tbOptions] (
     [SymmetricIV]        VARBINARY (16) NULL,
     [SupportRequestTemplateId]      INT NULL,
     [UserRegistrationTemplateId]    INT NULL,
+    [UserRegistrationConfirmTemplateId]     INT NULL,
+    [UserRegistrationAdminNotifyTemplateId] INT NULL,
     [InsertedBy]         NVARCHAR (50)  CONSTRAINT [DF_App_tbOptions_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
     [InsertedOn]         DATETIME       CONSTRAINT [DF_App_tbOptions_InsertedOn] DEFAULT (getdate()) NOT NULL,
     [UpdatedBy]          NVARCHAR (50)  CONSTRAINT [DF_App_tbOptions_UpdatedBy] DEFAULT (suser_sname()) NOT NULL,
@@ -38,13 +40,13 @@ CREATE TABLE [App].[tbOptions] (
     CONSTRAINT [FK_App_tbOptions_Web_tbTemplate_SupportRequest]
         FOREIGN KEY ([SupportRequestTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId]),
     CONSTRAINT [FK_App_tbOptions_Web_tbTemplate_UserRegistration]
-        FOREIGN KEY ([UserRegistrationTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId])
+        FOREIGN KEY ([UserRegistrationTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId]),
+    CONSTRAINT [FK_App_tbOptions_Web_tbTemplate_UserRegistrationConfirm]
+        FOREIGN KEY ([UserRegistrationConfirmTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId]),
+    CONSTRAINT [FK_App_tbOptions_Web_tbTemplate_UserRegistrationAdminNotify]
+        FOREIGN KEY ([UserRegistrationAdminNotifyTemplateId]) REFERENCES [Web].[tbTemplate] ([TemplateId])
 
 );
-
-
-
-
 GO
 CREATE TRIGGER App.App_tbOptions_TriggerUpdate 
    ON App.tbOptions

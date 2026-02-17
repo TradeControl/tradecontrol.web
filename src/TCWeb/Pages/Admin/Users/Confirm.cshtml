@@ -1,29 +1,78 @@
 @page
 @model TradeControl.Web.Pages.Admin.Users.ConfirmModel
-@{ ViewData["Title"] = "Registration"; }
+@{
+    ViewData["Title"] = "Registration";
 
-<h1>@ViewData["Title"]</h1>
-<h3>Give this user system access?</h3>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Users";
 
-<div>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.AspNet_UserRegistration.UserName):
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.AspNet_UserRegistration.UserName)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.AspNet_UserRegistration.EmailAddress):
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.AspNet_UserRegistration.EmailAddress)
-        </dd>
-    </dl>
-    <form method="post">
-        <input type="hidden" asp-for="AspNet_UserRegistration.Id" />
-        <input type="submit" value="Confirm" class="btn btn-warning" />
-        <a asp-page="./Index" class="btn btn-info">To List</a>
-    </form>
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="alert alert-warning py-2 mb-3" role="alert">
+                Give this user system access?
+            </div>
+
+            <div class="border rounded bg-light p-3">
+                <div class="row g-2">
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Username</div>
+                        <div class="fw-semibold">@Model.AspNet_UserRegistration.UserName</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Email</div>
+                        <div class="fw-semibold">@Model.AspNet_UserRegistration.EmailAddress</div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" class="mt-3">
+                <input type="hidden" asp-for="AspNet_UserRegistration.Id" />
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit"
+                            class="btn btn-warning"
+                            asp-route-id="@Model.AspNet_UserRegistration.Id"
+                            asp-route-embedded="@(embedded ? "1" : null)"
+                            asp-route-returnNode="@returnNode">
+                        Confirm
+                    </button>
+
+                    <a asp-page="./Index"
+                       asp-route-embedded="@(embedded ? "1" : null)"
+                       asp-route-returnNode="@returnNode"
+                       class="btn btn-outline-secondary"
+                       style="min-width:7.5rem;">
+                        Cancel
+                    </a>
+
+                    @if (!embedded)
+                    {
+                        <a href="@backToManagerUrl"
+                           class="btn btn-outline-secondary"
+                           style="min-width:7.5rem;">
+                            Back
+                        </a>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
 </div>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +12,7 @@ using System.Globalization;
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
+using TradeControl.Web.Mail;
 
 [assembly: HostingStartup(typeof(TradeControl.Web.Areas.Identity.IdentityHostingStartup))]
 namespace TradeControl.Web.Areas.Identity
@@ -24,16 +26,13 @@ namespace TradeControl.Web.Areas.Identity
                     options.UseSqlServer(
                         context.Configuration.GetConnectionString("TCNodeContext")));
 
-                //services.AddPooledDbContextFactory<NodeContext>(options =>
-                //    options.UseSqlServer(
-                //        context.Configuration.GetConnectionString("TCNodeContext")));
-
                 services.AddDefaultIdentity<TradeControlWebUser>(options => 
                     options.SignIn.RequireConfirmedAccount = true)
                     .AddRoles<IdentityRole>()
                     .AddEntityFrameworkStores<NodeContext>();
 
-                
+                services.AddTransient<IEmailSender, IdentityEmailSender>();
+
                 services.AddAuthorization(options =>
                 {
                     options.FallbackPolicy = new AuthorizationPolicyBuilder()

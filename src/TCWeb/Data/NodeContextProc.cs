@@ -2561,5 +2561,50 @@ namespace TradeControl.Web.Data
             }
         }
         #endregion
+
+        #region Users
+        public async Task<string> UserIdDefault(string userName)
+        {
+            try
+            {
+                var _userName = new SqlParameter() {
+                    ParameterName = "@UserName",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 100,
+                    Value = userName
+                };
+
+                var _userId = new SqlParameter() {
+                    ParameterName = "@UserId",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Output,
+                    Size = 10
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Usr.proc_DefaultUserId";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_userName);
+                        _command.Parameters.Add(_userId);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return (string)_userId.Value;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return string.Empty;
+            }
+        }
+        #endregion
     }
 }

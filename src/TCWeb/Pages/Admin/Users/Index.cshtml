@@ -2,120 +2,166 @@
 @model TradeControl.Web.Pages.Admin.Users.IndexModel
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
-@{ViewData["Title"] = "User Registrations";}
+@{
+    ViewData["Title"] = "User Registrations";
 
-<h1>@ViewData["Title"]</h1>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Users";
 
-<form class="mb-3" method="get">
-    <div class="row g-2 align-items-center">
-        <div class="col-auto">
-            <label class="visually-hidden" for="ConfirmFilterOption">Confirmed?</label>
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+            <input type="hidden" name="embedded" value="@(embedded ? "1" : "0")" />
+            <input type="hidden" name="returnNode" value="@returnNode" />
+
+            <label class="form-label mb-0 text-muted small" for="ConfirmFilterOption">Confirmed</label>
             <select asp-for="ConfirmFilterOption"
                     asp-items="Model.ConfirmFilterOptions"
                     id="ConfirmFilterOption"
-                    class="form-control"
+                    class="form-select"
+                    style="min-width: 10rem;"
                     onchange="this.form.submit()">
                 <option value="">All</option>
             </select>
-        </div>
 
-        <div class="col-auto">
-            <!-- reset to first page when changing the filter -->
-            <input type="hidden" name="PageNumber" value="1" />
             <noscript>
                 <button type="submit" class="btn btn-primary">Filter</button>
             </noscript>
-        </div>
-    </div>
-</form>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].EmailAddress)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].UserName)
-            </th>
-            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
-            {
-                <th>
-                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsConfirmed)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsRegistered)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsAdministrator)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsManager)
-                </th>
-            }
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.AspNet_UserRegistration)
+        </form>
+
+        @if (!embedded)
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.EmailAddress)
-                </td>
-                <td>
-                    @{
-                        if (item.IsConfirmed && item.IsRegistered)
-                        {                                                                                                
-                            <a asp-page="./Edit" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.UserName)</a>
-                        }
-                        else
-                        {
-                            @Html.DisplayFor(modelItem => item.UserName)
-                        }
-                    }
-                </td>
-                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
-                {
-                    <td>
-                        @Html.DisplayFor(modelItem => item.IsConfirmed)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.IsRegistered)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.IsAdministrator)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.IsManager)
-                    </td>
-                }
-                <td>
-                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Delete)).Succeeded)
-                    {
-                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-danger" title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                    }
-                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
-                    {
-                        <a asp-page="./Confirm" asp-route-id="@item.Id" class="btn btn-warning" title="Confirm">
-                            <i class="bi bi-check2-circle"></i>
-                        </a>
-                    }
-                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed)
-                    {
-                        <a asp-page="./Role" asp-route-id="@item.Id" class="btn btn-secondary" title="Role">
-                            <i class="bi bi-person-badge"></i>
-                        </a>
-                    }
-                    @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && !item.IsRegistered)
-                    {
-                        <a asp-page="./Create" asp-route-id="@item.Id" class="btn btn-primary" title="Create">
-                            <i class="bi bi-person-plus"></i>
-                        </a>
-                    }
-                </td>
-            </tr>
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary" style="min-width:7.5rem;">Back</a>
         }
-    </tbody>
-</table>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>@Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].EmailAddress)</th>
+                    <th>@Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].UserName)</th>
+
+                    @if (Detection.Device.Type != Device.Mobile)
+                    {
+                        <th class="text-nowrap">@Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsConfirmed)</th>
+                        <th class="text-nowrap">@Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsRegistered)</th>
+                        <th class="text-nowrap">@Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsAdministrator)</th>
+                        <th class="text-nowrap">@Html.DisplayNameFor(model => model.AspNet_UserRegistration[0].IsManager)</th>
+                    }
+
+                    <th style="width:1%; white-space:nowrap;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.AspNet_UserRegistration)
+                {
+                    <tr>
+                        <td>@Html.DisplayFor(modelItem => item.EmailAddress)</td>
+                        <td>
+                            @if (item.IsConfirmed && item.IsRegistered)
+                            {
+                                <a asp-page="./Edit"
+                                   asp-route-id="@item.Id"
+                                   asp-route-embedded="@(embedded ? "1" : null)"
+                                   asp-route-returnNode="@returnNode">
+                                    @Html.DisplayFor(modelItem => item.UserName)
+                                </a>
+                            }
+                            else
+                            {
+                                @Html.DisplayFor(modelItem => item.UserName)
+                            }
+                        </td>
+
+                        @if (Detection.Device.Type != Device.Mobile)
+                        {
+                            <td>@Html.DisplayFor(modelItem => item.IsConfirmed)</td>
+                            <td>@Html.DisplayFor(modelItem => item.IsRegistered)</td>
+                            <td>@Html.DisplayFor(modelItem => item.IsAdministrator)</td>
+                            <td>@Html.DisplayFor(modelItem => item.IsManager)</td>
+                        }
+
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Delete)).Succeeded)
+                                {
+                                    <a asp-page="./Delete"
+                                       asp-route-id="@item.Id"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-outline-danger"
+                                       title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                }
+
+                                @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && !item.IsConfirmed && item.IsRegistered)
+                                {
+                                    <a asp-page="./Confirm"
+                                       asp-route-id="@item.Id"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-outline-warning"
+                                       title="Confirm">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </a>
+                                }
+
+                                @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Update)).Succeeded && item.IsConfirmed && item.IsRegistered)
+                                {
+                                    <a asp-page="./Role"
+                                       asp-route-id="@item.Id"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-outline-secondary"
+                                       title="Roles">
+                                        <i class="bi bi-person-badge"></i>
+                                    </a>
+                                }
+
+                                @if ((await AuthorizationService.AuthorizeAsync(User, item, Operations.Approve)).Succeeded && item.IsConfirmed && !item.IsRegistered)
+                                {
+                                    <a asp-page="./Create"
+                                       asp-route-id="@item.Id"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-outline-primary"
+                                       title="Create">
+                                        <i class="bi bi-person-plus"></i>
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+
+                @if (Model.AspNet_UserRegistration == null || Model.AspNet_UserRegistration.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-muted py-3">
+                            No user registrations found.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

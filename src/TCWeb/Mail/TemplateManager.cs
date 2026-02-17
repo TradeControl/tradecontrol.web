@@ -414,6 +414,60 @@ namespace TradeControl.Web.Mail
             }
         }
 
+        public async Task<MailDocument> GetUserRegistrationConfirm()
+        {
+            try
+            {
+                NodeSettings nodeSettings = new(NodeContext);
+
+                if (!nodeSettings.HasMailHost)
+                    throw new Exception("Mail host needs configuring");
+                else if (FileProvider == null)
+                    throw new Exception("FileProvider not specified");
+
+                var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
+                if (options == null || options.UserRegistrationConfirmTemplateId == null)
+                    throw new Exception("User registration confirmation template not configured.");
+
+                var fileInfo = await GetTemplateFromId(options.UserRegistrationConfirmTemplateId.Value);
+                MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
+                mailDocument.Settings = await nodeSettings.MailHost();
+                return mailDocument;
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                throw;
+            }
+        }
+
+        public async Task<MailDocument> GetUserRegistrationAdminNotify()
+        {
+            try
+            {
+                NodeSettings nodeSettings = new(NodeContext);
+
+                if (!nodeSettings.HasMailHost)
+                    throw new Exception("Mail host needs configuring");
+                else if (FileProvider == null)
+                    throw new Exception("FileProvider not specified");
+
+                var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
+                if (options == null || options.UserRegistrationAdminNotifyTemplateId == null)
+                    throw new Exception("User registration admin notification template not configured.");
+
+                var fileInfo = await GetTemplateFromId(options.UserRegistrationAdminNotifyTemplateId.Value);
+                MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
+                mailDocument.Settings = await nodeSettings.MailHost();
+                return mailDocument;
+            }
+            catch (Exception e)
+            {
+                await NodeContext.ErrorLog(e);
+                throw;
+            }
+        }
+
         #endregion
 
         #region usage

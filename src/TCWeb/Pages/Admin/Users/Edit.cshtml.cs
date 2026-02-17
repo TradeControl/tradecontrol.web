@@ -60,7 +60,7 @@ namespace TradeControl.Web.Pages.Admin.Users
 
                         if (Usr_tbUser == null)
                             return NotFound();
-                                        
+
                     }
                 }
 
@@ -80,6 +80,9 @@ namespace TradeControl.Web.Pages.Admin.Users
             {
                 if (!ModelState.IsValid)
                     return Page();
+
+                var embedded = Request.Query.TryGetValue("embedded", out var emb) && emb == "1";
+                var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Users";
 
                 Profile profile = new(NodeContext);
 
@@ -101,7 +104,11 @@ namespace TradeControl.Web.Pages.Admin.Users
 
                 }
 
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index",
+                    routeValues: new {
+                        embedded = embedded ? "1" : null,
+                        returnNode
+                    });
             }
             catch (Exception e)
             {

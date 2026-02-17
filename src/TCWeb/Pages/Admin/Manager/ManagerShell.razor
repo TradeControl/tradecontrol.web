@@ -72,6 +72,12 @@
 
                                     <button type="button"
                                             class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Users)">
+                                        <i class="bi bi-people me-2" aria-hidden="true"></i>Users
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Templates)">
                                         <i class="bi bi-filetype-html me-2" aria-hidden="true"></i>Templates
                                     </button>
@@ -88,10 +94,6 @@
                                 <div class="d-grid gap-2 mt-2">
                                     <button type="button" class="btn btn-outline-secondary text-start" disabled>
                                         <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Financial Periods
-                                    </button>
-
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
-                                        <i class="bi bi-people me-2" aria-hidden="true"></i>Users
                                     </button>
 
                                     <button type="button" class="btn btn-outline-secondary text-start" disabled>
@@ -170,6 +172,7 @@
         ManagerTreeHost.ManagerNode.FileTransfer => $"{_companyName} / File Transfer",
         ManagerTreeHost.ManagerNode.FileTransferContentType => $"{_companyName} / File Transfer / {_selectedContentType}",
         ManagerTreeHost.ManagerNode.Host => $"{_companyName} / Mail Host",
+        ManagerTreeHost.ManagerNode.Users => $"{_companyName} / Users",
         ManagerTreeHost.ManagerNode.Templates => $"{_companyName} / Templates",
         ManagerTreeHost.ManagerNode.TemplateInvoices => $"{_companyName} / Templates / Invoices",
         ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
@@ -184,8 +187,8 @@
                      src="@_iframeSrc"></iframe>,
 
         _ => @<div class="bg-white border rounded p-3">
-                 <div class="text-muted">Not implemented in Admin Manager yet.</div>
-             </div>
+    <div class="text-muted">Not implemented in Admin Manager yet.</div>
+</div>
     };
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
@@ -234,6 +237,9 @@
 
                 ManagerTreeHost.ManagerNode.Host =>
                     "/Admin/Host/Index?embedded=1&returnNode=Host",
+
+                ManagerTreeHost.ManagerNode.Users =>
+                    "/Admin/Users/Index?embedded=1&returnNode=Users",
 
                 ManagerTreeHost.ManagerNode.TemplateInvoices =>
                     "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
@@ -315,8 +321,11 @@
             if (node == ManagerTreeHost.ManagerNode.Host)
                 NavigationManager.NavigateTo("/Admin/Host/Index?returnNode=Host", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.Users)
+                NavigationManager.NavigateTo("/Admin/Users/Index?returnNode=Users", forceLoad: true);
+
             if (node == ManagerTreeHost.ManagerNode.Templates)
-                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Templates", forceLoad: true);
+                NavigationManager.NavigateTo("/Admin/Manager/Index?node=Templates", forceLoad: true);
 
             if (node == ManagerTreeHost.ManagerNode.TemplateInvoices)
                 NavigationManager.NavigateTo("/Admin/Template/Invoices?returnNode=Templates", forceLoad: true);
@@ -338,6 +347,7 @@
             ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
             ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
             ManagerTreeHost.ManagerNode.Host => "/Admin/Host/Index?embedded=1&returnNode=Host",
+            ManagerTreeHost.ManagerNode.Users => "/Admin/Users/Index?embedded=1&returnNode=Users",
             ManagerTreeHost.ManagerNode.TemplateInvoices => "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
             ManagerTreeHost.ManagerNode.TemplateSystem => "/Admin/Template/System?embedded=1&returnNode=Templates",
             _ => null

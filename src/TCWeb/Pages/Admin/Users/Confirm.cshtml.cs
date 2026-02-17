@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 using TradeControl.Web.Data;
@@ -20,7 +17,7 @@ namespace TradeControl.Web.Pages.Admin.Users
         IAuthorizationService AuthorizationService { get; }
         UserManager<TradeControlWebUser> UserManager { get; }
 
-        public ConfirmModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context) 
+        public ConfirmModel(NodeContext context, IAuthorizationService authorizationService, UserManager<TradeControlWebUser> userManager) : base(context)
         {
             AuthorizationService = authorizationService;
             UserManager = userManager;
@@ -68,11 +65,18 @@ namespace TradeControl.Web.Pages.Admin.Users
                 if (id == null)
                     return NotFound();
 
+                var embedded = Request.Query.TryGetValue("embedded", out var emb) && emb == "1";
+                var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Users";
+
                 var user = await UserManager.FindByIdAsync(id);
                 var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
                 await UserManager.ConfirmEmailAsync(user, code);
 
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index",
+                    routeValues: new {
+                        embedded = embedded ? "1" : null,
+                        returnNode
+                    });
             }
             catch (Exception e)
             {

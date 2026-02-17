@@ -63,6 +63,8 @@ namespace TradeControl.Web.Models
 
         public int? SupportRequestTemplateId { get; set; }
         public int? UserRegistrationTemplateId { get; set; }
+        public int? UserRegistrationConfirmTemplateId { get; set; }
+        public int? UserRegistrationAdminNotifyTemplateId { get; set; }
 
         [Required]
         [StringLength(50)]
