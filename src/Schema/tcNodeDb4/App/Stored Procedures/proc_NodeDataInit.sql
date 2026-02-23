@@ -585,6 +585,12 @@ BEGIN TRY
 		, (1217, 'Order charge differs from the invoice. Reconcile <1>?', 1)
 		, (1218, 'Raise invoice and pay expenses now?', 0)
 		, (1219, 'Reserve Balance', 0)
+		, (1220, 'Invoices deployed to the network cannot be deleted. Add a credit/debit note instead.', 0)
+		, (1221, 'Service Log cleared down.', 0)
+		, (1222, 'Task Change Log cleared down.', 0)
+		, (1223, 'Invoice Change Log cleared down.', 0)
+		, (1224, 'Raise corresponding invoices?', 0)
+		, (1225, 'Initialising <1>', 1)
 		, (2002, 'Only administrators have access to the system configuration features of this application.', 0)
 		, (2003, 'You are not a registered user of this system. Please contact the Administrator if you believe you should have access.', 0)
 		, (2004, 'The primary key you have entered contains invalid characters. Digits and letters should be used for these keys. Please amend accordingly or press Esc to cancel.', 0)
@@ -608,12 +614,6 @@ BEGIN TRY
 		, (3016, 'Operations cannot end before they have been started', 0)
 		, (3017, 'Cash codes must be of catagory type MONEY', 0)
 		, (3018, 'The balance for this account is zero. Check for unposted payments.', 0)
-		, (1220, 'Invoices deployed to the network cannot be deleted. Add a credit/debit note instead.', 0)
-		, (1221, 'Service Log cleared down.', 0)
-		, (1222, 'Task Change Log cleared down.', 0)
-		, (1223, 'Invoice Change Log cleared down.', 0)
-		, (1224, 'Raise corresponding invoices?', 0)
-		, (1225, 'Initialising <1>', 1)
 		;
 	END
 

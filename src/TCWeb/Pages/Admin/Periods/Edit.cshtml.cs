@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
@@ -81,10 +78,18 @@ namespace TradeControl.Web.Pages.Admin.Periods
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Periods")
+                    : "Periods";
+
                 App_tbYear.CashStatusCode = await NodeContext.Cash_tbStatuses
-                .Where(s => s.CashStatus == CashStatus)
-                .Select(s => s.CashStatusCode)
-                .FirstAsync();
+                    .Where(s => s.CashStatus == CashStatus)
+                    .Select(s => s.CashStatusCode)
+                    .FirstAsync();
 
                 App_tbYear.StartMonth = await NodeContext.App_tbMonths
                                 .Where(m => m.MonthName == MonthName)
@@ -105,7 +110,11 @@ namespace TradeControl.Web.Pages.Admin.Periods
                         throw;
                 }
 
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index",
+                    routeValues: new {
+                        embedded = embedded ? "1" : null,
+                        returnNode
+                    });
             }
             catch (Exception e)
             {

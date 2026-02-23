@@ -38,11 +38,23 @@ BEGIN TRY
 	IF NOT EXISTS (SELECT 1 FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration.html')
 		INSERT INTO Web.tbTemplate (TemplateFileName) VALUES ('user_registration.html');
 
+	IF NOT EXISTS (SELECT 1 FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration_confirm.html')
+		INSERT INTO Web.tbTemplate (TemplateFileName) VALUES ('user_registration_confirm.html');
+
+	IF NOT EXISTS (SELECT 1 FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration_admin_notify.html')
+		INSERT INTO Web.tbTemplate (TemplateFileName) VALUES ('user_registration_admin_notify.html');
+
 	DECLARE @SupportRequestTemplateId INT =
 		(SELECT TemplateId FROM Web.tbTemplate WHERE TemplateFileName = 'support_request.html');
 
 	DECLARE @UserRegistrationTemplateId INT =
 		(SELECT TemplateId FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration.html');
+
+    DECLARE @RegistrationConfirmTemplateId INT =
+		(SELECT TemplateId FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration_confirm.html');
+
+	DECLARE @RegstrationNotifyTemplateId INT =
+		(SELECT TemplateId FROM Web.tbTemplate WHERE TemplateFileName = 'user_registration_admin_notify.html');
 
 	INSERT INTO App.tbOptions
 	(
@@ -57,7 +69,9 @@ BEGIN TRY
 		IsAutoOffsetDays,
 		UnitOfCharge,
 		SupportRequestTemplateId,
-		UserRegistrationTemplateId
+		UserRegistrationTemplateId,
+        UserRegistrationConfirmTemplateId,
+        UserRegistrationAdminNotifyTemplateId
 	)
 	VALUES
 	(
@@ -72,7 +86,9 @@ BEGIN TRY
 		0,
 		@UnitOfCharge,
 		@SupportRequestTemplateId,
-		@UserRegistrationTemplateId
+		@UserRegistrationTemplateId,
+        @RegistrationConfirmTemplateId,
+        @RegstrationNotifyTemplateId
 	);
 
 	SET IDENTITY_INSERT [Usr].[tbMenu] ON;

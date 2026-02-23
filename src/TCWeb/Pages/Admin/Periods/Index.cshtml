@@ -2,97 +2,172 @@
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Admin.Periods.IndexModel
-@{ ViewData["Title"] = "Financial Periods"; }
+@{
+    ViewData["Title"] = "Financial Periods";
 
-<h1>@ViewData["Title"]</h1>
-<h2>@Model.ActivePeriod</h2>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Periods";
 
-<form method="post">
-    @{
-        if (User.IsInRole(Constants.AdministratorsRole))
-        {
-            <p>
-                <button type="submit" asp-page-handler="PeriodEnd" class="btn btn-outline-warning">Period End</button>
-                <a asp-page="./Create" class="btn btn-outline-primary">New Year</a>
-                <button type="submit" asp-page-handler="RebuildPeriods" class="btn btn-outline-success">Rebuild Periods</button>
-                <button type="submit" asp-page-handler="RebuildSystem" class="btn btn-outline-success">Rebuild System</button>
-            </p>
-        }
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
     }
-</form>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+    var openEventLogInNewTab = !Detection.Device.Type.Equals(Device.Mobile) && embedded;
+
+    var eventLogReturnUrl = backToManagerUrl;
+    var eventLogUrl = $"/Admin/EventLog/Index?returnUrl={Uri.EscapeDataString(eventLogReturnUrl)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    @if (!string.IsNullOrWhiteSpace(Model.FlashMessage))
+    {
+        <div class="alert @(Model.FlashOk ? "alert-success" : "alert-danger") py-2 mb-3" role="alert">
+            @Model.FlashMessage
+            <a class="alert-link ms-1"
+               href="@eventLogUrl"
+               target="@(openEventLogInNewTab ? "_top" : null)"
+               rel="@(openEventLogInNewTab ? "noopener" : null)">
+                Event Logs
+            </a>
+        </div>
+    }
+
+    <div class="text-muted small">Active period</div>
+    <div class="fw-semibold mb-2">@Model.ActivePeriod</div>
+
+    @if (User.IsInRole(Constants.AdministratorsRole))
+    {
+        <form method="post" class="mb-3" autocomplete="off">
+            @if (embedded)
             {
-                <th>
-                    @Html.DisplayNameFor(model => model.App_Years[0].YearNumber)
-                </th>
+                <input type="hidden" name="embedded" value="1" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
             }
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_Years[0].StartMonth)
-            </th>
-            @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
-            {
-                <th>
-                    @Html.DisplayNameFor(model => model.App_Years[0].CashStatus)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.App_Years[0].InsertedBy)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.App_Years[0].InsertedOn)
-                </th>
-            }
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.App_Years)
-        {
-            <tr>
-                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" asp-page-handler="PeriodEnd" class="btn btn-outline-warning">
+                    Period End
+                </button>
+
+                <a asp-page="./Create"
+                   asp-route-embedded="@(embedded ? "1" : null)"
+                   asp-route-returnNode="@returnNode"
+                   class="btn btn-outline-primary">
+                    New Year
+                </a>
+
+                <button type="submit" asp-page-handler="RebuildPeriods" class="btn btn-outline-success">
+                    Rebuild Periods
+                </button>
+
+                <button type="submit" asp-page-handler="RebuildSystem" class="btn btn-outline-success">
+                    Rebuild System
+                </button>
+
+                @if (!embedded)
                 {
-                    <td>
-                        @Html.DisplayFor(modelItem => item.YearNumber)
-                    </td>
-                }
-                <td>
-                    @Html.DisplayFor(modelItem => item.Description)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.StartMonth)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashStatus)
-                </td>
-                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
-                {
-                    <td>
-                        @Html.DisplayFor(modelItem => item.InsertedBy)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.InsertedOn)
-                    </td>
-                }
-                <td>
-                    <a asp-page="./Details" asp-route-yearNumber="@item.YearNumber" class="btn btn-info">
-                        <i class="bi bi-eye"></i>
+                    <a href="@backToManagerUrl"
+                       class="btn btn-outline-secondary"
+                       style="min-width: 7.5rem;">
+                        Back
                     </a>
-                    @{
-                        if (User.IsInRole(Constants.AdministratorsRole))
-                        {
-                            <a asp-page="./Edit" asp-route-yearNumber="@item.YearNumber" class="btn btn-secondary"><i class="bi bi-pencil"></i></a>
-                            <a asp-page="./Delete" asp-route-yearNumber="@item.YearNumber" class="btn btn-danger"><i class="bi bi-trash"></i></a>
-                        }
-                    }
-                </td>
+                }
+            </div>
+        </form>
+    }
+    else if (!embedded)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl"
+               class="btn btn-outline-secondary"
+               style="min-width: 7.5rem;">
+                Back
+            </a>
+        </div>
+    }
 
-            </tr>
-        }
-    </tbody>
-</table>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    @if (Detection.Device.Type != Device.Mobile)
+                    {
+                        <th>@Html.DisplayNameFor(model => model.App_Years[0].YearNumber)</th>
+                    }
+                    <th>@Html.DisplayNameFor(model => model.App_Years[0].Description)</th>
+                    <th>@Html.DisplayNameFor(model => model.App_Years[0].StartMonth)</th>
+                    @if (Detection.Device.Type != Device.Mobile)
+                    {
+                        <th>@Html.DisplayNameFor(model => model.App_Years[0].CashStatus)</th>
+                        <th>@Html.DisplayNameFor(model => model.App_Years[0].InsertedBy)</th>
+                        <th>@Html.DisplayNameFor(model => model.App_Years[0].InsertedOn)</th>
+                    }
+                    <th style="width:1%; white-space:nowrap;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.App_Years)
+                {
+                    <tr>
+                        @if (Detection.Device.Type != Device.Mobile)
+                        {
+                            <td>@Html.DisplayFor(modelItem => item.YearNumber)</td>
+                        }
+                        <td>@Html.DisplayFor(modelItem => item.Description)</td>
+                        <td>@Html.DisplayFor(modelItem => item.StartMonth)</td>
+                        <td>@Html.DisplayFor(modelItem => item.CashStatus)</td>
+                        @if (Detection.Device.Type != Device.Mobile)
+                        {
+                            <td>@Html.DisplayFor(modelItem => item.InsertedBy)</td>
+                            <td>@Html.DisplayFor(modelItem => item.InsertedOn)</td>
+                        }
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a asp-page="./Details"
+                                   asp-route-yearNumber="@item.YearNumber"
+                                   asp-route-embedded="@(embedded ? "1" : null)"
+                                   asp-route-returnNode="@returnNode"
+                                   class="btn btn-outline-primary"
+                                   title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+
+                                @if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <a asp-page="./Edit"
+                                       asp-route-yearNumber="@item.YearNumber"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-outline-secondary"
+                                       title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    <a asp-page="./Delete"
+                                       asp-route-yearNumber="@item.YearNumber"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       class="btn btn-outline-danger"
+                                       title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

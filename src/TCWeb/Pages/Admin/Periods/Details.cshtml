@@ -1,78 +1,90 @@
 @page
 @model TradeControl.Web.Pages.Admin.Periods.DetailsModel
-@{ ViewData["Title"] = "Financial Period"; }
-<h1>@ViewData["Title"]</h1>
+@{
+    ViewData["Title"] = "Financial Year";
 
-<div>
-    <h4>@Html.DisplayFor(model => model.App_Year.Description)</h4>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Year.YearNumber)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Year.YearNumber)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Year.StartMonth)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Year.StartMonth)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Year.CashStatus)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Year.CashStatus)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Year.InsertedBy)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Year.InsertedBy)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.App_Year.InsertedOn)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.App_Year.InsertedOn)
-        </dd>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Periods";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <div class="text-muted small">Year</div>
+            <div class="fw-semibold">@Html.DisplayFor(model => model.App_Year.Description)</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-page="./Index"
+               asp-route-embedded="@(embedded ? "1" : null)"
+               asp-route-returnNode="@returnNode"
+               class="btn btn-outline-secondary">
+                To List
+            </a>
+
+            @if (!embedded)
+            {
+                <a href="@backToManagerUrl"
+                   class="btn btn-outline-secondary"
+                   style="min-width: 7.5rem;">
+                    Back
+                </a>
+            }
+        </div>
+    </div>
+
+    <dl class="row mb-3">
+        <dt class="col-sm-3">Year Number</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_Year.YearNumber)</dd>
+
+        <dt class="col-sm-3">Start Month</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_Year.StartMonth)</dd>
+
+        <dt class="col-sm-3">Cash Status</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_Year.CashStatus)</dd>
+
+        <dt class="col-sm-3">Inserted By</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_Year.InsertedBy)</dd>
+
+        <dt class="col-sm-3">Inserted On</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(model => model.App_Year.InsertedOn)</dd>
     </dl>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>@Html.DisplayNameFor(model => model.App_YearPeriods[0].MonthName)</th>
+                    <th>@Html.DisplayNameFor(model => model.App_YearPeriods[0].CashStatus)</th>
+                    <th>@Html.DisplayNameFor(model => model.App_YearPeriods[0].StartOn)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.App_YearPeriods)
+                {
+                    <tr>
+                        <td>@Html.DisplayFor(modelItem => item.MonthName)</td>
+                        <td>@Html.DisplayFor(modelItem => item.CashStatus)</td>
+                        <td>@Html.DisplayFor(modelItem => item.StartOn)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
-<p>
-    <a asp-page="./Index" class="btn btn-info">To List</a>
-</p>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.App_YearPeriods[0].MonthName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_YearPeriods[0].CashStatus)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.App_YearPeriods[0].StartOn)
-            </th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.App_YearPeriods)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.MonthName)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashStatus)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.StartOn)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.CashStatus)
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>

@@ -1,45 +1,76 @@
 @page
 @model TradeControl.Web.Pages.Admin.Periods.CreateModel
-@{ ViewData["Title"] = "New Financial Year"; }
-<h1>@ViewData["Title"]</h1>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+@{
+    ViewData["Title"] = "New Financial Year";
 
-            <div class="mb-3">
-                <label asp-for="App_tbYear.YearNumber" class="control-label"></label>
-                <input asp-for="App_tbYear.YearNumber" class="form-control" />
-                <span asp-validation-for="App_tbYear.YearNumber" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbYear.Description" class="control-label"></label>
-                <input asp-for="App_tbYear.Description" class="form-control" />
-                <span asp-validation-for="App_tbYear.Description" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbYear.StartMonth" class="control-label"></label>
-                <p>
-                    <select asp-for="MonthName" asp-items="Model.MonthNames" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="App_tbYear.CashStatusCode" class="control-label"></label>
-                <p>
-                    <select asp-for="CashStatus" asp-items="Model.CashStatuses" class="form-control"></select>
-                </p>
-            </div>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "Periods";
 
-            <input type="hidden" asp-for="App_tbYear.CashStatusCode" />
-            <input type="hidden" asp-for="App_tbYear.StartMonth" />
-            <input type="hidden" asp-for="App_tbYear.InsertedBy" />
-            <input type="hidden" asp-for="App_tbYear.InsertedOn" />
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+}
 
-            <div class="mb-3">
-                <input type="submit" value="CREATE" class="btn btn-primary" />
-                <a asp-page="./Index" class="btn btn-info">To List</a>
-            </div>
-        </form>
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="row">
+        <div class="col-12 col-md-7 col-lg-5">
+            <form method="post" autocomplete="off">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbYear.YearNumber" class="form-label"></label>
+                    <input asp-for="App_tbYear.YearNumber" class="form-control" />
+                    <span asp-validation-for="App_tbYear.YearNumber" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbYear.Description" class="form-label"></label>
+                    <input asp-for="App_tbYear.Description" class="form-control" />
+                    <span asp-validation-for="App_tbYear.Description" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbYear.StartMonth" class="form-label"></label>
+                    <select asp-for="MonthName" asp-items="Model.MonthNames" class="form-select"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="App_tbYear.CashStatusCode" class="form-label"></label>
+                    <select asp-for="CashStatus" asp-items="Model.CashStatuses" class="form-select"></select>
+                </div>
+
+                <input type="hidden" asp-for="App_tbYear.CashStatusCode" />
+                <input type="hidden" asp-for="App_tbYear.StartMonth" />
+                <input type="hidden" asp-for="App_tbYear.InsertedBy" />
+                <input type="hidden" asp-for="App_tbYear.InsertedOn" />
+
+                @if (embedded)
+                {
+                    <input type="hidden" name="embedded" value="1" />
+                    <input type="hidden" name="returnNode" value="@returnNode" />
+                }
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">Create</button>
+
+                    <a asp-page="./Index"
+                       asp-route-embedded="@(embedded ? "1" : null)"
+                       asp-route-returnNode="@returnNode"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

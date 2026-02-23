@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -48,8 +47,10 @@ namespace TradeControl.Web.Pages.Admin.EventLog
         public static string TruncateMessage(string message, int maxWords = 25)
         {
             if (string.IsNullOrWhiteSpace(message)) return string.Empty;
-            var words = message.Split(' ');
+
+            var words = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (words.Length <= maxWords) return message;
+
             return string.Join(' ', words.Take(maxWords)) + " ...";
         }
     }

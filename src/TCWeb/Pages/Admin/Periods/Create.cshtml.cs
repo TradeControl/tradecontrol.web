@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
 using TradeControl.Web.Areas.Identity.Data;
@@ -57,8 +56,7 @@ namespace TradeControl.Web.Pages.Admin.Periods
                         yearDesc = string.Concat($"{yearNumber}-", $"{yearNumber + 1}".Substring(2));
                 }
 
-                App_tbYear = new App_tbYear()
-                {
+                App_tbYear = new App_tbYear() {
                     YearNumber = yearNumber,
                     Description = yearDesc,
                     StartMonth = startMonth,
@@ -96,6 +94,14 @@ namespace TradeControl.Web.Pages.Admin.Periods
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Periods")
+                    : "Periods";
+
                 App_tbYear.CashStatusCode = await NodeContext.Cash_tbStatuses
                                 .Where(s => s.CashStatus == CashStatus)
                                 .Select(s => s.CashStatusCode)
@@ -112,9 +118,19 @@ namespace TradeControl.Web.Pages.Admin.Periods
                 FinancialPeriods periods = new(NodeContext);
 
                 if (await periods.Generate())
-                    return RedirectToPage("./Index");
-                else
-                    return RedirectToPage("/Admin/EventLog/Index");
+                {
+                    return RedirectToPage("./Index",
+                        routeValues: new {
+                            embedded = embedded ? "1" : null,
+                            returnNode
+                        });
+                }
+
+                return RedirectToPage("/Admin/EventLog/Index",
+                    routeValues: new {
+                        embedded = embedded ? "1" : null,
+                        returnNode
+                    });
             }
             catch (Exception e)
             {

@@ -91,7 +91,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
                 var email = (Input.Email ?? string.Empty).Trim();
 
                 var nodeSettings = new NodeSettings(_nodeContext);
-                var isBootstrap = !nodeSettings.IsInitialised;
+                var isBootstrap = nodeSettings.IsFirstUse;
 
                 if (!isBootstrap)
                 {
@@ -112,59 +112,59 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
                 var user = new TradeControlWebUser { UserName = email, Email = email };
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
-                if (result.Succeeded)
+                if (!result.Succeeded)
                 {
-                    _logger.LogInformation("User created a new account with password.");
+                    foreach (var error in result.Errors)
+                        ModelState.AddModelError(string.Empty, error.Description);
 
-                    if (isBootstrap)
-                    {
-                        var setupAdminEmail = await _nodeContext.Usr_tbUsers
-                            .OrderBy(u => u.UserId)
-                            .Select(u => u.EmailAddress)
-                            .FirstOrDefaultAsync();
-
-                        if (!string.IsNullOrWhiteSpace(setupAdminEmail)
-                            && string.Equals(setupAdminEmail.Trim(), email, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var code0 = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                            await _userManager.ConfirmEmailAsync(user, code0);
-
-                            if (!await _userManager.IsInRoleAsync(user, Constants.AdministratorsRole))
-                                await _userManager.AddToRoleAsync(user, Constants.AdministratorsRole);
-
-                            return RedirectToPage("./Login", new { returnUrl });
-                        }
-                    }
-
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
-                        protocol: Request.Scheme);
-
-                    if (_emailSender is IdentityEmailSender tcSender)
-                    {
-                        await tcSender.SendRegistrationConfirmAsync(email, callbackUrl);
-                    }
-                    else
-                    {
-                        await _emailSender.SendEmailAsync(email, "Confirm your email",
-                            $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-                    }
-
-                    if (_userManager.Options.SignIn.RequireConfirmedAccount)
-                        return RedirectToPage("RegisterConfirmation", new { email = email, returnUrl = returnUrl });
-
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl);
+                    return Page();
                 }
 
-                foreach (var error in result.Errors)
-                    ModelState.AddModelError(string.Empty, error.Description);
+                _logger.LogInformation("User created a new account with password.");
 
-                return Page();
+                if (isBootstrap)
+                {
+                    var code0 = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    await _userManager.ConfirmEmailAsync(user, code0);
+
+                    var setupAdminEmail = await _nodeContext.Usr_tbUsers
+                        .OrderBy(u => u.UserId)
+                        .Select(u => u.EmailAddress)
+                        .FirstOrDefaultAsync();
+
+                    if (!string.IsNullOrWhiteSpace(setupAdminEmail)
+                        && string.Equals(setupAdminEmail.Trim(), email, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!await _userManager.IsInRoleAsync(user, Constants.AdministratorsRole))
+                            await _userManager.AddToRoleAsync(user, Constants.AdministratorsRole);
+                    }
+
+                    return RedirectToPage("./Login", new { returnUrl });
+                }
+
+                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                var callbackUrl = Url.Page(
+                    "/Account/ConfirmEmail",
+                    pageHandler: null,
+                    values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
+                    protocol: Request.Scheme);
+
+                if (_emailSender is IdentityEmailSender tcSender)
+                {
+                    await tcSender.SendRegistrationConfirmAsync(email, callbackUrl);
+                }
+                else
+                {
+                    await _emailSender.SendEmailAsync(email, "Confirm your email",
+                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                }
+
+                if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                    return RedirectToPage("RegisterConfirmation", new { email = email, returnUrl = returnUrl });
+
+                await _signInManager.SignInAsync(user, isPersistent: false);
+                return LocalRedirect(returnUrl);
             }
             catch (Exception e)
             {

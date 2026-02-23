@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
@@ -38,7 +34,7 @@ namespace TradeControl.Web.Pages.Admin.Periods
                     return NotFound();
 
                 App_tbYearPeriod = await NodeContext.App_tbYearPeriods.Where(p => p.YearNumber == yearNumber && p.MonthNumber == monthNumber).FirstOrDefaultAsync();
-                
+
                 if (App_tbYearPeriod == null)
                     return NotFound();
 
@@ -48,7 +44,7 @@ namespace TradeControl.Web.Pages.Admin.Periods
                 CashStatuses = new SelectList(await NodeContext.Cash_tbStatuses.OrderBy(s => s.CashStatusCode).Select(s => s.CashStatus).ToListAsync());
                 CashStatus = await NodeContext.Cash_tbStatuses
                                             .Where(s => s.CashStatusCode == App_tbYearPeriod.CashStatusCode)
-                                            .Select(s => s.CashStatus).FirstAsync();                                        
+                                            .Select(s => s.CashStatus).FirstAsync();
 
                 await SetViewData();
                 return Page();
@@ -86,10 +82,20 @@ namespace TradeControl.Web.Pages.Admin.Periods
                         throw;
                 }
 
-                RouteValueDictionary route = new();
-                route.Add("YearNumber", App_tbYearPeriod.YearNumber);
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
 
-                return RedirectToPage("./Edit", route);
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "Periods")
+                    : "Periods";
+
+                return RedirectToPage("./Edit",
+                    routeValues: new {
+                        YearNumber = App_tbYearPeriod.YearNumber,
+                        embedded = embedded ? "1" : null,
+                        returnNode
+                    });
             }
             catch (Exception e)
             {

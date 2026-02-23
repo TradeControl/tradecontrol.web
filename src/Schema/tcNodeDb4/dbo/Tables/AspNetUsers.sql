@@ -85,11 +85,6 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRY
 
-        IF UPDATE (EmailConfirmed)
-        BEGIN
-            EXEC App.proc_EventLog 'ASP.NET user email confirmation updated';
-        END
-
         IF UPDATE (PhoneNumber)
         BEGIN
             UPDATE Usr.tbUser
@@ -104,3 +99,4 @@ BEGIN
     END CATCH
 
 END
+GO

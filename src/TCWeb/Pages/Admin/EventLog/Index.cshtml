@@ -4,11 +4,29 @@
 @model TradeControl.Web.Pages.Admin.EventLog.IndexModel
 @{
     ViewData["Title"] = "Event Log";
+
+    var returnUrl = Request.Query.TryGetValue("returnUrl", out var ru) ? ru.ToString() : string.Empty;
+    var hasReturnUrl = !string.IsNullOrWhiteSpace(returnUrl);
+
+    var isMobile = Detection.Device.Type == Device.Mobile;
+    var messageWords = isMobile ? 2 : 25;
 }
 
 <h1>@ViewData["Title"]</h1>
 
+@if (hasReturnUrl)
+{
+    <div class="mb-2">
+        <a class="btn btn-outline-secondary" href="@returnUrl">Back</a>
+    </div>
+}
+
 <form method="get" class="row g-2 align-items-center mb-3">
+    @if (hasReturnUrl)
+    {
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+    }
+
     <div class="col-auto">
         <label for="EventTypeFilter" class="me-2">Event Type:</label>
         <select id="EventTypeFilter" name="EventTypeFilter" class="form-select me-3" onchange="this.form.submit()">
@@ -42,15 +60,18 @@
     <table class="table table-striped" style="max-width:1200px;">
         <thead>
             <tr>
-                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                @if (!isMobile)
                 {
                     <th style="min-width:120px;">@Html.DisplayNameFor(model => model.App_EventLog[0].LogCode)</th>
                 }
                 <th style="min-width:140px;">@Html.DisplayNameFor(model => model.App_EventLog[0].LoggedOn)</th>
                 <th style="min-width:120px;">@Html.DisplayNameFor(model => model.App_EventLog[0].EventType)</th>
-                @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+
+                @* Always show message (mobile uses 2-word truncation). *@
+                <th style="min-width:200px;">@Html.DisplayNameFor(model => model.App_EventLog[0].EventMessage)</th>
+
+                @if (!isMobile)
                 {
-                    <th style="min-width:200px;">@Html.DisplayNameFor(model => model.App_EventLog[0].EventMessage)</th>
                     <th style="min-width:120px;">@Html.DisplayNameFor(model => model.App_EventLog[0].InsertedBy)</th>
                 }
                 <th style="min-width:80px;"></th>
@@ -60,7 +81,7 @@
             @foreach (var item in Model.App_EventLog)
             {
                 <tr>
-                    @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+                    @if (!isMobile)
                     {
                         <td>@item.LogCode</td>
                     }
@@ -68,36 +89,31 @@
                     <td>
                         @if (item.EventTypeCode == (int)TradeControl.Web.Data.NodeEnum.EventType.IsError)
                         {
-                            <span title="@item.EventType">
-                                <i class="bi bi-exclamation-circle-fill text-danger"></i>
-                            </span>
+                            <span title="@item.EventType"><i class="bi bi-exclamation-circle-fill text-danger"></i></span>
                         }
                         else if (item.EventTypeCode == (int)TradeControl.Web.Data.NodeEnum.EventType.IsWarning)
                         {
-                            <span title="@item.EventType">
-                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-                            </span>
+                            <span title="@item.EventType"><i class="bi bi-exclamation-triangle-fill text-warning"></i></span>
                         }
                         else if (item.EventTypeCode == (int)TradeControl.Web.Data.NodeEnum.EventType.IsInformation)
                         {
-                            <span title="@item.EventType">
-                                <i class="bi bi-info-circle-fill text-info"></i>
-                            </span>
+                            <span title="@item.EventType"><i class="bi bi-info-circle-fill text-info"></i></span>
                         }
                         else
                         {
-                            <span title="@item.EventType">
-                                <i class="bi bi-question-circle-fill text-secondary"></i>
-                            </span>
+                            <span title="@item.EventType"><i class="bi bi-question-circle-fill text-secondary"></i></span>
                         }
                     </td>
-                    @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
+
+                    <td>
+                        @TradeControl.Web.Pages.Admin.EventLog.IndexModel.TruncateMessage(item.EventMessage, messageWords)
+                    </td>
+
+                    @if (!isMobile)
                     {
-                        <td>
-                            @TradeControl.Web.Pages.Admin.EventLog.IndexModel.TruncateMessage(item.EventMessage)
-                        </td>
                         <td>@item.InsertedBy</td>
                     }
+
                     <td>
                         <div class="d-flex gap-2">
                             <a asp-page="./Details"
@@ -105,18 +121,25 @@
                                asp-route-EventTypeFilter="@Model.SelectedEventType"
                                asp-route-PageNumber="@Model.PageNumber"
                                asp-route-PageSize="@Model.PageSize"
+                               asp-route-returnUrl="@(hasReturnUrl? returnUrl : null)"
                                class="btn btn-primary btn-sm" title="View Details">
                                 <i class="bi bi-eye"></i>
                             </a>
                             @if (User.IsInRole(Constants.AdministratorsRole))
                             {
-                                <a asp-page="./Delete" asp-route-logCode="@item.LogCode" class="btn btn-danger btn-sm" title="Delete Log">
+                                <a asp-page="./Delete"
+                                   asp-route-logCode="@item.LogCode"
+                                   asp-route-returnUrl="@(hasReturnUrl? returnUrl : null)"
+                                   class="btn btn-danger btn-sm" title="Delete Log">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             }
                             @if (item.EventTypeCode == (int)TradeControl.Web.Data.NodeEnum.EventType.IsError)
                             {
-                                <a asp-page="./Submit" asp-route-logCode="@item.LogCode" class="btn btn-warning btn-sm" title="Submit Error">
+                                <a asp-page="./Submit"
+                                   asp-route-logCode="@item.LogCode"
+                                   asp-route-returnUrl="@(hasReturnUrl? returnUrl : null)"
+                                   class="btn btn-warning btn-sm" title="Submit Error">
                                     <i class="bi bi-arrow-repeat"></i>
                                 </a>
                             }
@@ -127,12 +150,16 @@
         </tbody>
     </table>
 </div>
+
 <nav>
     <ul class="pagination">
         @for (int i = 1; i <= Model.TotalPages; i++)
         {
             <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                <a class="page-link" href="?PageNumber=@i&PageSize=@Model.PageSize&EventTypeFilter=@Model.SelectedEventType">@i</a>
+                <a class="page-link"
+                   href="?PageNumber=@i&PageSize=@Model.PageSize&EventTypeFilter=@Model.SelectedEventType@(hasReturnUrl ? $"&returnUrl={Uri.EscapeDataString(returnUrl)}" : "")">
+                    @i
+                </a>
             </li>
         }
     </ul>

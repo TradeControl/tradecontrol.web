@@ -87,14 +87,17 @@
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Host)">
                                         <i class="bi bi-envelope-at me-2" aria-hidden="true"></i>Mail Host
                                     </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Periods)">
+                                        <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Financial Periods
+                                    </button>
                                 </div>
 
                                 <hr class="my-3" />
 
                                 <div class="d-grid gap-2 mt-2">
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
-                                        <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Financial Periods
-                                    </button>
 
                                     <button type="button" class="btn btn-outline-secondary text-start" disabled>
                                         <i class="bi bi-hash me-2" aria-hidden="true"></i>Invoice Settings
@@ -176,6 +179,7 @@
         ManagerTreeHost.ManagerNode.Templates => $"{_companyName} / Templates",
         ManagerTreeHost.ManagerNode.TemplateInvoices => $"{_companyName} / Templates / Invoices",
         ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
+        ManagerTreeHost.ManagerNode.Periods => $"{_companyName} / Financial Periods",
         _ => _companyName
     };
 
@@ -246,6 +250,9 @@
 
                 ManagerTreeHost.ManagerNode.TemplateSystem =>
                     "/Admin/Template/System?embedded=1&returnNode=Templates",
+
+                ManagerTreeHost.ManagerNode.Periods =>
+                    "/Admin/Periods/Index?embedded=1&returnNode=Periods",
 
                 _ => null
             };
@@ -333,6 +340,9 @@
             if (node == ManagerTreeHost.ManagerNode.TemplateSystem)
                 NavigationManager.NavigateTo("/Admin/Template/System?returnNode=Templates", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.Periods)
+                NavigationManager.NavigateTo("/Admin/Periods/Index?returnNode=Periods", forceLoad: true);
+
             return Task.CompletedTask;
         }
 
@@ -350,6 +360,7 @@
             ManagerTreeHost.ManagerNode.Users => "/Admin/Users/Index?embedded=1&returnNode=Users",
             ManagerTreeHost.ManagerNode.TemplateInvoices => "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
             ManagerTreeHost.ManagerNode.TemplateSystem => "/Admin/Template/System?embedded=1&returnNode=Templates",
+            ManagerTreeHost.ManagerNode.Periods => "/Admin/Periods/Index?embedded=1&returnNode=Periods",
             _ => null
         };
 

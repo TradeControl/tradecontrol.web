@@ -293,7 +293,40 @@ html, body {
     line-height: 1.25rem;
 }
 
+@media (max-width: 991.98px) {
+    .tc-tree-workspace {
+        position: static;
+        left: auto;
+        right: auto;
+        top: auto;
+        height: auto;
+        overflow: visible;
+        z-index: auto;
+    }
 
+    .tc-tree-manager,
+    .tc-tree-manager-frame {
+        min-height: 0;
+    }
+
+        .tc-tree-manager-frame,
+        .tc-tree-manager-frame > div {
+            overflow: hidden;
+        }
+
+    .tc-tree-host {
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: calc(100dvh - var(--tc-footer-height, 0px));
+    }
+
+    header,
+    header .navbar,
+    header .navbar-collapse {
+        position: relative;
+        z-index: 3000;
+    }
+}
 
 
 

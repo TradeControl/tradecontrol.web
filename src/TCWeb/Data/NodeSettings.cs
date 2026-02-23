@@ -22,7 +22,10 @@ namespace TradeControl.Web.Data
             {
                 try
                 {
-                    return _context.App_tbOptions.First().IsInitialised;
+                    if (!_context.App_tbOptions.Any())
+                        return false;
+                    else
+                        return _context.App_tbOptions.First().IsInitialised;
                 }
                 catch (Exception e)
                 {
