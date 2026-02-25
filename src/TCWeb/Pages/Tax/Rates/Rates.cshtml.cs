@@ -8,13 +8,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 
-namespace TradeControl.Web.Pages.Tax.Company
+namespace TradeControl.Web.Pages.Tax.Rates
 {
     [Authorize(Roles = "Administrators")]
     public class RatesModel : DI_BasePageModel

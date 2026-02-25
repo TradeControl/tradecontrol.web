@@ -1,0 +1,142 @@
+@page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
+@using TradeControl.Web.Data
+@model TradeControl.Web.Pages.Tax.Rates.IndexModel
+
+@{
+    ViewData["Title"] = "Tax Rates & Adjustments";
+
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "TaxCompany";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="bg-white border rounded p-3">
+    @if (!embedded && Detection?.Device?.Type == Device.Mobile)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary" style="min-width: 7.5rem;">
+                Back
+            </a>
+        </div>
+    }
+
+    <form method="get" class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3" autocomplete="off">
+        @if (embedded)
+        {
+            <input type="hidden" name="embedded" value="1" />
+            <input type="hidden" name="returnNode" value="@returnNode" />
+        }
+
+        <div>
+            <label asp-for="YearNumber" class="form-label small text-muted mb-1">Financial Year</label>
+            <select asp-for="YearNumber"
+                    asp-items="Model.YearOptions"
+                    class="form-select"
+                    onchange="this.form.submit()">
+                <option value="">All years</option>
+            </select>
+        </div>
+
+        <noscript>
+            <button type="submit" class="btn btn-outline-secondary">Apply</button>
+        </noscript>
+    </form>
+
+    <div class="text-muted small mb-3">
+        Financial years and monthly periods. Colors indicate @nameof(NodeEnum.CashStatus.Forecast) / @nameof(NodeEnum.CashStatus.Current) / @nameof(NodeEnum.CashStatus.Closed) / @nameof(NodeEnum.CashStatus.Archived).
+    </div>
+
+    @if (Model.Years == null || Model.Years.Count == 0)
+    {
+        <div class="alert alert-light border mb-0" role="status">
+            No financial years found.
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-2">
+            @foreach (var year in Model.Years)
+            {
+                var isOpen = Model.YearNumber.HasValue && Model.YearNumber.Value == year.YearNumber;
+
+                <details class="border rounded bg-light" open="@isOpen">
+                    <summary class="px-3 py-2 d-flex align-items-center justify-content-between" style="cursor:pointer;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-semibold">@year.Description</span>
+                            <span class="text-muted">(@year.YearNumber)</span>
+                        </div>
+                        <span class="text-muted small">Toggle</span>
+                    </summary>
+
+                    <div class="p-3 bg-white border-top">
+                        @if (year.Periods == null || year.Periods.Count == 0)
+                        {
+                            <div class="text-muted">No periods found for this year.</div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var p in year.Periods)
+                                {
+                                    var badgeClass =
+                                    p.IsCurrent ? "text-bg-primary" :
+                                    p.IsFuture ? "text-bg-secondary" :
+                                    "text-bg-light";
+
+                                    var status = (NodeEnum.CashStatus)p.CashStatusCode;
+
+                                    var borderClass = status switch
+                                    {
+                                        NodeEnum.CashStatus.Archived => "border border-2 border-secondary",
+                                        NodeEnum.CashStatus.Closed => "border border-2 border-warning",
+                                        NodeEnum.CashStatus.Current => "border border-2 border-success",
+                                        NodeEnum.CashStatus.Forecast => "border border-2 border-info",
+                                        _ => "border"
+                                    };
+
+                                    <a class="text-decoration-none"
+                                       asp-page="./Period"
+                                       asp-route-startOn="@p.StartOn.ToString("O")"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       title="Open period">
+                                        <div class="px-2 py-1 rounded @borderClass" style="min-width: 11.5rem;">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <span class="fw-semibold">@p.StartOn.ToString("MMM yyyy")</span>
+                                                <span class="badge @badgeClass">@p.MonthNumber</span>
+                                            </div>
+                                            <div class="small text-muted">
+                                                CT rate: @p.CorporationTaxRate.ToString("P")
+                                            </div>
+                                            <div class="small text-muted">
+                                                VAT adj: @p.VatAdjustment
+                                                &nbsp;|&nbsp; CT adj: @p.TaxAdjustment
+                                            </div>
+                                        </div>
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                </details>
+            }
+        </div>
+    }
+</div>

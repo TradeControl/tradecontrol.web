@@ -1404,115 +1404,6 @@ namespace TradeControl.Web.Data
                 return sourceDate;
             }
         }
-
-        public async Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, double taxAdjustment)
-        {
-            try
-            {
-                var _startOn = new SqlParameter()
-                {
-                    ParameterName = "@StartOn",
-                    SqlDbType = System.Data.SqlDbType.DateTime,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Value = startOn
-                };
-
-                var _taxTypeCode = new SqlParameter()
-                {
-                    ParameterName = "@TaxTypeCode",
-                    SqlDbType = System.Data.SqlDbType.SmallInt,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Value = (short)taxType
-                };
-
-                var _taxAdjustment = new SqlParameter()
-                {
-                    ParameterName = "@TaxAdjustment",
-                    SqlDbType = System.Data.SqlDbType.Decimal,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Value = taxAdjustment
-                };
-
-                using (SqlConnection _connection = new(Database.GetConnectionString()))
-                {
-                    _connection.Open();
-                    using (SqlCommand _command = _connection.CreateCommand())
-                    {
-                        _command.CommandText = "Cash.proc_TaxAdjustment";
-                        _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_startOn);
-                        _command.Parameters.Add(_taxTypeCode);
-                        _command.Parameters.Add(_taxAdjustment);
-
-                        await _command.ExecuteNonQueryAsync();
-                    }
-                    _connection.Close();
-                }
-
-                return true;
-
-            }
-            catch (Exception e)
-            {
-                await ErrorLog(e);
-                return false;
-            }
-        }
-
-        public async Task<bool> TaxRate(DateTime startOn, DateTime endOn, float taxRate)
-        {
-            try
-            {
-                var _startOn = new SqlParameter()
-                {
-                    ParameterName = "@StartOn",
-                    SqlDbType = System.Data.SqlDbType.DateTime,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Value = startOn
-                };
-
-                var _endOn = new SqlParameter()
-                {
-                    ParameterName = "@EndOn",
-                    SqlDbType = System.Data.SqlDbType.DateTime,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Value = endOn
-                };
-
-                var _taxRate = new SqlParameter()
-                {
-                    ParameterName = "@CorporationTaxRate",
-                    SqlDbType = System.Data.SqlDbType.Real,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Value = taxRate
-                };
-
-                using (SqlConnection _connection = new(Database.GetConnectionString()))
-                {
-                    _connection.Open();
-                    using (SqlCommand _command = _connection.CreateCommand())
-                    {
-                        _command.CommandText = "App.proc_TaxRates";
-                        _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_startOn);
-                        _command.Parameters.Add(_endOn);
-                        _command.Parameters.Add(_taxRate);
-
-                        await _command.ExecuteNonQueryAsync();
-                    }
-                    _connection.Close();
-                }
-
-                return true;
-
-            }
-            catch (Exception e)
-            {
-                await ErrorLog(e);
-                return false;
-            }
-        }
-
         #endregion
 
         #region Tasks
@@ -2603,6 +2494,206 @@ namespace TradeControl.Web.Data
             {
                 await ErrorLog(e);
                 return string.Empty;
+            }
+        }
+        #endregion
+
+        #region Tax
+        public async Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, double taxAdjustment)
+        {
+            try
+            {
+                var _startOn = new SqlParameter() {
+                    ParameterName = "@StartOn",
+                    SqlDbType = System.Data.SqlDbType.DateTime,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Value = startOn
+                };
+
+                var _taxTypeCode = new SqlParameter() {
+                    ParameterName = "@TaxTypeCode",
+                    SqlDbType = System.Data.SqlDbType.SmallInt,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Value = (short)taxType
+                };
+
+                var _taxAdjustment = new SqlParameter() {
+                    ParameterName = "@TaxAdjustment",
+                    SqlDbType = System.Data.SqlDbType.Decimal,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Value = taxAdjustment
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Cash.proc_TaxAdjustment";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_startOn);
+                        _command.Parameters.Add(_taxTypeCode);
+                        _command.Parameters.Add(_taxAdjustment);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return true;
+
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<bool> TaxRate(DateTime startOn, DateTime endOn, float taxRate)
+        {
+            try
+            {
+                var _startOn = new SqlParameter() {
+                    ParameterName = "@StartOn",
+                    SqlDbType = System.Data.SqlDbType.DateTime,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Value = startOn
+                };
+
+                var _endOn = new SqlParameter() {
+                    ParameterName = "@EndOn",
+                    SqlDbType = System.Data.SqlDbType.DateTime,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Value = endOn
+                };
+
+                var _taxRate = new SqlParameter() {
+                    ParameterName = "@CorporationTaxRate",
+                    SqlDbType = System.Data.SqlDbType.Real,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Value = taxRate
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "App.proc_TaxRates";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_startOn);
+                        _command.Parameters.Add(_endOn);
+                        _command.Parameters.Add(_taxRate);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return true;
+
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<string> TaxCodeDefault(string taxDescription)
+        {
+            try
+            {
+                taxDescription ??= string.Empty;
+
+                var _taxDescription = new SqlParameter() {
+                    ParameterName = "@TaxDescription",
+                    SqlDbType = System.Data.SqlDbType.NVarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 100,
+                    Value = taxDescription
+                };
+
+                var _taxCode = new SqlParameter() {
+                    ParameterName = "@TaxCode",
+                    SqlDbType = System.Data.SqlDbType.NVarChar,
+                    Direction = System.Data.ParameterDirection.Output,
+                    Size = 10
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "App.proc_DefaultTaxCode";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_taxDescription);
+                        _command.Parameters.Add(_taxCode);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return _taxCode.Value == DBNull.Value ? string.Empty : (string)_taxCode.Value;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return string.Empty;
+            }
+        }
+
+        public async Task<decimal> TaxAdjustmentGet(DateTime startOn, NodeEnum.TaxType taxType)
+        {
+            try
+            {
+                var _startOn = new SqlParameter() {
+                    ParameterName = "@StartOn",
+                    SqlDbType = SqlDbType.DateTime,
+                    Direction = ParameterDirection.Input,
+                    Value = startOn
+                };
+
+                var _taxTypeCode = new SqlParameter() {
+                    ParameterName = "@TaxTypeCode",
+                    SqlDbType = SqlDbType.SmallInt,
+                    Direction = ParameterDirection.Input,
+                    Value = (short)taxType
+                };
+
+                var _taxAdjustment = new SqlParameter() {
+                    ParameterName = "@TaxAdjustment",
+                    SqlDbType = SqlDbType.Decimal,
+                    Direction = ParameterDirection.Output,
+                    Precision = 18,
+                    Scale = 5
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Cash.proc_TaxAdjustmentGet";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_startOn);
+                        _command.Parameters.Add(_taxTypeCode);
+                        _command.Parameters.Add(_taxAdjustment);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+
+                return _taxAdjustment.Value == DBNull.Value ? 0m : (decimal)_taxAdjustment.Value;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return 0m;
             }
         }
         #endregion

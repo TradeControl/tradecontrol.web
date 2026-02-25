@@ -152,6 +152,22 @@ html, body {
     color: #0d6efd; /* Bootstrap primary blue */
 }
 
+.tc-admin-manager-tree i.bi-calendar3 {
+    color: #0d6efd;
+}
+
+.tc-admin-manager-tree i.bi-sliders {
+    color: #20c997;
+}
+
+.tc-admin-manager-tree i.bi-receipt {
+    color: #6f42c1;
+}
+
+.tc-admin-manager-tree i.bi-bank {
+    color: #198754;
+}
+
 .tc-tree-label {
     display: inline-block;
     padding: 0.06rem 0.25rem;

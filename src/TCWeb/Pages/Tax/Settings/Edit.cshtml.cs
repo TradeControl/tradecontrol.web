@@ -1,17 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
@@ -44,7 +38,6 @@ namespace TradeControl.Web.Pages.Tax.Settings
         [Display(Name = "Account")]
         public string SubjectName { get; set; }
         public SelectList SubjectNames { get; set; }
-
 
         public async Task<IActionResult> OnGetAsync(short? taxTypeCode)
         {
@@ -90,6 +83,14 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 if (!ModelState.IsValid)
                     return Page();
 
+                var embedded = Request?.Form.ContainsKey("embedded") == true
+                    && (string.Equals(Request.Form["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(Request.Form["embedded"], "true", StringComparison.OrdinalIgnoreCase));
+
+                var returnNode = Request?.Form.ContainsKey("returnNode") == true
+                    ? (Request.Form["returnNode"].ToString() ?? "TaxSettings")
+                    : "TaxSettings";
+
                 Cash_tbTaxType.CashCode = await NodeContext.Cash_tbCodes.Where(t => t.CashDescription == CashDescription).Select(t => t.CashCode).FirstAsync();
                 Cash_tbTaxType.MonthNumber = await NodeContext.App_tbMonths.Where(t => t.MonthName == MonthName).Select(t => t.MonthNumber).FirstAsync();
                 Cash_tbTaxType.RecurrenceCode = await NodeContext.App_tbRecurrences.Where(t => t.Recurrence == Recurrence).Select(t => t.RecurrenceCode).FirstAsync();
@@ -105,12 +106,14 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 {
                     if (!await NodeContext.Cash_tbTaxTypes.AnyAsync(e => e.TaxTypeCode == Cash_tbTaxType.TaxTypeCode))
                         return NotFound();
-                    else
-                        throw;
-
+                    throw;
                 }
 
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index",
+                    routeValues: new {
+                        embedded = embedded ? "1" : null,
+                        returnNode
+                    });
             }
             catch (Exception e)
             {
@@ -118,6 +121,5 @@ namespace TradeControl.Web.Pages.Tax.Settings
                 throw;
             }
         }
-
     }
 }

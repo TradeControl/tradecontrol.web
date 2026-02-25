@@ -5,110 +5,91 @@
 
 @{
     ViewData["Title"] = "Tax Settings";
-    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "TaxSettings";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
 }
 
-<h1>@ViewData["Title"]</h1>
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
 
-@{
-    if (User.IsInRole(Constants.AdministratorsRole))
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    @if (!embedded && Detection.Device.Type == Device.Mobile)
     {
-        <div class="row">
-            <div class="col-md-4">
-                <form method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    <div class="mb-3">
-                        <label asp-for="NetProfitCode" class="control-label"></label>
-                        <p>
-                            <select asp-for="NetProfitCode" asp-items="Model.Categories" class="form-control"></select>
-                        </p>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="VatCategoryCode" class="control-label"></label>
-                        <p>
-                            <select asp-for="VatCategoryCode" asp-items="Model.Categories" class="form-control"></select>
-                        </p>
-                    </div>
-                    <div class="mb-3">
-                        <input type="submit" value="UPDATE" class="btn btn-primary" />
-                    </div>
-                </form>
-            </div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary">Back</a>
         </div>
     }
-}
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.App_TaxTypes[0].TaxType)
-            </th>
-            @if (Detection?.Device?.Type != Device.Mobile)
-            {
-                <th>
-                    @Html.DisplayNameFor(model => model.App_TaxTypes[0].CashDescription)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.App_TaxTypes[0].MonthName)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.App_TaxTypes[0].Recurrence)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.App_TaxTypes[0].SubjectName)
-                </th>
-                <th>
-                    @Html.DisplayNameFor(model => model.App_TaxTypes[0].OffsetDays)
-                </th>
-            }
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.App_TaxTypes)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.TaxType)
-                </td>
-                @if (Detection?.Device?.Type != Device.Mobile)
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>@Html.DisplayNameFor(model => model.App_TaxTypes[0].TaxType)</th>
+                    @if (Detection?.Device?.Type != Device.Mobile)
+                    {
+                        <th>@Html.DisplayNameFor(model => model.App_TaxTypes[0].CashDescription)</th>
+                        <th>@Html.DisplayNameFor(model => model.App_TaxTypes[0].MonthName)</th>
+                        <th>@Html.DisplayNameFor(model => model.App_TaxTypes[0].Recurrence)</th>
+                        <th>@Html.DisplayNameFor(model => model.App_TaxTypes[0].SubjectName)</th>
+                        <th>@Html.DisplayNameFor(model => model.App_TaxTypes[0].OffsetDays)</th>
+                    }
+                    <th style="width:1%; white-space:nowrap;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.App_TaxTypes)
                 {
-                    <td>
-                        @Html.DisplayFor(modelItem => item.CashDescription)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.MonthName)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.Recurrence)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.SubjectName)
-                    </td>
-                    <td>
-                        @Html.DisplayFor(modelItem => item.OffsetDays)
-                    </td>
-                }
-                <td>
-                    <div class="action-buttons">
-                        <a class="btn btn-info" asp-page="./Details" asp-route-taxTypeCode="@item.TaxTypeCode" title="Details">
-                            <i class="bi bi-info-circle" aria-hidden="true"></i>
-                            <span class="visually-hidden">Details</span>
-                        </a>
-                        @{
-                            if (User.IsInRole(Constants.AdministratorsRole))
-                            {
-                                <a asp-page="./Edit" asp-route-taxTypeCode="@item.TaxTypeCode" class="btn btn-secondary" title="Edit">
-                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                    <span class="visually-hidden">Edit</span>
-                                </a>
-                            }
+                    <tr>
+                        <td>@Html.DisplayFor(modelItem => item.TaxType)</td>
+                        @if (Detection?.Device?.Type != Device.Mobile)
+                        {
+                            <td>@Html.DisplayFor(modelItem => item.CashDescription)</td>
+                            <td>@Html.DisplayFor(modelItem => item.MonthName)</td>
+                            <td>@Html.DisplayFor(modelItem => item.Recurrence)</td>
+                            <td>@Html.DisplayFor(modelItem => item.SubjectName)</td>
+                            <td>@Html.DisplayFor(modelItem => item.OffsetDays)</td>
                         }
-                    </div>
-                </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a class="btn btn-outline-primary"
+                                   asp-page="./Details"
+                                   asp-route-taxTypeCode="@item.TaxTypeCode"
+                                   asp-route-embedded="@(embedded ? "1" : null)"
+                                   asp-route-returnNode="@returnNode"
+                                   title="Details">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                </a>
 
-            </tr>
-        }
-    </tbody>
-</table>
+                                @if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <a class="btn btn-outline-secondary"
+                                       asp-page="./Edit"
+                                       asp-route-taxTypeCode="@item.TaxTypeCode"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       title="Edit">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

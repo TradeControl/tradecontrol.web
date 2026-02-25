@@ -5,93 +5,133 @@
 
 @{
     ViewData["Title"] = "Tax Codes";
-    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "TaxCode";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
 }
 
-<h1>@ViewData["Title"]</h1>
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
 
-<div class="row g-2 mb-3">
-    <div class="col-12 col-sm-3 d-flex">
-        <a asp-page="Create" asp-route-taxType="@Model.TaxType"
-           class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
-           title="Create New Tax Code">
-            <span class="text-truncate">New Tax Code</span>
+<div class="bg-white border rounded p-3">
+    @if (!embedded && Detection.Device.Type == Device.Mobile)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary" style="min-width: 7.5rem;">
+                Back
+            </a>
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <form method="get" autocomplete="off" class="d-flex flex-wrap align-items-center gap-2">
+            @if (embedded)
+            {
+                <input type="hidden" name="embedded" value="1" />
+                <input type="hidden" name="returnNode" value="@returnNode" />
+            }
+
+            <div class="d-flex flex-column">
+                <label class="form-label small text-muted mb-1" asp-for="TaxType"></label>
+                <select asp-for="TaxType"
+                        asp-items="Model.TaxTypes"
+                        class="form-select"
+                        onchange="this.form.submit()">
+                    <option value="">All</option>
+                </select>
+            </div>
+        </form>
+
+        <a asp-page="Create"
+           asp-route-taxType="@Model.TaxType"
+           asp-route-embedded="@(embedded ? "1" : null)"
+           asp-route-returnNode="@returnNode"
+           class="btn btn-outline-primary">
+            New Tax Code
         </a>
     </div>
+
+    @if (Model.App_TaxCodes == null || Model.App_TaxCodes.Count == 0)
+    {
+        <div class="alert alert-light border mb-0" role="status">
+            No tax codes found.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxDescription)</th>
+                        @if (Detection?.Device?.Type != Device.Mobile)
+                        {
+                            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxCode)</th>
+                            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxType)</th>
+                            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].Rounding)</th>
+                            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].UpdatedBy)</th>
+                            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].UpdatedOn)</th>
+                        }
+                        <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxRate)</th>
+                        <th style="width:1%; white-space:nowrap;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.App_TaxCodes)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@Html.DisplayFor(modelItem => item.TaxDescription)</td>
+
+                            @if (Detection?.Device?.Type != Device.Mobile)
+                            {
+                                <td class="text-muted">@Html.DisplayFor(modelItem => item.TaxCode)</td>
+                                <td>@Html.DisplayFor(modelItem => item.TaxType)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Rounding)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UpdatedBy)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UpdatedOn)</td>
+                            }
+
+                            <td>@Html.DisplayFor(modelItem => item.TaxRate)</td>
+
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a class="btn btn-outline-secondary"
+                                       asp-page="./Edit"
+                                       asp-route-taxCode="@item.TaxCode"
+                                       asp-route-taxType="@Model.TaxType"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       title="Edit tax code">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </a>
+                                    <a class="btn btn-outline-danger"
+                                       asp-page="./Delete"
+                                       asp-route-taxCode="@item.TaxCode"
+                                       asp-route-taxType="@Model.TaxType"
+                                       asp-route-embedded="@(embedded ? "1" : null)"
+                                       asp-route-returnNode="@returnNode"
+                                       title="Delete tax code">
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
-
-<form class="mb-3" method="get">
-    <div class="row g-2 align-items-center">
-        <div class="col-auto">
-            <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-control">
-                <option value="">All</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <label class="visually-hidden" for="SearchString">Description</label>
-            <input type="text" asp-for="SearchString" id="SearchString" class="form-control" placeholder="Description" />
-        </div>
-        <div class="col-auto">
-            <input type="submit" value="Filter" class="btn btn-primary" />
-        </div>
-    </div>
-</form>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            @if (Detection?.Device?.Type != Device.Mobile)
-            {
-                <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxCode)</th>
-            }
-            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxDescription)</th>
-            @if (Detection?.Device?.Type != Device.Mobile)
-            {
-                <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxType)</th>
-            }
-            <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].TaxRate)</th>
-            @if (Detection?.Device?.Type != Device.Mobile)
-            {
-                <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].Rounding)</th>
-                <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].UpdatedBy)</th>
-                <th>@Html.DisplayNameFor(model => model.App_TaxCodes[0].UpdatedOn)</th>
-            }
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.App_TaxCodes)
-        {
-            <tr>
-                @if (Detection?.Device?.Type != Device.Mobile)
-                {
-                    <td>@Html.DisplayFor(modelItem => item.TaxCode)</td>
-                }
-                <td>@Html.DisplayFor(modelItem => item.TaxDescription)</td>
-                @if (Detection?.Device?.Type != Device.Mobile)
-                {
-                    <td>@Html.DisplayFor(modelItem => item.TaxType)</td>
-                }
-                <td>@Html.DisplayFor(modelItem => item.TaxRate)</td>
-                @if (Detection?.Device?.Type != Device.Mobile)
-                {
-                    <td>@Html.DisplayFor(modelItem => item.Rounding)</td>
-                    <td>@Html.DisplayFor(modelItem => item.UpdatedBy)</td>
-                    <td>@Html.DisplayFor(modelItem => item.UpdatedOn)</td>
-                }
-                <td>
-                    <div class="action-buttons">
-                        <a class="btn btn-secondary" asp-page="./Edit" asp-route-taxCode="@item.TaxCode" title="Edit tax code">
-                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                            <span class="visually-hidden">Edit</span>
-                        </a>
-                        <a class="btn btn-danger" asp-page="./Delete" asp-route-taxCode="@item.TaxCode" title="Delete tax code">
-                            <i class="bi bi-trash" aria-hidden="true"></i>
-                            <span class="visually-hidden">Delete</span>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>

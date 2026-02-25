@@ -651,11 +651,20 @@
     <Build Include="tbCategoryExp.Trigger.sql" />
     <Build Include="Web\Tables\tbTemplateStatus.sql" />
     <Build Include="Usr\Stored Procedures\proc_DefaultUserId.sql" />
+    <Build Include="App\Stored Procedures\proc_DefaultCodeGenerator.sql" />
+    <Build Include="App\Stored Procedures\proc_DefaultTaxCode.sql" />
+    <Build Include="Cash\Stored Procedures\proc_TaxAdjustmentGet.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\DB3-DB4 migration script.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">
+      <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
+      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
+    </ArtifactReference>
   </ItemGroup>
 </Project>

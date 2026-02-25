@@ -29,18 +29,6 @@
         </a>
     </div>
 
-    @if (User.IsInRole(Constants.AdministratorsRole))
-    {
-        <div class="col-12 col-sm-3 d-flex">
-            <a asp-page="/Tax/TaxCode/Index" asp-route-taxTypeCode="1"
-               class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
-               title="Tax rates">
-                <i class="bi bi-percent me-1" aria-hidden="true"></i>
-                <span class="text-truncate">Tax Rates</span>
-            </a>
-        </div>
-    }
-
     <div class="col-12 col-sm-3 d-flex">
         <form method="get" class="w-100 d-flex align-items-center justify-content-center">
             <!-- reset to first page when changing page size -->

@@ -93,26 +93,31 @@
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Periods)">
                                         <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Financial Periods
                                     </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxSettings)">
+                                        <i class="bi bi-sliders me-2" aria-hidden="true"></i>Tax Settings
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxCode)">
+                                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>Tax Codes
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxCompany)">
+                                        <i class="bi bi-bank me-2" aria-hidden="true"></i>Tax Rates &amp; Adjustments
+                                    </button>
                                 </div>
 
                                 <hr class="my-3" />
 
                                 <div class="d-grid gap-2 mt-2">
-
                                     <button type="button" class="btn btn-outline-secondary text-start" disabled>
                                         <i class="bi bi-hash me-2" aria-hidden="true"></i>Invoice Settings
-                                    </button>
-
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
-                                        <i class="bi bi-sliders me-2" aria-hidden="true"></i>Tax Settings
-                                    </button>
-
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
-                                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>VAT Codes
-                                    </button>
-
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
-                                        <i class="bi bi-bank me-2" aria-hidden="true"></i>Corporation Tax
                                     </button>
 
                                     <button type="button" class="btn btn-outline-secondary text-start" disabled>
@@ -180,6 +185,9 @@
         ManagerTreeHost.ManagerNode.TemplateInvoices => $"{_companyName} / Templates / Invoices",
         ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
         ManagerTreeHost.ManagerNode.Periods => $"{_companyName} / Financial Periods",
+        ManagerTreeHost.ManagerNode.TaxSettings => $"{_companyName} / Tax Settings",
+        ManagerTreeHost.ManagerNode.TaxCode => $"{_companyName} / Tax Codes",
+        ManagerTreeHost.ManagerNode.TaxCompany => $"{_companyName} / Tax Rates & Adjustments",
         _ => _companyName
     };
 
@@ -253,6 +261,15 @@
 
                 ManagerTreeHost.ManagerNode.Periods =>
                     "/Admin/Periods/Index?embedded=1&returnNode=Periods",
+
+                ManagerTreeHost.ManagerNode.TaxSettings =>
+                    "/Tax/Settings/Index?embedded=1&returnNode=TaxSettings",
+
+                ManagerTreeHost.ManagerNode.TaxCode =>
+                    "/Tax/TaxCode/Index?embedded=1&returnNode=TaxCode",
+
+                ManagerTreeHost.ManagerNode.TaxCompany =>
+                    "/Tax/Rates/Index?embedded=1&returnNode=TaxCompany",
 
                 _ => null
             };
@@ -343,6 +360,15 @@
             if (node == ManagerTreeHost.ManagerNode.Periods)
                 NavigationManager.NavigateTo("/Admin/Periods/Index?returnNode=Periods", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.TaxSettings)
+                NavigationManager.NavigateTo("/Tax/Settings/Index?returnNode=TaxSettings", forceLoad: true);
+
+            if (node == ManagerTreeHost.ManagerNode.TaxCode)
+                NavigationManager.NavigateTo("/Tax/TaxCode/Index?returnNode=TaxCode", forceLoad: true);
+
+            if (node == ManagerTreeHost.ManagerNode.TaxCompany)
+                NavigationManager.NavigateTo("/Tax/Rates/Index?returnNode=TaxCompany", forceLoad: true);
+
             return Task.CompletedTask;
         }
 
@@ -361,6 +387,9 @@
             ManagerTreeHost.ManagerNode.TemplateInvoices => "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
             ManagerTreeHost.ManagerNode.TemplateSystem => "/Admin/Template/System?embedded=1&returnNode=Templates",
             ManagerTreeHost.ManagerNode.Periods => "/Admin/Periods/Index?embedded=1&returnNode=Periods",
+            ManagerTreeHost.ManagerNode.TaxSettings => "/Tax/Settings/Index?embedded=1&returnNode=TaxSettings",
+            ManagerTreeHost.ManagerNode.TaxCode => "/Tax/TaxCode/Index?embedded=1&returnNode=TaxCode",
+            ManagerTreeHost.ManagerNode.TaxCompany => "/Tax/Rates/Index?embedded=1&returnNode=TaxCompany",
             _ => null
         };
 

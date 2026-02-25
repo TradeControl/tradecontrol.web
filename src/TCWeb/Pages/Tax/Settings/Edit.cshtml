@@ -1,55 +1,80 @@
 @page
 @model TradeControl.Web.Pages.Tax.Settings.EditModel
-@{ ViewData["Title"] = "Edit Tax Type"; }
-<h1>@ViewData["Title"]</h1>
-<hr />
-<h4>@Html.DisplayFor(model => model.Cash_tbTaxType.TaxType)</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="mb-3">
-                <label asp-for="CashDescription" class="control-label"></label>
-                <p>
-                    <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Cash_tbTaxType.RecurrenceCode" class="control-label"></label>
-                <p>
-                    <select asp-for="Recurrence" asp-items="Model.Recurrences" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="MonthName" class="control-label"></label>
-                <p>
-                    <select asp-for="MonthName" asp-items="Model.MonthNames" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="SubjectName" class="control-label"></label>
-                <p>
-                    <select asp-for="SubjectName" asp-items="Model.SubjectNames" class="form-control"></select>
-                </p>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Cash_tbTaxType.OffsetDays" class="control-label"></label>
-                <input asp-for="Cash_tbTaxType.OffsetDays" class="form-control" />
-                <span asp-validation-for="Cash_tbTaxType.OffsetDays" class="text-danger"></span>
-            </div>
+@{
+    ViewData["Title"] = "Edit Tax Type";
 
-            <input type="hidden" asp-for="Cash_tbTaxType.CashCode" />
-            <input type="hidden" asp-for="Cash_tbTaxType.RecurrenceCode" />
-            <input type="hidden" asp-for="Cash_tbTaxType.MonthNumber" />
-            <input type="hidden" asp-for="Cash_tbTaxType.SubjectCode" />
-            <input type="hidden" asp-for="Cash_tbTaxType.TaxTypeCode" />
-            <input type="hidden" asp-for="Cash_tbTaxType.TaxType" />
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "TaxSettings";
 
-            <div class="mb-3">
-                <input type="submit" value="UPDATE" class="btn btn-primary" />
-                <a asp-page="./Index" class="btn btn-info">To List</a>
-            </div>
-        </form>
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToIndexUrl = $"/Tax/Settings/Index?{(embedded ? "embedded=1&" : "")}returnNode={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="@(embedded ? "bg-white border rounded p-3" : "")">
+    <div class="fw-semibold mb-3">@Html.DisplayFor(model => model.Cash_tbTaxType.TaxType)</div>
+
+    <div class="row">
+        <div class="col-12 col-md-6 col-lg-5">
+            <form method="post" autocomplete="off">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="CashDescription" class="form-label"></label>
+                    <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-select"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Recurrence" class="form-label"></label>
+                    <select asp-for="Recurrence" asp-items="Model.Recurrences" class="form-select"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="MonthName" class="form-label"></label>
+                    <select asp-for="MonthName" asp-items="Model.MonthNames" class="form-select"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="SubjectName" class="form-label"></label>
+                    <select asp-for="SubjectName" asp-items="Model.SubjectNames" class="form-select"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Cash_tbTaxType.OffsetDays" class="form-label"></label>
+                    <input asp-for="Cash_tbTaxType.OffsetDays" class="form-control" />
+                    <span asp-validation-for="Cash_tbTaxType.OffsetDays" class="text-danger"></span>
+                </div>
+
+                <input type="hidden" asp-for="Cash_tbTaxType.CashCode" />
+                <input type="hidden" asp-for="Cash_tbTaxType.RecurrenceCode" />
+                <input type="hidden" asp-for="Cash_tbTaxType.MonthNumber" />
+                <input type="hidden" asp-for="Cash_tbTaxType.SubjectCode" />
+                <input type="hidden" asp-for="Cash_tbTaxType.TaxTypeCode" />
+                <input type="hidden" asp-for="Cash_tbTaxType.TaxType" />
+
+                @if (embedded)
+                {
+                    <input type="hidden" name="embedded" value="1" />
+                    <input type="hidden" name="returnNode" value="@returnNode" />
+                }
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <a href="@backToIndexUrl" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>

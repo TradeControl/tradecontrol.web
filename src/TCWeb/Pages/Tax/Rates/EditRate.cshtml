@@ -1,0 +1,75 @@
+@page
+@model TradeControl.Web.Pages.Tax.Rates.EditRateModel
+
+@{
+    ViewData["Title"] = "Set Corporation Tax Rate";
+
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "TaxCompany";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToIndexUrl = $"/Tax/Rates/Index?{(embedded ? "embedded=1&" : "")}returnNode={Uri.EscapeDataString(returnNode)}"
+        + (Model.YearNumber.HasValue ? $"&yearNumber={Model.YearNumber.Value}" : "");
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="bg-white border rounded p-3">
+    <div class="text-muted small mb-3">
+        Applies the corporation tax rate to all months with a start date within the selected range.
+    </div>
+
+    <form method="post" autocomplete="off">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <input type="hidden" asp-for="YearNumber" />
+
+        @if (embedded)
+        {
+            <input type="hidden" name="embedded" value="1" />
+            <input type="hidden" name="returnNode" value="@returnNode" />
+        }
+
+        <div class="row g-2">
+            <div class="col-12 col-md-6 mb-3">
+                <label asp-for="StartOn" class="form-label"></label>
+                <input asp-for="StartOn" class="form-control" />
+                <span asp-validation-for="StartOn" class="text-danger"></span>
+            </div>
+
+            <div class="col-12 col-md-6 mb-3">
+                <label asp-for="EndOn" class="form-label"></label>
+                <input asp-for="EndOn" class="form-control" />
+                <span asp-validation-for="EndOn" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="CorporationTaxRatePercent" class="form-label"></label>
+            <div class="input-group" style="max-width: 18rem;">
+                <input asp-for="CorporationTaxRatePercent" class="form-control" inputmode="decimal" />
+                <span class="input-group-text">%</span>
+            </div>
+            <span asp-validation-for="CorporationTaxRatePercent" class="text-danger"></span>
+            <div class="form-text text-muted">
+                Enter <strong>25</strong> for <strong>25%</strong>.
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">Set rate</button>
+            <a class="btn btn-outline-secondary" href="@backToIndexUrl">Cancel</a>
+        </div>
+    </form>
+</div>
