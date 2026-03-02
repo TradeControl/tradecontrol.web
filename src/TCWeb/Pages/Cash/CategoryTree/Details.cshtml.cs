@@ -21,6 +21,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public CashCodeDetailsVm Code { get; private set; }
         public ExpressionDetailsVm Expression { get; set; }
 
+        public CashCodeListByPolarityVm CashCodes { get; private set; }
+
         public async Task<IActionResult> OnGetAsync(string key, string parentKey = null)
         {
             try
@@ -31,6 +33,64 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var helper = new CashCodes(NodeContext);
+
+                var isSyntheticCashCodeListKey =
+                    string.Equals(key, CategoryTreeModel.RootNodeKey, StringComparison.Ordinal)
+                    || string.Equals(key, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal)
+                    || string.Equals(key, "__TYPE_ROOT__", StringComparison.Ordinal);
+
+                // Exclude Expressions synthetic root
+                if (isSyntheticCashCodeListKey)
+                {
+                    NodeType = "cashCodeList";
+
+                    var grouped = await NodeContext.Cash_Codes
+                        .OrderBy(t => t.CashCode)
+                        .Select(t => new {
+                            t.CashCode,
+                            t.CashDescription,
+                            t.Category,
+                            t.CashPolarityCode,
+                            t.IsCashEnabled,
+                            t.IsCategoryEnabled
+                        })
+                        .ToListAsync();
+
+                    CashCodes = new CashCodeListByPolarityVm {
+                        Expense = grouped
+                            .Where(x => x.CashPolarityCode == (short)NodeEnum.CashPolarity.Expense)
+                            .Select(x => new CashCodeListItemVm {
+                                CashCode = x.CashCode,
+                                CashDescription = x.CashDescription,
+                                Category = x.Category,
+                                IsCashEnabled = x.IsCashEnabled,
+                                IsCategoryEnabled = x.IsCategoryEnabled
+                            }).ToList(),
+
+                        Income = grouped
+                            .Where(x => x.CashPolarityCode == (short)NodeEnum.CashPolarity.Income)
+                            .Select(x => new CashCodeListItemVm {
+                                CashCode = x.CashCode,
+                                CashDescription = x.CashDescription,
+                                Category = x.Category,
+                                IsCashEnabled = x.IsCashEnabled,
+                                IsCategoryEnabled = x.IsCategoryEnabled
+                            }).ToList(),
+
+                        Neutral = grouped
+                            .Where(x => x.CashPolarityCode == (short)NodeEnum.CashPolarity.Neutral)
+                            .Select(x => new CashCodeListItemVm {
+                                CashCode = x.CashCode,
+                                CashDescription = x.CashDescription,
+                                Category = x.Category,
+                                IsCashEnabled = x.IsCashEnabled,
+                                IsCategoryEnabled = x.IsCategoryEnabled
+                            }).ToList()
+                    };
+
+                    await SetViewData();
+                    return Page();
+                }
 
                 if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -78,7 +138,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                          Format = e.Format,
                                          IsError = e.IsError,
                                          ErrorMessage = e.ErrorMessage,
-                                         SyntaxType = s.SyntaxType   // added
+                                         SyntaxType = s.SyntaxType
                                      }).FirstOrDefaultAsync();
 
                     if (exp == null)
@@ -111,7 +171,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         return NotFound();
                     }
 
-                    // Counts
                     vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ParentCode == vm.CategoryCode).CountAsync();
                     vm.CodesCount = await NodeContext.Cash_tbCodes.Where(cd => cd.CategoryCode == vm.CategoryCode).CountAsync();
                     vm.ParentCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ChildCode == vm.CategoryCode).CountAsync();
@@ -124,12 +183,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     vm.IsRootContext = (effectiveParentKey == null) && vm.IsRootNode;
 
-                    // Options for Profit/VAT roots
                     var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
                     vm.IsProfitRoot = options != null && string.Equals(options.NetProfitCode, vm.CategoryCode, StringComparison.Ordinal);
                     vm.IsVatRoot = options != null && string.Equals(options.VatCategoryCode, vm.CategoryCode, StringComparison.Ordinal);
 
-                    // Presence on any primary path
                     var presentOnPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
                         .AnyAsync(v => v.ChildCode == vm.CategoryCode);
 
@@ -157,7 +214,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
 
-                    // Flags for UI
                     bool isDisconnectedContext = string.Equals(parentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal);
 
                     bool isCashCodeCategory =

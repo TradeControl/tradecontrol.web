@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
@@ -27,11 +28,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsProfitRoot { get; set; }    // true when App.tbOptions.NetProfitCode == CategoryCode
         public bool IsVatRoot { get; set; }       // true when App.tbOptions.VatCategoryCode == CategoryCode
 
-        // Keep if you also use it elsewhere; otherwise optional
         public bool IsRootContext { get; set; }
         public bool IsDisconnectedContext { get; set; }
         public bool IsCashCodeCategory { get; set; }
-
     }
 
     public class CashCodeDetailsVm
@@ -57,5 +56,26 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string SyntaxType { get; set; } = string.Empty;
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
+    }
+
+    public class CashCodeListItemVm
+    {
+        public string CashCode { get; set; } = string.Empty;
+        public string CashDescription { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string CategoryCode { get; set; } = string.Empty;
+        public bool IsCashEnabled { get; set; }
+        public bool IsCategoryEnabled { get; set; }
+
+        public bool IsEnabled => IsCashEnabled && IsCategoryEnabled;
+    }
+
+    public class CashCodeListByPolarityVm
+    {
+        public List<CashCodeListItemVm> Expense { get; set; } = new();
+        public List<CashCodeListItemVm> Income { get; set; } = new();
+        public List<CashCodeListItemVm> Neutral { get; set; } = new();
+
+        public int TotalCount => (Expense?.Count ?? 0) + (Income?.Count ?? 0) + (Neutral?.Count ?? 0);
     }
 }

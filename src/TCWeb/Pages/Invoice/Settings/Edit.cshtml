@@ -1,28 +1,71 @@
 @page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Invoice.Settings.EditModel
-@{ ViewData["Title"] = "Edit Invoice Number"; }
-<h1>@ViewData["Title"]</h1>
-<hr />
-<h2>@Model.Invoice_Type.InvoiceType</h2>
-<hr/>
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="mb-3">
-                <label asp-for="Invoice_Type.NextNumber" class="control-label"></label>
-                <input asp-for="Invoice_Type.NextNumber" class="form-control" />
-                <span asp-validation-for="Invoice_Type.NextNumber" class="text-danger"></span>
-            </div>
 
-            <input type="hidden" asp-for="Invoice_Type.InvoiceType" />
-            <input type="hidden" asp-for="Invoice_Type.InvoiceTypeCode" />
-            <input type="hidden" asp-for="Invoice_Type.CashPolarityCode" />
+@{
+    ViewData["Title"] = "Edit Invoice Number";
 
-            <div class="mb-3">
-                <input type="submit" value="UPDATE" class="btn btn-primary" />
-                <a asp-page="./Index" class="btn btn-info">To List</a>
-            </div>
-        </form>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "InvoiceSettings";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="bg-white border rounded p-3">
+    @if (!embedded && Detection?.Device?.Type == Device.Mobile)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary" style="min-width: 7.5rem;">Back</a>
+        </div>
+    }
+
+    <div class="mb-3">
+        <div class="text-muted small">Invoice type</div>
+        <div class="fw-semibold">@Model.Invoice_Type.InvoiceType</div>
     </div>
+
+    <form method="post" autocomplete="off">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="mb-3" style="max-width: 22rem;">
+            <label asp-for="Invoice_Type.NextNumber" class="form-label"></label>
+            <input asp-for="Invoice_Type.NextNumber" class="form-control" />
+            <span asp-validation-for="Invoice_Type.NextNumber" class="text-danger"></span>
+        </div>
+
+        <input type="hidden" asp-for="Invoice_Type.InvoiceType" />
+        <input type="hidden" asp-for="Invoice_Type.InvoiceTypeCode" />
+        <input type="hidden" asp-for="Invoice_Type.CashPolarityCode" />
+
+        @if (embedded)
+        {
+            <input type="hidden" name="embedded" value="1" />
+            <input type="hidden" name="returnNode" value="@returnNode" />
+        }
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a asp-page="./Index"
+               asp-route-embedded="@(embedded ? "1" : null)"
+               asp-route-returnNode="@returnNode"
+               class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
 </div>

@@ -1,46 +1,96 @@
 @page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Invoice.Settings.IndexModel
-@{ ViewData["Title"] = "Invoice Numbering"; }
-<h1>@ViewData["Title"]</h1>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Types[0].InvoiceType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Types[0].CashPolarity)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Invoice_Types[0].NextNumber)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Invoice_Types)
-        {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.InvoiceType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CashPolarity)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.NextNumber)
-            </td>
-            <td>
-                @{
-                    if (User.IsInRole(Constants.AdministratorsRole))
+@{
+    ViewData["Title"] = "Invoice Settings";
+
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "InvoiceSettings";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="bg-white border rounded p-3">
+    @if (!embedded && Detection?.Device?.Type == Device.Mobile)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary" style="min-width: 7.5rem;">Back</a>
+        </div>
+    }
+
+    <div class="text-muted small mb-3">
+        Set the next invoice number for each document type. This controls numbering only.
+    </div>
+
+    @if (Model.Invoice_Types == null || Model.Invoice_Types.Count == 0)
+    {
+        <div class="alert alert-light border mb-0" role="status">
+            No invoice types found.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@Html.DisplayNameFor(model => model.Invoice_Types[0].InvoiceType)</th>
+                        @if (Detection?.Device?.Type != Device.Mobile)
+                        {
+                            <th>@Html.DisplayNameFor(model => model.Invoice_Types[0].CashPolarity)</th>
+                        }
+                        <th>@Html.DisplayNameFor(model => model.Invoice_Types[0].NextNumber)</th>
+                        <th style="width:1%; white-space:nowrap;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Invoice_Types)
                     {
-                        <a asp-page="./Edit" asp-route-invoiceTypeCode="@item.InvoiceTypeCode" class="btn btn-secondary"></a>
-                    }
-                }
-            </td>
+                        <tr>
+                            <td class="fw-semibold">@Html.DisplayFor(modelItem => item.InvoiceType)</td>
 
-        </tr>
-        }
-    </tbody>
-</table>
+                            @if (Detection?.Device?.Type != Device.Mobile)
+                            {
+                                <td class="text-muted">@Html.DisplayFor(modelItem => item.CashPolarity)</td>
+                            }
+
+                            <td>@Html.DisplayFor(modelItem => item.NextNumber)</td>
+
+                            <td>
+                                @if (User.IsInRole(Constants.AdministratorsRole))
+                                {
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a class="btn btn-outline-secondary"
+                                           asp-page="./Edit"
+                                           asp-route-invoiceTypeCode="@item.InvoiceTypeCode"
+                                           asp-route-embedded="@(embedded ? "1" : null)"
+                                           asp-route-returnNode="@returnNode"
+                                           title="Edit next number">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </a>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

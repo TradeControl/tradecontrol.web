@@ -111,19 +111,20 @@
                                             @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxCompany)">
                                         <i class="bi bi-bank me-2" aria-hidden="true"></i>Tax Rates &amp; Adjustments
                                     </button>
-                                </div>
 
-                                <hr class="my-3" />
-
-                                <div class="d-grid gap-2 mt-2">
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.InvoiceSettings)">
                                         <i class="bi bi-hash me-2" aria-hidden="true"></i>Invoice Settings
                                     </button>
 
-                                    <button type="button" class="btn btn-outline-secondary text-start" disabled>
+                                    <button type="button"
+                                            class="btn btn-outline-primary text-start"
+                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.SubjectType)">
                                         <i class="bi bi-tags me-2" aria-hidden="true"></i>Subject Types
                                     </button>
                                 </div>
+
                             </div>
                         }
                         else if (_selected == ManagerTreeHost.ManagerNode.Templates)
@@ -188,6 +189,8 @@
         ManagerTreeHost.ManagerNode.TaxSettings => $"{_companyName} / Tax Settings",
         ManagerTreeHost.ManagerNode.TaxCode => $"{_companyName} / Tax Codes",
         ManagerTreeHost.ManagerNode.TaxCompany => $"{_companyName} / Tax Rates & Adjustments",
+        ManagerTreeHost.ManagerNode.InvoiceSettings => $"{_companyName} / Invoice Settings",
+        ManagerTreeHost.ManagerNode.SubjectType => $"{_companyName} / Subject Types",
         _ => _companyName
     };
 
@@ -270,6 +273,12 @@
 
                 ManagerTreeHost.ManagerNode.TaxCompany =>
                     "/Tax/Rates/Index?embedded=1&returnNode=TaxCompany",
+
+                ManagerTreeHost.ManagerNode.InvoiceSettings =>
+                    "/Invoice/Settings/Index?embedded=1&returnNode=InvoiceSettings",
+
+                ManagerTreeHost.ManagerNode.SubjectType =>
+                    "/Subject/Type/Index?embedded=1&returnNode=SubjectType",
 
                 _ => null
             };
@@ -369,6 +378,12 @@
             if (node == ManagerTreeHost.ManagerNode.TaxCompany)
                 NavigationManager.NavigateTo("/Tax/Rates/Index?returnNode=TaxCompany", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.InvoiceSettings)
+                NavigationManager.NavigateTo("/Invoice/Settings/Index?returnNode=InvoiceSettings", forceLoad: true);
+
+            if (node == ManagerTreeHost.ManagerNode.SubjectType)
+                NavigationManager.NavigateTo("/Subject/Type/Index?returnNode=SubjectType", forceLoad: true);
+
             return Task.CompletedTask;
         }
 
@@ -390,6 +405,9 @@
             ManagerTreeHost.ManagerNode.TaxSettings => "/Tax/Settings/Index?embedded=1&returnNode=TaxSettings",
             ManagerTreeHost.ManagerNode.TaxCode => "/Tax/TaxCode/Index?embedded=1&returnNode=TaxCode",
             ManagerTreeHost.ManagerNode.TaxCompany => "/Tax/Rates/Index?embedded=1&returnNode=TaxCompany",
+            ManagerTreeHost.ManagerNode.InvoiceSettings => "/Invoice/Settings/Index?embedded=1&returnNode=InvoiceSettings",
+            ManagerTreeHost.ManagerNode.SubjectType => "/Subject/Type/Index?embedded=1&returnNode=SubjectType",
+
             _ => null
         };
 

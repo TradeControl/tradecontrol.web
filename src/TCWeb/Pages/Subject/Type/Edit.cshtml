@@ -1,31 +1,70 @@
 @page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Subject.Type.EditModel
-@{ ViewData["Title"] = "Edit Organisation Type"; }
-<h1>@ViewData["Title"]</h1>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="mb-3">
-                <label asp-for="Subject_tbType.SubjectType" class="control-label"></label>
-                <input asp-for="Subject_tbType.SubjectType" class="form-control" />
-                <span asp-validation-for="Subject_tbType.SubjectType" class="text-danger"></span>
-            </div>
-            <div class="mb-3">
-                <label asp-for="Subject_tbType.CashPolarityCode" class="control-label"></label>
-                <p>
-                    <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-control"></select>
-                </p>
-            </div>
 
-            <input type="hidden" asp-for="Subject_tbType.SubjectTypeCode" />
-            <input type="hidden" asp-for="Subject_tbType.CashPolarityCode" />
+@{
+    ViewData["Title"] = "Edit Subject Type";
 
-            <div class="mb-3">
-                <input type="submit" value="UPDATE" class="btn btn-primary" />
-                <a asp-page="./Index" class="btn btn-info">To List</a>
-            </div>
-        </form>
-    </div>
+    var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
+    var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "SubjectType";
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var backToManagerUrl = $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}";
+}
+
+@if (!embedded)
+{
+    <h1 class="h4 mb-2 mt-2">@ViewData["Title"]</h1>
+}
+else
+{
+    <div class="fw-semibold mb-2">@ViewData["Title"]</div>
+}
+
+<div class="bg-white border rounded p-3">
+    @if (!embedded && Detection?.Device?.Type == Device.Mobile)
+    {
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="@backToManagerUrl" class="btn btn-outline-secondary" style="min-width: 7.5rem;">Back</a>
+        </div>
+    }
+
+    <form method="post" autocomplete="off" style="max-width: 32rem;">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="Subject_tbType.SubjectType" class="form-label"></label>
+            <input asp-for="Subject_tbType.SubjectType" class="form-control" />
+            <span asp-validation-for="Subject_tbType.SubjectType" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Subject_tbType.CashPolarityCode" class="form-label"></label>
+            <select asp-for="CashPolarity" asp-items="Model.CashPolaritys" class="form-select"></select>
+        </div>
+
+        <input type="hidden" asp-for="Subject_tbType.SubjectTypeCode" />
+        <input type="hidden" asp-for="Subject_tbType.CashPolarityCode" />
+
+        @if (embedded)
+        {
+            <input type="hidden" name="embedded" value="1" />
+            <input type="hidden" name="returnNode" value="@returnNode" />
+        }
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a asp-page="./Index"
+               asp-route-embedded="@(embedded ? "1" : null)"
+               asp-route-returnNode="@returnNode"
+               class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
 </div>

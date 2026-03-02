@@ -1,0 +1,52 @@
+@model (string Title, System.Collections.Generic.List<TradeControl.Web.Pages.Cash.CategoryTree.CashCodeListItemVm> Items, string Border)
+
+@{
+    // Default collapsed accordion UX
+    var open = false;
+    var polarityKey = Model.Title?.Trim()?.ToLowerInvariant() ?? "unknown"; // expense|income|neutral
+}
+
+<details class="border rounded bg-light"
+         data-cc-group="@polarityKey"
+         open="@open">
+    <summary class="px-3 py-2 d-flex align-items-center justify-content-between" style="cursor:pointer;">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">@Model.Title</span>
+            <span class="text-muted">(@(Model.Items?.Count ?? 0))</span>
+        </div>
+        <span class="text-muted small">Toggle</span>
+    </summary>
+
+    <div class="p-3 bg-white border-top">
+        @if (Model.Items == null || Model.Items.Count == 0)
+        {
+            <div class="text-muted">No codes.</div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var item in Model.Items)
+                {
+                    var enabled = item.IsEnabled;
+
+                    <button type="button"
+                            class="tc-cashcode-box text-start rounded @Model.Border @(enabled ? "bg-white" : "bg-light")"
+                            style="min-width: 13.5rem; max-width: 18rem; padding: .5rem .6rem;"
+                            data-action="selectCashCode"
+                            data-cashcode="@item.CashCode"
+                            data-search="@($"{item.CashCode} {item.CashDescription}".ToLowerInvariant())"
+                            title="Select @item.CashCode in the tree">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="fw-semibold">@item.CashCode</span>
+                            @if (!enabled)
+                            {
+                                <span class="badge text-bg-secondary">Disabled</span>
+                            }
+                        </div>
+                        <div class="small text-muted text-truncate">@item.CashDescription</div>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</details>

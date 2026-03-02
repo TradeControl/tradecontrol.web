@@ -23,7 +23,7 @@ namespace TradeControl.Web.Pages.Subject.Type
         public Subject_vwTypeLookup Subject_Type { get; set; }
 
         [BindProperty]
-        [Display(Name ="Accounts")]
+        [Display(Name = "Accounts")]
         public int NumberOfAccounts { get; set; }
 
         public async Task<IActionResult> OnGetAsync(short? SubjectTypeCode)
@@ -61,7 +61,10 @@ namespace TradeControl.Web.Pages.Subject.Type
                 NodeContext.Subject_tbTypes.Remove(tbSubjectType);
                 await NodeContext.SaveChangesAsync();
 
-                return RedirectToPage("./Index");
+                var embedded = Request.Form.TryGetValue("embedded", out var emb) && emb == "1" ? "1" : null;
+                var returnNode = Request.Form.TryGetValue("returnNode", out var rn) ? rn.ToString() : null;
+
+                return RedirectToPage("./Index", new { embedded, returnNode });
             }
             catch (Exception e)
             {

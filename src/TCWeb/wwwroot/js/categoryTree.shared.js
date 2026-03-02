@@ -54,7 +54,7 @@
         };
     };
 
-    // Canonical action normalization (now includes expressions)
+    // Canonical action normalization
     function normalizeActionName(name)
     {
         if (!name)

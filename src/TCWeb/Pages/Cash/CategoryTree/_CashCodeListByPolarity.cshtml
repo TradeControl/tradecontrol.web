@@ -1,0 +1,47 @@
+@model TradeControl.Web.Pages.Cash.CategoryTree.CashCodeListByPolarityVm
+@{
+    static string BorderClass(string polarity) => polarity switch
+    {
+        "Expense" => "border border-2 border-danger",
+        "Income" => "border border-2 border-dark",
+        _ => "border border-2 border-secondary"
+    };
+}
+
+<div class="bg-white border rounded p-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+        <div>
+            <div class="fw-semibold">Cash Codes</div>
+            <div class="text-muted small">Grouped by polarity. Click a code to locate it in the tree.</div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <input id="tcCashCodeListSearch"
+                   type="search"
+                   class="form-control form-control-sm"
+                   style="min-width: 16rem;"
+                   placeholder="Search code or description" />
+            <div class="text-muted small">@Model.TotalCount</div>
+        </div>
+    </div>
+
+    @if (Model.TotalCount == 0)
+    {
+        <div class="alert alert-light border mb-0" role="status">
+            No cash codes found.
+        </div>
+    }
+    else
+    {
+        <div id="tcCashCodeList" class="d-flex flex-column gap-2">
+            @await Html.PartialAsync("_CashCodeListByPolaritySection",
+                (Title: "Expense", Items: Model.Expense, Border: BorderClass("Expense")))
+
+            @await Html.PartialAsync("_CashCodeListByPolaritySection",
+                (Title: "Income", Items: Model.Income, Border: BorderClass("Income")))
+
+            @await Html.PartialAsync("_CashCodeListByPolaritySection",
+                (Title: "Neutral", Items: Model.Neutral, Border: BorderClass("Neutral")))
+        </div>
+    }
+</div>

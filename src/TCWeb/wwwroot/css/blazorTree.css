@@ -168,6 +168,14 @@ html, body {
     color: #198754;
 }
 
+.tc-admin-manager-tree i.bi-hash {
+    color: #0dcaf0; /* info */
+}
+
+.tc-admin-manager-tree i.bi-tags {
+    color: #fd7e14; /* orange */
+}
+
 .tc-tree-label {
     display: inline-block;
     padding: 0.06rem 0.25rem;

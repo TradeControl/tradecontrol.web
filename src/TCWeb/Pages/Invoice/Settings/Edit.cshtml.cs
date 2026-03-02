@@ -1,22 +1,12 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Invoice.Settings
 {
-    [Authorize(Roles = "Administrators")]
     public class EditModel : DI_BasePageModel
     {
         public EditModel(NodeContext context) : base(context) { }
@@ -24,26 +14,24 @@ namespace TradeControl.Web.Pages.Invoice.Settings
         [BindProperty]
         public Invoice_tbType Invoice_Type { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string? Embedded { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public string? ReturnNode { get; set; }
+
         public async Task<IActionResult> OnGetAsync(short? invoiceTypeCode)
         {
-            try
-            {
-                if (invoiceTypeCode == null)
-                    return NotFound();
+            if (invoiceTypeCode == null)
+                return NotFound();
 
-                Invoice_Type = await NodeContext.Invoice_tbTypes.FirstOrDefaultAsync(t => t.InvoiceTypeCode == invoiceTypeCode);
+            Invoice_Type = await NodeContext.Invoice_tbTypes.FirstOrDefaultAsync(m => m.InvoiceTypeCode == invoiceTypeCode);
 
-                if (Invoice_Type == null)
-                    return NotFound();
+            if (Invoice_Type == null)
+                return NotFound();
 
-                await SetViewData();
-                return Page();
-            }
-            catch (Exception e)
-            {
-                await NodeContext.ErrorLog(e);
-                throw;
-            }
+            await SetViewData();
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -51,24 +39,18 @@ namespace TradeControl.Web.Pages.Invoice.Settings
             try
             {
                 if (!ModelState.IsValid)
+                {
+                    await SetViewData();
                     return Page();
+                }
 
                 NodeContext.Attach(Invoice_Type).State = EntityState.Modified;
+                await NodeContext.SaveChangesAsync();
 
-                try
-                {
-                    await NodeContext.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!await NodeContext.Invoice_tbTypes.AnyAsync(e => e.InvoiceTypeCode == Invoice_Type.InvoiceTypeCode))
-                        return NotFound();
-                    else
-                        throw;
-
-                }
-
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index", new {
+                    embedded = string.Equals(Embedded, "1", StringComparison.OrdinalIgnoreCase) ? "1" : null,
+                    returnNode = string.IsNullOrWhiteSpace(ReturnNode) ? null : ReturnNode
+                });
             }
             catch (Exception e)
             {

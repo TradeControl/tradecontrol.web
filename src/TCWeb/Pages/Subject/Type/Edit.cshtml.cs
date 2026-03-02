@@ -61,7 +61,7 @@ namespace TradeControl.Web.Pages.Subject.Type
             try
             {
                 if (!ModelState.IsValid)
-                    return Page();
+                    return await OnGetAsync(Subject_tbType.SubjectTypeCode);
 
                 var orgType = await NodeContext.Subject_tbTypes.SingleOrDefaultAsync(t => t.SubjectTypeCode == Subject_tbType.SubjectTypeCode);
                 orgType.CashPolarityCode = await NodeContext.Cash_tbPolaritys.Where(t => t.CashPolarity == CashPolarity).Select(t => t.CashPolarityCode).SingleAsync();
@@ -79,10 +79,12 @@ namespace TradeControl.Web.Pages.Subject.Type
                         return NotFound();
                     else
                         throw;
-
                 }
 
-                return RedirectToPage("./Index");
+                var embedded = Request.Form.TryGetValue("embedded", out var emb) && emb == "1" ? "1" : null;
+                var returnNode = Request.Form.TryGetValue("returnNode", out var rn) ? rn.ToString() : null;
+
+                return RedirectToPage("./Index", new { embedded, returnNode });
             }
             catch (Exception e)
             {

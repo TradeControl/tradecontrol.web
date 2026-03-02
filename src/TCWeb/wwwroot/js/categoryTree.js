@@ -1999,8 +1999,31 @@ window.CategoryTree = (function ()
             }
 
             // Synthetic fallback: show parent details if parent real
+            // Synthetic fallback: show parent details if parent real
             if (tcIsSyntheticKey(key))
             {
+                var isCashCodeListSynthetic =
+                    key === ROOT_KEY
+                    || key === DISC_KEY
+                    || key === "__TYPE_ROOT__";
+
+                if (isCashCodeListSynthetic)
+                {
+                    var synUrl = detailsUrl + "?key=" + encodeURIComponent(key);
+                    synUrl = appendQuery(synUrl, "embed", "1");
+
+                    $.get(nocache(synUrl))
+                        .done(function (html)
+                        {
+                            $pane.html(html);
+                        })
+                        .fail(function ()
+                        {
+                            $pane.html("<div class='text-muted small p-2'>No details</div>");
+                        });
+                    return;
+                }
+
                 if (parentKey && !tcIsSyntheticKey(parentKey))
                 {
                     var parentUrl = detailsUrl + "?key=" + encodeURIComponent(parentKey);
@@ -3586,10 +3609,28 @@ window.CategoryTree = (function ()
             var key = kinds.key || "";
             var nodeType = kinds.nodeType || "";
 
-            // Hide bar entirely for synthetic anchors (root, disconnected, types, expressions root)
-            if (!node || kinds.isSynthetic || key === "__EXPRESSIONS__")
+            // Show a minimal action bar for synthetic cash-code-list anchors on mobile
+            var isCashCodeListSynthetic =
+                kinds.isSynthetic
+                && (key === ROOT_KEY || key === DISC_KEY || key === "__TYPE_ROOT__");
+
+            if (!node || (kinds.isSynthetic && !isCashCodeListSynthetic) || key === "__EXPRESSIONS__")
             {
                 bar.classList.remove("tc-visible");
+                return;
+            }
+
+            if (isCashCodeListSynthetic)
+            {
+                bar.querySelectorAll(".admin-only").forEach(function (el)
+                {
+                    el.style.display = "none";
+                });
+
+                setBarButtonVisible("view", false);
+                setBarButtonVisible("openCashCodesList", true);
+
+                bar.classList.add("tc-visible");
                 return;
             }
 
@@ -3605,6 +3646,7 @@ window.CategoryTree = (function ()
             var isExpression = (nodeType === "expression");
 
             setBarButtonVisible("view", true);
+            setBarButtonVisible("openCashCodesList", false);
             setBarButtonVisible("edit", isAdmin);
 
             // Move: hide for expressions explicitly
@@ -3873,6 +3915,13 @@ window.CategoryTree = (function ()
             else if (isRootKey || isTypeSynthetic)
             {
                 order = ["expandSelected", "collapseSelected"];
+
+                if (isRootKey)
+                {
+                    order.push("openCashCodesList");
+                    groups = [2];
+                }
+
                 renderMenuFromTemplates($menu, order, groups);
             }
             else if (key === DISC_KEY)
@@ -4059,7 +4108,8 @@ window.CategoryTree = (function ()
                     {
                         maxHeight: (window.innerHeight - 24) + "px",
                         overflowY: "auto",
-                        paddingBottom: "64px"
+                        paddingBottom: "64px",
+                        minHeight: "220px"
                     }
                 );
             }
@@ -4778,6 +4828,139 @@ window.CategoryTree = (function ()
                             });
                         break;
                     }
+                    case "openCashCodesList":
+                    {
+                        if (!detailsUrl)
+                        {
+                            alert("Details endpoint not configured.");
+                            break;
+                        }
+
+                        // Full page for mobile; RHS embed for desktop (even though menu is mainly mobile)
+                        if (isMobile())
+                        {
+                            window.location.href = detailsUrl + "?key=" + encodeURIComponent(ROOT_KEY);
+                        }
+                        else
+                        {
+                            openEmbeddedUrl(detailsUrl + "?key=" + encodeURIComponent(ROOT_KEY) + "&embed=1");
+                        }
+                        break;
+                    }
+                }
+            });
+
+            // Click handler for Cash Code list boxes rendered in details pane
+            $(document).off("click.tcCashCodeList").on("click.tcCashCodeList", "[data-action='selectCashCode'][data-cashcode]", function (e)
+            {
+                try
+                {
+                    e.preventDefault();
+
+                    var cashCode = String($(this).data("cashcode") || "").trim();
+                    if (!cashCode)
+                    {
+                        return;
+                    }
+
+                    if (isMobile())
+                    {
+                        // Return to the tree and request selection under ROOT so the mobile selector helper can resolve it reliably
+                        window.location.href =
+                            basePageUrl
+                            + "/Index?select=" + encodeURIComponent("code:" + cashCode)
+                            + "&expand=" + encodeURIComponent(ROOT_KEY);
+
+                        return;
+                    }
+
+                    var tree = getTree();
+                    if (!tree)
+                    {
+                        return;
+                    }
+
+                    var key = "code:" + cashCode;
+                    var node = tree.getNodeByKey(key);
+
+                    if (node)
+                    {
+                        node.setActive(true);
+                        persistActiveKey(node);
+                        loadDetails(node);
+                        return;
+                    }
+
+                    var root = tree.getNodeByKey(ROOT_KEY) || tree.getRootNode();
+                    loadDescendantsUntilKey(root, key, MAX_BFS_FOLDERS, function (found)
+                    {
+                        if (!found)
+                        {
+                            return;
+                        }
+                        var n2 = tree.getNodeByKey(key);
+                        if (n2)
+                        {
+                            n2.setActive(true);
+                            persistActiveKey(n2);
+                            loadDetails(n2);
+                        }
+                    });
+                }
+                catch (_)
+                {
+                }
+            });
+
+            const $doc = $(document);
+
+            $doc.off("input.tcCashCodeSearch keyup.tcCashCodeSearch change.tcCashCodeSearch")
+                .on("input.tcCashCodeSearch keyup.tcCashCodeSearch change.tcCashCodeSearch", "#tcCashCodeListSearch", function ()
+            {
+                try
+                {
+                    const q = String($(this).val() || "").trim().toLowerCase();
+                    const $list = $("#tcCashCodeList");
+                    if ($list.length === 0)
+                    {
+                        return;
+                    }
+
+                    const $items = $list.find("[data-action='selectCashCode'][data-search]");
+                    const $groups = $list.find("details[data-cc-group]");
+
+                    if (!q)
+                    {
+                        $items.each(function () { this.style.display = ""; });
+                        $groups.each(function () { this.open = false; });
+                        return;
+                    }
+
+                    const hitGroups = new Set();
+
+                    $items.each(function ()
+                    {
+                        const hay = String(this.getAttribute("data-search") || "");
+                        const hit = hay.indexOf(q) >= 0;
+                        this.style.display = hit ? "" : "none";
+
+                        if (hit)
+                        {
+                            const det = this.closest("details[data-cc-group]");
+                            if (det)
+                            {
+                                hitGroups.add(det);
+                            }
+                        }
+                    });
+
+                    $groups.each(function ()
+                    {
+                        this.open = hitGroups.has(this);
+                    });
+                }
+                catch (_)
+                {
                 }
             });
         }
@@ -4954,6 +5137,19 @@ window.CategoryTree = (function ()
                                 var msg = (xhr && xhr.status === 200) ? (xhr.responseText || "Parse error") : ("Server error (" + xhr.status + ")");
                                 alert(msg);
                             });
+                        break;
+                    }
+
+                    case "openCashCodesList":
+                    {
+                        if (!detailsUrl)
+                        {
+                            alert("Details endpoint not configured.");
+                            break;
+                        }
+
+                        var k = (node && node.key) ? node.key : ROOT_KEY;
+                        window.location.href = detailsUrl + "?key=" + encodeURIComponent(k);
                         break;
                     }
                 }
@@ -5299,6 +5495,36 @@ window.CategoryTree = (function ()
                     if (root && !root.expanded) {root.setExpanded(true);}
                     ensureTreeContainerSizing();
                     resizeColumns();
+
+                    try
+                    {
+                        var qs = new URLSearchParams(window.location.search || "");
+                        var hasQuerySelect = qs.has("select") || qs.has("returnKey") || qs.has("key");
+
+                        var activeKey = "";
+                        try
+                        {
+                            activeKey = loadActiveKey();
+                        }
+                        catch (_) { activeKey = ""; }
+
+                        if (!hasQuerySelect && (!activeKey || tcIsSyntheticKey(activeKey)))
+                        {
+                            if (root)
+                            {
+                                root.setActive(true);
+                                persistActiveKey(root);
+                                if (!isMobile())
+                                {
+                                    loadDetails(root);
+                                }
+                            }
+                        }
+                    }
+                    catch (_)
+                    {
+                    }
+
                 },
                 expand: function (event, data)
                 {
