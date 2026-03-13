@@ -35,52 +35,55 @@ BEGIN TRY
 	
 	IF NOT EXISTS (SELECT * FROM [Usr].[tbMenuView])
 		INSERT INTO [Usr].[tbMenuView] ([MenuViewCode], [MenuView])
-		VALUES
-	(0, 'List')
-	, (1, 'Tree')
+		VALUES (0, 'List')
+	    , (1, 'Tree')
 
 	IF NOT EXISTS (SELECT * FROM [Cash].[tbChangeType])
-			INSERT INTO [Cash].[tbChangeType] ([ChangeTypeCode], [ChangeType])
-			VALUES
-		(0, 'Receipt')
+		INSERT INTO [Cash].[tbChangeType] ([ChangeTypeCode], [ChangeType])
+		VALUES (0, 'Receipt')
 		, (1, 'Change')
 
 	IF NOT EXISTS (SELECT * FROM [Cash].[tbChangeStatus])
-			INSERT INTO [Cash].[tbChangeStatus] ([ChangeStatusCode], [ChangeStatus])
-			VALUES
-		(0, 'Unused')
+		INSERT INTO [Cash].[tbChangeStatus] ([ChangeStatusCode], [ChangeStatus])
+		VALUES (0, 'Unused')
 		, (1, 'Paid')
 		, (2, 'Spent')
 
 	IF NOT EXISTS (SELECT * FROM [Cash].[tbTxStatus])
-			INSERT INTO [Cash].[tbTxStatus] ([TxStatusCode], [TxStatus])
-			VALUES
-		(0, 'Received')
+		INSERT INTO [Cash].[tbTxStatus] ([TxStatusCode], [TxStatus])
+		VALUES (0, 'Received')
 		, (1, 'UTXO')
 		, (2, 'Spent')
 
 	IF NOT EXISTS (SELECT * FROM [Subject].[tbTransmitStatus])
-			INSERT INTO [Subject].[tbTransmitStatus] ([TransmitStatusCode], [TransmitStatus])
-			VALUES
-		(0, 'Disconnected')
+		INSERT INTO [Subject].[tbTransmitStatus] ([TransmitStatusCode], [TransmitStatus])
+		VALUES (0, 'Disconnected')
 		, (1, 'Deploy')
 		, (2, 'Update')
 		, (3, 'Processed')
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbTemplate])
-			INSERT INTO [App].[tbTemplate] ([TemplateName], [StoredProcedure], [TemplateDescription])
-			VALUES
-		('Basic Company Setup', 'App.proc_TemplateCompanyGeneral', N'Creates a basic UK company setup with a starter Category Tree, Cash Codes, and defaults suitable for getting started.')
-		, ('HMRC Company Accounts', 'App.proc_TemplateCompanyHMRC2021', N'Installs a UK company accounts-oriented Category Tree and Cash Codes aligned to the HMRC-style template baseline (2021).')
-		, ('MIS Tutorials', 'App.proc_TemplateTutorials', N'Adds tutorial/sample data intended for learning and demonstration (MIS-oriented).')
+        INSERT INTO [App].[tbTemplate]
+            ([TemplateName], [StoredProcedure], [TemplateDescription], [IsVatRegistered])
+        VALUES
+            ('Minimal Micro Company Accounts 2026',
+             'App.proc_Template_CO_MICRO_CUR_MIN_2026',
+             'Ultra‑minimal micro‑entity accounts for very simple companies. One sales code, one cost code, one wages code, one admin code. Ideal for side‑hustles, dormant companies, and very small operations.', 1),
 
+            ('Standard Micro Company Accounts 2026',
+             'App.proc_Template_CO_MICRO_CUR_STD_2026',
+             'Enhanced micro‑entity accounts with real‑world business categories. Splits sales into labour/materials, direct costs into materials/subs/fuel/travel, full admin breakdown, and detailed depreciation classes. Ideal for tradesmen, small agencies, and micro‑manufacturers who want meaningful reporting without leaving the micro‑entity regime.', 1),
+
+            ('Sole Trader Accounts 2026',
+             'App.proc_Template_ST_SOLE_CUR_2026',
+             'Simple, MTD‑ready sole trader accounts. No balance sheet, no corporation tax, optional VAT, and a clean income/expense structure aligned with HMRC reporting groups. Ideal for tradespeople, freelancers, and self‑employed individuals preparing for Making Tax Digital.', 0);
 
 	IF NOT EXISTS (SELECT * FROM [Subject].[tbAccountType])
-			INSERT INTO [Subject].[tbAccountType] ([AccountTypeCode], [AccountType])
-			VALUES
-		(0, 'CASH')
-		, (1, 'DUMMY')
-		, (2, 'ASSET')
+		INSERT INTO [Subject].[tbAccountType] ([AccountTypeCode], [AccountType])
+		VALUES
+		    (0, 'CASH')
+		    , (1, 'DUMMY')
+		    , (2, 'ASSET')
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbUoc])
 		INSERT INTO [App].[tbUoc] ([UnitOfCharge], [UocSymbol], [UocName])
@@ -536,12 +539,6 @@ BEGIN TRY
 		, (3, 'CASH')
 		, (4, 'CASH ACCOUNTS')
 		, (5, 'CAPITAL');
-
-	IF NOT EXISTS(SELECT * FROM App.tbTemplate)
-		INSERT INTO App.tbTemplate (TemplateName, StoredProcedure)
-		VALUES ('Basic Company Setup', 'App.proc_TemplateCompanyGeneral') 
-			, ('HMRC Company Accounts', 'App.proc_TemplateCompanyHMRC2021')
-			, ('MIS Tutorials', 'App.proc_TemplateTutorials');
 
 	IF NOT EXISTS(SELECT * FROM Usr.tbMenuView)
 		INSERT INTO Usr.tbMenuView (MenuViewCode, MenuView)

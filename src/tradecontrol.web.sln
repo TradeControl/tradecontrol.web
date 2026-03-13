@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1
 		..\docs\changelog-schema.md = ..\docs\changelog-schema.md
 		..\docs\changelog.md = ..\docs\changelog.md
 		..\readme.md = ..\readme.md
+		template_naming.md = template_naming.md
+		synthetic-dataset.md = synthetic-dataset.md
 		..\docs\template_tags.md = ..\docs\template_tags.md
 	EndProjectSection
 EndProject

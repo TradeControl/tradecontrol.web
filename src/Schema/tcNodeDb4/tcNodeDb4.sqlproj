@@ -505,7 +505,6 @@
     <Build Include="Invoice\Stored Procedures\proc_NetworkUpdated.sql" />
     <Build Include="App\Stored Procedures\proc_TemplateTutorials.sql" />
     <Build Include="App\Stored Procedures\proc_EventLog.sql" />
-    <Build Include="App\Stored Procedures\proc_TemplateCompanyGeneral.sql" />
     <Build Include="App\Stored Procedures\proc_ErrorLog.sql" />
     <Build Include="Cash\Stored Procedures\proc_PaymentPostById.sql" />
     <Build Include="Invoice\Stored Procedures\proc_Mirror.sql" />
@@ -634,7 +633,6 @@
     <Build Include="Security\Project.sql" />
     <Build Include="Security\Usr.sql" />
     <Build Include="Security\Web.sql" />
-    <Build Include="App\Stored Procedures\proc_TemplateCompanyHMRC2021.sql" />
     <Build Include="Cash\Views\vwTaxLossesCarriedForward.sql" />
     <Build Include="App\Stored Procedures\proc_DB4Migration.sql" />
     <Build Include="App\Stored Procedures\proc_NodeDataInit.sql" />
@@ -654,12 +652,24 @@
     <Build Include="App\Stored Procedures\proc_DefaultCodeGenerator.sql" />
     <Build Include="App\Stored Procedures\proc_DefaultTaxCode.sql" />
     <Build Include="Cash\Stored Procedures\proc_TaxAdjustmentGet.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_MIN_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_STD_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_STD_EXP_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_ST_SOLE_CUR_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_DisableVAT.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetCreateProduct.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetObjectPrint.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetCreateService.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetCreateProjectTemplate.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetProjectPrint.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\DB3-DB4 migration script.sql" />
+    <None Include="Scripts\SyntheticDataset.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

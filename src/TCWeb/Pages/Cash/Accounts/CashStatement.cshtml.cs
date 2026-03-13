@@ -39,10 +39,10 @@ public class CashStatementModel : PageModel
             Format = "excel",
             Params = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
                 ["commandTimeout"] = CommandTimeout.ToString(CultureInfo.InvariantCulture),
-                ["includeActivePeriods"] = IncludeActivePeriods ? "false" : "false", // sample shows false by default
+                ["includeActivePeriods"] = IncludeActivePeriods ? "true" : "false", 
                 ["includeBalanceSheet"] = IncludeBalanceSheet ? "true" : "false",
                 ["includeBankBalances"] = IncludeBankBalances ? "true" : "false",
-                ["includeOrderBook"] = IncludeOrderBook ? "false" : "false",
+                ["includeOrderBook"] = IncludeOrderBook ? "true" : "false",
                 ["includeTaxAccruals"] = IncludeTaxAccruals ? "true" : "false",
                 ["includeVatDetails"] = IncludeVatDetails ? "true" : "false",
             }

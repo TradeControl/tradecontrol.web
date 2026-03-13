@@ -73,6 +73,24 @@
                         </div>
 
                         <input asp-for="App_Initialisation.CalendarCode" type="hidden" />
+
+                        <hr class="my-3" />
+
+                        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                            <div>
+                                <div class="fw-semibold">VAT registration</div>
+                                <div class="text-muted small">Affects template setup and tax behavior.</div>
+                            </div>
+
+                            <input asp-for="App_Initialisation.IsVatRegistered" type="hidden" id="isVatRegistered" />
+
+                            <button type="button"
+                                    class="btn"
+                                    id="vatToggle"
+                                    aria-pressed="false">
+                                VAT: Off
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -235,20 +253,68 @@
     (function ()
     {
         const descriptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TemplateDescriptions));
+        const vatDefaults = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TemplateVatDefaults));
+
         const select = document.getElementById("templateName");
         const box = document.getElementById("templateDescription");
-        if (!select || !box) return;
+        const vatToggle = document.getElementById("vatToggle");
+        const vatField = document.getElementById("isVatRegistered");
+
+        if (!select)
+            return;
 
         function setDescription()
         {
+            if (!box)
+                return;
+
             const name = select.value;
             const text = descriptions[name] || "";
             box.textContent = text;
             box.style.display = text.length > 0 ? "" : "none";
         }
 
-        select.addEventListener("change", setDescription);
+        function setVatVisual(isVat)
+        {
+            if (!vatToggle || !vatField)
+                return;
+
+            vatField.value = isVat ? "true" : "false";
+            vatToggle.setAttribute("aria-pressed", isVat ? "true" : "false");
+            vatToggle.textContent = isVat ? "VAT: On" : "VAT: Off";
+
+            vatToggle.classList.remove("btn-success", "btn-danger");
+            vatToggle.classList.add(isVat ? "btn-success" : "btn-danger");
+        }
+
+        function setVatDefaultFromTemplate()
+        {
+            const name = select.value;
+            const isVat = !!vatDefaults[name];
+            setVatVisual(isVat);
+        }
+
+        select.addEventListener("change", function ()
+        {
+            setDescription();
+            setVatDefaultFromTemplate();
+        });
+
+        if (vatToggle)
+        {
+            vatToggle.addEventListener("click", function ()
+            {
+                if (!vatField)
+                    return;
+
+                const isVat = (vatField.value === "true");
+                setVatVisual(!isVat);
+            });
+        }
+
         setDescription();
+        setVatVisual(vatField && vatField.value === "true");
+        setVatDefaultFromTemplate();
     })();
 
     (function ()

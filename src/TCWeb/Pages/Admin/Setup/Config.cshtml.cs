@@ -25,6 +25,7 @@ namespace TradeControl.Web.Pages.Admin.Setup
         public SelectList MonthNames { get; set; }
 
         public Dictionary<string, string> TemplateDescriptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, bool> TemplateVatDefaults { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
         UserManager<TradeControlWebUser> UserManager { get; }
 
@@ -39,13 +40,16 @@ namespace TradeControl.Web.Pages.Admin.Setup
             {
                 var templates = await NodeContext.App_tbTemplates
                     .OrderBy(t => t.TemplateName)
-                    .Select(t => new { t.TemplateName, t.TemplateDescription })
+                    .Select(t => new { t.TemplateName, t.TemplateDescription, t.IsVatRegistered })
                     .ToListAsync();
 
                 TemplateNames = new SelectList(templates.Select(t => t.TemplateName).ToList());
 
                 TemplateDescriptions = templates
                     .ToDictionary(t => t.TemplateName, t => t.TemplateDescription ?? string.Empty, StringComparer.OrdinalIgnoreCase);
+
+                TemplateVatDefaults = templates
+                    .ToDictionary(t => t.TemplateName, t => t.IsVatRegistered, StringComparer.OrdinalIgnoreCase);
 
                 MonthNames = new SelectList(await NodeContext.App_tbMonths.OrderBy(m => m.MonthNumber).Select(m => m.MonthName).ToListAsync());
 
@@ -77,21 +81,15 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         CompanyNumber = company.CompanyNumber,
                         VatNumber = company.VatNumber,
                         BankName = company.BankName,
+                        BankAddress = company.BankAddress,
                         CurrentSubjectName = company.CurrentAccountName,
                         CAAccountNumber = company.BankAccountNumber,
                         CASortCode = company.BankSortCode,
                         CalendarCode = await NodeContext.App_tbCalendars.OrderBy(c => c.CalendarCode).Select(c => c.CalendarCode).SingleOrDefaultAsync(),
                         MonthName = monthName,
-                        UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == options.UnitOfCharge).Select(u => u.UocName).SingleOrDefaultAsync()
+                        UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == options.UnitOfCharge).Select(u => u.UocName).SingleOrDefaultAsync(),
+                        IsVatRegistered = TemplateVatDefaults.TryGetValue(TemplateNames.FirstOrDefault().Text, out var isVat) && isVat
                     };
-
-                    var bankAddr =
-                        await (from ca in NodeContext.Subject_CurrentAccounts
-                               join addr in NodeContext.Subject_tbAddresses
-                               on ca.SubjectCode equals addr.SubjectCode
-                               select addr.Address).FirstOrDefaultAsync();
-
-                    App_Initialisation.BankAddress = bankAddr != null ? bankAddr : string.Empty;
 
                     var reserveAccount = await NodeContext.Subject_ReserveAccounts.OrderBy(r => r.AccountCode).FirstOrDefaultAsync();
 
@@ -112,12 +110,17 @@ namespace TradeControl.Web.Pages.Admin.Setup
                         App_Initialisation.Government = gov;
                 }
                 else
+                {
+                    var defaultTemplate = TemplateNames.FirstOrDefault().Text;
+
                     App_Initialisation = new()
                     {
-                        TemplateName = TemplateNames.FirstOrDefault().Text,
+                        TemplateName = defaultTemplate,
                         MonthName = await NodeContext.App_tbMonths.Where(m => m.MonthNumber == 4).Select(m => m.MonthName).SingleAsync(),
-                        UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == "GBP").Select(u => u.UocName).SingleAsync()
+                        UocName = await NodeContext.App_tbUocs.Where(u => u.UnitOfCharge == "GBP").Select(u => u.UocName).SingleAsync(),
+                        IsVatRegistered = TemplateVatDefaults.TryGetValue(defaultTemplate, out var isVat) && isVat
                     };
+                }
 
                 return Page();
             }
@@ -187,7 +190,8 @@ namespace TradeControl.Web.Pages.Admin.Setup
                 ca_AccountNumber: App_Initialisation.CAAccountNumber,
                 reserveAccount: App_Initialisation.ReserveSubjectName,
                 ra_SortCode: App_Initialisation.RASortCode,
-                ra_AccountNumber: App_Initialisation.RAAccountNumber);
+                ra_AccountNumber: App_Initialisation.RAAccountNumber,
+                isVatRegistered: App_Initialisation.IsVatRegistered);
 
             if (embedded)
             {
@@ -204,85 +208,110 @@ namespace TradeControl.Web.Pages.Admin.Setup
         [Required]
         [Display(Name = "Configuration Template")]
         public string TemplateName { get; set; }
+
         [Required]
         [StringLength(100)]
         [Display(Name = "Unit of Account")]
         public string UocName { get; set; }
+
         [Required]
         [Display(Name = "Financial Year")]
         public string MonthName { get; set; }
+
         [Required]
         [StringLength(255)]
         [Display(Name = "Government")]
         public string Government { get; set; } = "HM REVENUE AND CUSTOMS";
+
         [Required]
         [StringLength(10)]
         [Display(Name = "Account Code")]
         public string SubjectCode { get; set; } = "HOME";
+
         [Required]
         [StringLength(255)]
         [Display(Name = "Business Name")]
         public string SubjectName { get; set; }
+
         [Required]
         [Display(Name = "Business Address")]
         public string BusinessAddress { get; set; }
+
         [Required]
         [StringLength(100)]
         [Display(Name = "Your Name")]
         public string UserName { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Phone Number")]
         [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; }
+
         [Required]
         [StringLength(255)]
         [Display(Name = "Email Address")]
         [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
+
         [StringLength(255)]
         [Display(Name = "Web Site")]
         [DataType(DataType.Url)]
         public string WebSite { get; set; }
+
         [StringLength(20)]
         [Display(Name = "Company Number")]
         public string CompanyNumber { get; set; }
+
         [StringLength(50)]
         [Display(Name = "Vat Number")]
         public string VatNumber { get; set; }
+
         [Required]
         [StringLength(255)]
         [Display(Name = "Bank Name")]
         public string BankName { get; set; }
+
         [Display(Name = "Bank Address")]
         public string BankAddress { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Current Account Name")]
         public string CurrentSubjectName { get; set; }
+
         [Required]
         [StringLength(10)]
         [Display(Name = "Sort Code")]
         public string CASortCode { get; set; }
+
         [Required]
         [StringLength(20)]
         [Display(Name = "Account No")]
         public string CAAccountNumber { get; set; }
+
         [StringLength(50)]
         [Display(Name = "Reserve Account Name")]
         public string ReserveSubjectName { get; set; }
+
         [StringLength(10)]
         [Display(Name = "Sort Code")]
         public string RASortCode { get; set; }
+
         [StringLength(20)]
         [Display(Name = "Account No")]
         public string RAAccountNumber { get; set; }
+
         [StringLength(50)]
         [Display(Name = "Dummy Account")]
         public string DummySubjectName { get; set; } = "ADJUSTMENTS";
+
         [Required]
         [StringLength(10)]
         [Display(Name = "Calendar Code")]
         public string CalendarCode { get; set; } = "OFFICE";
+
+        [Display(Name = "VAT Registered")]
+        public bool IsVatRegistered { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE App.proc_BasicSetup
+CREATE PROCEDURE App.proc_BasicSetup
 (
 	@TemplateName NVARCHAR(100),
 	@FinancialMonth SMALLINT = 4,
@@ -12,7 +12,8 @@
 	@CA_AccountNumber NVARCHAR(20) = null,
 	@ReserveAccount NVARCHAR(50) = null, 
 	@RA_SortCode NVARCHAR(10) = null,
-	@RA_AccountNumber NVARCHAR(20) = null
+	@RA_AccountNumber NVARCHAR(20) = null,
+	@IsVatRegistered BIT = 0
 )
 AS
 	DECLARE 
@@ -49,7 +50,8 @@ AS
 				@CA_AccountNumber = @CA_AccountNumber, 
 				@ReserveAccount = @ReserveAccount, 
 				@RA_SortCode = @RA_SortCode, 
-				@RA_AccountNumber = @RA_AccountNumber;
+				@RA_AccountNumber = @RA_AccountNumber,
+				@IsVATRegistered = @IsVatRegistered;
 
 		--TIME PERIODS
 		WHILE (@Year < DATEPART(YEAR, CURRENT_TIMESTAMP) + 2)

@@ -1,4 +1,4 @@
-﻿CREATE VIEW Usr.vwDoc
+CREATE VIEW Usr.vwDoc
 AS
 	WITH bank AS 
 	(
@@ -6,17 +6,20 @@ AS
 			Subject.tbSubject.SubjectName AS BankName,
 			Subject.tbAccount.AccountName AS CurrentAccountName,
 			CONCAT(Subject.tbSubject.SubjectName, SPACE(1), Subject.tbAccount.AccountName) AS BankAccount, 
-			Subject.tbAccount.SortCode AS BankSortCode, Subject.tbAccount.AccountNumber AS BankAccountNumber
+			Subject.tbAccount.SortCode AS BankSortCode, 
+			Subject.tbAccount.AccountNumber AS BankAccountNumber,
+			bank_addr.Address AS BankAddress
 		FROM Subject.tbAccount 
 			INNER JOIN Subject.tbSubject ON Subject.tbAccount.SubjectCode = Subject.tbSubject.SubjectCode
+			LEFT OUTER JOIN Subject.tbAddress AS bank_addr ON Subject.tbSubject.AddressCode = bank_addr.AddressCode
 		WHERE (NOT (Subject.tbAccount.CashCode IS NULL)) AND (Subject.tbAccount.AccountTypeCode = 0)
 	)
-    SELECT        TOP (1) company.SubjectName AS CompanyName, Subject.tbAddress.Address AS CompanyAddress, company.PhoneNumber AS CompanyPhoneNumber,  
-                              company.EmailAddress AS CompanyEmailAddress, company.WebSite AS CompanyWebsite, company.CompanyNumber, company.VatNumber, company.Logo, 
-							  bank_details.BankName, bank_details.CurrentAccountName,
-							  bank_details.BankAccount, bank_details.BankAccountNumber, bank_details.BankSortCode
-     FROM            Subject.tbSubject AS company INNER JOIN
-                              App.tbOptions ON company.SubjectCode = App.tbOptions.SubjectCode LEFT OUTER JOIN
-                              bank AS bank_details ON company.SubjectCode = bank_details.SubjectCode LEFT OUTER JOIN
-                              Subject.tbAddress ON company.AddressCode = Subject.tbAddress.AddressCode;
-
+    SELECT TOP (1) company.SubjectName AS CompanyName, Subject.tbAddress.Address AS CompanyAddress, company.PhoneNumber AS CompanyPhoneNumber,  
+        company.EmailAddress AS CompanyEmailAddress, company.WebSite AS CompanyWebsite, company.CompanyNumber, company.VatNumber, company.Logo, 
+		bank_details.BankName, bank_details.CurrentAccountName,
+		bank_details.BankAccount, bank_details.BankAccountNumber, bank_details.BankSortCode,
+		bank_details.BankAddress
+     FROM Subject.tbSubject AS company 
+		INNER JOIN App.tbOptions ON company.SubjectCode = App.tbOptions.SubjectCode 
+		LEFT OUTER JOIN bank AS bank_details ON company.SubjectCode = bank_details.SubjectCode 
+		LEFT OUTER JOIN Subject.tbAddress ON company.AddressCode = Subject.tbAddress.AddressCode;

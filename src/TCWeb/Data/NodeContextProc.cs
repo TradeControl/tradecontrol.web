@@ -2340,7 +2340,7 @@ namespace TradeControl.Web.Data
         }
 
         public async Task InstallBasicSetup(string templateName,
-                                        short financialMonth,                                        
+                                        short financialMonth,
                                         string govSubjectName,
                                         string bankName,
                                         string bankAddress,
@@ -2350,7 +2350,8 @@ namespace TradeControl.Web.Data
                                         string ca_AccountNumber,
                                         string reserveAccount,
                                         string ra_SortCode,
-                                        string ra_AccountNumber)
+                                        string ra_AccountNumber,
+                                        bool isVatRegistered)
         {
             try
             {
@@ -2440,6 +2441,12 @@ namespace TradeControl.Web.Data
                     p11.ParameterName = "@RA_AccountNumber";
                     p11.Value = ra_AccountNumber;
                     command.Parameters.Add(p11);
+
+                    SqlParameter p12 = command.CreateParameter();
+                    p12.DbType = DbType.Boolean;
+                    p12.ParameterName = "@IsVatRegistered";
+                    p12.Value = isVatRegistered;
+                    command.Parameters.Add(p12);
 
                     await command.ExecuteNonQueryAsync();
                 }

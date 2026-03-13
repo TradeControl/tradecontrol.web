@@ -20,5 +20,7 @@ namespace TradeControl.Web.Models
         public string StoredProcedure { get; set; }
 
         public string TemplateDescription { get; set; }
+
+        public bool IsVatRegistered { get; set; }
     }
 }
