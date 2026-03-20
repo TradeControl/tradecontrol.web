@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Cash.proc_GeneratePeriods
+CREATE PROCEDURE Cash.proc_GeneratePeriods
 AS
  	SET NOCOUNT, XACT_ABORT ON;
 
@@ -86,8 +86,10 @@ AS
 			SELECT payment.CashCode, 
 				(SELECT TOP 1 StartOn FROM App.tbYearPeriod WHERE (StartOn <= payment.PaidOn) ORDER BY StartOn DESC) AS StartOn,
 				CASE cash_category.CashPolarityCode
-					WHEN 0 THEN (PaidInValue + (PaidOutValue * -1)) * -1
-					WHEN 1 THEN PaidInValue + (PaidOutValue * -1)
+					WHEN 0 THEN 
+						(PaidInValue + (PaidOutValue * -1)) * -1
+					ELSE 
+						PaidInValue + (PaidOutValue * -1)
 				END AssetValue
 			FROM Cash.tbPayment payment
 				JOIN Subject.tbAccount account ON payment.AccountCode = account.AccountCode

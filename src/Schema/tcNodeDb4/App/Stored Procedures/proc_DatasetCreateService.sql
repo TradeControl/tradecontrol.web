@@ -1,4 +1,4 @@
-CREATE PROCEDURE [App].[proc_DatasetCreateService]
+CREATE PROCEDURE App.proc_DatasetCreateService
 (
 	@ServiceName NVARCHAR(50) = N'Book',
 	@UnitCharge DECIMAL(18, 7) = 0.0000000,
@@ -8,8 +8,6 @@ AS
 	SET NOCOUNT, XACT_ABORT ON;
 
 	BEGIN TRY
-		BEGIN TRAN;
-
 		IF NOT EXISTS (SELECT 1 FROM Usr.vwCredentials WHERE IsAdministrator <> 0)
 		BEGIN
 			DECLARE @Msg NVARCHAR(100) = CONCAT('Access Denied: User ', SUSER_SNAME(), ' is not an administrsator');
@@ -196,7 +194,6 @@ AS
 				OffsetDays = s.OffsetDays,
 				UsedOnQuantity = s.UsedOnQuantity;
 
-		COMMIT TRAN;
 	END TRY
 	BEGIN CATCH
 		EXEC App.proc_ErrorLog;

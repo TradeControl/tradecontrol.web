@@ -1038,9 +1038,9 @@ BEGIN TRY
 	---------------------------------------------------------------------
 	DECLARE
 		@EnableLayer1_Mis bit = 1,
-        @EnableLayer1_Invoicing bit = 0,
-        @EnableLayer1_Settlement bit = 0,
-		@EnableLayer2_Accounts bit = 0,
+        @EnableLayer1_Invoicing bit = 1,
+        @EnableLayer1_Settlement bit = 1,
+		@EnableLayer2_Accounts bit = 1,
 		@EnableLayer3_Assets bit = 0,
 
 		@MisOrdersPerMonth int = 2,
@@ -1325,6 +1325,92 @@ BEGIN TRY
 				ON cc.CategoryCode = cat.CategoryCode
 		GROUP BY m.MonthStartOn, prj.SubjectCode
 		ORDER BY m.MonthStartOn, prj.SubjectCode;
+
+        -----------------------------------------------------------------
+		-- Diagnostics 3: VAT and Profit
+		-----------------------------------------------------------------
+
+        WITH periods AS
+        (
+            SELECT yp.YearNumber, yp.StartOn
+            FROM App.tbYearPeriod yp
+        ),
+        projects AS
+        (
+            SELECT
+                p.ProjectCode,
+                p.CashCode,
+                (SELECT TOP (1) StartOn
+                 FROM App.tbYearPeriod
+                 WHERE StartOn <= p.ActionOn
+                 ORDER BY StartOn DESC) AS StartOn,
+                 CASE cat.CashPolarityCode WHEN 0 THEN p.TotalCharge * -1 ELSE p.TotalCharge END TotalCharge,
+                ISNULL(tax.TaxRate, 0) AS TaxRate
+            FROM Project.tbProject p
+            JOIN App.tbTaxCode tax
+                ON p.TaxCode = tax.TaxCode
+	        JOIN Cash.tbCode cc
+		        ON p.CashCode = cc.CashCode
+	        JOIN Cash.tbCategory cat
+		        ON cc.CategoryCode = cat.CategoryCode
+            WHERE p.ProjectStatusCode IN (1, 2)
+              AND p.CashCode IS NOT NULL
+        ),
+        projects_foryear AS
+        (
+            SELECT per.YearNumber, prj.*
+            FROM projects prj
+            JOIN periods per
+                ON prj.StartOn = per.StartOn
+        ),
+        orders AS
+        (
+            SELECT
+                pfy.CashCode,
+		        pfy.YearNumber,
+                pfy.StartOn,
+                pfy.TotalCharge  AS InvoiceValue,
+                (pfy.TotalCharge * pfy.TaxRate) AS InvoiceTax
+            FROM projects_foryear pfy
+        ),
+        order_summary AS
+        (
+            SELECT
+                CashCode,
+		        YearNumber,
+                StartOn,
+                SUM(InvoiceValue) AS InvoiceValue,
+                SUM(InvoiceTax) AS InvoiceTax
+            FROM orders
+            GROUP BY CashCode,YearNumber, StartOn
+        )
+        SELECT
+            CashCode,
+	        YearNumber,
+            CAST(StartOn AS date) AS StartOn,
+            InvoiceValue,
+            InvoiceTax
+        INTO #T
+        FROM order_summary
+        WHERE InvoiceValue <> 0 OR InvoiceTax <> 0;
+
+        SELECT YearNumber, SUM(InvoiceValue) TotalProfit, SUM(os.InvoiceTax) TotalVAT
+        FROM #T os
+        GROUP BY YearNumber
+        ORDER BY YearNumber;
+
+        SELECT
+            CashCode,
+	        YearNumber,
+            CAST(StartOn AS date) AS StartOn,
+            InvoiceValue,
+            InvoiceTax
+        FROM #T order_summary
+        WHERE InvoiceValue <> 0 OR InvoiceTax <> 0
+        ORDER BY CashCode, YearNumber, StartOn;
+
+        DROP TABLE #T;
+
     END;
 
 	---------------------------------------------------------------------
@@ -1339,12 +1425,12 @@ BEGIN TRY
 			@ProjectActionOn date;
 
 		DECLARE curInv CURSOR LOCAL FAST_FORWARD FOR
-			SELECT r.ProjectCode
-			FROM #MisRoots r
-				JOIN Project.tbProject p ON r.ProjectCode = p.ProjectCode
+			SELECT DISTINCT p.ProjectCode
+			FROM Project.tbProject p
+                JOIN Cash.tbCode cc
+                    ON p.CashCode = cc.CashCode
 			WHERE CAST(p.ActionOn AS date) <= EOMONTH(@LastClosedStartOn)
-			  AND p.CashCode IS NOT NULL
-			ORDER BY p.ActionOn, r.ProjectCode;
+			ORDER BY p.ProjectCode;
 
 		OPEN curInv;
 		FETCH NEXT FROM curInv INTO @InvoiceProjectCode;
@@ -1368,36 +1454,217 @@ BEGIN TRY
 			UPDATE Invoice.tbInvoice
 			SET InvoiceStatusCode = 1
 			WHERE InvoiceNumber = @InvoiceNumber
-			  AND InvoiceStatusCode = 0;
+				AND InvoiceStatusCode = 0;
 
 			FETCH NEXT FROM curInv INTO @InvoiceProjectCode;
 		END
 
 		CLOSE curInv;
 		DEALLOCATE curInv;
+
+	---------------------------------------------------------------------
+	-- Phase 2b: Returns (Credit/Debit Notes) - one product + one service per financial year
+	-- Create CN/DN against the selected projects then (for one) scale the note lines to 50%
+	-- IMPORTANT: do not modify Project.tbProject (completed orders must remain intact)
+	---------------------------------------------------------------------
+		DECLARE
+			@CreditNoteTypeCode smallint = 1,
+			@DebitNoteTypeCode smallint = 3;
+
+		IF NOT EXISTS (SELECT 1 FROM Invoice.tbType WHERE InvoiceTypeCode = @CreditNoteTypeCode)
+			THROW 51070, 'SyntheticDataset: missing Invoice.tbType row for CreditNote (InvoiceTypeCode=1).', 1;
+
+		IF NOT EXISTS (SELECT 1 FROM Invoice.tbType WHERE InvoiceTypeCode = @DebitNoteTypeCode)
+			THROW 51071, 'SyntheticDataset: missing Invoice.tbType row for DebitNote (InvoiceTypeCode=3).', 1;
+
+		IF OBJECT_ID('tempdb..#ReturnCandidates') IS NOT NULL DROP TABLE #ReturnCandidates;
+
+		;WITH candidates AS
+		(
+			SELECT
+				yp.YearNumber,
+				p.ProjectCode,
+				CAST(p.ActionOn AS date) AS ActionOn,
+				subj.SubjectTypeCode,
+				obj.UnitOfMeasure,
+				ROW_NUMBER() OVER
+				(
+					PARTITION BY yp.YearNumber,
+						CASE
+							WHEN subj.SubjectTypeCode = 1 AND obj.UnitOfMeasure = N'each' THEN N'CR_PRODUCT'
+							WHEN subj.SubjectTypeCode = 1 AND obj.UnitOfMeasure <> N'each' THEN N'CR_SERVICE'
+							WHEN subj.SubjectTypeCode = 0 AND obj.UnitOfMeasure = N'each' THEN N'DR_PRODUCT'
+							WHEN subj.SubjectTypeCode = 0 AND obj.UnitOfMeasure <> N'each' THEN N'DR_SERVICE'
+							ELSE N'OTHER'
+						END
+					ORDER BY p.ProjectCode
+				) AS RN
+			FROM Project.tbProject p
+				JOIN Subject.tbSubject subj
+					ON p.SubjectCode = subj.SubjectCode
+				JOIN Object.tbObject obj
+					ON p.ObjectCode = obj.ObjectCode
+				JOIN App.tbYearPeriod yp
+					ON yp.StartOn =
+						(
+							SELECT TOP (1) StartOn
+							FROM App.tbYearPeriod
+							WHERE StartOn <= p.ActionOn
+							ORDER BY StartOn DESC
+						)
+			WHERE p.CashCode IS NOT NULL
+			  AND CAST(p.ActionOn AS date) <= EOMONTH(@LastClosedStartOn)
+			  AND subj.SubjectTypeCode IN (0, 1)
+		)
+		SELECT
+			YearNumber,
+			ProjectCode,
+			ActionOn,
+			CASE
+				WHEN SubjectTypeCode = 1 AND UnitOfMeasure = N'each' THEN N'CR_PRODUCT'
+				WHEN SubjectTypeCode = 1 AND UnitOfMeasure <> N'each' THEN N'CR_SERVICE'
+				WHEN SubjectTypeCode = 0 AND UnitOfMeasure = N'each' THEN N'DR_PRODUCT'
+				WHEN SubjectTypeCode = 0 AND UnitOfMeasure <> N'each' THEN N'DR_SERVICE'
+				ELSE N'OTHER'
+			END AS ReturnKind
+		INTO #ReturnCandidates
+		FROM candidates
+		WHERE RN = 1
+		  AND
+		  (
+				(SubjectTypeCode = 1 AND (UnitOfMeasure = N'each' OR UnitOfMeasure <> N'each'))
+			 OR (SubjectTypeCode = 0 AND (UnitOfMeasure = N'each' OR UnitOfMeasure <> N'each'))
+		  )
+		  AND
+		  (
+				CASE
+					WHEN SubjectTypeCode = 1 AND UnitOfMeasure = N'each' THEN N'CR_PRODUCT'
+					WHEN SubjectTypeCode = 1 AND UnitOfMeasure <> N'each' THEN N'CR_SERVICE'
+					WHEN SubjectTypeCode = 0 AND UnitOfMeasure = N'each' THEN N'DR_PRODUCT'
+					WHEN SubjectTypeCode = 0 AND UnitOfMeasure <> N'each' THEN N'DR_SERVICE'
+					ELSE N'OTHER'
+				END <> N'OTHER'
+		  );
+
+		DECLARE
+			@RetYear smallint,
+			@RetProjectCode nvarchar(20),
+			@RetActionOn date,
+			@RetKind nvarchar(20),
+			@RetInvoiceNumber nvarchar(20),
+			@IsHalf bit;
+
+		-- deterministic: half return on the product credit note
+		DECLARE curReturns CURSOR LOCAL FAST_FORWARD FOR
+			SELECT YearNumber, ProjectCode, ActionOn, ReturnKind
+			FROM #ReturnCandidates
+			ORDER BY YearNumber, ReturnKind;
+
+		OPEN curReturns;
+		FETCH NEXT FROM curReturns INTO @RetYear, @RetProjectCode, @RetActionOn, @RetKind;
+
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			SET @IsHalf = CASE WHEN @RetKind = N'CR_PRODUCT' THEN 1 ELSE 0 END;
+			SET @RetInvoiceNumber = NULL;
+
+			IF @RetKind IN (N'CR_PRODUCT', N'CR_SERVICE')
+			BEGIN
+				EXEC Invoice.proc_Raise
+					@ProjectCode = @RetProjectCode,
+					@InvoiceTypeCode = @CreditNoteTypeCode,
+					@InvoicedOn = @RetActionOn,
+					@InvoiceNumber = @RetInvoiceNumber OUTPUT;
+			END
+			ELSE
+			BEGIN
+				EXEC Invoice.proc_Raise
+					@ProjectCode = @RetProjectCode,
+					@InvoiceTypeCode = @DebitNoteTypeCode,
+					@InvoicedOn = @RetActionOn,
+					@InvoiceNumber = @RetInvoiceNumber OUTPUT;
+			END
+
+			IF @RetInvoiceNumber IS NOT NULL
+			BEGIN
+				UPDATE Invoice.tbInvoice
+				SET InvoiceStatusCode = 1
+				WHERE InvoiceNumber = @RetInvoiceNumber
+				  AND InvoiceStatusCode = 0;
+
+				-- half return: adjust NOTE lines (Invoice.tbProject / Invoice.tbItem), not the project
+				IF @IsHalf <> 0
+				BEGIN
+					UPDATE ip
+					SET
+						Quantity = CAST(ip.Quantity / 2.0 AS decimal(18,4)),
+						InvoiceValue = CAST(ip.InvoiceValue / 2.0 AS decimal(18,5)),
+						TotalValue = 0
+					FROM Invoice.tbProject ip
+					WHERE ip.InvoiceNumber = @RetInvoiceNumber;
+
+					UPDATE ii
+					SET
+						InvoiceValue = CAST(ii.InvoiceValue / 2.0 AS decimal(18,5)),
+						TotalValue = 0
+					FROM Invoice.tbItem ii
+					WHERE ii.InvoiceNumber = @RetInvoiceNumber;
+				END
+			END
+
+			FETCH NEXT FROM curReturns INTO @RetYear, @RetProjectCode, @RetActionOn, @RetKind;
+		END
+
+		CLOSE curReturns;
+		DEALLOCATE curReturns;
+
+		DROP TABLE #ReturnCandidates;
+
+        --pull invoice due date into the past
+        UPDATE i
+        SET 
+	        DueOn = App.fnAdjustToCalendar
+	        (
+		        CASE 
+			        WHEN s.PayDaysFromMonthEnd <> 0 
+			        THEN 
+				        DATEADD(d, -1, DATEADD(m, 1, CONCAT(FORMAT(DATEADD(d, s.PaymentDays, i.InvoicedOn), 'yyyyMM'), '01')))												
+			        ELSE
+				        DATEADD(d, s.PaymentDays, i.InvoicedOn)	
+		        END
+		        , 0
+	        )
+        FROM Invoice.tbInvoice i
+	        JOIN Subject.tbSubject s 
+		        ON i.SubjectCode = s.SubjectCode;
+
+        UPDATE Invoice.tbInvoice
+        SET ExpectedOn = DueOn;
 	END
+
 
 	---------------------------------------------------------------------
 	-- Phase 3: Pay off month-end balances (invoice settlements only)
 	-- Uses Subject.vwStatement balances at month end.
+	-- Pays a % (so Debtors/Creditors exist at month end), and POSTS each payment.
 	---------------------------------------------------------------------
 	IF @EnableLayer1_Settlement <> 0
 	BEGIN
 		IF OBJECT_ID('tempdb..#Payables') IS NOT NULL DROP TABLE #Payables;
 
-		SELECT DISTINCT p.SubjectCode
+		SELECT DISTINCT i.SubjectCode
 		INTO #Payables
-		FROM Project.tbProject p
-			JOIN #MisRoots r ON p.ProjectCode = r.ProjectCode;
+		FROM Invoice.tbInvoice i;
 
-		-- For each month, compute the latest statement balance <= month end and pay it off.
 		DECLARE
 			@PayMonthStart date,
 			@PayMonthEnd date,
 			@PaySubjectCode nvarchar(10),
 			@Balance float,
 			@PaidOn date,
-			@PaymentCode nvarchar(20);
+			@PaymentCode nvarchar(20),
+			@PayPct decimal(9,6) = 0.80, -- pay 80% of the outstanding balance
+			@PayAmount decimal(18,5);
 
 		DECLARE curPayMonths CURSOR LOCAL FAST_FORWARD FOR
 			SELECT MonthStartOn, MonthEndOn
@@ -1410,7 +1677,6 @@ BEGIN TRY
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
-			-- Pay on month end for determinism
 			SET @PaidOn = @PayMonthEnd;
 
 			DECLARE curSubjects CURSOR LOCAL FAST_FORWARD FOR
@@ -1423,47 +1689,51 @@ BEGIN TRY
 
 			WHILE @@FETCH_STATUS = 0
 			BEGIN
-				SELECT TOP (1) @Balance = Balance
+				SELECT TOP (1) @Balance = COALESCE(Balance, 0)
 				FROM Subject.vwStatement
 				WHERE SubjectCode = @PaySubjectCode
 				  AND CAST(TransactedOn AS date) <= @PayMonthEnd
 				ORDER BY TransactedOn DESC, RowNumber DESC;
 
-				SET @Balance = ISNULL(@Balance, 0);
-
 				IF @Balance <> 0
 				BEGIN
-					SET @PaymentCode = NULL;
-					EXEC Cash.proc_NextPaymentCode @PaymentCode = @PaymentCode OUTPUT;
+					SET @PayAmount =
+						CAST(ROUND(ABS(CAST(@Balance AS decimal(18,5))) * @PayPct, 2) AS decimal(18,5));
 
-					INSERT INTO Cash.tbPayment
-					(
-						PaymentCode,
-						UserId,
-						PaymentStatusCode,
-						SubjectCode,
-						AccountCode,
-						CashCode,
-						TaxCode,
-						PaidOn,
-						PaidInValue,
-						PaidOutValue,
-						PaymentReference
-					)
-					SELECT
-						@PaymentCode,
-						(SELECT UserId FROM Usr.vwCredentials),
-						0,
-						@PaySubjectCode,
-						@SettlementAccountCode,
-						NULL,
-						NULL,
-						@PaidOn,
-						CASE WHEN @Balance < 0 THEN CAST(@Balance * -1 AS decimal(18,5)) ELSE CAST(0 AS decimal(18,5)) END,
-						CASE WHEN @Balance > 0 THEN CAST(@Balance AS decimal(18,5)) ELSE CAST(0 AS decimal(18,5)) END,
-						CONCAT(N'DS SETTLE ', FORMAT(@PaidOn, 'yyyy-MM'));
+					IF @PayAmount > 0
+					BEGIN
+						SET @PaymentCode = NULL;
+						EXEC Cash.proc_NextPaymentCode @PaymentCode = @PaymentCode OUTPUT;
 
-					-- Payment(s) remain status 0 until posted
+						INSERT INTO Cash.tbPayment
+						(
+							PaymentCode,
+							UserId,
+							PaymentStatusCode,
+							SubjectCode,
+							AccountCode,
+							CashCode,
+							TaxCode,
+							PaidOn,
+							PaidInValue,
+							PaidOutValue,
+							PaymentReference
+						)
+						SELECT
+							@PaymentCode,
+							(SELECT UserId FROM Usr.vwCredentials),
+							0,
+							@PaySubjectCode,
+							@SettlementAccountCode,
+							NULL,
+							NULL,
+							@PaidOn,
+							CASE WHEN @Balance < 0 THEN @PayAmount ELSE CAST(0 AS decimal(18,5)) END,
+							CASE WHEN @Balance > 0 THEN @PayAmount ELSE CAST(0 AS decimal(18,5)) END,
+							CONCAT(N'DS SETTLE ', FORMAT(@PaidOn, 'yyyy-MM'), N' ', CAST(@PayPct * 100 AS int), N'%');
+
+						EXEC Cash.proc_PaymentPost;
+					END
 				END
 
 				FETCH NEXT FROM curSubjects INTO @PaySubjectCode;
@@ -1477,9 +1747,559 @@ BEGIN TRY
 
 		CLOSE curPayMonths;
 		DEALLOCATE curPayMonths;
-
-		EXEC Cash.proc_PaymentPost;
 	END
+
+	---------------------------------------------------------------------
+	-- Layer 2 (Accounts Mode): misc payments + employee expense claims
+	-- Payments are inserted pending then posted (posting auto-creates invoices).
+	---------------------------------------------------------------------
+	IF @EnableLayer2_Accounts <> 0
+	BEGIN
+		-----------------------------------------------------------------
+		-- Ensure Category + CashCode for Employee Expenses
+		-----------------------------------------------------------------
+		IF NOT EXISTS (SELECT 1 FROM Cash.tbCategory WHERE CategoryCode = N'TC-EXPENSE')
+		BEGIN
+			INSERT INTO Cash.tbCategory
+			(
+				CategoryCode,
+				Category,
+				CategoryTypeCode,
+				CashPolarityCode,
+				CashTypeCode,
+				DisplayOrder,
+				IsEnabled
+			)
+			VALUES
+			(
+				N'TC-EXPENSE',
+				N'Expense Claims',
+				0,
+				0,
+				0,
+				135,
+				1
+			);
+		END
+
+		IF NOT EXISTS (SELECT 1 FROM Cash.tbCode WHERE CashCode = N'TC401')
+		BEGIN
+			INSERT INTO Cash.tbCode
+			(
+				CashCode,
+				CashDescription,
+				CategoryCode,
+				TaxCode,
+				IsEnabled
+			)
+			VALUES
+			(
+				N'TC401',
+				N'Employee Expenses',
+				N'TC-EXPENSE',
+				N'T0',
+				1
+			);
+		END
+
+        IF NOT EXISTS (SELECT 1 FROM Cash.tbCategoryTotal WHERE ParentCode = 'AC425' AND ChildCode = 'TC-EXPENSE')
+        BEGIN
+            INSERT INTO Cash.tbCategoryTotal
+	        (
+		        ParentCode,
+		        ChildCode,
+		        DisplayOrder
+	        )
+	        VALUES
+	        (
+		        'AC425',
+		        'TC-EXPENSE',
+		        2
+	        );
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM Object.tbObject WHERE ObjectCode = 'EXPENSE')
+        BEGIN
+            INSERT INTO Object.tbObject
+            (
+	            ObjectCode
+	            ,ProjectStatusCode
+	            ,UnitOfMeasure
+	            ,CashCode
+	            ,Printed
+	            ,RegisterName
+	            ,ObjectDescription
+	            ,UnitCharge	   
+            )
+            VALUES
+            (
+                'EXPENSE'
+                , 1
+                , 'each'
+                , 'TC401'
+                , 1
+                , 'Purchase Order'
+                , 'Employee Expense Claim'
+                , 0
+            );
+        END
+
+		-----------------------------------------------------------------
+		-- Resolve subjects needed for Layer 2
+		-----------------------------------------------------------------
+		DECLARE
+			@L2_UserId nvarchar(10) = (SELECT TOP (1) UserId FROM Usr.vwCredentials),
+			@L2_EmployeeSubjectCode nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'Employee'),
+			@L2_WalkInSubjectCode nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MiscCustomer1');
+
+		IF @L2_EmployeeSubjectCode IS NULL
+			THROW 51100, 'SyntheticDataset Layer2: missing SUBJECT/Employee in #DatasetCodes.', 1;
+
+		IF @L2_WalkInSubjectCode IS NULL
+			THROW 51101, 'SyntheticDataset Layer2: missing SUBJECT/MiscCustomer1 (walk-in) in #DatasetCodes.', 1;
+
+		-----------------------------------------------------------------
+		-- Add admin expense suppliers (Energy + Supermarket)
+		-----------------------------------------------------------------
+		DECLARE
+			@L2_EnergySupplierCode nvarchar(10) = NULL,
+			@L2_SupermarketSupplierCode nvarchar(10) = NULL;
+
+		EXEC Subject.proc_DefaultSubjectCode @SubjectName = N'Dataset Energy Supplier', @SubjectCode = @L2_EnergySupplierCode OUTPUT;
+		IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @L2_EnergySupplierCode)
+		BEGIN
+			INSERT INTO Subject.tbSubject
+			(
+				SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode,
+				TaxCode, EUJurisdiction,
+				PaymentTerms, ExpectedDays, PaymentDays, PayDaysFromMonthEnd, PayBalance
+			)
+			VALUES
+			(
+				@L2_EnergySupplierCode, N'Dataset Energy Supplier', 0, 1,
+				N'T1', 0,
+				N'30 days', 0, 30, 0, 1
+			);
+		END
+
+		EXEC Subject.proc_DefaultSubjectCode @SubjectName = N'Dataset Supermarket', @SubjectCode = @L2_SupermarketSupplierCode OUTPUT;
+		IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @L2_SupermarketSupplierCode)
+		BEGIN
+			INSERT INTO Subject.tbSubject
+			(
+				SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode,
+				TaxCode, EUJurisdiction,
+				PaymentTerms, ExpectedDays, PaymentDays, PayDaysFromMonthEnd, PayBalance
+			)
+			VALUES
+			(
+				@L2_SupermarketSupplierCode, N'Dataset Supermarket', 0, 1,
+				N'T1', 0,
+				N'30 days', 0, 30, 0, 1
+			);
+		END
+
+		-----------------------------------------------------------------
+		-- Loop closed months and create misc payments
+		-----------------------------------------------------------------
+		DECLARE
+			@L2_MonthStart date,
+			@L2_MonthEnd date,
+			@L2_MonthIndex int,
+			@L2_PaymentCode nvarchar(20),
+			@L2_Amount decimal(18, 5);
+
+		DECLARE curL2Months CURSOR LOCAL FAST_FORWARD FOR
+			SELECT MonthStartOn, MonthEndOn, MonthIndex
+			FROM #Months
+			WHERE MonthStartOn <= EOMONTH(@LastClosedStartOn)
+			ORDER BY MonthStartOn;
+
+		OPEN curL2Months;
+		FETCH NEXT FROM curL2Months INTO @L2_MonthStart, @L2_MonthEnd, @L2_MonthIndex;
+
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			-----------------------------------------------------------------
+			-- TC400 Admin Expenses - quarterly electricity
+			-----------------------------------------------------------------
+			IF (@L2_MonthIndex % 3) = 0
+			BEGIN
+				SET @L2_Amount = CAST(250 + (ABS(CHECKSUM(CONCAT(N'DS:L2:ENERGY:', @L2_MonthIndex))) % 750) AS decimal(18,5));
+
+				SET @L2_PaymentCode = NULL;
+				EXEC Cash.proc_NextPaymentCode @PaymentCode = @L2_PaymentCode OUTPUT;
+
+				INSERT INTO Cash.tbPayment
+				(
+					PaymentCode,
+					UserId,
+					PaymentStatusCode,
+					SubjectCode,
+					AccountCode,
+					CashCode,
+					TaxCode,
+					PaidOn,
+					PaidInValue,
+					PaidOutValue,
+					PaymentReference
+				)
+				VALUES
+				(
+					@L2_PaymentCode,
+					@L2_UserId,
+					0,
+					@L2_EnergySupplierCode,
+					@SettlementAccountCode,
+					N'TC400',
+					N'T1',
+					@L2_MonthEnd,
+					0,
+					@L2_Amount,
+					N'Electricity Charge'
+				);
+
+				EXEC Cash.proc_PaymentPost;
+			END
+
+			-----------------------------------------------------------------
+			-- TC400 Admin Expenses - monthly provisions
+			-----------------------------------------------------------------
+			SET @L2_Amount = CAST(60 + (ABS(CHECKSUM(CONCAT(N'DS:L2:PROV:', @L2_MonthIndex))) % 140) AS decimal(18,5));
+
+			SET @L2_PaymentCode = NULL;
+			EXEC Cash.proc_NextPaymentCode @PaymentCode = @L2_PaymentCode OUTPUT;
+
+			INSERT INTO Cash.tbPayment
+			(
+				PaymentCode,
+				UserId,
+				PaymentStatusCode,
+				SubjectCode,
+				AccountCode,
+				CashCode,
+				TaxCode,
+				PaidOn,
+				PaidInValue,
+				PaidOutValue,
+				PaymentReference
+			)
+			VALUES
+			(
+				@L2_PaymentCode,
+				@L2_UserId,
+				0,
+				@L2_SupermarketSupplierCode,
+				@SettlementAccountCode,
+				N'TC400',
+				N'T1',
+				@L2_MonthEnd,
+				0,
+				@L2_Amount,
+				N'Provisions'
+			);
+
+			EXEC Cash.proc_PaymentPost;
+
+			-----------------------------------------------------------------
+			-- TC101 Other Income - walk-in "Widget Purchase"
+			-----------------------------------------------------------------
+			SET @L2_Amount = CAST(25 + (ABS(CHECKSUM(CONCAT(N'DS:L2:WALKIN:', @L2_MonthIndex))) % 125) AS decimal(18,5));
+
+			SET @L2_PaymentCode = NULL;
+			EXEC Cash.proc_NextPaymentCode @PaymentCode = @L2_PaymentCode OUTPUT;
+
+			INSERT INTO Cash.tbPayment
+			(
+				PaymentCode,
+				UserId,
+				PaymentStatusCode,
+				SubjectCode,
+				AccountCode,
+				CashCode,
+				TaxCode,
+				PaidOn,
+				PaidInValue,
+				PaidOutValue,
+				PaymentReference
+			)
+			VALUES
+			(
+				@L2_PaymentCode,
+				@L2_UserId,
+				0,
+				@L2_WalkInSubjectCode,
+				@SettlementAccountCode,
+				N'TC101',
+				N'T1',
+				@L2_MonthEnd,
+				@L2_Amount,
+				0,
+				N'Widget Purchase'
+			);
+
+			EXEC Cash.proc_PaymentPost;
+
+			-----------------------------------------------------------------
+			-- TC300 Wages - two payments each month to John Smith
+			-----------------------------------------------------------------
+			SET @L2_Amount = CAST(1200 + (ABS(CHECKSUM(CONCAT(N'DS:L2:WAGEA:', @L2_MonthIndex))) % 250) AS decimal(18,5));
+
+			SET @L2_PaymentCode = NULL;
+			EXEC Cash.proc_NextPaymentCode @PaymentCode = @L2_PaymentCode OUTPUT;
+
+			INSERT INTO Cash.tbPayment
+			(
+				PaymentCode,
+				UserId,
+				PaymentStatusCode,
+				SubjectCode,
+				AccountCode,
+				CashCode,
+				TaxCode,
+				PaidOn,
+				PaidInValue,
+				PaidOutValue,
+				PaymentReference
+			)
+			VALUES
+			(
+				@L2_PaymentCode,
+				@L2_UserId,
+				0,
+				@L2_EmployeeSubjectCode,
+				@SettlementAccountCode,
+				N'TC300',
+				N'N/A',
+				@L2_MonthEnd,
+				0,
+				@L2_Amount,
+				N'Wages'
+			);
+
+			EXEC Cash.proc_PaymentPost;
+
+			SET @L2_Amount = CAST(950 + (ABS(CHECKSUM(CONCAT(N'DS:L2:WAGEB:', @L2_MonthIndex))) % 250) AS decimal(18,5));
+
+			SET @L2_PaymentCode = NULL;
+			EXEC Cash.proc_NextPaymentCode @PaymentCode = @L2_PaymentCode OUTPUT;
+
+			INSERT INTO Cash.tbPayment
+			(
+				PaymentCode,
+				UserId,
+				PaymentStatusCode,
+				SubjectCode,
+				AccountCode,
+				CashCode,
+				TaxCode,
+				PaidOn,
+				PaidInValue,
+				PaidOutValue,
+				PaymentReference
+			)
+			VALUES
+			(
+				@L2_PaymentCode,
+				@L2_UserId,
+				0,
+				@L2_EmployeeSubjectCode,
+				@SettlementAccountCode,
+				N'TC300',
+				N'N/A',
+				@L2_MonthEnd,
+				0,
+				@L2_Amount,
+				N'Wages'
+			);
+
+			EXEC Cash.proc_PaymentPost;
+
+			-----------------------------------------------------------------
+			-- TC601 Employee NI contribution: 10% of total wages paid this month
+			-----------------------------------------------------------------
+			DECLARE @L2_WagesMonthTotal decimal(18,5) =
+				(
+					SELECT SUM(p.PaidOutValue)
+					FROM Cash.tbPayment p
+					WHERE p.SubjectCode = @L2_EmployeeSubjectCode
+					  AND p.CashCode = N'TC300'
+					  AND CAST(p.PaidOn AS date) = @L2_MonthEnd
+				);
+
+            DECLARE @HMRC_NI_Account nvarchar(50), @HMRC_NI_CashCode NVARCHAR(50);
+
+            SELECT @HMRC_NI_Account = SubjectCode, @HMRC_NI_CashCode = CashCode FROM Cash.tbTaxType WHERE TaxTypeCode = 2;
+
+			SET @L2_Amount = CAST(ROUND(COALESCE(@L2_WagesMonthTotal, 0) * 0.10, 2) AS decimal(18,5));
+
+			IF @L2_Amount > 0
+			BEGIN
+				SET @L2_PaymentCode = NULL;
+				EXEC Cash.proc_NextPaymentCode @PaymentCode = @L2_PaymentCode OUTPUT;
+
+				INSERT INTO Cash.tbPayment
+				(
+					PaymentCode,
+					UserId,
+					PaymentStatusCode,
+					SubjectCode,
+					AccountCode,
+					CashCode,
+					TaxCode,
+					PaidOn,
+					PaidInValue,
+					PaidOutValue,
+					PaymentReference
+				)
+				VALUES
+				(
+					@L2_PaymentCode,
+					@L2_UserId,
+					0,
+					@HMRC_NI_Account,
+					@SettlementAccountCode,
+					@HMRC_NI_CashCode,
+					'N/A',
+					@L2_MonthEnd,
+					0,
+					@L2_Amount,
+					N'Employee NI'
+				);
+
+				EXEC Cash.proc_PaymentPost;
+			END
+
+			FETCH NEXT FROM curL2Months INTO @L2_MonthStart, @L2_MonthEnd, @L2_MonthIndex;
+		END
+
+		CLOSE curL2Months;
+		DEALLOCATE curL2Months;
+
+		-----------------------------------------------------------------
+		-- Employee Expenses: container project + monthly claim child projects
+		-----------------------------------------------------------------
+		DECLARE
+			@L2_ClaimsContainerProjectCode nvarchar(20) = NULL,
+			@L2_ClaimsChildProjectCode nvarchar(20) = NULL,
+			@L2_ClaimPaymentCode nvarchar(20) = NULL,
+			@L2_ClaimsMonthEnd date,
+			@L2_ClaimsMonthIndex int,
+            @ObjectCode nvarchar(50);
+
+		-- Create container (no CashCode) for John Smith's Expense Claims
+        SET @ObjectCode = 'PROJECT';
+		EXEC Project.proc_NextCode @ObjectCode = @ObjectCode, @ProjectCode = @L2_ClaimsContainerProjectCode OUTPUT;
+
+		IF @L2_ClaimsContainerProjectCode IS NULL
+			THROW 51110, 'SyntheticDataset Layer2: Project.proc_NextCode returned NULL.', 1;
+
+		IF NOT EXISTS (SELECT 1 FROM Project.tbProject WHERE ProjectCode = @L2_ClaimsContainerProjectCode)
+		BEGIN
+			INSERT INTO Project.tbProject
+			(
+				ProjectCode,
+				UserId,
+				SubjectCode,
+				ProjectTitle,
+				ObjectCode,
+				ProjectStatusCode,
+				ActionById,
+				ActionOn,
+				Quantity,
+				CashCode,
+				TaxCode,
+				UnitCharge,
+				TotalCharge
+			)
+			VALUES
+			(
+				@L2_ClaimsContainerProjectCode,
+				@L2_UserId,
+				@L2_EmployeeSubjectCode,
+				N'John Smith''s Expense Claims',
+				@ObjectCode,
+				0,
+				@L2_UserId,
+				EOMONTH(@LastClosedStartOn),
+				0,
+				NULL,
+				NULL,
+				0,
+				0
+			);
+		END
+
+		-- One claim per closed month
+		DECLARE curClaims CURSOR LOCAL FAST_FORWARD FOR
+			SELECT MonthEndOn, MonthIndex
+			FROM #Months
+			WHERE MonthStartOn <= EOMONTH(@LastClosedStartOn)
+			ORDER BY MonthStartOn;
+
+		OPEN curClaims;
+		FETCH NEXT FROM curClaims INTO @L2_ClaimsMonthEnd, @L2_ClaimsMonthIndex;
+
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+            
+			SET @ObjectCode = 'EXPENSE';
+		    EXEC Project.proc_NextCode @ObjectCode = @ObjectCode, @ProjectCode = @L2_ClaimsChildProjectCode OUTPUT;
+
+			IF @L2_ClaimsChildProjectCode IS NULL
+				THROW 51111, 'SyntheticDataset Layer2: Project.proc_NextCode returned NULL for claim child project.', 1;
+
+			INSERT INTO Project.tbProject
+			(
+				ProjectCode,
+				UserId,
+				SubjectCode,
+				ProjectTitle,
+				ObjectCode,
+				ProjectStatusCode,
+				ActionById,
+				ActionOn,
+				Quantity,
+				CashCode,
+				TaxCode,
+				UnitCharge,
+				TotalCharge
+			)
+			VALUES
+			(
+				@L2_ClaimsChildProjectCode,
+				@L2_UserId,
+				@L2_EmployeeSubjectCode,
+				CASE WHEN (@L2_ClaimsMonthIndex % 2) = 0 THEN N'Travel Costs' ELSE N'Entertainment' END,
+				@ObjectCode,
+				0,
+				@L2_UserId,
+				@L2_ClaimsMonthEnd,
+				1,
+				N'TC401',
+				N'T0',
+				CAST(25 + (ABS(CHECKSUM(CONCAT(N'DS:L2:CLAIM:', @L2_ClaimsMonthIndex))) % 175) AS decimal(18,7)),
+				0
+			);
+
+			EXEC Project.proc_AssignToParent
+				@ChildProjectCode = @L2_ClaimsChildProjectCode,
+				@ParentProjectCode = @L2_ClaimsContainerProjectCode;
+
+			SET @L2_ClaimPaymentCode = NULL;
+			EXEC Project.proc_Pay
+				@ProjectCode = @L2_ClaimsChildProjectCode,
+				@Post = 1,
+				@PaymentCode = @L2_ClaimPaymentCode OUTPUT;
+
+			FETCH NEXT FROM curClaims INTO @L2_ClaimsMonthEnd, @L2_ClaimsMonthIndex;
+		END
+
+		CLOSE curClaims;
+		DEALLOCATE curClaims;
+	END
+
+    EXEC App.proc_SystemRebuild;
 
 	COMMIT TRAN;
 END TRY

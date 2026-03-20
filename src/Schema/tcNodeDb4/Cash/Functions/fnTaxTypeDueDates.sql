@@ -1,7 +1,7 @@
-﻿CREATE FUNCTION Cash.fnTaxTypeDueDates(@TaxTypeCode smallint)
+CREATE FUNCTION Cash.fnTaxTypeDueDates(@TaxTypeCode smallint)
 RETURNS @tbDueDate TABLE (PayOn datetime, PayFrom datetime, PayTo datetime)
  AS
-	BEGIN
+BEGIN
 	DECLARE @MonthNumber smallint
 			, @MonthInterval smallint
 			, @StartOn datetime
@@ -64,4 +64,4 @@ RETURNS @tbDueDate TABLE (PayOn datetime, PayFrom datetime, PayTo datetime)
 		SET PayOn = DATEADD(DAY, (SELECT OffsetDays FROM Cash.tbTaxType WHERE TaxTypeCode = @TaxTypeCode), PayOn)
 
 	RETURN	
-	END
+END

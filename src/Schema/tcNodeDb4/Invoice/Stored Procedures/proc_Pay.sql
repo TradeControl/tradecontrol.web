@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Invoice.proc_Pay
+CREATE PROCEDURE Invoice.proc_Pay
 	(
 	@InvoiceNumber nvarchar(20),
 	@PaidOn datetime,
@@ -47,40 +47,39 @@ AS
 		SET @PaidOn = CAST(@PaidOn AS DATE)
 
 		SET @PaymentCode = CONCAT(@UserId, '_', FORMAT(@PaidOn, 'yyyymmdd_hhmmss'))
+        SET @PaymentReference = @InvoiceNumber
 
 		WHILE EXISTS (SELECT * FROM Cash.tbPayment WHERE PaymentCode = @PaymentCode)
-			BEGIN
+		BEGIN
 			SET @PaidOn = DATEADD(s, 1, @PaidOn)
 			SET @PaymentCode = CONCAT(@UserId, '_', FORMAT(@PaidOn, 'yyyymmdd_hhmmss'))
-			END
+		END
 			
 		IF @PayBalance = 0
-			BEGIN	
-			SET @PaymentReference = @InvoiceNumber
-														
+	    BEGIN																		
 			IF @CashPolarityCode = 0
-				BEGIN
+			BEGIN
 				SET @PaidOut = @InvoiceOutstanding
 				SET @PaidIn = 0
-				END
+			END
 			ELSE
-				BEGIN
+			BEGIN
 				SET @PaidIn = @InvoiceOutstanding
 				SET @PaidOut = 0
-				END
 			END
+		END
 		ELSE
-			BEGIN
+		BEGIN
 			SET @PaidIn = CASE WHEN @BalanceOutstanding > 0 THEN @BalanceOutstanding ELSE 0 END
 			SET @PaidOut = CASE WHEN @BalanceOutstanding < 0 THEN ABS(@BalanceOutstanding) ELSE 0 END
-			END
+		END
 	
 		EXEC Cash.proc_CurrentAccount @AccountCode OUTPUT
 
 		BEGIN TRANSACTION
 
 		IF @PaidIn + @PaidOut > 0
-			BEGIN			
+		BEGIN			
 
 			INSERT INTO Cash.tbPayment
 								  (PaymentCode, UserId, PaymentStatusCode, SubjectCode, AccountCode, PaidOn, PaidInValue, PaidOutValue, PaymentReference)
@@ -88,7 +87,7 @@ AS
 		
 			IF @Post <> 0
 				EXEC Cash.proc_PaymentPostInvoiced @PaymentCode			
-			END
+		END
 		
 		IF @@TRANCOUNT > 0
 			COMMIT TRANSACTION

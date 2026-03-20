@@ -7,6 +7,8 @@ CREATE PROCEDURE App.proc_DatasetCreateProjectTemplate
 	@ActionOn date,                                  -- dead-year date
 	@Quantity decimal(18,4) = 100,
 
+	@PriceRatio decimal(18,7) = 1.0000000,           -- adjust selling price (profit/loss lever)
+
 	@BoxSupplierSubjectCode nvarchar(10) = NULL,
 	@PlasticSupplierSubjectCode nvarchar(10) = NULL,
 	@InsertSupplierSubjectCode nvarchar(10) = NULL,
@@ -26,6 +28,9 @@ AS
 			RAISERROR ('%s', 13, 1, @Msg);
 		END
 
+		IF @PriceRatio IS NULL OR @PriceRatio <= 0
+			THROW 51031, 'Dataset: @PriceRatio must be > 0.', 1;
+
 		DECLARE
 			@UserId nvarchar(10) = (SELECT UserId FROM Usr.vwCredentials),
 			@DefaultSubjectCode nvarchar(10) = (SELECT TOP (1) SubjectCode FROM App.tbOptions),
@@ -44,8 +49,6 @@ AS
 
 		IF @ObjectDescription IS NULL
 			THROW 51030, 'Dataset: @ObjectCode not found in Object.tbObject.', 1;
-
-		BEGIN TRAN;
 
 		-----------------------------------------------------------------
 		-- Ensure container parent project
@@ -122,8 +125,8 @@ AS
 			@Quantity,
 			@ObjectCashCode,
 			s.TaxCode,
-			@ObjectUnitCharge,
-			@ObjectUnitCharge * @Quantity,
+			CAST(ROUND(@ObjectUnitCharge * @PriceRatio, 2) AS decimal(18,7)),
+			CAST(ROUND(@ObjectUnitCharge * @PriceRatio, 2) AS decimal(18,7)) * @Quantity,
 			s.AddressCode,
 			s.AddressCode,
 			CASE WHEN @ObjectPrinted = 0 THEN 1 ELSE 0 END
@@ -222,11 +225,8 @@ AS
 
 		EXEC Project.proc_Schedule @ProjectCode;
 
-		COMMIT TRAN;
 	END TRY
 	BEGIN CATCH
-		IF @@TRANCOUNT > 0
-			ROLLBACK TRAN;
 		EXEC App.proc_ErrorLog;
 	END CATCH
 GO

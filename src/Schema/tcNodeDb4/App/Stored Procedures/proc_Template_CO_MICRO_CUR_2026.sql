@@ -81,10 +81,7 @@ AS
             ('AC34',  'Tax on Profit',            1, 2, 0,  70, 1),
 
             -- Profit root (after tax)
-            ('AC435', 'Profit and Loss',          1, 2, 0,  90, 1),
-
-            -- Internal profit-before-tax total
-            ('TC-NP', 'Profit Before Tax',        1, 2, 0,  80, 1),
+            ('AC435', 'Profit and Loss',          1, 2, 0,  80, 1),
 
             -- Internal P&L categories
             ('TC-SALES',   'Sales',                       0, 1, 0, 100, 1),
@@ -94,12 +91,12 @@ AS
             ('TC-ADMIN',   'Admin Expenses',              0, 0, 0, 140, 1),
 
             -- Minimal asset movement bucket
-            ('TC-ASSET',   'Asset Movements',             0, 0, 2, 150, 1),
-            ('TC-ASADJ',   'Asset Adjustments',           0, 0, 2, 160, 1),
+            ('TC-ASSET',   'Asset Movements',             0, 2, 2, 150, 1),
+            ('TC-ASADJ',   'Asset Adjustments',           0, 2, 2, 160, 1),
 
             -- Tax categories
             ('TC-TAXGD',   'Tax on Goods (VAT / General)',0, 0, 1, 170, 1),
-            ('TC-TAXCO',   'Tax on Company (Corp / NI)',  0, 0, 1, 180, 1),
+            ('TC-TAXCO',   'Tax on Company (Corp)',       0, 0, 1, 180, 1),
 
             -- VAT root
             ('TC-VAT',     'VAT Control Root',            1, 2, 1, 900, 1),
@@ -107,24 +104,27 @@ AS
             -- Internal Balance Sheet-ish groupings
             ('TC-BANK',    'Bank Accounts',               0, 2, 2, 910, 1),
             ('TC-INVEST',  'Investments / Capital',       0, 2, 2, 920, 1),
-            ('TC-LIAB',    'Liabilities',                 0, 0, 2, 930, 1);
+            ('TC-LIAB',    'Liabilities',                 0, 0, 2, 930, 1),
+
+			-- Interbank Transfers
+			('TC-IP',	   'Intercompany Payment',	      0, 0, 2, 200, 1),
+			('TC-IR',      'Intercompany Receipt',	      0, 1, 2, 210, 1),
+
+			-- Dividend Payment
+			('TC-DI',      'Dividends',                   0, 0, 0, 300, 1);
 
         ----------------------------------------------------------------
         -- CATEGORY TOTALS (roll-up structure)
         ----------------------------------------------------------------
         INSERT INTO Cash.tbCategoryTotal (ParentCode, ChildCode)
         VALUES
-            -- Profit root (after tax)
-            ('AC435', 'TC-NP'),
-            ('AC435', 'AC34'),
-
             -- Profit before tax
-            ('TC-NP', 'AC12'),
-            ('TC-NP', 'AC405'),
-            ('TC-NP', 'AC410'),
-            ('TC-NP', 'AC415'),
-            ('TC-NP', 'AC420'),
-            ('TC-NP', 'AC425'),
+            ('AC435', 'AC12'),
+            ('AC435', 'AC405'),
+            ('AC435', 'AC410'),
+            ('AC435', 'AC415'),
+            ('AC435', 'AC420'),
+            ('AC435', 'AC425'),
 
             -- Turnover
             ('AC12',  'TC-SALES'),
@@ -168,10 +168,11 @@ AS
             ('TC101', 'Other Income',      'TC-INCOME',  'T1',  1),
 
             -- Direct Costs
-            ('TC200', 'Direct Purchases',  'TC-DIRECT',  'T1',  1),
+            ('TC200', 'Direct Costs',  'TC-DIRECT',  'T1',  1),
 
             -- Wages
             ('TC300', 'Wages',             'TC-WAGES',   'N/A', 1),
+			('TC301', 'Pensions',          'TC-WAGES',   'N/A', 1),
 
             -- Admin
             ('TC400', 'Admin Expenses',    'TC-ADMIN',   'T1',  1),
@@ -181,15 +182,23 @@ AS
             ('TC501', 'Depreciation Adjustment', 'TC-ASADJ', 'N/A', 1),
 
             -- Tax (aligned to TaxTypeCode 0–3)
-            ('TC600', 'VAT Control',       'TC-TAXGD',   'N/A', 1),
-            ('TC601', 'Employers NI',      'TC-TAXCO',   'N/A', 1),
+            ('TC600', 'VAT Control',       'TC-TAXGD',   'N/A', 1),            
             ('TC602', 'Corporation Tax',   'TC-TAXCO',   'N/A', 1),
             ('TC603', 'General Taxes',     'TC-TAXGD',   'N/A', 1),
+
+			('TC601', 'Employers NI',      'TC-WAGES',   'N/A', 1),
 
             -- Operational accounts
             ('TC700', 'Bank',              'TC-BANK',    'N/A', 1),
             ('TC701', 'Share Capital',     'TC-INVEST',  'N/A', 1),
-            ('TC702', 'Loan / Liability',  'TC-LIAB',    'N/A', 1);
+            ('TC702', 'Loan / Liability',  'TC-LIAB',    'N/A', 1),
+
+			-- Bank Transfers
+			('TC800', 'Transfer Payment',   'TC-IP',     'N/A', 1),
+            ('TC801', 'Transfer Receipt',   'TC-IR',     'N/A', 1),
+			
+			-- Dividends
+			('TC900', 'Dividends',          'TC-DI',     'N/A', 1);
 
         ----------------------------------------------------------------
         -- EXPRESSION CATEGORIES (CategoryTypeCode = 2)
@@ -226,7 +235,7 @@ AS
             ('AP', 'IF([Sales]=0,0,(ABS([Admin Expenses])/[Sales]))', 'Num2', 0, 0, NULL),
 
             -- Direct Cost %
-            ('DP', 'IF([Sales]=0,0,(ABS([Direct Purchases])/[Sales]))', 'Num2', 0, 0, NULL),
+            ('DP', 'IF([Sales]=0,0,(ABS([Direct Costs])/[Sales]))', 'Num2', 0, 0, NULL),
 
             -- Depreciation %
             ('DE', 'IF([Sales]=0,0,(ABS([Depreciation (Total)])/[Sales]))', 'Num2', 0, 0, NULL),

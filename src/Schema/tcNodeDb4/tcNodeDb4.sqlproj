@@ -214,7 +214,7 @@
     <Build Include="Cash\Tables\tbChangeStatus.sql" />
     <Build Include="Invoice\Tables\tbStatus.sql" />
     <Build Include="Cash\Tables\tbChange.sql" />
-    <Build Include="Invoice\Tables\tbTask.sql" />
+    <Build Include="Invoice\Tables\tbProject.sql" />
     <Build Include="Invoice\Tables\tbMirrorReference.sql" />
     <Build Include="Invoice\Tables\tbType.sql" />
     <Build Include="Subject\Tables\tbAccount.sql" />
@@ -663,6 +663,23 @@
     <Build Include="App\Stored Procedures\proc_DatasetCreateService.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetCreateProjectTemplate.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetProjectPrint.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Bootstrap.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_ProjectInit.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_ProjectTemplates.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_ProjectTran.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_ProjectInvoice.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_ProjectPay.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_PayInit.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_PayMisc.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_PayWages.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Expenses.sql" />
+    <Build Include="App\Functions\fnDatasetMonths.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Assets.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_TaxVat.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Transfer.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Transfers.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_TaxOnProfit.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
@@ -670,6 +687,7 @@
   <ItemGroup>
     <None Include="Scripts\DB3-DB4 migration script.sql" />
     <None Include="Scripts\SyntheticDataset.sql" />
+    <None Include="Scripts\EXEC_DatasetSyntheticMIS.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

@@ -7,7 +7,6 @@ AS
 	SET NOCOUNT, XACT_ABORT ON;
 
 	BEGIN TRY
-		BEGIN TRAN;
 
 		IF NOT EXISTS (SELECT 1 FROM Usr.vwCredentials WHERE IsAdministrator <> 0)
 		BEGIN
@@ -337,11 +336,8 @@ AS
 			INSERT INTO Object.tbFlow (ParentCode, StepNumber, ChildCode, SyncTypeCode, OffsetDays, UsedOnQuantity)
 			VALUES (@NarrowFootCode, 20, @MaterialPcCode, 1, 0, 0.171);
 
-		COMMIT TRAN;
 	END TRY
 	BEGIN CATCH
-		IF @@TRANCOUNT > 0
-			ROLLBACK TRAN;
 		EXEC App.proc_ErrorLog;
 	END CATCH
 GO

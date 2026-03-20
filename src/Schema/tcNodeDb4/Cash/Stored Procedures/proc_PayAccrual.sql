@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Cash.proc_PayAccrual (@PaymentCode NVARCHAR(20))
+CREATE PROCEDURE Cash.proc_PayAccrual (@PaymentCode NVARCHAR(20))
 AS
     SET NOCOUNT, XACT_ABORT ON;
 
@@ -8,13 +8,13 @@ AS
 					FROM            Cash.tbPayment 
 					WHERE        (PaymentStatusCode = 2) 
 						AND UserId = (SELECT UserId FROM Usr.vwCredentials))
-			BEGIN
+		BEGIN
 
 			BEGIN TRANSACTION
 			EXEC Cash.proc_PaymentPostMisc @PaymentCode	
 			COMMIT TRANSACTION
 			
-			END
+		END
 
   	END TRY
 	BEGIN CATCH

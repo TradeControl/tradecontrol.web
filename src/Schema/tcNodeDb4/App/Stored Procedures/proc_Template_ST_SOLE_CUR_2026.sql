@@ -41,11 +41,11 @@ BEGIN TRY
     ----------------------------------------------------------------
     UPDATE Cash.tbCategory
     SET IsEnabled = 0
-    WHERE CategoryCode IN ('CT', 'CT_PAY', 'CT_ADJ', 'AC34', 'TC-TAXCO');
+    WHERE CategoryCode IN ('CT', 'CT_PAY', 'CT_ADJ', 'AC34', 'TC-TAXCO', 'TC-DI');
 
     UPDATE Cash.tbCode
     SET IsEnabled = 0
-    WHERE CashCode IN ('TC500', 'TC501', 'TC601', 'TC602', 'TC701');
+    WHERE CashCode IN ('TC500', 'TC501', 'TC601', 'TC602', 'TC701', 'TC900');
 
     UPDATE App.tbYearPeriod
     SET CorporationTaxRate = 0;
