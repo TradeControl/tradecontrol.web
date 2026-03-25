@@ -1,6 +1,10 @@
-CREATE FUNCTION Cash.fnTaxTypeDueDates(@TaxTypeCode smallint)
+CREATE FUNCTION Cash.fnTaxTypeDueDates
+(
+	@TaxTypeCode smallint,
+	@IsAccrual bit = 0
+)
 RETURNS @tbDueDate TABLE (PayOn datetime, PayFrom datetime, PayTo datetime)
- AS
+AS
 BEGIN
 	DECLARE @MonthNumber smallint
 			, @MonthInterval smallint
@@ -16,29 +20,33 @@ BEGIN
 								WHEN 4 THEN 12
 							END
 		FROM Cash.tbTaxType
-		WHERE TaxTypeCode = @TaxTypeCode			
+		WHERE TaxTypeCode = @TaxTypeCode;			
 
-		SELECT   @StartOn = MIN(StartOn)
-		FROM         App.tbYearPeriod
-		WHERE     (MonthNumber = @MonthNumber)
+		SELECT @StartOn = MIN(StartOn)
+		FROM App.tbYearPeriod
+		WHERE (MonthNumber = @MonthNumber);
 
-		INSERT INTO @tbDueDate (PayOn) VALUES (@StartOn)
+		INSERT INTO @tbDueDate (PayOn) VALUES (@StartOn);
 	
 		SET @MonthNumber = CASE 			
 			WHEN (@MonthNumber + @MonthInterval) <= 12 THEN @MonthNumber + @MonthInterval
 			WHEN (@MonthNumber + @MonthInterval) % 12 = 0 THEN @MonthNumber
 			ELSE (@MonthNumber + @MonthInterval) % 12
-			END
+			END;
 	
-		WHILE EXISTS(SELECT     *
-					 FROM         App.tbYearPeriod
-					 WHERE     (StartOn > @StartOn) AND (MonthNumber = @MonthNumber))
+		WHILE EXISTS
+		(
+			SELECT *
+			FROM App.tbYearPeriod
+			WHERE (StartOn > @StartOn) AND (MonthNumber = @MonthNumber)
+		)
 		BEGIN
 			SELECT @StartOn = MIN(StartOn)
-			FROM         App.tbYearPeriod
-			WHERE     (StartOn > @StartOn) AND (MonthNumber = @MonthNumber)
-			ORDER BY MIN(StartOn)		
-			INSERT INTO @tbDueDate (PayOn) VALUES (@StartOn)
+			FROM App.tbYearPeriod
+			WHERE (StartOn > @StartOn) AND (MonthNumber = @MonthNumber)
+			ORDER BY MIN(StartOn);
+
+			INSERT INTO @tbDueDate (PayOn) VALUES (@StartOn);
 		
 			SET @MonthNumber = CASE 
 						WHEN (@MonthNumber + @MonthInterval) <= 12 THEN @MonthNumber + @MonthInterval
@@ -54,14 +62,18 @@ BEGIN
 		)
 		UPDATE @tbDueDate
 		SET PayTo = dd.PayOn, PayFrom = dd.PayFrom
-		FROM @tbDueDate tbDueDate JOIN dd ON tbDueDate.PayOn = dd.PayOn;
+		FROM @tbDueDate tbDueDate
+			JOIN dd ON tbDueDate.PayOn = dd.PayOn;
 
 		UPDATE @tbDueDate
 		SET PayFrom = DATEADD(MONTH, @MonthInterval * -1, PayTo)
 		WHERE PayTo = (SELECT MIN(PayTo) FROM @tbDueDate);
 
-		UPDATE @tbDueDate
-		SET PayOn = DATEADD(DAY, (SELECT OffsetDays FROM Cash.tbTaxType WHERE TaxTypeCode = @TaxTypeCode), PayOn)
+		IF ISNULL(@IsAccrual, 0) = 0
+		BEGIN
+			UPDATE @tbDueDate
+			SET PayOn = DATEADD(DAY, (SELECT OffsetDays FROM Cash.tbTaxType WHERE TaxTypeCode = @TaxTypeCode), PayOn);
+		END
 
-	RETURN	
+	RETURN;
 END

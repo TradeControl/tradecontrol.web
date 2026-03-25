@@ -1,7 +1,8 @@
 CREATE PROCEDURE App.proc_DatasetSyntheticMIS_ProjectInit
 (
 	@IsCompany bit,
-	@IsVatRegistered bit
+	@IsVatRegistered bit,
+    @EnableOpeningBalance bit = 1
 )
 AS
 	SET NOCOUNT, XACT_ABORT ON;
@@ -372,8 +373,8 @@ AS
 	-- Seed opening AR/AP
 	---------------------------------------------------------------------
 	DECLARE
-		@OpeningAR decimal(18,5) = 1200.00000,
-		@OpeningAP decimal(18,5) = -800.00000;
+		@OpeningAR decimal(18,5) = (CASE @EnableOpeningBalance WHEN 1 THEN 1200.00000 ELSE 0 END),
+		@OpeningAP decimal(18,5) = (CASE @EnableOpeningBalance WHEN 1 THEN -800.00000 ELSE 0 END);
 
 	DECLARE
 		@OpeningCustomerCode nvarchar(10) =

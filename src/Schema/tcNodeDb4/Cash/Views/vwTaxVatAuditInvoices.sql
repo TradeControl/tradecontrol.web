@@ -1,4 +1,4 @@
-﻿CREATE VIEW Cash.vwTaxVatAuditInvoices
+CREATE VIEW Cash.vwTaxVatAuditInvoices
 AS
 	WITH vat_transactions AS
 	(
@@ -23,7 +23,7 @@ AS
 	)
 	, vat_dataset AS
 	(
-		SELECT  (SELECT PayTo FROM Cash.fnTaxTypeDueDates(1) due_dates WHERE vat_transactions.InvoicedOn >= PayFrom AND vat_transactions.InvoicedOn < PayTo) AS StartOn,
+		SELECT  (SELECT PayTo FROM Cash.fnTaxTypeDueDates(1, 0) due_dates WHERE vat_transactions.InvoicedOn >= PayFrom AND vat_transactions.InvoicedOn < PayTo) AS StartOn,
 		 vat_transactions.InvoicedOn, InvoiceNumber, invoice_type.InvoiceType, vat_transactions.InvoiceTypeCode, TaxCode, InvoiceValue, TaxValue, TaxRate, EUJurisdiction, IdentityCode, ItemDescription,
 				CASE WHEN EUJurisdiction = 0 THEN CASE vat_transactions.InvoiceTypeCode WHEN 0 THEN InvoiceValue WHEN 1 THEN
 				InvoiceValue * - 1 ELSE 0 END ELSE 0 END AS HomeSales, 

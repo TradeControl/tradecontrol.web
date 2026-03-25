@@ -30,6 +30,15 @@ BEGIN TRY
     WHERE C.TaxCode <> 'T0'
       AND C.TaxCode NOT IN ('N/A');
 
+    ----------------------------------------------------------------
+    -- 4. Zero tax rates
+    ----------------------------------------------------------------
+    UPDATE App.tbTaxCode
+    SET
+        TaxRate = 0
+    WHERE
+        TaxTypeCode = 1
+
     COMMIT TRAN DisableVAT;
 
 END TRY

@@ -15,7 +15,7 @@ AS
 		SELECT
 			@PayFrom = PayFrom,
 			@PayTo = PayTo
-		FROM Cash.fnTaxTypeDueDates(@TaxTypeCode) due_dates
+		FROM Cash.fnTaxTypeDueDates(@TaxTypeCode, 0) due_dates
 		WHERE @StartOn >= due_dates.PayFrom AND @StartOn < due_dates.PayTo;
 
 		SELECT @StartOn = MAX(StartOn)

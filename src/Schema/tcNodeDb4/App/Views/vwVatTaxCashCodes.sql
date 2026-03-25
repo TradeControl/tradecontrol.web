@@ -1,28 +1,41 @@
-﻿
-CREATE   VIEW App.vwVatTaxCashCodes
+CREATE VIEW App.vwVatTaxCashCodes
 AS
 	WITH category_relations AS
 	(
-		SELECT Cash.tbCategoryTotal.ParentCode, Cash.tbCategoryTotal.ChildCode, Cash.tbCategory.CategoryTypeCode, Cash.tbCode.CashCode
-		FROM  Cash.tbCategoryTotal 
-			INNER JOIN Cash.tbCategory ON Cash.tbCategoryTotal.ChildCode = Cash.tbCategory.CategoryCode 
-			LEFT OUTER JOIN Cash.tbCode ON Cash.tbCategory.CategoryCode = Cash.tbCode.CategoryCode
-		WHERE Cash.tbCategory.CashTypeCode = 0
-	), cashcode_candidates AS
+		SELECT
+			ct.ParentCode,
+			ct.ChildCode,
+			cat.CategoryTypeCode,
+			code.CashCode
+		FROM Cash.tbCategoryTotal ct
+			INNER JOIN Cash.tbCategory cat
+				ON ct.ChildCode = cat.CategoryCode
+			LEFT OUTER JOIN Cash.tbCode code
+				ON cat.CategoryCode = code.CategoryCode
+		WHERE cat.CashTypeCode = 0
+		  AND cat.IsEnabled = 1
+		  AND (code.CashCode IS NULL OR code.IsEnabled = 1)
+	),
+	cashcode_candidates AS
 	(
-		SELECT     ChildCode, CashCode
+		SELECT ChildCode, CashCode
 		FROM category_relations
-		WHERE     ( CategoryTypeCode = 1) AND ( ParentCode = (SELECT VatCategoryCode FROM App.tbOptions))
+		WHERE (CategoryTypeCode = 1)
+		  AND (ParentCode = (SELECT VatCategoryCode FROM App.tbOptions))
 
 		UNION ALL
 
-		SELECT     category_relations.ChildCode, category_relations.CashCode
-		FROM  category_relations JOIN cashcode_candidates ON category_relations.ParentCode = cashcode_candidates.ChildCode
-	), cashcode_selected AS
+		SELECT cr.ChildCode, cr.CashCode
+		FROM category_relations cr
+			JOIN cashcode_candidates cc
+				ON cr.ParentCode = cc.ChildCode
+	),
+	cashcode_selected AS
 	(
 		SELECT CashCode FROM cashcode_candidates
 		UNION
 		SELECT CashCode FROM category_relations WHERE ParentCode = (SELECT VatCategoryCode FROM App.tbOptions)
 	)
-	SELECT CashCode FROM cashcode_selected WHERE NOT CashCode IS NULL;
-
+	SELECT CashCode
+	FROM cashcode_selected
+	WHERE CashCode IS NOT NULL;

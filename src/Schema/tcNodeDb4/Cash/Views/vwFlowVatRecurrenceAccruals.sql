@@ -1,4 +1,4 @@
-﻿CREATE   VIEW Cash.vwFlowVatRecurrenceAccruals
+CREATE   VIEW Cash.vwFlowVatRecurrenceAccruals
 AS	
 	WITH active_periods AS
 	(
@@ -9,7 +9,7 @@ AS
 		WHERE        (App.tbYear.CashStatusCode < 3)
 	),	vat_dates AS
 	(
-		SELECT PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1)
+		SELECT PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1, 0)
 	), vatPeriod AS
 	(
 		SELECT        StartOn, y.YearNumber, p.MonthNumber,

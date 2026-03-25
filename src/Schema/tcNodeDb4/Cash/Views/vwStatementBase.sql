@@ -1,4 +1,4 @@
-﻿CREATE   VIEW Cash.vwStatementBase
+CREATE   VIEW Cash.vwStatementBase
 AS
 	--invoiced taxes
 	WITH corp_taxcode AS
@@ -40,7 +40,7 @@ AS
 	--uninvoiced taxes
 	,  corptax_dates AS
 	(
-		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0)
+		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0, 0)
 	), corptax_accrual_entries AS
 	(
 		SELECT StartOn, SUM(TaxDue) AS TaxDue
@@ -65,7 +65,7 @@ AS
 		FROM corptax_accrual_totals CROSS JOIN corp_taxcode
 	), vat_dates AS
 	(
-		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1)
+		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1, 0)
 	), vat_accrual_entries AS
 	(
 		SELECT StartOn, SUM(VatDue) AS TaxDue 

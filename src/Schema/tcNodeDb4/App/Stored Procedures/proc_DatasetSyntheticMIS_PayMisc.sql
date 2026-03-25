@@ -25,6 +25,9 @@ AS
 	IF @L2_WalkInSubjectCode IS NULL
 		THROW 51101, 'SyntheticDataset Layer2: missing SUBJECT/MiscCustomer1 (walk-in) in #DatasetCodes.', 1;
 
+	DECLARE @PayMiscTaxCode nvarchar(10) =
+		CASE WHEN ISNULL(@IsVatRegistered, 0) <> 0 THEN N'T1' ELSE N'T0' END;
+
 	-----------------------------------------------------------------
 	-- Add admin expense suppliers (Energy + Supermarket)
 	-----------------------------------------------------------------
@@ -106,7 +109,7 @@ AS
 			(
 				@L2_PaymentCode, @L2_UserId, 0,
 				@L2_EnergySupplierCode, @SettlementAccountCode,
-				N'TC400', N'T1',
+				N'TC400', @PayMiscTaxCode,
 				@L2_MonthEnd, 0, @L2_Amount,
 				N'Electricity Charge'
 			);
@@ -132,7 +135,7 @@ AS
 		(
 			@L2_PaymentCode, @L2_UserId, 0,
 			@L2_SupermarketSupplierCode, @SettlementAccountCode,
-			N'TC400', N'T1',
+			N'TC400', @PayMiscTaxCode,
 			@L2_MonthEnd, 0, @L2_Amount,
 			N'Provisions'
 		);
@@ -157,7 +160,7 @@ AS
 		(
 			@L2_PaymentCode, @L2_UserId, 0,
 			@L2_WalkInSubjectCode, @SettlementAccountCode,
-			N'TC101', N'T1',
+			N'TC101', @PayMiscTaxCode,
 			@L2_MonthEnd, @L2_Amount, 0,
 			N'Widget Purchase'
 		);
@@ -169,4 +172,3 @@ AS
 
 	CLOSE curL2Months;
 	DEALLOCATE curL2Months;
-

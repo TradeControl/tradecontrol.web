@@ -4,7 +4,7 @@ CREATE PROCEDURE App.proc_DatasetSyntheticMIS
 	@IsVatRegistered bit = NULL,
 
 	@MisOrdersPerMonth int = 2,
-	@MonthsForward int = 3,
+	@MonthsForward int = 3,    
 
     -- ratios
     @PriceRatio decimal(18,7) = 1.0000000,
@@ -21,7 +21,8 @@ CREATE PROCEDURE App.proc_DatasetSyntheticMIS
 	@EnableExpenses bit = 1,
     @EnableAssets bit = 1,
     @EnableTax bit = 1,
-	@EnableTransfers bit = 1
+	@EnableTransfers bit = 1,
+    @EnableOpeningBalance bit = 0
 )
 AS
 	SET NOCOUNT, XACT_ABORT ON;
@@ -64,7 +65,8 @@ AS
 		---------------------------------------------------------------------
         EXEC App.proc_DatasetSyntheticMIS_Bootstrap
 	        @TemplateName = @TemplateName,
-	        @IsVatRegistered = @IsVatRegistered;
+	        @IsVatRegistered = @IsVatRegistered,
+            @EnableOpeningBalance = @EnableOpeningBalance;
 
 		---------------------------------------------------------------------
 		-- 2) Project side
@@ -73,7 +75,8 @@ AS
 		BEGIN
 			EXEC App.proc_DatasetSyntheticMIS_ProjectInit
 				@IsCompany = @IsCompany,
-				@IsVatRegistered = @IsVatRegistered;
+				@IsVatRegistered = @IsVatRegistered,
+            @EnableOpeningBalance = @EnableOpeningBalance;
 
 			EXEC App.proc_DatasetSyntheticMIS_ProjectTemplates
 				@IsCompany = @IsCompany,

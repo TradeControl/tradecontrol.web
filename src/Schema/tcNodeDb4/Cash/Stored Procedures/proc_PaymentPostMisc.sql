@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Cash.proc_PaymentPostMisc
+CREATE PROCEDURE Cash.proc_PaymentPostMisc
 	(
 	@PaymentCode nvarchar(20) 
 	)
@@ -17,7 +17,27 @@
 												 Cash.tbCategory ON Cash.tbCode.CategoryCode = Cash.tbCategory.CategoryCode
 						WHERE        (Cash.tbPayment.PaymentStatusCode <> 1)  
 							AND Cash.tbPayment.UserId = (SELECT UserId FROM Usr.vwCredentials))
-			RETURN 
+			RETURN;
+
+		-----------------------------------------------------------------
+		-- Guard: if VAT is being charged, cash code must be in VAT tree
+		-----------------------------------------------------------------
+		IF EXISTS
+		(
+			SELECT 1
+			FROM Cash.tbPayment p
+				JOIN App.tbTaxCode tc ON p.TaxCode = tc.TaxCode
+			WHERE p.PaymentCode = @PaymentCode
+			  AND tc.TaxTypeCode = 1
+			  AND tc.TaxRate <> 0
+			  AND NOT EXISTS (SELECT 1 FROM App.vwVatTaxCashCodes v WHERE v.CashCode = p.CashCode)
+		)
+		BEGIN
+			DECLARE @CashCode nvarchar(50) = (SELECT CashCode FROM Cash.tbPayment WHERE PaymentCode = @PaymentCode);
+			DECLARE @TaxCode nvarchar(10) = (SELECT TaxCode FROM Cash.tbPayment WHERE PaymentCode = @PaymentCode);
+            DECLARE @ErrorMessage nvarchar(255) = CONCAT('PaymentPostMisc: VAT tax code ', @TaxCode, ' used with cash code ', @CashCode, ' not in VAT category tree.');
+			THROW 51410, @ErrorMessage, 1;
+		END
 
 		SELECT @InvoiceTypeCode = CASE WHEN PaidInValue != 0 THEN 0 ELSE 2 END 
 		FROM         Cash.tbPayment

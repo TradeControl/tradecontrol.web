@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Cash.proc_TaxAdjustment (@StartOn datetime, @TaxTypeCode smallint, @TaxAdjustment decimal(18, 5))
+CREATE   PROCEDURE Cash.proc_TaxAdjustment (@StartOn datetime, @TaxTypeCode smallint, @TaxAdjustment decimal(18, 5))
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 
@@ -11,7 +11,7 @@ AS
 		SELECT 
 			@PayFrom = PayFrom,
 			@PayTo = PayTo 
-		FROM Cash.fnTaxTypeDueDates(@TaxTypeCode) due_dates 
+		FROM Cash.fnTaxTypeDueDates(@TaxTypeCode, 0) due_dates 
 		WHERE @StartOn >= due_dates.PayFrom AND @StartOn < due_dates.PayTo
 
 		UPDATE App.tbYearPeriod

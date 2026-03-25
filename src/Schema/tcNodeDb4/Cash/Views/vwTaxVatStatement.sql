@@ -1,8 +1,8 @@
-﻿CREATE VIEW Cash.vwTaxVatStatement
+CREATE VIEW Cash.vwTaxVatStatement
 AS
 	WITH vat_dates AS
 	(
-		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1)
+		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1, 0)
 	), vatPeriod AS
 	(
 		SELECT        StartOn, 

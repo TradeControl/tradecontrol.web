@@ -680,6 +680,8 @@
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Transfer.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_Transfers.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_TaxOnProfit.sql" />
+    <Build Include="Cash\Views\vwEquityReconciliationByYear.sql" />
+    <Build Include="Cash\Views\vwFlowReconcilationByYear.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
@@ -688,6 +690,8 @@
     <None Include="Scripts\DB3-DB4 migration script.sql" />
     <None Include="Scripts\SyntheticDataset.sql" />
     <None Include="Scripts\EXEC_DatasetSyntheticMIS.sql" />
+    <None Include="Scripts\PROOF_CashStatementReconciliation.sql" />
+    <None Include="Scripts\EXEC_Proof_CashStatementReconciliation.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

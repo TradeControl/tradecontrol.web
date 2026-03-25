@@ -1,7 +1,8 @@
 CREATE PROCEDURE App.proc_DatasetSyntheticMIS_Bootstrap
 (
 	@TemplateName nvarchar(100) = N'Minimal Micro Company Accounts 2026',
-	@IsVatRegistered bit = NULL
+	@IsVatRegistered bit = NULL,
+    @EnableOpeningBalance bit = 1
 )
 AS
 	SET NOCOUNT, XACT_ABORT ON;
@@ -286,6 +287,9 @@ AS
 		WHERE YearNumber = @PriorYear;
 	END
 
+    UPDATE App.tbYearPeriod
+    SET CorporationTaxRate = 0.19    
+
 	DECLARE
 		@CurrentAccountCode nvarchar(10),
 		@ReserveAccountCode nvarchar(10);
@@ -318,8 +322,8 @@ AS
 	END
 
 	DECLARE
-		@OpeningCurrentCash decimal(18,5) = 25000.00000,
-		@OpeningReserveCash decimal(18,5) = 10000.00000;
+		@OpeningCurrentCash decimal(18,5) = (CASE @EnableOpeningBalance WHEN 1 THEN 25000.00000 ELSE 0 END),
+		@OpeningReserveCash decimal(18,5) = (CASE @EnableOpeningBalance WHEN 1 THEN 10000.00000 ELSE 0 END);
 
 	UPDATE Subject.tbAccount
 	SET OpeningBalance = @OpeningCurrentCash

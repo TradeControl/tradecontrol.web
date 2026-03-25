@@ -257,7 +257,7 @@ AS
 			@SettlementAccountCode,
 			N'TC101',
 			N'N/A',
-			@FirstTradingOn,
+			DATEADD(DAY, 7, @FirstTradingOn),
 			@LoanAmount,
 			0.00000,
 			N'Director Loan Injection'
@@ -299,12 +299,12 @@ AS
 			(
 				@LiabPaymentCode,
 				@UserId,
-				0,
+				1,
 				N'HOME',
 				N'LONLIA',
 				N'TC702',
 				N'N/A',
-				@FirstTradingOn,
+				DATEADD(DAY, 7, @FirstTradingOn),
 				0.00000,
 				@LoanAmount,
 				N'Director Loan Liability'

@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Cash.proc_FlowCashCodeValues(@CashCode nvarchar(50), @YearNumber smallint, @IncludeActivePeriods BIT = 0, @IncludeOrderBook BIT = 0, @IncludeTaxAccruals BIT = 0)
+CREATE   PROCEDURE Cash.proc_FlowCashCodeValues(@CashCode nvarchar(50), @YearNumber smallint, @IncludeActivePeriods BIT = 0, @IncludeOrderBook BIT = 0, @IncludeTaxAccruals BIT = 0)
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 
@@ -150,7 +150,7 @@ AS
 				BEGIN
 				WITH ct_dates AS
 				(
-					SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0)
+					SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0, 1)
 				), ct_period AS
 				(
 					SELECT (SELECT TOP (1) StartOn FROM App.tbYearPeriod WHERE (StartOn <= PayOn) ORDER BY StartOn DESC) AS StartOn, PayOn, PayFrom, PayTo
@@ -185,7 +185,7 @@ AS
 				BEGIN
 				WITH vat_dates AS
 				(
-					SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1)
+					SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1, 0)
 				), vat_period AS
 				(
 					SELECT (SELECT TOP (1) StartOn FROM App.tbYearPeriod WHERE (StartOn <= PayOn) ORDER BY StartOn DESC) AS StartOn, PayOn, PayFrom, PayTo

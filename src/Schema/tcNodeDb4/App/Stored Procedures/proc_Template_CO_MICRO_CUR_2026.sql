@@ -154,6 +154,7 @@ AS
 
             -- VAT root
             ('TC-VAT', 'TC-SALES'),
+            ('TC-VAT', 'TC-INCOME'),
             ('TC-VAT', 'TC-DIRECT'),
             ('TC-VAT', 'TC-ADMIN');
 

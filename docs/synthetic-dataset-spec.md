@@ -1,5 +1,7 @@
 # Synthetic dataset generator (T-SQL): 2-year Accounts + MIS validation
 
+2026-03-12
+
 **Introduction**
 
 Hello.

@@ -29,7 +29,7 @@ AS
 	;WITH vat_dates AS
 	(
 		SELECT CAST(PayOn AS date) AS PayOn, CAST(PayTo AS date) AS PayTo
-		FROM Cash.fnTaxTypeDueDates(1)
+		FROM Cash.fnTaxTypeDueDates(1, 0)
 	),
 	due_quarters AS
 	(
