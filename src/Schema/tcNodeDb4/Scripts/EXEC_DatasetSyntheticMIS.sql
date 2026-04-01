@@ -27,7 +27,7 @@ CREATE TABLE #EquityRecon
 	OpeningCapital decimal(18,2) NULL,
 	ClosingCapital decimal(18,2) NULL,
 	Profit decimal(18,2) NULL,
-	CorporationTax decimal(18,2) NULL,
+	BusinessTax decimal(18,2) NULL,
 	ProfitAfterTax decimal(18,2) NULL,
 	CapitalInjection decimal(18,2) NULL,
 	OpeningPosition decimal(18,2) NULL,
@@ -76,7 +76,7 @@ BEGIN
 	INSERT INTO #EquityRecon
 	(
 		ScenarioId, ScenarioName, YearNumber, [Description],
-		OpeningCapital, ClosingCapital, Profit, CorporationTax, ProfitAfterTax,
+		OpeningCapital, ClosingCapital, Profit, BusinessTax, ProfitAfterTax,
 		CapitalInjection, OpeningPosition, CapitalDelta, Difference
 	)
 	SELECT
@@ -87,7 +87,7 @@ BEGIN
 		OpeningCapital,
 		ClosingCapital,
 		Profit,
-		CorporationTax,
+		BusinessTax,
 		ProfitAfterTax,
 		CAST(CapitalInjection AS decimal(18,2)),
 		CAST(OpeningPosition AS decimal(18,2)),

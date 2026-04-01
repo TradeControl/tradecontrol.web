@@ -5,11 +5,11 @@ AS
 		SELECT PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0, 0)
 	), period_totals AS
 	(
-		SELECT (SELECT PayTo FROM tax_dates WHERE totals.StartOn >= PayFrom AND totals.StartOn < PayTo) AS StartOn, CorporationTax
-		FROM Cash.vwTaxCorpTotalsByPeriod totals
+		SELECT (SELECT PayTo FROM tax_dates WHERE totals.StartOn >= PayFrom AND totals.StartOn < PayTo) AS StartOn, BusinessTax
+		FROM Cash.vwTaxBizTotalsByPeriod totals
 	), tax_entries AS
 	(
-		SELECT StartOn, SUM(CorporationTax) AS TaxDue, 0 AS TaxPaid
+		SELECT StartOn, SUM(BusinessTax) AS TaxDue, 0 AS TaxPaid
 		FROM period_totals
 		WHERE NOT StartOn IS NULL
 		GROUP BY StartOn
@@ -29,7 +29,7 @@ AS
 	), profit_statement AS
 	(
 		SELECT tax_statement.StartOn, CAST(TaxDue AS decimal(18, 5)) TaxDue, CAST(Balance AS decimal(18, 5)) TaxBalance,
-			CAST(Balance / CorporationTaxRate AS decimal(18, 5)) LossesCarriedForward
+			CAST(Balance / BusinessTaxRate AS decimal(18, 5)) LossesCarriedForward
 		FROM tax_statement
 			JOIN App.tbYearPeriod yp ON tax_statement.StartOn = yp.StartOn
 		WHERE tax_statement.StartOn >= (SELECT MIN(StartOn) FROM App.tbYearPeriod p JOIN App.tbYear y ON p.YearNumber = y.YearNumber WHERE y.CashStatusCode < 3)

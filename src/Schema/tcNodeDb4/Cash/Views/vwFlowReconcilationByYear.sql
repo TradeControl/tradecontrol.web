@@ -8,7 +8,7 @@ AS
 			OpeningCapital,
 			ClosingCapital,
 			Profit,
-			CorporationTax,
+			BusinessTax,
 			ProfitAfterTax,
 			TaxCarry,
 			CapitalInjection,
@@ -30,7 +30,7 @@ AS
 	FROM base
 
 	UNION ALL SELECT YearNumber, Description, 20, N'PROFIT',    N'Profit',                 Profit FROM base
-	UNION ALL SELECT YearNumber, Description, 30, N'TAX_EXP',   N'Corporation tax (P&L)',  CorporationTax FROM base
+	UNION ALL SELECT YearNumber, Description, 30, N'TAX_EXP',   N'Business tax (P&L)',  BusinessTax FROM base
 	UNION ALL SELECT YearNumber, Description, 40, N'PROF_AT',   N'Profit after tax',       ProfitAfterTax FROM base
 	UNION ALL SELECT YearNumber, Description, 50, N'CAP_INJ',   N'Capital injection',      CapitalInjection FROM base
 	UNION ALL SELECT YearNumber, Description, 60, N'OPEN_POS',  N'Opening position',       OpeningPosition FROM base

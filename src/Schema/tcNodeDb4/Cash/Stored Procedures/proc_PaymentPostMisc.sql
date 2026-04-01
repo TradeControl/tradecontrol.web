@@ -30,7 +30,7 @@ CREATE PROCEDURE Cash.proc_PaymentPostMisc
 			WHERE p.PaymentCode = @PaymentCode
 			  AND tc.TaxTypeCode = 1
 			  AND tc.TaxRate <> 0
-			  AND NOT EXISTS (SELECT 1 FROM App.vwVatTaxCashCodes v WHERE v.CashCode = p.CashCode)
+			  AND NOT EXISTS (SELECT 1 FROM App.vwTaxVatCashCodes v WHERE v.CashCode = p.CashCode)
 		)
 		BEGIN
 			DECLARE @CashCode nvarchar(50) = (SELECT CashCode FROM Cash.tbPayment WHERE PaymentCode = @PaymentCode);

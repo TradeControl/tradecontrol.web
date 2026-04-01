@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Cash_vwTaxCorpAuditAccrual
+    public partial class Cash_vwTaxBizAuditAccrual
     {
         public short YearNumber { get; set; }
         [Required]

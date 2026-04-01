@@ -1,6 +1,12 @@
-CREATE VIEW App.vwVatTaxCashCodes
+CREATE VIEW App.vwTaxVatCashCodes
 AS
-	WITH category_relations AS
+	WITH vat_enabled AS
+	(
+		SELECT IsEnabled
+		FROM Cash.tbTaxType
+		WHERE TaxTypeCode = 1
+	),
+	category_relations AS
 	(
 		SELECT
 			ct.ParentCode,
@@ -12,7 +18,9 @@ AS
 				ON ct.ChildCode = cat.CategoryCode
 			LEFT OUTER JOIN Cash.tbCode code
 				ON cat.CategoryCode = code.CategoryCode
-		WHERE cat.CashTypeCode = 0
+			CROSS JOIN vat_enabled ve
+		WHERE ve.IsEnabled = 1
+		  AND cat.CashTypeCode = 0
 		  AND cat.IsEnabled = 1
 		  AND (code.CashCode IS NULL OR code.IsEnabled = 1)
 	),

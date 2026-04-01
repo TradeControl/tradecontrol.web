@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -29,6 +29,8 @@ namespace TradeControl.Web.Models
         [StringLength(10)]
         public string SubjectCode { get; set; }
         public short OffsetDays { get; set; }
+
+        public bool IsEnabled { get; set; }
 
         [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbTaxTypes))]

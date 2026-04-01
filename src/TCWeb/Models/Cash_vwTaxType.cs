@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,8 +15,13 @@ namespace TradeControl.Web.Models
         [Required]
         [Display(Name = "Type Code")]
         public short TaxTypeCode { get; set; }
+
         [Display(Name = "Tax Type")]
         public string TaxType { get; set; }
+
+        [Display(Name = "Enabled")]
+        public bool IsEnabled { get; set; }
+
         [Display(Name = "Cash Code")]
         public string CashCode { get; set; }
         [Display(Name = "Cash Desc.")]
@@ -34,6 +39,6 @@ namespace TradeControl.Web.Models
         [Display(Name = "Account Name")]
         public string SubjectName { get; set; }
         [Display(Name = "Offset Days")]
-        public short OffsetDays { get; set; }        
+        public short OffsetDays { get; set; }
     }
 }

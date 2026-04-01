@@ -1,18 +1,18 @@
-﻿CREATE VIEW Cash.vwSummary
+CREATE VIEW Cash.vwSummary
 AS
 	WITH company AS
 	(
 		SELECT 0 AS SummaryId, SUM( Subject.tbAccount.CurrentBalance) AS CompanyBalance 
 		FROM Subject.tbAccount WHERE ( Subject.tbAccount.AccountClosed = 0) AND (Subject.tbAccount.AccountTypeCode = 0)
-	), corp_tax_invoiced AS
+	), biz_tax_invoiced AS
 	(
-		SELECT TOP (1)  0 AS SummaryId, Balance AS CorpTaxBalance 
-		FROM Cash.vwTaxCorpStatement 
+		SELECT TOP (1)  0 AS SummaryId, Balance AS BizTaxBalance 
+		FROM Cash.vwTaxBizStatement 
 		ORDER BY StartOn DESC
-	), corp_tax_ordered AS
+	), biz_tax_ordered AS
 	(
-		SELECT 0 AS SummaryId, SUM(TaxDue) AS CorpTaxBalance
-		FROM Cash.vwTaxCorpAccruals
+		SELECT 0 AS SummaryId, SUM(TaxDue) AS BizTaxBalance
+		FROM Cash.vwTaxBizAccruals
 	), vat_invoiced AS
 	(
 		SELECT TOP (1)  0 AS SummaryId, Balance AS VatBalance 
@@ -39,10 +39,10 @@ AS
 		FROM  invoices
 	), summary_base AS
 	(
-		SELECT Collect, Pay, TaxValue + vat_invoiced.VatBalance + vat_accruals.VatBalance + corp_tax_invoiced.CorpTaxBalance + corp_tax_ordered.CorpTaxBalance AS Tax, CompanyBalance
+		SELECT Collect, Pay, TaxValue + vat_invoiced.VatBalance + vat_accruals.VatBalance + biz_tax_invoiced.BizTaxBalance + biz_tax_ordered.BizTaxBalance AS Tax, CompanyBalance
 		FROM company 
-				JOIN corp_tax_invoiced ON company.SummaryId = corp_tax_invoiced.SummaryId
-				JOIN corp_tax_ordered ON company.SummaryId = corp_tax_ordered.SummaryId
+				JOIN biz_tax_invoiced ON company.SummaryId = biz_tax_invoiced.SummaryId
+				JOIN biz_tax_ordered ON company.SummaryId = biz_tax_ordered.SummaryId
 				JOIN vat_invoiced ON company.SummaryId = vat_invoiced.SummaryId
 				JOIN vat_accruals ON company.SummaryId = vat_accruals.SummaryId
 				JOIN invoice_totals ON company.SummaryId = invoice_totals.SummaryId

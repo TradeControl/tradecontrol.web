@@ -1,11 +1,11 @@
-﻿CREATE VIEW Cash.vwTaxVatSummary
+CREATE VIEW Cash.vwTaxVatSummary
 AS
 	WITH vat_transactions AS
 	(	
 		SELECT  (SELECT TOP (1) p.StartOn FROM App.tbYearPeriod p WHERE (p.StartOn <= Invoice.tbInvoice.InvoicedOn) ORDER BY p.StartOn DESC) AS StartOn,  
 				Invoice.tbInvoice.InvoiceNumber, Invoice.tbInvoice.InvoiceTypeCode, Invoice.tbItem.TaxCode, Invoice.tbItem.InvoiceValue, 
 								 Invoice.tbItem.TaxValue, Subject.tbSubject.EUJurisdiction, Invoice.tbItem.CashCode AS IdentityCode
-		FROM   App.vwVatTaxCashCodes cash_codes INNER JOIN  Invoice.tbItem ON cash_codes.CashCode = Invoice.tbItem.CashCode 
+		FROM   App.vwTaxVatCashCodes cash_codes INNER JOIN  Invoice.tbItem ON cash_codes.CashCode = Invoice.tbItem.CashCode 
 				INNER JOIN Invoice.tbInvoice ON Invoice.tbItem.InvoiceNumber = Invoice.tbInvoice.InvoiceNumber INNER JOIN
 								 Subject.tbSubject ON Invoice.tbInvoice.SubjectCode = Subject.tbSubject.SubjectCode INNER JOIN
 								 App.tbTaxCode ON Invoice.tbItem.TaxCode = App.tbTaxCode.TaxCode
@@ -14,7 +14,7 @@ AS
 		SELECT  (SELECT TOP (1) p.StartOn FROM App.tbYearPeriod p WHERE (p.StartOn <= Invoice.tbInvoice.InvoicedOn) ORDER BY p.StartOn DESC) AS StartOn,  
 					Invoice.tbProject.InvoiceNumber, Invoice.tbInvoice.InvoiceTypeCode, Invoice.tbProject.TaxCode, Invoice.tbProject.InvoiceValue, 
 								 Invoice.tbProject.TaxValue, Subject.tbSubject.EUJurisdiction, Invoice.tbProject.ProjectCode AS IdentityCode
-		FROM    App.vwVatTaxCashCodes cash_codes INNER JOIN  Invoice.tbProject ON cash_codes.CashCode = Invoice.tbProject.CashCode 
+		FROM    App.vwTaxVatCashCodes cash_codes INNER JOIN  Invoice.tbProject ON cash_codes.CashCode = Invoice.tbProject.CashCode 
 					INNER JOIN Invoice.tbInvoice ON Invoice.tbProject.InvoiceNumber = Invoice.tbInvoice.InvoiceNumber INNER JOIN
 								 Subject.tbSubject ON Invoice.tbInvoice.SubjectCode = Subject.tbSubject.SubjectCode INNER JOIN
 								 App.tbTaxCode ON Invoice.tbProject.TaxCode = App.tbTaxCode.TaxCode

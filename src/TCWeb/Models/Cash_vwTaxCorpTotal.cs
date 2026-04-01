@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Cash_vwTaxCorpTotal
+    public partial class Cash_vwTaxBizTotal
     {
         [Display(Name ="F/Year No.")]
         public short YearNumber { get; set; }
@@ -27,11 +27,11 @@ namespace TradeControl.Web.Models
         public string Period { get; set; }
         [Display(Name = "Tax Rate")]
         [DisplayFormat(DataFormatString = "{0:p}")]
-        public float CorporationTaxRate { get; set; }
+        public float BusinessTaxRate { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Adj.")]
         [DataType(DataType.Currency)]
-        public decimal TaxAdjustment { get; set; }
+        public decimal BusinessTaxAdjustment { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Net Profit")]
         [DataType(DataType.Currency)]
@@ -40,6 +40,6 @@ namespace TradeControl.Web.Models
         [Display(Name = "Company Tax")]
         [DataType(DataType.Currency)]
 
-        public decimal CorporationTax { get; set; }
+        public decimal BusinessTax { get; set; }
     }
 }

@@ -254,22 +254,22 @@
     <Build Include="Usr\Views\vwDoc.sql" />
     <Build Include="Cash\Views\vwFlowVatRecurrenceAccruals.sql" />
     <Build Include="Usr\Views\vwMenuItemFormMode.sql" />
-    <Build Include="App\Views\vwCorpTaxCashCodes.sql" />
+    <Build Include="App\Views\vwTaxBizCashCodes.sql" />
     <Build Include="Invoice\Views\vwNetworkDeployments.sql" />
     <Build Include="Usr\Views\vwMenuItemReportMode.sql" />
-    <Build Include="Cash\Views\vwTaxCorpTotalsByPeriod.sql" />
+    <Build Include="Cash\Views\vwTaxBizTotalsByPeriod.sql" />
     <Build Include="Invoice\Views\vwNetworkDeploymentItems.sql" />
-    <Build Include="Cash\Views\vwTaxCorpStatement.sql" />
+    <Build Include="Cash\Views\vwTaxBizStatement.sql" />
     <Build Include="Invoice\Views\vwNetworkUpdates.sql" />
-    <Build Include="App\Views\vwVatTaxCashCodes.sql" />
+    <Build Include="App\Views\vwTaxVatCashCodes.sql" />
     <Build Include="Invoice\Views\vwNetworkChangeLog.sql" />
     <Build Include="dbo\Views\AspNetUserRegistrations.sql" />
     <Build Include="Cash\Views\vwTaxVatSummary.sql" />
     <Build Include="Cash\Views\vwNetworkMirrors.sql" />
     <Build Include="Cash\Views\vwTaxVatStatement.sql" />
-    <Build Include="Cash\Views\vwTaxCorpAccruals.sql" />
+    <Build Include="Cash\Views\vwTaxBizAccruals.sql" />
     <Build Include="Cash\Views\vwStatement.sql" />
-    <Build Include="Cash\Views\vwTaxCorpAuditAccruals.sql" />
+    <Build Include="Cash\Views\vwTaxBizAuditAccruals.sql" />
     <Build Include="Cash\Views\vwUnMirrored.sql" />
     <Build Include="Invoice\Views\vwMirrorDetails.sql" />
     <Build Include="Subject\Views\vwMailContacts.sql" />
@@ -286,7 +286,7 @@
     <Build Include="Subject\Views\vwDatasheet.sql" />
     <Build Include="Invoice\Views\vwEntry.sql" />
     <Build Include="Subject\Views\vwStatusReport.sql" />
-    <Build Include="Cash\Views\vwTaxCorpTotals.sql" />
+    <Build Include="Cash\Views\vwTaxBizTotals.sql" />
     <Build Include="Invoice\Views\vwRegisterSales.sql" />
     <Build Include="Invoice\Views\vwRegisterExpenses.sql" />
     <Build Include="Invoice\Views\vwRegisterPurchases.sql" />
@@ -503,7 +503,6 @@
     <Build Include="Cash\Stored Procedures\proc_NetworkUpdated.sql" />
     <Build Include="dbo\Stored Procedures\AspNetGetId.sql" />
     <Build Include="Invoice\Stored Procedures\proc_NetworkUpdated.sql" />
-    <Build Include="App\Stored Procedures\proc_TemplateTutorials.sql" />
     <Build Include="App\Stored Procedures\proc_EventLog.sql" />
     <Build Include="App\Stored Procedures\proc_ErrorLog.sql" />
     <Build Include="Cash\Stored Procedures\proc_PaymentPostById.sql" />
@@ -682,6 +681,11 @@
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_TaxOnProfit.sql" />
     <Build Include="Cash\Views\vwEquityReconciliationByYear.sql" />
     <Build Include="Cash\Views\vwFlowReconcilationByYear.sql" />
+    <Build Include="Cash\Views\vwSoleTraderReconciliationByYear.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_SoleTraderCapitalIntroduced.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_SoleTraderDrawings.sql" />
+    <Build Include="Cash\Functions\fnPersonalEffectiveRateCalculator.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_SoleTraderPersonalTaxRate.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
@@ -692,6 +696,7 @@
     <None Include="Scripts\EXEC_DatasetSyntheticMIS.sql" />
     <None Include="Scripts\PROOF_CashStatementReconciliation.sql" />
     <None Include="Scripts\EXEC_Proof_CashStatementReconciliation.sql" />
+    <None Include="Scripts\EXEC_Proof_SoleTrader_Reconciliation.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

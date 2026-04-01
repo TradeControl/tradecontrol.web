@@ -31,6 +31,11 @@ else
             <form method="post" autocomplete="off">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
+                <div class="form-check mb-3">
+                    <input class="form-check-input" asp-for="Cash_tbTaxType.IsEnabled" />
+                    <label class="form-check-label" asp-for="Cash_tbTaxType.IsEnabled"></label>
+                </div>
+
                 <div class="mb-3">
                     <label asp-for="CashDescription" class="form-label"></label>
                     <select asp-for="CashDescription" asp-items="Model.CashDescriptions" class="form-select"></select>

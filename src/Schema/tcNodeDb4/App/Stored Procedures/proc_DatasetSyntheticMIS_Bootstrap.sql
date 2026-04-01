@@ -288,7 +288,7 @@ AS
 	END
 
     UPDATE App.tbYearPeriod
-    SET CorporationTaxRate = 0.19    
+    SET BusinessTaxRate = 0.19    
 
 	DECLARE
 		@CurrentAccountCode nvarchar(10),

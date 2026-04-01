@@ -19,7 +19,7 @@ namespace TradeControl.Web.Pages.Tax.Company
     {
         public IndexModel(NodeContext context) : base(context) { }
 
-        public IList<Cash_vwTaxCorpTotal> Cash_CorpTaxTotals { get; set; }
+        public IList<Cash_vwTaxBizTotal> Cash_TaxBizTotals { get; set; }
 
         // Pagination
         [BindProperty(SupportsGet = true)]
@@ -38,7 +38,7 @@ namespace TradeControl.Web.Pages.Tax.Company
             {
                 await SetViewData();
 
-                var query = NodeContext.Cash_TaxCorpTotals
+                var query = NodeContext.Cash_TaxBizTotals
                                        .Where(t => t.StartOn <= DateTime.Today)
                                        .OrderByDescending(t => t.StartOn)
                                        .AsQueryable();
@@ -58,7 +58,7 @@ namespace TradeControl.Web.Pages.Tax.Company
                 if (PageNumber < 1) PageNumber = 1;
                 if (PageNumber > TotalPages) PageNumber = TotalPages;
 
-                Cash_CorpTaxTotals = await query
+                Cash_TaxBizTotals = await query
                     .Skip((PageNumber - 1) * PageSize)
                     .Take(PageSize)
                     .ToListAsync();

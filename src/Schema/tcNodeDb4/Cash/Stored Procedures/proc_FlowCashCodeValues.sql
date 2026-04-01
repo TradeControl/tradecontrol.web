@@ -77,7 +77,7 @@ AS
 					WITH ct_due AS
 					(
 						SELECT (SELECT TOP (1) StartOn FROM App.tbYearPeriod AS p WHERE (StartOn <= ct_statement.StartOn) ORDER BY StartOn DESC) AS StartOn, TaxDue 
-						FROM Cash.vwTaxCorpStatement ct_statement
+						FROM Cash.vwTaxBizStatement ct_statement
 						WHERE ct_statement.StartOn >= @StartOn
 					)							
 					UPDATE cashcode_values
@@ -161,7 +161,7 @@ AS
 				), ct_accrual_details AS
 				(		
 					SELECT StartOn, SUM(TaxDue) AS TaxDue 
-					FROM Cash.vwTaxCorpAccruals
+					FROM Cash.vwTaxBizAccruals
 					WHERE TaxDue <> 0
 					GROUP BY StartOn
 				), ct_accruals AS

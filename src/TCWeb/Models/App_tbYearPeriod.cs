@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -27,7 +27,7 @@ namespace TradeControl.Web.Models
         [DataType(DataType.Date)]
         [Display(Name ="Start On")]
         public DateTime StartOn { get; set; }
-        [Display(Name ="Mode")]
+        [Display(Name ="Status")]
         public short CashStatusCode { get; set; }
         [Required]
         [StringLength(50)]
@@ -36,9 +36,13 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "datetime")]
         [Display(Name ="Inserted")]
         public DateTime InsertedOn { get; set; }
-        public float CorporationTaxRate { get; set; }
+        [Display(Name = "Business Tax Rate")]
+        [Column(TypeName = "decimal(9, 6)")]
+        public decimal BusinessTaxRate { get; set; }
+        [Display(Name = "Business Tax Adj.")]
         [Column(TypeName = "decimal(18, 5)")]
-        public decimal TaxAdjustment { get; set; }
+        public decimal BusinessTaxAdjustment { get; set; }
+        [Display(Name = "Vat Tax Adj.")]
         [Column(TypeName = "decimal(18, 5)")]
         public decimal VatAdjustment { get; set; }
 

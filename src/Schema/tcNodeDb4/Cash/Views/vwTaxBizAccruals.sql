@@ -1,4 +1,4 @@
-﻿CREATE VIEW Cash.vwTaxCorpAccruals
+CREATE VIEW Cash.vwTaxBizAccruals
 AS
 	WITH corptax_ordered_confirmed AS
 	(
@@ -23,5 +23,5 @@ AS
 		FROM corptax_ordered_confirmed 
 			LEFT JOIN corptax_ordered_invoices ON corptax_ordered_confirmed.ProjectCode = corptax_ordered_invoices.ProjectCode
 	)
-	SELECT corptax_ordered.StartOn, ProjectCode, QuantityRemaining, OrderValue, OrderValue * CorporationTaxRate AS TaxDue
+	SELECT corptax_ordered.StartOn, ProjectCode, QuantityRemaining, OrderValue, OrderValue * BusinessTaxRate AS TaxDue
 	FROM corptax_ordered JOIN App.tbYearPeriod year_period ON corptax_ordered.StartOn = year_period.StartOn;

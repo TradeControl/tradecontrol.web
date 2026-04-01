@@ -53,8 +53,14 @@ else
             <tbody>
                 @foreach (var item in Model.App_TaxTypes)
                 {
-                    <tr>
-                        <td>@Html.DisplayFor(modelItem => item.TaxType)</td>
+                    <tr class="@(item.IsEnabled ? "" : "text-muted")">
+                        <td>
+                            @Html.DisplayFor(modelItem => item.TaxType)
+                            @if (!item.IsEnabled)
+                            {
+                                <span class="badge text-bg-secondary ms-2">Disabled</span>
+                            }
+                        </td>
                         @if (Detection?.Device?.Type != Device.Mobile)
                         {
                             <td>@Html.DisplayFor(modelItem => item.CashDescription)</td>

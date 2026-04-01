@@ -15,7 +15,7 @@ namespace TradeControl.Web.AppServices
             NodeContext = nodeContext;
         }
 
-        public Task<string?> GetInvoiceTypeNameAsync(short invoiceTypeCode, CancellationToken cancellationToken = default)
+        public Task<string> GetInvoiceTypeNameAsync(short invoiceTypeCode, CancellationToken cancellationToken = default)
         {
             return NodeContext.Invoice_tbTypes
                 .Where(t => t.InvoiceTypeCode == invoiceTypeCode)

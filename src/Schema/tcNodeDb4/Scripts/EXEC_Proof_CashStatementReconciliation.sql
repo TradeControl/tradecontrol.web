@@ -75,7 +75,7 @@ BEGIN
 	IF OBJECT_ID('tempdb..#Calc') IS NOT NULL DROP TABLE #Calc;
 	SELECT
 		CapitalDelta_Error = (r.CapitalDelta - (r.ClosingCapital - r.OpeningCapital)),
-		ProfitAfterTax_Error = (r.ProfitAfterTax - (r.Profit - r.CorporationTax)),
+		ProfitAfterTax_Error = (r.ProfitAfterTax - (r.Profit - r.BusinessTax)),
 		Residual_Error = (r.Difference - (r.CapitalDelta - (r.ProfitAfterTax + r.CapitalInjection + r.OpeningPosition))),
 		Residual_Definition = (r.CapitalDelta - (r.ProfitAfterTax + r.CapitalInjection + r.OpeningPosition)),
 		LossCF_Sign_Bad = CASE WHEN r.ClosingLossesCarriedForward < 0 THEN 1 ELSE 0 END,

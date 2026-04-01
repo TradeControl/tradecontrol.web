@@ -28,8 +28,8 @@ namespace TradeControl.Web.Pages.Tax.Rates
         public DateTime EndOn { get; set; } = DateTime.Today;
 
         [BindProperty]
-        [Display(Name = "Corporation Tax Rate (%)")]
-        public float CorporationTaxRatePercent { get; set; }
+        [Display(Name = "Business Tax Rate (%)")]
+        public float BusinessTaxRatePercent { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -72,7 +72,7 @@ namespace TradeControl.Web.Pages.Tax.Rates
 
                 var periods = new FinancialPeriods(NodeContext);
 
-                await periods.TaxRate(StartOn, EndOn, CorporationTaxRatePercent / 100f);
+                await periods.TaxRate(StartOn, EndOn, BusinessTaxRatePercent / 100f);
 
                 return RedirectToPage("./Index", new {
                     embedded,

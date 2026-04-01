@@ -24,7 +24,7 @@ AS
 
 		SELECT @TaxAdjustment =
 			CASE @TaxTypeCode
-				WHEN 0 THEN TaxAdjustment
+				WHEN 0 THEN BusinessTaxAdjustment
 				WHEN 1 THEN VatAdjustment
 				ELSE 0
 			END

@@ -106,7 +106,7 @@ AS
 		END
 
 		---------------------------------------------------------------------
-		-- 3) Payables side (Accounts mode)
+		-- 3a) Payables side (Accounts mode)
 		---------------------------------------------------------------------
 		IF @EnablePayables <> 0
 		BEGIN
@@ -138,7 +138,22 @@ AS
 		END
 
 		---------------------------------------------------------------------
-		-- 3) Company Assets
+		-- 3b) Sole Trader owner movements
+		---------------------------------------------------------------------
+		IF @IsCompany = 0
+		BEGIN
+			EXEC App.proc_DatasetSyntheticMIS_SoleTraderCapitalIntroduced
+				@IsCompany = @IsCompany;
+
+			EXEC App.proc_DatasetSyntheticMIS_SoleTraderDrawings
+				@IsCompany = @IsCompany;
+
+			EXEC App.proc_DatasetSyntheticMIS_SoleTraderPersonalTaxRate
+				@IsCompany = @IsCompany;
+		END
+
+		---------------------------------------------------------------------
+		-- 3c) Company Assets
 		---------------------------------------------------------------------        
         IF @IsCompany <> 0 AND @EnableAssets <> 0
         BEGIN
@@ -175,7 +190,7 @@ AS
 				@IsCompany = @IsCompany;
 		END
 
-		EXEC App.proc_SystemRebuild;
+        EXEC App.proc_SystemRebuild;
 
 		COMMIT TRAN;
 	END TRY

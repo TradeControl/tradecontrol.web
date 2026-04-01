@@ -96,7 +96,7 @@ AS
 
             -- Tax categories
             ('TC-TAXGD',   'Tax on Goods (VAT / General)',0, 0, 1, 170, 1),
-            ('TC-TAXCO',   'Tax on Company (Corp)',       0, 0, 1, 180, 1),
+            ('TC-TAXCO',   'Tax on Company (Biz)',       0, 0, 1, 180, 1),
 
             -- VAT root
             ('TC-VAT',     'VAT Control Root',            1, 2, 1, 900, 1),
@@ -184,7 +184,7 @@ AS
 
             -- Tax (aligned to TaxTypeCode 0–3)
             ('TC600', 'VAT Control',       'TC-TAXGD',   'N/A', 1),            
-            ('TC602', 'Corporation Tax',   'TC-TAXCO',   'N/A', 1),
+            ('TC602', 'Business Tax',   'TC-TAXCO',   'N/A', 1),
             ('TC603', 'General Taxes',     'TC-TAXGD',   'N/A', 1),
 
 			('TC601', 'Employers NI',      'TC-WAGES',   'N/A', 1),
@@ -295,7 +295,7 @@ AS
         SET SubjectCode = @SubjectCode,
             CashCode    = 'TC602',
             MonthNumber = @FinancialMonth
-        WHERE TaxTypeCode = 0;  -- Corporation Tax
+        WHERE TaxTypeCode = 0;  -- Business Tax
 
         UPDATE Cash.tbTaxType
         SET SubjectCode = @SubjectCode,

@@ -33,7 +33,7 @@ namespace TradeControl.Web.Pages.Tax.Rates
         [BindProperty]
         [Display(Name = "Tax Rate")]
         [DisplayFormat(DataFormatString = "{0:p}")]
-        public float CorporationTaxRate { get; set; } = 0;
+        public float BusinessTaxRate { get; set; } = 0;
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -49,7 +49,7 @@ namespace TradeControl.Web.Pages.Tax.Rates
                     return Page();
 
                 Data.FinancialPeriods periods = new(NodeContext);
-                await periods.TaxRate(StartOn, EndOn, CorporationTaxRate);
+                await periods.TaxRate(StartOn, EndOn, BusinessTaxRate);
 
                 return RedirectToPage("./Index");
             }

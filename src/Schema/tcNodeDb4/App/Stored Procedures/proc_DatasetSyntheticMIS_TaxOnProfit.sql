@@ -20,15 +20,15 @@ AS
 
 	DECLARE
 		@HmrcSubjectCode nvarchar(10),
-		@CorpCashCode nvarchar(50);
+		@BizTaxCashCode nvarchar(50);
 
 	SELECT
 		@HmrcSubjectCode = SubjectCode,
-		@CorpCashCode = CashCode
+		@BizTaxCashCode = CashCode
 	FROM Cash.tbTaxType
 	WHERE TaxTypeCode = 0;
 
-	IF @HmrcSubjectCode IS NULL OR @CorpCashCode IS NULL
+	IF @HmrcSubjectCode IS NULL OR @BizTaxCashCode IS NULL
 		THROW 51361, 'DatasetSyntheticMIS_TaxOnProfit: Cash.tbTaxType missing SubjectCode/CashCode for TaxTypeCode=0.', 1;
 
 	DECLARE
@@ -58,7 +58,7 @@ AS
 		SELECT TOP (1)
 			@PayOn = CAST(StartOn AS date),
 			@Balance = Balance
-		FROM Cash.vwTaxCorpStatement
+		FROM Cash.vwTaxBizStatement
 		WHERE CAST(StartOn AS date) BETWEEN @PayOn AND @CurrentPeriodStartOn
 		  AND Balance > 0
 		ORDER BY StartOn;
@@ -102,12 +102,12 @@ AS
 			2,
 			@HmrcSubjectCode,
 			@CurrentAccountCode,
-			@CorpCashCode,
+			@BizTaxCashCode,
 			N'N/A',
 			@PayOn,
 			0.00000,
 			@Balance,
-			N'DS CORP TAX PAYMENT'
+			N'DS BIZ TAX PAYMENT'
 		);
 
 		EXEC Cash.proc_PayAccrual @PaymentCode = @PaymentCode;

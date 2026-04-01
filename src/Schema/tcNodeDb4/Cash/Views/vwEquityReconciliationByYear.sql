@@ -57,53 +57,53 @@ AS
 	),
 
 	-----------------------------------------------------------------
-	-- Corporation tax: bind each accounting year-end to the corp tax
+	-- Business tax: bind each accounting year-end to the biz tax
 	-- statement bucket (PayOn), then split expense vs carry by TaxDue
 	-- sign (statement truth source).
 	-----------------------------------------------------------------
-	corptax_due_dates AS
+	biztax_due_dates AS
 	(
 		SELECT PayOn, PayFrom, PayTo
 		FROM Cash.fnTaxTypeDueDates(0, 0)
 	),
-	corptax_year_end AS
+	biztax_year_end AS
 	(
 		SELECT
 			yb.YearNumber,
 			yb.YearEndOn,
-			CorpTaxPayOn =
+			BizTaxPayOn =
 				(
 					SELECT TOP (1) dd.PayOn
-					FROM corptax_due_dates dd
+					FROM biztax_due_dates dd
 					WHERE yb.YearEndOn >= dd.PayFrom
 					  AND yb.YearEndOn < dd.PayTo
 					ORDER BY dd.PayOn
 				)
 		FROM year_bounds yb
 	),
-	corptax_stmt AS
+	biztax_stmt AS
 	(
 		SELECT
 			ye.YearNumber,
-			ye.CorpTaxPayOn,
+			ye.BizTaxPayOn,
 			TaxDue = COALESCE(st.TaxDue, 0),
 			TaxBalance = COALESCE(st.Balance, 0),
-			CorporationTaxRate = COALESCE(yp.CorporationTaxRate, 0)
-		FROM corptax_year_end ye
-			LEFT JOIN Cash.vwTaxCorpStatement st
-				ON st.StartOn = ye.CorpTaxPayOn
+			BusinessTaxRate = COALESCE(yp.BusinessTaxRate, 0)
+		FROM biztax_year_end ye
+			LEFT JOIN Cash.vwTaxBizStatement st
+				ON st.StartOn = ye.BizTaxPayOn
 			LEFT JOIN App.tbYearPeriod yp
-				ON yp.StartOn = ye.CorpTaxPayOn
+				ON yp.StartOn = ye.BizTaxPayOn
 	),
-	corptax_by_year AS
+	biztax_by_year AS
 	(
 		SELECT
 			YearNumber,
-			CorporationTaxExpense = SUM(CASE WHEN TaxDue > 0 THEN TaxDue ELSE 0 END),
+			BusinessTaxExpense = SUM(CASE WHEN TaxDue > 0 THEN TaxDue ELSE 0 END),
 			TaxCarry = SUM(CASE WHEN TaxDue < 0 THEN TaxDue ELSE 0 END),
 			TaxBalance = SUM(TaxBalance),
-			CorporationTaxRate = MAX(CorporationTaxRate)
-		FROM corptax_stmt
+			BusinessTaxRate = MAX(BusinessTaxRate)
+		FROM biztax_stmt
 		GROUP BY YearNumber
 	),
 	loss_cf_delta AS
@@ -118,14 +118,14 @@ AS
 				YearNumber,
 				LossesCarriedForward =
 					CASE
-						WHEN CorporationTaxRate = 0 THEN 0
+						WHEN BusinessTaxRate = 0 THEN 0
 						ELSE
 							CASE
-								WHEN (TaxBalance / CorporationTaxRate) < 0 THEN ABS(TaxBalance / CorporationTaxRate)
+								WHEN (TaxBalance / BusinessTaxRate) < 0 THEN ABS(TaxBalance / BusinessTaxRate)
 								ELSE 0
 							END
 					END
-			FROM corptax_by_year
+			FROM biztax_by_year
 		) x
 	),
 
@@ -189,8 +189,8 @@ AS
 		ClosingCapital = ROUND(b.ClosingCapital, 2),
 		Profit = ROUND(p.Profit, 2),
 
-		CorporationTax = ROUND(COALESCE(ct.CorporationTaxExpense, 0), 2),
-		ProfitAfterTax = ROUND(COALESCE(p.Profit, 0) - COALESCE(ct.CorporationTaxExpense, 0), 2),
+		BusinessTax = ROUND(COALESCE(ct.BusinessTaxExpense, 0), 2),
+		ProfitAfterTax = ROUND(COALESCE(p.Profit, 0) - COALESCE(ct.BusinessTaxExpense, 0), 2),
 
 		TaxCarry = ROUND(COALESCE(ct.TaxCarry, 0), 2),
 
@@ -208,7 +208,7 @@ AS
 			ROUND(
 				(b.ClosingCapital - COALESCE(b.OpeningCapital, (SELECT Capital FROM opening_capital)))
 				- (
-					(COALESCE(p.Profit, 0) - COALESCE(ct.CorporationTaxExpense, 0))
+					(COALESCE(p.Profit, 0) - COALESCE(ct.BusinessTaxExpense, 0))
 					+ COALESCE(ci.CapitalInjection, 0)
 					+ CASE WHEN b.OpeningCapital IS NULL THEN COALESCE((SELECT OpeningPosition FROM opening_position), 0) ELSE 0 END
 				),
@@ -217,7 +217,7 @@ AS
 	FROM App.tbYear y
 		JOIN balances b ON y.YearNumber = b.YearNumber
 		LEFT JOIN profit_by_year p ON y.YearNumber = p.YearNumber
-		LEFT JOIN corptax_by_year ct ON y.YearNumber = ct.YearNumber
+		LEFT JOIN biztax_by_year ct ON y.YearNumber = ct.YearNumber
 		LEFT JOIN capital_injection_by_year ci ON y.YearNumber = ci.YearNumber
 		LEFT JOIN loss_cf_delta lcfd ON y.YearNumber = lcfd.YearNumber
 	WHERE y.CashStatusCode BETWEEN 1 AND 2;

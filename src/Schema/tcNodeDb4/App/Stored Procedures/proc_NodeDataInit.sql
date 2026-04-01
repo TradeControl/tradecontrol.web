@@ -1,4 +1,4 @@
-CREATE PROCEDURE [App].[proc_NodeDataInit]
+CREATE PROCEDURE App.proc_NodeDataInit
 AS
 SET NOCOUNT, XACT_ABORT ON;
 BEGIN TRY
@@ -373,7 +373,7 @@ BEGIN TRY
 		, (1, 'Invoice')
 		, (2, 'Order')
 		, (3, 'Quote')
-		, (4, 'Corporation Tax')
+		, (4, 'Business Tax')
 		, (5, 'Vat')
 		, (6, 'Forecast');
 
@@ -392,7 +392,7 @@ BEGIN TRY
 
 	IF NOT EXISTS(SELECT * FROM Cash.tbTaxType)
 		INSERT INTO Cash.tbTaxType (TaxTypeCode, TaxType, MonthNumber, RecurrenceCode, OffsetDays)
-		VALUES (0, 'Corporation Tax', 12, 4, 275)
+		VALUES (0, 'Business Tax', 12, 4, 275)
 		, (1, 'Vat', 4, 2, 31)
 		, (2, 'N.I.', 4, 1, 0)
 		, (3, 'General', 4, 0, 0);

@@ -1,15 +1,15 @@
-CREATE VIEW Cash.vwTaxCorpStatement
+CREATE VIEW Cash.vwTaxBizStatement
 AS
 	WITH tax_dates AS
 	(
 		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0, 0)
 	), period_totals AS
 	(
-		SELECT (SELECT PayOn FROM tax_dates WHERE totals.StartOn >= PayFrom AND totals.StartOn < PayTo) AS StartOn, CorporationTax
-		FROM Cash.vwTaxCorpTotalsByPeriod totals
+		SELECT (SELECT PayOn FROM tax_dates WHERE totals.StartOn >= PayFrom AND totals.StartOn < PayTo) AS StartOn, BusinessTax
+		FROM Cash.vwTaxBizTotalsByPeriod totals
 	), tax_entries AS
 	(
-		SELECT StartOn, SUM(CorporationTax) AS TaxDue, 0 AS TaxPaid
+		SELECT StartOn, SUM(BusinessTax) AS TaxDue, 0 AS TaxPaid
 		FROM period_totals
 		WHERE NOT StartOn IS NULL
 		GROUP BY StartOn

@@ -24,9 +24,18 @@ else
 }
 
 <div class="@(embedded ? "bg-white border rounded p-3" : "")">
-    <div class="fw-semibold mb-2">@Html.DisplayFor(model => model.App_TaxType.TaxType)</div>
+    <div class="fw-semibold mb-2">
+        @Html.DisplayFor(model => model.App_TaxType.TaxType)
+        @if (!Model.App_TaxType.IsEnabled)
+        {
+            <span class="badge text-bg-secondary ms-2">Disabled</span>
+        }
+    </div>
 
     <dl class="row mb-0">
+        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.App_TaxType.IsEnabled)</dt>
+        <dd class="col-sm-9">@(Model.App_TaxType.IsEnabled ? "Yes" : "No")</dd>
+
         <dt class="col-sm-3">@Html.DisplayNameFor(model => model.App_TaxType.CashDescription)</dt>
         <dd class="col-sm-9">@Html.DisplayFor(model => model.App_TaxType.CashDescription)</dd>
 

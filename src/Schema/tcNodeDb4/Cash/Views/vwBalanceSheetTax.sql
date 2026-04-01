@@ -1,4 +1,4 @@
-﻿CREATE VIEW Cash.vwBalanceSheetTax
+CREATE VIEW Cash.vwBalanceSheetTax
 AS
 	WITH tax_dates AS
 	(
@@ -9,11 +9,11 @@ AS
 		FROM Cash.fnTaxTypeDueDates(0, 1) f
 	), period_totals AS
 	(
-		SELECT (SELECT PayOn FROM tax_dates WHERE totals.StartOn >= PayFrom AND totals.StartOn < PayTo) AS StartOn, CorporationTax
-		FROM Cash.vwTaxCorpTotalsByPeriod totals
+		SELECT (SELECT PayOn FROM tax_dates WHERE totals.StartOn >= PayFrom AND totals.StartOn < PayTo) AS StartOn, BusinessTax
+		FROM Cash.vwTaxBizTotalsByPeriod totals
 	), tax_entries AS
 	(
-		SELECT StartOn, SUM(CorporationTax) AS TaxDue, 0 AS TaxPaid
+		SELECT StartOn, SUM(BusinessTax) AS TaxDue, 0 AS TaxPaid
 		FROM period_totals
 		WHERE NOT StartOn IS NULL
 		GROUP BY StartOn

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Cash_vwTaxCorpStatement
+    public partial class Cash_vwTaxBizStatement
     {
         [Column(TypeName = "datetime")]
         [Display(Name = "Start On")]

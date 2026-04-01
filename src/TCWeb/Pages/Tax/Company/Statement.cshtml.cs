@@ -18,7 +18,7 @@ namespace TradeControl.Web.Pages.Tax.Company
     {
         public StatementModel(NodeContext context) : base(context) { }
 
-        public IList<Cash_vwTaxCorpStatement> Cash_CorpStatement { get; set; }
+        public IList<Cash_vwTaxBizStatement> Cash_CorpStatement { get; set; }
 
         public async Task OnGetAsync()
         {
@@ -26,7 +26,7 @@ namespace TradeControl.Web.Pages.Tax.Company
             {
                 await SetViewData();
 
-                Cash_CorpStatement = await NodeContext.Cash_TaxCorpStatement.OrderBy(t => t.StartOn).ToListAsync();
+                Cash_CorpStatement = await NodeContext.Cash_TaxBizStatement.OrderBy(t => t.StartOn).ToListAsync();
             }
             catch (Exception e)
             {

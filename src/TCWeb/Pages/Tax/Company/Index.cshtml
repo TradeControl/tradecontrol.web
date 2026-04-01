@@ -51,29 +51,29 @@
         <tr>
             @if (Detection?.Device?.Type != Device.Mobile)
             {
-                <th>@Html.DisplayNameFor(model => model.Cash_CorpTaxTotals[0].Description)</th>
-                <th>@Html.DisplayNameFor(model => model.Cash_CorpTaxTotals[0].CorporationTaxRate)</th>
-                <th>@Html.DisplayNameFor(model => model.Cash_CorpTaxTotals[0].TaxAdjustment)</th>
+                <th>@Html.DisplayNameFor(model => model.Cash_TaxBizTotals[0].Description)</th>
+                <th>@Html.DisplayNameFor(model => model.Cash_TaxBizTotals[0].BusinessTaxRate)</th>
+                <th>@Html.DisplayNameFor(model => model.Cash_TaxBizTotals[0].BusinessTaxAdjustment)</th>
             }
-            <th>@Html.DisplayNameFor(model => model.Cash_CorpTaxTotals[0].Period)</th>
-            <th>@Html.DisplayNameFor(model => model.Cash_CorpTaxTotals[0].NetProfit)</th>
-            <th>@Html.DisplayNameFor(model => model.Cash_CorpTaxTotals[0].CorporationTax)</th>
+            <th>@Html.DisplayNameFor(model => model.Cash_TaxBizTotals[0].Period)</th>
+            <th>@Html.DisplayNameFor(model => model.Cash_TaxBizTotals[0].NetProfit)</th>
+            <th>@Html.DisplayNameFor(model => model.Cash_TaxBizTotals[0].BusinessTax)</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model.Cash_CorpTaxTotals)
+        @foreach (var item in Model.Cash_TaxBizTotals)
         {
             <tr>
                 @if (Detection?.Device?.Type != Device.Mobile)
                 {
                     <td>@Html.DisplayFor(modelItem => item.Description)</td>
-                    <td>@Html.DisplayFor(modelItem => item.CorporationTaxRate)</td>
-                    <td>@Html.DisplayFor(modelItem => item.TaxAdjustment)</td>
+                    <td>@Html.DisplayFor(modelItem => item.BusinessTaxRate)</td>
+                    <td>@Html.DisplayFor(modelItem => item.BusinessTaxAdjustment)</td>
                 }
                 <td>@Html.DisplayFor(modelItem => item.Period)</td>
                 <td>@Html.DisplayFor(modelItem => item.NetProfit)</td>
-                <td>@Html.DisplayFor(modelItem => item.CorporationTax)</td>
+                <td>@Html.DisplayFor(modelItem => item.BusinessTax)</td>
                 <td>
                     <div class="action-buttons">
                         <a class="btn btn-info" asp-page="./Details" asp-route-startOn="@item.StartOn.ToLongDateString()" title="Details">

@@ -1,22 +1,22 @@
-CREATE   VIEW Cash.vwStatementBase
+CREATE VIEW Cash.vwStatementBase
 AS
 	--invoiced taxes
-	WITH corp_taxcode AS
+	WITH biz_taxcode AS
 	(
 		SELECT TOP (1) SubjectCode, CashCode 
 		FROM Cash.tbTaxType WHERE (TaxTypeCode = 0)
-	), corptax_invoiced_entries AS
+	), biztax_invoiced_entries AS
 	(
 		SELECT SubjectCode, CashCode, StartOn, TaxDue, Balance,
 			ROW_NUMBER() OVER (ORDER BY StartOn) AS RowNumber 
-		FROM Cash.vwTaxCorpStatement CROSS JOIN corp_taxcode
+		FROM Cash.vwTaxBizStatement CROSS JOIN biz_taxcode
 		WHERE (Balance <> 0) AND (StartOn >= (SELECT MIN(StartOn) FROM App.tbYearPeriod WHERE CashStatusCode < 2)) --AND (TaxDue > 0) 
-	), corptax_invoiced_owing AS
+	), biztax_invoiced_owing AS
 	(
 		SELECT SubjectCode, CashCode EntryDescription, StartOn AS TransactOn, 4 AS CashEntryTypeCode, 
 			(SELECT CAST(Message AS NVARCHAR) FROM App.tbText WHERE TextId = 1214) ReferenceCode, 0 AS PayIn,
 			CASE RowNumber WHEN 1 THEN Balance ELSE TaxDue END AS PayOut
-		FROM corptax_invoiced_entries
+		FROM biztax_invoiced_entries
 	), vat_taxcode AS
 	(
 		SELECT TOP (1) SubjectCode, CashCode 
@@ -38,31 +38,31 @@ AS
 		--(SELECT TOP 1 t.Id FROM vat_totals t WHERE t.IsLive IS NULL ORDER BY Id)
 	)
 	--uninvoiced taxes
-	,  corptax_dates AS
+	,  biztax_dates AS
 	(
 		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(0, 0)
-	), corptax_accrual_entries AS
+	), biztax_accrual_entries AS
 	(
 		SELECT StartOn, SUM(TaxDue) AS TaxDue
-		FROM Cash.vwTaxCorpAccruals
+		FROM Cash.vwTaxBizAccruals
 		GROUP BY StartOn
-	), corptax_accrual_candidates AS
+	), biztax_accrual_candidates AS
 	(
-			SELECT (SELECT PayOn FROM corptax_dates WHERE corptax_accrual_entries.StartOn >= PayFrom AND corptax_accrual_entries.StartOn < PayTo) AS TransactOn, TaxDue			
-		FROM corptax_accrual_entries 
-	), corptax_accrual_totals AS
+			SELECT (SELECT PayOn FROM biztax_dates WHERE biztax_accrual_entries.StartOn >= PayFrom AND biztax_accrual_entries.StartOn < PayTo) AS TransactOn, TaxDue			
+		FROM biztax_accrual_entries 
+	), biztax_accrual_totals AS
 	(
 		SELECT TransactOn, SUM(TaxDue) AS TaxDue
-		FROM corptax_accrual_candidates
+		FROM biztax_accrual_candidates
 		GROUP BY TransactOn
 	)	
-	, corptax_accruals AS
+	, biztax_accruals AS
 	(	
 		SELECT SubjectCode, CashCode EntryDescription, TransactOn, 4 AS CashEntryTypeCode, 
 				(SELECT CAST(Message AS NVARCHAR) FROM App.tbText WHERE TextId = 1215) ReferenceCode, 
 				CASE WHEN TaxDue < 0 THEN ABS(TaxDue) ELSE 0 END AS PayIn,
 				CASE WHEN TaxDue >= 0 THEN TaxDue ELSE 0 END AS PayOut
-		FROM corptax_accrual_totals CROSS JOIN corp_taxcode
+		FROM biztax_accrual_totals CROSS JOIN biz_taxcode
 	), vat_dates AS
 	(
 		SELECT PayOn, PayFrom, PayTo FROM Cash.fnTaxTypeDueDates(1, 0)
@@ -157,11 +157,11 @@ AS
 								 Cash.tbPayment ON transfer_current_account.AccountCode = Cash.tbPayment.AccountCode
 		WHERE        (Cash.tbPayment.PaymentStatusCode = 2)
 	)
-	SELECT SubjectCode, EntryDescription, TransactOn, ReferenceCode, CashEntryTypeCode, PayIn, PayOut FROM corptax_invoiced_owing
+	SELECT SubjectCode, EntryDescription, TransactOn, ReferenceCode, CashEntryTypeCode, PayIn, PayOut FROM biztax_invoiced_owing
 	UNION
 	SELECT SubjectCode, EntryDescription, TransactOn, ReferenceCode, CashEntryTypeCode, PayIn, PayOut FROM vat_invoiced_owing
 	UNION
-	SELECT SubjectCode, EntryDescription, TransactOn, ReferenceCode, CashEntryTypeCode, PayIn, PayOut FROM corptax_accruals
+	SELECT SubjectCode, EntryDescription, TransactOn, ReferenceCode, CashEntryTypeCode, PayIn, PayOut FROM biztax_accruals
 	UNION
 	SELECT SubjectCode, EntryDescription, TransactOn, ReferenceCode, CashEntryTypeCode, PayIn, PayOut FROM vat_accruals
 	UNION

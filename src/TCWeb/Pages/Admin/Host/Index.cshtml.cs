@@ -35,11 +35,11 @@ namespace TradeControl.Web.Pages.Admin.Host
         [Display(Name = "Active Host")]
         public string HostDescription { get; set; }
 
-        public string? StatusMessage { get; set; }
+        public string StatusMessage { get; set; }
         public bool StatusOk { get; set; }
 
         [TempData]
-        public string? FlashMessage { get; set; }
+        public string FlashMessage { get; set; }
 
         [TempData]
         public bool FlashOk { get; set; }

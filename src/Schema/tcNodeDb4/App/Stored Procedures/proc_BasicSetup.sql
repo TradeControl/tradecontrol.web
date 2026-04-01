@@ -67,7 +67,7 @@ AS
 		EXEC Cash.proc_GeneratePeriods;
 
 		UPDATE App.tbYearPeriod
-		SET CorporationTaxRate = 0.19;
+		SET BusinessTaxRate = 0.19;
 
 		UPDATE App.tbYearPeriod
 		SET CashStatusCode = 2

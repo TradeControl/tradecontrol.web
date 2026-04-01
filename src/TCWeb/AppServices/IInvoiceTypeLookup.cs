@@ -5,6 +5,6 @@ namespace TradeControl.Web.AppServices
 {
     public interface IInvoiceTypeLookup
     {
-        Task<string?> GetInvoiceTypeNameAsync(short invoiceTypeCode, CancellationToken cancellationToken = default);
+        Task<string> GetInvoiceTypeNameAsync(short invoiceTypeCode, CancellationToken cancellationToken = default);
     }
 }

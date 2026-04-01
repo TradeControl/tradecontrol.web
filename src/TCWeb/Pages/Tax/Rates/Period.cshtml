@@ -52,9 +52,9 @@ else
                     </div>
 
                     <div class="col-12 col-md-6 mb-3">
-                        <label asp-for="CorporationTaxAdjustment" class="form-label"></label>
-                        <input asp-for="CorporationTaxAdjustment" class="form-control" />
-                        <span asp-validation-for="CorporationTaxAdjustment" class="text-danger"></span>
+                        <label asp-for="BusinessTaxAdjustment" class="form-label"></label>
+                        <input asp-for="BusinessTaxAdjustment" class="form-control" />
+                        <span asp-validation-for="BusinessTaxAdjustment" class="text-danger"></span>
                     </div>
                 </div>
 
@@ -85,12 +85,12 @@ else
 
                 <div class="row g-2 align-items-end">
                     <div class="col-12 col-md-6 mb-3">
-                        <label asp-for="CorporationTaxRatePercent" class="form-label"></label>
+                        <label asp-for="BusinessTaxRate" class="form-label"></label>
                         <div class="input-group">
-                            <input asp-for="CorporationTaxRatePercent" class="form-control" inputmode="decimal" />
+                            <input asp-for="BusinessTaxRate" class="form-control" inputmode="decimal" />
                             <span class="input-group-text">%</span>
                         </div>
-                        <span asp-validation-for="CorporationTaxRatePercent" class="text-danger"></span>
+                        <span asp-validation-for="BusinessTaxRate" class="text-danger"></span>
                     </div>
 
                     <div class="col-12 col-md-6 mb-3">

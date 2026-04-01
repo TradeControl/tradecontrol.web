@@ -48,7 +48,17 @@ BEGIN TRY
     WHERE CashCode IN ('TC500', 'TC501', 'TC601', 'TC602', 'TC701', 'TC900');
 
     UPDATE App.tbYearPeriod
-    SET CorporationTaxRate = 0;
+    SET BusinessTaxRate = 0;
+
+    ----------------------------------------------------------------
+    -- 2b. Personal Tax settings for Sole Traders
+    ----------------------------------------------------------------
+    UPDATE Cash.tbTaxType
+    SET MonthNumber = 4,
+        RecurrenceCode = 4,
+        OffsetDays = 300,
+        IsEnabled = 0
+    WHERE TaxTypeCode = 0;
 
     ----------------------------------------------------------------
     -- 3. Sole‑trader specific categories: Drawings, Capital Introduced
@@ -58,7 +68,7 @@ BEGIN TRY
         INSERT INTO Cash.tbCategory
             (CategoryCode, Category, CategoryTypeCode, CashPolarityCode, CashTypeCode, DisplayOrder, IsEnabled)
         VALUES
-            ('DRAW', 'Drawings', 1, 1, 0, 900, 1);
+            ('DRAW', 'Drawings', 0, 1, 0, 900, 1);
     END;
 
     IF NOT EXISTS (SELECT 1 FROM Cash.tbCategory WHERE CategoryCode = 'CAPIN')
@@ -66,7 +76,7 @@ BEGIN TRY
         INSERT INTO Cash.tbCategory
             (CategoryCode, Category, CategoryTypeCode, CashPolarityCode, CashTypeCode, DisplayOrder, IsEnabled)
         VALUES
-            ('CAPIN', 'Capital Introduced', 1, 2, 0, 901, 1);
+            ('CAPIN', 'Capital Introduced', 0, 2, 0, 901, 1);
     END;
 
     ----------------------------------------------------------------
@@ -108,6 +118,23 @@ BEGIN TRY
              'TC603', 1, 2,
              (SELECT TOP 1 SubjectCode FROM Cash.tbTaxType), 0);
     END;
+
+    ----------------------------------------------------------------
+    -- 7. Tax year alignment: financial year starts on April 6
+    ----------------------------------------------------------------
+    WITH year_start AS
+    (
+	    SELECT YearNumber, MIN(StartOn) StartOn
+	    FROM App.tbYearPeriod
+	    GROUP BY YearNumber
+    )
+    UPDATE yp
+    SET 
+	    StartOn = DATEADD(DAY, 5, yp.StartOn)
+    FROM year_start ys
+	    JOIN App.tbYearPeriod yp
+		    ON ys.YearNumber = yp.YearNumber AND ys.StartOn = yp.StartOn
+			    AND DATEPART(DAY, yp.StartOn) = 1;
 
     COMMIT TRAN SoleTraderTemplate;
 

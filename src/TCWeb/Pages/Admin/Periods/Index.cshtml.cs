@@ -20,7 +20,7 @@ namespace TradeControl.Web.Pages.Admin.Periods
         public string ActivePeriod { get; set; }
 
         [TempData]
-        public string? FlashMessage { get; set; }
+        public string FlashMessage { get; set; }
 
         [TempData]
         public bool FlashOk { get; set; }

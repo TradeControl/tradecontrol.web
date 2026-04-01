@@ -15,10 +15,10 @@ namespace TradeControl.Web.Pages.Invoice.Settings
         public Invoice_tbType Invoice_Type { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public string? Embedded { get; set; }
+        public string Embedded { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public string? ReturnNode { get; set; }
+        public string ReturnNode { get; set; }
 
         public async Task<IActionResult> OnGetAsync(short? invoiceTypeCode)
         {

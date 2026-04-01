@@ -2576,7 +2576,7 @@ namespace TradeControl.Web.Data
                 };
 
                 var _taxRate = new SqlParameter() {
-                    ParameterName = "@CorporationTaxRate",
+                    ParameterName = "@BusinessTaxRate",
                     SqlDbType = System.Data.SqlDbType.Real,
                     Direction = System.Data.ParameterDirection.Input,
                     Value = taxRate

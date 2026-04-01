@@ -30,12 +30,12 @@ namespace TradeControl.Web.Pages.Tax.Rates
 
         [BindProperty]
         [DataType(DataType.Currency)]
-        [Display(Name = "Corporation Tax Adjustment")]
-        public decimal CorporationTaxAdjustment { get; set; }
+        [Display(Name = "Business Tax Adjustment")]
+        public decimal BusinessTaxAdjustment { get; set; }
 
         [BindProperty]
-        [Display(Name = "Corporation Tax Rate (%)")]
-        public float CorporationTaxRatePercent { get; set; }
+        [Display(Name = "Business Tax Rate (%)")]
+        public decimal BusinessTaxRate { get; set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -48,9 +48,9 @@ namespace TradeControl.Web.Pages.Tax.Rates
 
             // The adjustment is stored on the *window closing period*, not necessarily this month.
             VatAdjustment = await NodeContext.TaxAdjustmentGet(StartOn, NodeEnum.TaxType.VAT);
-            CorporationTaxAdjustment = await NodeContext.TaxAdjustmentGet(StartOn, NodeEnum.TaxType.CorporationTax);
+            BusinessTaxAdjustment = await NodeContext.TaxAdjustmentGet(StartOn, NodeEnum.TaxType.BusinessTax);
 
-            CorporationTaxRatePercent = YearPeriod.CorporationTaxRate * 100f;
+            BusinessTaxRate = YearPeriod.BusinessTaxRate * 100m;
 
             await SetViewData();
             return Page();
@@ -66,7 +66,7 @@ namespace TradeControl.Web.Pages.Tax.Rates
                 var periods = new FinancialPeriods(NodeContext);
 
                 await periods.AdjustTax(StartOn, NodeEnum.TaxType.VAT, (double)VatAdjustment);
-                await periods.AdjustTax(StartOn, NodeEnum.TaxType.CorporationTax, (double)CorporationTaxAdjustment);
+                await periods.AdjustTax(StartOn, NodeEnum.TaxType.BusinessTax, (double)BusinessTaxAdjustment);
 
                 return RedirectToPage("./Index", new
                 {
@@ -93,7 +93,7 @@ namespace TradeControl.Web.Pages.Tax.Rates
                 if (period == null)
                     return NotFound();
 
-                period.CorporationTaxRate = CorporationTaxRatePercent / 100f;
+                period.BusinessTaxRate = BusinessTaxRate / 100m;
                 await NodeContext.SaveChangesAsync();
 
                 return RedirectToPage("./Index", new

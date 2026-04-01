@@ -17,7 +17,7 @@ namespace TradeControl.Web.Pages.Admin.Host
         public App_tbHost App_tbHost { get; set; }
 
         [BindProperty(SupportsGet = true)]
-        public string? ReturnNode { get; set; }
+        public string ReturnNode { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public int? Embedded { get; set; }

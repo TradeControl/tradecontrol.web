@@ -29,7 +29,7 @@ SELECT
     r.OpeningCapital,
     r.ClosingCapital,
     r.Profit,
-    r.CorporationTax,
+    r.BusinessTax,
     r.ProfitAfterTax,
     r.TaxCarry,
     r.CapitalInjection,
@@ -59,10 +59,10 @@ CREATE UNIQUE CLUSTERED INDEX IX_Reconciliation_YearNumber ON #Reconciliation(Ye
         CapitalDelta_Reported = CapitalDelta,
         CapitalDelta_Error = (CapitalDelta - (ClosingCapital - OpeningCapital)),
 
-        -- Identity 2: ProfitAfterTax must equal Profit - CorporationTax
-        ProfitAfterTax_Definition = (Profit - CorporationTax),
+        -- Identity 2: ProfitAfterTax must equal Profit - BusinessTax
+        ProfitAfterTax_Definition = (Profit - BusinessTax),
         ProfitAfterTax_Reported = ProfitAfterTax,
-        ProfitAfterTax_Error = (ProfitAfterTax - (Profit - CorporationTax)),
+        ProfitAfterTax_Error = (ProfitAfterTax - (Profit - BusinessTax)),
 
         -- Identity 3: DEBK-style equity bridge residual
         BridgeTotal = (ProfitAfterTax + CapitalInjection + OpeningPosition),
@@ -126,7 +126,7 @@ FROM summary s;
         OpeningCapital,
         ClosingCapital,
         Profit,
-        CorporationTax,
+        BusinessTax,
         ProfitAfterTax,
         CapitalInjection,
         OpeningPosition,
@@ -134,12 +134,12 @@ FROM summary s;
         Difference,
 
         CapitalDelta_Definition = (ClosingCapital - OpeningCapital),
-        ProfitAfterTax_Definition = (Profit - CorporationTax),
+        ProfitAfterTax_Definition = (Profit - BusinessTax),
         BridgeTotal = (ProfitAfterTax + CapitalInjection + OpeningPosition),
         Residual_Definition = (CapitalDelta - (ProfitAfterTax + CapitalInjection + OpeningPosition)),
 
         CapitalDelta_Error = (CapitalDelta - (ClosingCapital - OpeningCapital)),
-        ProfitAfterTax_Error = (ProfitAfterTax - (Profit - CorporationTax)),
+        ProfitAfterTax_Error = (ProfitAfterTax - (Profit - BusinessTax)),
         Residual_Error = (Difference - (CapitalDelta - (ProfitAfterTax + CapitalInjection + OpeningPosition))),
 
         OpeningLossesCarriedForward,
@@ -181,7 +181,7 @@ SELECT TOP (@ShowTop)
     CapitalDelta_Error,
 
     Profit,
-    CorporationTax,
+    BusinessTax,
     ProfitAfterTax,
     ProfitAfterTax_Definition,
     ProfitAfterTax_Error,

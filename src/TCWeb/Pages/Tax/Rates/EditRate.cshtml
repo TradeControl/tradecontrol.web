@@ -2,7 +2,7 @@
 @model TradeControl.Web.Pages.Tax.Rates.EditRateModel
 
 @{
-    ViewData["Title"] = "Set Corporation Tax Rate";
+    ViewData["Title"] = "Set Business Tax Rate";
 
     var embedded = (Request.Query.TryGetValue("embedded", out var emb) && emb == "1");
     var returnNode = Request.Query.TryGetValue("returnNode", out var rn) ? rn.ToString() : "TaxCompany";
@@ -27,7 +27,7 @@ else
 
 <div class="bg-white border rounded p-3">
     <div class="text-muted small mb-3">
-        Applies the corporation tax rate to all months with a start date within the selected range.
+        Applies the business tax rate to all months with a start date within the selected range.
     </div>
 
     <form method="post" autocomplete="off">
@@ -56,12 +56,12 @@ else
         </div>
 
         <div class="mb-3">
-            <label asp-for="CorporationTaxRatePercent" class="form-label"></label>
+            <label asp-for="BusinessTaxRatePercent" class="form-label"></label>
             <div class="input-group" style="max-width: 18rem;">
-                <input asp-for="CorporationTaxRatePercent" class="form-control" inputmode="decimal" />
+                <input asp-for="BusinessTaxRatePercent" class="form-control" inputmode="decimal" />
                 <span class="input-group-text">%</span>
             </div>
-            <span asp-validation-for="CorporationTaxRatePercent" class="text-danger"></span>
+            <span asp-validation-for="BusinessTaxRatePercent" class="text-danger"></span>
             <div class="form-text text-muted">
                 Enter <strong>25</strong> for <strong>25%</strong>.
             </div>

@@ -60,8 +60,8 @@ namespace TradeControl.Web.Pages.Tax.Rates
                         MonthNumber = p.MonthNumber,
                         StartOn = p.StartOn,
                         CashStatusCode = p.CashStatusCode,
-                        CorporationTaxRate = p.CorporationTaxRate,
-                        TaxAdjustment = p.TaxAdjustment,
+                        BusinessTaxRate = p.BusinessTaxRate,
+                        BusinessTaxAdjustment = p.BusinessTaxAdjustment,
                         VatAdjustment = p.VatAdjustment,
                         IsPast = p.StartOn.Date < today,
                         IsCurrent = p.StartOn.Month == today.Month && p.StartOn.Year == today.Year,
@@ -103,8 +103,8 @@ namespace TradeControl.Web.Pages.Tax.Rates
             public short MonthNumber { get; init; }
             public DateTime StartOn { get; init; }
             public short CashStatusCode { get; init; }
-            public float CorporationTaxRate { get; init; }
-            public decimal TaxAdjustment { get; init; }
+            public decimal BusinessTaxRate { get; init; }
+            public decimal BusinessTaxAdjustment { get; init; }
             public decimal VatAdjustment { get; init; }
 
             public bool IsPast { get; init; }

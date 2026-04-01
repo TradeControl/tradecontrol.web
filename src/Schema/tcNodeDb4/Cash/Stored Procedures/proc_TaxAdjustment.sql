@@ -16,7 +16,7 @@ AS
 
 		UPDATE App.tbYearPeriod
 		SET 
-			TaxAdjustment = CASE @TaxTypeCode WHEN 0 THEN 0 ELSE TaxAdjustment END,
+			BusinessTaxAdjustment = CASE @TaxTypeCode WHEN 0 THEN 0 ELSE BusinessTaxAdjustment END,
 			VatAdjustment = CASE @TaxTypeCode WHEN 1 THEN 0 ELSE VatAdjustment END
 		WHERE StartOn >= @PayFrom AND StartOn < @PayTo;
 
@@ -26,7 +26,7 @@ AS
 
 		UPDATE App.tbYearPeriod
 		SET 
-			TaxAdjustment = CASE @TaxTypeCode WHEN 0 THEN @TaxAdjustment ELSE TaxAdjustment END,
+			BusinessTaxAdjustment = CASE @TaxTypeCode WHEN 0 THEN @TaxAdjustment ELSE BusinessTaxAdjustment END,
 			VatAdjustment = CASE @TaxTypeCode WHEN 1 THEN @TaxAdjustment ELSE VatAdjustment END
 		WHERE StartOn = @StartOn;
 	END TRY

@@ -154,7 +154,7 @@ BEGIN TRY
 	, (2, 58, 5, 8, 'Network Invoices', 4, 'Trader', 'Invoice_Mirror', 0)
 	, (2, 62, 7, 0, 'Audit Reports', 0, 'Trader', '', 1)
 	, (2, 63, 6, 11, 'Audit Reports', 1, '', '7', 1)
-	, (2, 64, 7, 1, 'Corporation Tax Accruals', 5, 'Trader', 'Cash_CorpTaxAuditAccruals', 4)
+	, (2, 64, 7, 1, 'Business Tax Accruals', 5, 'Trader', 'Cash_BizTaxAuditAccruals', 4)
 	, (2, 65, 7, 2, 'Vat Accruals', 5, 'Trader', 'Cash_VatAuditAccruals', 4)
 	, (2, 66, 7, 3, 'Balance Sheet Audit', 5, 'Trader', 'Subject_BalanceSheetAudit', 4);
 	SET IDENTITY_INSERT [Usr].[tbMenuEntry] OFF;

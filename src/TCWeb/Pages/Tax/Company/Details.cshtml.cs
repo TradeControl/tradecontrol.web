@@ -18,16 +18,16 @@ namespace TradeControl.Web.Pages.Tax.Company
     {
         public DetailsModel(NodeContext context) : base(context) { }
 
-        public Cash_vwTaxCorpTotal Cash_CorpTaxTotal { get; set; }
+        public Cash_vwTaxBizTotal Cash_TaxBizTotal { get; set; }
 
         public async Task<IActionResult> OnGetAsync(DateTime? startOn)
         {
             if (startOn == null)
                 return NotFound();
 
-            Cash_CorpTaxTotal = await NodeContext.Cash_TaxCorpTotals.FirstOrDefaultAsync(m => m.StartOn == startOn);
+            Cash_TaxBizTotal = await NodeContext.Cash_TaxBizTotals.FirstOrDefaultAsync(m => m.StartOn == startOn);
 
-            if (Cash_CorpTaxTotal == null)
+            if (Cash_TaxBizTotal == null)
                 return NotFound();
             else
             {
