@@ -29,7 +29,7 @@ AS
 
 	EXEC Cash.proc_NextPaymentCode @PaymentCode = @PayOutCode OUTPUT;
 
-	-- From account pays out (TC800)
+	-- From account pays out (CC-TRNPY)
 	INSERT INTO Cash.tbPayment
 	(
 		PaymentCode,
@@ -51,7 +51,7 @@ AS
 		2,
 		@HomeSubjectCode,
 		@FromAccountCode,
-		N'TC800',
+		N'CC-TRNPY',
 		N'N/A',
 		@PaidOn,
 		0.00000,
@@ -61,7 +61,7 @@ AS
 
 	EXEC Cash.proc_NextPaymentCode @PaymentCode = @PayInCode OUTPUT;
 
-	-- To account receives (TC801)
+	-- To account receives (CC-TRNRC)
 	INSERT INTO Cash.tbPayment
 	(
 		PaymentCode,
@@ -83,7 +83,7 @@ AS
 		2,
 		@HomeSubjectCode,
 		@ToAccountCode,
-		N'TC801',
+		N'CC-TRNRC',
 		N'N/A',
 		@PaidOn,
 		@Amount,

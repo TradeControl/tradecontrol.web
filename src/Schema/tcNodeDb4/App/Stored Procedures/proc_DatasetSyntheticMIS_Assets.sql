@@ -78,7 +78,7 @@ AS
 		THROW 51263, 'DatasetSyntheticMIS_Assets: unable to resolve SettlementAccountCode.', 1;
 
 	---------------------------------------------------------------------
-	-- (1) Share Capital (CALUP / TC701)
+	-- (1) Share Capital (CALUP / CC-SHCAP)
 	---------------------------------------------------------------------
 	IF EXISTS (SELECT 1 FROM Subject.tbAccount WHERE AccountCode = N'CALUP' AND AccountClosed = 0)
 	BEGIN
@@ -116,7 +116,7 @@ AS
 				1,
 				N'HOME',
 				N'CALUP',
-				N'TC701',
+				N'CC-SHCAP',
 				N'N/A',
 				@FirstTradingOn,
 				0.00000,
@@ -179,7 +179,7 @@ AS
 		FROM Cash.tbPayment p
 		WHERE p.SubjectCode = @SidCode
 		  AND p.AccountCode = @SettlementAccountCode
-		  AND p.CashCode = N'TC101'
+		  AND p.CashCode = N'CC-INCME'
 		  AND CAST(p.PaidOn AS date) = @FirstTradingOn
 		  AND p.PaymentReference = N'Share Capital Subscription'
 	)
@@ -208,7 +208,7 @@ AS
 			0,
 			@SidCode,
 			@SettlementAccountCode,
-			N'TC101',
+			N'CC-INCME',
 			N'N/A',
 			@FirstTradingOn,
 			1.00000,
@@ -226,7 +226,7 @@ AS
 		FROM Cash.tbPayment p
 		WHERE p.SubjectCode = @SidCode
 		  AND p.AccountCode = @SettlementAccountCode
-		  AND p.CashCode = N'TC101'
+		  AND p.CashCode = N'CC-INCME'
 		  AND CAST(p.PaidOn AS date) = @FirstTradingOn
 		  AND p.PaymentReference = N'Director Loan Injection'
 	)
@@ -255,7 +255,7 @@ AS
 			0,
 			@SidCode,
 			@SettlementAccountCode,
-			N'TC101',
+			N'CC-INCME',
 			N'N/A',
 			DATEADD(DAY, 7, @FirstTradingOn),
 			@LoanAmount,
@@ -273,7 +273,7 @@ AS
 			FROM Cash.tbPayment p
 			WHERE p.SubjectCode = N'HOME'
 			  AND p.AccountCode = N'LONLIA'
-			  AND p.CashCode = N'TC802'
+			  AND p.CashCode = N'CC-LOAN'
 			  AND CAST(p.PaidOn AS date) = @FirstTradingOn
 			  AND p.PaymentReference = N'Director Loan Liability'
 		)
@@ -302,7 +302,7 @@ AS
 				1,
 				N'HOME',
 				N'LONLIA',
-				N'TC702',
+				N'CC-LOAN',
 				N'N/A',
 				DATEADD(DAY, 7, @FirstTradingOn),
 				0.00000,
@@ -319,7 +319,7 @@ AS
 	-- (3) Depreciation
 	-- (a) Add Cash Code TC213 Motors (category TC-DIRECT)
 	---------------------------------------------------------------------
-	IF NOT EXISTS (SELECT 1 FROM Cash.tbCode WHERE CashCode = N'TC213')
+	IF NOT EXISTS (SELECT 1 FROM Cash.tbCode WHERE CashCode = N'CC-MREPA')
 	BEGIN
 		INSERT INTO Cash.tbCode
 		(
@@ -331,9 +331,9 @@ AS
 		)
 		VALUES
 		(
-			N'TC213',
+			N'CC-MREPA',
 			N'Motors',
-			N'TC-DIRECT',
+			N'CA-DIRECT',
 			N'T1',
 			1
 		);
@@ -383,7 +383,7 @@ AS
 		SELECT 1
 		FROM Cash.tbPayment p
 		WHERE p.SubjectCode = @GarageCode
-		  AND p.CashCode = N'TC213'
+		  AND p.CashCode = N'CC-MREPA'
 		  AND p.PaymentReference = N'White Van'
 		  AND CAST(p.PaidOn AS date) = @Year1LatePurchaseOn
 	)
@@ -412,7 +412,7 @@ AS
 			0,
 			@GarageCode,
 			@SettlementAccountCode,
-			N'TC213',
+			N'CC-MREPA',
 			N'T1',
 			@Year1LatePurchaseOn,
 			0.00000,

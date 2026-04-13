@@ -89,7 +89,7 @@ AS
 
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
-		-- TC400 quarterly electricity
+		-- CC-ADMIN quarterly electricity
 		IF (@L2_MonthIndex % 3) = 0
 		BEGIN
 			SET @L2_Amount = CAST(250 + (ABS(CHECKSUM(CONCAT(N'DS:L2:ENERGY:', @L2_MonthIndex))) % 750) AS decimal(18,5));
@@ -109,7 +109,7 @@ AS
 			(
 				@L2_PaymentCode, @L2_UserId, 0,
 				@L2_EnergySupplierCode, @SettlementAccountCode,
-				N'TC400', @PayMiscTaxCode,
+				N'CC-ADMIN', @PayMiscTaxCode,
 				@L2_MonthEnd, 0, @L2_Amount,
 				N'Electricity Charge'
 			);
@@ -117,7 +117,7 @@ AS
 			EXEC Cash.proc_PaymentPost;
 		END
 
-		-- TC400 monthly provisions
+		-- CC-ADMIN monthly provisions
 		SET @L2_Amount = CAST(60 + (ABS(CHECKSUM(CONCAT(N'DS:L2:PROV:', @L2_MonthIndex))) % 140) AS decimal(18,5));
 
 		SET @L2_PaymentCode = NULL;
@@ -135,14 +135,14 @@ AS
 		(
 			@L2_PaymentCode, @L2_UserId, 0,
 			@L2_SupermarketSupplierCode, @SettlementAccountCode,
-			N'TC400', @PayMiscTaxCode,
+			N'CC-ADMIN', @PayMiscTaxCode,
 			@L2_MonthEnd, 0, @L2_Amount,
 			N'Provisions'
 		);
 
 		EXEC Cash.proc_PaymentPost;
 
-		-- TC101 walk-in income
+		-- CC-INCME walk-in income
 		SET @L2_Amount = CAST(25 + (ABS(CHECKSUM(CONCAT(N'DS:L2:WALKIN:', @L2_MonthIndex))) % 125) AS decimal(18,5));
 
 		SET @L2_PaymentCode = NULL;
@@ -160,7 +160,7 @@ AS
 		(
 			@L2_PaymentCode, @L2_UserId, 0,
 			@L2_WalkInSubjectCode, @SettlementAccountCode,
-			N'TC101', @PayMiscTaxCode,
+			N'CC-INCME', @PayMiscTaxCode,
 			@L2_MonthEnd, @L2_Amount, 0,
 			N'Widget Purchase'
 		);

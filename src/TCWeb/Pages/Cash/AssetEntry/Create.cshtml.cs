@@ -56,8 +56,7 @@ namespace TradeControl.Web.Pages.Cash.AssetEntry
                     TaxCode = cashAccount.TaxCode,
                     PaidOn = DateTime.Today,
                     UserId = await profile.UserId(UserManager.GetUserId(User)),
-                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
-                    IsProfitAndLoss = true
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User))
                 };
 
                 Cash_AssetsUnposted.UpdatedBy = Cash_AssetsUnposted.InsertedBy;

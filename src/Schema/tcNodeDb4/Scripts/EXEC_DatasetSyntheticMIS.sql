@@ -1,6 +1,13 @@
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
+DECLARE
+    @IsCompany bit = 0; -- set to 0 for Sole Trader scenarios
+
+DECLARE 
+    @EnableWages bit = CASE WHEN @IsCompany = 1 THEN 1 ELSE 0 END
+    , @EnableAssets bit = CASE WHEN @IsCompany = 1 THEN 1 ELSE 0 END;
+
 IF OBJECT_ID('tempdb..#Scenarios') IS NOT NULL DROP TABLE #Scenarios;
 CREATE TABLE #Scenarios
 (
@@ -12,10 +19,11 @@ CREATE TABLE #Scenarios
 
 INSERT INTO #Scenarios (ScenarioName, IsVatRegistered, PriceRatio)
 VALUES
-	(N'VAT=0, PriceRatio=3.0 (profit)', 0, 3.0),
-	(N'VAT=1, PriceRatio=3.0 (profit)', 1, 3.0),
-	(N'VAT=0, PriceRatio=0.5 (loss)',   0, 0.5),
-	(N'VAT=1, PriceRatio=0.5 (loss)',   1, 0.5);
+	 (N'VAT=0, PriceRatio=0.5 (loss)',   0, 0.5)
+	, (N'VAT=1, PriceRatio=0.5 (loss)',   1, 0.5)
+	, (N'VAT=0, PriceRatio=3.0 (profit)', 0, 3.0)
+	, (N'VAT=1, PriceRatio=3.0 (profit)', 1, 3.0)
+    ;
 
 IF OBJECT_ID('tempdb..#EquityRecon') IS NOT NULL DROP TABLE #EquityRecon;
 CREATE TABLE #EquityRecon
@@ -29,10 +37,11 @@ CREATE TABLE #EquityRecon
 	Profit decimal(18,2) NULL,
 	BusinessTax decimal(18,2) NULL,
 	ProfitAfterTax decimal(18,2) NULL,
-	CapitalInjection decimal(18,2) NULL,
+	CapitalMovement decimal(18,2) NULL,
 	OpeningPosition decimal(18,2) NULL,
+	OpeningAccountPosition decimal(18,2) NULL,
 	CapitalDelta decimal(18,2) NULL,
-	Difference decimal(18,2) NULL
+	Variance decimal(18,2) NULL
 );
 
 DECLARE
@@ -54,7 +63,7 @@ BEGIN
 	PRINT CONCAT('Running scenario ', @ScenarioId, ': ', @ScenarioName);
 
 	EXEC App.proc_DatasetSyntheticMIS
-		@IsCompany = 1,
+		@IsCompany = @IsCompany,
 		@IsVatRegistered = @IsVatRegistered,
 		@MisOrdersPerMonth = 2,
 		@MonthsForward = 3,
@@ -66,9 +75,9 @@ BEGIN
 		@EnableProjectPayments = 1,
 		@EnablePayables = 1,
 		@EnableMiscPayments = 1,
-		@EnableWages = 1,
+		@EnableWages = @EnableWages,
 		@EnableExpenses = 1,
-		@EnableAssets = 1,
+		@EnableAssets = @EnableAssets,
 		@EnableTax = 1,
 		@EnableTransfers = 1,
 		@EnableOpeningBalance = 1;
@@ -77,7 +86,7 @@ BEGIN
 	(
 		ScenarioId, ScenarioName, YearNumber, [Description],
 		OpeningCapital, ClosingCapital, Profit, BusinessTax, ProfitAfterTax,
-		CapitalInjection, OpeningPosition, CapitalDelta, Difference
+		CapitalMovement, OpeningPosition, OpeningAccountPosition, CapitalDelta, Variance
 	)
 	SELECT
 		@ScenarioId,
@@ -89,10 +98,11 @@ BEGIN
 		Profit,
 		BusinessTax,
 		ProfitAfterTax,
-		CAST(CapitalInjection AS decimal(18,2)),
+		CAST(CapitalMovement AS decimal(18,2)),
 		CAST(OpeningPosition AS decimal(18,2)),
+		CAST(OpeningAccountPosition AS decimal(18,2)),
 		CapitalDelta,
-		Difference
+		Variance
 	FROM Cash.vwEquityReconciliationByYear;
 
 	FETCH NEXT FROM cur INTO @ScenarioId, @ScenarioName, @IsVatRegistered, @PriceRatio;
@@ -101,18 +111,6 @@ END
 CLOSE cur;
 DEALLOCATE cur;
 
--- Summary: show first-year and total difference per scenario
-SELECT
-	ScenarioId,
-	ScenarioName,
-	FirstYear = MIN(YearNumber),
-	FirstYearDifference = SUM(CASE WHEN YearNumber = (SELECT MIN(YearNumber) FROM #EquityRecon e2 WHERE e2.ScenarioId = e.ScenarioId) THEN Difference ELSE 0 END),
-	TotalAbsDifference = SUM(ABS(Difference))
-FROM #EquityRecon e
-GROUP BY ScenarioId, ScenarioName
-ORDER BY ScenarioId;
-
--- Full breakdown if needed
 SELECT *
 FROM #EquityRecon
 ORDER BY ScenarioId, YearNumber;

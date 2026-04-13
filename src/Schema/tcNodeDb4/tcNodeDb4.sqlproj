@@ -645,7 +645,6 @@
     <Build Include="Cash\Tables\tbCategoryExpSyntax.sql" />
     <Build Include="Cash\Stored Procedures\proc_CategoryExprStatusSet.sql" />
     <Build Include="Cash\Tables\tbCategoryExprFormat.sql" />
-    <Build Include="tbCategoryExp.Trigger.sql" />
     <Build Include="Web\Tables\tbTemplateStatus.sql" />
     <Build Include="Usr\Stored Procedures\proc_DefaultUserId.sql" />
     <Build Include="App\Stored Procedures\proc_DefaultCodeGenerator.sql" />
@@ -655,7 +654,7 @@
     <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_MIN_2026.sql" />
     <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_STD_2026.sql" />
     <Build Include="App\Stored Procedures\proc_Template_CO_MICRO_CUR_STD_EXP_2026.sql" />
-    <Build Include="App\Stored Procedures\proc_Template_ST_SOLE_CUR_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_ST_SOLE_CUR_MIN_2026.sql" />
     <Build Include="App\Stored Procedures\proc_Template_DisableVAT.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetCreateProduct.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetObjectPrint.sql" />
@@ -681,22 +680,30 @@
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_TaxOnProfit.sql" />
     <Build Include="Cash\Views\vwEquityReconciliationByYear.sql" />
     <Build Include="Cash\Views\vwFlowReconcilationByYear.sql" />
-    <Build Include="Cash\Views\vwSoleTraderReconciliationByYear.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_SoleTraderCapitalIntroduced.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_SoleTraderDrawings.sql" />
     <Build Include="Cash\Functions\fnPersonalEffectiveRateCalculator.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_SoleTraderPersonalTaxRate.sql" />
+    <Build Include="App\Tables\tbJurisdiction.sql" />
+    <Build Include="Cash\Tables\tbTaxTagSource.sql" />
+    <Build Include="Cash\Tables\tbTaxTag.sql" />
+    <Build Include="Cash\Tables\tbTaxTagMap.sql" />
+    <Build Include="Cash\Functions\func_TaxTagMapValidate.sql" />
+    <Build Include="Cash\Stored Procedures\proc_TaxTagMapValidate.sql" />
+    <Build Include="Cash\Tables\tbTaxTagClass.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_BASE_MIN_2026.sql" />
+    <Build Include="App\Stored Procedures\proc_Template_ST_SOLE_CUR_STD_2026.sql" />
+    <Build Include="Subject\Tables\tbBalanceConstraint.sql" />
+    <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_CompanyLoanPayback.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scripts\DB3-DB4 migration script.sql" />
-    <None Include="Scripts\SyntheticDataset.sql" />
     <None Include="Scripts\EXEC_DatasetSyntheticMIS.sql" />
     <None Include="Scripts\PROOF_CashStatementReconciliation.sql" />
-    <None Include="Scripts\EXEC_Proof_CashStatementReconciliation.sql" />
-    <None Include="Scripts\EXEC_Proof_SoleTrader_Reconciliation.sql" />
+    <None Include="Scripts\MTDSoleTraderMappingEnquiry.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

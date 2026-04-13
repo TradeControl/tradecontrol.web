@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -60,9 +60,6 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         [Display(Name = "Ref.")]
         public string PaymentReference { get; set; }
-
-        [Display(Name = "P&L?")]
-        public bool IsProfitAndLoss { get; set; }
 
         [Required]
         [StringLength(50)]

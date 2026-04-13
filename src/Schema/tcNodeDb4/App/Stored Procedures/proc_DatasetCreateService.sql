@@ -34,8 +34,8 @@ AS
 		SET @ObjectCode = @SoObjectCode;
 
 		DECLARE
-			@SoCashCode NVARCHAR(50) = N'TC100',
-			@PoCashCode NVARCHAR(50) = N'TC200',
+			@SoCashCode NVARCHAR(50) = N'CC-SALES',
+			@PoCashCode NVARCHAR(50) = N'CC-DIRCT',
 			@SoUnitCharge DECIMAL(18, 7) = ISNULL(@UnitCharge, 0.0000000),
 			@PoUnitCharge DECIMAL(18, 7) = CAST(ROUND(ISNULL(@UnitCharge, 0.0000000) * 0.7, 2) AS DECIMAL(18, 7));
 

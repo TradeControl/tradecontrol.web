@@ -33,7 +33,7 @@ AS
 		DECLARE @TemplateName nvarchar(100) =
 			CASE WHEN @IsCompany = 1
 				THEN N'Minimal Micro Company Accounts 2026'
-				ELSE N'Sole Trader Accounts 2026'
+				ELSE N'Standard Sole Trader Accounts 2026'
 			END;
 
 		-- If caller didn't specify VAT setting, inherit from template default.
@@ -160,6 +160,9 @@ AS
 	        EXEC App.proc_DatasetSyntheticMIS_Assets
 		        @IsCompany = @IsCompany,
 		        @IsVatRegistered = @IsVatRegistered;
+
+            EXEC App.proc_DatasetSyntheticMIS_CompanyLoanPayback
+                @IsCompany = @IsCompany;
         END
 
 		---------------------------------------------------------------------

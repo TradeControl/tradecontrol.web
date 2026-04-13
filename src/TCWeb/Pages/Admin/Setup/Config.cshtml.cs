@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 
@@ -29,9 +30,12 @@ namespace TradeControl.Web.Pages.Admin.Setup
 
         UserManager<TradeControlWebUser> UserManager { get; }
 
-        public ConfigModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
+        SignInManager<TradeControlWebUser> SignInManager { get; }
+
+        public ConfigModel(NodeContext context, UserManager<TradeControlWebUser> userManager, SignInManager<TradeControlWebUser> signInManager) : base(context)
         {
             UserManager = userManager;
+            SignInManager = signInManager;
         }
 
         public async Task<IActionResult> OnGetAsync()
@@ -195,10 +199,12 @@ namespace TradeControl.Web.Pages.Admin.Setup
 
             if (embedded)
             {
-                return Redirect($"/Admin/Setup/Config?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}&reinit={(reinit ? "1" : "0")}&done=1");
+                return RedirectToPage("/Account/SignOutAndRegister", new { area = "Identity" });
             }
 
+            await SignInManager.SignOutAsync();
             return RedirectToPage("/Index");
+
         }
     }
 

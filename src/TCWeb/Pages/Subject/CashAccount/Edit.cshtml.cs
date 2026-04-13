@@ -32,11 +32,32 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
         [BindProperty]
         public string OrganisationName { get; set; }
 
+        public SelectList BalanceConstraints { get; set; }
+
         UserManager<TradeControlWebUser> UserManager { get; }
 
         public EditModel(NodeContext context, UserManager<TradeControlWebUser> userManager) : base(context)
         {
             UserManager = userManager;
+        }
+
+        private async Task BuildSelectListsAsync()
+        {
+            var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
+                                   orderby tb.CashDescription
+                                   select tb.CashDescription).ToListAsync();
+
+            cashCodes.Add(string.Empty);
+            CashCodes = new SelectList(cashCodes);
+
+            BalanceConstraints = new SelectList(
+                await NodeContext.Subject_tbBalanceConstraints
+                    .OrderBy(t => t.BalanceConstraintCode)
+                    .Select(t => new { t.BalanceConstraintCode, t.BalanceConstraint })
+                    .ToListAsync(),
+                "BalanceConstraintCode",
+                "BalanceConstraint"
+            );
         }
 
         public async Task<IActionResult> OnGetAsync(string cashSubjectCode)
@@ -51,13 +72,8 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                 if (Subject_CashAccount == null)
                     return NotFound();
 
-                var cashCodes = await (from tb in NodeContext.Cash_BankCashCodes
-                                       orderby tb.CashDescription
-                                       select tb.CashDescription).ToListAsync();
+                await BuildSelectListsAsync();
 
-                cashCodes.Add(string.Empty);
-
-                CashCodes = new SelectList(cashCodes);
                 if (string.IsNullOrEmpty(Subject_CashAccount.CashCode))
                     CashDescription = string.Empty;
                 else
@@ -81,7 +97,11 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
             try
             {
                 if (!ModelState.IsValid)
+                {
+                    await BuildSelectListsAsync();
+                    await SetViewData();
                     return Page();
+                }
 
                 Profile profile = new(NodeContext);
                 Subject_CashAccount.UpdatedBy = await profile.UserName(UserManager.GetUserId(User));

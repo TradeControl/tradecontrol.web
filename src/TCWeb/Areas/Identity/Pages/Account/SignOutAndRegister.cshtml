@@ -1,0 +1,31 @@
+@page
+@model TradeControl.Web.Pages.Account.SignOutAndRegisterModel
+@{
+    Layout = null;
+    Response.Headers.CacheControl = "no-store";
+}
+
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+</head>
+<body>
+    <script>
+        (function ()
+        {
+            const target = "/Identity/Account/Register";
+
+            if (window.top && window.top !== window)
+            {
+                window.top.location = target;
+            }
+            else
+            {
+                window.location = target;
+            }
+        })();
+    </script>
+</body>
+</html>

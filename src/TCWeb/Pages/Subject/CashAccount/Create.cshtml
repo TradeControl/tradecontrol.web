@@ -45,6 +45,14 @@
                 <span asp-validation-for="Subject_CashAccount.CashCode" class="text-danger"></span>
             </div>
             <div class="mb-3">
+                <label asp-for="Subject_CashAccount.BalanceConstraintCode" class="control-label"></label>
+                <select asp-for="Subject_CashAccount.BalanceConstraintCode"
+                        asp-items="Model.BalanceConstraints"
+                        class="form-control">
+                </select>
+                <span asp-validation-for="Subject_CashAccount.BalanceConstraintCode" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
                 <label asp-for="Subject_CashAccount.LiquidityLevel" class="control-label"></label>
                 <input asp-for="Subject_CashAccount.LiquidityLevel" class="form-control" />
                 <span asp-validation-for="Subject_CashAccount.LiquidityLevel" class="text-danger"></span>

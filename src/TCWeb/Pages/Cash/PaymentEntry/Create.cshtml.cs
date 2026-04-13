@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -273,8 +273,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                     TaxCode = TaxCode,
                     PaidOn = DateTime.Today,
                     UserId = await profile.UserId(UserManager.GetUserId(User)),
-                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
-                    IsProfitAndLoss = false
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User))
                 };
 
                 Cash_PaymentsUnposted.UpdatedBy = Cash_PaymentsUnposted.InsertedBy;

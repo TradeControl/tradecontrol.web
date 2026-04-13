@@ -305,7 +305,7 @@ AS
 		BEGIN
 			INSERT INTO Subject.tbAccount (AccountCode, SubjectCode, AccountName, SortCode, AccountNumber, CashCode, OpeningBalance, CoinTypeCode, AccountTypeCode, LiquidityLevel)
 			VALUES (@CurrentAccountCode, @NodeSubjectCode, N'Dataset Current Account', N'00-00-00', N'00000000',
-					(SELECT TOP (1) CashCode FROM Cash.tbCode ORDER BY CashCode), 0, @CoinTypeCode, 0, 0);
+					'CC-BANK', 0, @CoinTypeCode, 0, 0);
 		END
 	END
 

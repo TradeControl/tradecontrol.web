@@ -1,4 +1,4 @@
-﻿CREATE VIEW Cash.vwBalanceSheetAccounts
+CREATE VIEW Cash.vwBalanceSheetAccounts
 AS
 	WITH cash_accounts AS
 	(
@@ -13,7 +13,8 @@ AS
 			JOIN App.tbYear ON App.tbYearPeriod.YearNumber = App.tbYear.YearNumber
 			CROSS JOIN  cash_accounts
 		WHERE (App.tbYear.CashStatusCode BETWEEN 1 AND 2)
-	), last_entries AS
+	)
+	, last_entries AS
 	(
 		SELECT account_statement.AccountCode, account_statement.StartOn, MAX(account_statement.EntryNumber) As EntryNumber
 		FROM Cash.vwAccountStatement account_statement 
@@ -26,6 +27,26 @@ AS
 		FROM last_entries 
 			JOIN Cash.vwAccountStatement account_statement ON last_entries.AccountCode = account_statement.AccountCode
 				AND last_entries.EntryNumber = account_statement.EntryNumber
+
+		UNION ALL
+
+		-- Ensure OpeningBalance exists in the first period only when there is no statement row for that period.
+		SELECT
+			a.AccountCode,
+			fp.StartOn,
+			CAST(a.OpeningBalance AS float) AS PaidBalance
+		FROM Subject.tbAccount a
+		CROSS JOIN (SELECT MIN(StartOn) AS StartOn FROM App.tbYearPeriod) fp
+		WHERE a.AccountTypeCode = 0
+		  AND a.AccountClosed = 0
+		  AND COALESCE(a.OpeningBalance, 0) <> 0
+		  AND NOT EXISTS
+		  (
+			  SELECT 1
+			  FROM Cash.vwAccountStatement acs
+			  WHERE acs.AccountCode = a.AccountCode
+			    AND acs.StartOn = fp.StartOn
+		  )
 	)
 	, statement_ordered AS
 	(
@@ -49,7 +70,8 @@ AS
 		SELECT EntryNumber, AccountCode, CashCode, YearNumber, StartOn, Balance, IsEntry,
 			MAX(CASE IsEntry WHEN 0 THEN 0 ELSE RNK END) OVER (PARTITION BY AccountCode ORDER BY EntryNumber) RNK
 		FROM statement_ranked
-	), account_balances AS
+	)
+	, account_balances AS
 	(
 		SELECT AccountCode, CashCode, StartOn, 
 			CASE IsEntry WHEN 0 THEN
@@ -60,12 +82,14 @@ AS
 			END
 			AS Balance		
 		FROM statement_grouped
-	), account_polarity AS
+	)
+	, account_polarity AS
 	(
 		SELECT CashCode, StartOn, SUM(Balance) Balance
 		FROM account_balances
 		GROUP BY CashCode, StartOn
-	), account_base AS
+	)
+	, account_base AS
 	(
 		SELECT 
 			CASE WHEN NOT (CashCode IS NULL) 

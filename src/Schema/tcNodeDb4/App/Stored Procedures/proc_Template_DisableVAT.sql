@@ -31,7 +31,14 @@ BEGIN TRY
       AND C.TaxCode NOT IN ('N/A');
 
     ----------------------------------------------------------------
-    -- 4. Disable VAT postings/statements via tax type enablement
+    -- 4. Zero VAT Rates
+    ----------------------------------------------------------------
+    UPDATE App.tbTaxCode
+    SET TaxRate = 0
+    WHERE TaxRate != 0;
+
+    ----------------------------------------------------------------
+    -- 5. Disable VAT postings/statements via tax type enablement
     --    Leave App.tbTaxCode rates intact for "what-if" analysis.
     ----------------------------------------------------------------
     UPDATE Cash.tbTaxType

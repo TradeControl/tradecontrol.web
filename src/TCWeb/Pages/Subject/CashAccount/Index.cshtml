@@ -37,6 +37,7 @@
                 <th>@Html.DisplayNameFor(model => model.Subject_CashAccounts[0].CashDescription)</th>
                 <th>@Html.DisplayNameFor(model => model.Subject_CashAccounts[0].OpeningBalance)</th>
                 <th>@Html.DisplayNameFor(model => model.Subject_CashAccounts[0].LiquidityLevel)</th>
+                <th>@Html.DisplayNameFor(model => model.Subject_CashAccounts[0].BalanceConstraint)</th>
             }
             <th>@Html.DisplayNameFor(model => model.Subject_CashAccounts[0].AccountClosed)</th>
             <th></th>
@@ -53,6 +54,7 @@
                     <td>@Html.DisplayFor(modelItem => item.CashDescription)</td>
                     <td>@Html.DisplayFor(modelItem => item.OpeningBalance)</td>
                     <td>@Html.DisplayFor(modelItem => item.LiquidityLevel)</td>
+                    <td>@Html.DisplayFor(modelItem => item.BalanceConstraint)</td>
                 }
                 <td>@Html.DisplayFor(modelItem => item.AccountClosed)</td>
                 <td>

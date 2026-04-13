@@ -37,20 +37,27 @@ AS
 	IF @SettlementAccountCode IS NULL
 		THROW 51293, 'DatasetSyntheticMIS_SoleTraderDrawings: unable to resolve SettlementAccountCode.', 1;
 
+	DECLARE @OwnerCapitalAccountCode nvarchar(10) = N'OWNCAP';
+
+	IF NOT EXISTS (SELECT 1 FROM Subject.tbAccount WHERE AccountCode = @OwnerCapitalAccountCode)
+		THROW 51294, 'DatasetSyntheticMIS_SoleTraderDrawings: unable to resolve owner capital AccountCode (OWNCAP).', 1;
+
+	DECLARE @CashCode nvarchar(50) = N'CC-OWNCAP';
+
 	DECLARE @Drawing1 decimal(18,5) = 750.00000;
 	DECLARE @Drawing2 decimal(18,5) = 900.00000;
 
 	DECLARE @PaidOn1 date = DATEADD(DAY, 40, @Year1FirstStartOn);
 	DECLARE @PaidOn2 date = DATEADD(DAY, 75, @Year1FirstStartOn);
 
-	-- Bank-side: drawings (what the trader sees)
+	-- Event 1
 	IF NOT EXISTS
 	(
 		SELECT 1
 		FROM Cash.tbPayment p
 		WHERE p.SubjectCode = N'HOME'
 		  AND p.AccountCode = @SettlementAccountCode
-		  AND p.CashCode = N'DRAW01'
+		  AND p.CashCode = @CashCode
 		  AND CAST(p.PaidOn AS date) = @PaidOn1
 		  AND p.PaymentReference = N'Owner Drawings'
 	)
@@ -79,7 +86,7 @@ AS
 			1,
 			N'HOME',
 			@SettlementAccountCode,
-			N'DRAW01',
+			@CashCode,
 			N'N/A',
 			@PaidOn1,
 			0.00000,
@@ -93,9 +100,9 @@ AS
 		SELECT 1
 		FROM Cash.tbPayment p
 		WHERE p.SubjectCode = N'HOME'
-		  AND p.AccountCode = @SettlementAccountCode
-		  AND p.CashCode = N'DRAW01'
-		  AND CAST(p.PaidOn AS date) = @PaidOn2
+		  AND p.AccountCode = @OwnerCapitalAccountCode
+		  AND p.CashCode = @CashCode
+		  AND CAST(p.PaidOn AS date) = @PaidOn1
 		  AND p.PaymentReference = N'Owner Drawings'
 	)
 	BEGIN
@@ -122,12 +129,101 @@ AS
 			@UserId,
 			1,
 			N'HOME',
+			@OwnerCapitalAccountCode,
+			@CashCode,
+			N'N/A',
+			@PaidOn1,
+			@Drawing1,
+			0.00000,
+			N'Owner Drawings'
+		);
+	END
+
+	-- Event 2
+	IF NOT EXISTS
+	(
+		SELECT 1
+		FROM Cash.tbPayment p
+		WHERE p.SubjectCode = N'HOME'
+		  AND p.AccountCode = @SettlementAccountCode
+		  AND p.CashCode = @CashCode
+		  AND CAST(p.PaidOn AS date) = @PaidOn2
+		  AND p.PaymentReference = N'Owner Drawings'
+	)
+	BEGIN
+		DECLARE @PayCode3 nvarchar(20) = NULL;
+		EXEC Cash.proc_NextPaymentCode @PaymentCode = @PayCode3 OUTPUT;
+
+		INSERT INTO Cash.tbPayment
+		(
+			PaymentCode,
+			UserId,
+			PaymentStatusCode,
+			SubjectCode,
+			AccountCode,
+			CashCode,
+			TaxCode,
+			PaidOn,
+			PaidInValue,
+			PaidOutValue,
+			PaymentReference
+		)
+		VALUES
+		(
+			@PayCode3,
+			@UserId,
+			1,
+			N'HOME',
 			@SettlementAccountCode,
-			N'DRAW01',
+			@CashCode,
 			N'N/A',
 			@PaidOn2,
 			0.00000,
 			@Drawing2,
+			N'Owner Drawings'
+		);
+	END
+
+	IF NOT EXISTS
+	(
+		SELECT 1
+		FROM Cash.tbPayment p
+		WHERE p.SubjectCode = N'HOME'
+		  AND p.AccountCode = @OwnerCapitalAccountCode
+		  AND p.CashCode = @CashCode
+		  AND CAST(p.PaidOn AS date) = @PaidOn2
+		  AND p.PaymentReference = N'Owner Drawings'
+	)
+	BEGIN
+		DECLARE @PayCode4 nvarchar(20) = NULL;
+		EXEC Cash.proc_NextPaymentCode @PaymentCode = @PayCode4 OUTPUT;
+
+		INSERT INTO Cash.tbPayment
+		(
+			PaymentCode,
+			UserId,
+			PaymentStatusCode,
+			SubjectCode,
+			AccountCode,
+			CashCode,
+			TaxCode,
+			PaidOn,
+			PaidInValue,
+			PaidOutValue,
+			PaymentReference
+		)
+		VALUES
+		(
+			@PayCode4,
+			@UserId,
+			1,
+			N'HOME',
+			@OwnerCapitalAccountCode,
+			@CashCode,
+			N'N/A',
+			@PaidOn2,
+			@Drawing2,
+			0.00000,
 			N'Owner Drawings'
 		);
 	END

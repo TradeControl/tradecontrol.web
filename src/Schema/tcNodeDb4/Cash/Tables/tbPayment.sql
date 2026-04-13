@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Cash].[tbPayment] (
+CREATE TABLE [Cash].[tbPayment] (
     [PaymentCode]       NVARCHAR (20)   NOT NULL,
     [UserId]            NVARCHAR (10)   NOT NULL,
     [PaymentStatusCode] SMALLINT        CONSTRAINT [DF_Cash_tbPayment_PaymentStatusCode] DEFAULT ((0)) NOT NULL,
@@ -15,7 +15,6 @@
     [UpdatedBy]         NVARCHAR (50)   CONSTRAINT [DF_Cash_tbPayment_UpdatedBy] DEFAULT (suser_sname()) NOT NULL,
     [UpdatedOn]         DATETIME        CONSTRAINT [DF_Cash_tbPayment_UpdatedOn] DEFAULT (getdate()) NOT NULL,
     [RowVer]            ROWVERSION      NOT NULL,
-    [IsProfitAndLoss]   BIT             CONSTRAINT [DF_Cash_tbPayment_IsProfitAndLoss] DEFAULT ((1)) NOT NULL,
     CONSTRAINT [PK_Cash_tbPayment] PRIMARY KEY CLUSTERED ([PaymentCode] ASC),
     CONSTRAINT [FK_Cash_tbPayment_App_tbTaxCode] FOREIGN KEY ([TaxCode]) REFERENCES [App].[tbTaxCode] ([TaxCode]),
     CONSTRAINT [FK_Cash_tbPayment_Cash_tbCode] FOREIGN KEY ([CashCode]) REFERENCES [Cash].[tbCode] ([CashCode]) ON UPDATE CASCADE,
@@ -149,6 +148,29 @@ AS
 		FROM Subject.tbAccount account
 			JOIN balance ON account.AccountCode = balance.AccountCode;
 
+		----------------------------------------------------------------
+		-- Balance constraints (asset accounts only, posted rows only)
+		----------------------------------------------------------------
+		IF EXISTS
+		(
+			SELECT 1
+			FROM inserted i
+				JOIN Subject.tbAccount a
+					ON a.AccountCode = i.AccountCode
+			WHERE i.PaymentStatusCode = 1
+			  AND a.AccountTypeCode = 2
+			  AND
+			  (
+					(a.BalanceConstraintCode = 1 AND a.CurrentBalance < 0)  -- NoNegatives
+				 OR (a.BalanceConstraintCode = 2 AND a.CurrentBalance > 0)  -- NoPositives
+			  )
+		)
+		BEGIN
+			RAISERROR('Balance constraint violation on asset account.', 16, 1);
+			ROLLBACK TRANSACTION;
+			RETURN;
+		END
+
 	END TRY
 	BEGIN CATCH
 		EXEC App.proc_ErrorLog;
@@ -211,9 +233,33 @@ AS
 			SET CurrentBalance = balance.CurrentBalance + OpeningBalance
 			FROM Subject.tbAccount account
 				JOIN balance ON account.AccountCode = balance.AccountCode;
+
+			----------------------------------------------------------------
+			-- Balance constraints (asset accounts only, posted rows only)
+			----------------------------------------------------------------
+			IF EXISTS
+			(
+				SELECT 1
+				FROM inserted i
+					JOIN Subject.tbAccount a
+						ON a.AccountCode = i.AccountCode
+				WHERE i.PaymentStatusCode = 1
+				  AND a.AccountTypeCode = 2
+				  AND
+				  (
+						(a.BalanceConstraintCode = 1 AND a.CurrentBalance < 0)  -- NoNegatives
+					 OR (a.BalanceConstraintCode = 2 AND a.CurrentBalance > 0)  -- NoPositives
+				  )
+			)
+			BEGIN
+				RAISERROR('Balance constraint violation on asset account.', 16, 1);
+				ROLLBACK TRANSACTION;
+				RETURN;
+			END
 		END
 
 	END TRY
 	BEGIN CATCH
 		EXEC App.proc_ErrorLog;
 	END CATCH
+GO

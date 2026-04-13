@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     public partial class Subject_vwCashAccount
     {
         [StringLength(10)]
-        [Display (Name = "Cash A/c")]
+        [Display(Name = "Cash A/c")]
         public string AccountCode { get; set; }
         [StringLength(10)]
         [Display(Name = "Account Code")]
@@ -34,6 +34,14 @@ namespace TradeControl.Web.Models
         [StringLength(100)]
         [Display(Name = "Cash Desc")]
         public string CashDescription { get; set; }
+
+        [Display(Name = "Balance Constraint")]
+        public byte BalanceConstraintCode { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Constraint")]
+        public string BalanceConstraint { get; set; }
+
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Opening Balance")]
         [DataType(DataType.Currency)]

@@ -32,6 +32,7 @@ BEGIN TRY
 	DELETE FROM Cash.tbTaxType;
 	DELETE FROM Cash.tbCategory;
 	DELETE FROM App.tbTemplate;
+    DELETE FROM App.tbJurisdiction;
 	
 	IF NOT EXISTS (SELECT * FROM [Usr].[tbMenuView])
 		INSERT INTO [Usr].[tbMenuView] ([MenuViewCode], [MenuView])
@@ -74,9 +75,13 @@ BEGIN TRY
              'App.proc_Template_CO_MICRO_CUR_STD_2026',
              'Enhanced micro‑entity accounts with real‑world business categories. Splits sales into labour/materials, direct costs into materials/subs/fuel/travel, full admin breakdown, and detailed depreciation classes. Ideal for tradesmen, small agencies, and micro‑manufacturers who want meaningful reporting without leaving the micro‑entity regime.', 1),
 
-            ('Sole Trader Accounts 2026',
-             'App.proc_Template_ST_SOLE_CUR_2026',
-             'Simple, MTD‑ready sole trader accounts. No balance sheet, no corporation tax, optional VAT, and a clean income/expense structure aligned with HMRC reporting groups. Ideal for tradespeople, freelancers, and self‑employed individuals preparing for Making Tax Digital.', 0);
+            ('Minimal Sole Trader Accounts 2026',
+             'App.proc_Template_ST_SOLE_CUR_MIN_2026',
+             'Simple, MTD‑ready sole trader accounts. No balance sheet, no corporation tax, optional VAT, and a clean income/expense structure aligned with HMRC reporting groups. Ideal for tradespeople, freelancers, and self‑employed individuals preparing for Making Tax Digital.', 0),
+
+            ('Standard Sole Trader Accounts 2026',
+             'App.proc_Template_ST_SOLE_CUR_STD_2026',
+             'Sole trader accounts with a more realistic expense breakdown (motor, premises, phone, insurance, bank charges, professional fees, advertising, repairs). Designed to reduce manual reclassification before MTD ITSA submissions.', 0);
 
 	IF NOT EXISTS (SELECT * FROM [Subject].[tbAccountType])
 		INSERT INTO [Subject].[tbAccountType] ([AccountTypeCode], [AccountType])
@@ -84,6 +89,13 @@ BEGIN TRY
 		    (0, 'CASH')
 		    , (1, 'DUMMY')
 		    , (2, 'ASSET')
+
+    IF NOT EXISTS (SELECT * FROM [Subject].[tbBalanceConstraint])
+        INSERT INTO [Subject].[tbBalanceConstraint] ([BalanceConstraintCode], [BalanceConstraint])
+        VALUES
+            (0, N'Neutral'),
+            (1, N'No Negatives'),
+            (2, N'No Positives');
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbUoc])
 		INSERT INTO [App].[tbUoc] ([UnitOfCharge], [UocSymbol], [UocName])
@@ -180,10 +192,16 @@ BEGIN TRY
 			,(N'YER', N'ر.ي.‏', N'Yemen Rials')
 			,(N'YUN', N'Din.', N'Serbia')
 			,(N'ZAR', N'R', N'South Africa Rand')
-			,(N'ZWD', N'Z$', N'Zimbabwe Dollar');	
+			,(N'ZWD', N'Z$', N'Zimbabwe Dollar');
+
+    IF NOT EXISTS (SELECT * FROM App.tbJurisdiction)
+        INSERT INTO App.tbJurisdiction (JurisdictionCode, JurisdictionName, UocCode, IsEnabled)
+        VALUES
+        ('UK', 'United Kingdom', 'GBP', 1);
+
 	IF NOT EXISTS (SELECT * FROM [App].[tbEventType])
-			INSERT INTO [App].[tbEventType] ([EventTypeCode], [EventType])
-			VALUES
+		INSERT INTO [App].[tbEventType] ([EventTypeCode], [EventType])
+		VALUES
 		(0, 'Error')
 		, (1, 'Warning')
 		, (2, 'Information')
@@ -195,8 +213,8 @@ BEGIN TRY
 		, (8, 'Pay Address')
 
 	IF NOT EXISTS (SELECT * FROM [Cash].[tbAssetType])
-			INSERT INTO [Cash].[tbAssetType] ([AssetTypeCode], [AssetType])
-			VALUES
+		INSERT INTO [Cash].[tbAssetType] ([AssetTypeCode], [AssetType])
+		VALUES
 		(0, 'DEBTORS')
 		, (1, 'CREDITORS')
 		, (2, 'BANK')
@@ -205,15 +223,15 @@ BEGIN TRY
 		, (5, 'CAPITAL')
 
 	IF NOT EXISTS (SELECT * FROM [Cash].[tbPaymentStatus])
-			INSERT INTO [Cash].[tbPaymentStatus] ([PaymentStatusCode], [PaymentStatus])
-			VALUES
+		INSERT INTO [Cash].[tbPaymentStatus] ([PaymentStatusCode], [PaymentStatus])
+		VALUES
 		(0, 'Unposted')
 		, (1, 'Posted')
 		, (2, 'Transfer')
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbMonth])
-			INSERT INTO [App].[tbMonth] ([MonthNumber], [MonthName])
-			VALUES
+		INSERT INTO [App].[tbMonth] ([MonthNumber], [MonthName])
+		VALUES
 		(1, 'JAN')
 		, (2, 'FEB')
 		, (3, 'MAR')
@@ -228,8 +246,8 @@ BEGIN TRY
 		, (12, 'DEC')
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbText])
-			INSERT INTO [App].[tbText] ([TextId], [Message], [Arguments])
-			VALUES
+		INSERT INTO [App].[tbText] ([TextId], [Message], [Arguments])
+		VALUES
 		(1220, 'Invoices deployed to the network cannot be deleted. Add a credit/debit note instead.', 0)
 		, (1221, 'Service Log cleared down.', 0)
 		, (1222, 'Task Change Log cleared down.', 0)
@@ -238,15 +256,15 @@ BEGIN TRY
 		, (1225, 'Initialising <1>', 1)
 
 	IF NOT EXISTS (SELECT * FROM [Cash].[tbCoinType])
-			INSERT INTO [Cash].[tbCoinType] ([CoinTypeCode], [CoinType])
-			VALUES
+		INSERT INTO [Cash].[tbCoinType] ([CoinTypeCode], [CoinType])
+		VALUES
 		(0, 'Main')
 		, (1, 'TestNet')
 		, (2, 'Fiat')
 
 	IF NOT EXISTS (SELECT * FROM [Usr].[tbInterface])
-			INSERT INTO [Usr].[tbInterface] ([InterfaceCode], [Interface])
-			VALUES
+		INSERT INTO [Usr].[tbInterface] ([InterfaceCode], [Interface])
+		VALUES
 		(0, 'Accounts')
 		, (1, 'MIS')
 
@@ -344,7 +362,7 @@ BEGIN TRY
 
 	IF NOT EXISTS(SELECT * FROM Cash.tbCategoryType)
 		INSERT INTO Cash.tbCategoryType (CategoryTypeCode, CategoryType)
-		VALUES (0, 'Cash Code')
+		VALUES (0, 'Nominal')
 		, (1, 'Total')
 		, (2, 'Expression');
 
@@ -474,6 +492,12 @@ BEGIN TRY
 		, ('Purchase Order', 20000)
 		, ('Sales Order', 10000);
 
+	IF NOT EXISTS (SELECT * FROM Cash.tbTaxTagClass)
+		INSERT INTO Cash.tbTaxTagClass (TagClassCode, TagClass)
+		VALUES (0, 'Rollup')
+		, (1, 'Component')
+        , (2, 'Derived');
+
 	IF NOT EXISTS(SELECT * FROM App.tbDoc)
 		INSERT INTO App.tbDoc (DocTypeCode, ReportName, OpenMode, Description)
 		VALUES (0, 'Project_QuotationStandard', 2, 'Standard Quotation')
@@ -588,6 +612,7 @@ BEGIN TRY
 		, (1223, 'Invoice Change Log cleared down.', 0)
 		, (1224, 'Raise corresponding invoices?', 0)
 		, (1225, 'Initialising <1>', 1)
+        , (1226, 'Tax Type Disabled. Rate must be zero.', 0)
 		, (2002, 'Only administrators have access to the system configuration features of this application.', 0)
 		, (2003, 'You are not a registered user of this system. Please contact the Administrator if you believe you should have access.', 0)
 		, (2004, 'The primary key you have entered contains invalid characters. Digits and letters should be used for these keys. Please amend accordingly or press Esc to cancel.', 0)

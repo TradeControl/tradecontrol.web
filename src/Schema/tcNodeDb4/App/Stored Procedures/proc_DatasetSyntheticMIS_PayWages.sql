@@ -63,7 +63,7 @@ AS
 		(
 			@L2_PaymentCode, @L2_UserId, 0,
 			@L2_EmployeeSubjectCode, @SettlementAccountCode,
-			N'TC300', N'N/A',
+			N'CC-WAGES', N'N/A',
 			@L2_MonthEnd, 0, @L2_Amount,
 			N'Wages'
 		);
@@ -88,7 +88,7 @@ AS
 		(
 			@L2_PaymentCode, @L2_UserId, 0,
 			@L2_EmployeeSubjectCode, @SettlementAccountCode,
-			N'TC300', N'N/A',
+			N'CC-WAGES', N'N/A',
 			@L2_MonthEnd, 0, @L2_Amount,
 			N'Wages'
 		);
@@ -101,7 +101,7 @@ AS
 			SELECT SUM(p.PaidOutValue)
 			FROM Cash.tbPayment p
 			WHERE p.SubjectCode = @L2_EmployeeSubjectCode
-				AND p.CashCode = N'TC300'
+				AND p.CashCode = N'CC-WAGES'
 				AND CAST(p.PaidOn AS date) = @L2_MonthEnd
 		);
 

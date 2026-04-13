@@ -37,7 +37,6 @@
             @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
             {
                 <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].CashCode)</th>
-                <th>@Html.DisplayNameFor(model => model.Cash_AssetsUnposted[0].IsProfitAndLoss)</th>
             }
             <th></th>
         </tr>
@@ -60,7 +59,6 @@
                 @if (Detection.Device.Type != Wangkanai.Detection.Models.Device.Mobile)
                 {
                     <td>@Html.DisplayFor(modelItem => item.CashCode)</td>
-                    <td>@Html.DisplayFor(modelItem => item.IsProfitAndLoss)</td>
                 }
                 <td>
                     <a asp-page="./PostEntry" asp-route-paymentCode="@item.PaymentCode" class="btn btn-warning" title="Post this entry">

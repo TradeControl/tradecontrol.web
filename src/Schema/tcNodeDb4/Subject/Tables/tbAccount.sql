@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Subject].[tbAccount] (
+CREATE TABLE [Subject].[tbAccount] (
     [AccountCode]     NVARCHAR (10)   NOT NULL,
     [SubjectCode]     NVARCHAR (10)   NOT NULL,
     [AccountName]     NVARCHAR (50)   NOT NULL,
@@ -9,6 +9,7 @@
     [CurrentBalance]  DECIMAL (18, 5) CONSTRAINT [DF_Subject_tbAccount_CurrentBalance] DEFAULT ((0)) NOT NULL,
     [CoinTypeCode]    SMALLINT        CONSTRAINT [DF_Subject_tbAccount_CoinTypeCode] DEFAULT ((2)) NOT NULL,
     [AccountTypeCode] SMALLINT        CONSTRAINT [DF_Subject_tbAccount_AccountTypeCode] DEFAULT ((0)) NOT NULL,
+    [BalanceConstraintCode] TINYINT   CONSTRAINT [DF_Subject_tbAccount_BalanceConstraintCode] DEFAULT ((0)) NOT NULL,
     [LiquidityLevel]  SMALLINT        CONSTRAINT [DF_Subject_tbAccount_LiquidityLevel] DEFAULT ((0)) NOT NULL,
     [AccountClosed]   BIT             CONSTRAINT [DF_Subject_tbAccount_AccountClosed] DEFAULT ((0)) NOT NULL,
     [InsertedBy]      NVARCHAR (50)   CONSTRAINT [DF_Subject_tbAccount_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
@@ -20,21 +21,17 @@
     CONSTRAINT [FK_Subject_tbAccount_Cash_tbCode] FOREIGN KEY ([CashCode]) REFERENCES [Cash].[tbCode] ([CashCode]),
     CONSTRAINT [FK_Subject_tbAccount_Cash_tbCoinType] FOREIGN KEY ([CoinTypeCode]) REFERENCES [Cash].[tbCoinType] ([CoinTypeCode]),
     CONSTRAINT [FK_Subject_tbAccount_Subject_tb] FOREIGN KEY ([SubjectCode]) REFERENCES [Subject].[tbSubject] ([SubjectCode]) ON UPDATE CASCADE,
-    CONSTRAINT [FK_Subject_tbAccount_Subject_tbAccountType] FOREIGN KEY ([AccountTypeCode]) REFERENCES [Subject].[tbAccountType] ([AccountTypeCode])
+    CONSTRAINT [FK_Subject_tbAccount_Subject_tbAccountType] FOREIGN KEY ([AccountTypeCode]) REFERENCES [Subject].[tbAccountType] ([AccountTypeCode]),
+    CONSTRAINT [FK_Subject_tbAccount_Subject_tbBalanceConstraint] FOREIGN KEY ([BalanceConstraintCode]) REFERENCES [Subject].[tbBalanceConstraint] ([BalanceConstraintCode])
 );
-
-
-
-
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Subject_tbAccount]
     ON [Subject].[tbAccount]([SubjectCode] ASC, [AccountCode] ASC) WITH (FILLFACTOR = 90);
-
 
 GO
 CREATE NONCLUSTERED INDEX [IX_tbAccount_AccountTypeCode]
     ON [Subject].[tbAccount]([AccountTypeCode] ASC, [LiquidityLevel] DESC, [AccountCode] ASC);
-
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Subject_tbAccount_CashAccountName]

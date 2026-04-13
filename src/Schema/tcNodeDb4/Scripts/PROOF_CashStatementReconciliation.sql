@@ -5,40 +5,61 @@ SET XACT_ABORT ON;
 -- PROOF_CashStatementReconciliation.sql
 --
 -- Purpose:
---   Provide machine-checkable proofs (invariants) demonstrating that the Cash
---   Statement reconciliation is mathematically consistent with the annual
---   equity bridge and that residuals are rounding-only.
+--   Provide machine-checkable proofs (invariants) demonstrating that:
+--     1) Annual equity reconciliation fields are internally consistent.
+--     2) The DEBK-style equity bridge balances within a rounding tolerance.
+--     3) Flow reconciliation is a pure projection (row-shape invariant).
 --
--- Systems note:
---   Trade Control is a production/flow system; accounting is derived from
---   genesis transactions and cash polarity. This script validates the DEBK-
---   style invariants presented by the reporting layer.
+-- Notes:
+--   - The reporting layer derives accounting from genesis transactions and cash
+--     polarity; this script validates the invariants presented by that layer.
+--   - Tolerance is intentionally small to catch drift, but allows for rounding.
+--   - This script assumes `Cash.vwEquityReconciliationByYear` exposes the
+--     post-refactor names:
+--       * `CapitalMovement` (formerly `CapitalInjection`)
+--       * `Variance`        (formerly `Difference`)
+--       * `OpeningAccountPosition` (new: opening cash/bank seed funding)
 ------------------------------------------------------------------------------
 
-DECLARE @Tolerance decimal(18, 4) = 0.10; -- acceptable rounding tolerance in base currency units
+DECLARE @Tolerance decimal(18, 4) = 0.10; -- rounding tolerance in base currency units
 DECLARE @ShowTop int = 25;
 
 ------------------------------------------------------------------------------
--- Base dataset
+-- Base dataset (materialize to temp table)
+--
+-- Rationale:
+--   - Makes the proof deterministic and fast to query repeatedly.
+--   - Allows us to index by YearNumber for the later checks.
 ------------------------------------------------------------------------------
 IF OBJECT_ID('tempdb..#Reconciliation') IS NOT NULL DROP TABLE #Reconciliation;
 
 SELECT
     r.YearNumber,
     r.[Description],
+
+    -- Balance sheet bridge endpoints
     r.OpeningCapital,
     r.ClosingCapital,
+
+    -- Profit and tax
     r.Profit,
     r.BusinessTax,
     r.ProfitAfterTax,
     r.TaxCarry,
-    r.CapitalInjection,
+
+    -- Equity bridge components
+    r.CapitalMovement,
     r.OpeningPosition,
+    r.OpeningAccountPosition,
+
+    -- Loss pool telemetry (not strictly part of the DEBK identity)
     r.OpeningLossesCarriedForward,
     r.ClosingLossesCarriedForward,
     r.LossesCarriedForwardDelta,
+
+    -- Derived bridge target and residual
     r.CapitalDelta,
-    r.Difference
+    r.Variance
 INTO #Reconciliation
 FROM Cash.vwEquityReconciliationByYear r;
 
@@ -46,34 +67,55 @@ CREATE UNIQUE CLUSTERED INDEX IX_Reconciliation_YearNumber ON #Reconciliation(Ye
 
 ------------------------------------------------------------------------------
 -- Invariant checks (annual)
+--
+-- Definitions:
+--   Identity 1:
+--     CapitalDelta = ClosingCapital - OpeningCapital
+--
+--   Identity 2:
+--     ProfitAfterTax = Profit - BusinessTax
+--
+--   Identity 3 (DEBK-style equity bridge, explicit opening items):
+--     CapitalDelta = ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition + Residual
+--   where Residual ~= 0 (rounding-only).
 ------------------------------------------------------------------------------
-
 ;WITH calc AS
 (
     SELECT
         YearNumber,
         [Description],
 
-        -- Identity 1: CapitalDelta must equal Closing - Opening (pre-round)
+        ----------------------------------------------------------------------
+        -- Identity 1: CapitalDelta definition check
+        ----------------------------------------------------------------------
         CapitalDelta_Definition = (ClosingCapital - OpeningCapital),
         CapitalDelta_Reported = CapitalDelta,
         CapitalDelta_Error = (CapitalDelta - (ClosingCapital - OpeningCapital)),
 
-        -- Identity 2: ProfitAfterTax must equal Profit - BusinessTax
+        ----------------------------------------------------------------------
+        -- Identity 2: ProfitAfterTax definition check
+        ----------------------------------------------------------------------
         ProfitAfterTax_Definition = (Profit - BusinessTax),
         ProfitAfterTax_Reported = ProfitAfterTax,
         ProfitAfterTax_Error = (ProfitAfterTax - (Profit - BusinessTax)),
 
-        -- Identity 3: DEBK-style equity bridge residual
-        BridgeTotal = (ProfitAfterTax + CapitalInjection + OpeningPosition),
-        Residual_Definition = (CapitalDelta - (ProfitAfterTax + CapitalInjection + OpeningPosition)),
-        Residual_Reported = Difference,
-        Residual_Error = (Difference - (CapitalDelta - (ProfitAfterTax + CapitalInjection + OpeningPosition))),
+        ----------------------------------------------------------------------
+        -- Identity 3: Equity bridge + residual
+        ----------------------------------------------------------------------
+        BridgeTotal = (ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition),
+        Residual_Definition = (CapitalDelta - (ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition)),
+        Residual_Reported = Variance,
+        Residual_Error =
+            (Variance - (CapitalDelta - (ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition))),
 
-        -- Loss pool shape checks (not DEBK identities; proof of consistency/communication)
+        ----------------------------------------------------------------------
+        -- Loss pool shape checks (consistency / communication checks)
+        -- (not part of the DEBK identity above)
+        ----------------------------------------------------------------------
         LossCF_Sign_Bad = CASE WHEN ClosingLossesCarriedForward < 0 THEN 1 ELSE 0 END,
         LossCF_Delta_Definition = (ClosingLossesCarriedForward - OpeningLossesCarriedForward),
-        LossCF_Delta_Error = (LossesCarriedForwardDelta - (ClosingLossesCarriedForward - OpeningLossesCarriedForward))
+        LossCF_Delta_Error =
+            (LossesCarriedForwardDelta - (ClosingLossesCarriedForward - OpeningLossesCarriedForward))
     FROM #Reconciliation
 ),
 summary AS
@@ -82,7 +124,7 @@ summary AS
         MaxAbs_CapitalDelta_Error = MAX(ABS(CapitalDelta_Error)),
         MaxAbs_ProfitAfterTax_Error = MAX(ABS(ProfitAfterTax_Error)),
         MaxAbs_Residual_Error = MAX(ABS(Residual_Error)),
-        MaxAbs_Difference = MAX(ABS(Residual_Definition)),
+        MaxAbs_Variance = MAX(ABS(Residual_Definition)),
         MaxAbs_LossCF_Delta_Error = MAX(ABS(LossCF_Delta_Error)),
         LossCF_Negative_Count = SUM(LossCF_Sign_Bad),
         YearCount = COUNT(*)
@@ -95,8 +137,8 @@ SELECT
 
     CapitalDelta_Definition_MaxAbsError = s.MaxAbs_CapitalDelta_Error,
     ProfitAfterTax_Definition_MaxAbsError = s.MaxAbs_ProfitAfterTax_Error,
-    Difference_Definition_MaxAbsError = s.MaxAbs_Residual_Error,
-    Difference_MaxAbs = s.MaxAbs_Difference,
+    Variance_Definition_MaxAbsError = s.MaxAbs_Residual_Error,
+    Variance_MaxAbs = s.MaxAbs_Variance,
 
     LossesCarriedForwardDelta_Definition_MaxAbsError = s.MaxAbs_LossCF_Delta_Error,
     LossesCarriedForward_NegativeCount = s.LossCF_Negative_Count,
@@ -106,7 +148,7 @@ SELECT
             WHEN s.MaxAbs_CapitalDelta_Error > @Tolerance THEN 'FAIL'
             WHEN s.MaxAbs_ProfitAfterTax_Error > @Tolerance THEN 'FAIL'
             WHEN s.MaxAbs_Residual_Error > @Tolerance THEN 'FAIL'
-            WHEN s.MaxAbs_Difference > @Tolerance THEN 'WARN' -- identity holds, residual too big for rounding
+            WHEN s.MaxAbs_Variance > @Tolerance THEN 'WARN' -- identity holds, residual too big for rounding
             WHEN s.MaxAbs_LossCF_Delta_Error > @Tolerance THEN 'FAIL'
             WHEN s.LossCF_Negative_Count > 0 THEN 'FAIL'
             ELSE 'PASS'
@@ -114,9 +156,11 @@ SELECT
 FROM summary s;
 
 ------------------------------------------------------------------------------
--- Detailed offenders (top N), only when something is out-of-tolerance
+-- Detailed offenders (top N)
+--
+-- Output only years that violate tolerance or have invalid loss pool shape.
+-- This makes it easy to paste the worst rows into an issue/PR description.
 ------------------------------------------------------------------------------
-
 ;WITH calc AS
 (
     SELECT
@@ -128,25 +172,28 @@ FROM summary s;
         Profit,
         BusinessTax,
         ProfitAfterTax,
-        CapitalInjection,
+        CapitalMovement,
         OpeningPosition,
+        OpeningAccountPosition,
         CapitalDelta,
-        Difference,
+        Variance,
 
         CapitalDelta_Definition = (ClosingCapital - OpeningCapital),
         ProfitAfterTax_Definition = (Profit - BusinessTax),
-        BridgeTotal = (ProfitAfterTax + CapitalInjection + OpeningPosition),
-        Residual_Definition = (CapitalDelta - (ProfitAfterTax + CapitalInjection + OpeningPosition)),
+
+        BridgeTotal = (ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition),
+        Residual_Definition = (CapitalDelta - (ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition)),
 
         CapitalDelta_Error = (CapitalDelta - (ClosingCapital - OpeningCapital)),
         ProfitAfterTax_Error = (ProfitAfterTax - (Profit - BusinessTax)),
-        Residual_Error = (Difference - (CapitalDelta - (ProfitAfterTax + CapitalInjection + OpeningPosition))),
+        Residual_Error = (Variance - (CapitalDelta - (ProfitAfterTax + CapitalMovement + OpeningPosition + OpeningAccountPosition))),
 
         OpeningLossesCarriedForward,
         ClosingLossesCarriedForward,
         LossesCarriedForwardDelta,
         LossCF_Delta_Definition = (ClosingLossesCarriedForward - OpeningLossesCarriedForward),
-        LossCF_Delta_Error = (LossesCarriedForwardDelta - (ClosingLossesCarriedForward - OpeningLossesCarriedForward))
+        LossCF_Delta_Error =
+            (LossesCarriedForwardDelta - (ClosingLossesCarriedForward - OpeningLossesCarriedForward))
     FROM #Reconciliation
 ),
 offenders AS
@@ -186,10 +233,11 @@ SELECT TOP (@ShowTop)
     ProfitAfterTax_Definition,
     ProfitAfterTax_Error,
 
-    CapitalInjection,
+    CapitalMovement,
     OpeningPosition,
+    OpeningAccountPosition,
     BridgeTotal,
-    Difference,
+    Variance,
     Residual_Definition,
     Residual_Error,
 
@@ -204,10 +252,11 @@ FROM offenders
 ORDER BY WorstAbs DESC, YearNumber;
 
 ------------------------------------------------------------------------------
--- Proof: Flow view is a pure projection of equity reconciliation
--- (sanity check of row set shape per year)
+-- Proof: Flow view is a pure projection of equity reconciliation (shape check)
+--
+-- The flow view is intended as a fixed (per-year) line set for reporting.
+-- This check ensures the view returns exactly one row per line per year.
 ------------------------------------------------------------------------------
-
 ;WITH per_year AS
 (
     SELECT YearNumber, LineCount = COUNT(*)
@@ -220,5 +269,9 @@ SELECT
     YearsWithWrongLineCount = SUM(CASE WHEN LineCount <> 13 THEN 1 ELSE 0 END),
     MinLinesPerYear = MIN(LineCount),
     MaxLinesPerYear = MAX(LineCount),
-    Status = CASE WHEN SUM(CASE WHEN LineCount <> 13 THEN 1 ELSE 0 END) = 0 THEN 'PASS' ELSE 'FAIL' END
+    Status =
+        CASE
+            WHEN SUM(CASE WHEN LineCount <> 13 THEN 1 ELSE 0 END) = 0 THEN 'PASS'
+            ELSE 'FAIL'
+        END
 FROM per_year;

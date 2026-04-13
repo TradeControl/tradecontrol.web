@@ -19,18 +19,22 @@ CREATE PROCEDURE Cash.proc_PaymentPostMisc
 							AND Cash.tbPayment.UserId = (SELECT UserId FROM Usr.vwCredentials))
 			RETURN;
 
-		-----------------------------------------------------------------
-		-- Guard: if VAT is being charged, cash code must be in VAT tree
-		-----------------------------------------------------------------
+		------------------------------------------------------------------------
+		-- Guard: if VAT is being charged, cash code must be in enabled VAT tree
+		------------------------------------------------------------------------
 		IF EXISTS
 		(
 			SELECT 1
 			FROM Cash.tbPayment p
-				JOIN App.tbTaxCode tc ON p.TaxCode = tc.TaxCode
+				JOIN App.tbTaxCode tc
+                    ON p.TaxCode = tc.TaxCode
+                JOIN Cash.tbTaxType tt
+                    ON tc.TaxTypeCode = tt.TaxTypeCode
 			WHERE p.PaymentCode = @PaymentCode
 			  AND tc.TaxTypeCode = 1
 			  AND tc.TaxRate <> 0
 			  AND NOT EXISTS (SELECT 1 FROM App.vwTaxVatCashCodes v WHERE v.CashCode = p.CashCode)
+              AND tt.IsEnabled != 0
 		)
 		BEGIN
 			DECLARE @CashCode nvarchar(50) = (SELECT CashCode FROM Cash.tbPayment WHERE PaymentCode = @PaymentCode);

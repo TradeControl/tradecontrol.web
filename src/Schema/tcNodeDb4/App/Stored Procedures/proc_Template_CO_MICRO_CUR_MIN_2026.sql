@@ -41,19 +41,35 @@ AS
         INSERT INTO Cash.tbCategory
             (CategoryCode, Category, CategoryTypeCode, CashPolarityCode, CashTypeCode, DisplayOrder, IsEnabled)
         VALUES
-            ('CO', 'Cash Operating Surplus %',    2, 2, 0, 10, 1)
+            ('CE-CO', 'Cash Operating Surplus %', 2, 2, 0, 10, 1);
 
         INSERT INTO Cash.tbCategoryExp
             (CategoryCode, Expression, Format, SyntaxTypeCode, IsError, ErrorMessage)
         VALUES
-            -- Cash Operating Surplus %
-            ('CO', 'IF([Sales]=0,0,(([Sales]+[Other Income]-[Direct Purchases]-[Wages]-[Admin Expenses])/[Sales]))', 'Pct0', 0, 0, NULL);
+            ('CE-CO', 'IF([Sales]=0,0,(([Sales]+[Other Income]-[Direct Purchases]-[Wages]-[Admin Expenses])/[Sales]))', 'Pct0', 0, 0, NULL);
 
         ----------------------------------------------------------------
         -- 2. VAT handling for non‑registered businesses
         ----------------------------------------------------------------
         IF @IsVATRegistered = 0
             EXEC App.proc_Template_DisableVAT;
+
+        ----------------------------------------------------------------
+        -- 3. Enable Asset Accounts
+        ----------------------------------------------------------------
+        UPDATE Subject.tbAccount
+        SET AccountClosed = 0
+        WHERE AccountClosed = 1;
+
+        ----------------------------------------------------------------
+        -- 4. MTD tax mapping
+        ----------------------------------------------------------------
+        INSERT INTO Cash.tbTaxTagMap
+            (TaxSourceCode, TagCode, MapTypeCode, CategoryCode, CashCode, IsEnabled)
+        VALUES
+            ('UK-MTD', 'CP28', 1, '', 'CC-DEPRC', 1);
+
+        EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = 'UK-MTD';
 
         COMMIT TRAN MicroMinTemplate;
 

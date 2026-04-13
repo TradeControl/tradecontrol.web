@@ -37,19 +37,26 @@ AS
 	IF @SettlementAccountCode IS NULL
 		THROW 51283, 'DatasetSyntheticMIS_SoleTraderCapitalIntroduced: unable to resolve SettlementAccountCode.', 1;
 
+	DECLARE @OwnerCapitalAccountCode nvarchar(10) = N'OWNCAP';
+
+	IF NOT EXISTS (SELECT 1 FROM Subject.tbAccount WHERE AccountCode = @OwnerCapitalAccountCode)
+		THROW 51284, 'DatasetSyntheticMIS_SoleTraderCapitalIntroduced: unable to resolve owner capital AccountCode (OWNCAP).', 1;
+
+	DECLARE @CashCode nvarchar(50) = N'CC-OWNCAP';
+
 	DECLARE @CapitalIntroduced decimal(18,5) = 5000.00000;
 	DECLARE @PaidOn date = DATEADD(DAY, 10, @Year1FirstStartOn);
 
-	-- Bank-side: owner introduces cash (what the trader sees)
+	-- Leg 1: Bank-side (cash enters the bank)
 	IF NOT EXISTS
 	(
 		SELECT 1
 		FROM Cash.tbPayment p
 		WHERE p.SubjectCode = N'HOME'
 		  AND p.AccountCode = @SettlementAccountCode
-		  AND p.CashCode = N'CAPIN01'
+		  AND p.CashCode = @CashCode
 		  AND CAST(p.PaidOn AS date) = @PaidOn
-		  AND p.PaymentReference = N'Owner Capital Introduced'
+		  AND p.PaymentReference = N'Owner Capital'
 	)
 	BEGIN
 		DECLARE @PayCode1 nvarchar(20) = NULL;
@@ -73,17 +80,63 @@ AS
 		(
 			@PayCode1,
 			@UserId,
-			1,
+			0,
 			N'HOME',
 			@SettlementAccountCode,
-			N'CAPIN01',
+			@CashCode,
 			N'N/A',
 			@PaidOn,
 			@CapitalIntroduced,
 			0.00000,
-			N'Owner Capital Introduced'
+			N'Owner Capital'
 		);
+
+		EXEC Cash.proc_PaymentPost;
 	END
 
-	EXEC Cash.proc_PaymentPost;
+	-- Leg 2: Owner capital account
+	IF NOT EXISTS
+	(
+		SELECT 1
+		FROM Cash.tbPayment p
+		WHERE p.SubjectCode = N'HOME'
+		  AND p.AccountCode = @OwnerCapitalAccountCode
+		  AND p.CashCode = @CashCode
+		  AND CAST(p.PaidOn AS date) = @PaidOn
+		  AND p.PaymentReference = N'Owner Capital'
+	)
+	BEGIN
+		DECLARE @PayCode2 nvarchar(20) = NULL;
+		EXEC Cash.proc_NextPaymentCode @PaymentCode = @PayCode2 OUTPUT;
+
+		INSERT INTO Cash.tbPayment
+		(
+			PaymentCode,
+			UserId,
+			PaymentStatusCode,
+			SubjectCode,
+			AccountCode,
+			CashCode,
+			TaxCode,
+			PaidOn,
+			PaidInValue,
+			PaidOutValue,
+			PaymentReference
+		)
+		VALUES
+		(
+			@PayCode2,
+			@UserId,
+			1,
+			N'HOME',
+			@OwnerCapitalAccountCode,
+			@CashCode,
+			N'N/A',
+			@PaidOn,
+			0.00000,
+			@CapitalIntroduced,
+			N'Owner Capital'
+		);
+	END	
+
 GO

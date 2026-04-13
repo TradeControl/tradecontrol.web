@@ -64,12 +64,6 @@
                 <input asp-for="Cash_PaymentsUnposted.PaymentReference" class="form-control" />
                 <span asp-validation-for="Cash_PaymentsUnposted.PaymentReference" class="text-danger"></span>
             </div>
-            <div class="mb-3 form-check">
-                <label class="form-check-label">
-                    <input asp-for="Cash_PaymentsUnposted.IsProfitAndLoss" class="form-check-input" /> @Html.DisplayNameFor(model => model.Cash_PaymentsUnposted.IsProfitAndLoss)
-                </label>                
-                <span asp-validation-for="Cash_PaymentsUnposted.IsProfitAndLoss" class="text-danger"></span>
-            </div>
 
             <div class="mb-3">
                 <input type="submit" value="SAVE" class="btn btn-primary" />

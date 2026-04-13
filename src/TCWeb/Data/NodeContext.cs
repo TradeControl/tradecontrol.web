@@ -21,6 +21,7 @@ namespace TradeControl.Web.Data
 
         #region Tables
         public virtual DbSet<Subject_tbAccount> Subject_tbAccounts { get; set; }
+        public virtual DbSet<Subject_tbBalanceConstraint> Subject_tbBalanceConstraints { get; set; }
         public virtual DbSet<Subject_tbAccountType> Subject_tbAccountTypes { get; set; }
         public virtual DbSet<Object_tbObject> Object_tbActivities { get; set; }
         public virtual DbSet<Subject_tbAddress> Subject_tbAddresses { get; set; }
@@ -1927,8 +1928,6 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                //entity.Property(e => e.IsProfitAndLoss).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.PaidOn).HasDefaultValueSql("(CONVERT([date],getdate()))");
 

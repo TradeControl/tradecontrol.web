@@ -31,10 +31,11 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
         public string CashDescription { get; set; }
         public SelectList CashCodes { get; set; }
 
-
         [BindProperty]
         public string AccountType { get; set; }
         public SelectList AccountTypes { get; set; }
+
+        public SelectList BalanceConstraints { get; set; }
 
         UserManager<TradeControlWebUser> UserManager { get; }
 
@@ -66,6 +67,14 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                 CashCodes = new SelectList(cashCodes);
                 CashDescription = string.Empty;
 
+                BalanceConstraints = new SelectList(
+                    await NodeContext.Subject_tbBalanceConstraints
+                        .OrderBy(t => t.BalanceConstraintCode)
+                        .Select(t => new { t.BalanceConstraintCode, t.BalanceConstraint })
+                        .ToListAsync(),
+                    "BalanceConstraintCode",
+                    "BalanceConstraint"
+                );
 
                 Profile profile = new(NodeContext);
                 CashAccounts cashAccounts = new(NodeContext);
@@ -78,7 +87,8 @@ namespace TradeControl.Web.Pages.Subject.CashAccount
                     AccountTypeCode = await NodeContext.Subject_tbAccountTypes.Where(t => t.AccountType == AccountType).Select(t => t.AccountTypeCode).FirstOrDefaultAsync(),
                     LiquidityLevel = 0,
                     OpeningBalance = 0,
-                    InsertedBy = await profile.UserName(UserManager.GetUserId(User))
+                    InsertedBy = await profile.UserName(UserManager.GetUserId(User)),
+                    BalanceConstraintCode = 0,
                 };
 
                 Subject_CashAccount.UpdatedBy = Subject_CashAccount.InsertedBy;

@@ -18,31 +18,8 @@ AS
 	-----------------------------------------------------------------
 	-- Ensure Category + CashCode for Employee Expenses
 	-----------------------------------------------------------------
-	IF NOT EXISTS (SELECT 1 FROM Cash.tbCategory WHERE CategoryCode = N'TC-EXPENSE')
-	BEGIN
-		INSERT INTO Cash.tbCategory
-		(
-			CategoryCode,
-			Category,
-			CategoryTypeCode,
-			CashPolarityCode,
-			CashTypeCode,
-			DisplayOrder,
-			IsEnabled
-		)
-		VALUES
-		(
-			N'TC-EXPENSE',
-			N'Expense Claims',
-			0,
-			0,
-			0,
-			135,
-			1
-		);
-	END
 
-	IF NOT EXISTS (SELECT 1 FROM Cash.tbCode WHERE CashCode = N'TC401')
+	IF NOT EXISTS (SELECT 1 FROM Cash.tbCode WHERE CashCode = N'CC-EXPENSE')
 	BEGIN
 		INSERT INTO Cash.tbCode
 		(
@@ -54,27 +31,11 @@ AS
 		)
 		VALUES
 		(
-			N'TC401',
+			N'CC-EXPENSE',
 			N'Employee Expenses',
-			N'TC-EXPENSE',
+			N'CA-ADMIN',
 			N'T0',
 			1
-		);
-	END
-
-	IF NOT EXISTS (SELECT 1 FROM Cash.tbCategoryTotal WHERE ParentCode = 'AC425' AND ChildCode = 'TC-EXPENSE')
-	BEGIN
-		INSERT INTO Cash.tbCategoryTotal
-		(
-			ParentCode,
-			ChildCode,
-			DisplayOrder
-		)
-		VALUES
-		(
-			'AC425',
-			'TC-EXPENSE',
-			2
 		);
 	END
 
@@ -96,7 +57,7 @@ AS
 			'EXPENSE',
 			1,
 			'each',
-			'TC401',
+			'CC-EXPENSE',
 			1,
 			'Purchase Order',
 			'Employee Expense Claim',
@@ -212,7 +173,7 @@ AS
 			@L2_UserId,
 			@L2_ClaimsMonthEnd,
 			1,
-			N'TC401',
+			N'CC-EXPENSE',
 			N'T0',
 			CAST(25 + (ABS(CHECKSUM(CONCAT(N'DS:L2:CLAIM:', @L2_ClaimsMonthIndex))) % 175) AS decimal(18,7)),
 			0

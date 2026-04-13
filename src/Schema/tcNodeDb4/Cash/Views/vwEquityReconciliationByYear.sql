@@ -13,6 +13,14 @@ AS
 		FROM Subject.tbSubject s
 		WHERE s.OpeningBalance <> 0
 	),
+	opening_account_position AS
+	(
+		SELECT OpeningAccountPosition = SUM(a.OpeningBalance)
+		FROM Subject.tbAccount a
+		WHERE a.AccountTypeCode = 0
+		  AND a.AccountClosed = 0
+		  AND a.OpeningBalance <> 0
+	),
 	opening_capital AS
 	(
 		SELECT SUM(bs.Balance) AS Capital
@@ -130,94 +138,107 @@ AS
 	),
 
 	-----------------------------------------------------------------
-	-- Capital injection: derive applicable cash codes dynamically by
-	-- inspecting the first posted transaction direction.
+	-- Capital movement (balance-based, LAG delta):
+	-- Use year-end balances of accounts constrained to "no positives"
+	-- (BalanceConstraintCode=2), which represent the financing/equity pool.
 	-----------------------------------------------------------------
-	capital_cash_codes AS
+	capital_position_by_year AS
 	(
-		SELECT DISTINCT cc.CashCode
-		FROM Cash.tbCode cc
-			JOIN Cash.tbCategory cat
-				ON cat.CategoryCode = cc.CategoryCode
-			JOIN Subject.tbAccount acc
-				ON acc.CashCode = cc.CashCode
-		WHERE cat.CashTypeCode = 2
-		  AND acc.AccountTypeCode = 2
-		  AND acc.AccountClosed = 0
-	),
-	capital_injection_cash_codes AS
-	(
-		SELECT CashCode
+		SELECT
+			pe.YearNumber,
+			CapitalPosition = SUM(ba.Balance)
 		FROM
 		(
 			SELECT
-				p.CashCode,
-				FirstPaidOutValue =
-					FIRST_VALUE(COALESCE(p.PaidOutValue, 0))
-					OVER (PARTITION BY p.CashCode ORDER BY p.PaidOn, p.PaymentCode)
-			FROM Cash.tbPayment p
-				JOIN capital_cash_codes cc
-					ON cc.CashCode = p.CashCode
-			WHERE p.PaymentStatusCode = 1
-		) first_payments
-		GROUP BY CashCode
-		HAVING SUM(FirstPaidOutValue) > 0
+				yb.YearNumber,
+				yb.YearEndOn AS StartOn
+			FROM year_bounds yb
+		) pe
+			JOIN Cash.vwBalanceSheetAssets ba
+				ON ba.StartOn = pe.StartOn
+			JOIN Subject.tbAccount acc
+				ON acc.AccountCode = ba.AssetCode
+		WHERE acc.BalanceConstraintCode = 2
+		GROUP BY pe.YearNumber
 	),
 	capital_injection_by_year AS
 	(
 		SELECT
-			yp.YearNumber,
-			CapitalInjection = SUM(COALESCE(p.PaidInValue, 0) - COALESCE(p.PaidOutValue, 0))
-		FROM Cash.tbPayment p
-			JOIN capital_injection_cash_codes cicc
-				ON cicc.CashCode = p.CashCode
-			JOIN App.tbYearPeriod yp
-				ON yp.StartOn =
-					(SELECT TOP (1) StartOn
-					 FROM App.tbYearPeriod
-					 WHERE StartOn <= p.PaidOn
-					 ORDER BY StartOn DESC)
-			JOIN App.tbYear y ON yp.YearNumber = y.YearNumber
+			YearNumber,
+			CapitalInjection =
+				COALESCE(CapitalPosition, 0)
+				- COALESCE(LAG(CapitalPosition) OVER (ORDER BY YearNumber), 0)
+		FROM capital_position_by_year
+	),
+	recon AS
+	(
+		SELECT
+			y.YearNumber,
+			y.Description,
+
+			OpeningCapital = ROUND(COALESCE(b.OpeningCapital, (SELECT Capital FROM opening_capital)), 2),
+			ClosingCapital = ROUND(b.ClosingCapital, 2),
+
+			Profit = ROUND(p.Profit, 2),
+			BusinessTax = ROUND(COALESCE(ct.BusinessTaxExpense, 0), 2),
+			ProfitAfterTax = ROUND(COALESCE(p.Profit, 0) - COALESCE(ct.BusinessTaxExpense, 0), 2),
+
+			TaxCarry = ROUND(COALESCE(ct.TaxCarry, 0), 2),
+
+			OpeningPosition =
+				CASE WHEN b.OpeningCapital IS NULL THEN COALESCE((SELECT OpeningPosition FROM opening_position), 0) ELSE 0 END,
+			OpeningAccountPosition =
+				CASE WHEN b.OpeningCapital IS NULL THEN COALESCE((SELECT OpeningAccountPosition FROM opening_account_position), 0) ELSE 0 END,
+
+			OpeningLossesCarriedForward = ROUND(COALESCE(lcfd.OpeningLossesCarriedForward, 0), 2),
+			ClosingLossesCarriedForward = ROUND(COALESCE(lcfd.ClosingLossesCarriedForward, 0), 2),
+			LossesCarriedForwardDelta =
+				ROUND(COALESCE(lcfd.ClosingLossesCarriedForward, 0) - COALESCE(lcfd.OpeningLossesCarriedForward, 0), 2),
+
+			CapitalDelta =
+				ROUND(b.ClosingCapital - COALESCE(b.OpeningCapital, (SELECT Capital FROM opening_capital)), 2)
+		FROM App.tbYear y
+			JOIN balances b ON y.YearNumber = b.YearNumber
+			LEFT JOIN profit_by_year p ON y.YearNumber = p.YearNumber
+			LEFT JOIN biztax_by_year ct ON y.YearNumber = ct.YearNumber
+			LEFT JOIN loss_cf_delta lcfd ON y.YearNumber = lcfd.YearNumber
 		WHERE y.CashStatusCode BETWEEN 1 AND 2
-		  AND p.PaymentStatusCode = 1
-		GROUP BY yp.YearNumber
 	)
 	SELECT
-		y.YearNumber,
-		y.Description,
-		OpeningCapital = ROUND(COALESCE(b.OpeningCapital, (SELECT Capital FROM opening_capital)), 2),
-		ClosingCapital = ROUND(b.ClosingCapital, 2),
-		Profit = ROUND(p.Profit, 2),
+		r.YearNumber,
+		r.Description,
+		r.OpeningCapital,
+		r.ClosingCapital,
+		r.Profit,
+		r.BusinessTax,
+		r.ProfitAfterTax,
+		r.TaxCarry,
 
-		BusinessTax = ROUND(COALESCE(ct.BusinessTaxExpense, 0), 2),
-		ProfitAfterTax = ROUND(COALESCE(p.Profit, 0) - COALESCE(ct.BusinessTaxExpense, 0), 2),
-
-		TaxCarry = ROUND(COALESCE(ct.TaxCarry, 0), 2),
-
-		CapitalInjection = COALESCE(ci.CapitalInjection, 0),
-		OpeningPosition =
-			CASE WHEN b.OpeningCapital IS NULL THEN COALESCE((SELECT OpeningPosition FROM opening_position), 0) ELSE 0 END,
-
-		OpeningLossesCarriedForward = ROUND(COALESCE(lcfd.OpeningLossesCarriedForward, 0), 2),
-		ClosingLossesCarriedForward = ROUND(COALESCE(lcfd.ClosingLossesCarriedForward, 0), 2),
-		LossesCarriedForwardDelta =
-			ROUND(COALESCE(lcfd.ClosingLossesCarriedForward, 0) - COALESCE(lcfd.OpeningLossesCarriedForward, 0), 2),
-
-		CapitalDelta = ROUND(b.ClosingCapital - COALESCE(b.OpeningCapital, (SELECT Capital FROM opening_capital)), 2),
-		Difference =
+		CapitalMovement =
 			ROUND(
-				(b.ClosingCapital - COALESCE(b.OpeningCapital, (SELECT Capital FROM opening_capital)))
+				r.CapitalDelta
+				- (r.ProfitAfterTax + r.OpeningPosition + r.OpeningAccountPosition),
+				2
+			),
+
+		r.OpeningPosition,
+		r.OpeningAccountPosition,
+
+		r.OpeningLossesCarriedForward,
+		r.ClosingLossesCarriedForward,
+		r.LossesCarriedForwardDelta,
+
+		r.CapitalDelta,
+
+		Variance =
+			ROUND(
+				r.CapitalDelta
 				- (
-					(COALESCE(p.Profit, 0) - COALESCE(ct.BusinessTaxExpense, 0))
-					+ COALESCE(ci.CapitalInjection, 0)
-					+ CASE WHEN b.OpeningCapital IS NULL THEN COALESCE((SELECT OpeningPosition FROM opening_position), 0) ELSE 0 END
+					r.ProfitAfterTax
+					+ (r.CapitalDelta - (r.ProfitAfterTax + r.OpeningPosition + r.OpeningAccountPosition))
+					+ r.OpeningPosition
+					+ r.OpeningAccountPosition
 				),
 				2
 			)
-	FROM App.tbYear y
-		JOIN balances b ON y.YearNumber = b.YearNumber
-		LEFT JOIN profit_by_year p ON y.YearNumber = p.YearNumber
-		LEFT JOIN biztax_by_year ct ON y.YearNumber = ct.YearNumber
-		LEFT JOIN capital_injection_by_year ci ON y.YearNumber = ci.YearNumber
-		LEFT JOIN loss_cf_delta lcfd ON y.YearNumber = lcfd.YearNumber
-	WHERE y.CashStatusCode BETWEEN 1 AND 2;
+	FROM recon r;

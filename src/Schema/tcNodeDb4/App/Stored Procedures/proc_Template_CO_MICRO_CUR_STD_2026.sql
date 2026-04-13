@@ -42,89 +42,20 @@ BEGIN TRY
     INSERT INTO Cash.tbCategory
         (CategoryCode, Category, CategoryTypeCode, CashPolarityCode, CashTypeCode, DisplayOrder, IsEnabled)
     VALUES
-        -- Turnover splits
-        ('SALAB', 'Sales – Labour',        0, 1, 0, 111, 1),
-        ('SAMAT', 'Sales – Materials',     0, 1, 0, 112, 1),
+        ('CA-BUILD', 'Building', 0, 0, 0, 411, 1);
 
-        -- Direct cost splits
-        ('MAT',   'Materials',             0, 0, 0, 211, 1),
-        ('SUB',   'Subcontractors',        0, 0, 0, 212, 1),
-        ('FUEL',  'Fuel & Oil',            0, 0, 0, 213, 1),
-        ('MTRAV', 'Motor Travel',          0, 0, 0, 214, 1),
-
-        -- Staff cost splits
-        ('WAGE',  'Wages & Salaries',      0, 0, 0, 311, 1),
-        ('ERNI',  'Employer NI',           0, 0, 0, 312, 1),
-        ('PENS',  'Employer Pension',      0, 0, 0, 313, 1),
-
-        -- Admin splits
-        ('RENT',  'Rent & Rates',          0, 0, 0, 411, 1),
-        ('LHEAT', 'Light, Heat & Power',   0, 0, 0, 412, 1),
-        ('INS',   'Insurance',             0, 0, 0, 413, 1),
-        ('REPA',  'Repairs & Maintenance', 0, 0, 0, 414, 1),
-        ('PHONE', 'Telephone & Internet',  0, 0, 0, 415, 1),
-        ('ADVT',  'Advertising',           0, 0, 0, 416, 1),
-        ('TRAV',  'Travel & Subsistence',  0, 0, 0, 417, 1),
-        ('PROF',  'Professional Fees',     0, 0, 0, 418, 1),
-        ('BANK',  'Bank Charges',          0, 0, 0, 419, 1),
-
-        -- Depreciation splits
-        ('DEPPL', 'Depreciation – Plant & Tools', 0, 0, 0, 611, 1),
-        ('DEPMV', 'Depreciation – Motor Vehicles',0, 0, 0, 612, 1),
-        ('DEPFX', 'Depreciation – Fixtures',      0, 0, 0, 613, 1);
-
-    ----------------------------------------------------------------
-    -- 3. STANDARD MICRO ROLL-UPS (ADDITIVE)
-    ----------------------------------------------------------------
     INSERT INTO Cash.tbCategoryTotal (ParentCode, ChildCode)
     VALUES
-        -- Turnover
-        ('AC12', 'SALAB'),
-        ('AC12', 'SAMAT'),
+        ('CT-OVERHD', 'CA-BUILD');
 
-        -- Cost of Sales
-        ('AC410', 'MAT'),
-        ('AC410', 'SUB'),
-        ('AC410', 'FUEL'),
-        ('AC410', 'MTRAV'),
-
-        -- Staff Costs
-        ('AC415', 'WAGE'),
-        ('AC415', 'ERNI'),
-        ('AC415', 'PENS'),
-
-        -- Admin Expenses
-        ('AC425', 'RENT'),
-        ('AC425', 'LHEAT'),
-        ('AC425', 'INS'),
-        ('AC425', 'REPA'),
-        ('AC425', 'PHONE'),
-        ('AC425', 'ADVT'),
-        ('AC425', 'TRAV'),
-        ('AC425', 'PROF'),
-        ('AC425', 'BANK'),
-
-        -- Depreciation
-        ('AC420', 'DEPPL'),
-        ('AC420', 'DEPMV'),
-        ('AC420', 'DEPFX'),
-
-        -- VAT root
-        ('TC-VAT', 'SALAB'),
-        ('TC-VAT', 'SAMAT'),
-        ('TC-VAT', 'MAT'),
-        ('TC-VAT', 'SUB'),
-        ('TC-VAT', 'FUEL'),
-        ('TC-VAT', 'MTRAV'),
-        ('TC-VAT', 'RENT'),
-        ('TC-VAT', 'LHEAT'),
-        ('TC-VAT', 'INS'),
-        ('TC-VAT', 'REPA'),
-        ('TC-VAT', 'PHONE'),
-        ('TC-VAT', 'ADVT'),
-        ('TC-VAT', 'TRAV'),
-        ('TC-VAT', 'PROF'),
-        ('TC-VAT', 'BANK');
+    ----------------------------------------------------------------
+    -- 3. REPLACE BASE DEPRECIATION ACCOUNTING MODEL
+    --    Base creates 'EQUIPMENT' account with CashCode = 'CC-DEPRC'.
+    ----------------------------------------------------------------
+    DELETE a
+    FROM Subject.tbAccount a
+    WHERE a.AccountName = 'EQUIPMENT'
+      AND a.CashCode = 'CC-DEPRC';
 
     ----------------------------------------------------------------
     -- 4. STANDARD MICRO CASH CODES (ADDITIVE)
@@ -132,45 +63,107 @@ BEGIN TRY
     INSERT INTO Cash.tbCode
         (CashCode, CashDescription, CategoryCode, TaxCode, IsEnabled)
     VALUES
-        -- Turnover
-        ('TC110', 'Sales – Labour',        'SALAB', 'T1', 1),
-        ('TC111', 'Sales – Materials',     'SAMAT', 'T1', 1),
+        -- Sales splits -> CA-SALES
+        ('CC-SALAB', 'Sales – Labour',        'CA-SALES',  'T1', 1),
+        ('CC-SAMAT', 'Sales – Materials',     'CA-SALES',  'T1', 1),
 
-        -- Direct Costs
-        ('TC210', 'Materials',             'MAT',   'T1', 1),
-        ('TC211', 'Subcontractors',        'SUB',   'T1', 1),
-        ('TC212', 'Fuel & Oil',            'FUEL',  'T1', 1),
-        ('TC213', 'Motor Travel',          'MTRAV', 'T1', 1),
+        -- Direct cost splits -> CA-DIRECT
+        ('CC-MAT',   'Materials',             'CA-DIRECT', 'T1', 1),
+        ('CC-SUB',   'Subcontractors',        'CA-DIRECT', 'T1', 1),
+        ('CC-FUEL',  'Fuel & Oil',            'CA-DIRECT', 'T1', 1),
+        ('CC-MTRAV', 'Motor Travel',          'CA-DIRECT', 'T1', 1),
 
-        -- Staff Costs
-        ('TC310', 'Wages & Salaries',      'WAGE',  'N/A', 1),
-        ('TC311', 'Employer NI',           'ERNI',  'N/A', 1),
-        ('TC312', 'Employer Pension',      'PENS',  'N/A', 1),
+        -- Staff collapse: CC-WAGE -> CC-SALRY -> CA-WAGES
+        ('CC-SALRY', 'Salary',                'CA-WAGES',  'N/A', 1),
 
-        -- Admin
-        ('TC410', 'Rent & Rates',          'RENT',  'T1', 1),
-        ('TC411', 'Light, Heat & Power',   'LHEAT', 'T1', 1),
-        ('TC412', 'Insurance',             'INS',   'T1', 1),
-        ('TC413', 'Repairs & Maintenance', 'REPA',  'T1', 1),
-        ('TC414', 'Telephone & Internet',  'PHONE', 'T1', 1),
-        ('TC415', 'Advertising',           'ADVT',  'T1', 1),
-        ('TC416', 'Travel & Subsistence',  'TRAV',  'T1', 1),
-        ('TC417', 'Professional Fees',     'PROF',  'T1', 1),
-        ('TC418', 'Bank Charges',          'BANK',  'T1', 1),
+        -- Building: CC-RENT, CC-LHEAT, CC-REPA -> CA-BUILD
+        ('CC-RENT',  'Rent & Rates',          'CA-BUILD',  'T1', 1),
+        ('CC-LHEAT', 'Light, Heat & Power',   'CA-BUILD',  'T1', 1),
+        ('CC-REPA',  'Repairs & Maintenance', 'CA-BUILD',  'T1', 1),
 
-        -- Depreciation
-        ('TC510', 'Depreciation – Plant & Tools', 'DEPPL', 'N/A', 1),
-        ('TC511', 'Depreciation – Motor Vehicles','DEPMV', 'N/A', 1),
-        ('TC512', 'Depreciation – Fixtures',      'DEPFX', 'N/A', 1);
+        -- Admin collapse -> CA-ADMIN
+        ('CC-INS',   'Insurance',             'CA-ADMIN',  'T1', 1),
+        ('CC-PHONE', 'Telephone & Internet',  'CA-ADMIN',  'T1', 1),
+        ('CC-ADVT',  'Advertising',           'CA-ADMIN',  'T1', 1),
+        ('CC-TRAV',  'Travel & Subsistence',  'CA-ADMIN',  'T1', 1),
+        ('CC-PROF',  'Professional Fees',     'CA-ADMIN',  'T1', 1),
+        ('CC-BANKC', 'Bank Charges',          'CA-ADMIN',  'T1', 1),
+
+        -- Depreciation (STD replacement for CC-DEPRC)
+        ('CC-DEPPL', 'Depreciation – Plant & Tools',  'CA-ASSET', 'N/A', 1),
+        ('CC-DEPMV', 'Depreciation – Motor Vehicles', 'CA-ASSET', 'N/A', 1),
+        ('CC-DEPFX', 'Depreciation – Fixtures',       'CA-ASSET', 'N/A', 1);
+
+    ----------------------------------------------------------------
+    -- 4b. Create capital accounts for the STD depreciation model
+    ----------------------------------------------------------------
+    DECLARE
+    @DepAccount NVARCHAR(50)
+    , @SubjectCode  NVARCHAR(10) = (SELECT TOP 1 SubjectCode FROM App.tbOptions)
+    , @AccountCode  NVARCHAR(10);
+
+    SET @DepAccount = 'PLANT & TOOLS';
+    EXEC Subject.proc_DefaultSubjectCode
+         @SubjectName = @DepAccount,
+         @SubjectCode = @AccountCode OUTPUT;
+
+    INSERT INTO Subject.tbAccount
+        (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
+    VALUES
+        (@AccountCode, @SubjectCode, @DepAccount, 2, 1, 30, 'CC-DEPPL', 0);
+
+    SET @DepAccount = 'MOTOR VEHICLES';
+    EXEC Subject.proc_DefaultSubjectCode
+         @SubjectName = @DepAccount,
+         @SubjectCode = @AccountCode OUTPUT;
+
+    INSERT INTO Subject.tbAccount
+        (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
+    VALUES
+        (@AccountCode, @SubjectCode, @DepAccount, 2, 1, 31, 'CC-DEPMV', 0);
+
+    SET @DepAccount = 'FIXTURES';
+    EXEC Subject.proc_DefaultSubjectCode
+         @SubjectName = @DepAccount,
+         @SubjectCode = @AccountCode OUTPUT;
+
+    INSERT INTO Subject.tbAccount
+        (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
+    VALUES
+        (@AccountCode, @SubjectCode, @DepAccount, 2, 1, 32, 'CC-DEPFX', 0);
+
+    ----------------------------------------------------------------
+    -- 5. UK MTD TEMPLATE MAPPING (STD deltas)
+    ----------------------------------------------------------------
+    INSERT INTO Cash.tbTaxTagMap
+        (TaxSourceCode, TagCode, MapTypeCode, CategoryCode, CashCode, IsEnabled)
+    VALUES
+        ('UK-MTD', 'CP28', 1, '', 'CC-DEPPL', 1),
+        ('UK-MTD', 'CP28', 1, '', 'CC-DEPMV', 1),
+        ('UK-MTD', 'CP28', 1, '', 'CC-DEPFX', 1);
+
+    ----------------------------------------------------------------
+    -- 6. DELETE CASH CODE INHERITED FROM BASE TEMPLATE (now unused)
+    ----------------------------------------------------------------
+    DELETE FROM Cash.tbTaxTagMap
+    WHERE CashCode = 'CC-DEPRC';
+
+    DELETE FROM Cash.tbCode
+    WHERE CashCode = 'CC-DEPRC';
 
     -- Add STD expression suite
     EXEC App.proc_Template_CO_MICRO_CUR_STD_EXP_2026;
 
     ----------------------------------------------------------------
-    -- 5. VAT handling for non‑registered businesses
+    -- 7. VAT handling for non‑registered businesses
     ----------------------------------------------------------------
     IF @IsVATRegistered = 0
         EXEC App.proc_Template_DisableVAT;
+
+    ----------------------------------------------------------------
+    -- 8. Check MTD tax mapping
+    ----------------------------------------------------------------
+    EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = 'UK-MTD';
 
     COMMIT TRAN MicroStdTemplate;
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [App].[tbTaxCode] (
+CREATE TABLE [App].[tbTaxCode] (
     [TaxCode]        NVARCHAR (10)   NOT NULL,
     [TaxDescription] NVARCHAR (50)   NOT NULL,
     [TaxTypeCode]    SMALLINT        CONSTRAINT [DF_App_tbTaxCode_TaxTypeCode] DEFAULT ((2)) NOT NULL,
@@ -26,10 +26,17 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 	BEGIN TRY
+		DECLARE @Msg NVARCHAR(MAX);
+
 		IF EXISTS (SELECT * FROM inserted i WHERE App.fnParsePrimaryKey(TaxCode) = 0)
 		BEGIN
-			DECLARE @Msg NVARCHAR(MAX);
 			SELECT @Msg = Message FROM App.tbText WHERE TextId = 2004;
+			RAISERROR (@Msg, 10, 1);
+			ROLLBACK TRANSACTION;
+		END
+		ELSE IF EXISTS (SELECT 1 FROM inserted i JOIN Cash.tbTaxType tt ON tt.TaxTypeCode = i.TaxTypeCode AND tt.IsEnabled = 0 AND i.TaxRate > 0)
+		BEGIN
+			SELECT @Msg = Message FROM App.tbText WHERE TextId = 1226;
 			RAISERROR (@Msg, 10, 1);
 			ROLLBACK TRANSACTION;
 		END
@@ -38,7 +45,7 @@ BEGIN
 			UPDATE App.tbTaxCode
 			SET UpdatedBy = SUSER_SNAME(), UpdatedOn = CURRENT_TIMESTAMP
 			FROM App.tbTaxCode INNER JOIN inserted AS i ON tbTaxCode.TaxCode = i.TaxCode;
-		END
+		END;
 		
 	END TRY
 	BEGIN CATCH

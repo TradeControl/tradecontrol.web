@@ -356,3 +356,5 @@ tests/ui/.cache/
 
 # Ignore runtime-uploaded web content (File Transfer store)
 # src/TCWeb/wwwroot/content/
+
+docs/tmp/
