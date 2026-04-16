@@ -458,6 +458,13 @@
                 var oldKey = marker.getAttribute("data-old") || "";
                 var parentKey = marker.getAttribute("data-parent") || "";
                 var movedKey = marker.getAttribute("data-key") || "";
+                var mode = (marker.getAttribute("data-mode") || "").toLowerCase();
+
+                // Back-compat: if backend doesn't send mode, assume "move" semantics (legacy behavior)
+                if (!mode)
+                {
+                    mode = "move";
+                }
 
                 // Optional: parent chain (Totals): topCategory|...|parent
                 var pathAttr = marker.getAttribute("data-path") || "";
@@ -514,10 +521,10 @@
                     return;
                 }
 
-                // Proactively remove the stale child under the old parent (prevents duplicates before reload)
+                // Remove stale child under the old parent only for real moves (adds must not delete)
                 try
                 {
-                    if (oldKey && movedKey && oldKey !== parentKey)
+                    if (mode === "move" && oldKey && movedKey && oldKey !== parentKey)
                     {
                         var oldParent = tree.getNodeByKey(oldKey);
                         if (oldParent && oldParent.children && oldParent.children.length)

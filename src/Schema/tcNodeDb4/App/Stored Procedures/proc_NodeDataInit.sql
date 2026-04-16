@@ -498,6 +498,11 @@ BEGIN TRY
 		, (1, 'Component')
         , (2, 'Derived');
 
+	IF NOT EXISTS (SELECT * FROM Cash.tbTaxTagMapType)
+		INSERT INTO Cash.tbTaxTagMapType (MapTypeCode, MapType)
+		VALUES (0, 'Category')
+		, (1, 'CashCode');
+
 	IF NOT EXISTS(SELECT * FROM App.tbDoc)
 		INSERT INTO App.tbDoc (DocTypeCode, ReportName, OpenMode, Description)
 		VALUES (0, 'Project_QuotationStandard', 2, 'Standard Quotation')

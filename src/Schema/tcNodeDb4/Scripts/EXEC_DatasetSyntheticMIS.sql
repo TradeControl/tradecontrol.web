@@ -6,7 +6,9 @@ DECLARE
 
 DECLARE 
     @EnableWages bit = CASE WHEN @IsCompany = 1 THEN 1 ELSE 0 END
-    , @EnableAssets bit = CASE WHEN @IsCompany = 1 THEN 1 ELSE 0 END;
+    , @EnableAssets bit = CASE WHEN @IsCompany = 1 THEN 1 ELSE 0 END
+    , @UseStdCompanyTemplate bit = 0
+
 
 IF OBJECT_ID('tempdb..#Scenarios') IS NOT NULL DROP TABLE #Scenarios;
 CREATE TABLE #Scenarios
@@ -80,7 +82,9 @@ BEGIN
 		@EnableAssets = @EnableAssets,
 		@EnableTax = 1,
 		@EnableTransfers = 1,
-		@EnableOpeningBalance = 1;
+		@EnableOpeningBalance = 1,
+        @UseStdCompanyTemplate = @UseStdCompanyTemplate
+    ;
 
 	INSERT INTO #EquityRecon
 	(

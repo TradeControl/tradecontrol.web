@@ -22,7 +22,9 @@ CREATE PROCEDURE App.proc_DatasetSyntheticMIS
     @EnableAssets bit = 1,
     @EnableTax bit = 1,
 	@EnableTransfers bit = 1,
-    @EnableOpeningBalance bit = 0
+    @EnableOpeningBalance bit = 0,
+
+	@UseStdCompanyTemplate bit = 0
 )
 AS
 	SET NOCOUNT, XACT_ABORT ON;
@@ -31,8 +33,11 @@ AS
 		BEGIN TRAN;
 
 		DECLARE @TemplateName nvarchar(100) =
-			CASE WHEN @IsCompany = 1
-				THEN N'Minimal Micro Company Accounts 2026'
+			CASE
+				WHEN @IsCompany = 1 AND @UseStdCompanyTemplate <> 0
+					THEN N'Standard Micro Company Accounts 2026'
+				WHEN @IsCompany = 1
+					THEN N'Minimal Micro Company Accounts 2026'
 				ELSE N'Standard Sole Trader Accounts 2026'
 			END;
 

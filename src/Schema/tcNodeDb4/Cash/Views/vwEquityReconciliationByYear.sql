@@ -207,18 +207,19 @@ AS
 	SELECT
 		r.YearNumber,
 		r.Description,
-		r.OpeningCapital,
-		r.ClosingCapital,
+
+		OpeningCapital = CONVERT(decimal(38, 5), r.OpeningCapital),
+		ClosingCapital = CONVERT(decimal(38, 5), r.ClosingCapital),
+
 		r.Profit,
 		r.BusinessTax,
 		r.ProfitAfterTax,
 		r.TaxCarry,
 
 		CapitalMovement =
-			ROUND(
+			CONVERT(decimal(38, 5),
 				r.CapitalDelta
-				- (r.ProfitAfterTax + r.OpeningPosition + r.OpeningAccountPosition),
-				2
+				- (r.ProfitAfterTax + r.OpeningPosition + r.OpeningAccountPosition)
 			),
 
 		r.OpeningPosition,
@@ -228,17 +229,16 @@ AS
 		r.ClosingLossesCarriedForward,
 		r.LossesCarriedForwardDelta,
 
-		r.CapitalDelta,
+		CapitalDelta = CONVERT(decimal(38, 5), r.CapitalDelta),
 
 		Variance =
-			ROUND(
+			CONVERT(decimal(38, 5),
 				r.CapitalDelta
 				- (
 					r.ProfitAfterTax
 					+ (r.CapitalDelta - (r.ProfitAfterTax + r.OpeningPosition + r.OpeningAccountPosition))
 					+ r.OpeningPosition
 					+ r.OpeningAccountPosition
-				),
-				2
+				)
 			)
 	FROM recon r;

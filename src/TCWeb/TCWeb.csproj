@@ -69,4 +69,8 @@
         <ProjectReference Include="..\TCExports\src\TCExports.Generator\TCExports.Generator.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Pages\Shared\Tree\" />
+    </ItemGroup>
+
 </Project>

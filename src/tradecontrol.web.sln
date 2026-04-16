@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1
 		..\docs\changelog.md = ..\docs\changelog.md
 		..\docs\MTD_ITSA_SoleTrader_FieldSets.md = ..\docs\MTD_ITSA_SoleTrader_FieldSets.md
 		..\docs\MTD_ITSA_SoleTrader_Mapping_Slice2.md = ..\docs\MTD_ITSA_SoleTrader_Mapping_Slice2.md
+		..\docs\MTD_Tax_Configurator_Slice3.md = ..\docs\MTD_Tax_Configurator_Slice3.md
 		..\readme.md = ..\readme.md
 		..\docs\sole trader capital.md = ..\docs\sole trader capital.md
 		template_naming.md = template_naming.md

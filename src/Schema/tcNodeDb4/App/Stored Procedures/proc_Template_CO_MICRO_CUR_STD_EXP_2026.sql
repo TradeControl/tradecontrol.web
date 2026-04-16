@@ -14,26 +14,29 @@ BEGIN
         ('CE-MM',   'Materials Margin %',                    2, 2, 0, 22, 1),
         ('CE-SDR',  'Subcontractor Dependency Ratio',        2, 2, 0, 23, 1),
 
+        -- Effective tax rate (enabled)
+        ('CE-ETR',  'Effective Tax Rate',                    2, 2, 0, 24, 1),
+
         -- Disabled by default (progressive disclosure)
-        ('CE-VCR',  'Vehicle Cost Ratio',                    2, 2, 0, 24, 0),
+        ('CE-VCR',  'Vehicle Cost Ratio',                    2, 2, 0, 25, 0),
 
-        ('CE-WPR',  'Wages % of Staff Costs',                2, 2, 0, 25, 0),
-        ('CE-NPR',  'Employer NI % of Staff Costs',          2, 2, 0, 26, 0),
-        ('CE-PPR',  'Pension % of Staff Costs',              2, 2, 0, 27, 0),
+        ('CE-WPR',  'Wages % of Staff Costs',                2, 2, 0, 26, 0),
+        ('CE-NPR',  'Employer NI % of Staff Costs',          2, 2, 0, 27, 0),
+        ('CE-PPR',  'Pension % of Staff Costs',              2, 2, 0, 28, 0),
 
-        ('CE-RPR',  'Rent % of Admin Expenses',              2, 2, 0, 28, 0),
-        ('CE-UPR',  'Utilities % of Admin Expenses',         2, 2, 0, 29, 0),
-        ('CE-IPR',  'Insurance % of Admin Expenses',         2, 2, 0, 30, 0),
-        ('CE-MPR',  'Repairs % of Admin Expenses',           2, 2, 0, 31, 0),
-        ('CE-TPR',  'Telephone % of Admin Expenses',         2, 2, 0, 32, 0),
-        ('CE-APR',  'Advertising % of Admin Expenses',       2, 2, 0, 33, 0),
-        ('CE-TRR',  'Travel % of Admin Expenses',            2, 2, 0, 34, 0),
-        ('CE-PFR',  'Professional Fees % of Admin Expenses', 2, 2, 0, 35, 0),
-        ('CE-BCR',  'Bank Charges % of Admin Expenses',      2, 2, 0, 36, 0),
+        ('CE-RPR',  'Rent % of Admin Expenses',              2, 2, 0, 29, 0),
+        ('CE-UPR',  'Utilities % of Admin Expenses',         2, 2, 0, 30, 0),
+        ('CE-IPR',  'Insurance % of Admin Expenses',         2, 2, 0, 31, 0),
+        ('CE-MPR',  'Repairs % of Admin Expenses',           2, 2, 0, 32, 0),
+        ('CE-TPR',  'Telephone % of Admin Expenses',         2, 2, 0, 33, 0),
+        ('CE-APR',  'Advertising % of Admin Expenses',       2, 2, 0, 34, 0),
+        ('CE-TRR',  'Travel % of Admin Expenses',            2, 2, 0, 35, 0),
+        ('CE-PFR',  'Professional Fees % of Admin Expenses', 2, 2, 0, 36, 0),
+        ('CE-BCR',  'Bank Charges % of Admin Expenses',      2, 2, 0, 37, 0),
 
-        ('CE-DPL',  'Plant Depreciation % of Depreciation',  2, 2, 0, 37, 0),
-        ('CE-DMV',  'Motor Depreciation % of Depreciation',  2, 2, 0, 38, 0),
-        ('CE-DFX',  'Fixtures Depreciation % of Depreciation', 2, 2, 0, 39, 0);
+        ('CE-DPL',  'Plant Depreciation % of Depreciation',  2, 2, 0, 38, 0),
+        ('CE-DMV',  'Motor Depreciation % of Depreciation',  2, 2, 0, 39, 0),
+        ('CE-DFX',  'Fixtures Depreciation % of Depreciation', 2, 2, 0, 40, 0);
 
     ----------------------------------------------------------------
     -- STD-SPECIFIC EXPRESSIONS (DESCRIPTION-BASED)
@@ -52,6 +55,11 @@ BEGIN
 
         -- Subcontractor Dependency Ratio
         ('CE-SDR', 'IF([Cost of Sales]=0,0,[Subcontractors]/[Cost of Sales])', 'Pct0', 0, 0, NULL),
+
+        -- Effective Tax Rate
+        ('CE-ETR',
+            'IF(([Turnover]-[Cost of Sales]-[Staff Costs]-[Admin Expenses])=0,0,(ABS([Tax on Company (Biz)])/([Turnover]-[Cost of Sales]-[Staff Costs]-[Admin Expenses])))',
+            'Pct0', 0, 0, NULL),
 
         -- Vehicle Cost Ratio
         ('CE-VCR', 'IF([Turnover]=0,0,([Fuel & Oil]+[Motor Travel])/[Turnover])', 'Pct0', 0, 0, NULL),

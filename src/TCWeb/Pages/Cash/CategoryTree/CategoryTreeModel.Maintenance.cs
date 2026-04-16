@@ -815,6 +815,45 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 return new JsonResult(new { success = false, message = e.Message });
             }
         }
+
+        public async Task<JsonResult> OnPostUnlinkAsync([FromForm] string parentKey, [FromForm] string childKey)
+        {
+            if (!IsAdmin())
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+
+            if (string.IsNullOrWhiteSpace(parentKey) || string.IsNullOrWhiteSpace(childKey))
+                return new JsonResult(new { success = false, message = "Missing parameters" });
+
+            try
+            {
+                var link = await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => t.ParentCode == parentKey && t.ChildCode == childKey)
+                    .FirstOrDefaultAsync();
+
+                if (link == null)
+                    return new JsonResult(new { success = false, message = "Link not found" });
+
+                NodeContext.Cash_tbCategoryTotals.Remove(link);
+
+                var siblings = await NodeContext.Cash_tbCategoryTotals
+                    .Where(t => t.ParentCode == parentKey)
+                    .OrderBy(t => t.DisplayOrder)
+                    .ToListAsync();
+
+                short order = 1;
+                foreach (var sib in siblings)
+                    sib.DisplayOrder = order++;
+
+                await NodeContext.SaveChangesAsync();
+
+                return new JsonResult(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                await NodeContext.ErrorLog(ex);
+                return new JsonResult(new { success = false, message = "Server error" });
+            }
+        }
         #endregion
 
 

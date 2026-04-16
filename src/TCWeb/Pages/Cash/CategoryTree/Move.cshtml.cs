@@ -40,6 +40,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string NewTypeKey { get; private set; } = string.Empty;
         public string NewParentPath { get; private set; } = string.Empty;
 
+        public string Mode { get; private set; } = string.Empty;
+
         public async Task<IActionResult> OnGetAsync()
         {
             try
@@ -114,16 +116,48 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                OldParentKey = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ChildCode == Key)
-                    .Select(t => t.ParentCode)
-                    .FirstOrDefaultAsync() ?? string.Empty;
+                var alreadyAttached = await NodeContext.Cash_tbCategoryTotals
+                    .AnyAsync(t => t.ParentCode == TargetParentKey && t.ChildCode == Key);
 
-                using var tx = await NodeContext.Database.BeginTransactionAsync();
+                if (alreadyAttached)
+                {
+                    OperationSucceeded = true;
+                    OldParentKey = string.Empty;
+                    NewParentKey = TargetParentKey;
+                    NewTypeKey = $"type:{tgt.CashTypeCode}";
+                    NewParentPath = await BuildAncestorPathAsync(TargetParentKey);
+                    Mode = "add";
+                    ParentKey = string.Empty;
 
-                await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ChildCode == Key)
-                    .ExecuteDeleteAsync();
+                    return await ReturnEmbeddedOrRedirectAsync();
+                }
+
+                var keyRoots = await GetRootAncestorsAsync(Key);
+                var targetRoots = await GetRootAncestorsAsync(TargetParentKey);
+                var sameTree = keyRoots.Overlaps(targetRoots);
+
+                Mode = sameTree ? "move" : "add";
+
+                // For UX: prefer the existing parent in the same tree (when moving),
+                // otherwise don't report an old parent.
+                OldParentKey = string.Empty;
+                if (sameTree)
+                {
+                    OldParentKey = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ChildCode == Key)
+                        .OrderBy(t => t.ParentCode)
+                        .Select(t => t.ParentCode)
+                        .FirstOrDefaultAsync() ?? string.Empty;
+                }
+
+                await using var tx = await NodeContext.Database.BeginTransactionAsync();
+
+                if (sameTree && !string.IsNullOrWhiteSpace(OldParentKey))
+                {
+                    await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ParentCode == OldParentKey && t.ChildCode == Key)
+                        .ExecuteDeleteAsync();
+                }
 
                 short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
                     .Where(t => t.ParentCode == TargetParentKey)
@@ -143,33 +177,81 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 NewParentKey = TargetParentKey;
                 NewTypeKey = $"type:{tgt.CashTypeCode}";
                 NewParentPath = await BuildAncestorPathAsync(TargetParentKey);
+
+                // Preserve original semantics: ParentKey in query string should remain the old parent (when moving)
                 ParentKey = OldParentKey;
 
-                // Embedded desktop (AJAX or embed=1): return a compact success marker,
-                // which categoryTree.move.js consumes to select and show details.
-                bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-                if (isAjax || Request.Query["embed"] == "1")
-                {
-                    var enc = HtmlEncoder.Default;
-                    var html =
-                        "<div id=\"moveResult\""
-                        + " data-key=\"" + enc.Encode(Key) + "\""
-                        + " data-parent=\"" + enc.Encode(NewParentKey ?? string.Empty) + "\""
-                        + " data-old=\"" + enc.Encode(OldParentKey ?? string.Empty) + "\""
-                        + " data-type=\"" + enc.Encode(NewTypeKey ?? string.Empty) + "\""
-                        + " data-path=\"" + enc.Encode(NewParentPath ?? string.Empty) + "\"></div>";
-
-                    return Content(html, "text/html");
-                }
-
-                // Mobile/full-page: go back to Index selecting the moved node and expanding its new parent.
-                return RedirectToPage("/Cash/CategoryTree/Index", new { select = Key, parentKey = TargetParentKey });
+                return await ReturnEmbeddedOrRedirectAsync();
             }
             catch (Exception e)
             {
                 await NodeContext.ErrorLog(e);
                 throw;
             }
+        }
+
+        private async Task<HashSet<string>> GetRootAncestorsAsync(string key)
+        {
+            var edges = await NodeContext.Cash_tbCategoryTotals
+                .AsNoTracking()
+                .Where(t => t.ParentCode != null && t.ChildCode != null)
+                .Select(t => new { t.ParentCode, t.ChildCode })
+                .ToListAsync();
+
+            var parentsByChild = edges
+                .GroupBy(e => e.ChildCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => x.ParentCode)
+                          .Where(p => !string.IsNullOrWhiteSpace(p))
+                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                          .ToList(),
+                    StringComparer.OrdinalIgnoreCase);
+
+            var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var stack = new Stack<string>();
+            stack.Push(key);
+
+            var guard = 0;
+            while (stack.Count > 0 && guard++ < 4096)
+            {
+                var cur = stack.Pop();
+                if (!seen.Add(cur))
+                    continue;
+
+                if (!parentsByChild.TryGetValue(cur, out var parents) || parents.Count == 0)
+                {
+                    roots.Add(cur);
+                    continue;
+                }
+
+                foreach (var p in parents)
+                    stack.Push(p);
+            }
+
+            return roots;
+        }
+
+        private async Task<IActionResult> ReturnEmbeddedOrRedirectAsync()
+        {
+            bool isAjax = string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+            if (isAjax || Request.Query["embed"] == "1")
+            {
+                var enc = HtmlEncoder.Default;
+                var html =
+                    "<div id=\"moveResult\""
+                    + " data-key=\"" + enc.Encode(Key) + "\""
+                    + " data-parent=\"" + enc.Encode(NewParentKey ?? string.Empty) + "\""
+                    + " data-old=\"" + enc.Encode(OldParentKey ?? string.Empty) + "\""
+                    + " data-type=\"" + enc.Encode(NewTypeKey ?? string.Empty) + "\""
+                    + " data-path=\"" + enc.Encode(NewParentPath ?? string.Empty) + "\""
+                    + " data-mode=\"" + enc.Encode(Mode ?? string.Empty) + "\"></div>";
+
+                return Content(html, "text/html");
+            }
+
+            return RedirectToPage("/Cash/CategoryTree/Index", new { select = Key, parentKey = TargetParentKey });
         }
 
         private async Task<string> BuildAncestorPathAsync(string leafParent)

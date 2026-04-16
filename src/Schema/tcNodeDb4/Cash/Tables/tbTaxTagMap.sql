@@ -21,7 +21,11 @@ CREATE TABLE Cash.tbTaxTagMap
     CONSTRAINT FK_Cash_tbTaxTagMap_TaxTag
         FOREIGN KEY (TaxSourceCode, TagCode)
         REFERENCES Cash.tbTaxTag (TaxSourceCode, TagCode)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT FK_Cash_tbTaxTagMap_TaxTagMapType
+        FOREIGN KEY (MapTypeCode)
+        REFERENCES Cash.tbTaxTagMapType (MapTypeCode)
 );
 GO
 

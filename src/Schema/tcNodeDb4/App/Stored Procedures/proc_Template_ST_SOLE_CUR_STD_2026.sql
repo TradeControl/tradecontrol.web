@@ -180,6 +180,51 @@ BEGIN TRY
         INSERT INTO Cash.tbCode (CashCode, CashDescription, CategoryCode, TaxCode, IsEnabled)
         VALUES ('CC-PREMS', 'Premises Costs', 'CA-PREMS', 'T1', 1);
 
+    ----------------------------------------------------------------
+    -- 7. UK-ITSA-* Slice 2 mappings (STD-owned additions only)
+    ----------------------------------------------------------------
+    INSERT INTO Cash.tbTaxTagMap
+        (TaxSourceCode, TagCode, MapTypeCode, CategoryCode, CashCode, IsEnabled)
+    SELECT v.TaxSourceCode, v.TagCode, v.MapTypeCode, v.CategoryCode, v.CashCode, 1
+    FROM (VALUES
+        -- QU: overhead categories created by STD
+        ('UK-ITSA-SE-QU', 'carVanExpenses',       CONVERT(TINYINT, 0), 'CA-MOTOR',  CAST('' AS NVARCHAR(50))),
+        ('UK-ITSA-SE-QU', 'travelExpenses',       CONVERT(TINYINT, 0), 'CA-TRAVEL', CAST('' AS NVARCHAR(50))),
+        ('UK-ITSA-SE-QU', 'premisesRunningCosts', CONVERT(TINYINT, 0), 'CA-PREMS',  CAST('' AS NVARCHAR(50))),
+        ('UK-ITSA-SE-QU', 'adminCosts',           CONVERT(TINYINT, 0), 'CA-ADMIN',  CAST('' AS NVARCHAR(50))),
+
+        -- QU: finance + selected overhead headings by CashCode (created/enabled by STD)
+        ('UK-ITSA-SE-QU', 'interestOnLoans',      CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-LOINT'),
+        ('UK-ITSA-SE-QU', 'financialCharges',     CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-FINCH'),
+        ('UK-ITSA-SE-QU', 'professionalFees',     CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-PROF'),
+        ('UK-ITSA-SE-QU', 'advertisingMarketing', CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-ADVT'),
+
+        -- EOPS: overhead categories created by STD
+        ('UK-ITSA-SE-EOPS', 'carVanExpenses',       CONVERT(TINYINT, 0), 'CA-MOTOR',  CAST('' AS NVARCHAR(50))),
+        ('UK-ITSA-SE-EOPS', 'travelExpenses',       CONVERT(TINYINT, 0), 'CA-TRAVEL', CAST('' AS NVARCHAR(50))),
+        ('UK-ITSA-SE-EOPS', 'premisesRunningCosts', CONVERT(TINYINT, 0), 'CA-PREMS',  CAST('' AS NVARCHAR(50))),
+        ('UK-ITSA-SE-EOPS', 'adminCosts',           CONVERT(TINYINT, 0), 'CA-ADMIN',  CAST('' AS NVARCHAR(50))),
+
+        -- EOPS: finance + selected overhead headings by CashCode
+        ('UK-ITSA-SE-EOPS', 'interestOnLoans',      CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-LOINT'),
+        ('UK-ITSA-SE-EOPS', 'financialCharges',     CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-FINCH'),
+        ('UK-ITSA-SE-EOPS', 'professionalFees',     CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-PROF'),
+        ('UK-ITSA-SE-EOPS', 'advertisingMarketing', CONVERT(TINYINT, 1), CAST('' AS NVARCHAR(10)), 'CC-ADVT')
+    ) v(TaxSourceCode, TagCode, MapTypeCode, CategoryCode, CashCode)
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM Cash.tbTaxTagMap tm
+        WHERE tm.TaxSourceCode = v.TaxSourceCode
+          AND tm.TagCode = v.TagCode
+          AND tm.MapTypeCode = v.MapTypeCode
+          AND tm.CategoryCode = v.CategoryCode
+          AND tm.CashCode = v.CashCode
+    );
+
+    EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = 'UK-ITSA-SE-QU';
+    EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = 'UK-ITSA-SE-EOPS';
+
     COMMIT TRAN SoleTraderStdTemplate;
 
 END TRY

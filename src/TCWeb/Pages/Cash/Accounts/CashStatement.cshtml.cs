@@ -25,6 +25,7 @@ public class CashStatementModel : PageModel
     [BindProperty] public bool IncludeOrderBook { get; set; } = false;
     [BindProperty] public bool IncludeTaxAccruals { get; set; } = true;
     [BindProperty] public bool IncludeVatDetails { get; set; } = true;
+    [BindProperty] public bool IncludeReconciliation { get; set; } = false;
 
     public void OnGet() { }
 
@@ -39,12 +40,13 @@ public class CashStatementModel : PageModel
             Format = "excel",
             Params = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
                 ["commandTimeout"] = CommandTimeout.ToString(CultureInfo.InvariantCulture),
-                ["includeActivePeriods"] = IncludeActivePeriods ? "true" : "false", 
+                ["includeActivePeriods"] = IncludeActivePeriods ? "true" : "false",
                 ["includeBalanceSheet"] = IncludeBalanceSheet ? "true" : "false",
                 ["includeBankBalances"] = IncludeBankBalances ? "true" : "false",
                 ["includeOrderBook"] = IncludeOrderBook ? "true" : "false",
                 ["includeTaxAccruals"] = IncludeTaxAccruals ? "true" : "false",
                 ["includeVatDetails"] = IncludeVatDetails ? "true" : "false",
+                ["includeReconciliation"] = IncludeReconciliation ? "true" : "false",
             }
         };
 

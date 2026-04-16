@@ -3891,7 +3891,10 @@ window.CategoryTree = (function ()
             {
                 menuTemplates.items.toggleEnabled = "<div class='dropdown-item' data-action='toggleEnabled'><i class='bi bi-power'></i> Enable</div>";
             }
-
+            if (!menuTemplates.items.unlink)
+            {
+                menuTemplates.items.unlink = "<div class='dropdown-item' data-action='unlink'>Detach from Parent</div>";
+            }
             if (isExprRoot)
             {
                 pushIf(isAdmin, "createExpression");
@@ -3989,6 +3992,7 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
                         pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "unlink");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
                         if (!menuTemplates.items.setProfitRoot)
@@ -4014,6 +4018,7 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
                         pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "unlink");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
                         order.push("expandSelected", "collapseSelected");
@@ -4033,6 +4038,7 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
                         pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "unlink");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
                         order.push("expandSelected", "collapseSelected");
@@ -4048,6 +4054,7 @@ window.CategoryTree = (function ()
                         pushIf(isAdmin, "delete");
                         pushIf(isAdmin, "toggleEnabled");
                         pushIf(isAdmin, "move");
+                        pushIf(isAdmin, "unlink");
                         pushIf(isAdmin, "moveUp");
                         pushIf(isAdmin, "moveDown");
                         order.push("expandSelected", "collapseSelected");
@@ -4670,6 +4677,83 @@ window.CategoryTree = (function ()
                         break;
                     }
 
+                    case "unlink":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!parentKey || parentKey === "__ROOT__" || parentKey === "__DISCONNECTED__" || parentKey.indexOf("type:") === 0)
+                        {
+                            alert("Cannot detach from this parent");
+                            break;
+                        }
+    
+                        if (!confirm("Detach '" + plainNodeTitle(node) + "' from this parent?"))
+                        {
+                            break;
+                        }
+
+                        postJsonGlobal("Unlink", { parentKey: parentKey, childKey: key })
+                            .done(function (res)
+                            {
+                                if (res && res.success)
+                                {
+                                    var parentNode = tree.getNodeByKey(parentKey);
+                                    if (parentNode && parentNode.children)
+                                    {
+                                        for (var i = 0; i < parentNode.children.length; i++)
+                                        {
+                                            var c = parentNode.children[i];
+                                            if (c && c.key === key)
+                                            {
+                                                try
+                                                {
+                                                    c.remove();
+                                                }
+                                                catch (_){}
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if (parentNode)
+                                    {
+                                        if (typeof parentNode.reloadChildren === "function")
+                                        {
+                                            parentNode.reloadChildren();
+                                        }
+                                        
+                                        setTimeout(function ()
+                                        {
+                                            try
+                                            {
+                                                parentNode.setActive(true);
+                                                persistActiveKey(parentNode);
+                                                if (!isMobile())
+                                                {
+                                                    loadDetails(parentNode);
+                                                }
+                                            }
+                                            catch (_){}
+                                        }, 200);
+                                    }
+
+                                    var discNode = tree.getNodeByKey(DISC_KEY);
+                                    if (discNode && typeof discNode.reloadChildren === "function")
+                                    {
+                                        discNode.reloadChildren();
+                                    }
+
+                                    notify("Category detached", "success");
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || "Detach failed");
+                                }
+                            })
+                            .fail(alertFail);
+                        break;
+                    }
+
                     case "createTotal":
                     {
                         if (!isAdmin) { alert("Insufficient privileges"); break; }
@@ -5087,6 +5171,58 @@ window.CategoryTree = (function ()
                         break;
                     }
 
+                    case "unlink":
+                    {
+                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!parentKey || parentKey === "__ROOT__" || parentKey === "__DISCONNECTED__" || parentKey.indexOf("type:") === 0)
+                        {
+                            alert("Cannot detach from this parent");
+                            break;
+                        }
+    
+                        if (!confirm("Detach '" + node.title + "' from this parent?"))
+                        {
+                            break;
+                        }
+
+                        postJsonGlobal("Unlink", { parentKey: parentKey, childKey: key })
+                            .done(function (res)
+                            {
+                                if (res && res.success)
+                                {
+                                    try
+                                    {
+                                        node.remove();
+                                    }
+                                    catch (_){}
+
+                                    var parentNode = tree.getNodeByKey(parentKey);
+                                    if (parentNode && typeof parentNode.reloadChildren === "function")
+                                    {
+                                        parentNode.reloadChildren();
+                                    }
+
+                                    var discKey = (document.getElementById("categoryTreeConfig") || {}).dataset.disc || "";
+                                    if (discKey)
+                                    {
+                                        var discNode = tree.getNodeByKey(discKey);
+                                        if (discNode && typeof discNode.reloadChildren === "function")
+                                        {
+                                            discNode.reloadChildren();
+                                        }
+                                    }
+
+                                    notify("Category detached", "success");
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || "Detach failed");
+                                }
+                            })
+                            .fail(alertFail);
+                        break;
+                    }
                     case "delete":
                     {
                         if (!isAdmin)

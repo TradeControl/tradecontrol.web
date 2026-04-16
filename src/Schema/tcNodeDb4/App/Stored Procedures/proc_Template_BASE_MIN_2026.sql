@@ -77,7 +77,10 @@ AS
 
             ('CT-OVERHD', 'Overheads',                1, 2, 0,  60, 1),
 
-            -- Profit root
+            -- Gross profit total (required by expressions; users expect it)
+            ('CT-GROSSP', 'Gross Profit',             1, 2, 0,  70, 1),
+
+            -- Profit root (system net profit root)
             ('CT-PANDL',  'Profit and Loss',          1, 2, 0,  80, 1),
 
             -- Internal nominal categories
@@ -115,12 +118,15 @@ AS
         INSERT INTO Cash.tbCategoryTotal (ParentCode, ChildCode)
         VALUES
             -- Profit and Loss (CT-PANDL)
-            ('CT-PANDL', 'CT-TURNOV'),
-            ('CT-PANDL', 'CT-OTHRIN'),
-            ('CT-PANDL', 'CT-CSTSAL'),
+            ('CT-PANDL', 'CT-GROSSP'),
             ('CT-PANDL', 'CT-STAFFC'),
             ('CT-PANDL', 'CT-OVERHD'),
             ('CT-PANDL', 'CA-ASSET'),
+
+            -- Gross Profit
+            ('CT-GROSSP', 'CT-TURNOV'),
+            ('CT-GROSSP', 'CT-OTHRIN'),
+            ('CT-GROSSP', 'CT-CSTSAL'),
 
             -- Turnover
             ('CT-TURNOV', 'CA-SALES'),
@@ -198,7 +204,6 @@ AS
             ('CE-AP', 'Admin Cost Ratio',            2, 2, 0,  4, 1),
             ('CE-DP', 'Direct Cost Ratio',           2, 2, 0,  5, 1),
             ('CE-DE', 'Depreciation Ratio',          2, 2, 0,  6, 1),
-            ('CE-TR', 'Effective Tax Rate',          2, 2, 0,  7, 1),
             ('CE-OC', 'Overhead Coverage Ratio',     2, 2, 0,  8, 1),
             ('CE-RS', 'Revenue-to-Wages Ratio',      2, 2, 0,  9, 1);
 
@@ -211,8 +216,8 @@ AS
             -- Gross Margin %
             ('CE-GP', 'IF([Sales]=0,0,([Gross Profit]/[Sales]))', 'Pct0', 0, 0, NULL),
 
-            -- Net Profit %
-            ('CE-NP', 'IF([Sales]=0,0,([Net Profit]/[Sales]))', 'Pct0', 0, 0, NULL),
+            -- Net Profit % (use CT-PANDL description)
+            ('CE-NP', 'IF([Sales]=0,0,([Profit and Loss]/[Sales]))', 'Pct0', 0, 0, NULL),
 
             -- Wages %
             ('CE-WP', 'IF([Sales]=0,0,(ABS([Wages])/[Sales]))', 'Num2', 0, 0, NULL),
@@ -223,11 +228,8 @@ AS
             -- Direct Cost %
             ('CE-DP', 'IF([Sales]=0,0,(ABS([Direct Costs])/[Sales]))', 'Num2', 0, 0, NULL),
 
-            -- Depreciation %
-            ('CE-DE', 'IF([Sales]=0,0,(ABS([Depreciation (Total)])/[Sales]))', 'Num2', 0, 0, NULL),
-
-            -- Effective Tax Rate
-            ('CE-TR', 'IF([Profit Before Tax]=0,0,(ABS([Tax on Profit])/[Profit Before Tax]))', 'Pct0', 0, 0, NULL),
+            -- Depreciation % (Asset Movements)
+            ('CE-DE', 'IF([Sales]=0,0,(ABS([Asset Movements])/[Sales]))', 'Num2', 0, 0, NULL),
 
             -- Overhead Coverage Ratio
             ('CE-OC', 'IF([Admin Expenses]=0,0,([Gross Profit]/ABS([Admin Expenses])))', 'Num2', 0, 0, NULL),
@@ -434,6 +436,7 @@ AS
             (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
         VALUES
             (@AccountCode, @SubjectCode, @CapitalAccount, 2, 0, 40, 'CC-DEPRJ', 1);
+
 
     END TRY
     BEGIN CATCH

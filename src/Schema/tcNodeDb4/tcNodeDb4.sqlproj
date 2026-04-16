@@ -695,6 +695,7 @@
     <Build Include="App\Stored Procedures\proc_Template_ST_SOLE_CUR_STD_2026.sql" />
     <Build Include="Subject\Tables\tbBalanceConstraint.sql" />
     <Build Include="App\Stored Procedures\proc_DatasetSyntheticMIS_CompanyLoanPayback.sql" />
+    <Build Include="Cash\Tables\tbTaxTagMapType.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

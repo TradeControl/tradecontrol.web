@@ -323,6 +323,27 @@ BEGIN TRY
           AND t.TagCode = s.TagCode
     );
 
+    ----------------------------------------------------------------
+    -- 10. UK-ITSA-* tag mappings (Category tree mappings)
+    ----------------------------------------------------------------
+    INSERT INTO Cash.tbTaxTagMap
+        (TaxSourceCode, TagCode, MapTypeCode, CategoryCode, CashCode, IsEnabled)
+    VALUES
+        -- QU (MIN-owned categories from BASE_MIN)
+        ('UK-ITSA-SE-QU', 'turnover',      0, 'CT-TURNOV', '', 1),
+        ('UK-ITSA-SE-QU', 'otherIncome',   0, 'CT-OTHRIN', '', 1),
+        ('UK-ITSA-SE-QU', 'costOfGoods',   0, 'CT-CSTSAL', '', 1),
+        ('UK-ITSA-SE-QU', 'wagesSalaries', 0, 'CT-STAFFC', '', 1),
+
+        -- EOPS (same MIN-owned categories)
+        ('UK-ITSA-SE-EOPS', 'turnover',      0, 'CT-TURNOV', '', 1),
+        ('UK-ITSA-SE-EOPS', 'otherIncome',   0, 'CT-OTHRIN', '', 1),
+        ('UK-ITSA-SE-EOPS', 'costOfGoods',   0, 'CT-CSTSAL', '', 1),
+        ('UK-ITSA-SE-EOPS', 'wagesSalaries', 0, 'CT-STAFFC', '', 1);
+
+    EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = 'UK-ITSA-SE-QU';
+    EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = 'UK-ITSA-SE-EOPS';
+
     COMMIT TRAN SoleTraderTemplate;
 
 END TRY

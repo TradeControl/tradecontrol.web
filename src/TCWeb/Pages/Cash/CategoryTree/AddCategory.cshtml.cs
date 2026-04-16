@@ -19,7 +19,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [BindProperty]
         public string ParentKey { get; set; }
 
-        // Bound selected value from the <select>
         [BindProperty]
         public string ChildKey { get; set; }
 
@@ -30,7 +29,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool OperationSucceeded { get; private set; }
         public string ErrorMessage { get; private set; }
 
-        // DO NOT bind the list itself (binding was overriding selection)
+        public string Mode { get; private set; } = string.Empty;
+
         public List<SelectListItem> CategoryList { get; private set; } = new();
 
         public async Task<IActionResult> OnGetAsync(string parentKey, bool embed = false)
@@ -94,7 +94,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 || (Request.HasFormContentType && string.Equals(Request.Form["embed"], "1", StringComparison.Ordinal))
                 || string.Equals(Request.Query["embed"], "1", StringComparison.Ordinal);
 
-            // Explicitly read posted values to avoid any interference from prior list binding
             var postedParent = Request.Form["ParentKey"].FirstOrDefault();
             var postedChild = Request.Form["ChildKey"].FirstOrDefault();
 
@@ -175,92 +174,98 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                var currentLink = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ChildCode == ChildKey)
-                    .Select(t => new { t.ParentCode })
-                    .FirstOrDefaultAsync();
+                // Already attached: idempotent success
+                var exists = await NodeContext.Cash_tbCategoryTotals
+                    .AnyAsync(t => t.ParentCode == ParentKey && t.ChildCode == ChildKey);
 
-                // If already attached to this parent or cycle detected, treat as success (idempotent)
-                var parentMap = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ChildCode != null && t.ParentCode != null)
-                    .GroupBy(t => t.ChildCode)
-                    .Select(g => new {
-                        Child = g.Key,
-                        Parent = g.Select(x => x.ParentCode).FirstOrDefault()
-                    })
-                    .ToDictionaryAsync(x => x.Child, x => x.Parent);
+                // Decide add vs move for the Add action
+                var childRoots = await GetRootAncestorsAsync(ChildKey);
+                var targetRoots = await GetRootAncestorsAsync(ParentKey);
+                bool sameTree = childRoots.Overlaps(targetRoots);
 
-                bool cycleDetected = IsAncestor(ChildKey, ParentKey, parentMap);
+                Mode = sameTree ? "move" : "add";
 
-                if ((currentLink != null &&
-                    string.Equals(currentLink.ParentCode, ParentKey, StringComparison.OrdinalIgnoreCase))
-                    || cycleDetected)
+                if (!exists)
                 {
-                    ChildName = child.Category;
-                    ChildPolarity = child.CashPolarityCode;
-                    ChildIsEnabled = child.IsEnabled != 0;
-                    OperationSucceeded = true;
+                    // Prevent cycles (ensure ParentKey is not a descendant of ChildKey)
+                    var parentMap = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ChildCode != null && t.ParentCode != null)
+                        .GroupBy(t => t.ChildCode)
+                        .Select(g => new {
+                            Child = g.Key,
+                            Parent = g.Select(x => x.ParentCode).FirstOrDefault()
+                        })
+                        .ToDictionaryAsync(x => x.Child, x => x.Parent);
 
-                    if (isEmbedded)
-                        return Page();
-
-                    return RedirectToPage("/Cash/CategoryTree/Index",
-                        new { select = ChildKey, parentKey = ParentKey, expand = ParentKey });
-                }
-
-                // MOVE: detach from old parent if different
-                if (currentLink != null &&
-                    !string.Equals(currentLink.ParentCode, ParentKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    using var txMove = await NodeContext.Database.BeginTransactionAsync();
-
-                    var oldLink = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == currentLink.ParentCode && t.ChildCode == ChildKey)
-                        .FirstOrDefaultAsync();
-
-                    if (oldLink != null)
+                    bool cycleDetected = IsAncestor(ChildKey, ParentKey, parentMap);
+                    if (cycleDetected)
                     {
-                        NodeContext.Cash_tbCategoryTotals.Remove(oldLink);
-                        await NodeContext.SaveChangesAsync();
+                        ErrorMessage = "Operation would create a cycle.";
+                        await PopulateOptionsAsync(ChildKey);
+                        return Page();
                     }
 
-                    var oldSiblings = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == currentLink.ParentCode)
+                    await using var tx = await NodeContext.Database.BeginTransactionAsync();
+
+                    if (sameTree)
+                    {
+                        // Remove one existing edge for this child that belongs to the same tree as the target.
+                        // (If none, this degenerates to a pure add.)
+                        var existingParents = await NodeContext.Cash_tbCategoryTotals
+                            .Where(t => t.ChildCode == ChildKey)
+                            .Select(t => t.ParentCode)
+                            .ToListAsync();
+
+                        string oldParentInSameTree = null;
+                        for (var i = 0; i < existingParents.Count; i++)
+                        {
+                            var p = existingParents[i];
+                            if (string.IsNullOrWhiteSpace(p))
+                                continue;
+
+                            var pRoots = await GetRootAncestorsAsync(p);
+                            if (pRoots.Overlaps(targetRoots))
+                            {
+                                oldParentInSameTree = p;
+                                break;
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(oldParentInSameTree))
+                        {
+                            await NodeContext.Cash_tbCategoryTotals
+                                .Where(t => t.ParentCode == oldParentInSameTree && t.ChildCode == ChildKey)
+                                .ExecuteDeleteAsync();
+                        }
+                    }
+
+                    // Normalize any zero display orders under new parent
+                    var existingUnderNew = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ParentCode == ParentKey)
                         .OrderBy(t => t.DisplayOrder)
                         .ToListAsync();
 
-                    short reIdx = 1;
-                    foreach (var s in oldSiblings)
-                        s.DisplayOrder = reIdx++;
+                    if (existingUnderNew.Any(e => e.DisplayOrder == 0))
+                    {
+                        short i = 1;
+                        foreach (var row in existingUnderNew)
+                            row.DisplayOrder = i++;
+                        await NodeContext.SaveChangesAsync();
+                    }
+
+                    short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.ParentCode == ParentKey)
+                        .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
+
+                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
+                        ParentCode = ParentKey,
+                        ChildCode = ChildKey,
+                        DisplayOrder = nextOrder
+                    });
 
                     await NodeContext.SaveChangesAsync();
-                    await txMove.CommitAsync();
+                    await tx.CommitAsync();
                 }
-
-                // Normalize any zero display orders under new parent
-                var existingUnderNew = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ParentCode == ParentKey)
-                    .OrderBy(t => t.DisplayOrder)
-                    .ToListAsync();
-
-                if (existingUnderNew.Any(e => e.DisplayOrder == 0))
-                {
-                    short i = 1;
-                    foreach (var row in existingUnderNew)
-                        row.DisplayOrder = i++;
-                    await NodeContext.SaveChangesAsync();
-                }
-
-                short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ParentCode == ParentKey)
-                    .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
-
-                NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
-                    ParentCode = ParentKey,
-                    ChildCode = ChildKey,
-                    DisplayOrder = nextOrder
-                });
-                await NodeContext.SaveChangesAsync();
 
                 ChildName = child.Category;
                 ChildPolarity = child.CashPolarityCode;
@@ -282,6 +287,49 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     ? Content("<div class='text-danger small p-2'>Server error</div>")
                     : Page();
             }
+        }
+
+        private async Task<HashSet<string>> GetRootAncestorsAsync(string key)
+        {
+            var edges = await NodeContext.Cash_tbCategoryTotals
+                .AsNoTracking()
+                .Where(t => t.ParentCode != null && t.ChildCode != null)
+                .Select(t => new { t.ParentCode, t.ChildCode })
+                .ToListAsync();
+
+            var parentsByChild = edges
+                .GroupBy(e => e.ChildCode, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => x.ParentCode)
+                          .Where(p => !string.IsNullOrWhiteSpace(p))
+                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                          .ToList(),
+                    StringComparer.OrdinalIgnoreCase);
+
+            var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var stack = new Stack<string>();
+            stack.Push(key);
+
+            var guard = 0;
+            while (stack.Count > 0 && guard++ < 4096)
+            {
+                var cur = stack.Pop();
+                if (!seen.Add(cur))
+                    continue;
+
+                if (!parentsByChild.TryGetValue(cur, out var parents) || parents.Count == 0)
+                {
+                    roots.Add(cur);
+                    continue;
+                }
+
+                foreach (var p in parents)
+                    stack.Push(p);
+            }
+
+            return roots;
         }
 
         private async Task PopulateOptionsAsync(string selectedChildCode)

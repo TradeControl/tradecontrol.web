@@ -92,6 +92,15 @@
 
         var parentKey = (opts.parentKey || "").trim();
         var childKey = (opts.childKey || "").trim();
+        var mode = (opts.mode || "").toLowerCase();
+
+        if (mode === "move")
+        {
+            fullTreeReloadAndSelect(parentKey, childKey);
+            return;
+        }
+
+        // existing reconcile path continues...
         var name = opts.name;
         var polarity = opts.polarity;
         var categoryType = opts.categoryType;
@@ -1258,6 +1267,50 @@
         })();
     }
 
+    function selectChildUnderParentWithRetry(tree, parentKey, childKey, maxAttempts)
+    {
+        maxAttempts = maxAttempts || 12;
+        var attempt = 0;
+
+        (function retry()
+        {
+            attempt++;
+            try
+            {
+                var parentNode = tree.getNodeByKey(parentKey);
+                if (parentNode && parentNode.children)
+                {
+                    for (var i = 0; i < parentNode.children.length; i++)
+                    {
+                        var c = parentNode.children[i];
+                        if (c && c.key === childKey)
+                        {
+                            try
+                            {
+                                c.makeVisible();
+                            }
+                            catch (_){}
+                            try
+                            {
+                                c.setActive(true);
+                            }
+                            catch (_){}
+                            return;
+                        }
+                    }
+                }
+            }
+            catch (_)
+            {
+            }
+
+            if (attempt < maxAttempts)
+            {
+                setTimeout(retry, 150);
+            }
+        })();
+    }
+
     function ensureNodeExpandedAndReload(node)
     {
         return new Promise(function (resolve)
@@ -2104,49 +2157,129 @@ function reloadParentAndSelect(key, parentKey)
         // Add Category
         if (id === "addExistingCategoryResult")
         {
-            var keyAet = (marker.getAttribute("data-key") || "").trim();
-            var parentAet = (marker.getAttribute("data-parent") || "").trim();
-            var nameAet = (marker.getAttribute("data-name") || "").trim();
-            var polarityAet = parseInt((marker.getAttribute("data-polarity") || "2").trim(), 10);
-            var isEnabledAet = (marker.getAttribute("data-isenabled") || "1").trim();
-            var categoryTypeAet = parseInt((marker.getAttribute("data-categorytype") || "1").trim(), 10);
+            const keyAet = (marker.getAttribute("data-key") || "").trim();
+            const parentAet = (marker.getAttribute("data-parent") || "").trim();
+            const nameAet = (marker.getAttribute("data-name") || "").trim();
+            const polarityAet = parseInt((marker.getAttribute("data-polarity") || "2").trim(), 10);
+            const isEnabledAet = (marker.getAttribute("data-isenabled") || "1").trim();
+            const categoryTypeAet = parseInt((marker.getAttribute("data-categorytype") || "1").trim(), 10);
+            const modeAet = (marker.getAttribute("data-mode") || "").trim().toLowerCase();
 
-            if (!keyAet)
+            if (!keyAet || !parentAet)
             {
                 return;
             }
 
-            removeExistingOutsideParent(keyAet, parentAet);
+            if (modeAet === "move")
+            {
+                fullTreeReloadAndSelect(parentAet, keyAet);
+                setTimeout(function () { loadDetailsEmbedded(keyAet, parentAet); }, 350);
+                return;
+            }
+
+            const tree = getTreeGlobal();
+            if (!tree)
+            {
+                return;
+            }
+
+            const parentNode = tree.getNodeByKey(parentAet);
+            if (!parentNode)
+            {
+                fullTreeReloadAndSelect(parentAet, keyAet);
+                setTimeout(function () { loadDetailsEmbedded(keyAet, parentAet); }, 350);
+                return;
+            }
+
+            function escapeHtml(str)
+            {
+                if (!str && str !== 0) { return ""; }
+                return String(str)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            const safeTitle = escapeHtml(nameAet || keyAet);
+            const safeCode = escapeHtml(keyAet);
+            const polClass = (polarityAet === 0) ? "expense" : (polarityAet === 1) ? "income" : "neutral";
+            const prefixedTitle = "<span class='tc-cat-icon tc-cat-" + polClass + "'></span> " + safeTitle + " (" + safeCode + ")";
+
+            const childSpec = {
+                title: prefixedTitle,
+                key: keyAet,
+                folder: true,
+                lazy: true,
+                icon: false,
+                extraClasses: (isEnabledAet === "0") ? "tc-disabled" : null,
+                data: {
+                    cashPolarity: polarityAet,
+                    categoryType: categoryTypeAet,
+                    nodeType: "category",
+                    isEnabled: (isEnabledAet === "0") ? 0 : 1,
+                    categoryCode: keyAet
+                }
+            };
 
             try
             {
-                var cfgElA = document.getElementById("categoryTreeConfig");
-                var discKeyA = (cfgElA && cfgElA.dataset) ? (cfgElA.dataset.disc || "") : "";
-                if (discKeyA && parentAet && parentAet !== discKeyA)
+                if (parentNode.folder && !parentNode.expanded)
                 {
-                    removeChildFromDisconnected(keyAet);
+                    parentNode.setExpanded(true);
                 }
             }
-            catch (_)
-            {
-            }
+            catch (_){}
 
-            reconcileAndSelect({
-                parentKey: parentAet,
-                childKey: keyAet,
-                name: nameAet,
-                polarity: polarityAet,
-                categoryType: categoryTypeAet,
-                isEnabled: isEnabledAet
-            });
+            let addedNode = null;
+
+            try
+            {
+                const existing = tree.getNodeByKey(keyAet);
+                if (existing && existing.getParent && existing.getParent().key === parentAet)
+                {
+                    addedNode = existing;
+                }
+                else
+                {
+                    const newNodes = parentNode.addChildren([childSpec]);
+                    addedNode = (newNodes && newNodes.length) ? newNodes[0] : tree.getNodeByKey(keyAet);
+                }
+            }
+            catch (_){}
+
+            if (addedNode)
+            {
+                try
+                {
+                    addedNode.setActive(true);
+                }
+                catch (_){}
+                try
+                {
+                    addedNode.makeVisible();
+                }
+                catch (_){}
+                loadDetailsEmbedded(keyAet, parentAet);
+            }
 
             setTimeout(function ()
             {
-                loadDetailsEmbedded(keyAet, parentAet);
-                forceSelectChild(parentAet, keyAet, 6);
-                // Ensure select even if optimistic insert skipped
-                reloadParentAndSelect(keyAet, parentAet);
-            }, 300);
+                if (parentNode && typeof parentNode.reloadChildren === "function")
+                {
+                    const url = _nodesUrl ? _nocache(_appendQuery(_nodesUrl, "id", parentNode.key)) : null;
+                    if (url)
+                    {
+                        parentNode.reloadChildren({ url: url });
+                    }
+                    else
+                    {
+                        parentNode.reloadChildren();
+                    }
+                }
+            }, 500);
+
             return;
         }
 
@@ -2460,7 +2593,6 @@ function bindEmbeddedFormSubmit()
     var pane = document.getElementById("detailsPane");
     if (!pane) { return; }
 
-    // Track last submitted parent (fallback when marker lacks data-parent)
     window.__tcLastSubmitParentKey = "";
 
     pane.addEventListener("submit", function (e)
@@ -2501,7 +2633,6 @@ function bindEmbeddedFormSubmit()
                 }
             }
 
-            // Record for fallback in processMarker
             window.__tcLastSubmitParentKey = parentVal || "";
         }
         catch (_){}
@@ -2516,15 +2647,15 @@ function bindEmbeddedFormSubmit()
             try
             {
                 var selectNames = [
-                    "ChildKey",              // AddCategory current form
-                    "CategoryKey",           // fallback naming variant
-                    "CategoryCode",          // legacy
-                    "MappedCategoryCode",    // mapping forms
-                    "ChildCategoryCode",     // older AddExisting pattern
-                    "CashCode",              // AddCashCode simple
-                    "ExistingCashCode",      // possible naming
-                    "MappedCashCode",        // mapping variant
-                    "ChildCashCode"          // older pattern
+                    "ChildKey",
+                    "CategoryKey",
+                    "CategoryCode",
+                    "MappedCategoryCode",
+                    "ChildCategoryCode",
+                    "CashCode",
+                    "ExistingCashCode",
+                    "MappedCashCode",
+                    "ChildCashCode"
                 ];
 
                 selectNames.forEach(function (nm)
@@ -2536,7 +2667,7 @@ function bindEmbeddedFormSubmit()
                     }
                 });
             }
-            catch (_){ /* silent */ }
+            catch (_){ }
 
             var token =
                 (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
@@ -2578,8 +2709,9 @@ function bindEmbeddedFormSubmit()
                         }
                         catch (_){}
 
+                        if (marker.id === "addExistingCategoryResult") { return; }
+
                         var parentKey = (marker.getAttribute("data-parent") || "").trim() || window.__tcLastSubmitParentKey || "";
-                        // RHS details refresh
                         var keyAttr = (marker.getAttribute("data-key") || "").trim();
                         setTimeout(function () { loadDetailsEmbedded(keyAttr, parentKey); }, 150);
 
