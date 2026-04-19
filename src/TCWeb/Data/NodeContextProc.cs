@@ -2506,6 +2506,38 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Tax
+        public async Task TaxTagMapValidate(string taxSourceCode)
+        {
+            try
+            {
+                var _taxSourceCode = new SqlParameter() {
+                    ParameterName = "@TaxSourceCode",
+                    SqlDbType = System.Data.SqlDbType.NVarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 10,
+                    Value = taxSourceCode
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Cash.proc_TaxTagMapValidate";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_taxSourceCode);
+
+                        await _command.ExecuteNonQueryAsync();
+                    }
+                    _connection.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+            }
+        }
+
         public async Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, double taxAdjustment)
         {
             try

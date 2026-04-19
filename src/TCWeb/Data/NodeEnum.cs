@@ -13,7 +13,7 @@ namespace TradeControl.Web.Data
         public enum CategoryType { CashCode, CashTotal, Expression };
         public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, Tax, Bank };
-        public enum CashStatus { Forecast, Current, Closed, Archived};
+        public enum CashStatus { Forecast, Current, Closed, Archived };
         public enum ProjectStatus { Pending, Opened, Closed, Charged, Cancelled, Archived };
         public enum DocType { Quotation, SalesOrder, Enquiry, PurchaseOrder, SalesInvoice, CreditNote, DebitNote };
         public enum DocClassCode { Product, Money };
@@ -27,8 +27,12 @@ namespace TradeControl.Web.Data
         public enum PaymentStatus { Unposted, Posted, Transfer };
         public enum InterfaceCode { Accounts, MIS };
         public enum RoundingCode { Round, Truncate };
+
+        public enum MapTypeCode : byte { Category, CashCode }
+        public enum TagClassCode : byte { Rollup, Component, Derived }
+
         public enum AssetType { Debtors, Creditors, Bank, Cash, CashAccounts, Capital };
         public enum ContentType { Documents, Images, Templates, Invalid };
-        public enum SyntaxType {  Both, LibreOffice, Excel };
+        public enum SyntaxType { Both, LibreOffice, Excel };
     }
 }

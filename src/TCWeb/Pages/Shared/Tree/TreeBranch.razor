@@ -1,0 +1,206 @@
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using TradeControl.Web.Pages.Shared.Tree
+
+@if (IsRoot)
+{
+    foreach (var node in RootNodes)
+    {
+        <TreeBranch @key="node.Key"
+                    Node="node"
+                    GetChildren="GetChildren"
+                    OnLeafSelected="OnLeafSelected"
+                    SelectedKey="@SelectedKey"
+                    ExpandToKey="@ExpandToKey"
+                    OnNodeSelected="OnNodeSelected"
+                    RefreshToken="RefreshToken" />
+    }
+}
+else if (Node is not null)
+{
+    <div class="d-flex align-items-center">
+        @if (Node.HasChildren)
+        {
+            <button type="button"
+                    class="btn btn-link text-start tc-tree-row p-0"
+                    style="width:1.6rem;"
+                    @onclick="ToggleExpandAsync"
+                    aria-expanded="@_expanded"
+                    title="Expand">
+                <span class="tc-tree-expander" aria-hidden="true">
+                    <i class="bi @(_expanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                </span>
+            </button>
+        }
+        else
+        {
+            <span class="tc-tree-expander" aria-hidden="true" style="display:inline-block;width:1.6rem;">
+                <i class="bi bi-dot"></i>
+            </span>
+        }
+
+        <button type="button"
+                class="btn btn-link text-start w-100 tc-tree-row"
+                @onclick="OnClickAsync">
+            <i class="bi @Node.IconClass me-2 tc-tree-icon @(Node.IsMapped ? "tc-tree-icon-mapped" : "")" aria-hidden="true"></i>
+            <span class="tc-tree-label @(IsSelected(Node, SelectedKey) ? "tc-tree-label-selected" : "")">@Node.Text</span>
+
+            @if (Node.IsMapped)
+            {
+                <i class="bi bi-check-circle-fill tc-tree-mapped-glyph ms-1" aria-hidden="true" title="Mapped"></i>
+            }
+        </button>
+    </div>
+
+    @if (_expanded)
+    {
+        <div class="ps-3">
+            @if (_loading)
+            {
+                <div class="py-1 text-muted small">Loading…</div>
+            }
+            else if (_error is not null)
+            {
+                <div class="py-1 text-danger small">@_error</div>
+            }
+            else
+            {
+                foreach (var child in _children)
+                {
+                    <TreeBranch @key="child.Key"
+                                Node="child"
+                                GetChildren="GetChildren"
+                                OnLeafSelected="OnLeafSelected"
+                                SelectedKey="@SelectedKey"
+                                ExpandToKey="@ExpandToKey"
+                                OnNodeSelected="OnNodeSelected"
+                                RefreshToken="RefreshToken" />
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public bool IsRoot { get; set; }
+    [Parameter] public IReadOnlyList<TreeNode> RootNodes { get; set; } = Array.Empty<TreeNode>();
+    [Parameter] public TreeNode? Node { get; set; }
+
+    [Parameter] public Func<TreeNode, Task<IReadOnlyList<TreeNode>>> GetChildren { get; set; } = default!;
+    [Parameter] public EventCallback<TreeNode> OnLeafSelected { get; set; }
+
+    [Parameter] public string? SelectedKey { get; set; }
+    [Parameter] public string? ExpandToKey { get; set; }
+
+    [Parameter] public EventCallback<TreeNode> OnNodeSelected { get; set; }
+
+    [Parameter] public long RefreshToken { get; set; }
+
+    private long _lastRefreshToken;
+    private bool _expanded;
+    private bool _loading;
+    private bool _loaded;
+    private string? _error;
+    private List<TreeNode> _children = new();
+
+    protected override void OnParametersSet()
+    {
+        if (_lastRefreshToken != RefreshToken)
+        {
+            _lastRefreshToken = RefreshToken;
+            _loaded = false;
+            _loading = false;
+            _error = null;
+            _children.Clear();
+
+            if (_expanded)
+                _ = EnsureChildrenLoadedAsync();
+        }
+
+        if (Node is not null && !_expanded && ShouldAutoExpand(Node, ExpandToKey))
+        {
+            _expanded = true;
+            _ = EnsureChildrenLoadedAsync();
+        }
+    }
+
+    private static string? NormalizeKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        return key.Trim();
+    }
+
+    private static bool IsSelected(TreeNode node, string? selectedKey)
+    {
+        var a = NormalizeKey(selectedKey);
+        var b = NormalizeKey(node.Key);
+
+        return a is not null && b is not null && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ShouldAutoExpand(TreeNode node, string? expandToKey)
+    {
+        var target = NormalizeKey(expandToKey);
+
+        if (target is null || !node.HasChildren)
+            return false;
+
+        return target.StartsWith(node.Key, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ToggleExpandAsync()
+    {
+        _expanded = !_expanded;
+
+        if (_expanded)
+            await EnsureChildrenLoadedAsync();
+    }
+
+    private async Task EnsureChildrenLoadedAsync()
+    {
+        if (_loaded || _loading || Node is null)
+            return;
+
+        try
+        {
+            _loading = true;
+            _error = null;
+
+            var children = await GetChildren(Node);
+            _children = children.ToList();
+            _loaded = true;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnClickAsync()
+    {
+        if (Node is null)
+            return;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(Node);
+
+        if (!Node.HasChildren)
+        {
+            if (OnLeafSelected.HasDelegate)
+                await OnLeafSelected.InvokeAsync(Node);
+
+            return;
+        }
+
+        await ToggleExpandAsync();
+    }
+}

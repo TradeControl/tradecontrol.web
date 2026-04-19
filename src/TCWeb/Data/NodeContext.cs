@@ -20,6 +20,12 @@ namespace TradeControl.Web.Data
         public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
 
         #region Tables
+        public virtual DbSet<App_tbJurisdiction> App_tbJurisdictions { get; set; }
+        public virtual DbSet<Cash_tbTaxTagClass> Cash_tbTaxTagClasses { get; set; }
+        public virtual DbSet<Cash_tbTaxTagMapType> Cash_tbTaxTagMapTypes { get; set; }
+        public virtual DbSet<Cash_tbTaxTagSource> Cash_tbTaxTagSources { get; set; }
+        public virtual DbSet<Cash_tbTaxTag> Cash_tbTaxTags { get; set; }
+        public virtual DbSet<Cash_tbTaxTagMap> Cash_tbTaxTagMaps { get; set; }
         public virtual DbSet<Subject_tbAccount> Subject_tbAccounts { get; set; }
         public virtual DbSet<Subject_tbBalanceConstraint> Subject_tbBalanceConstraints { get; set; }
         public virtual DbSet<Subject_tbAccountType> Subject_tbAccountTypes { get; set; }
@@ -337,6 +343,99 @@ namespace TradeControl.Web.Data
                 //entity.ToView("AspNetUserRegistrations");
             });
             #endregion
+
+            modelBuilder.Entity<App_tbJurisdiction>(entity =>
+            {
+                entity.HasKey(e => e.JurisdictionCode)
+                    .HasName("PK_App_tbJurisdiction");
+
+                entity.Property(e => e.JurisdictionCode).ValueGeneratedNever();
+                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+
+                entity.HasOne(d => d.UocCodeNavigation)
+                    .WithMany()
+                    .HasForeignKey(d => d.UocCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_App_tbJurisdiction_Uoc");
+            });
+
+            modelBuilder.Entity<Cash_tbTaxTagClass>(entity =>
+            {
+                entity.HasKey(e => e.TagClassCode)
+                    .HasName("PK_Cash_tbTaxTagClass");
+
+                entity.Property(e => e.TagClassCode).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<Cash_tbTaxTagMapType>(entity =>
+            {
+                entity.HasKey(e => e.MapTypeCode)
+                    .HasName("PK_Cash_tbTaxTagMapType");
+
+                entity.Property(e => e.MapTypeCode).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<Cash_tbTaxTagSource>(entity =>
+            {
+                entity.HasKey(e => e.TaxSourceCode)
+                    .HasName("PK_Cash_tbTaxTagSource");
+
+                entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
+                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+
+                entity.HasOne(d => d.JurisdictionCodeNavigation)
+                    .WithMany(p => p.TbTaxTagSources)
+                    .HasForeignKey(d => d.JurisdictionCode)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_Cash_tbTaxTagSource_Jurisdiction");
+            });
+
+            modelBuilder.Entity<Cash_tbTaxTag>(entity =>
+            {
+                entity.HasKey(e => new { e.TaxSourceCode, e.TagCode })
+                    .HasName("PK_Cash_tbTaxTag");
+
+                entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
+                entity.Property(e => e.TagCode).ValueGeneratedNever();
+                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+
+                entity.HasOne(d => d.TaxSourceCodeNavigation)
+                    .WithMany(p => p.TbTaxTags)
+                    .HasForeignKey(d => d.TaxSourceCode)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_Cash_tbTaxTag_Source");
+
+                entity.HasOne(d => d.TagClassCodeNavigation)
+                    .WithMany(p => p.TbTaxTags)
+                    .HasForeignKey(d => d.TagClassCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Cash_tbTaxTag_Class");
+            });
+
+            modelBuilder.Entity<Cash_tbTaxTagMap>(entity =>
+            {
+                entity.HasKey(e => new { e.TaxSourceCode, e.TagCode, e.MapTypeCode, e.CategoryCode, e.CashCode })
+                    .HasName("PK_Cash_tbTaxTagMap");
+
+                entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
+                entity.Property(e => e.TagCode).ValueGeneratedNever();
+                entity.Property(e => e.MapTypeCode).ValueGeneratedNever();
+                entity.Property(e => e.CategoryCode).ValueGeneratedNever();
+                entity.Property(e => e.CashCode).ValueGeneratedNever();
+                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+
+                entity.HasOne(d => d.TagCodeNavigation)
+                    .WithMany(p => p.TbTaxTagMaps)
+                    .HasForeignKey(d => new { d.TaxSourceCode, d.TagCode })
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_Cash_tbTaxTagMap_TaxTag");
+
+                entity.HasOne(d => d.MapTypeCodeNavigation)
+                    .WithMany(p => p.TbTaxTagMaps)
+                    .HasForeignKey(d => d.MapTypeCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Cash_tbTaxTagMap_TaxTagMapType");
+            });
 
             modelBuilder.Entity<Subject_tbAccount>(entity =>
             {

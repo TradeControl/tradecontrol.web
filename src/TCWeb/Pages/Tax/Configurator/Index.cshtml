@@ -1,4 +1,109 @@
-﻿@page
+@page
 @model TradeControl.Web.Pages.Tax.Configurator.IndexModel
 @{
+    ViewData["Title"] = "Tax Configurator";
 }
+
+<link href="~/css/blazorTree.css" rel="stylesheet" />
+
+<div class="tc-tree-workspace">
+    <component type="typeof(TradeControl.Web.Pages.Tax.Configurator.TaxConfigurator)"
+               render-mode="ServerPrerendered" />
+</div>
+
+<script src="/_framework/blazor.server.js"></script>
+<script src="https://unpkg.com/split.js/dist/split.min.js"></script>
+<script>
+    window.taxConfigurator = window.taxConfigurator || {};
+
+    window.taxConfigurator.updateHeaderOffset = function ()
+    {
+        const header = document.querySelector('header');
+        const bottom = header ? header.getBoundingClientRect().bottom : 0;
+        document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
+    };
+
+    window.taxConfigurator.updateViewportHeight = function ()
+    {
+        const height = window.innerHeight || document.documentElement.clientHeight || 0;
+        document.documentElement.style.setProperty('--tc-viewport-height', height + 'px');
+    };
+
+    window.taxConfigurator.initSplit = function ()
+    {
+        if (!window.matchMedia("(min-width: 992px)").matches)
+            return;
+
+        if (!window.Split)
+            return;
+
+        const left = document.getElementById('leftCol');
+        const right = document.getElementById('rightCol');
+
+        if (!left || !right)
+            return;
+
+        function dropInitialClasses()
+        {
+            left.classList.remove('tc-initial-left');
+            right.classList.remove('tc-initial-right');
+        }
+
+        const saved = (function ()
+        {
+            try
+            {
+                const arr = JSON.parse(localStorage.getItem("tcTaxConfiguratorSplit") || "[]");
+                if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50)
+                    return arr;
+            }
+            catch
+            {
+            }
+
+            return [33, 67];
+        })();
+
+        Split(["#leftCol", "#rightCol"],
+        {
+            sizes: saved,
+            minSize: [240, 320],
+            gutterSize: 6,
+            snapOffset: 0,
+            elementStyle: function (dimension, size)
+            {
+                return { flexBasis: size + '%', maxWidth: size + '%' };
+            },
+            gutterStyle: function (dimension, gutterSize)
+            {
+                return { flexBasis: gutterSize + 'px' };
+            },
+            onDragEnd: function (sizes)
+            {
+                localStorage.setItem("tcTaxConfiguratorSplit", JSON.stringify(sizes));
+            }
+        });
+
+        dropInitialClasses();
+    };
+
+    (function ()
+    {
+        function refreshSoon()
+        {
+            window.taxConfigurator.updateViewportHeight();
+            window.taxConfigurator.updateHeaderOffset();
+
+            setTimeout(window.taxConfigurator.updateViewportHeight, 50);
+            setTimeout(window.taxConfigurator.updateHeaderOffset, 50);
+            setTimeout(window.taxConfigurator.updateViewportHeight, 250);
+            setTimeout(window.taxConfigurator.updateHeaderOffset, 250);
+        }
+
+        refreshSoon();
+        window.taxConfigurator.initSplit();
+
+        window.addEventListener('resize', refreshSoon);
+        window.addEventListener('orientationchange', refreshSoon);
+    })();
+</script>

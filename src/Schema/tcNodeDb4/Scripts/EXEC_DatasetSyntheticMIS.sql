@@ -115,6 +115,6 @@ END
 CLOSE cur;
 DEALLOCATE cur;
 
-SELECT *
+SELECT @IsCompany IsCompany, *
 FROM #EquityRecon
 ORDER BY ScenarioId, YearNumber;

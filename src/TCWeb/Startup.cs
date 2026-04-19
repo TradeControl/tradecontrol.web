@@ -74,7 +74,7 @@ namespace TradeControl.Web
             });
 
             services.AddSingleton<IFileProvider>(new PhysicalFileProvider(_env.WebRootPath));
-            services.AddAdminManagerServices();
+            services.AddAppServices();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -1,12 +1,18 @@
-using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using TradeControl.Web.Data;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TradeControl.Web.Pages.Tax.Configurator
 {
-    public class IndexModel : PageModel
+    public class IndexModel : DI_BasePageModel
     {
-        public void OnGet()
+        public IndexModel(NodeContext nodeContext) : base(nodeContext)
         {
+        }
+
+        public async Task OnGetAsync()
+        {
+            await SetViewData();
         }
     }
 }

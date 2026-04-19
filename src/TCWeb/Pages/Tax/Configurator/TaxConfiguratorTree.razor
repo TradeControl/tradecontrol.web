@@ -1,0 +1,39 @@
+@using System.Collections.Generic
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using TradeControl.Web.Pages.Shared.Tree
+
+@if (IsLoading)
+{
+    <div class="text-muted small py-1">Loading tax configuration…</div>
+}
+else if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger py-2 mb-0">@ErrorMessage</div>
+}
+else if (RootNodes.Count == 0)
+{
+    <div class="text-muted small py-1">No jurisdictions or tax sources are configured yet.</div>
+}
+else
+{
+    <TreeBranch IsRoot="true"
+                RootNodes="@RootNodes"
+                GetChildren="GetChildren"
+                OnLeafSelected="OnSelected"
+                SelectedKey="@SelectedKey"
+                ExpandToKey="@ExpandToKey"
+                OnNodeSelected="OnSelected"
+                RefreshToken="@RefreshToken" />
+}
+
+@code {
+    [Parameter] public IReadOnlyList<TreeNode> RootNodes { get; set; } = Array.Empty<TreeNode>();
+    [Parameter] public Func<TreeNode, Task<IReadOnlyList<TreeNode>>> GetChildren { get; set; } = default!;
+    [Parameter] public string? SelectedKey { get; set; }
+    [Parameter] public string? ExpandToKey { get; set; }
+    [Parameter] public EventCallback<TreeNode> OnSelected { get; set; }
+    [Parameter] public long RefreshToken { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+}

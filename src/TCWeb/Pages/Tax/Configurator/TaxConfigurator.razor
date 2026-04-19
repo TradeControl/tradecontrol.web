@@ -1,0 +1,117 @@
+@using System.Collections.Generic
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Pages.Shared.Tree
+@using Wangkanai.Detection.Models
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@inject ITaxConfiguratorService TaxConfiguratorService
+
+<div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <h1 class="h4 mb-1">Tax Configurator</h1>
+            <div class="text-muted small">Jurisdiction → Tax source → Tag class → Tag</div>
+        </div>
+
+        <div class="text-muted small">
+            @if (_isLoading)
+            {
+                <span>Loading tax configuration…</span>
+            }
+            else
+            {
+                <span>@(_rootNodes.Count) jurisdictions loaded</span>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="alert alert-danger py-2 mb-0">@_error</div>
+    }
+
+    <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
+        <TreeShell IsMobile="@_isMobile">
+            <LeftPane>
+                <TaxConfiguratorTree RootNodes="@_rootNodes"
+                                     GetChildren="TaxConfiguratorService.GetChildrenAsync"
+                                     SelectedKey="@_selectedKey"
+                                     ExpandToKey="@_expandToKey"
+                                     RefreshToken="@_refreshToken"
+                                     IsLoading="@_isLoading"
+                                     ErrorMessage="@_error"
+                                     OnSelected="HandleSelectedAsync" />
+            </LeftPane>
+
+            <RightPane>
+                <TaxTagDetails Details="@_selectedDetails" />
+            </RightPane>
+        </TreeShell>
+    </div>
+</div>
+
+@code {
+    private bool _isMobile;
+    private bool _isLoading;
+    private string? _error;
+    private IReadOnlyList<TreeNode> _rootNodes = Array.Empty<TreeNode>();
+    private TreeNode? _selectedNode;
+    private TaxConfiguratorNodeDetails? _selectedDetails;
+    private string? _selectedKey;
+    private string? _expandToKey;
+    private long _refreshToken;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isMobile = Detection?.Device?.Type == Device.Mobile;
+        await LoadRootNodesAsync();
+    }
+
+    private async Task LoadRootNodesAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            _rootNodes = await TaxConfiguratorService.GetRootNodesAsync();
+
+            if (_rootNodes.Count > 0)
+            {
+                _expandToKey = _rootNodes[0].Key;
+
+                if (_rootNodes.Count == 1)
+                {
+                    _selectedNode = _rootNodes[0];
+                    _selectedKey = _rootNodes[0].Key;
+                    _selectedDetails = await TaxConfiguratorService.GetNodeDetailsAsync(_rootNodes[0]);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSelectedAsync(TreeNode node)
+    {
+        _selectedNode = node;
+        _selectedKey = node.Key;
+        _expandToKey = node.Key;
+        _error = null;
+
+        try
+        {
+            _selectedDetails = await TaxConfiguratorService.GetNodeDetailsAsync(node);
+        }
+        catch (Exception ex)
+        {
+            _selectedDetails = null;
+            _error = ex.Message;
+        }
+    }
+}

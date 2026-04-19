@@ -152,6 +152,23 @@ html, body {
     color: #0d6efd; /* Bootstrap primary blue */
 }
 
+.tc-tree-icon {
+    color: var(--tc-tree-icon-muted);
+}
+
+.tc-tree-icon-mapped {
+    color: #198754;
+}
+
+.tc-tree-mapped-glyph {
+    color: #198754;
+    font-size: 0.8rem;
+    vertical-align: middle;
+}
+
+.tc-tree-label-mapped {
+    color: #198754;
+}
 .tc-admin-manager-tree i.bi-calendar3 {
     color: #0d6efd;
 }

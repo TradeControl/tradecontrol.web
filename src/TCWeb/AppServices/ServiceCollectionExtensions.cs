@@ -8,10 +8,11 @@ namespace TradeControl.Web.AppServices
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddAdminManagerServices(this IServiceCollection services)
+        public static IServiceCollection AddAppServices(this IServiceCollection services)
         {
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<IInvoiceTypeLookup, InvoiceTypeLookup>();
+            services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
 
             return services;
         }

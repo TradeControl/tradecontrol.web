@@ -1,0 +1,134 @@
+@using TradeControl.Web.AppServices
+
+@if (Details is null)
+{
+    <div class="text-muted">
+        Select a jurisdiction, source, tag class, or tag.
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3">
+        <div>
+            <div class="text-uppercase small text-muted">@KindLabel(Details.Kind)</div>
+            <h2 class="h5 mb-1">@Details.Title</h2>
+            <div class="text-muted small"><code>@Details.Code</code></div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Enabled</dt>
+                    <dd class="col-sm-8">@(Details.IsEnabled ? "Yes" : "No")</dd>
+
+                    @if (!string.IsNullOrWhiteSpace(Details.Description))
+                    {
+                        <dt class="col-sm-4">Description</dt>
+                        <dd class="col-sm-8">@Details.Description</dd>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Details.JurisdictionName))
+                    {
+                        <dt class="col-sm-4">Jurisdiction</dt>
+                        <dd class="col-sm-8">
+                            @Details.JurisdictionName
+                            <span class="text-muted"><code>@Details.JurisdictionCode</code></span>
+                        </dd>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Details.TaxSourceName))
+                    {
+                        <dt class="col-sm-4">Tax source</dt>
+                        <dd class="col-sm-8">
+                            @Details.TaxSourceName
+                            <span class="text-muted"><code>@Details.TaxSourceCode</code></span>
+                        </dd>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Details.TagClassName))
+                    {
+                        <dt class="col-sm-4">Tag class</dt>
+                        <dd class="col-sm-8">
+                            @Details.TagClassName
+                            <span class="text-muted"><code>@Details.TagClassCode</code></span>
+                        </dd>
+                    }
+
+                    @if (Details.DisplayOrder.HasValue)
+                    {
+                        <dt class="col-sm-4">Display order</dt>
+                        <dd class="col-sm-8">@Details.DisplayOrder.Value</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        @if (Details.Kind == TaxConfiguratorNodeKind.Tag)
+        {
+            @if (Details.CanMap)
+            {
+                <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>Mappings</span>
+                        <span class="text-muted small">@Details.Mappings.Count</span>
+                    </div>
+
+                    <div class="card-body">
+                        @if (Details.Mappings.Count == 0)
+                        {
+                            <div class="text-muted">No mappings have been defined.</div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Code</th>
+                                            <th>Name</th>
+                                            <th>Enabled</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var mapping in Details.Mappings)
+                                        {
+                                            <tr>
+                                                <td>@mapping.MapType</td>
+                                                <td><code>@mapping.TargetCode</code></td>
+                                                <td>@mapping.TargetName</td>
+                                                <td>@(mapping.IsEnabled ? "✓" : "—")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-secondary mb-0">
+                    This tag is computed and cannot be mapped.
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public TaxConfiguratorNodeDetails? Details { get; set; }
+
+    private static string KindLabel(TaxConfiguratorNodeKind kind)
+    {
+        return kind switch
+        {
+            TaxConfiguratorNodeKind.Jurisdiction => "Jurisdiction",
+            TaxConfiguratorNodeKind.Source => "Tax source",
+            TaxConfiguratorNodeKind.TagClass => "Tag class",
+            TaxConfiguratorNodeKind.Tag => "Tag",
+            _ => kind.ToString()
+        };
+    }
+}

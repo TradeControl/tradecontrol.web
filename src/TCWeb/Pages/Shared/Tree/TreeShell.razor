@@ -1,0 +1,42 @@
+@using Microsoft.AspNetCore.Components
+
+<div class="tc-tree-manager h-100" style="min-height:0;">
+    <div class="tc-tree-manager-frame border rounded bg-white p-2 h-100" style="min-height:0;">
+        @if (IsMobile)
+        {
+            <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                <div class="flex-grow-1 border rounded bg-white p-2" style="min-height:0;">
+                    @LeftPane
+                </div>
+
+                <div class="flex-grow-1 border rounded bg-light p-3" style="min-height:0;">
+                    @RightPane
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="tc-tree-split">
+                <div id="@LeftPaneId" class="tc-pane tc-initial-left">
+                    <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
+                        @LeftPane
+                    </div>
+                </div>
+
+                <div id="@RightPaneId" class="tc-pane tc-initial-right d-none d-lg-flex">
+                    <div class="flex-grow-1 border rounded p-2 bg-light d-flex flex-column">
+                        @RightPane
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public string LeftPaneId { get; set; } = "leftCol";
+    [Parameter] public string RightPaneId { get; set; } = "rightCol";
+    [Parameter] public RenderFragment? LeftPane { get; set; }
+    [Parameter] public RenderFragment? RightPane { get; set; }
+}
