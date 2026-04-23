@@ -67,7 +67,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
 
                 Cash_tbCategory = new Cash_tbCategory()
                 {
-                    CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode,
+                    CategoryTypeCode = (short)NodeEnum.CategoryType.Nominal,
                     DisplayOrder = 0,
                     IsEnabled = 1,
                     CashPolarityCode = (short)NodeEnum.CashPolarity.Expense,

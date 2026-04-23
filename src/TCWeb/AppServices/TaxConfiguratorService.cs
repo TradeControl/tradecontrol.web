@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Data;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -27,13 +29,15 @@ namespace TradeControl.Web.AppServices
             {
                 return await _nodeContext.App_tbJurisdictions
                     .AsNoTracking()
-                    .Where(j => j.IsEnabled)
                     .OrderBy(j => j.JurisdictionName)
                     .Select(j => new TreeNode(
                         $"jurisdiction:{j.JurisdictionCode}",
                         $"{j.JurisdictionCode} - {j.JurisdictionName}",
                         "bi-geo-alt",
-                        j.TbTaxTagSources.Any(s => s.IsEnabled)))
+                        j.TbTaxTagSources.Any(),
+                        false,
+                        true,
+                        j.TbTaxTagSources.Any(s => s.TbTaxTags.Any(t => t.TbTaxTagMaps.Any(m => !m.IsEnabled)))))
                     .ToListAsync();
             }
             finally
@@ -73,22 +77,161 @@ namespace TradeControl.Web.AppServices
             return null;
         }
 
+        public Task AddCategoryMappingAsync(string sourceCode, string tagCode, string categoryCode)
+        {
+            return ExecuteMutationAsync(sourceCode, async () => {
+                var category = NormalizeCode(categoryCode);
+                if (string.IsNullOrWhiteSpace(category))
+                    throw new ArgumentException("Category code is required.", nameof(categoryCode));
+
+                var existing = await FindMapAsync(sourceCode, tagCode, NodeEnum.MapTypeCode.Category, category, string.Empty);
+                if (existing is null)
+                {
+                    _nodeContext.Cash_tbTaxTagMaps.Add(new Cash_tbTaxTagMap {
+                        TaxSourceCode = NormalizeCode(sourceCode),
+                        TagCode = NormalizeCode(tagCode),
+                        MapTypeCode = NodeEnum.MapTypeCode.Category,
+                        CategoryCode = category,
+                        CashCode = string.Empty,
+                        IsEnabled = true
+                    });
+                }
+                else
+                {
+                    existing.IsEnabled = true;
+                }
+            });
+        }
+
+        public Task AddCashCodeMappingAsync(string sourceCode, string tagCode, string cashCode)
+        {
+            return ExecuteMutationAsync(sourceCode, async () => {
+                var code = NormalizeCode(cashCode);
+                if (string.IsNullOrWhiteSpace(code))
+                    throw new ArgumentException("Cash code is required.", nameof(cashCode));
+
+                var existing = await FindMapAsync(sourceCode, tagCode, NodeEnum.MapTypeCode.CashCode, string.Empty, code);
+                if (existing is null)
+                {
+                    _nodeContext.Cash_tbTaxTagMaps.Add(new Cash_tbTaxTagMap {
+                        TaxSourceCode = NormalizeCode(sourceCode),
+                        TagCode = NormalizeCode(tagCode),
+                        MapTypeCode = NodeEnum.MapTypeCode.CashCode,
+                        CategoryCode = string.Empty,
+                        CashCode = code,
+                        IsEnabled = true
+                    });
+                }
+                else
+                {
+                    existing.IsEnabled = true;
+                }
+            });
+        }
+
+        public Task RemoveMappingAsync(string sourceCode, string tagCode, NodeEnum.MapTypeCode mapTypeCode, string categoryCode, string cashCode)
+        {
+            return ExecuteMutationAsync(sourceCode, async () => {
+                var map = await FindMapAsync(sourceCode, tagCode, mapTypeCode, NormalizeCode(categoryCode), NormalizeCode(cashCode));
+                if (map is not null)
+                    _nodeContext.Cash_tbTaxTagMaps.Remove(map);
+            });
+        }
+
+        public Task ToggleMappingEnabledAsync(string sourceCode, string tagCode, NodeEnum.MapTypeCode mapTypeCode, string categoryCode, string cashCode)
+        {
+            return ExecuteMutationAsync(sourceCode, async () => {
+                var map = await FindMapAsync(sourceCode, tagCode, mapTypeCode, NormalizeCode(categoryCode), NormalizeCode(cashCode));
+                if (map is not null)
+                    map.IsEnabled = !map.IsEnabled;
+            });
+        }
+
+        private async Task<IReadOnlyList<TaxConfiguratorValidationRow>> GetValidationIssuesAsync(string taxSourceCode)
+        {
+            var issues = new List<TaxConfiguratorValidationRow>();
+
+            var connection = _nodeContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+                await connection.OpenAsync();
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT IsError, TagCode, TagName, CashCode, CategoryCode, HitCount, Message
+                    FROM Cash.fnTaxTagMapValidate(@TaxSourceCode)
+                    ORDER BY IsError DESC, TagCode, CashCode, CategoryCode;";
+
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = "@TaxSourceCode";
+                parameter.DbType = DbType.String;
+                parameter.Value = NormalizeCode(taxSourceCode);
+                command.Parameters.Add(parameter);
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    issues.Add(new TaxConfiguratorValidationRow {
+                        IsError = !reader.IsDBNull(0) && reader.GetBoolean(0),
+                        TagCode = reader.IsDBNull(1) ? null : reader.GetString(1),
+                        TagName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        CashCode = reader.IsDBNull(3) ? null : reader.GetString(3),
+                        CategoryCode = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        HitCount = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                        Message = reader.IsDBNull(6) ? string.Empty : reader.GetString(6)
+                    });
+                }
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            return issues;
+        }
+
         private async Task<IReadOnlyList<TreeNode>> GetSourceNodesAsync(string jurisdictionCode)
         {
             await _dbGate.WaitAsync();
             try
             {
-                return await _nodeContext.Cash_tbTaxTagSources
+                var sources = await _nodeContext.Cash_tbTaxTagSources
                     .AsNoTracking()
-                    .Where(s => s.JurisdictionCode == jurisdictionCode && s.IsEnabled)
+                    .Where(s => s.JurisdictionCode == jurisdictionCode)
                     .OrderBy(s => s.SourceName)
                     .ThenBy(s => s.TaxSourceCode)
-                    .Select(s => new TreeNode(
-                        $"source:{s.TaxSourceCode}",
-                        $"{s.TaxSourceCode} - {s.SourceName}",
-                        "bi-diagram-3",
-                        s.TbTaxTags.Any(t => t.IsEnabled)))
+                    .Select(s => new
+                    {
+                        s.TaxSourceCode,
+                        s.SourceName,
+                        HasChildren = s.TbTaxTags.Any()
+                    })
                     .ToListAsync();
+
+                var nodes = new List<TreeNode>(sources.Count);
+
+                foreach (var source in sources)
+                {
+                    var validationIssues = await GetValidationIssuesAsync(source.TaxSourceCode);
+                    var validationCount = validationIssues.Count;
+
+                    nodes.Add(new TreeNode(
+                        $"source:{source.TaxSourceCode}",
+                        validationCount > 0
+                            ? $"{source.TaxSourceCode} - {source.SourceName} ({validationCount})"
+                            : $"{source.TaxSourceCode} - {source.SourceName}",
+                        "bi-diagram-3",
+                        source.HasChildren,
+                        false,
+                        true,
+                        validationIssues.Any(v => v.IsError)));
+                }
+
+                return nodes;
             }
             finally
             {
@@ -106,13 +249,16 @@ namespace TradeControl.Web.AppServices
                     join tagClass in _nodeContext.Cash_tbTaxTagClasses.AsNoTracking()
                         on tag.TagClassCode equals tagClass.TagClassCode
                     where tag.TaxSourceCode == sourceCode
-                    group tagClass by new { tagClass.TagClassCode, tagClass.TagClass } into grouped
+                    group tag by new { tagClass.TagClassCode, tagClass.TagClass } into grouped
                     orderby grouped.Key.TagClassCode
                     select new TreeNode(
                         $"class:{sourceCode}:{(byte)grouped.Key.TagClassCode}",
                         $"{grouped.Key.TagClass} ({grouped.Count()})",
                         IconForTagClass(grouped.Key.TagClassCode),
-                        grouped.Any()))
+                        grouped.Any(),
+                        false,
+                        true,
+                        false))
                     .ToListAsync();
             }
             finally
@@ -133,10 +279,12 @@ namespace TradeControl.Web.AppServices
                     .ThenBy(t => t.TagName)
                     .Select(t => new TreeNode(
                         $"tag:{t.TaxSourceCode}:{t.TagCode}",
-                        $"{t.TagCode} - {t.TagName}",
+                        t.TagCode,
                         "bi-tag",
                         false,
-                        t.TbTaxTagMaps.Any()))
+                        t.TbTaxTagMaps.Any(),
+                        !t.TbTaxTagMaps.Any(m => !m.IsEnabled),
+                        false))
                     .ToListAsync();
             }
             finally
@@ -156,8 +304,7 @@ namespace TradeControl.Web.AppServices
                     .Select(j => new {
                         j.JurisdictionCode,
                         j.JurisdictionName,
-                        j.UocCode,
-                        j.IsEnabled
+                        j.UocCode
                     })
                     .SingleOrDefaultAsync();
 
@@ -172,7 +319,6 @@ namespace TradeControl.Web.AppServices
                     Description = null,
                     JurisdictionCode = jurisdiction.JurisdictionCode,
                     JurisdictionName = jurisdiction.JurisdictionName,
-                    IsEnabled = jurisdiction.IsEnabled,
                     CanMap = false,
                     Mappings = Array.Empty<TaxConfiguratorMappingRow>()
                 };
@@ -199,12 +345,13 @@ namespace TradeControl.Web.AppServices
                         s.SourceDescription,
                         s.JurisdictionCode,
                         j.JurisdictionName,
-                        s.IsEnabled
                     })
                     .SingleOrDefaultAsync();
 
                 if (source is null)
                     return null;
+
+                var validationIssues = await GetValidationIssuesAsync(source.TaxSourceCode);
 
                 return new TaxConfiguratorNodeDetails {
                     Kind = TaxConfiguratorNodeKind.Source,
@@ -218,8 +365,8 @@ namespace TradeControl.Web.AppServices
                     JurisdictionName = source.JurisdictionName,
                     TaxSourceCode = source.TaxSourceCode,
                     TaxSourceName = source.SourceName,
-                    IsEnabled = source.IsEnabled,
                     CanMap = false,
+                    ValidationIssues = validationIssues,
                     Mappings = Array.Empty<TaxConfiguratorMappingRow>()
                 };
             }
@@ -228,6 +375,7 @@ namespace TradeControl.Web.AppServices
                 _dbGate.Release();
             }
         }
+
 
         private async Task<TaxConfiguratorNodeDetails?> GetTagClassDetailsAsync(string key, string sourceCode, NodeEnum.TagClassCode tagClassCode)
         {
@@ -246,7 +394,6 @@ namespace TradeControl.Web.AppServices
                         source.SourceName,
                         source.JurisdictionCode,
                         jurisdiction.JurisdictionName,
-                        source.IsEnabled,
                         tagClass.TagClassCode,
                         tagClass.TagClass
                     })
@@ -254,6 +401,20 @@ namespace TradeControl.Web.AppServices
 
                 if (item is null)
                     return null;
+
+                var tags = await _nodeContext.Cash_tbTaxTags
+                    .AsNoTracking()
+                    .Where(t => t.TaxSourceCode == sourceCode && t.TagClassCode == tagClassCode)
+                    .OrderBy(t => t.DisplayOrder)
+                    .ThenBy(t => t.TagCode)
+                    .Select(t => new TaxConfiguratorTagRow {
+                        TagCode = t.TagCode,
+                        TagName = t.TagName,
+                        DisplayOrder = t.DisplayOrder,
+                        IsEnabled = !t.TbTaxTagMaps.Any(m => !m.IsEnabled),
+                        IsMapped = t.TbTaxTagMaps.Any()
+                    })
+                    .ToListAsync();
 
                 return new TaxConfiguratorNodeDetails {
                     Kind = TaxConfiguratorNodeKind.TagClass,
@@ -269,8 +430,8 @@ namespace TradeControl.Web.AppServices
                     TaxSourceName = item.SourceName,
                     TagClassCode = ((byte)item.TagClassCode).ToString(),
                     TagClassName = item.TagClass,
-                    IsEnabled = item.IsEnabled,
                     CanMap = false,
+                    Tags = tags,
                     Mappings = Array.Empty<TaxConfiguratorMappingRow>()
                 };
             }
@@ -301,7 +462,6 @@ namespace TradeControl.Web.AppServices
                         tag.TagDescription,
                         tag.TagClassCode,
                         tag.DisplayOrder,
-                        tag.IsEnabled,
                         tagClass.TagClass,
                         source.SourceName,
                         source.JurisdictionCode,
@@ -311,6 +471,15 @@ namespace TradeControl.Web.AppServices
 
                 if (item is null)
                     return null;
+
+                IReadOnlyList<TaxConfiguratorLookupRow> categoryOptions = Array.Empty<TaxConfiguratorLookupRow>();
+                IReadOnlyList<TaxConfiguratorLookupRow> cashCodeOptions = Array.Empty<TaxConfiguratorLookupRow>();
+
+                if (item.TagClassCode == NodeEnum.TagClassCode.Component)
+                {
+                    categoryOptions = await GetCategoryOptionsAsync();
+                    cashCodeOptions = await GetCashCodeOptionsAsync();
+                }
 
                 var mappings = await GetMappingsAsync(item.TaxSourceCode, item.TagCode);
 
@@ -326,11 +495,12 @@ namespace TradeControl.Web.AppServices
                     JurisdictionName = item.JurisdictionName,
                     TaxSourceCode = item.TaxSourceCode,
                     TaxSourceName = item.SourceName,
-                    TagClassCode = item.TagClassCode.ToString(),
+                    TagClassCode = ((byte)item.TagClassCode).ToString(),
                     TagClassName = item.TagClass,
-                    IsEnabled = item.IsEnabled,
-                    CanMap = string.Equals(item.TagClass, "Component", StringComparison.OrdinalIgnoreCase),
+                    CanMap = item.TagClassCode == NodeEnum.TagClassCode.Component,
                     DisplayOrder = item.DisplayOrder,
+                    CategoryOptions = categoryOptions,
+                    CashCodeOptions = cashCodeOptions,
                     Mappings = mappings
                 };
             }
@@ -340,16 +510,45 @@ namespace TradeControl.Web.AppServices
             }
         }
 
+        private async Task<IReadOnlyList<TaxConfiguratorLookupRow>> GetCategoryOptionsAsync()
+        {
+            return await _nodeContext.Set<Cash_tbCategory>()
+                .AsNoTracking()
+                .Where(c =>
+                    c.IsEnabled != 0 &&
+                    (c.CategoryTypeCode == (short)NodeEnum.CategoryType.Nominal ||
+                     c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashTotal))
+                .OrderBy(c => c.Category)
+                .Select(c => new TaxConfiguratorLookupRow {
+                    Code = c.CategoryCode,
+                    Text = c.CategoryCode + " - " + c.Category
+                })
+                .ToListAsync();
+        }
+
+        private async Task<IReadOnlyList<TaxConfiguratorLookupRow>> GetCashCodeOptionsAsync()
+        {
+            return await _nodeContext.Set<Cash_tbCode>()
+                .AsNoTracking()
+                .Where(c => c.IsEnabled != 0)
+                .OrderBy(c => c.CashDescription)
+                .Select(c => new TaxConfiguratorLookupRow {
+                    Code = c.CashCode,
+                    Text = c.CashCode + " - " + c.CashDescription
+                })
+                .ToListAsync();
+        }
+
         private async Task<IReadOnlyList<TaxConfiguratorMappingRow>> GetMappingsAsync(string taxSourceCode, string tagCode)
         {
-            var mappings = await (
+            return await (
                 from map in _nodeContext.Cash_tbTaxTagMaps.AsNoTracking()
                 join mapType in _nodeContext.Cash_tbTaxTagMapTypes.AsNoTracking()
                     on map.MapTypeCode equals mapType.MapTypeCode
-                join category in _nodeContext.Cash_tbCategories.AsNoTracking()
+                join category in _nodeContext.Set<Cash_tbCategory>().AsNoTracking()
                     on map.CategoryCode equals category.CategoryCode into categories
                 from category in categories.DefaultIfEmpty()
-                join cashCode in _nodeContext.Cash_Codes.AsNoTracking()
+                join cashCode in _nodeContext.Set<Cash_tbCode>().AsNoTracking()
                     on map.CashCode equals cashCode.CashCode into cashCodes
                 from cashCode in cashCodes.DefaultIfEmpty()
                 where map.TaxSourceCode == taxSourceCode && map.TagCode == tagCode
@@ -364,8 +563,61 @@ namespace TradeControl.Web.AppServices
                     IsEnabled = map.IsEnabled
                 })
                 .ToListAsync();
+        }
 
-            return mappings;
+        private async Task ExecuteMutationAsync(string taxSourceCode, Func<Task> mutation)
+        {
+            await _dbGate.WaitAsync();
+            try
+            {
+                await using var transaction = await _nodeContext.Database.BeginTransactionAsync();
+                try
+                {
+                    await mutation();
+                    await _nodeContext.SaveChangesAsync();
+                    await ValidateTaxSourceAsync(taxSourceCode);
+                    await transaction.CommitAsync();
+                }
+                catch
+                {
+                    try
+                    {
+                        await transaction.RollbackAsync();
+                    }
+                    catch
+                    {
+                    }
+
+                    throw;
+                }
+            }
+            finally
+            {
+                _dbGate.Release();
+            }
+        }
+
+        private Task ValidateTaxSourceAsync(string taxSourceCode)
+        {
+            return _nodeContext.Database.ExecuteSqlRawAsync(
+                "EXEC Cash.proc_TaxTagMapValidate @TaxSourceCode = {0}",
+                NormalizeCode(taxSourceCode));
+        }
+
+        private async Task<Cash_tbTaxTagMap?> FindMapAsync(string sourceCode, string tagCode, NodeEnum.MapTypeCode mapTypeCode, string categoryCode, string cashCode)
+        {
+            return await _nodeContext.Cash_tbTaxTagMaps
+                .SingleOrDefaultAsync(m =>
+                    m.TaxSourceCode == NormalizeCode(sourceCode) &&
+                    m.TagCode == NormalizeCode(tagCode) &&
+                    m.MapTypeCode == mapTypeCode &&
+                    m.CategoryCode == categoryCode &&
+                    m.CashCode == cashCode);
+        }
+
+        private static string NormalizeCode(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
 
         private static bool TryParseJurisdictionKey(string key, out string jurisdictionCode)
@@ -428,8 +680,7 @@ namespace TradeControl.Web.AppServices
 
         private static string IconForTagClass(NodeEnum.TagClassCode tagClass)
         {
-            return tagClass switch
-            {
+            return tagClass switch {
                 NodeEnum.TagClassCode.Component => "bi-bullseye",
                 NodeEnum.TagClassCode.Derived => "bi-calculator",
                 NodeEnum.TagClassCode.Rollup => "bi-collection",

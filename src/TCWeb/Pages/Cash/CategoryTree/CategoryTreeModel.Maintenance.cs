@@ -474,7 +474,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 // Optionally enforce category type (only allow attaching to CashCode categories).
                 // This follows the UI rule that codes belong under CategoryType == CashCode (0).
-                if (category.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
+                if (category.CategoryTypeCode != (short)NodeEnum.CategoryType.Nominal)
                     return new JsonResult(new { success = false, message = "Target category is not a Cash Code category." });
 
                 var code = await NodeContext.Cash_tbCodes.FirstOrDefaultAsync(c => c.CashCode == codeKey);

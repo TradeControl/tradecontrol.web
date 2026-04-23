@@ -43,6 +43,9 @@
         if (!left || !right)
             return;
 
+        if (left.dataset.splitInitialized === "true")
+            return;
+
         function dropInitialClasses()
         {
             left.classList.remove('tc-initial-left');
@@ -84,6 +87,7 @@
             }
         });
 
+        left.dataset.splitInitialized = "true";
         dropInitialClasses();
     };
 
@@ -101,7 +105,6 @@
         }
 
         refreshSoon();
-        window.taxConfigurator.initSplit();
 
         window.addEventListener('resize', refreshSoon);
         window.addEventListener('orientationchange', refreshSoon);

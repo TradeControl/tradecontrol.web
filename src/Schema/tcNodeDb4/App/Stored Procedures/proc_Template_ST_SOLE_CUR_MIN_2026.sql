@@ -148,19 +148,19 @@ BEGIN TRY
     IF NOT EXISTS (SELECT 1 FROM Cash.tbTaxTagSource WHERE TaxSourceCode = 'UK-ITSA-SE-QU')
     BEGIN
         INSERT INTO Cash.tbTaxTagSource
-            (TaxSourceCode, JurisdictionCode, SourceName, SourceDescription, IsEnabled)
+            (TaxSourceCode, JurisdictionCode, SourceName, SourceDescription)
         VALUES
             ('UK-ITSA-SE-QU', 'UK', 'ITSA',
-             'MTD ITSA Self-Employment (SA103F-aligned) Quarterly Update field set', 1);
+             'MTD ITSA Self-Employment (SA103F-aligned) Quarterly Update field set');
     END;
 
     IF NOT EXISTS (SELECT 1 FROM Cash.tbTaxTagSource WHERE TaxSourceCode = 'UK-ITSA-SE-EOPS')
     BEGIN
         INSERT INTO Cash.tbTaxTagSource
-            (TaxSourceCode, JurisdictionCode, SourceName, SourceDescription, IsEnabled)
+            (TaxSourceCode, JurisdictionCode, SourceName, SourceDescription)
         VALUES
             ('UK-ITSA-SE-EOPS', 'UK', 'ITSA',
-             'MTD ITSA Self-Employment (SA103F-aligned) annual business return field set (EOPS)', 1);
+             'MTD ITSA Self-Employment (SA103F-aligned) annual business return field set (EOPS)');
     END;
 
     -- QU tags (existing)
@@ -188,14 +188,13 @@ BEGIN TRY
         ) v(TagCode, TagName, TagClassCode, DisplayOrder)
     )
     INSERT INTO Cash.tbTaxTag
-        (TaxSourceCode, TagCode, TagName, TagClassCode, DisplayOrder, IsEnabled)
+        (TaxSourceCode, TagCode, TagName, TagClassCode, DisplayOrder)
     SELECT
         'UK-ITSA-SE-QU',
         s.TagCode,
         s.TagName,
         s.TagClassCode,
-        s.DisplayOrder,
-        1
+        s.DisplayOrder
     FROM TagSeed s
     WHERE NOT EXISTS
     (
@@ -306,14 +305,13 @@ BEGIN TRY
         ) v(TagCode, TagName, TagClassCode, DisplayOrder)
     )
     INSERT INTO Cash.tbTaxTag
-        (TaxSourceCode, TagCode, TagName, TagClassCode, DisplayOrder, IsEnabled)
+        (TaxSourceCode, TagCode, TagName, TagClassCode, DisplayOrder)
     SELECT
         'UK-ITSA-SE-EOPS',
         s.TagCode,
         s.TagName,
         s.TagClassCode,
-        s.DisplayOrder,
-        1
+        s.DisplayOrder
     FROM EopsSeed s
     WHERE NOT EXISTS
     (

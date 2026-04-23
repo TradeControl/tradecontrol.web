@@ -4,7 +4,6 @@ CREATE TABLE [Cash].[tbTaxTagSource]
     JurisdictionCode   NVARCHAR(10)  NOT NULL,   -- FK → App.tbJurisdiction
     SourceName         NVARCHAR(50)  NOT NULL,   -- e.g. 'MTD Company'
     SourceDescription  NVARCHAR(255) NULL,
-    IsEnabled          BIT           NOT NULL CONSTRAINT DF_Cash_tbTaxTagSource_IsEnabled DEFAULT 1,
 
     CONSTRAINT PK_Cash_tbTaxTagSource
         PRIMARY KEY CLUSTERED (TaxSourceCode),

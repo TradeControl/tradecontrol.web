@@ -48,7 +48,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return embed ? Content("<div class='text-danger small p-2'>Not found</div>") : Page();
                 }
 
-                if (cat.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
+                if (cat.CategoryTypeCode != (short)NodeEnum.CategoryType.Nominal)
                 {
                     ErrorMessage = "Not a Cash Code category.";
                     await BuildLists();
@@ -97,7 +97,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 var cat = await NodeContext.Cash_tbCategories
                     .FirstOrDefaultAsync(c => c.CategoryCode == CategoryCode);
 
-                if (cat == null || cat.CategoryTypeCode != (short)NodeEnum.CategoryType.CashCode)
+                if (cat == null || cat.CategoryTypeCode != (short)NodeEnum.CategoryType.Nominal)
                 {
                     ErrorMessage = "Category not found or invalid type.";
                     await BuildLists();

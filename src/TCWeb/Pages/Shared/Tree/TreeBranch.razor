@@ -1,3 +1,4 @@
+@using System
 @using System.Collections.Generic
 @using System.Linq
 @using System.Threading.Tasks
@@ -44,12 +45,20 @@ else if (Node is not null)
         <button type="button"
                 class="btn btn-link text-start w-100 tc-tree-row"
                 @onclick="OnClickAsync">
-            <i class="bi @Node.IconClass me-2 tc-tree-icon @(Node.IsMapped ? "tc-tree-icon-mapped" : "")" aria-hidden="true"></i>
+            <i class="bi @Node.IconClass me-2 tc-tree-icon @(GetNodeStateClass(Node))" aria-hidden="true"></i>
             <span class="tc-tree-label @(IsSelected(Node, SelectedKey) ? "tc-tree-label-selected" : "")">@Node.Text</span>
 
             @if (Node.IsMapped)
             {
-                <i class="bi bi-check-circle-fill tc-tree-mapped-glyph ms-1" aria-hidden="true" title="Mapped"></i>
+                <i class="bi @(Node.IsEnabled ? "bi-check-circle-fill tc-tree-state-glyph-mapped" : "bi-exclamation-triangle-fill tc-tree-state-glyph-warning") ms-1"
+                   aria-hidden="true"
+                   title="@(Node.IsEnabled ? "Mapped" : "Mapped but disabled")"></i>
+            }
+            else if (Node.HasDisabledDescendants)
+            {
+                <i class="bi bi-exclamation-triangle-fill tc-tree-state-glyph tc-tree-state-glyph-warning ms-1"
+                   aria-hidden="true"
+                   title="Validation issues"></i>
             }
         </button>
     </div>
@@ -110,13 +119,15 @@ else if (Node is not null)
         if (_lastRefreshToken != RefreshToken)
         {
             _lastRefreshToken = RefreshToken;
-            _loaded = false;
-            _loading = false;
-            _error = null;
-            _children.Clear();
 
-            if (_expanded)
+            if (Node is not null && _expanded)
+            {
+                _loaded = false;
+                _loading = false;
+                _error = null;
+                _children.Clear();
                 _ = EnsureChildrenLoadedAsync();
+            }
         }
 
         if (Node is not null && !_expanded && ShouldAutoExpand(Node, ExpandToKey))
@@ -124,6 +135,11 @@ else if (Node is not null)
             _expanded = true;
             _ = EnsureChildrenLoadedAsync();
         }
+    }
+
+    private static string GetNodeStateClass(TreeNode node)
+    {
+        return node.HasChildren && !node.IsEnabled ? "tc-tree-icon-disabled" : string.Empty;
     }
 
     private static string? NormalizeKey(string? key)
@@ -149,7 +165,8 @@ else if (Node is not null)
         if (target is null || !node.HasChildren)
             return false;
 
-        return target.StartsWith(node.Key, StringComparison.OrdinalIgnoreCase);
+        var segments = target.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Any(segment => string.Equals(segment, node.Key, StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task ToggleExpandAsync()

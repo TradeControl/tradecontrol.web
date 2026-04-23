@@ -30,8 +30,6 @@ namespace TradeControl.Web.Models
         [StringLength(255)]
         public string SourceDescription { get; set; }
 
-        public bool IsEnabled { get; set; }
-
         [ForeignKey(nameof(JurisdictionCode))]
         [InverseProperty(nameof(App_tbJurisdiction.TbTaxTagSources))]
         public virtual App_tbJurisdiction JurisdictionCodeNavigation { get; set; }

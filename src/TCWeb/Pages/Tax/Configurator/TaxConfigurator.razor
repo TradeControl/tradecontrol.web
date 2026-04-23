@@ -1,72 +1,215 @@
 @using System.Collections.Generic
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.JSInterop
 @using TradeControl.Web.AppServices
+@using TradeControl.Web.Data
 @using TradeControl.Web.Pages.Shared.Tree
 @using Wangkanai.Detection.Models
+@inject NavigationManager NavigationManager
 @inject Wangkanai.Detection.Services.IDetectionService Detection
+@inject IJSRuntime JSRuntime
 @inject ITaxConfiguratorService TaxConfiguratorService
 
-<div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div>
-            <h1 class="h4 mb-1">Tax Configurator</h1>
-            <div class="text-muted small">Jurisdiction → Tax source → Tag class → Tag</div>
+@if (_isEmbedded)
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="NavigateBackAsync">
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+            </button>
+
+            <div class="text-muted small text-end">
+                @if (_selectedDetails is not null && !string.IsNullOrWhiteSpace(_selectedDetails.TaxSourceName))
+                {
+                    <div>@_selectedDetails.TaxSourceName</div>
+                    <div><code>@_selectedDetails.TaxSourceCode</code></div>
+                }
+            </div>
         </div>
 
-        <div class="text-muted small">
-            @if (_isLoading)
-            {
-                <span>Loading tax configuration…</span>
-            }
-            else
-            {
-                <span>@(_rootNodes.Count) jurisdictions loaded</span>
-            }
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_error</div>
+        }
+
+        <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
+            <TaxTagDetails Details="@_selectedDetails"
+                           OnAddCategoryMappingRequested="HandleAddCategoryMappingAsync"
+                           OnAddCashCodeMappingRequested="HandleAddCashCodeMappingAsync"
+                           OnRemoveMappingRequested="HandleRemoveMappingAsync"
+                           OnToggleMappingRequested="HandleToggleMappingAsync"
+                           OnValidateSourceRequested="HandleValidateSourceAsync" />
         </div>
     </div>
+}
+else if (_isMobile)
+{
+    <div class="tc-tax-configurator-mobile-shell d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h1 class="h4 mb-1">Tax Configurator</h1>
+                <div class="text-muted small">Jurisdiction → Tax source → Tag class → Tag</div>
+            </div>
 
-    @if (!string.IsNullOrWhiteSpace(_error))
-    {
-        <div class="alert alert-danger py-2 mb-0">@_error</div>
-    }
+            <div class="text-muted small">
+                @if (_isLoading)
+                {
+                    <span>Loading tax configuration…</span>
+                }
+                else
+                {
+                    <span>@(_rootNodes.Count) jurisdictions loaded</span>
+                }
+            </div>
+        </div>
 
-    <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
-        <TreeShell IsMobile="@_isMobile">
-            <LeftPane>
-                <TaxConfiguratorTree RootNodes="@_rootNodes"
-                                     GetChildren="TaxConfiguratorService.GetChildrenAsync"
-                                     SelectedKey="@_selectedKey"
-                                     ExpandToKey="@_expandToKey"
-                                     RefreshToken="@_refreshToken"
-                                     IsLoading="@_isLoading"
-                                     ErrorMessage="@_error"
-                                     OnSelected="HandleSelectedAsync" />
-            </LeftPane>
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_error</div>
+        }
 
-            <RightPane>
-                <TaxTagDetails Details="@_selectedDetails" />
-            </RightPane>
-        </TreeShell>
+        <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
+            <TaxConfiguratorTree RootNodes="@_rootNodes"
+                                 GetChildren="TaxConfiguratorService.GetChildrenAsync"
+                                 SelectedKey="@_selectedKey"
+                                 ExpandToKey="@_expandToKey"
+                                 RefreshToken="@_refreshToken"
+                                 IsLoading="@_isLoading"
+                                 ErrorMessage="@_error"
+                                 OnSelected="HandleSelectedAsync" />
+        </div>
+
+        <div class="tc-mobile-actionbar tc-visible" role="toolbar" aria-label="Tax configurator actions">
+            <div class="tc-mobile-action-summary me-2">
+                <div class="tc-mobile-action-title">@GetMobileActionTitle()</div>
+                <div class="tc-mobile-action-subtitle">@GetMobileActionSubtitle()</div>
+            </div>
+
+            <button type="button"
+                    class="btn-action"
+                    disabled="@(!CanOpenDetails())"
+                    @onclick="OpenEmbeddedDetailsAsync">
+                <i class="bi bi-eye" aria-hidden="true"></i>
+                <span>Details</span>
+            </button>
+
+            <button type="button"
+                    class="btn-action"
+                    disabled="@(!CanValidateSelectedSource())"
+                    @onclick="OpenEmbeddedValidationAsync">
+                <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                <span>Validate</span>
+            </button>
+        </div>
     </div>
-</div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h1 class="h4 mb-1">Tax Configurator</h1>
+                <div class="text-muted small">Jurisdiction → Tax source → Tag class → Tag</div>
+            </div>
+
+            <div class="text-muted small">
+                @if (_isLoading)
+                {
+                    <span>Loading tax configuration…</span>
+                }
+                else
+                {
+                    <span>@(_rootNodes.Count) jurisdictions loaded</span>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_error</div>
+        }
+
+        <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
+            <TreeShell IsMobile="@_isMobile">
+                <LeftPane>
+                    <TaxConfiguratorTree RootNodes="@_rootNodes"
+                                         GetChildren="TaxConfiguratorService.GetChildrenAsync"
+                                         SelectedKey="@_selectedKey"
+                                         ExpandToKey="@_expandToKey"
+                                         RefreshToken="@_refreshToken"
+                                         IsLoading="@_isLoading"
+                                         ErrorMessage="@_error"
+                                         OnSelected="HandleSelectedAsync" />
+                </LeftPane>
+
+                <RightPane>
+                    <TaxTagDetails Details="@_selectedDetails"
+                                   OnAddCategoryMappingRequested="HandleAddCategoryMappingAsync"
+                                   OnAddCashCodeMappingRequested="HandleAddCashCodeMappingAsync"
+                                   OnRemoveMappingRequested="HandleRemoveMappingAsync"
+                                   OnToggleMappingRequested="HandleToggleMappingAsync"
+                                   OnValidateSourceRequested="HandleValidateSourceAsync" />
+                </RightPane>
+            </TreeShell>
+        </div>
+    </div>
+}
 
 @code {
     private bool _isMobile;
+    private bool _isEmbedded;
     private bool _isLoading;
     private string? _error;
+
     private IReadOnlyList<TreeNode> _rootNodes = Array.Empty<TreeNode>();
     private TreeNode? _selectedNode;
     private TaxConfiguratorNodeDetails? _selectedDetails;
     private string? _selectedKey;
     private string? _expandToKey;
+    private string? _returnNodeKey;
+    private string? _initialSelectKey;
+    private string? _initialExpandKey;
     private long _refreshToken;
 
     protected override async Task OnInitializedAsync()
     {
+        ParseQueryParameters();
         _isMobile = Detection?.Device?.Type == Device.Mobile;
-        await LoadRootNodesAsync();
+
+        if (_isEmbedded)
+        {
+            await LoadEmbeddedPageAsync();
+            return;
+        }
+
+        await LoadTreePageAsync();
     }
 
-    private async Task LoadRootNodesAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        if (!_isEmbedded)
+        {
+            await JSRuntime.InvokeVoidAsync("taxConfigurator.updateViewportHeight");
+            await JSRuntime.InvokeVoidAsync("taxConfigurator.updateHeaderOffset");
+            await JSRuntime.InvokeVoidAsync("taxConfigurator.initSplit");
+        }
+    }
+
+    private void ParseQueryParameters()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        _isEmbedded = query.TryGetValue("embedded", out var embeddedValue) && embeddedValue == "1";
+        _returnNodeKey = query.TryGetValue("returnNode", out var returnValue) ? returnValue.ToString() : null;
+        _initialSelectKey = query.TryGetValue("select", out var selectValue) ? selectValue.ToString() : null;
+        _initialExpandKey = query.TryGetValue("expand", out var expandValue) ? expandValue.ToString() : null;
+    }
+
+    private async Task LoadTreePageAsync()
     {
         _isLoading = true;
         _error = null;
@@ -75,15 +218,19 @@
         {
             _rootNodes = await TaxConfiguratorService.GetRootNodesAsync();
 
+            if (!string.IsNullOrWhiteSpace(_initialSelectKey))
+            {
+                await SelectNodeAsync(new TreeNode(_initialSelectKey, _initialSelectKey), _initialExpandKey);
+                return;
+            }
+
             if (_rootNodes.Count > 0)
             {
                 _expandToKey = _rootNodes[0].Key;
 
                 if (_rootNodes.Count == 1)
                 {
-                    _selectedNode = _rootNodes[0];
-                    _selectedKey = _rootNodes[0].Key;
-                    _selectedDetails = await TaxConfiguratorService.GetNodeDetailsAsync(_rootNodes[0]);
+                    await SelectNodeAsync(_rootNodes[0], _initialExpandKey);
                 }
             }
         }
@@ -97,16 +244,358 @@
         }
     }
 
+    private async Task LoadEmbeddedPageAsync()
+    {
+        _isLoading = true;
+        _error = null;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(_initialSelectKey))
+            {
+                await SelectNodeAsync(new TreeNode(_initialSelectKey, _initialSelectKey), _initialExpandKey);
+            }
+            else
+            {
+                _selectedNode = null;
+                _selectedDetails = null;
+                _selectedKey = null;
+                _expandToKey = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _selectedNode = null;
+            _selectedDetails = null;
+            _selectedKey = null;
+            _expandToKey = null;
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
     private async Task HandleSelectedAsync(TreeNode node)
+    {
+        await SelectNodeAsync(node, null);
+    }
+
+    private async Task SelectNodeAsync(TreeNode node, string? expandKey)
     {
         _selectedNode = node;
         _selectedKey = node.Key;
-        _expandToKey = node.Key;
         _error = null;
 
         try
         {
             _selectedDetails = await TaxConfiguratorService.GetNodeDetailsAsync(node);
+
+            if (!string.IsNullOrWhiteSpace(expandKey))
+                _expandToKey = expandKey;
+            else
+                _expandToKey = BuildExpandPath(node, _selectedDetails);
+        }
+        catch (Exception ex)
+        {
+            _selectedDetails = null;
+            _expandToKey = !string.IsNullOrWhiteSpace(expandKey) ? expandKey : node.Key;
+            _error = ex.Message;
+        }
+    }
+
+    private bool CanMutateCurrentTag()
+    {
+        return _selectedNode is not null
+            && _selectedDetails is not null
+            && _selectedDetails.Kind == TaxConfiguratorNodeKind.Tag
+            && _selectedDetails.CanMap
+            && !string.IsNullOrWhiteSpace(_selectedDetails.TaxSourceCode);
+    }
+
+    private bool CanOpenDetails()
+    {
+        return _selectedNode is not null && _selectedDetails is not null;
+    }
+
+    private bool CanValidateSelectedSource()
+    {
+        return _selectedDetails is not null
+            && _selectedDetails.Kind == TaxConfiguratorNodeKind.Source
+            && !string.IsNullOrWhiteSpace(_selectedDetails.TaxSourceCode);
+    }
+
+    private async Task HandleAddCategoryMappingAsync(string categoryCode)
+    {
+        if (!CanMutateCurrentTag())
+            return;
+
+        try
+        {
+            await TaxConfiguratorService.AddCategoryMappingAsync(_selectedDetails!.TaxSourceCode!, _selectedDetails.Code, categoryCode);
+            await RefreshCurrentSelectionAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task HandleAddCashCodeMappingAsync(string cashCode)
+    {
+        if (!CanMutateCurrentTag())
+            return;
+
+        try
+        {
+            await TaxConfiguratorService.AddCashCodeMappingAsync(_selectedDetails!.TaxSourceCode!, _selectedDetails.Code, cashCode);
+            await RefreshCurrentSelectionAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task HandleRemoveMappingAsync(TaxConfiguratorMappingRow mapping)
+    {
+        if (!CanMutateCurrentTag())
+            return;
+
+        try
+        {
+            var categoryCode = mapping.MapTypeCode == NodeEnum.MapTypeCode.Category ? mapping.TargetCode : string.Empty;
+            var cashCode = mapping.MapTypeCode == NodeEnum.MapTypeCode.CashCode ? mapping.TargetCode : string.Empty;
+
+            await TaxConfiguratorService.RemoveMappingAsync(_selectedDetails!.TaxSourceCode!, _selectedDetails.Code, mapping.MapTypeCode, categoryCode, cashCode);
+            await RefreshCurrentSelectionAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task HandleToggleMappingAsync(TaxConfiguratorMappingRow mapping)
+    {
+        if (!CanMutateCurrentTag())
+            return;
+
+        try
+        {
+            var categoryCode = mapping.MapTypeCode == NodeEnum.MapTypeCode.Category ? mapping.TargetCode : string.Empty;
+            var cashCode = mapping.MapTypeCode == NodeEnum.MapTypeCode.CashCode ? mapping.TargetCode : string.Empty;
+
+            await TaxConfiguratorService.ToggleMappingEnabledAsync(_selectedDetails!.TaxSourceCode!, _selectedDetails.Code, mapping.MapTypeCode, categoryCode, cashCode);
+            await RefreshCurrentSelectionAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task HandleValidateSourceAsync(string sourceCode)
+    {
+        if (_selectedNode is null || _selectedDetails is null)
+            return;
+
+        if (_selectedDetails.Kind != TaxConfiguratorNodeKind.Source)
+            return;
+
+        if (!string.Equals(_selectedDetails.TaxSourceCode, sourceCode, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        await RefreshCurrentSelectionAsync();
+    }
+
+    private Task OpenEmbeddedDetailsAsync()
+    {
+        if (_selectedNode is null || string.IsNullOrWhiteSpace(_selectedKey))
+            return Task.CompletedTask;
+
+        var expandKey = !string.IsNullOrWhiteSpace(_expandToKey) ? _expandToKey : _selectedKey;
+        var returnNode = !string.IsNullOrWhiteSpace(_selectedKey) ? _selectedKey : _selectedNode.Key;
+
+        NavigationManager.NavigateTo(
+            BuildUrl(
+                embedded: true,
+                selectKey: _selectedKey,
+                expandKey: expandKey,
+                returnNodeKey: returnNode),
+            forceLoad: true);
+
+        return Task.CompletedTask;
+    }
+
+    private Task OpenEmbeddedValidationAsync()
+    {
+        if (!CanValidateSelectedSource() || string.IsNullOrWhiteSpace(_selectedKey))
+            return Task.CompletedTask;
+
+        var expandKey = !string.IsNullOrWhiteSpace(_expandToKey) ? _expandToKey : _selectedKey;
+
+        NavigationManager.NavigateTo(
+            BuildUrl(
+                embedded: true,
+                selectKey: _selectedKey,
+                expandKey: expandKey,
+                returnNodeKey: _selectedKey,
+                fragment: "validation"),
+            forceLoad: true);
+
+        return Task.CompletedTask;
+    }
+
+    private string GetMobileActionTitle()
+    {
+        if (_selectedDetails is null)
+            return _selectedNode?.Text ?? "Select a node";
+
+        return $"{GetNodeKindLabel(_selectedDetails.Kind)} · {_selectedDetails.Title}";
+    }
+
+    private string GetMobileActionSubtitle()
+    {
+        if (_selectedDetails is null)
+            return "Select a node to view details";
+
+        if (!string.IsNullOrWhiteSpace(_selectedDetails.TaxSourceName))
+            return $"{_selectedDetails.TaxSourceName} · {_selectedDetails.TaxSourceCode}";
+
+        if (!string.IsNullOrWhiteSpace(_selectedDetails.ParentName))
+            return $"{_selectedDetails.ParentName} · {_selectedDetails.ParentCode}";
+
+        return _selectedDetails.Code;
+    }
+
+    private static string GetNodeKindLabel(TaxConfiguratorNodeKind kind)
+    {
+        return kind switch
+        {
+            TaxConfiguratorNodeKind.Jurisdiction => "Jurisdiction",
+            TaxConfiguratorNodeKind.Source => "Tax source",
+            TaxConfiguratorNodeKind.TagClass => "Tag class",
+            TaxConfiguratorNodeKind.Tag => "Tag",
+            _ => kind.ToString()
+        };
+    }
+
+    private string BuildUrl(bool embedded, string? selectKey = null, string? expandKey = null, string? returnNodeKey = null, string? fragment = null)
+    {
+        var baseUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/Tax/Configurator/Index";
+        var query = new List<string>();
+
+        if (embedded)
+            query.Add("embedded=1");
+
+        if (!string.IsNullOrWhiteSpace(selectKey))
+            query.Add($"select={Uri.EscapeDataString(selectKey)}");
+
+        if (!string.IsNullOrWhiteSpace(expandKey))
+            query.Add($"expand={Uri.EscapeDataString(expandKey)}");
+
+        if (!string.IsNullOrWhiteSpace(returnNodeKey))
+            query.Add($"returnNode={Uri.EscapeDataString(returnNodeKey)}");
+
+        var url = query.Count == 0
+            ? baseUrl
+            : $"{baseUrl}?{string.Join("&", query)}";
+
+        return string.IsNullOrWhiteSpace(fragment) ? url : $"{url}#{fragment}";
+    }
+
+    private static string BuildExpandPath(TreeNode node, TaxConfiguratorNodeDetails? details)
+    {
+        if (details is null)
+            return node.Key;
+
+        return details.Kind switch
+        {
+            TaxConfiguratorNodeKind.Jurisdiction
+                when !string.IsNullOrWhiteSpace(details.JurisdictionCode)
+                => $"jurisdiction:{details.JurisdictionCode}",
+
+            TaxConfiguratorNodeKind.Source
+                when !string.IsNullOrWhiteSpace(details.JurisdictionCode)
+                     && !string.IsNullOrWhiteSpace(details.TaxSourceCode)
+                => $"jurisdiction:{details.JurisdictionCode}|source:{details.TaxSourceCode}",
+
+            TaxConfiguratorNodeKind.TagClass
+                when !string.IsNullOrWhiteSpace(details.JurisdictionCode)
+                     && !string.IsNullOrWhiteSpace(details.TaxSourceCode)
+                     && !string.IsNullOrWhiteSpace(details.TagClassCode)
+                => $"jurisdiction:{details.JurisdictionCode}|source:{details.TaxSourceCode}|class:{details.TaxSourceCode}:{details.TagClassCode}",
+
+            TaxConfiguratorNodeKind.Tag
+                when !string.IsNullOrWhiteSpace(details.JurisdictionCode)
+                     && !string.IsNullOrWhiteSpace(details.TaxSourceCode)
+                     && !string.IsNullOrWhiteSpace(details.TagClassCode)
+                => $"jurisdiction:{details.JurisdictionCode}|source:{details.TaxSourceCode}|class:{details.TaxSourceCode}:{details.TagClassCode}|tag:{details.TaxSourceCode}:{details.Code}",
+
+            _ => node.Key
+        };
+    }
+
+    private Task NavigateBackAsync()
+    {
+        var returnNode = !string.IsNullOrWhiteSpace(_returnNodeKey)
+            ? _returnNodeKey
+            : _selectedKey;
+
+        if (string.IsNullOrWhiteSpace(returnNode))
+        {
+            NavigationManager.NavigateTo(BuildUrl(embedded: false), forceLoad: true);
+            return Task.CompletedTask;
+        }
+
+        NavigationManager.NavigateTo(
+            BuildUrl(
+                embedded: false,
+                selectKey: returnNode,
+                expandKey: _expandToKey ?? returnNode),
+            forceLoad: true);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshCurrentSelectionAsync()
+    {
+        if (_selectedNode is null)
+            return;
+
+        if (_isEmbedded)
+        {
+            await ReloadSelectedDetailsAsync();
+            return;
+        }
+
+        await ReloadTreeAndSelectionAsync();
+        _refreshToken++;
+    }
+
+    private async Task ReloadTreeAndSelectionAsync()
+    {
+        var selectedKey = _selectedKey;
+        var expandKey = _expandToKey;
+
+        _rootNodes = await TaxConfiguratorService.GetRootNodesAsync();
+
+        if (!string.IsNullOrWhiteSpace(selectedKey))
+            await SelectNodeAsync(new TreeNode(selectedKey, selectedKey), expandKey);
+    }
+
+    private async Task ReloadSelectedDetailsAsync()
+    {
+        if (_selectedNode is null)
+            return;
+
+        _error = null;
+
+        try
+        {
+            _selectedDetails = await TaxConfiguratorService.GetNodeDetailsAsync(_selectedNode);
         }
         catch (Exception ex)
         {

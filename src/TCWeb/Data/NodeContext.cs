@@ -350,7 +350,6 @@ namespace TradeControl.Web.Data
                     .HasName("PK_App_tbJurisdiction");
 
                 entity.Property(e => e.JurisdictionCode).ValueGeneratedNever();
-                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
 
                 entity.HasOne(d => d.UocCodeNavigation)
                     .WithMany()
@@ -381,7 +380,6 @@ namespace TradeControl.Web.Data
                     .HasName("PK_Cash_tbTaxTagSource");
 
                 entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
-                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
 
                 entity.HasOne(d => d.JurisdictionCodeNavigation)
                     .WithMany(p => p.TbTaxTagSources)
@@ -397,7 +395,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
                 entity.Property(e => e.TagCode).ValueGeneratedNever();
-                entity.Property(e => e.IsEnabled).HasDefaultValue(true);
 
                 entity.HasOne(d => d.TaxSourceCodeNavigation)
                     .WithMany(p => p.TbTaxTags)

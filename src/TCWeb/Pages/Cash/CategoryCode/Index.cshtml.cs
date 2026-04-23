@@ -55,7 +55,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryCode
                                                              join p in NodeContext.Cash_tbPolaritys on c.CashPolarityCode equals p.CashPolarityCode
                                                              join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
                                                              join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
-                                                             where c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashCode
+                                                             where c.CategoryTypeCode == (short)NodeEnum.CategoryType.Nominal
                                                              select new Cash_Category
                                                              {
                                                                  CategoryCode = c.CategoryCode,

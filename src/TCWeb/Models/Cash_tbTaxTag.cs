@@ -35,8 +35,6 @@ namespace TradeControl.Web.Models
 
         public short DisplayOrder { get; set; }
 
-        public bool IsEnabled { get; set; }
-
         [ForeignKey(nameof(TaxSourceCode))]
         [InverseProperty(nameof(Cash_tbTaxTagSource.TbTaxTags))]
         public virtual Cash_tbTaxTagSource TaxSourceCodeNavigation { get; set; }

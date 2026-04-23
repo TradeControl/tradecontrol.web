@@ -234,7 +234,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 NewParentKey = CategoryCode;
                 NewName = code.CashDescription;
                 NewPolarity = parent?.CashPolarityCode ?? (short)NodeEnum.CashPolarity.Neutral;
-                NewCategoryType = parent?.CategoryTypeCode ?? (short)NodeEnum.CategoryType.CashCode;
+                NewCategoryType = parent?.CategoryTypeCode ?? (short)NodeEnum.CategoryType.Nominal;
                 NewCashType = parent?.CashTypeCode ?? 0;
                 NewIsEnabled = code.IsEnabled;
 

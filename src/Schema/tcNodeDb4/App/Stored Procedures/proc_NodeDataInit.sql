@@ -195,9 +195,9 @@ BEGIN TRY
 			,(N'ZWD', N'Z$', N'Zimbabwe Dollar');
 
     IF NOT EXISTS (SELECT * FROM App.tbJurisdiction)
-        INSERT INTO App.tbJurisdiction (JurisdictionCode, JurisdictionName, UocCode, IsEnabled)
+        INSERT INTO App.tbJurisdiction (JurisdictionCode, JurisdictionName, UocCode)
         VALUES
-        ('UK', 'United Kingdom', 'GBP', 1);
+        ('UK', 'United Kingdom', 'GBP');
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbEventType])
 		INSERT INTO [App].[tbEventType] ([EventTypeCode], [EventType])

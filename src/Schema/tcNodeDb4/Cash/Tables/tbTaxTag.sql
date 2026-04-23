@@ -6,7 +6,6 @@ CREATE TABLE [Cash].[tbTaxTag]
     TagClassCode     TINYINT        NOT NULL CONSTRAINT DF_Cash_tbTaxTag_TagClassCode DEFAULT 1,
     TagDescription   NVARCHAR(MAX)  NULL,
     DisplayOrder     SMALLINT       NOT NULL CONSTRAINT DF_Cash_tbTaxTag_DisplayOrder DEFAULT 0,
-    IsEnabled        BIT            NOT NULL CONSTRAINT DF_Cash_tbTaxTag_IsEnabled DEFAULT 1,
 
     CONSTRAINT PK_Cash_tbTaxTag
         PRIMARY KEY CLUSTERED (TaxSourceCode, TagCode),

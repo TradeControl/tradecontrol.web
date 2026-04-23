@@ -10,7 +10,7 @@ namespace TradeControl.Web.Data
         public enum CashAccountType { Cash, Dummy, Asset }
         public enum OpStatus { Pending, InProgress, Complete }
         public enum SubjectStatus { Pending, Active, Hot, Dead };
-        public enum CategoryType { CashCode, CashTotal, Expression };
+        public enum CategoryType { Nominal, CashTotal, Expression };
         public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, Tax, Bank };
         public enum CashStatus { Forecast, Current, Closed, Archived };

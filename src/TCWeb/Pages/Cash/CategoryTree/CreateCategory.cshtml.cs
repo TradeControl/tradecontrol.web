@@ -90,7 +90,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 var cat = new Cash_tbCategory {
                     CategoryCode = CategoryCode,
                     Category = Category,
-                    CategoryTypeCode = (short)NodeEnum.CategoryType.CashCode,
+                    CategoryTypeCode = (short)NodeEnum.CategoryType.Nominal,
                     CashTypeCode = CashTypeCode,
                     CashPolarityCode = CashPolarityCode,
                     DisplayOrder = 0,
@@ -130,7 +130,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     lazy = false,
                     data = new {
                         nodeType = "category",
-                        categoryType = (short)NodeEnum.CategoryType.CashCode, // you set CategoryTypeCode earlier
+                        categoryType = (short)NodeEnum.CategoryType.Nominal, // you set CategoryTypeCode earlier
                         cashPolarity = CashPolarityCode,
                         cashType = CashTypeCode,
                         isEnabled = IsEnabled ? 1 : 0

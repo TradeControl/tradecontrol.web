@@ -27,8 +27,6 @@ namespace TradeControl.Web.Models
         [StringLength(5)]
         public string UocCode { get; set; }
 
-        public bool IsEnabled { get; set; }
-
         [ForeignKey(nameof(UocCode))]
         public virtual App_tbUoc UocCodeNavigation { get; set; }
 

@@ -1,8 +1,8 @@
 /* Admin Manager / Blazor tree manager shell
    - Desktop split panes using Split.js
    - Fixed viewport workspace between header and fixed footer
-   - RHS iframe fills remaining height under the selected-node header
    - Admin Manager tree styles (Explorer-like density)
+   - Tax Configurator mobile actions and details styling
 */
 
 :root {
@@ -22,9 +22,20 @@
     --tc-viewport-height: 100dvh; /* JS overwrites with px value on mobile */
 }
 
-/* Fixed workspace between header and footer (Explorer-style) */
-html, body {
+/* -------------------------------------------------------------------------- */
+/* Base workspace                                                             */
+/* -------------------------------------------------------------------------- */
+
+html,
+body {
     height: 100%;
+}
+
+@supports (height: 100dvh) {
+    html,
+    body {
+        min-height: 100dvh;
+    }
 }
 
 .tc-tree-workspace {
@@ -32,7 +43,7 @@ html, body {
     left: var(--tc-workspace-gap);
     right: var(--tc-workspace-gap);
     top: calc(var(--tc-header-offset) + var(--tc-workspace-gap) + var(--tc-safe-top));
-    height: calc( var(--tc-viewport-height) - var(--tc-header-offset) - var(--tc-tree-manager-footer) - (var(--tc-workspace-gap) * 2) - var(--tc-safe-top) - var(--tc-safe-bottom) );
+    height: calc(var(--tc-viewport-height) - var(--tc-header-offset) - var(--tc-tree-manager-footer) - (var(--tc-workspace-gap) * 2) - var(--tc-safe-top) - var(--tc-safe-bottom));
     overflow: hidden;
     z-index: 1;
     display: flex;
@@ -40,24 +51,15 @@ html, body {
     min-height: 0;
 }
 
-/* iOS Safari friendly viewport */
-@supports (height: 100dvh) {
-    html, body {
-        min-height: 100dvh;
-    }
-}
-
-/* Component wrapper */
 .tc-tree-manager {
     display: flex;
     flex-direction: column;
     width: 100%;
     min-height: 0;
-    flex: 1 1 auto; /* fill tc-tree-workspace */
+    flex: 1 1 auto;
     box-sizing: border-box;
 }
 
-/* Outer frame (border/rounded/padding applied in markup) must stretch */
 .tc-tree-manager-frame {
     display: flex;
     flex-direction: column;
@@ -66,7 +68,10 @@ html, body {
     box-sizing: border-box;
 }
 
-/* ---- Admin Manager tree (Explorer-like) ---- */
+/* -------------------------------------------------------------------------- */
+/* Shared tree row/icon styling                                               */
+/* -------------------------------------------------------------------------- */
+
 .tc-admin-manager-tree {
     font-size: var(--tc-tree-font-size);
     line-height: 1.25;
@@ -97,67 +102,35 @@ html, body {
 }
 
 .tc-tree-icon-root {
-    color: #f57c00; /* subtle brand tint */
+    color: #f57c00;
 }
 
 .tc-tree-icon-setup {
-    color: #1976d2; /* slight functional tint */
+    color: #1976d2;
 }
 
 .tc-tree-icon-filetransfer {
-    color: #198754; /* Bootstrap 'success' tone to match transfer/action */
+    color: #198754;
 }
 
 .tc-tree-icon-contenttype {
-    color: #fbc02d; /* folder yellow */
-}
-
-/* Template/document icons (Bootstrap icons) */
-.tc-admin-manager-tree i.bi-filetype-html {
-    color: #6f42c1; /* purple */
-}
-
-.tc-admin-manager-tree i.bi-files {
-    color: #0d6efd; /* blue */
-}
-
-.tc-admin-manager-tree i.bi-images,
-.tc-admin-manager-tree i.bi-image {
-    color: #d63384; /* pink */
-}
-
-.tc-admin-manager-tree i.bi-paperclip {
-    color: #20c997; /* teal */
-}
-
-.tc-admin-manager-tree i.bi-file-earmark,
-.tc-admin-manager-tree i.bi-file-earmark-text {
-    color: #fd7e14; /* orange */
-}
-
-/* Templates module icons (<i class="bi ..."> used in ManagerTreeHost.razor) */
-.tc-admin-manager-tree i.bi-receipt {
-    color: #0d6efd; /* blue (Invoices) */
-}
-
-.tc-admin-manager-tree i.bi-gear {
-    color: #495057; /* dark gray (System) */
-}
-
-.tc-admin-manager-tree i.bi-envelope-at {
-    color: #0dcaf0; /* Bootstrap 'info' tone for email */
+    color: #fbc02d;
 }
 
 .tc-tree-icon-users {
-    color: #0d6efd; /* Bootstrap primary blue */
-}
-
-.tc-tree-icon {
-    color: var(--tc-tree-icon-muted);
+    color: #0d6efd;
 }
 
 .tc-tree-icon-mapped {
     color: #198754;
+}
+
+.tc-tree-icon-enabled {
+    color: #198754;
+}
+
+.tc-tree-icon-disabled {
+    color: #6c757d;
 }
 
 .tc-tree-mapped-glyph {
@@ -166,31 +139,17 @@ html, body {
     vertical-align: middle;
 }
 
-.tc-tree-label-mapped {
-    color: #198754;
-}
-.tc-admin-manager-tree i.bi-calendar3 {
-    color: #0d6efd;
+.tc-tree-state-glyph {
+    font-size: 0.8rem;
+    vertical-align: middle;
 }
 
-.tc-admin-manager-tree i.bi-sliders {
-    color: #20c997;
-}
-
-.tc-admin-manager-tree i.bi-receipt {
-    color: #6f42c1;
-}
-
-.tc-admin-manager-tree i.bi-bank {
+.tc-tree-state-glyph-mapped {
     color: #198754;
 }
 
-.tc-admin-manager-tree i.bi-hash {
-    color: #0dcaf0; /* info */
-}
-
-.tc-admin-manager-tree i.bi-tags {
-    color: #fd7e14; /* orange */
+.tc-tree-state-glyph-disabled {
+    color: #6c757d;
 }
 
 .tc-tree-label {
@@ -204,7 +163,69 @@ html, body {
     color: var(--tc-tree-selected-fg);
 }
 
-/* ---- Desktop split ---- */
+.tc-tree-label-mapped {
+    color: #198754;
+}
+
+/* Icon colouring for manager tree nodes */
+.tc-admin-manager-tree i.bi-filetype-html {
+    color: #6f42c1;
+}
+
+.tc-admin-manager-tree i.bi-files {
+    color: #0d6efd;
+}
+
+.tc-admin-manager-tree i.bi-images,
+.tc-admin-manager-tree i.bi-image {
+    color: #d63384;
+}
+
+.tc-admin-manager-tree i.bi-paperclip {
+    color: #20c997;
+}
+
+.tc-admin-manager-tree i.bi-file-earmark,
+.tc-admin-manager-tree i.bi-file-earmark-text {
+    color: #fd7e14;
+}
+
+.tc-admin-manager-tree i.bi-receipt {
+    color: #6f42c1;
+}
+
+.tc-admin-manager-tree i.bi-gear {
+    color: #495057;
+}
+
+.tc-admin-manager-tree i.bi-envelope-at {
+    color: #0dcaf0;
+}
+
+.tc-admin-manager-tree i.bi-calendar3 {
+    color: #0d6efd;
+}
+
+.tc-admin-manager-tree i.bi-sliders {
+    color: #20c997;
+}
+
+.tc-admin-manager-tree i.bi-bank {
+    color: #198754;
+}
+
+.tc-admin-manager-tree i.bi-hash {
+    color: #0dcaf0;
+}
+
+.tc-admin-manager-tree i.bi-tags {
+    color: #fd7e14;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Desktop split                                                              */
+/* -------------------------------------------------------------------------- */
+
 @media (min-width: 992px) {
     .tc-tree-split {
         display: flex;
@@ -212,7 +233,7 @@ html, body {
         flex: 1 1 auto;
         min-height: 0;
         align-items: stretch;
-        gap: 0; /* gutter handled by Split.js */
+        gap: 0;
         box-sizing: border-box;
         overflow: hidden;
     }
@@ -225,7 +246,6 @@ html, body {
             box-sizing: border-box;
         }
 
-    /* Inner bordered pane content must fill height and scroll internally */
     #leftCol > div,
     #rightCol > div {
         display: flex;
@@ -236,17 +256,14 @@ html, body {
         box-sizing: border-box;
     }
 
-    /* If the pane contains scrollable content, scroll inside it */
     #leftCol > div {
         overflow: auto;
     }
 
-    /* RHS: header + iframe/card; keep it a flex column and let children size correctly */
     #rightCol > div {
         overflow: hidden;
     }
 
-    /* Split.js initial sizing (removed after init) */
     #leftCol.tc-initial-left {
         flex: 0 1 33.333%;
         max-width: 33.333%;
@@ -257,7 +274,6 @@ html, body {
         max-width: 66.667%;
     }
 
-    /* Split.js gutter */
     .gutter {
         flex: 0 0 6px;
         background: #e0e0e0;
@@ -269,14 +285,13 @@ html, body {
             background: #d0d0d0;
         }
 
-    /* RHS iframe: fill the remaining height UNDER the selected-node header */
     .tc-details-frame {
         display: block;
         flex: 1 1 auto;
         width: 100%;
         min-height: 0;
-        height: auto; /* do not use 100% in a flex column with a header above */
-        border: 0; /* border is provided by markup class 'border rounded' */
+        height: auto;
+        border: 0;
     }
 }
 
@@ -286,7 +301,10 @@ html, body {
     min-width: 0;
 }
 
-/* ---- Generic tree context menu (Blazor) ---- */
+/* -------------------------------------------------------------------------- */
+/* Generic tree context menu                                                  */
+/* -------------------------------------------------------------------------- */
+
 .tc-tree-ctx-backdrop {
     position: fixed;
     inset: 0;
@@ -300,17 +318,21 @@ html, body {
     z-index: 2010;
 }
 
-.tc-tree-ctx-menu .dropdown-item {
-    width: 100%;
-    text-align: left;
-    background: transparent;
-    border: 0;
-    padding: 0.45rem 0.85rem;
-}
+    .tc-tree-ctx-menu .dropdown-item {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: 0;
+        padding: 0.45rem 0.85rem;
+    }
 
-.tc-tree-ctx-menu .dropdown-item:hover {
-    background: #f8f9fa;
-}
+        .tc-tree-ctx-menu .dropdown-item:hover {
+            background: #f8f9fa;
+        }
+
+/* -------------------------------------------------------------------------- */
+/* Mobile shell / action bar                                                  */
+/* -------------------------------------------------------------------------- */
 
 @media (max-width: 991.98px) {
     :root {
@@ -318,30 +340,6 @@ html, body {
     }
 
     .tc-tree-workspace {
-        z-index: auto;
-    }
-}
-
-.tc-ft-topbtn {
-    min-height: 44px; /* iOS-friendly tap target */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tc-ft-upload-hint {
-    min-height: 1.25rem; /* reserves one text line so button heights stay aligned */
-    line-height: 1.25rem;
-}
-
-@media (max-width: 991.98px) {
-    .tc-tree-workspace {
-        position: static;
-        left: auto;
-        right: auto;
-        top: auto;
-        height: auto;
-        overflow: visible;
         z-index: auto;
     }
 
@@ -361,6 +359,91 @@ html, body {
         max-height: calc(100dvh - var(--tc-footer-height, 0px));
     }
 
+    .tc-mobile-actionbar {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--tc-orange, #ff7a00);
+        color: var(--tc-on-orange, #fff);
+        z-index: 2050;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    }
+
+        .tc-mobile-actionbar.tc-visible {
+            display: flex;
+            align-items: stretch;
+            gap: 4px;
+        }
+
+        .tc-mobile-actionbar .tc-mobile-action-summary {
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .tc-mobile-actionbar .tc-mobile-action-title,
+        .tc-mobile-actionbar .tc-mobile-action-subtitle {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.15;
+        }
+
+        .tc-mobile-actionbar .tc-mobile-action-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .tc-mobile-actionbar .tc-mobile-action-subtitle {
+            font-size: 0.78rem;
+            opacity: 0.85;
+        }
+
+        .tc-mobile-actionbar .btn-action {
+            appearance: none;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 0.9rem;
+            padding: 10px 6px;
+            line-height: 1.1;
+            border-radius: 6px;
+            min-width: 64px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+            .tc-mobile-actionbar .btn-action:active {
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+            .tc-mobile-actionbar .btn-action i {
+                margin-right: 0;
+                font-size: 1.1rem;
+                line-height: 1;
+            }
+
+    .tc-tree-workspace {
+        position: static;
+        left: auto;
+        right: auto;
+        top: auto;
+        height: auto;
+        overflow: visible;
+        z-index: auto;
+    }
+
     header,
     header .navbar,
     header .navbar-collapse {
@@ -369,9 +452,90 @@ html, body {
     }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Tax Configurator                                                           */
+/* -------------------------------------------------------------------------- */
 
+.tc-tax-configurator-tree i.bi-geo-alt {
+    color: #f57c00;
+}
 
+.tc-tax-configurator-tree i.bi-diagram-3 {
+    color: #1976d2;
+}
 
+.tc-tax-configurator-tree i.bi-bullseye {
+    color: #198754;
+}
 
+.tc-tax-configurator-tree i.bi-calculator {
+    color: #6f42c1;
+}
 
+.tc-tax-configurator-tree i.bi-collection {
+    color: #0dcaf0;
+}
 
+.tc-tax-configurator-tree i.bi-tag {
+    color: #0d6efd;
+}
+
+.tc-tax-configurator-tree i.tc-tree-icon-disabled {
+    color: var(--tc-tree-icon-muted);
+}
+
+.tc-tax-configurator-tag-control-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.tc-tax-configurator-tag-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tc-tax-configurator-tag-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.tc-tax-configurator-mapping-actions-row {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: flex-end;
+}
+
+.tc-tax-configurator-mapping-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.tc-tax-tag-list {
+    min-height: 0;
+    overflow: auto;
+}
+
+@media (max-width: 767.98px) {
+    .tc-tax-configurator-tag-control-row {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .tc-tax-configurator-tag-select,
+    .tc-tax-configurator-tag-button {
+        width: 100%;
+        min-height: 38px;
+    }
+
+    .tc-tax-configurator-mapping-action {
+        width: 2.5rem;
+        min-width: 2.5rem;
+        height: 2.5rem;
+        padding: 0;
+    }
+}

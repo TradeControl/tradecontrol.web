@@ -37,23 +37,23 @@ AS
         -- 2. UK MTD TAX TAG SOURCE, TAGS & TEMPLATE MAPPING
         ----------------------------------------------------------------
         INSERT INTO Cash.tbTaxTagSource
-            (TaxSourceCode, JurisdictionCode, SourceName, SourceDescription, IsEnabled)
+            (TaxSourceCode, JurisdictionCode, SourceName, SourceDescription)
         VALUES
-            ('UK-MTD', 'UK', 'MTD', 'UK Making Tax Digital (template defaults)', 1);
+            ('UK-MTD', 'UK', 'MTD', 'UK Making Tax Digital (template defaults)');
 
         INSERT INTO Cash.tbTaxTag
-            (TaxSourceCode, TagCode, TagName, TagClassCode, DisplayOrder, IsEnabled)
+            (TaxSourceCode, TagCode, TagName, TagClassCode, DisplayOrder)
         VALUES
-            ('UK-MTD', 'AC12',  'Turnover',           1, 10, 1),
-            ('UK-MTD', 'AC405', 'Other Income',       1, 20, 1),
-            ('UK-MTD', 'AC410', 'Cost of Sales',      1, 30, 1),
-            ('UK-MTD', 'AC415', 'Staff Costs',        1, 40, 1),
-            ('UK-MTD', 'AC420', 'Depreciation Total', 1, 50, 1),
-            ('UK-MTD', 'AC425', 'Other Charges',      1, 60, 1),
-            ('UK-MTD', 'AC34',  'Tax On Profit',      1, 70, 1),
-            ('UK-MTD', 'AC435', 'Profit and Loss',    0, 80, 1),
-            ('UK-MTD', 'CP28', 'Depreciation charge',     1, 55, 1),
-            ('UK-MTD', 'CP46', 'Depreciation adjustment', 1, 56, 1);
+            ('UK-MTD', 'AC12',  'Turnover',           1, 10),
+            ('UK-MTD', 'AC405', 'Other Income',       1, 20),
+            ('UK-MTD', 'AC410', 'Cost of Sales',      1, 30),
+            ('UK-MTD', 'AC415', 'Staff Costs',        1, 40),
+            ('UK-MTD', 'AC420', 'Depreciation Total', 1, 50),
+            ('UK-MTD', 'AC425', 'Other Charges',      1, 60),
+            ('UK-MTD', 'AC34',  'Tax On Profit',      1, 70),
+            ('UK-MTD', 'AC435', 'Profit and Loss',    0, 80),
+            ('UK-MTD', 'CP28', 'Depreciation charge',     1, 55),
+            ('UK-MTD', 'CP46', 'Depreciation adjustment', 1, 56);
 
 
         INSERT INTO Cash.tbTaxTagMap

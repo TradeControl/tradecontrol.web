@@ -1,4 +1,8 @@
+@using System
+@using System.Linq
 @using TradeControl.Web.AppServices
+@using Wangkanai.Detection.Models
+@inject Wangkanai.Detection.Services.IDetectionService Detection
 
 @if (Details is null)
 {
@@ -8,7 +12,7 @@
 }
 else
 {
-    <div class="d-flex flex-column gap-3">
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0;">
         <div>
             <div class="text-uppercase small text-muted">@KindLabel(Details.Kind)</div>
             <h2 class="h5 mb-1">@Details.Title</h2>
@@ -18,9 +22,6 @@ else
         <div class="card">
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-4">Enabled</dt>
-                    <dd class="col-sm-8">@(Details.IsEnabled ? "Yes" : "No")</dd>
-
                     @if (!string.IsNullOrWhiteSpace(Details.Description))
                     {
                         <dt class="col-sm-4">Description</dt>
@@ -63,31 +64,187 @@ else
             </div>
         </div>
 
+        @if (Details.Kind == TaxConfiguratorNodeKind.Source)
+        {
+            <div id="validation" class="card flex-grow-1" style="min-height:0; scroll-margin-top:1rem;">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span>Validation</span>
+                    <span class="text-muted small">@Details.ValidationIssueCount issue@(Details.ValidationIssueCount == 1 ? "" : "s")</span>
+                </div>
+
+                <div class="card-body d-flex flex-column gap-3" style="min-height:0; overflow:hidden;">
+                    <div class="d-flex justify-content-end">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                @onclick="ValidateSourceAsync"
+                                disabled="@string.IsNullOrWhiteSpace(Details.TaxSourceCode)">
+                            Validate
+                        </button>
+                    </div>
+
+                    @if (Details.ValidationIssues.Count == 0)
+                    {
+                        <div class="text-muted">No validation issues found.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive tc-tax-tag-list flex-grow-1" style="min-height:0; overflow:auto;">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width:6rem;">State</th>
+                                        <th style="width:8rem;">Tag</th>
+                                        <th class="d-none d-md-table-cell">Name</th>
+                                        <th class="d-none d-md-table-cell">Cash</th>
+                                        <th class="d-none d-md-table-cell">Category</th>
+                                        <th class="d-none d-md-table-cell" style="width:7rem;">Hit count</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var issue in Details.ValidationIssues)
+                                    {
+                                        <tr class="@(issue.IsError ? "table-danger" : "")">
+                                            <td>
+                                                <span class="@(issue.IsError ? "text-danger" : "text-warning")">
+                                                    <i class="bi @(issue.IsError ? "bi-exclamation-triangle-fill" : "bi-info-circle-fill")" aria-hidden="true"></i>
+                                                    @(issue.IsError ? "Error" : "Warning")
+                                                </span>
+                                            </td>
+                                            <td><code>@(issue.TagCode ?? "—")</code></td>
+                                            <td class="d-none d-md-table-cell">@((issue.TagName ?? "—"))</td>
+                                            <td class="d-none d-md-table-cell"><code>@(issue.CashCode ?? "—")</code></td>
+                                            <td class="d-none d-md-table-cell"><code>@(issue.CategoryCode ?? "—")</code></td>
+                                            <td class="d-none d-md-table-cell">@((issue.HitCount?.ToString() ?? "—"))</td>
+                                            <td title="@issue.Message">
+                                                <span class="d-none d-md-inline">@issue.Message</span>
+                                                <span class="d-md-none">@TruncateWords(issue.Message, 5)</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Details.Kind == TaxConfiguratorNodeKind.TagClass)
+        {
+            <div class="card flex-grow-1" style="min-height:0;">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span>Tags</span>
+                    <span class="text-muted small">@Details.Tags.Count</span>
+                </div>
+
+                <div class="card-body p-0 d-flex flex-column" style="min-height:0;">
+                    @if (Details.Tags.Count == 0)
+                    {
+                        <div class="p-3 text-muted">No tags have been defined for this tag class.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive tc-tax-tag-list flex-grow-1" style="min-height:0;">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="d-none d-md-table-cell" style="width:5rem;">Order</th>
+                                        <th style="width:5rem;">State</th>
+                                        <th>Code</th>
+                                        <th>Name</th>
+                                        <th class="d-none d-md-table-cell">Mapped</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var tag in Details.Tags)
+                                    {
+                                        <tr>
+                                            <td class="d-none d-md-table-cell">@tag.DisplayOrder</td>
+                                            <td>
+                                                <i class="bi @(tag.IsEnabled ? "bi-check-circle-fill text-success" : "bi-x-circle-fill text-muted")" aria-hidden="true"></i>
+                                            </td>
+                                            <td><code>@tag.TagCode</code></td>
+                                            <td>@tag.TagName</td>
+                                            <td class="d-none d-md-table-cell">@(tag.IsMapped ? "✓" : "")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
         @if (Details.Kind == TaxConfiguratorNodeKind.Tag)
         {
             @if (Details.CanMap)
             {
-                <div class="card">
+                <div class="card flex-grow-1" style="min-height:0;">
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <span>Mappings</span>
                         <span class="text-muted small">@Details.Mappings.Count</span>
                     </div>
 
-                    <div class="card-body">
-                        @if (Details.Mappings.Count == 0)
-                        {
-                            <div class="text-muted">No mappings have been defined.</div>
-                        }
-                        else
-                        {
-                            <div class="table-responsive">
+                    <div class="card-body d-flex flex-column gap-3" style="min-height:0;">
+                        <div class="row g-3">
+                            <div class="col-12 col-xl-6">
+                                <label class="form-label mb-1">Category</label>
+                                <div class="tc-tax-configurator-tag-control-row">
+                                    <select class="form-select form-select-sm tc-tax-configurator-tag-select" @bind="_selectedCategoryCode">
+                                        <option value="">Select category…</option>
+                                        @foreach (var option in Details.CategoryOptions)
+                                        {
+                                            <option value="@option.Code">@option.Text</option>
+                                        }
+                                    </select>
+
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary tc-tax-configurator-tag-button"
+                                            disabled="@string.IsNullOrWhiteSpace(_selectedCategoryCode)"
+                                            @onclick="AddCategoryMappingAsync">
+                                        Map Category
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-xl-6">
+                                <label class="form-label mb-1">Cash code</label>
+                                <div class="tc-tax-configurator-tag-control-row">
+                                    <select class="form-select form-select-sm tc-tax-configurator-tag-select" @bind="_selectedCashCode">
+                                        <option value="">Select cash code…</option>
+                                        @foreach (var option in Details.CashCodeOptions)
+                                        {
+                                            <option value="@option.Code">@option.Text</option>
+                                        }
+                                    </select>
+
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary tc-tax-configurator-tag-button"
+                                            disabled="@string.IsNullOrWhiteSpace(_selectedCashCode)"
+                                            @onclick="AddCashCodeMappingAsync">
+                                        Map Cash Code
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive flex-grow-1" style="min-height:0; overflow:auto;">
+                            @if (Details.Mappings.Count == 0)
+                            {
+                                <div class="text-muted">No mappings have been defined.</div>
+                            }
+                            else
+                            {
                                 <table class="table table-sm align-middle mb-0">
                                     <thead>
                                         <tr>
                                             <th>Type</th>
                                             <th>Code</th>
-                                            <th>Name</th>
+                                            <th class="d-none d-md-table-cell">Name</th>
                                             <th>Enabled</th>
+                                            <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -96,14 +253,53 @@ else
                                             <tr>
                                                 <td>@mapping.MapType</td>
                                                 <td><code>@mapping.TargetCode</code></td>
-                                                <td>@mapping.TargetName</td>
-                                                <td>@(mapping.IsEnabled ? "✓" : "—")</td>
+                                                <td class="d-none d-md-table-cell">@mapping.TargetName</td>
+                                                <td>
+                                                    <span class="@(mapping.IsEnabled ? "text-success" : "text-muted")">
+                                                        @(mapping.IsEnabled ? "✓" : "—")
+                                                    </span>
+                                                </td>
+                                                <td class="tc-tax-configurator-mapping-actions">
+                                                    <div class="tc-tax-configurator-mapping-actions-row">
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary tc-tax-configurator-mapping-action"
+                                                                title="@(mapping.IsEnabled ? "Disable" : "Enable")"
+                                                                aria-label="@(mapping.IsEnabled ? "Disable" : "Enable")"
+                                                                style="@(IsCompactDevice ? "width:2.5rem; min-width:2.5rem; height:2.5rem; padding:0;" : null)"
+                                                                @onclick="() => ToggleMappingAsync(mapping)">
+                                                            @if (IsCompactDevice)
+                                                            {
+                                                                <i class="bi bi-power" aria-hidden="true"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                @(mapping.IsEnabled ? "Disable" : "Enable")
+                                                            }
+                                                        </button>
+
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-danger tc-tax-configurator-mapping-action"
+                                                                title="Remove"
+                                                                aria-label="Remove"
+                                                                style="@(IsCompactDevice ? "width:2.5rem; min-width:2.5rem; height:2.5rem; padding:0;" : null)"
+                                                                @onclick="() => RemoveMappingAsync(mapping)">
+                                                            @if (IsCompactDevice)
+                                                            {
+                                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                @("Remove")
+                                                            }
+                                                        </button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         }
                                     </tbody>
                                 </table>
-                            </div>
-                        }
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -120,6 +316,92 @@ else
 @code {
     [Parameter] public TaxConfiguratorNodeDetails? Details { get; set; }
 
+    [Parameter] public EventCallback<string> OnAddCategoryMappingRequested { get; set; }
+    [Parameter] public EventCallback<string> OnAddCashCodeMappingRequested { get; set; }
+    [Parameter] public EventCallback<TaxConfiguratorMappingRow> OnRemoveMappingRequested { get; set; }
+    [Parameter] public EventCallback<TaxConfiguratorMappingRow> OnToggleMappingRequested { get; set; }
+    [Parameter] public EventCallback<string> OnValidateSourceRequested { get; set; }
+
+    private string? _selectedCategoryCode;
+    private string? _selectedCashCode;
+    private string? _lastDetailsKey;
+    private bool IsCompactDevice => Detection?.Device?.Type is Device.Mobile or Device.Tablet;
+
+    protected override void OnParametersSet()
+    {
+        if (Details is null)
+        {
+            _selectedCategoryCode = null;
+            _selectedCashCode = null;
+            _lastDetailsKey = null;
+            return;
+        }
+
+        if (!string.Equals(_lastDetailsKey, Details.Key, StringComparison.OrdinalIgnoreCase))
+        {
+            _lastDetailsKey = Details.Key;
+            _selectedCategoryCode = Details.CategoryOptions.FirstOrDefault()?.Code;
+            _selectedCashCode = Details.CashCodeOptions.FirstOrDefault()?.Code;
+            return;
+        }
+
+        if (Details.Kind != TaxConfiguratorNodeKind.Tag || !Details.CanMap)
+        {
+            _selectedCategoryCode = null;
+            _selectedCashCode = null;
+            return;
+        }
+
+        if (!Details.CategoryOptions.Any(o => string.Equals(o.Code, _selectedCategoryCode, StringComparison.OrdinalIgnoreCase)))
+            _selectedCategoryCode = Details.CategoryOptions.FirstOrDefault()?.Code;
+
+        if (!Details.CashCodeOptions.Any(o => string.Equals(o.Code, _selectedCashCode, StringComparison.OrdinalIgnoreCase)))
+            _selectedCashCode = Details.CashCodeOptions.FirstOrDefault()?.Code;
+    }
+
+    private async Task AddCategoryMappingAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedCategoryCode) || !OnAddCategoryMappingRequested.HasDelegate)
+            return;
+
+        await OnAddCategoryMappingRequested.InvokeAsync(_selectedCategoryCode);
+    }
+
+    private async Task AddCashCodeMappingAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedCashCode) || !OnAddCashCodeMappingRequested.HasDelegate)
+            return;
+
+        await OnAddCashCodeMappingRequested.InvokeAsync(_selectedCashCode);
+    }
+
+    private async Task RemoveMappingAsync(TaxConfiguratorMappingRow mapping)
+    {
+        if (!OnRemoveMappingRequested.HasDelegate)
+            return;
+
+        await OnRemoveMappingRequested.InvokeAsync(mapping);
+    }
+
+    private async Task ToggleMappingAsync(TaxConfiguratorMappingRow mapping)
+    {
+        if (!OnToggleMappingRequested.HasDelegate)
+            return;
+
+        await OnToggleMappingRequested.InvokeAsync(mapping);
+    }
+
+    private async Task ValidateSourceAsync()
+    {
+        if (Details is null || Details.Kind != TaxConfiguratorNodeKind.Source || !OnValidateSourceRequested.HasDelegate)
+            return;
+
+        if (string.IsNullOrWhiteSpace(Details.TaxSourceCode))
+            return;
+
+        await OnValidateSourceRequested.InvokeAsync(Details.TaxSourceCode);
+    }
+
     private static string KindLabel(TaxConfiguratorNodeKind kind)
     {
         return kind switch
@@ -130,5 +412,18 @@ else
             TaxConfiguratorNodeKind.Tag => "Tag",
             _ => kind.ToString()
         };
+    }
+
+    private static string TruncateWords(string? value, int maxWords)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var words = value.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (words.Length <= maxWords)
+            return value;
+
+        return string.Join(" ", words.Take(maxWords)) + "...";
     }
 }
