@@ -8,11 +8,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1
 		..\docs\categorytree_test_script.md = ..\docs\categorytree_test_script.md
 		..\docs\changelog-schema.md = ..\docs\changelog-schema.md
 		..\docs\changelog.md = ..\docs\changelog.md
-		..\docs\MTD_ITSA_SoleTrader_FieldSets.md = ..\docs\MTD_ITSA_SoleTrader_FieldSets.md
-		..\docs\MTD_ITSA_SoleTrader_Mapping_Slice2.md = ..\docs\MTD_ITSA_SoleTrader_Mapping_Slice2.md
-		..\docs\MTD_Tax_Configurator_Slice3.md = ..\docs\MTD_Tax_Configurator_Slice3.md
 		..\readme.md = ..\readme.md
-		..\docs\sole trader capital.md = ..\docs\sole trader capital.md
 		template_naming.md = template_naming.md
 		..\docs\template_tags.md = ..\docs\template_tags.md
 	EndProjectSection
@@ -26,6 +22,19 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.Generator", "TCExports\src\TCExports.Generator\TCExports.Generator.csproj", "{B297B9DD-5233-F613-6EC0-216F4F6A22A4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tmp", "tmp", "{9CBE2E18-8652-40DB-B4BA-34CACF90365A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0-872A-4AA1-86B2-72F808E282F7}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\specs\MTDSoleTraderMappingEnquiry.md = ..\docs\specs\MTDSoleTraderMappingEnquiry.md
+		..\docs\specs\MTDSoleTraderMappingPreEnquiry.md = ..\docs\specs\MTDSoleTraderMappingPreEnquiry.md
+		..\docs\specs\MTDSoleTraderMappingSlice1.md = ..\docs\specs\MTDSoleTraderMappingSlice1.md
+		..\docs\specs\MTD_ITSA_SoleTrader_FieldSets.md = ..\docs\specs\MTD_ITSA_SoleTrader_FieldSets.md
+		..\docs\specs\MTD_ITSA_SoleTrader_Mapping_Slice2.md = ..\docs\specs\MTD_ITSA_SoleTrader_Mapping_Slice2.md
+		..\docs\specs\MTD_Tax_Configurator_Slice3.md = ..\docs\specs\MTD_Tax_Configurator_Slice3.md
+		..\docs\specs\sole-trader-capital.md = ..\docs\specs\sole-trader-capital.md
+		..\docs\specs\subject-namespace-spec.md = ..\docs\specs\subject-namespace-spec.md
+		..\docs\specs\synthetic-dataset-spec.md = ..\docs\specs\synthetic-dataset-spec.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -86,6 +95,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{9CBE2E18-8652-40DB-B4BA-34CACF90365A} = {2375B669-1B4B-4D74-84AF-4625B851D52B}
+		{694D7BA0-872A-4AA1-86B2-72F808E282F7} = {2375B669-1B4B-4D74-84AF-4625B851D52B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}
