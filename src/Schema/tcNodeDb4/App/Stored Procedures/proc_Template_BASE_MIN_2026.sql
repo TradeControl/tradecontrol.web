@@ -19,7 +19,7 @@ AS
 
         DECLARE
             @CoinTypeCode SMALLINT = (SELECT TOP (1) CoinTypeCode FROM App.tbOptions),
-            @SubjectCode  NVARCHAR(10),
+            @SubjectCode  NVARCHAR(50),
             @AccountCode  NVARCHAR(10),
             @Decimals     SMALLINT;
 
@@ -275,6 +275,11 @@ AS
         VALUES
             (@SubjectCode, @GovAccountName, 1, 7, 'N/A');
 
+        INSERT INTO Subject.tbVirtual
+            (SubjectCode)
+        VALUES
+            (@SubjectCode);
+
         ----------------------------------------------------------------
         -- ASSIGN CASH CODES AND GOV TO TAX TYPES
         ----------------------------------------------------------------
@@ -317,6 +322,11 @@ AS
             VALUES
                 (@SubjectCode, @BankName, 1, 5, 'T0');
 
+            INSERT INTO Subject.tbVirtual
+                (SubjectCode)
+            VALUES
+                (@SubjectCode);
+
             EXEC Subject.proc_AddAddress
                  @SubjectCode = @SubjectCode,
                  @Address     = @BankAddress;
@@ -332,6 +342,11 @@ AS
                 (SubjectCode, SubjectName, SubjectStatusCode, SubjectTypeCode, TaxCode)
             VALUES
                 (@SubjectCode, 'BITCOIN MINER', 1, 7, 'N/A');
+
+            INSERT INTO Subject.tbVirtual
+                (SubjectCode)
+            VALUES
+                (@SubjectCode);
 
             UPDATE App.tbOptions
             SET MinerAccountCode = @SubjectCode;
@@ -395,9 +410,9 @@ AS
 
         -- LONGTERM LIABILITIES
         SET @CapitalAccount = 'LONGTERM LIABILITIES';
-        EXEC Subject.proc_DefaultSubjectCode
-             @SubjectName = @CapitalAccount,
-             @SubjectCode = @AccountCode OUTPUT;
+        EXEC Subject.proc_DefaultAccountCode
+             @AccountName = @CapitalAccount,
+             @AccountCode = @AccountCode OUTPUT;
 
         INSERT INTO Subject.tbAccount
             (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
@@ -406,9 +421,9 @@ AS
 
         -- CALLED UP SHARE CAPITAL
         SET @CapitalAccount = 'CALLED UP SHARE CAPITAL';
-        EXEC Subject.proc_DefaultSubjectCode
-             @SubjectName = @CapitalAccount,
-             @SubjectCode = @AccountCode OUTPUT;
+        EXEC Subject.proc_DefaultAccountCode
+             @AccountName = @CapitalAccount,
+             @AccountCode = @AccountCode OUTPUT;
 
         INSERT INTO Subject.tbAccount
             (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
@@ -417,9 +432,9 @@ AS
 
         -- EQUIPMENT (replaces P&M, Vehicles, Stock)
         SET @CapitalAccount = 'EQUIPMENT';
-        EXEC Subject.proc_DefaultSubjectCode
-             @SubjectName = @CapitalAccount,
-             @SubjectCode = @AccountCode OUTPUT;
+        EXEC Subject.proc_DefaultAccountCode
+             @AccountName = @CapitalAccount,
+             @AccountCode = @AccountCode OUTPUT;
 
         INSERT INTO Subject.tbAccount
             (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
@@ -428,9 +443,9 @@ AS
 
         -- EQUIPMENT ADJUSTMENTS (replaces Depreciation Adjustments)
         SET @CapitalAccount = 'EQUIPMENT ADJUSTMENTS';
-        EXEC Subject.proc_DefaultSubjectCode
-             @SubjectName = @CapitalAccount,
-             @SubjectCode = @AccountCode OUTPUT;
+        EXEC Subject.proc_DefaultAccountCode
+             @AccountName = @CapitalAccount,
+             @AccountCode = @AccountCode OUTPUT;
 
         INSERT INTO Subject.tbAccount
             (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)

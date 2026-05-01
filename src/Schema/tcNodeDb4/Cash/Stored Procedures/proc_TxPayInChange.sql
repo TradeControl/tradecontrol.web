@@ -1,9 +1,9 @@
-﻿CREATE   PROCEDURE Cash.proc_TxPayInChange
+CREATE PROCEDURE Cash.proc_TxPayInChange
 (
 	@AccountCode nvarchar(10), 
 	@PaymentAddress nvarchar(42),
 	@TxId nvarchar(64),
-	@SubjectCode nvarchar(10), 
+	@SubjectCode nvarchar(50), 
 	@CashCode nvarchar(50),
 	@PaymentReference nvarchar(50) = null
 )

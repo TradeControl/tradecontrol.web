@@ -1,6 +1,6 @@
 CREATE TABLE [Subject].[tbAccount] (
     [AccountCode]     NVARCHAR (10)   NOT NULL,
-    [SubjectCode]     NVARCHAR (10)   NOT NULL,
+    [SubjectCode]     NVARCHAR (50)   NOT NULL,
     [AccountName]     NVARCHAR (50)   NOT NULL,
     [SortCode]        NVARCHAR (10)   NULL,
     [AccountNumber]   NVARCHAR (20)   NULL,

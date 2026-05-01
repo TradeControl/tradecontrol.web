@@ -521,16 +521,23 @@ BEGIN TRY
 		, (6, 'Invoice_DebitNote', 2, 'Standard Debit Note')
 		, (6, 'Invoice_DebitNoteLetterhead', 2, 'Debit Note for Letterhead Paper');
 
-	IF NOT EXISTS(SELECT * FROM Subject.tbType)
-		INSERT INTO Subject.tbType (SubjectTypeCode, CashPolarityCode, SubjectType)
-		VALUES (0, 0, 'Supplier')
-		, (1, 1, 'Customer')
-		, (2, 1, 'Prospect')
-		, (4, 1, 'Company')
-		, (5, 0, 'Bank')
-		, (7, 0, 'Other')
-		, (8, 0, 'TBC')
-		, (9, 0, 'Employee');
+    IF NOT EXISTS(SELECT * FROM Subject.tbClass)
+        INSERT INTO Subject.tbClass (SubjectClassCode, SubjectClass)
+        VALUES (0, 'Virtual')
+        , (1, 'Real')
+        , (2, 'Structural');
+
+    IF NOT EXISTS(SELECT * FROM Subject.tbType)
+        INSERT INTO Subject.tbType (SubjectTypeCode, CashPolarityCode, SubjectClassCode, SubjectType)
+        VALUES (0, 0, 0, 'Supplier')
+        , (1, 1, 0, 'Customer')
+        , (2, 1, 0, 'Prospect')
+        , (4, 1, 0, 'Company')
+        , (5, 0, 0, 'Bank')
+        , (7, 0, 0, 'Other')
+        , (8, 0, 0, 'TBC')
+        , (9, 0, 1, 'Employee')
+        , (10, 2, 2, 'External');
 
 	IF NOT EXISTS(SELECT * FROM Cash.tbCoinType)
 		INSERT INTO Cash.tbCoinType (CoinTypeCode, CoinType)

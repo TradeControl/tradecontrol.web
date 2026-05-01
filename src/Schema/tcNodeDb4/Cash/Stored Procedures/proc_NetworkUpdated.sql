@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE Cash.proc_NetworkUpdated(@SubjectCode nvarchar(10), @ChargeCode nvarchar(50))
+
+CREATE PROCEDURE Cash.proc_NetworkUpdated(@SubjectCode nvarchar(50), @ChargeCode nvarchar(50))
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 

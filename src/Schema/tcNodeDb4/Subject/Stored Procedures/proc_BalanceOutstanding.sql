@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE Subject.proc_BalanceOutstanding 
+CREATE PROCEDURE Subject.proc_BalanceOutstanding 
 	(
-	@SubjectCode nvarchar(10),
+	@SubjectCode nvarchar(50),
 	@Balance decimal(18, 5) = 0 OUTPUT
 	)
 AS

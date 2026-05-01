@@ -19,7 +19,7 @@ AS
 		THROW 51360, 'DatasetSyntheticMIS_TaxOnProfit: unable to resolve current period.', 1;
 
 	DECLARE
-		@HmrcSubjectCode nvarchar(10),
+		@HmrcSubjectCode nvarchar(50),
 		@BizTaxCashCode nvarchar(50);
 
 	SELECT
@@ -32,7 +32,7 @@ AS
 		THROW 51361, 'DatasetSyntheticMIS_TaxOnProfit: Cash.tbTaxType missing SubjectCode/CashCode for TaxTypeCode=0.', 1;
 
 	DECLARE
-		@HomeSubjectCode nvarchar(10) = (SELECT SubjectCode FROM App.vwHomeAccount),
+		@HomeSubjectCode nvarchar(50) = (SELECT SubjectCode FROM App.vwHomeAccount),
 		@CurrentAccountCode nvarchar(10) = (SELECT AccountCode FROM Cash.vwCurrentAccount),
 		@ReserveAccountCode nvarchar(10) = (SELECT AccountCode FROM Cash.vwReserveAccount),
 		@UserId nvarchar(10) = (SELECT TOP (1) UserId FROM Usr.vwCredentials);

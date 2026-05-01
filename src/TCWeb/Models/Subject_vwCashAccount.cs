@@ -15,7 +15,7 @@ namespace TradeControl.Web.Models
         [StringLength(10)]
         [Display(Name = "Cash A/c")]
         public string AccountCode { get; set; }
-        [StringLength(10)]
+        [StringLength(50)]
         [Display(Name = "Account Code")]
         public string SubjectCode { get; set; }
         [StringLength(50)]

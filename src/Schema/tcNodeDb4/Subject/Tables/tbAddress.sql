@@ -1,6 +1,6 @@
-﻿CREATE TABLE [Subject].[tbAddress] (
+CREATE TABLE [Subject].[tbAddress] (
     [AddressCode] NVARCHAR (15) NOT NULL,
-    [SubjectCode] NVARCHAR (10) NOT NULL,
+    [SubjectCode] NVARCHAR (50) NOT NULL,
     [Address]     NVARCHAR(MAX)         NOT NULL,
     [InsertedBy]  NVARCHAR (50) CONSTRAINT [DF_Subject_tbAddress_InsertedBy] DEFAULT (suser_sname()) NOT NULL,
     [InsertedOn]  DATETIME      CONSTRAINT [DF_Subject_tbAddress_InsertedOn] DEFAULT (getdate()) NOT NULL,

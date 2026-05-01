@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Subject.proc_Rebuild(@SubjectCode NVARCHAR(10))
+CREATE PROCEDURE Subject.proc_Rebuild(@SubjectCode NVARCHAR(50))
 AS
   	SET NOCOUNT, XACT_ABORT ON;
 

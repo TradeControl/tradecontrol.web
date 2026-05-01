@@ -21,7 +21,7 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         public string ProjectCode { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]

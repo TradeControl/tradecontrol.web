@@ -1,6 +1,6 @@
-﻿CREATE   PROCEDURE Cash.proc_TxPayOutInvoice 
+CREATE PROCEDURE Cash.proc_TxPayOutInvoice 
 (
-	@SubjectCode nvarchar(10),
+	@SubjectCode nvarchar(50),
 	@CashCode nvarchar(50),
 	@TaxCode nvarchar(10),
 	@ItemReference nvarchar(50),

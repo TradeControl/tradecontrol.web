@@ -1,7 +1,7 @@
-﻿
-CREATE   VIEW Subject.vwNameTitles
+
+CREATE VIEW Subject.vwNameTitles
 AS
-SELECT        NameTitle
-FROM            Subject.tbContact
-GROUP BY NameTitle
-HAVING        (NameTitle IS NOT NULL);
+    SELECT NameTitle
+    FROM Subject.tbReal
+    GROUP BY NameTitle
+    HAVING (NameTitle IS NOT NULL);

@@ -15,7 +15,7 @@ AS
 		, @BalanceOutstanding decimal(18, 5) = 0
 		, @InvoiceOutstanding decimal(18, 5) = 0
 		, @CashPolarityCode smallint
-		, @SubjectCode nvarchar(10)
+		, @SubjectCode nvarchar(50)
 		, @AccountCode nvarchar(10)
 		, @InvoiceStatusCode smallint
 		, @UserId nvarchar(10)

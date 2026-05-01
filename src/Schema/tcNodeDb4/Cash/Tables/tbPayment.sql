@@ -2,7 +2,7 @@ CREATE TABLE [Cash].[tbPayment] (
     [PaymentCode]       NVARCHAR (20)   NOT NULL,
     [UserId]            NVARCHAR (10)   NOT NULL,
     [PaymentStatusCode] SMALLINT        CONSTRAINT [DF_Cash_tbPayment_PaymentStatusCode] DEFAULT ((0)) NOT NULL,
-    [SubjectCode]       NVARCHAR (10)   NOT NULL,
+    [SubjectCode]       NVARCHAR (50)   NOT NULL,
     [AccountCode]   NVARCHAR (10)   NOT NULL,
     [CashCode]          NVARCHAR (50)   NULL,
     [TaxCode]           NVARCHAR (10)   NULL,

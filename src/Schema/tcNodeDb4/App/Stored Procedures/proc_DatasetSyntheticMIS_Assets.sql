@@ -9,15 +9,11 @@ AS
 	IF @IsCompany = 0
 		RETURN;
 
-	-- Needs temp mapping (subjects/accounts) from the main run
 	IF OBJECT_ID('tempdb..#DatasetCodes') IS NULL
 		THROW 51260, 'DatasetSyntheticMIS_Assets: missing temp table #DatasetCodes. Run via App.proc_DatasetSyntheticMIS.', 1;
 
 	DECLARE @UserId nvarchar(10) = (SELECT TOP (1) UserId FROM Usr.vwCredentials);
 
-	---------------------------------------------------------------------
-	-- Determine anchor dates
-	---------------------------------------------------------------------
 	DECLARE @Year1 smallint = (SELECT MIN(YearNumber) FROM App.tbYear);
 
 	IF @Year1 IS NULL
@@ -33,11 +29,8 @@ AS
 	IF @Year1FirstStartOn IS NULL
 		THROW 51262, 'DatasetSyntheticMIS_Assets: unable to resolve year 1 start period.', 1;
 
-	-- “first month of trading” as the first period start of year 1
 	DECLARE @FirstTradingOn date = @Year1FirstStartOn;
 
-	-- last few months of year 1 trading: pick the last closed period (by StartOn) in year 1 if available,
-	-- otherwise fall back to max period start in year 1
 	DECLARE @Year1LatePurchaseOn date =
 	(
 		SELECT TOP (1) CAST(yp.StartOn AS date)
@@ -54,32 +47,29 @@ AS
 		WHERE yp.YearNumber = @Year1;
 	END
 
-	---------------------------------------------------------------------
-	-- Ensure depreciation equipment accounts are open for company templates
-	---------------------------------------------------------------------
 	UPDATE Subject.tbAccount
 	SET AccountClosed = 0
 	WHERE AccountTypeCode = 2
 	  AND AccountClosed = 1;
 
-	---------------------------------------------------------------------
-	-- Resolve settlement/current account (reused for payments)
-	---------------------------------------------------------------------
 	DECLARE @SettlementAccountCode nvarchar(10) =
 		(SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'LINK' AND CodeName = N'SettlementAccountCode');
 
 	IF @SettlementAccountCode IS NULL
 	BEGIN
-		-- fallback to current account view if not present in codes
 		SELECT @SettlementAccountCode = AccountCode FROM Cash.vwCurrentAccount;
 	END
 
 	IF @SettlementAccountCode IS NULL
 		THROW 51263, 'DatasetSyntheticMIS_Assets: unable to resolve SettlementAccountCode.', 1;
 
-	---------------------------------------------------------------------
-	-- (1) Share Capital (CALUP / CC-SHCAP)
-	---------------------------------------------------------------------
+	DECLARE
+		@BusinessRootCode nvarchar(50) = (SELECT TOP (1) SubjectCode FROM App.tbOptions),
+		@SellerRootCode nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'SellerRoot');
+
+	IF @SellerRootCode IS NULL
+		THROW 51267, 'DatasetSyntheticMIS_Assets: missing SUBJECT/SellerRoot in #DatasetCodes.', 1;
+
 	IF EXISTS (SELECT 1 FROM Subject.tbAccount WHERE AccountCode = N'CALUP' AND AccountClosed = 0)
 	BEGIN
 		DECLARE @SharePaymentCode nvarchar(20) = NULL;
@@ -126,58 +116,53 @@ AS
 		END
 	END
 
-	---------------------------------------------------------------------
-	-- (2) Owner/Director setup (Sid Jones), Share Capital cash-in, Director loan, Liability
-	---------------------------------------------------------------------
-	-- a) Create Sid Jones
-	DECLARE @SidCode nvarchar(10) = NULL;
-	EXEC Subject.proc_DefaultSubjectCode @SubjectName = N'Sid Jones', @SubjectCode = @SidCode OUTPUT;
+	DECLARE
+		@SidsCode nvarchar(50) = NULL,
+		@EmployeeName nvarchar(100) = N'Sid Jones';
 
-	IF @SidCode IS NULL
-		THROW 51264, 'DatasetSyntheticMIS_Assets: failed to allocate SubjectCode for Sid Jones.', 1;
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @BusinessRootCode,
+		@SubjectName = @EmployeeName,
+		@SubjectTypeCode = 9,
+		@SubjectCode = @SidsCode OUTPUT;
 
-	IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @SidCode)
-	BEGIN
-		INSERT INTO Subject.tbSubject
-		(
-			SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode,
-			TaxCode, EUJurisdiction,
-			PaymentTerms, ExpectedDays, PaymentDays, PayDaysFromMonthEnd, PayBalance
-		)
-		VALUES
-		(
-			@SidCode, N'Sid Jones', 9, 1,
-			N'N/A', 0,
-			N'Immediate', 0, 0, 0, 1
-		);
-	END
+	UPDATE Subject.tbSubject
+	SET
+		SubjectStatusCode = 1,
+		TaxCode = N'N/A',
+		PaymentTerms = N'Immediate',
+		ExpectedDays = 0,
+		PaymentDays = 0,
+		PayDaysFromMonthEnd = 0,
+		PayBalance = 1
+	WHERE SubjectCode = @SidsCode;
 
 	IF NOT EXISTS
 	(
 		SELECT 1
 		FROM Subject.tbSubject s
 		JOIN Subject.tbAddress a ON a.AddressCode = s.AddressCode
-		WHERE s.SubjectCode = @SidCode
+		WHERE s.SubjectCode = @SidsCode
 	)
 	BEGIN
+		DECLARE @Address nvarchar(max) = CONCAT(N'Residence of ', @EmployeeName);
+
 		EXEC Subject.proc_AddAddress
-			@SubjectCode = @SidCode,
-			@Address = N'Residence of Sid Jones';
+			@SubjectCode = @SidsCode,
+			@Address = @Address;
 	END
 
-	-- track in codes for later use if desired
 	MERGE #DatasetCodes AS t
-	USING (SELECT N'SUBJECT' AS CodeType, N'Director' AS CodeName, @SidCode AS CodeValue, NULL AS RelatedName, N'Sid Jones' AS Notes) AS s
+	USING (SELECT N'SUBJECT' AS CodeType, N'Director' AS CodeName, @SidsCode AS CodeValue, NULL AS RelatedName, N'Sid Jones' AS Notes) AS s
 		ON t.CodeType = s.CodeType AND t.CodeName = s.CodeName
 	WHEN NOT MATCHED THEN INSERT (CodeType, CodeName, CodeValue, RelatedName, Notes) VALUES (s.CodeType, s.CodeName, s.CodeValue, s.RelatedName, s.Notes)
 	WHEN MATCHED THEN UPDATE SET CodeValue = s.CodeValue, Notes = s.Notes;
 
-	-- b) Pay in share capital (£1) into the settlement/current account (bank)
 	IF NOT EXISTS
 	(
 		SELECT 1
 		FROM Cash.tbPayment p
-		WHERE p.SubjectCode = @SidCode
+		WHERE p.SubjectCode = @SidsCode
 		  AND p.AccountCode = @SettlementAccountCode
 		  AND p.CashCode = N'CC-INCME'
 		  AND CAST(p.PaidOn AS date) = @FirstTradingOn
@@ -206,7 +191,7 @@ AS
 			@ShareInPaymentCode,
 			@UserId,
 			0,
-			@SidCode,
+			@SidsCode,
 			@SettlementAccountCode,
 			N'CC-INCME',
 			N'N/A',
@@ -217,14 +202,13 @@ AS
 		);
 	END
 
-	-- c) Director's loan injection (cash-in)
 	DECLARE @LoanAmount decimal(18,5) = 5000.00000;
 
 	IF NOT EXISTS
 	(
 		SELECT 1
 		FROM Cash.tbPayment p
-		WHERE p.SubjectCode = @SidCode
+		WHERE p.SubjectCode = @SidsCode
 		  AND p.AccountCode = @SettlementAccountCode
 		  AND p.CashCode = N'CC-INCME'
 		  AND CAST(p.PaidOn AS date) = @FirstTradingOn
@@ -253,7 +237,7 @@ AS
 			@InjectPaymentCode,
 			@UserId,
 			0,
-			@SidCode,
+			@SidsCode,
 			@SettlementAccountCode,
 			N'CC-INCME',
 			N'N/A',
@@ -264,7 +248,6 @@ AS
 		);
 	END
 
-	-- d) Add the corresponding loan liability (asset accounts mode)
 	IF EXISTS (SELECT 1 FROM Subject.tbAccount WHERE AccountCode = N'LONLIA' AND AccountClosed = 0)
 	BEGIN
 		IF NOT EXISTS
@@ -312,13 +295,8 @@ AS
 		END
 	END
 
-	-- e) Post everything added above in one go
 	EXEC Cash.proc_PaymentPost;
 
-	---------------------------------------------------------------------
-	-- (3) Depreciation
-	-- (a) Add Cash Code TC213 Motors (category TC-DIRECT)
-	---------------------------------------------------------------------
 	IF NOT EXISTS (SELECT 1 FROM Cash.tbCode WHERE CashCode = N'CC-MREPA')
 	BEGIN
 		INSERT INTO Cash.tbCode
@@ -339,28 +317,31 @@ AS
 		);
 	END
 
-	-- (b) Supplier Dataset Garage
-	DECLARE @GarageCode nvarchar(10) = NULL;
-	EXEC Subject.proc_DefaultSubjectCode @SubjectName = N'Dataset Garage', @SubjectCode = @GarageCode OUTPUT;
+	DECLARE @GarageCode nvarchar(50) = NULL;
+
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @SellerRootCode,
+		@SubjectName = N'Dataset Garage',
+		@SubjectTypeCode = 0,
+		@SubjectCode = @GarageCode OUTPUT;
 
 	IF @GarageCode IS NULL
 		THROW 51265, 'DatasetSyntheticMIS_Assets: failed to allocate SubjectCode for Dataset Garage.', 1;
 
-	IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @GarageCode)
-	BEGIN
-		INSERT INTO Subject.tbSubject
-		(
-			SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode,
-			TaxCode, EUJurisdiction,
-			PaymentTerms, ExpectedDays, PaymentDays, PayDaysFromMonthEnd, PayBalance
-		)
-		VALUES
-		(
-			@GarageCode, N'Dataset Garage', 0, 1,
-			N'T1', 0,
-			N'30 days', 0, 30, 0, 1
-		);
-	END
+	UPDATE Subject.tbSubject
+	SET
+		SubjectStatusCode = 1,
+		TaxCode = N'T1',
+		PaymentTerms = N'30 days',
+		ExpectedDays = 0,
+		PaymentDays = 30,
+		PayDaysFromMonthEnd = 0,
+		PayBalance = 1
+	WHERE SubjectCode = @GarageCode;
+
+	UPDATE Subject.tbVirtual
+	SET EUJurisdiction = 0
+	WHERE SubjectCode = @GarageCode;
 
 	IF NOT EXISTS
 	(
@@ -375,7 +356,6 @@ AS
 			@Address = N'Address of Dataset Garage';
 	END
 
-	-- (c) Purchase vehicle (misc payment) “White Van” for 5k, late year 1
 	DECLARE @VehicleCost decimal(18,5) = 5000.00000;
 
 	IF NOT EXISTS
@@ -421,10 +401,8 @@ AS
 		);
 	END
 
-    EXEC Cash.proc_PaymentPost;
+	EXEC Cash.proc_PaymentPost;
 
-	-- (d) Capitalise the van into the Equipment asset account (EQUIPM)
-	--     (this is the "asset side" of the double-entry, not the bank).
 	DECLARE @EquipCashCode nvarchar(50) =
 	(
 		SELECT CashCode
@@ -480,12 +458,6 @@ AS
 		);
 	END
 
-	---------------------------------------------------------------------
-	-- (e) Depreciation policy:
-	-- 20% per annum over 5 years => 5 write-off payments at each financial year end.
-	-- Insert all 5. Post (PaymentStatusCode=1) if that year-end date falls in a CLOSED period, else leave unposted (0).
-	-- These entries are against the asset account (EQUIPM), not the settlement account.
-	---------------------------------------------------------------------
 	DECLARE
 		@PurchaseOn date = @Year1LatePurchaseOn,
 		@Price decimal(18,5) = @VehicleCost,
@@ -499,7 +471,6 @@ AS
 	IF @Count <= 0
 		THROW 51271, 'DatasetSyntheticMIS_Assets: invalid depreciation Count.', 1;
 
-	-- find the YearNumber that contains the purchase date
 	DECLARE @PurchaseYear smallint =
 	(
 		SELECT TOP (1) yp.YearNumber
@@ -511,7 +482,6 @@ AS
 	IF @PurchaseYear IS NULL
 		THROW 51272, 'DatasetSyntheticMIS_Assets: unable to resolve purchase year.', 1;
 
-	-- financial year end date for that year
 	DECLARE @WriteOffDate date =
 	(
 		SELECT CAST(EOMONTH(MAX(CAST(yp.StartOn AS date))) AS date)
@@ -524,7 +494,6 @@ AS
 
 	WHILE @Count > 0
 	BEGIN
-		-- determine if the period containing the year-end date is closed
 		DECLARE @StatusCode smallint =
 		(
 			SELECT TOP (1) yp.CashStatusCode
@@ -581,3 +550,4 @@ AS
 		SET @WriteOffDate = DATEADD(year, 1, @WriteOffDate);
 		SET @Count -= 1;
 	END
+GO

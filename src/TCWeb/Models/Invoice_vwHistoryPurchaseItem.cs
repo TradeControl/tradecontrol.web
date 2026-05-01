@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -34,7 +34,7 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string TaxDescription { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         public short InvoiceTypeCode { get; set; }
         public short InvoiceStatusCode { get; set; }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +7,7 @@ namespace TradeControl.Web.Models
     [Keyless]
     public class App_vwHomeAccount
     {
-        [StringLength(10)]
+        [StringLength(50)]
         [Display(Name = "Account Code")]
         public string SubjectCode { get; set; }
         [StringLength(255)]

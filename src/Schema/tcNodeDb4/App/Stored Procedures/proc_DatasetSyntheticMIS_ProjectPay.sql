@@ -27,7 +27,7 @@ AS
 	DECLARE
 		@PayMonthStart date,
 		@PayMonthEnd date,
-		@PaySubjectCode nvarchar(10),
+		@PaySubjectCode nvarchar(50),
 		@Balance float,
 		@PaidOn date,
 		@PaymentCode nvarchar(20),

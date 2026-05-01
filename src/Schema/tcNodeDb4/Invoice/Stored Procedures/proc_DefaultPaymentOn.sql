@@ -1,6 +1,6 @@
-﻿CREATE   PROCEDURE Invoice.proc_DefaultPaymentOn
+CREATE PROCEDURE Invoice.proc_DefaultPaymentOn
 	(
-		@SubjectCode nvarchar(10),
+		@SubjectCode nvarchar(50),
 		@ActionOn datetime,
 		@PaymentOn datetime output
 	)

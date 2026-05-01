@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -29,7 +29,7 @@ namespace TradeControl.Web.Models
         [StringLength(10)]
         public string BucketId { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         [StringLength(100)]
         public string ContactName { get; set; }

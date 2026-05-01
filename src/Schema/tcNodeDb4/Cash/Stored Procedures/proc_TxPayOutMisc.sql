@@ -1,10 +1,10 @@
-﻿CREATE   PROCEDURE Cash.proc_TxPayOutMisc
+CREATE PROCEDURE Cash.proc_TxPayOutMisc
 (
 	@PaymentAddress nvarchar(42)
 	, @TxId nvarchar(64)
 	, @Spent decimal(18, 5)
 	, @MinerFee decimal(18, 5)
-	, @SubjectCode nvarchar(10)
+	, @SubjectCode nvarchar(50)
 	, @CashCode nvarchar(50)
 	, @TaxCode nvarchar(10)
 	, @PaymentReference nvarchar(50)

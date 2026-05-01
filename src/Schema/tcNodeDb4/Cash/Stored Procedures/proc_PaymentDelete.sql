@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Cash.proc_PaymentDelete
+CREATE PROCEDURE Cash.proc_PaymentDelete
 	(
 	@PaymentCode nvarchar(20)
 	)
@@ -7,7 +7,7 @@
 
 	BEGIN TRY
 		DECLARE 
-			@SubjectCode nvarchar(10)
+			@SubjectCode nvarchar(50)
 			, @AccountCode nvarchar(10)
 
 		SELECT  @SubjectCode = SubjectCode, @AccountCode = AccountCode

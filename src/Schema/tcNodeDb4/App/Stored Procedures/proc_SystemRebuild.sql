@@ -1,8 +1,8 @@
-﻿CREATE PROCEDURE App.proc_SystemRebuild
+CREATE PROCEDURE App.proc_SystemRebuild
 AS
   	SET NOCOUNT, XACT_ABORT ON;
 
-	DECLARE @SubjectCode nvarchar(10), @PaymentCode nvarchar(20);
+	DECLARE @SubjectCode nvarchar(50), @PaymentCode nvarchar(20);
 
 	BEGIN TRY
 		BEGIN TRANSACTION;

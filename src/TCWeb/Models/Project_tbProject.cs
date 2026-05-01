@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -35,7 +35,7 @@ namespace TradeControl.Web.Models
         [StringLength(10)]
         public string UserId { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         [StringLength(20)]
         public string SecondReference { get; set; }

@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE Subject.proc_Statement (@SubjectCode NVARCHAR(10))
+
+CREATE PROCEDURE Subject.proc_Statement (@SubjectCode NVARCHAR(50))
 AS
  	SET NOCOUNT, XACT_ABORT ON;
 

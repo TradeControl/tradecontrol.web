@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -29,7 +29,7 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "ntext")]
         public string DeliveryAddress { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         [StringLength(255)]
         public string ProjectNotes { get; set; }

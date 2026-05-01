@@ -1,22 +1,57 @@
-﻿CREATE VIEW Project.vwDoc
+CREATE VIEW Project.vwDoc
 AS
-	SELECT     Project.fnEmailAddress(Project.tbProject.ProjectCode) AS EmailAddress, Project.tbProject.ProjectCode, Project.tbProject.ProjectStatusCode, Project.tbStatus.ProjectStatus, 
-						  Project.tbProject.ContactName, Subject.tbContact.NickName, Usr.tbUser.UserName, Subject.tbSubject.SubjectName, Subject.tbAddress.Address AS InvoiceAddress, 
-						  Subject_tb1.SubjectName AS DeliveryAccountName, Subject_tbAddress1.Address AS DeliveryAddress, Subject_tb2.SubjectName AS CollectionAccountName, 
-						  Subject_tbAddress2.Address AS CollectionAddress, Project.tbProject.SubjectCode, Project.tbProject.ProjectNotes, Project.tbProject.ObjectCode, Project.tbProject.ActionOn, 
-						  Object.tbObject.UnitOfMeasure, Project.tbProject.Quantity, App.tbTaxCode.TaxCode, App.tbTaxCode.TaxRate, Project.tbProject.UnitCharge, Project.tbProject.TotalCharge, 
-						  Usr.tbUser.MobileNumber, Usr.tbUser.Signature, Project.tbProject.ProjectTitle, Project.tbProject.PaymentOn, Project.tbProject.SecondReference, Subject.tbSubject.PaymentTerms
-	FROM         Subject.tbSubject AS Subject_tb2 RIGHT OUTER JOIN
-						  Subject.tbAddress AS Subject_tbAddress2 ON Subject_tb2.SubjectCode = Subject_tbAddress2.SubjectCode RIGHT OUTER JOIN
-						  Project.tbStatus INNER JOIN
-						  Usr.tbUser INNER JOIN
-						  Object.tbObject INNER JOIN
-						  Project.tbProject ON Object.tbObject.ObjectCode = Project.tbProject.ObjectCode INNER JOIN
-						  Subject.tbSubject ON Project.tbProject.SubjectCode = Subject.tbSubject.SubjectCode LEFT OUTER JOIN
-						  Subject.tbAddress ON Subject.tbSubject.AddressCode = Subject.tbAddress.AddressCode ON Usr.tbUser.UserId = Project.tbProject.ActionById ON 
-						  Project.tbStatus.ProjectStatusCode = Project.tbProject.ProjectStatusCode LEFT OUTER JOIN
-						  Subject.tbAddress AS Subject_tbAddress1 LEFT OUTER JOIN
-						  Subject.tbSubject AS Subject_tb1 ON Subject_tbAddress1.SubjectCode = Subject_tb1.SubjectCode ON Project.tbProject.AddressCodeTo = Subject_tbAddress1.AddressCode ON 
-						  Subject_tbAddress2.AddressCode = Project.tbProject.AddressCodeFrom LEFT OUTER JOIN
-						  Subject.tbContact ON Project.tbProject.ContactName = Subject.tbContact.ContactName AND Project.tbProject.SubjectCode = Subject.tbContact.SubjectCode LEFT OUTER JOIN
-						  App.tbTaxCode ON Project.tbProject.TaxCode = App.tbTaxCode.TaxCode
+    SELECT
+        Project.fnEmailAddress(p.ProjectCode) AS EmailAddress,
+        p.ProjectCode,
+        p.ProjectStatusCode,
+        ps.ProjectStatus,
+        p.ContactName,
+        rv.NickName,
+        u.UserName,
+        s.SubjectName,
+        invoiceAddress.Address AS InvoiceAddress,
+        deliverySubject.SubjectName AS DeliveryAccountName,
+        deliveryAddress.Address AS DeliveryAddress,
+        collectionSubject.SubjectName AS CollectionAccountName,
+        collectionAddress.Address AS CollectionAddress,
+        p.SubjectCode,
+        p.ProjectNotes,
+        p.ObjectCode,
+        p.ActionOn,
+        o.UnitOfMeasure,
+        p.Quantity,
+        tax.TaxCode,
+        tax.TaxRate,
+        p.UnitCharge,
+        p.TotalCharge,
+        u.MobileNumber,
+        u.Signature,
+        p.ProjectTitle,
+        p.PaymentOn,
+        p.SecondReference,
+        s.PaymentTerms
+    FROM Project.tbProject AS p
+    INNER JOIN Project.tbStatus AS ps
+        ON ps.ProjectStatusCode = p.ProjectStatusCode
+    INNER JOIN Usr.tbUser AS u
+        ON u.UserId = p.ActionById
+    INNER JOIN Object.tbObject AS o
+        ON o.ObjectCode = p.ObjectCode
+    INNER JOIN Subject.tbSubject AS s
+        ON s.SubjectCode = p.SubjectCode
+    LEFT JOIN Subject.tbAddress AS invoiceAddress
+        ON invoiceAddress.AddressCode = s.AddressCode
+    LEFT JOIN Subject.tbAddress AS deliveryAddress
+        ON deliveryAddress.AddressCode = p.AddressCodeTo
+    LEFT JOIN Subject.tbSubject AS deliverySubject
+        ON deliverySubject.SubjectCode = deliveryAddress.SubjectCode
+    LEFT JOIN Subject.tbAddress AS collectionAddress
+        ON collectionAddress.AddressCode = p.AddressCodeFrom
+    LEFT JOIN Subject.tbSubject AS collectionSubject
+        ON collectionSubject.SubjectCode = collectionAddress.SubjectCode
+    LEFT JOIN Subject.vwReal AS rv
+        ON rv.SubjectCode = p.SubjectCode
+       AND rv.ContactName = p.ContactName
+    LEFT JOIN App.tbTaxCode AS tax
+        ON tax.TaxCode = p.TaxCode;
+GO

@@ -23,7 +23,7 @@ namespace TradeControl.Web.Models
         public string AccountCode { get; set; }
 
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         [Display(Name = "Subject")]
         public string SubjectCode { get; set; }
 

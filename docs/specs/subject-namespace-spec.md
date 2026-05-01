@@ -36,9 +36,9 @@ These rules must be understood when interpreting both Phase 1 and Phase 2.
 - [Phase 1 — Operating Principles](#phase1-operating-principles)
 - [Phase 1 — Step 1: SubjectCode Rules](#phase1-step1)
 - [Phase 1 — Step 2: Schema Design Changes](#phase1-step2)
-- [Phase 1 — Step 3: Bootstrap Updates](#phase1-step3)
-- [Phase 1 — Step 4: Synthetic Dataset Upgrade](#phase1-step4)
-- [Phase 1 — Step 5: Compatibility View](#phase1-step5)
+- [Phase 1 — Step 3: Compatibility Views](#phase1-step3)
+- [Phase 1 — Step 4: Bootstrap Updates](#phase1-step4)
+- [Phase 1 — Step 5: Synthetic Dataset Upgrade](#phase1-step5)
 - [Phase 1 — Step 6: Clean‑Up](#phase1-step6)
 
 ## Phase 2 — Front-end (TCWeb)
@@ -74,7 +74,7 @@ These rules must be understood when interpreting both Phase 1 and Phase 2.
 - [Semantics 3.7 — UI Workflows for Namespace Editing](#semantics37)
 - [Semantics 3.8 — Performance and Consistency Guarantees](#semantics38)
 - [Semantics 3.9 — Error Handling for Namespace Operations](#semantics39)
-- [Semantics 10 — Summary](#semantics310)
+- [Semantics 3.10 — Summary](#semantics310)
 
 ## Current Behaviour {#current-behaviour}
 
@@ -584,43 +584,9 @@ No additional fields in Phase 1.
 
 # Phase 1 — Step 3 {#phase1-step3}
 
-## Node Bootstrap Updates
+## 3.1 Compatibility View for `tbContact`
 
-Update `App.proc_NodeDataInit`, `App.proc_NodeBusinessInit` to:
-
-- Insert Subject.tbClass
-- Create default SubjectTypes with class/polarity assignments.
-- Create default Subjects using the new schema.
-- Insert Namespace root nodes.
-- Ensure all Subjects created during bootstrap populate:
-    - `tbSubject`
-    - the appropriate extension table (`tbReal`, `tbVirtual`, or `tbStructural`)
-
-Bootstrap must succeed in a blank Business Node.
-
-# Phase 1 — Step 4 {#phase1-step4}
-
-## Synthetic Dataset Upgrade
-
-Update the synthetic dataset generator to:
-
-- Create Subjects using the new schema.
-- Populate:
-    - `tbSubject`
-    - `tbReal`
-    - `tbVirtual`
-    - `tbStructural`
-    - `tbNamespace`
-- Use deterministic identity generation.
-- Ensure the dataset compiles and produces a coherent world.
-
-The synthetic dataset is the verification harness for Phase 1.
-
-# Phase 1 — Step 5 {#phase1-step5}
-
-## Compatibility View for `tbContact`
-
-### 5.1 Identify Dependencies
+### 3.1.1 Identify Dependencies
 
 Locate all references to:
 
@@ -628,11 +594,11 @@ Locate all references to:
 - any stored procedures, functions, or views that depend on it
 - UI components that expect contact‑like entities
 
-### 5.2 Create Compatibility View
+### 3.1.2 Create Compatibility View
 
 Create a view named:
 
-`Subject.vwContactBase`
+`Subject.vwReal`
 
 This view must:
 
@@ -643,17 +609,17 @@ This view must:
       - `tbType`
 - Use the composite semantics matrix to determine which Subjects appear.
 
-### 5.3 Redirect Dependencies
+### 3.1.3 Redirect Dependencies
 
-Replace all references to `tbContact` with `vwContact`.
+Replace all references to `tbContact` with `vwReal`.
 
-Before replacing `Subject.tbContact` with the compatibility view (`Subject.vwContact`), The Model must update all database objects that reference the physical table. The following list represents the **complete set of dependencies** identified in the Business Node schema.
+Before replacing `Subject.tbContact` with the compatibility view (`Subject.vwReal`), The Model must update all database objects that reference the physical table. The following list represents the **complete set of dependencies** identified in the Business Node schema.
 
 This list is authoritative.  
 
 The Model must use it to:
 
-- redirect each dependency to `Subject.vwContact`
+- redirect each dependency to `Subject.vwReal`
 - ensure all objects compile successfully after substitution
 - confirm no remaining references to the physical table exist
 - only then proceed to drop `Subject.tbContact`
@@ -663,7 +629,6 @@ The Model must use it to:
 | ObjectType             | SchemaName | ObjectName                          |
 |------------------------|------------|--------------------------------------|
 | SQL_SCALAR_FUNCTION    | Project    | fnEmailAddress                       |
-| SQL_STORED_PROCEDURE   | App        | proc_DemoServices                    |
 | SQL_STORED_PROCEDURE   | Project    | proc_Configure                       |
 | SQL_STORED_PROCEDURE   | Project    | proc_EmailAddress                    |
 | SQL_STORED_PROCEDURE   | Project    | proc_EmailDetail                     |
@@ -691,7 +656,7 @@ The Model must use it to:
 | VIEW                   | Subject    | vwMailContacts                       |
 | VIEW                   | Subject    | vwNameTitles                         |
 
-1. For each object listed above, replace references to `Subject.tbContact` with `Subject.vwContact`.
+1. For each object listed above, replace references to `Subject.tbContact` with `Subject.vwReal`.
 2. Recompile each object after substitution.
 3. Confirm that no object in the dependency list references the physical table.
 4. Confirm that no *other* object in the database references the physical table.
@@ -699,18 +664,50 @@ The Model must use it to:
 
 This list is a mandatory prerequisite for the safe removal of `Subject.tbContact`.
 
-### 5.4 Remove Physical Table
+### 3.1.4 Remove Physical Table
 
 Once all dependencies compile and run:
 
 - Drop `Subject.tbContact`.
-- Retain `vwContact` as the compatibility layer.
+- Retain `vwReal` as the compatibility layer.
 
----
+# Phase 1 — Step 4 {#phase1-step4}
+
+## Node Bootstrap Updates
+
+Update `App.proc_NodeDataInit`, `App.proc_NodeBusinessInit` to:
+
+- Insert Subject.tbClass
+- Create default SubjectTypes with class/polarity assignments.
+- Create default Subjects using the new schema.
+- Insert Namespace root nodes.
+- Ensure all Subjects created during bootstrap populate:
+    - `tbSubject`
+    - the appropriate extension table (`tbReal`, `tbVirtual`, or `tbStructural`)
+
+Bootstrap must succeed in a blank Business Node.
+
+# Phase 1 — Step 5 {#phase1-step5}
+
+## Synthetic Dataset Upgrade
+
+Update the synthetic dataset generator to:
+
+- Create Subjects using the new schema.
+- Populate:
+    - `tbSubject`
+    - `tbReal`
+    - `tbVirtual`
+    - `tbStructural`
+    - `tbNamespace`
+- Use deterministic identity generation.
+- Ensure the dataset compiles and produces a coherent world.
+
+The synthetic dataset is the verification harness for Phase 1.
 
 # Phase 1 — Step 6 {#phase1-step6}
 
-## Clean‑Up
+## Clean‑Up Objective
 
 Remove:
 
@@ -725,13 +722,67 @@ Ensure:
 - the Namespace is the authoritative structure
 - the synthetic dataset and bootstrap both run cleanly
 
+## 6. Compatibility View for `tbSubject`
+
+### 6.1 Identify Dependencies
+
+Locate all references to:
+
+- `Subject.tbSubject`
+- any stored procedures, functions, views, triggers, or UI components that depend on the legacy virtual fields currently stored on `tbSubject`
+- any code that expects the combined legacy `tbSubject` shape
+
+Because this dependency surface is broad, the Model must generate a dependency report from the database catalog before redirecting any references.
+
+### 6.2 Create Compatibility View
+
+Create a view named:
+
+`Subject.vwVirtual`
+
+This view must:
+
+- Expose the same column names as the current legacy virtual-compatible `tbSubject` shape.
+- Populate from:
+      - `tbSubject`
+      - `tbVirtual`
+      - `tbType`
+- Return only Subjects whose `SubjectClassCode = 0`.
+- Use the composite semantics matrix to determine which Subjects appear.
+- Surface the combined identity and virtual-specific fields required by existing consumers.
+
+### 6.3 Redirect Dependencies
+
+Replace all references to the legacy virtual columns on `tbSubject` with `vwVirtual`.
+
+Before replacing the physical table shape, The Model must update all database objects that reference those columns. The dependency list generated from the catalog is authoritative.
+
+The Model must use it to:
+
+- redirect each dependency to `Subject.vwVirtual`
+- ensure all objects compile successfully after substitution
+- confirm no remaining references to the legacy virtual columns exist
+- only then proceed to drop the legacy virtual columns from `Subject.tbSubject`
+
+#### Dependency List
+
+The Model must generate the dependency list for `Subject.tbSubject` from the catalog because the surface area is extensive.
+
+### 6.4 Remove Legacy Columns
+
+Once all dependencies compile and run:
+
+- Drop the virtual-specific columns from `Subject.tbSubject`.
+- Retain `vwVirtual` as the compatibility layer during the transition.
+- Keep `Subject.tbSubject` as the identity + common fields table.
+
 # Phase 2 — TCWeb Integration Outline {#phase2-overview}
 
 Phase 2 applies the enhanced Subject schema to the **TCWeb** application.  
 The work proceeds in the following order:
 
 1. **Model Integration**
-   - Add the new Subject models (`tbSubject`, `tbReal`, `tbVirtual`, `tbStructural`, `tbType`, `tbNamespace`, `vwContactBase`).
+   - Add the new Subject models (`tbSubject`, `tbReal`, `tbVirtual`, `tbStructural`, `tbType`, `tbNamespace`, `vwReal`).
    - Instantiate all models in `NodeContext`.
    - Ensure correct bindings, navigation properties, and one‑to‑one relationships.
 
@@ -741,7 +792,7 @@ The work proceeds in the following order:
    - Leave `System.Reports` untouched.
    - Replace the root Subject Index with a search redirect into `SubjectTree/Index`.
 
-3. **Substitute `tbContact` with `vwContactBase`**
+3. **Substitute `tbContact` with `vwReal`**
    - Replace all remaining references to `tbContact`.
    - Update any queries, models, or UI components that depend on contact data.
    - Ensure compatibility with the new Subject identity model.
@@ -750,7 +801,7 @@ The work proceeds in the following order:
    - Implement the new hierarchical Subject browser.
    - Support structural, real, and virtual Subjects.
    - Provide filtering, selection, expansion, and navigation.
-   - Integrate with the new models and `vwContactBase`.
+   - Integrate with the new models and `vwReal`.
 
 5. **Namespace Selector Control**
    - Implement a reusable UI component for selecting a Subject Namespace.
@@ -782,7 +833,8 @@ The following models must be created or updated to reflect the Phase 1 schema:
 - `Subject.tbStructural`  
 - `Subject.tbType` (including composite semantics)  
 - `Subject.tbNamespace`  
-- `Subject.vwContactBase` (new compatibility view model)
+- `Subject.vwReal` (new compatibility view model for contacts, formally tbContact)
+- `Subject.vwVirtual` (new compatibility view model for organisations absorbed from tbSubject)
 
 Each model must map **all fields** defined in the Phase 1 schema, including:
 
@@ -803,7 +855,7 @@ The Model must instantiate all Subject‑related models within the `NodeContext`
 - correct one‑to‑one relationships  
 - correct foreign key relationships  
 - correct namespace parent/child collections  
-- correct exposure of `vwContactBase` as the replacement for legacy contact queries  
+- correct exposure of `vwReal` as the replacement for legacy contact queries  
 
 This integration step is mandatory before any UI components, selectors, or workflows can be updated to use the new Subject model.
 
@@ -811,7 +863,7 @@ Phase 2 UI development depends on the successful completion of this model inte
 
 ## Phase 2.2 — Remove Legacy Code {#phase22}
 
-Before integrating the new Subject models or substituting `tbContact` with `vwContactBase`, all obsolete UI components in **TCWeb** must be removed. This reduces the number of references to update and ensures that subsequent changes are applied cleanly and deterministically.
+Before integrating the new Subject models or substituting `tbContact` with `vwReal`, all obsolete UI components in **TCWeb** must be removed. This reduces the number of references to update and ensures that subsequent changes are applied cleanly and deterministically.
 
 ### 1. Delete the Following Folders Entirely (TCWeb / Subject)
 
@@ -872,7 +924,7 @@ Any remaining Subject UI that:
 
 Subjects is removed and replaced by the new **Subject Tree UI** and **Namespace Selector Control**.
 
-## Phase 2.3 - Substitute `tbContact` with `vwContactBase` {#phase23}
+## Phase 2.3 - Substitute `tbContact` with `vwReal` {#phase23}
 
 With the legacy Subject UI removed, the remaining references to `tbContact` are limited and can now be replaced cleanly.
 
@@ -884,7 +936,7 @@ With the legacy Subject UI removed, the remaining references to `tbContact` are 
 
 and replace all occurrences with:
 
-`Subject_vwContactBase`
+`Subject_vwReal`
 
 2. **Record all affected areas.**  
 
@@ -918,7 +970,7 @@ Ensure that all updated components now operate using:
 - `SubjectCode`  
 - `SubjectClassCode`  
 - namespace relationships  
-- the new `vwContactBase` projection  
+- the new `vwReal` projection  
 
 This completes the replacement of the legacy `tbContact` table with the compatibility view introduced in Phase 1.
 
@@ -1049,7 +1101,7 @@ These instructions override any default behaviour of the model.
 
 These constraints must be applied before any functional or structural work begins.
 
-## Phase 4.2 - Purpose of the Subject Tree UI {#phase242}
+## Phase 2.4.2 - Purpose of the Subject Tree UI {#phase242}
 
 The Subject Tree UI serves three distinct purposes.  
 All three must be supported by the same component set (`TreeShell`, `TreeBranch`, `TreeNode`), without creating separate UIs or divergent code paths.
@@ -1086,7 +1138,7 @@ The Tree must support Subject‑level operations:
 - edit Subject details
 - change Subject type
 - manage relationships and attributes
-- integrate with `vwContactBase` for identity and contact data
+- integrate with `vwReal` for identity and contact data
 
 This is the “entity editing” mode.  
 It must be consistent with the new Subject identity model introduced in Phase 1.
@@ -1215,7 +1267,7 @@ Selecting a node must load a detail panel hosted by SubjectTreeShell.
 
 ### Required behaviour
 
-- Show Subject identity (via vwContactBase)
+- Show Subject identity (via vwReal)
 - Show namespace relationships
 - Show available actions based on mode
 - Load independently of tree expansion
@@ -1366,7 +1418,7 @@ Shared.Tree never loads children itself.
 
 **Responsibilities:**
 
-- Hold Subject identity (via vwContactBase)
+- Hold Subject identity (via vwReal)
 - Hold namespace path for filtering
 - Expose structural / real / virtual flags
 - Expose child count for lazy loading
@@ -1517,7 +1569,7 @@ All loading, filtering, and paging logic lives in the `Subject.Tree` layer.
 
 Optional (but recommended):
 
-- `string DisplayLabel` (resolved from `vwContactBase` where applicable)
+- `string DisplayLabel` (resolved from `vwReal` where applicable)
 
 These fields are used for:
 
@@ -1896,7 +1948,7 @@ This is a platform requirement because Razor Pages:
 - The detail panel routes all “Edit” actions to the correct Razor Page based on `SubjectClassCode`.  
 - Razor Pages load and save Subject data via `SubjectCode`.  
 - Razor Pages adapt their UI to the fields defined for that SubjectClassCode.  
-- Razor Pages must not depend on legacy `tbContact` or `vwContactBase`.  
+- Razor Pages must not depend on legacy `tbContact` or `vwReal`.  
 - Razor Pages must use the Subject identity model and SubjectType configuration.
 
 ## 7. Action Contracts
@@ -2261,7 +2313,7 @@ All workflows are initiated from:
 **Rules:**
 
 - Identity fields are defined by `SubjectTypeCode`.
-- No dependency on legacy `tbContact` or `vwContactBase`.
+- No dependency on legacy `tbContact` or `vwReal`.
 
 ### 4. Create Virtual Subject
 
@@ -2411,6 +2463,40 @@ Namespace relationships are managed in **NamespaceMode**.
 - Removing the last namespace relationship may be disallowed or treated as “orphaned Subject” (business rule).
 - All operations are path‑specific; other instances are unaffected.
 
+#### 7.4 Set default namespace child
+
+The UI must support a **Set Default** action for namespace relationships where the selected child is intended to be the default contextual Subject for its parent.
+
+This is required in particular for contact maintenance, where a Real Subject may appear under an organisation and act as its default buying or selling contact.
+
+**Entry points:**
+
+- From NamespaceMode:
+      - “Set Default” on a specific child instance under a selected parent
+
+**Flow:**
+
+1. User selects a specific parent → child instance in the tree.
+2. User chooses **Set Default**.
+3. Service layer:
+   - sets `Subject.tbNamespace.IsDefault = 1` for the selected `(ParentSubjectCode, ChildSubjectCode)` row
+   - clears `IsDefault` on all sibling rows for the same `ParentSubjectCode`
+4. On success:
+   - `SubjectTreeShell` refreshes only the affected branch
+   - the UI marks the selected child as the default instance for that parent
+
+**Rules:**
+
+- `IsDefault` is a property of the namespace relationship, not of the Subject.
+- A Subject may be default under one parent and non-default under another.
+- If a parent has only one child, that child should default automatically.
+- The UI must clearly indicate which child is the default for a given parent.
+- This action is path-specific in the DAG and must not affect other parent relationships.
+
+**Usage:**
+
+This workflow enables the platform to resolve default contacts for customers, suppliers, and other contextual relationships when creating or configuring projects, orders, and related workflows.
+
 ### 8. Delete Subject
 
 **Entry points:**
@@ -2475,7 +2561,7 @@ Addresses are stored in a dedicated table:
 
     Subject.tbAddress
         AddressCode nvarchar(15) PK
-        SubjectCode nvarchar(10) FK → Subject.tbSubject(SubjectCode)
+        SubjectCode nvarchar(50) FK → Subject.tbSubject(SubjectCode)
         Address nvarchar(max) -- free‑form address text
         InsertedBy / InsertedOn / UpdatedBy / UpdatedOn / RowVer
 
@@ -2976,7 +3062,7 @@ Subsections of **Semantics** will specify:
 
 ## Semantics 3.1 — Namespace Operations Overview {#semantics31}
 
-Semantics 1 introduces the conceptual overview of namespace operations.  
+Semantics 3.1 introduces the conceptual overview of namespace operations.  
 It explains how Subjects participate in the Namespace, how structural relationships are represented, and how the system must interpret and validate these relationships.
 
 Namespace operations allow users to modify the structural relationships between Subjects.  
@@ -3007,7 +3093,7 @@ Namespace operations must:
 - integrate cleanly with filtering and search  
 - maintain performance for large trees  
 
-### Scope of Semantics 1
+### Scope of Semantics 3.1
 
 This subsection provides:
 
@@ -3026,14 +3112,14 @@ Subsequent sections will define:
 - namespace path resolution  
 - filtering and search semantics  
 
-**Semantics 1** establishes the conceptual foundation for all namespace‑related behaviour in the enhanced Subject model.
+**Semantics 3.1** establishes the conceptual foundation for all namespace‑related behaviour in the enhanced Subject model.
 
 ## Semantics 3.2 — Parent/Child Relationship Rules {#semantics32}
 
 Parent/child relationships define the structural position of a Subject within the Namespace DAG.  
 These rules ensure that all structural relationships remain valid, deterministic, and consistent with the identity and class semantics defined in earlier phases.
 
-A parent/child relationship is represented as a row in `Subject.tbSubjectNamespace`, where:
+A parent/child relationship is represented as a row in `Subject.tbNamespace`, where:
 
 - `ParentSubjectCode` references the parent  
 - `ChildSubjectCode` references the child  

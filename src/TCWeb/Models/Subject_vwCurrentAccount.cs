@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -20,7 +20,7 @@ namespace TradeControl.Web.Models
         public string SortCode { get; set; }
         [StringLength(20)]
         public string AccountNumber { get; set; }
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         [StringLength(255)]
         public string SubjectName { get; set; }

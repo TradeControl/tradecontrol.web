@@ -1,23 +1,33 @@
-﻿
-CREATE   PROCEDURE Subject.proc_NextAddressCode 
+CREATE PROCEDURE Subject.proc_NextAddressCode 
 	(
-	@SubjectCode nvarchar(10),
+	@SubjectCode nvarchar(50),
 	@AddressCode nvarchar(15) OUTPUT
 	)
-  AS
-   	SET NOCOUNT, XACT_ABORT ON;
+AS
+	SET NOCOUNT, XACT_ABORT ON;
 
 	BEGIN TRY
-		DECLARE @AddCount int
+		DECLARE
+			@SubjectName nvarchar(100),
+			@GeneratedCode nvarchar(50),
+			@CheckSql nvarchar(max) = N'SELECT @cnt = COUNT(*) FROM Subject.tbAddress WHERE AddressCode = @Code';
 
-		SELECT @AddCount = ISNULL(COUNT(AddressCode), 0) 
-		FROM         Subject.tbAddress
-		WHERE     (SubjectCode = @SubjectCode)
-	
-		SET @AddCount += 1
-		SET @AddressCode = CONCAT(UPPER(@SubjectCode), '_', FORMAT(@AddCount, '000'))
-	
-  	END TRY
+		SELECT @SubjectName = SubjectName
+		FROM Subject.tbSubject
+		WHERE SubjectCode = @SubjectCode;
+
+		IF @SubjectName IS NULL
+			THROW 50000, 'Subject.proc_NextAddressCode: SubjectCode not found.', 1;
+
+		EXEC App.proc_DefaultCodeGenerator
+			@Description = @SubjectName,
+			@CheckSql = @CheckSql,
+			@UseWholeWords = 0,
+			@Code = @GeneratedCode OUTPUT;
+
+		SET @AddressCode = CAST(@GeneratedCode AS nvarchar(15));
+	END TRY
 	BEGIN CATCH
 		EXEC App.proc_ErrorLog;
 	END CATCH
+GO

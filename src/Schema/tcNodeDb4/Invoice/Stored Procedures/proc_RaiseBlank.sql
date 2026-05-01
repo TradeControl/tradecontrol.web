@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE Invoice.proc_RaiseBlank
+CREATE PROCEDURE Invoice.proc_RaiseBlank
 	(
-	@SubjectCode nvarchar(10),
+	@SubjectCode nvarchar(50),
 	@InvoiceTypeCode smallint,
 	@InvoiceNumber nvarchar(20) = null output
 	)

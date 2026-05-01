@@ -1,9 +1,9 @@
-﻿CREATE TABLE [Project].[tbChangeLog] (
+CREATE TABLE [Project].[tbChangeLog] (
     [ProjectCode]           NVARCHAR (20)   NOT NULL,
     [LogId]              INT             IDENTITY (1, 1) NOT NULL,
     [ChangedOn]          DATETIME        CONSTRAINT [DF_Project_tbChangeLog_ChangedOn] DEFAULT (dateadd(millisecond,datepart(millisecond,getdate())*(-1),getdate())) NOT NULL,
     [TransmitStatusCode] SMALLINT        CONSTRAINT [DF_Project_tbChangeLog_TransmissionStatusCode] DEFAULT ((0)) NOT NULL,
-    [SubjectCode]        NVARCHAR (10)   NOT NULL,
+    [SubjectCode]        NVARCHAR (50)   NOT NULL,
     [ObjectCode]       NVARCHAR (50)   NOT NULL,
     [ProjectStatusCode]     SMALLINT        NOT NULL,
     [ActionOn]           DATETIME        NOT NULL,

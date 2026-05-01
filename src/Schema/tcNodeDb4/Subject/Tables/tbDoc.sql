@@ -1,5 +1,5 @@
-﻿CREATE TABLE [Subject].[tbDoc] (
-    [SubjectCode]         NVARCHAR (10)  NOT NULL,
+CREATE TABLE [Subject].[tbDoc] (
+    [SubjectCode]         NVARCHAR (50)  NOT NULL,
     [DocumentName]        NVARCHAR (255) NOT NULL,
     [DocumentDescription] NVARCHAR(MAX)          NULL,
     [DocumentImage]       VARBINARY(MAX)          NULL,

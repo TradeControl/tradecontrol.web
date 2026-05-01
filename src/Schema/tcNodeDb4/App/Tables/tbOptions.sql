@@ -1,7 +1,7 @@
 CREATE TABLE [App].[tbOptions] (
     [Identifier]         NVARCHAR (4)   NOT NULL,
     [IsInitialised]      BIT            CONSTRAINT [DF_App_tbOptions_IsIntialised] DEFAULT ((0)) NOT NULL,
-    [SubjectCode]        NVARCHAR (10)  NOT NULL,
+    [SubjectCode]        NVARCHAR (50)  NOT NULL,
     [RegisterName]       NVARCHAR (50)  NOT NULL,
     [DefaultPrintMode]   SMALLINT       CONSTRAINT [DF_App_tbOptions_DefaultPrintMode] DEFAULT ((2)) NOT NULL,
     [BucketTypeCode]     SMALLINT       CONSTRAINT [DF_App_tbOptions_BucketTypeCode] DEFAULT ((1)) NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE [App].[tbOptions] (
     [IsAutoOffsetDays]   BIT            CONSTRAINT [DF_App_tbOptions_IsAutoOffsetDays] DEFAULT ((0)) NOT NULL,
     [UnitOfCharge]       NVARCHAR (5)   NULL,
     [MinerFeeCode]       NVARCHAR (50)  NULL,
-    [MinerAccountCode]   NVARCHAR (10)  NULL,
+    [MinerAccountCode]   NVARCHAR (50)  NULL,
     [CoinTypeCode]       SMALLINT       CONSTRAINT [DF_App_tbOptions_CoinTypeCode] DEFAULT ((2)) NOT NULL,
     [HostId]             INT            NULL,
     [SymmetricKey]       VARBINARY (32) NULL,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -17,7 +17,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "UID")]
         public string UserId { get; set; }
         [Key]
-        [StringLength(10)]
+        [StringLength(50)]
         [Display(Name = "A/c")]
         public string SubjectCode { get; set; }
         [Key]

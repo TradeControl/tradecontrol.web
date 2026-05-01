@@ -1,10 +1,10 @@
-﻿CREATE   PROCEDURE Invoice.proc_PostEntriesById(@UserId nvarchar(10))
+CREATE   PROCEDURE Invoice.proc_PostEntriesById(@UserId nvarchar(10))
 AS
    	SET NOCOUNT, XACT_ABORT ON;
 
 	BEGIN TRY
 		DECLARE 
-			@SubjectCode nvarchar(10)
+			@SubjectCode nvarchar(50)
 			, @InvoiceTypeCode smallint
 			, @InvoiceNumber nvarchar(20);
 			

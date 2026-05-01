@@ -1,9 +1,13 @@
-﻿CREATE   VIEW Subject.vwEmailAddresses
+CREATE VIEW Subject.vwEmailAddresses
 AS
 	SELECT SubjectCode, SubjectName ContactName, EmailAddress, CAST(1 as bit) IsAdmin
 	FROM Subject.tbSubject
 	WHERE (NOT (EmailAddress IS NULL))
+
 	UNION
-	SELECT SubjectCode, ContactName, EmailAddress, CAST(0 as bit) IsAdmin
-	FROM            Subject.tbContact
-	WHERE        (NOT (EmailAddress IS NULL))
+
+	SELECT ns.ParentSubjectCode as SubjectCode, c.ContactName, c.EmailAddress, CAST(0 as bit) IsAdmin
+	FROM Subject.vwReal c
+        JOIN Subject.tbNamespace ns
+            ON c.SubjectCode = ns.ChildSubjectCode
+	WHERE (NOT (c.EmailAddress IS NULL));

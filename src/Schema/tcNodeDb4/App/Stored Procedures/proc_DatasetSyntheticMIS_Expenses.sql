@@ -70,7 +70,7 @@ AS
 	-----------------------------------------------------------------
 	DECLARE
 		@L2_UserId nvarchar(10) = (SELECT TOP (1) UserId FROM Usr.vwCredentials),
-		@L2_EmployeeSubjectCode nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'Employee');
+		@L2_EmployeeSubjectCode nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'Employee');
 
 	IF @L2_EmployeeSubjectCode IS NULL
 		THROW 51100, 'SyntheticDataset Layer2: missing SUBJECT/Employee in #DatasetCodes.', 1;

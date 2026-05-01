@@ -1,5 +1,5 @@
-﻿CREATE TABLE [Subject].[tbSector] (
-    [SubjectCode]    NVARCHAR (10) NOT NULL,
+CREATE TABLE [Subject].[tbSector] (
+    [SubjectCode]    NVARCHAR (50) NOT NULL,
     [IndustrySector] NVARCHAR (50) NOT NULL,
     [RowVer]         ROWVERSION    NOT NULL,
     CONSTRAINT [PK_Subject_tbSector] PRIMARY KEY CLUSTERED ([SubjectCode] ASC, [IndustrySector] ASC) WITH (FILLFACTOR = 90),

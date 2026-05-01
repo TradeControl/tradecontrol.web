@@ -17,7 +17,7 @@ namespace TradeControl.Web.Models
         public bool IsInitialised { get; set; }
 
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
 
         [Required]
@@ -41,7 +41,7 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string MinerFeeCode { get; set; }
 
-        [StringLength(10)]
+        [StringLength(50)]
         public string MinerAccountCode { get; set; }
 
         public short CoinTypeCode { get; set; }

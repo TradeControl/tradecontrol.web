@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -16,7 +16,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Invoice No.")]
         public string InvoiceNumber { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         [Display(Name = "A/c")]
         public string SubjectCode { get; set; }
         [Required]

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [App].[proc_Template_CO_MICRO_CUR_STD_2026]
+CREATE PROCEDURE App.proc_Template_CO_MICRO_CUR_STD_2026
 (
     @FinancialMonth SMALLINT = 4,
     @GovAccountName NVARCHAR(255),
@@ -99,13 +99,13 @@ BEGIN TRY
     ----------------------------------------------------------------
     DECLARE
     @DepAccount NVARCHAR(50)
-    , @SubjectCode  NVARCHAR(10) = (SELECT TOP 1 SubjectCode FROM App.tbOptions)
+    , @SubjectCode  NVARCHAR(50) = (SELECT TOP 1 SubjectCode FROM App.tbOptions)
     , @AccountCode  NVARCHAR(10);
 
     SET @DepAccount = 'PLANT & TOOLS';
-    EXEC Subject.proc_DefaultSubjectCode
-         @SubjectName = @DepAccount,
-         @SubjectCode = @AccountCode OUTPUT;
+    EXEC Subject.proc_DefaultAccountCode
+         @AccountName = @DepAccount,
+         @AccountCode = @AccountCode OUTPUT;
 
     INSERT INTO Subject.tbAccount
         (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
@@ -113,9 +113,9 @@ BEGIN TRY
         (@AccountCode, @SubjectCode, @DepAccount, 2, 1, 30, 'CC-DEPPL', 0);
 
     SET @DepAccount = 'MOTOR VEHICLES';
-    EXEC Subject.proc_DefaultSubjectCode
-         @SubjectName = @DepAccount,
-         @SubjectCode = @AccountCode OUTPUT;
+    EXEC Subject.proc_DefaultAccountCode
+         @AccountName = @DepAccount,
+         @AccountCode = @AccountCode OUTPUT;
 
     INSERT INTO Subject.tbAccount
         (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)
@@ -123,9 +123,9 @@ BEGIN TRY
         (@AccountCode, @SubjectCode, @DepAccount, 2, 1, 31, 'CC-DEPMV', 0);
 
     SET @DepAccount = 'FIXTURES';
-    EXEC Subject.proc_DefaultSubjectCode
-         @SubjectName = @DepAccount,
-         @SubjectCode = @AccountCode OUTPUT;
+    EXEC Subject.proc_DefaultAccountCode
+         @AccountName = @DepAccount,
+         @AccountCode = @AccountCode OUTPUT;
 
     INSERT INTO Subject.tbAccount
         (AccountCode, SubjectCode, AccountName, AccountTypeCode, BalanceConstraintCode, LiquidityLevel, CashCode, AccountClosed)

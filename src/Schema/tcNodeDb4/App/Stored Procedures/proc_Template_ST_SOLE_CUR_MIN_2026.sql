@@ -97,13 +97,13 @@ BEGIN TRY
     -- 5. Dedicated cash account (ASSET-type) for owner capital balance
     ----------------------------------------------------------------
     DECLARE
-        @SubjectCode    NVARCHAR(10) = (SELECT SubjectCode FROM App.tbOptions),
+        @SubjectCode    NVARCHAR(50) = (SELECT SubjectCode FROM App.tbOptions),
         @OwnerAccount   NVARCHAR(50) = N'OWNER CAPITAL ACCOUNT',
         @OwnerAccountCode NVARCHAR(10);
 
-    EXEC Subject.proc_DefaultSubjectCode
-         @SubjectName = @OwnerAccount,
-         @SubjectCode = @OwnerAccountCode OUTPUT;
+    EXEC Subject.proc_DefaultAccountCode
+         @AccountName = @OwnerAccount,
+         @AccountCode = @OwnerAccountCode OUTPUT;
 
     IF NOT EXISTS (SELECT 1 FROM Subject.tbAccount WHERE AccountCode = @OwnerAccountCode)
     BEGIN

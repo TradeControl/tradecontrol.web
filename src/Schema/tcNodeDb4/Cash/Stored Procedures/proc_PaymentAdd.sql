@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE Cash.proc_PaymentAdd(@SubjectCode nvarchar(10), @AccountCode AS nvarchar(10), @CashCode nvarchar(50), @PaidOn datetime, @ToPay decimal(18, 5), @PaymentReference nvarchar(50) = null, @PaymentCode nvarchar(20) output)
+CREATE PROCEDURE Cash.proc_PaymentAdd(@SubjectCode nvarchar(50), @AccountCode AS nvarchar(10), @CashCode nvarchar(50), @PaidOn datetime, @ToPay decimal(18, 5), @PaymentReference nvarchar(50) = null, @PaymentCode nvarchar(20) output)
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 	BEGIN TRY

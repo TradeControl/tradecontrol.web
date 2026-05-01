@@ -1,7 +1,18 @@
-﻿CREATE   VIEW Subject.vwCompanyHeader
+CREATE VIEW Subject.vwCompanyHeader
 AS
-SELECT        TOP (1) Subject.tbSubject.SubjectName AS CompanyName, Subject.tbAddress.Address AS CompanyAddress, Subject.tbSubject.PhoneNumber AS CompanyPhoneNumber, 
-                         Subject.tbSubject.EmailAddress AS CompanyEmailAddress, Subject.tbSubject.WebSite AS CompanyWebsite, Subject.tbSubject.CompanyNumber, Subject.tbSubject.VatNumber
-FROM            Subject.tbSubject INNER JOIN
-                         App.tbOptions ON Subject.tbSubject.SubjectCode = App.tbOptions.SubjectCode LEFT OUTER JOIN
-                         Subject.tbAddress ON Subject.tbSubject.AddressCode = Subject.tbAddress.AddressCode;
+	SELECT TOP (1)
+		s.SubjectName AS CompanyName,
+		a.Address AS CompanyAddress,
+		s.PhoneNumber AS CompanyPhoneNumber,
+		s.EmailAddress AS CompanyEmailAddress,
+		v.WebSite AS CompanyWebsite,
+		v.CompanyNumber,
+		v.VatNumber
+	FROM App.tbOptions AS o
+		INNER JOIN Subject.tbSubject AS s
+			ON o.SubjectCode = s.SubjectCode
+		LEFT OUTER JOIN Subject.tbVirtual AS v
+			ON s.SubjectCode = v.SubjectCode
+		LEFT OUTER JOIN Subject.tbAddress AS a
+			ON s.AddressCode = a.AddressCode;
+GO

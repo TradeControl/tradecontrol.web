@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Subject].[proc_BalanceToPay](@SubjectCode NVARCHAR(10), @Balance DECIMAL(18, 5) = 0 OUTPUT)
+CREATE PROCEDURE [Subject].[proc_BalanceToPay] (@SubjectCode NVARCHAR(50), @Balance DECIMAL(18, 5) = 0 OUTPUT)
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 

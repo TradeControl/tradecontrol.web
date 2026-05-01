@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Invoice.proc_Mirror(@ContractAddress nvarchar(42), @InvoiceNumber nvarchar(20) OUTPUT)
+CREATE PROCEDURE Invoice.proc_Mirror(@ContractAddress nvarchar(42), @InvoiceNumber nvarchar(20) OUTPUT)
 AS
  	SET NOCOUNT, XACT_ABORT ON;
 
@@ -7,7 +7,7 @@ AS
 		@UserId nvarchar(10)
 		, @NextNumber int
 		, @InvoiceSuffix nvarchar(4)
-		, @SubjectCode nvarchar(10)
+		, @SubjectCode nvarchar(50)
 		, @InvoiceTypeCode smallint
 	
 		SELECT @UserId = UserId FROM Usr.vwCredentials

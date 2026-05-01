@@ -4,7 +4,7 @@ CREATE TABLE [Cash].[tbTaxType] (
     [CashCode]       NVARCHAR (50) NULL,
     [MonthNumber]    SMALLINT      CONSTRAINT [DF_App_tbOptions_MonthNumber] DEFAULT ((1)) NOT NULL,
     [RecurrenceCode] SMALLINT      CONSTRAINT [DF_App_tbOptions_Recurrence] DEFAULT ((1)) NOT NULL,
-    [SubjectCode]    NVARCHAR (10) NULL,
+    [SubjectCode]    NVARCHAR (50) NULL,
     [OffsetDays]     SMALLINT      CONSTRAINT [DF_Cash_tbTaxType_OffsetDays] DEFAULT ((0)) NOT NULL,
     [IsEnabled]      BIT           CONSTRAINT [DF_Cash_tbTaxType_IsEnabled] DEFAULT ((1)) NOT NULL,
     [RowVer]         ROWVERSION    NOT NULL,

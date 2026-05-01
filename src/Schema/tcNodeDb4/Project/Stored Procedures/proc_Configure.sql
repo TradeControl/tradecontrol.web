@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Project.proc_Configure (@ParentProjectCode nvarchar(20))
+CREATE PROCEDURE Project.proc_Configure (@ParentProjectCode nvarchar(20))
 AS
  	SET NOCOUNT, XACT_ABORT ON;
 
@@ -8,27 +8,22 @@ AS
 			, @ProjectCode nvarchar(20)
 			, @UserId nvarchar(10)
 			, @ObjectCode nvarchar(50)
-			, @SubjectCode nvarchar(10)
-			, @DefaultSubjectCode nvarchar(10)
+			, @SubjectCode nvarchar(50)
+			, @DefaultSubjectCode nvarchar(50)
 			, @TaxCode nvarchar(10)
+            , @ContactName nvarchar(255)
+        ;
 
 		IF @@NESTLEVEL = 1
 			BEGIN TRANSACTION
 
-		INSERT INTO Subject.tbContact 
-			(SubjectCode, ContactName, FileAs, PhoneNumber, EmailAddress)
-		SELECT Project.tbProject.SubjectCode, Project.tbProject.ContactName, Project.tbProject.ContactName AS NickName, Subject.tbSubject.PhoneNumber, Subject.tbSubject.EmailAddress
+		SELECT @ContactName = ContactName, @SubjectCode = SubjectCode
 		FROM  Project.tbProject 
-			INNER JOIN Subject.tbSubject ON Project.tbProject.SubjectCode = Subject.tbSubject.SubjectCode
-		WHERE LEN(ISNULL(Project.tbProject.ContactName, '')) > 0 AND (Project.tbProject.ProjectCode = @ParentProjectCode)
-					AND EXISTS (SELECT *
-								FROM Project.tbProject
-								WHERE (ProjectCode = @ParentProjectCode) AND (NOT (ContactName IS NULL)) OR (ProjectCode = @ParentProjectCode) AND (ContactName <> N''))
-				AND NOT EXISTS(SELECT *
-								FROM  Project.tbProject 
-									INNER JOIN Subject.tbContact ON Project.tbProject.SubjectCode = Subject.tbContact.SubjectCode AND Project.tbProject.ContactName = Subject.tbContact.ContactName
-								WHERE     ( Project.tbProject.ProjectCode = @ParentProjectCode))
-	
+		WHERE LEN(ISNULL(ContactName, '')) > 0 AND (ProjectCode = @ParentProjectCode);
+
+        IF LEN(COALESCE(@ContactName, '')) > 0
+            EXEC Subject.proc_AddContact @SubjectCode = @SubjectCode, @ContactName = @ContactName
+
 		UPDATE Subject.tbSubject
 		SET SubjectStatusCode = 1
 		FROM Subject.tbSubject INNER JOIN Project.tbProject ON Subject.tbSubject.SubjectCode = Project.tbProject.SubjectCode

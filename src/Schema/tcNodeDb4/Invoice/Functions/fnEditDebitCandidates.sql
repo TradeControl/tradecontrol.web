@@ -1,4 +1,4 @@
-﻿CREATE   FUNCTION Invoice.fnEditDebitCandidates (@InvoiceNumber nvarchar(20), @SubjectCode nvarchar(10))
+CREATE FUNCTION Invoice.fnEditDebitCandidates (@InvoiceNumber nvarchar(20), @SubjectCode nvarchar(50))
 RETURNS TABLE
 AS
 	RETURN 

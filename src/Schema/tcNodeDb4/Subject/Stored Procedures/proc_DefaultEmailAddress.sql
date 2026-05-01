@@ -1,6 +1,6 @@
-﻿CREATE   PROCEDURE Subject.proc_DefaultEmailAddress 
+CREATE PROCEDURE Subject.proc_DefaultEmailAddress 
 	(
-	@SubjectCode nvarchar(10),
+	@SubjectCode nvarchar(50),
 	@EmailAddress nvarchar(255) OUTPUT
 	)
   AS
@@ -10,10 +10,12 @@
 
 	SELECT @EmailAddress = COALESCE(EmailAddress, '') FROM Subject.tbSubject WHERE SubjectCode = @SubjectCode;
 
-	IF (LEN(@EmailAddress) = 0)
+	IF (LEN(COALESCE(@EmailAddress, '')) = 0)
 		SELECT @EmailAddress = EmailAddress
-		FROM Subject.tbContact
-		WHERE SubjectCode = @SubjectCode AND NOT (EmailAddress IS NULL);
+		FROM Subject.tbNamespace ns
+            JOIN Subject.vwReal ct
+                ON ns.ChildSubjectCode = ct.SubjectCode
+		WHERE ns.ParentSubjectCode = @SubjectCode AND NOT (EmailAddress IS NULL);
 
 	SET @EmailAddress = COALESCE(@EmailAddress, '');
 

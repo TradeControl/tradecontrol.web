@@ -1,6 +1,6 @@
-﻿CREATE TABLE [Invoice].[tbMirror] (
+CREATE TABLE [Invoice].[tbMirror] (
     [ContractAddress]   NVARCHAR (42)   NOT NULL,
-    [SubjectCode]       NVARCHAR (10)   NOT NULL,
+    [SubjectCode]       NVARCHAR (50)   NOT NULL,
     [InvoiceNumber]     NVARCHAR (50)   NOT NULL,
     [InvoiceTypeCode]   SMALLINT        NOT NULL,
     [InvoiceStatusCode] SMALLINT        NOT NULL,

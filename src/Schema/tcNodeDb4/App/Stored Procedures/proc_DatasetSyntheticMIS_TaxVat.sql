@@ -61,7 +61,7 @@ AS
     -- Pay vat balance from Cash.vwVatStatement
     ---------------------------------------------------------------------
 	DECLARE
-		@HmrcSubjectCode nvarchar(10),
+		@HmrcSubjectCode nvarchar(50),
 		@VatCashCode nvarchar(50);
 
 	SELECT

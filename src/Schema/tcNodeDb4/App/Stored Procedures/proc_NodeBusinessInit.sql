@@ -1,6 +1,6 @@
 CREATE PROCEDURE [App].[proc_NodeBusinessInit]
 (
-	@SubjectCode NVARCHAR(10),
+	@SubjectCode NVARCHAR(50),
 	@BusinessName NVARCHAR(255),
 	@FullName NVARCHAR(100),
 	@BusinessAddress NVARCHAR(MAX),
@@ -17,10 +17,39 @@ SET NOCOUNT, XACT_ABORT ON;
 
 BEGIN TRY
 
-	BEGIN TRAN
+	BEGIN TRAN;
 
-	INSERT INTO Subject.tbSubject (SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode, PhoneNumber, EmailAddress, CompanyNumber, VatNumber)
-	VALUES (@SubjectCode, @BusinessName, 4, 1, @PhoneNumber, @BusinessEmailAddress, @CompanyNumber, @VatNumber);
+	INSERT INTO Subject.tbSubject
+	(
+		SubjectCode,
+		SubjectName,
+		SubjectTypeCode,
+		SubjectStatusCode,
+		PhoneNumber,
+		EmailAddress
+	)
+	VALUES
+	(
+		@SubjectCode,
+		@BusinessName,
+		4,
+		1,
+		@PhoneNumber,
+		@BusinessEmailAddress
+	);
+
+	INSERT INTO Subject.tbVirtual
+	(
+		SubjectCode,
+		CompanyNumber,
+		VatNumber
+	)
+	VALUES
+	(
+		@SubjectCode,
+		@CompanyNumber,
+		@VatNumber
+	);
 
 	EXEC Subject.proc_AddContact @SubjectCode = @SubjectCode, @ContactName = @FullName;
 	EXEC Subject.proc_AddAddress @SubjectCode = @SubjectCode, @Address = @BusinessAddress;
@@ -166,15 +195,13 @@ BEGIN TRY
 			(1, 6, 3, 'Payment Entry', 4, 'Trader', 'Cash_PaymentEntry', 0)
 			, (2, 5, 5, 'Transfers', 4, 'Trader', 'Cash_Transfer', 0)
 			, (2, 5, 4, 'Payment Entry', 4, 'Trader', 'Cash_PaymentEntry', 0)
-				
-
 	END
 
 	INSERT INTO Usr.tbMenuUser (UserId, MenuId)
 	SELECT (SELECT UserId FROM Usr.tbUser) AS UserId, MenuId 
 	FROM Usr.tbMenu;
 
-	COMMIT TRAN
+	COMMIT TRAN;
 
 	EXEC App.proc_RotateSymmetricKeys;
 

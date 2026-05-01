@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -63,7 +63,7 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "decimal(18, 5)")]
         public decimal TotalCharge { get; set; }
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         [Required]
         [StringLength(255)]

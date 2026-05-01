@@ -1,4 +1,4 @@
-﻿CREATE   FUNCTION Subject.fnAccountKeyNamespace
+CREATE FUNCTION Subject.fnAccountKeyNamespace
 (
 	@AccountCode nvarchar(10),
 	@HDPath hierarchyid

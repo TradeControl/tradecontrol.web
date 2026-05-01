@@ -23,7 +23,6 @@ AS
 	IF @TemplateName IS NULL OR NOT EXISTS (SELECT 1 FROM App.tbTemplate WHERE TemplateName = @TemplateName)
 		THROW 51001, 'DatasetSyntheticMIS: @TemplateName not found in App.tbTemplate.', 1;
 
-	-- Default VAT behavior from template when not specified by caller
 	IF @IsVatRegistered IS NULL
 	BEGIN
 		SELECT @IsVatRegistered = IsVatRegistered
@@ -32,7 +31,7 @@ AS
 	END
 
 	DECLARE
-		@SubjectCode nvarchar(10) = NULL,
+		@SubjectCode nvarchar(50) = NULL,
 		@BusinessName nvarchar(255) = NULL,
 		@FullName nvarchar(100) = NULL,
 		@BusinessAddress nvarchar(max) = NULL,
@@ -45,7 +44,7 @@ AS
 		@UnitOfCharge nvarchar(5) = NULL;
 
 	DECLARE
-		@NodeSubjectCode nvarchar(10) = (SELECT TOP (1) SubjectCode FROM App.tbOptions),
+		@NodeSubjectCode nvarchar(50) = (SELECT TOP (1) SubjectCode FROM App.tbOptions),
 		@CoinTypeCode smallint = (SELECT TOP (1) CoinTypeCode FROM App.tbOptions);
 
 	IF NOT EXISTS (SELECT 1 FROM App.tbOptions)
@@ -116,9 +115,6 @@ AS
 	IF @SubjectCode IS NULL OR @BusinessName IS NULL OR @BusinessAddress IS NULL OR @FullName IS NULL OR @CalendarCode IS NULL OR @UnitOfCharge IS NULL
 		THROW 51002, 'DatasetSyntheticMIS: unable to reverse engineer required node configuration.', 1;
 
-	---------------------------------------------------------------------
-	-- Preserve Identity (current user + roles/claims) before NodeDataInit wipes it
-	---------------------------------------------------------------------
 	DECLARE @IdentityUserId nvarchar(450);
 
 	SELECT TOP (1) @IdentityUserId = au.Id
@@ -134,14 +130,8 @@ AS
 	SELECT * INTO #Keep_AspNetUserRoles FROM dbo.AspNetUserRoles WHERE UserId = @IdentityUserId;
 	SELECT * INTO #Keep_AspNetUserClaims FROM dbo.AspNetUserClaims WHERE UserId = @IdentityUserId;
 
-	---------------------------------------------------------------------
-	-- Always reset node
-	---------------------------------------------------------------------
 	EXEC App.proc_NodeDataInit;
 
-	---------------------------------------------------------------------
-	-- Restore Identity
-	---------------------------------------------------------------------
 	IF NOT EXISTS (SELECT 1 FROM dbo.AspNetUsers WHERE Id = @IdentityUserId)
 	BEGIN
 		INSERT INTO dbo.AspNetUsers
@@ -208,9 +198,6 @@ AS
 	DROP TABLE #Keep_AspNetUserRoles;
 	DROP TABLE #Keep_AspNetUserClaims;
 
-	---------------------------------------------------------------------
-	-- Recreate business node + install template
-	---------------------------------------------------------------------
 	EXEC App.proc_NodeBusinessInit
 		@SubjectCode = @SubjectCode,
 		@BusinessName = @BusinessName,
@@ -240,10 +227,78 @@ AS
 		@RA_AccountNumber = @RA_AccountNumber,
 		@IsVatRegistered = @IsVatRegistered;
 
-	---------------------------------------------------------------------
-	-- (rest of your existing bootstrap proc remains unchanged)
-	---------------------------------------------------------------------
-	-- NOTE: Keeping your prior-year + opening-balance logic as-is below.
+	DECLARE @ExternalRootCode nvarchar(50) = NULL;
+
+	EXEC App.proc_DefaultCodeGenerator
+		@Description = N'External',
+		@CheckSql = N'SELECT @cnt = COUNT(*) FROM Subject.tbSubject WHERE SubjectCode = @Code;',
+		@UseWholeWords = 1,
+		@Code = @ExternalRootCode OUTPUT;
+
+	IF @ExternalRootCode IS NULL
+		THROW 51005, 'DatasetSyntheticMIS: failed to generate SubjectCode for External root.', 1;
+
+	IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @ExternalRootCode)
+	BEGIN
+		INSERT INTO Subject.tbSubject
+		(
+			SubjectCode,
+			SubjectName,
+			SubjectTypeCode,
+			SubjectStatusCode,
+			TransmitStatusCode,
+			TaxCode,
+			AddressCode,
+			AreaCode,
+			PhoneNumber,
+			EmailAddress
+		)
+		VALUES
+		(
+			@ExternalRootCode,
+			N'External',
+			10,
+			1,
+			0,
+			N'N/A',
+			NULL,
+			NULL,
+			NULL,
+			NULL
+		);
+
+		INSERT INTO Subject.tbStructural
+		(
+			SubjectCode,
+			Notes
+		)
+		VALUES
+		(
+			@ExternalRootCode,
+			N'Dataset root for external trading partners'
+		);
+	END
+
+	MERGE #DatasetCodes AS t
+	USING
+	(
+		SELECT
+			N'SUBJECT' AS CodeType,
+			N'ExternalRoot' AS CodeName,
+			@ExternalRootCode AS CodeValue,
+			NULL AS RelatedName,
+			N'External structural root' AS Notes
+	) AS s
+		ON t.CodeType = s.CodeType
+		AND t.CodeName = s.CodeName
+	WHEN NOT MATCHED THEN
+		INSERT (CodeType, CodeName, CodeValue, RelatedName, Notes)
+		VALUES (s.CodeType, s.CodeName, s.CodeValue, s.RelatedName, s.Notes)
+	WHEN MATCHED THEN
+		UPDATE SET
+			CodeValue = s.CodeValue,
+			RelatedName = s.RelatedName,
+			Notes = s.Notes;
 
 	DECLARE
 		@ExistingMinYear smallint = (SELECT MIN(YearNumber) FROM App.tbYear),
@@ -288,7 +343,7 @@ AS
 	END
 
     UPDATE App.tbYearPeriod
-    SET BusinessTaxRate = 0.19    
+    SET BusinessTaxRate = 0.19;
 
 	DECLARE
 		@CurrentAccountCode nvarchar(10),
@@ -333,3 +388,46 @@ AS
 	SET OpeningBalance = @OpeningReserveCash
 	WHERE AccountCode = (SELECT AccountCode FROM Cash.vwReserveAccount);
 
+	DECLARE
+		@BuyerRootCode nvarchar(50) = NULL,
+		@SellerRootCode nvarchar(50) = NULL,
+		@StateRootCode nvarchar(50) = NULL;
+
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @ExternalRootCode,
+		@SubjectName = N'Buyer',
+		@SubjectTypeCode = 10,
+		@SubjectCode = @BuyerRootCode OUTPUT;
+
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @ExternalRootCode,
+		@SubjectName = N'Seller',
+		@SubjectTypeCode = 10,
+		@SubjectCode = @SellerRootCode OUTPUT;
+
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @ExternalRootCode,
+		@SubjectName = N'State',
+		@SubjectTypeCode = 10,
+		@SubjectCode = @StateRootCode OUTPUT;
+
+	MERGE #DatasetCodes AS t
+	USING
+	(
+		SELECT N'SUBJECT' AS CodeType, N'BuyerRoot' AS CodeName, @BuyerRootCode AS CodeValue, N'ExternalRoot' AS RelatedName, N'Buyer structural root' AS Notes
+		UNION ALL
+		SELECT N'SUBJECT', N'SellerRoot', @SellerRootCode, N'ExternalRoot', N'Seller structural root'
+		UNION ALL
+		SELECT N'SUBJECT', N'StateRoot', @StateRootCode, N'ExternalRoot', N'State structural root'
+	) AS s
+		ON t.CodeType = s.CodeType
+		AND t.CodeName = s.CodeName
+	WHEN NOT MATCHED THEN
+		INSERT (CodeType, CodeName, CodeValue, RelatedName, Notes)
+		VALUES (s.CodeType, s.CodeName, s.CodeValue, s.RelatedName, s.Notes)
+	WHEN MATCHED THEN
+		UPDATE SET
+			CodeValue = s.CodeValue,
+			RelatedName = s.RelatedName,
+			Notes = s.Notes;
+GO

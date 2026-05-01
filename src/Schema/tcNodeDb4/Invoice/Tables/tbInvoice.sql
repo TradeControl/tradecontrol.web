@@ -1,7 +1,7 @@
-﻿CREATE TABLE [Invoice].[tbInvoice] (
+CREATE TABLE [Invoice].[tbInvoice] (
     [InvoiceNumber]     NVARCHAR (20)   NOT NULL,
     [UserId]            NVARCHAR (10)   NOT NULL,
-    [SubjectCode]       NVARCHAR (10)   NOT NULL,
+    [SubjectCode]       NVARCHAR (50)   NOT NULL,
     [InvoiceTypeCode]   SMALLINT        NOT NULL,
     [InvoiceStatusCode] SMALLINT        NOT NULL,
     [InvoicedOn]        DATETIME        CONSTRAINT [DF_Invoice_tb_InvoicedOn] DEFAULT (CONVERT([date],getdate())) NOT NULL,

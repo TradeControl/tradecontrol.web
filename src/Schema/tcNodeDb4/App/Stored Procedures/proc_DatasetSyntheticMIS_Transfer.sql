@@ -12,7 +12,7 @@ AS
 		RETURN;
 
 	DECLARE
-		@HomeSubjectCode nvarchar(10) = (SELECT SubjectCode FROM App.vwHomeAccount),
+		@HomeSubjectCode nvarchar(50) = (SELECT SubjectCode FROM App.vwHomeAccount),
 		@DefaultFrom nvarchar(10) = (SELECT AccountCode FROM Cash.vwCurrentAccount),
 		@DefaultTo nvarchar(10) = (SELECT AccountCode FROM Cash.vwReserveAccount),
 		@UserId nvarchar(10) = (SELECT TOP (1) UserId FROM Usr.vwCredentials);

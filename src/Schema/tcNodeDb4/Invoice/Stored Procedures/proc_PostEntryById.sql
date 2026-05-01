@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Invoice.proc_PostEntryById(@UserId nvarchar(10), @SubjectCode nvarchar(10), @CashCode nvarchar(50))
+CREATE PROCEDURE Invoice.proc_PostEntryById(@UserId nvarchar(10), @SubjectCode nvarchar(50), @CashCode nvarchar(50))
 AS
    	SET NOCOUNT, XACT_ABORT ON;
 

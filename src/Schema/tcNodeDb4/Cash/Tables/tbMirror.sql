@@ -1,6 +1,6 @@
-﻿CREATE TABLE [Cash].[tbMirror] (
+CREATE TABLE [Cash].[tbMirror] (
     [CashCode]           NVARCHAR (50) NOT NULL,
-    [SubjectCode]        NVARCHAR (10) NOT NULL,
+    [SubjectCode]        NVARCHAR (50) NOT NULL,
     [ChargeCode]         NVARCHAR (50) NOT NULL,
     [TransmitStatusCode] SMALLINT      CONSTRAINT [DF_Cash_tbMirror_TransmitStatusCode] DEFAULT ((0)) NOT NULL,
     [InsertedBy]         NVARCHAR (50) CONSTRAINT [DF_Cash_tbMirror_InsertedBy] DEFAULT (suser_sname()) NOT NULL,

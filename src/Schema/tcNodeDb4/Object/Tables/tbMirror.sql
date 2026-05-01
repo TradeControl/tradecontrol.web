@@ -1,6 +1,6 @@
-﻿CREATE TABLE [Object].[tbMirror] (
+CREATE TABLE [Object].[tbMirror] (
     [ObjectCode]       NVARCHAR (50) NOT NULL,
-    [SubjectCode]        NVARCHAR (10) NOT NULL,
+    [SubjectCode]        NVARCHAR (50) NOT NULL,
     [AllocationCode]     NVARCHAR (50) NOT NULL,
     [TransmitStatusCode] SMALLINT      CONSTRAINT [DF_Object_tbMirror_TransmitStatusCode] DEFAULT ((0)) NOT NULL,
     [InsertedBy]         NVARCHAR (50) CONSTRAINT [DF_Object_tbMirror_InsertedBy] DEFAULT (suser_sname()) NOT NULL,

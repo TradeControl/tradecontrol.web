@@ -2,19 +2,19 @@ CREATE PROCEDURE App.proc_DatasetCreateProjectTemplate
 (
 	@ParentProjectCode nvarchar(20) OUTPUT,          -- container; created if null/empty
 	@ParentProjectTitle nvarchar(100) = NULL,        -- defaults if container created
-	@CustomerSubjectCode nvarchar(10),               -- customer for the sales/service project
+	@CustomerSubjectCode nvarchar(50),               -- customer for the sales/service project
 	@ObjectCode nvarchar(50),                        -- the FG/service object being sold
 	@ActionOn date,                                  -- dead-year date
 	@Quantity decimal(18,4) = 100,
 
 	@PriceRatio decimal(18,7) = 1.0000000,           -- adjust selling price (profit/loss lever)
 
-	@BoxSupplierSubjectCode nvarchar(10) = NULL,
-	@PlasticSupplierSubjectCode nvarchar(10) = NULL,
-	@InsertSupplierSubjectCode nvarchar(10) = NULL,
-	@MouldingHaulierSubjectCode nvarchar(10) = NULL,
-	@PrinterSubjectCode nvarchar(10) = NULL,
-	@PrintHaulierSubjectCode nvarchar(10) = NULL,
+	@BoxSupplierSubjectCode nvarchar(50) = NULL,
+	@PlasticSupplierSubjectCode nvarchar(50) = NULL,
+	@InsertSupplierSubjectCode nvarchar(50) = NULL,
+	@MouldingHaulierSubjectCode nvarchar(50) = NULL,
+	@PrinterSubjectCode nvarchar(50) = NULL,
+	@PrintHaulierSubjectCode nvarchar(50) = NULL,
 
 	@ProjectCode nvarchar(20) OUTPUT                 -- master/template project created
 )
@@ -33,7 +33,7 @@ AS
 
 		DECLARE
 			@UserId nvarchar(10) = (SELECT UserId FROM Usr.vwCredentials),
-			@DefaultSubjectCode nvarchar(10) = (SELECT TOP (1) SubjectCode FROM App.tbOptions),
+			@DefaultSubjectCode nvarchar(50) = (SELECT TOP (1) SubjectCode FROM App.tbOptions),
 			@ObjectDescription nvarchar(100),
 			@ObjectCashCode nvarchar(50),
 			@ObjectUnitCharge decimal(18,7),
@@ -115,7 +115,7 @@ AS
 			@UserId,
 			@CustomerSubjectCode,
 			@ObjectDescription,
-			(SELECT UserName FROM Usr.vwCredentials),
+			dc.ContactName,
 			@ObjectCode,
 			1,
 			@UserId,
@@ -131,6 +131,20 @@ AS
 			s.AddressCode,
 			CASE WHEN @ObjectPrinted = 0 THEN 1 ELSE 0 END
 		FROM Subject.tbSubject s
+		OUTER APPLY
+		(
+			SELECT TOP (1)
+				c.SubjectName AS ContactName
+			FROM Subject.tbNamespace n
+			JOIN Subject.tbSubject c
+				ON c.SubjectCode = n.ChildSubjectCode
+			JOIN Subject.tbType t
+				ON t.SubjectTypeCode = c.SubjectTypeCode
+			WHERE n.ParentSubjectCode = s.SubjectCode
+			  AND n.IsDefault <> 0
+			  AND t.SubjectClassCode = 1
+			ORDER BY n.Ordinal
+		) dc
 		WHERE s.SubjectCode = @CustomerSubjectCode;
 
 		EXEC Project.proc_Configure @ProjectCode;
@@ -222,6 +236,28 @@ AS
 		WHERE p.ProjectTitle = (SELECT ProjectTitle FROM Project.tbProject WHERE ProjectCode = @ProjectCode)
 		  AND p.CashCode IS NULL
 		  AND p.SubjectCode <> @BoxSupplierSubjectCode;
+
+		-----------------------------------------------------------------
+		-- Resolve ContactName from the default real child of the final Subject
+		-----------------------------------------------------------------
+		UPDATE p
+		SET ContactName = dc.ContactName
+		FROM Project.tbProject p
+		OUTER APPLY
+		(
+			SELECT TOP (1)
+				c.SubjectName AS ContactName
+			FROM Subject.tbNamespace n
+			JOIN Subject.tbSubject c
+				ON c.SubjectCode = n.ChildSubjectCode
+			JOIN Subject.tbType t
+				ON t.SubjectTypeCode = c.SubjectTypeCode
+			WHERE n.ParentSubjectCode = p.SubjectCode
+			  AND n.IsDefault <> 0
+			  AND t.SubjectClassCode = 1
+			ORDER BY n.Ordinal
+		) dc
+		WHERE p.ProjectTitle = (SELECT ProjectTitle FROM Project.tbProject WHERE ProjectCode = @ProjectCode);
 
 		EXEC Project.proc_Schedule @ProjectCode;
 

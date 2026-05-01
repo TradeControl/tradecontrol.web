@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Object.proc_NetworkUpdated(@SubjectCode nvarchar(10), @AllocationCode nvarchar(50))
+CREATE PROCEDURE Object.proc_NetworkUpdated(@SubjectCode nvarchar(50), @AllocationCode nvarchar(50))
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 

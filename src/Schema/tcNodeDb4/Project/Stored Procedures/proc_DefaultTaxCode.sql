@@ -1,7 +1,7 @@
-﻿
-CREATE   PROCEDURE Project.proc_DefaultTaxCode 
+
+CREATE PROCEDURE Project.proc_DefaultTaxCode 
 	(
-	@SubjectCode nvarchar(10),
+	@SubjectCode nvarchar(50),
 	@CashCode nvarchar(50),
 	@TaxCode nvarchar(10) OUTPUT
 	)

@@ -1,10 +1,10 @@
-﻿CREATE   PROCEDURE Cash.proc_TxPayAccount
+CREATE   PROCEDURE Cash.proc_TxPayAccount
 (
 	@PaymentAddress nvarchar(42)
 	, @TxId nvarchar(64)
 	, @Spent decimal(18, 5)
 	, @MinerFee decimal(18, 5)
-	, @SubjectCode nvarchar(10)
+	, @SubjectCode nvarchar(50)
 )
 AS
 	SET XACT_ABORT, NOCOUNT ON;

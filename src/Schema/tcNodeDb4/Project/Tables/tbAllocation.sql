@@ -1,6 +1,6 @@
-﻿CREATE TABLE [Project].[tbAllocation] (
+CREATE TABLE [Project].[tbAllocation] (
     [ContractAddress]       NVARCHAR (42)   NOT NULL,
-    [SubjectCode]           NVARCHAR (10)   NOT NULL,
+    [SubjectCode]           NVARCHAR (50)   NOT NULL,
     [AllocationCode]        NVARCHAR (50)   NOT NULL,
     [AllocationDescription] NVARCHAR (256)  NULL,
     [ProjectCode]              NVARCHAR (20)   NOT NULL,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -13,7 +13,7 @@ namespace TradeControl.Web.Models
     {
         [Key]
         [Required]
-        [StringLength(10)]
+        [StringLength(50)]
         [Display(Name = "Account Code")]
         public string SubjectCode { get; set; }
         [Required]

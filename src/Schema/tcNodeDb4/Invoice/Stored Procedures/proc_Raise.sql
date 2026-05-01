@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE Invoice.proc_Raise
+
+CREATE PROCEDURE Invoice.proc_Raise
 	(
 	@ProjectCode nvarchar(20),
 	@InvoiceTypeCode smallint,
@@ -14,7 +14,7 @@ AS
 		@UserId nvarchar(10)
 		, @NextNumber int
 		, @InvoiceSuffix nvarchar(4)
-		, @SubjectCode nvarchar(10)
+		, @SubjectCode nvarchar(50)
 	
 		SELECT @UserId = UserId FROM Usr.vwCredentials
 

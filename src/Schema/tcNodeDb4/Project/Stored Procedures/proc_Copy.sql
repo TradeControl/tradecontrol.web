@@ -1,5 +1,5 @@
-﻿
-CREATE   PROCEDURE Project.proc_Copy
+
+CREATE PROCEDURE Project.proc_Copy
 	(
 	@FromProjectCode nvarchar(20),
 	@ParentProjectCode nvarchar(20) = null,
@@ -15,7 +15,7 @@ AS
 			, @ProjectStatusCode smallint
 			, @StepNumber smallint
 			, @UserId nvarchar(10)
-			, @SubjectCode nvarchar(10)
+			, @SubjectCode nvarchar(50)
 
 		SELECT @UserId = UserId FROM Usr.vwCredentials
 	

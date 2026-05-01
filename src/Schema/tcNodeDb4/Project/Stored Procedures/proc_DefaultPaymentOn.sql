@@ -1,7 +1,7 @@
-﻿
-CREATE   PROCEDURE Project.proc_DefaultPaymentOn
+
+CREATE PROCEDURE Project.proc_DefaultPaymentOn
 	(
-		@SubjectCode nvarchar(10),
+		@SubjectCode nvarchar(50),
 		@ActionOn datetime,
 		@PaymentOn datetime output
 	)

@@ -1,10 +1,10 @@
-﻿CREATE PROCEDURE Cash.proc_PaymentPostInvoiced (@PaymentCode nvarchar(20))
+CREATE PROCEDURE Cash.proc_PaymentPostInvoiced (@PaymentCode nvarchar(20))
 AS
 	SET NOCOUNT, XACT_ABORT ON;
 
 	BEGIN TRY
 		DECLARE 
-			@SubjectCode nvarchar(10)
+			@SubjectCode nvarchar(50)
 			, @PostValue decimal(18, 5)
 			, @CashCode nvarchar(50);
 

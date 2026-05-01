@@ -20,58 +20,64 @@ AS
 
 	DECLARE
 		@L2_UserId nvarchar(10) = (SELECT TOP (1) UserId FROM Usr.vwCredentials),
-		@L2_WalkInSubjectCode nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MiscCustomer1');
+		@L2_WalkInSubjectCode nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MiscCustomer1'),
+		@SellerRootCode nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'SellerRoot');
 
 	IF @L2_WalkInSubjectCode IS NULL
 		THROW 51101, 'SyntheticDataset Layer2: missing SUBJECT/MiscCustomer1 (walk-in) in #DatasetCodes.', 1;
 
+	IF @SellerRootCode IS NULL
+		THROW 51226, 'DatasetSyntheticMIS_PayMisc: missing SUBJECT/SellerRoot in #DatasetCodes.', 1;
+
 	DECLARE @PayMiscTaxCode nvarchar(10) =
 		CASE WHEN ISNULL(@IsVatRegistered, 0) <> 0 THEN N'T1' ELSE N'T0' END;
 
-	-----------------------------------------------------------------
-	-- Add admin expense suppliers (Energy + Supermarket)
-	-----------------------------------------------------------------
 	DECLARE
-		@L2_EnergySupplierCode nvarchar(10) = NULL,
-		@L2_SupermarketSupplierCode nvarchar(10) = NULL;
+		@L2_EnergySupplierCode nvarchar(50) = NULL,
+		@L2_SupermarketSupplierCode nvarchar(50) = NULL;
 
-	EXEC Subject.proc_DefaultSubjectCode @SubjectName = N'Dataset Energy Supplier', @SubjectCode = @L2_EnergySupplierCode OUTPUT;
-	IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @L2_EnergySupplierCode)
-	BEGIN
-		INSERT INTO Subject.tbSubject
-		(
-			SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode,
-			TaxCode, EUJurisdiction,
-			PaymentTerms, ExpectedDays, PaymentDays, PayDaysFromMonthEnd, PayBalance
-		)
-		VALUES
-		(
-			@L2_EnergySupplierCode, N'Dataset Energy Supplier', 0, 1,
-			N'T1', 0,
-			N'30 days', 0, 30, 0, 1
-		);
-	END
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @SellerRootCode,
+		@SubjectName = N'Dataset Energy Supplier',
+		@SubjectTypeCode = 0,
+		@SubjectCode = @L2_EnergySupplierCode OUTPUT;
 
-	EXEC Subject.proc_DefaultSubjectCode @SubjectName = N'Dataset Supermarket', @SubjectCode = @L2_SupermarketSupplierCode OUTPUT;
-	IF NOT EXISTS (SELECT 1 FROM Subject.tbSubject WHERE SubjectCode = @L2_SupermarketSupplierCode)
-	BEGIN
-		INSERT INTO Subject.tbSubject
-		(
-			SubjectCode, SubjectName, SubjectTypeCode, SubjectStatusCode,
-			TaxCode, EUJurisdiction,
-			PaymentTerms, ExpectedDays, PaymentDays, PayDaysFromMonthEnd, PayBalance
-		)
-		VALUES
-		(
-			@L2_SupermarketSupplierCode, N'Dataset Supermarket', 0, 1,
-			N'T1', 0,
-			N'30 days', 0, 30, 0, 1
-		);
-	END
+	UPDATE Subject.tbSubject
+	SET
+		SubjectStatusCode = 1,
+		TaxCode = N'T1',
+		PaymentTerms = N'30 days',
+		ExpectedDays = 0,
+		PaymentDays = 30,
+		PayDaysFromMonthEnd = 0,
+		PayBalance = 1
+	WHERE SubjectCode = @L2_EnergySupplierCode;
 
-	-----------------------------------------------------------------
-	-- Loop closed months and create misc payments
-	-----------------------------------------------------------------
+	UPDATE Subject.tbVirtual
+	SET EUJurisdiction = 0
+	WHERE SubjectCode = @L2_EnergySupplierCode;
+
+	EXEC Subject.proc_AddNamespace
+		@RootSubjectCode = @SellerRootCode,
+		@SubjectName = N'Dataset Supermarket',
+		@SubjectTypeCode = 0,
+		@SubjectCode = @L2_SupermarketSupplierCode OUTPUT;
+
+	UPDATE Subject.tbSubject
+	SET
+		SubjectStatusCode = 1,
+		TaxCode = N'T1',
+		PaymentTerms = N'30 days',
+		ExpectedDays = 0,
+		PaymentDays = 30,
+		PayDaysFromMonthEnd = 0,
+		PayBalance = 1
+	WHERE SubjectCode = @L2_SupermarketSupplierCode;
+
+	UPDATE Subject.tbVirtual
+	SET EUJurisdiction = 0
+	WHERE SubjectCode = @L2_SupermarketSupplierCode;
+
 	DECLARE
 		@L2_MonthStart date,
 		@L2_MonthEnd date,
@@ -89,7 +95,6 @@ AS
 
 	WHILE @@FETCH_STATUS = 0
 	BEGIN
-		-- CC-ADMIN quarterly electricity
 		IF (@L2_MonthIndex % 3) = 0
 		BEGIN
 			SET @L2_Amount = CAST(250 + (ABS(CHECKSUM(CONCAT(N'DS:L2:ENERGY:', @L2_MonthIndex))) % 750) AS decimal(18,5));
@@ -117,7 +122,6 @@ AS
 			EXEC Cash.proc_PaymentPost;
 		END
 
-		-- CC-ADMIN monthly provisions
 		SET @L2_Amount = CAST(60 + (ABS(CHECKSUM(CONCAT(N'DS:L2:PROV:', @L2_MonthIndex))) % 140) AS decimal(18,5));
 
 		SET @L2_PaymentCode = NULL;
@@ -142,7 +146,6 @@ AS
 
 		EXEC Cash.proc_PaymentPost;
 
-		-- CC-INCME walk-in income
 		SET @L2_Amount = CAST(25 + (ABS(CHECKSUM(CONCAT(N'DS:L2:WALKIN:', @L2_MonthIndex))) % 125) AS decimal(18,5));
 
 		SET @L2_PaymentCode = NULL;
@@ -172,3 +175,4 @@ AS
 
 	CLOSE curL2Months;
 	DEALLOCATE curL2Months;
+GO

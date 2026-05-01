@@ -1,6 +1,10 @@
-﻿
-CREATE   VIEW Subject.vwCompanyLogo
+CREATE VIEW Subject.vwCompanyLogo
 AS
-SELECT        TOP (1) Subject.tbSubject.Logo
-FROM            Subject.tbSubject INNER JOIN
-                         App.tbOptions ON Subject.tbSubject.SubjectCode = App.tbOptions.SubjectCode;
+	SELECT TOP (1)
+		v.Logo
+	FROM App.tbOptions AS o
+		INNER JOIN Subject.tbSubject AS s
+			ON o.SubjectCode = s.SubjectCode
+		LEFT OUTER JOIN Subject.tbVirtual AS v
+			ON s.SubjectCode = v.SubjectCode;
+GO

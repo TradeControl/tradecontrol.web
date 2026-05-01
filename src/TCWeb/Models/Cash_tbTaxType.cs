@@ -26,7 +26,7 @@ namespace TradeControl.Web.Models
         public string CashCode { get; set; }
         public short MonthNumber { get; set; }
         public short RecurrenceCode { get; set; }
-        [StringLength(10)]
+        [StringLength(50)]
         public string SubjectCode { get; set; }
         public short OffsetDays { get; set; }
 

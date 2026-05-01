@@ -111,14 +111,14 @@ AS
 		@ActionOn date,
 		@Qty decimal(18,4),
 		@Selector int,
-		@SubjectCodeForOrder nvarchar(10),
+		@SubjectCodeForOrder nvarchar(50),
 		@IsProduct bit;
 
 	DECLARE
-		@MouldingCustomerUK_Code nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MouldingCustomerUK'),
-		@MouldingCustomerEU_Code nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MouldingCustomerEU'),
-		@PrintCustomerUK_Code nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'PrintCustomerUK'),
-		@PrintCustomerEU_Code nvarchar(10) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'PrintCustomerEU');
+		@MouldingCustomerUK_Code nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MouldingCustomerUK'),
+		@MouldingCustomerEU_Code nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'MouldingCustomerEU'),
+		@PrintCustomerUK_Code nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'PrintCustomerUK'),
+		@PrintCustomerEU_Code nvarchar(50) = (SELECT CodeValue FROM #DatasetCodes WHERE CodeType = N'SUBJECT' AND CodeName = N'PrintCustomerEU');
 
 	IF @MouldingCustomerUK_Code IS NULL OR @MouldingCustomerEU_Code IS NULL OR @PrintCustomerUK_Code IS NULL OR @PrintCustomerEU_Code IS NULL
 		THROW 51053, 'SyntheticDataset: missing SUBJECT codes in #DatasetCodes required for UK/EU mix.', 1;

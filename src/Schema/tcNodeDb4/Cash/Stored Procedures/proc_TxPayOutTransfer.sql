@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Cash.proc_TxPayOutTransfer
+CREATE PROCEDURE Cash.proc_TxPayOutTransfer
 (
 	@PaymentAddress nvarchar(42)
 	, @TxId nvarchar(64)
@@ -13,7 +13,7 @@ AS
 	BEGIN TRY
 
 		DECLARE 						
-			@SubjectCode nvarchar(10)
+			@SubjectCode nvarchar(50)
 			, @TaxCode nvarchar(10)
 			, @PaymentCode nvarchar(20)
 			, @TxNumber int

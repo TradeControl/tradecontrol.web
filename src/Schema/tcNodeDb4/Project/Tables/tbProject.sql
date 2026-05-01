@@ -1,17 +1,17 @@
-﻿CREATE TABLE [Project].[tbProject] (
-    [ProjectCode]        NVARCHAR (20)   NOT NULL,
+CREATE TABLE [Project].[tbProject] (
+    [ProjectCode]     NVARCHAR (20)   NOT NULL,
     [UserId]          NVARCHAR (10)   NOT NULL,
-    [SubjectCode]     NVARCHAR (10)   NOT NULL,
+    [SubjectCode]     NVARCHAR (50)   NOT NULL,
     [SecondReference] NVARCHAR (20)   NULL,
-    [ProjectTitle]       NVARCHAR (100)  NULL,
+    [ProjectTitle]    NVARCHAR (100)  NULL,
     [ContactName]     NVARCHAR (100)  NULL,
-    [ObjectCode]    NVARCHAR (50)   NOT NULL,
-    [ProjectStatusCode]  SMALLINT        NOT NULL,
+    [ObjectCode]      NVARCHAR (50)   NOT NULL,
+    [ProjectStatusCode] SMALLINT        NOT NULL,
     [ActionById]      NVARCHAR (10)   NOT NULL,
     [ActionOn]        DATETIME        CONSTRAINT [DF_Project_tbProject_ActionOn] DEFAULT (getdate()) NOT NULL,
     [ActionedOn]      DATETIME        NULL,
     [PaymentOn]       DATETIME        CONSTRAINT [DF_Project_tb_PaymentOn] DEFAULT (getdate()) NOT NULL,
-    [ProjectNotes]       NVARCHAR (255)  NULL,
+    [ProjectNotes]    NVARCHAR (255)  NULL,
     [CashCode]        NVARCHAR (50)   NULL,
     [TaxCode]         NVARCHAR (10)   NULL,
     [AddressCodeFrom] NVARCHAR (15)   NULL,
@@ -162,11 +162,29 @@ AS
 		    JOIN inserted i ON Project.ProjectCode = i.ProjectCode
 	    WHERE NOT Project.CashCode IS NULL 
 
-	    INSERT INTO Subject.tbContact (SubjectCode, ContactName)
-	    SELECT DISTINCT SubjectCode, ContactName 
-	    FROM inserted
-	    WHERE EXISTS (SELECT ContactName FROM inserted AS i WHERE (NOT (ContactName IS NULL)) AND (ContactName <> N''))
-                AND NOT EXISTS(SELECT Subject.tbContact.ContactName FROM inserted AS i INNER JOIN Subject.tbContact ON i.SubjectCode = Subject.tbContact.SubjectCode AND i.ContactName = Subject.tbContact.ContactName)
+	    DECLARE @Xml nvarchar(max);
+
+	    SELECT @Xml =
+	    (
+	        SELECT
+	            i.SubjectCode,
+	            i.ContactName
+	        FROM inserted AS i
+	        WHERE NULLIF(LTRIM(RTRIM(i.ContactName)), N'') IS NOT NULL
+	          AND NOT EXISTS
+	          (
+	              SELECT 1
+	              FROM Subject.tbNamespace AS n
+	              INNER JOIN Subject.tbSubject AS s
+	                  ON s.SubjectCode = n.ChildSubjectCode
+	              WHERE n.ParentSubjectCode = i.SubjectCode
+	                AND s.SubjectName = i.ContactName
+	          )
+	        FOR XML PATH('Contact'), ROOT('Contacts'), TYPE
+	    ).value('.', 'nvarchar(max)');
+
+	    IF NULLIF(@Xml, N'') IS NOT NULL
+	        EXEC Subject.proc_AddContacts @Xml = @Xml;
 
 		INSERT INTO Project.tbChangeLog
 								 (ProjectCode, TransmitStatusCode, SubjectCode, ObjectCode, ProjectStatusCode, ActionOn, Quantity, CashCode, TaxCode, UnitCharge)
@@ -427,15 +445,20 @@ AS
 
 		IF UPDATE (ContactName)
 		BEGIN
-			INSERT INTO Subject.tbContact (SubjectCode, ContactName)
-			SELECT DISTINCT SubjectCode, ContactName FROM inserted
-			WHERE EXISTS (SELECT     *
-						FROM         inserted AS i
-						WHERE     (NOT (ContactName IS NULL)) AND
-												(ContactName <> N''))
-				AND NOT EXISTS(SELECT  *
-								FROM inserted AS i 
-								INNER JOIN Subject.tbContact ON i.SubjectCode = Subject.tbContact.SubjectCode AND i.ContactName = Subject.tbContact.ContactName)
+	        DECLARE @Xml nvarchar(max);
+
+	        SELECT @Xml =
+	        (
+	            SELECT
+	                i.SubjectCode,
+	                i.ContactName
+	            FROM inserted AS i
+	            WHERE NULLIF(LTRIM(RTRIM(i.ContactName)), N'') IS NOT NULL
+	            FOR XML PATH('Contact'), ROOT('Contacts'), TYPE
+	        ).value('.', 'nvarchar(max)');
+
+	        IF NULLIF(@Xml, N'') IS NOT NULL
+	            EXEC Subject.proc_AddContacts @Xml = @Xml;
 		END
 		
 		UPDATE Project.tbProject

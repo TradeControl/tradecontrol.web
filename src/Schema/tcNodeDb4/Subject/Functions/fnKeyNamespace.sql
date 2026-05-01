@@ -1,4 +1,4 @@
-﻿CREATE   FUNCTION Subject.fnKeyNamespace (@AccountCode nvarchar(10), @KeyName nvarchar(50))
+CREATE FUNCTION Subject.fnKeyNamespace (@AccountCode nvarchar(10), @KeyName nvarchar(50))
 RETURNS TABLE 
 AS
 	RETURN

@@ -13,6 +13,7 @@ AS
         EXEC App.proc_DefaultCodeGenerator
             @Description = @TaxDescription,
             @CheckSql = @CheckSql,
+            @UseWholeWords = 0,
             @Code = @TaxCode OUTPUT;
     END TRY
     BEGIN CATCH
