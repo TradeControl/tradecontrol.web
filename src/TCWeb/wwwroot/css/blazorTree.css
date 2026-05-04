@@ -1,4 +1,4 @@
-/* Admin Manager / Blazor tree manager shell
+/* Blazor tree manager shell
    - Desktop split panes using Split.js
    - Fixed viewport workspace between header and fixed footer
    - Admin Manager tree styles (Explorer-like density)
@@ -538,4 +538,44 @@ body {
         height: 2.5rem;
         padding: 0;
     }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Subject Browser                                                            */
+/* -------------------------------------------------------------------------- */
+
+.tc-subject-browser-tree .tc-subject-browser-icon-real {
+    color: coral;
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-virtual {
+    color: forestgreen;
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-structural {
+    color: gold;
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-default {
+    position: relative;
+}
+
+    .tc-subject-browser-tree .tc-subject-browser-icon-default::after {
+        content: "";
+        position: absolute;
+        right: -0.2rem;
+        bottom: -0.05rem;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        border: 1px solid #fff;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+
+.tc-subject-browser-tree .tc-subject-browser-icon-default-light::after {
+    background: #ced4da;
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-default-real::after {
+    background: #198754;
 }

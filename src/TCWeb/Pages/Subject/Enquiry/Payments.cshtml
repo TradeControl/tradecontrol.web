@@ -105,5 +105,8 @@
 }
 
 <p>
-    <a class="btn btn-info @btnWidthClass" asp-page="./Index" asp-route-accountCode="@Model.Subject_Account.SubjectCode" title="Back to list">To List</a>
+    <a class="btn btn-info @btnWidthClass"
+       asp-page="/Subject/Browser/Index"
+       asp-route-namespaceFilter="@Model.Subject_Account.SubjectCode"
+       title="Open Subject Browser">Subject Browser</a>
 </p>

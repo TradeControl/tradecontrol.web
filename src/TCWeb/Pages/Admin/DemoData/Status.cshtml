@@ -27,14 +27,11 @@
             ? $"/Admin/DemoData/Config?returnNode={Uri.EscapeDataString(returnNode)}"
             : "/Admin/DemoData/Config");
 
-    var cancelHref = embedded
-        ? (!string.IsNullOrWhiteSpace(returnNode)
-            ? $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}"
-            : "/Admin/Manager/Index")
-        : (!string.IsNullOrWhiteSpace(returnNode)
-            ? $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}"
-            : "/Admin/Manager/Index");
+    var cancelHref = !string.IsNullOrWhiteSpace(returnNode)
+        ? $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}"
+        : "/Admin/Manager/Index";
 
+    var cancelTarget = embedded ? "_top" : null;
     var stateUrl = Url.Page("./Status", pageHandler: "State") ?? "/Admin/DemoData/Status?handler=State";
 }
 
@@ -90,7 +87,7 @@
         <div class="col-12">
             <div class="d-flex gap-2 flex-wrap">
                 <a href="@configHref" class="btn btn-outline-primary">Queue another dataset</a>
-                <a href="@cancelHref" class="btn btn-outline-secondary">Back</a>
+                <a href="@cancelHref" target="@cancelTarget" class="btn btn-outline-secondary">Back</a>
             </div>
         </div>
     </div>

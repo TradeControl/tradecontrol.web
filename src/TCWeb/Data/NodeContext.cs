@@ -20,6 +20,12 @@ namespace TradeControl.Web.Data
         public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
 
         #region Tables
+        public virtual DbSet<Subject_tbVirtual> Subject_tbVirtuals { get; set; }
+        public virtual DbSet<Subject_tbStructural> Subject_tbStructurals { get; set; }
+        public virtual DbSet<Subject_tbNamespace> Subject_tbNamespaces { get; set; }
+        public virtual DbSet<Subject_tbReal> Subject_tbReals { get; set; }
+        public virtual DbSet<Subject_tbClass> Subject_tbClasses { get; set; }
+
         public virtual DbSet<App_tbJurisdiction> App_tbJurisdictions { get; set; }
         public virtual DbSet<Cash_tbTaxTagClass> Cash_tbTaxTagClasses { get; set; }
         public virtual DbSet<Cash_tbTaxTagMapType> Cash_tbTaxTagMapTypes { get; set; }
@@ -57,7 +63,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_tbCode> Cash_tbCodes { get; set; }
         public virtual DbSet<App_tbCodeExclusion> App_tbCodeExclusions { get; set; }
         public virtual DbSet<Cash_tbCoinType> Cash_tbCoinTypes { get; set; }
-        public virtual DbSet<Subject_tbContact> Subject_tbContacts { get; set; }
         public virtual DbSet<Project_tbCostSet> Project_tbCostSets { get; set; }
         public virtual DbSet<App_tbDoc> App_tbDocs { get; set; }
         public virtual DbSet<Subject_tbDoc> Subject_tbDocs { get; set; }
@@ -149,6 +154,8 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Views
+        public virtual DbSet<Subject_vwReal> Subject_vwReals { get; set; }
+        public virtual DbSet<Subject_vwVirtual> Subject_vwVirtuals { get; set; }
         public virtual DbSet<Cash_vwCategoryPrimaryParent> Cash_vwCategoryPrimaryParents { get; set; }
         public virtual DbSet<Subject_vwSubjectLookup> Subject_SubjectLookup { get; set; }
         public virtual DbSet<Subject_vwSubjectLookupAll> Subject_SubjectLookupAll { get; set; }
@@ -201,7 +208,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwCode> Cash_Codes { get; set; }
         public virtual DbSet<Subject_vwCompanyHeader> Subject_CompanyHeaders { get; set; }
         public virtual DbSet<Subject_vwCompanyLogo> Subject_CompanyLogos { get; set; }
-        public virtual DbSet<Subject_vwContact> Subject_Contacts { get; set; }
         public virtual DbSet<Subject_vwCurrentAccount> Subject_CurrentAccounts { get; set; }
 
         public virtual DbSet<Subject_vwAddressList> Subject_AddressList { get; set; }
@@ -1038,44 +1044,6 @@ namespace TradeControl.Web.Data
                     .HasName("PK_Cash_tbCoinType");
 
                 entity.Property(e => e.CoinTypeCode).ValueGeneratedNever();
-            });
-
-            modelBuilder.Entity<Subject_tbContact>(entity =>
-            {
-                entity.HasKey(e => new { e.SubjectCode, e.ContactName })
-                    .HasName("PK_Subject_tbContact")
-                    .IsClustered(false);
-
-                entity.HasIndex(e => e.Department, "IX_Subject_tbContactDepartment")
-                    .HasFillFactor((byte)90);
-
-                entity.HasIndex(e => e.JobTitle, "IX_Subject_tbContactJobTitle")
-                    .HasFillFactor((byte)90);
-
-                entity.HasIndex(e => e.NameTitle, "IX_Subject_tbContactNameTitle")
-                    .HasFillFactor((byte)90);
-
-                entity.HasIndex(e => e.SubjectCode, "IX_Subject_tbContact_SubjectCode")
-                    .HasFillFactor((byte)90);
-
-                entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                //entity.Property(e => e.OnMailingList).HasDefaultValueSql("((1))");
-
-                //entity.Property(e => e.RowVer)
-                //    .IsRowVersion()
-                //    .IsConcurrencyToken();
-
-                entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
-
-                entity.HasOne(d => d.SubjectCodeNavigation)
-                    .WithMany(p => p.TbContacts)
-                    .HasForeignKey(d => d.SubjectCode)
-                    .HasConstraintName("FK_Subject_tbContact_SubjectCode");
             });
 
             modelBuilder.Entity<Project_tbCostSet>(entity =>
@@ -1967,11 +1935,7 @@ namespace TradeControl.Web.Data
                     .HasName("PK_Subject_tbSubject")
                     .IsClustered(false);
 
-                entity.HasIndex(e => e.SubjectName, "IX_Subject_tb_SubjectName")
-                    .IsUnique()
-                    .HasFillFactor((byte)90);
-
-                entity.HasIndex(e => e.SubjectSource, "IX_Subject_tb_SubjectSource")
+                entity.HasIndex(e => e.SubjectName, "IX_Subject_tb_AccountName")
                     .HasFillFactor((byte)90);
 
                 entity.HasIndex(e => e.AreaCode, "IX_Subject_tb_AreaCode")
@@ -1980,15 +1944,28 @@ namespace TradeControl.Web.Data
                 entity.HasIndex(e => e.SubjectStatusCode, "IX_Subject_tb_SubjectStatusCode")
                     .HasFillFactor((byte)90);
 
+                entity.HasIndex(e => new { e.SubjectStatusCode, e.SubjectName }, "IX_Subject_tb_Status_AccountCode")
+                    .HasFillFactor((byte)90);
+
                 entity.HasIndex(e => e.SubjectTypeCode, "IX_Subject_tb_SubjectTypeCode")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.PaymentTerms, "IX_Subject_tb_PaymentTerms")
-                    .HasFillFactor((byte)90);
+                entity.Property(e => e.SubjectTypeCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.SubjectStatusCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.TransmitStatusCode).HasDefaultValueSql("((0))");
+                entity.Property(e => e.ExpectedDays).HasDefaultValueSql("((0))");
+                entity.Property(e => e.PaymentDays).HasDefaultValueSql("((0))");
+                entity.Property(e => e.PayDaysFromMonthEnd).HasDefaultValueSql("((0))");
+                entity.Property(e => e.PayBalance).HasDefaultValueSql("((1))");
+                entity.Property(e => e.OpeningBalance).HasDefaultValueSql("((0))");
+                entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
+                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
+                entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
+                entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasIndex(e => new { e.SubjectStatusCode, e.SubjectName }, "IX_Subject_tb_Status_SubjectCode")
-                    .IsUnique()
-                    .HasFillFactor((byte)90);
+                entity.Property(e => e.RowVer)
+                    .IsRowVersion()
+                    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.AddressCodeNavigation)
                     .WithMany(p => p.TbSubjects)
@@ -1999,13 +1976,13 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbSubjects)
                     .HasForeignKey(d => d.SubjectStatusCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("tbSubject_FK00");
+                    .HasConstraintName("FK_Subject_tbSubject_tbStatus");
 
                 entity.HasOne(d => d.SubjectTypeCodeNavigation)
                     .WithMany(p => p.TbSubjects)
                     .HasForeignKey(d => d.SubjectTypeCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("tbSubject_FK01");
+                    .HasConstraintName("FK_Subject_tbSubject_tbType");
 
                 entity.HasOne(d => d.TaxCodeNavigation)
                     .WithMany(p => p.TbSubjects)
@@ -2019,6 +1996,100 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_Subject_tbSubject_tbTransmitStatus");
             });
 
+            modelBuilder.Entity<Subject_tbReal>(entity =>
+            {
+                entity.HasKey(e => e.SubjectCode)
+                    .HasName("PK_Subject_tbReal")
+                    .IsClustered(false);
+
+                entity.HasIndex(e => e.Department, "IX_Subject_tbRealDepartment")
+                    .HasFillFactor((byte)90);
+
+                entity.HasIndex(e => e.JobTitle, "IX_Subject_tbRealJobTitle")
+                    .HasFillFactor((byte)90);
+
+                entity.HasIndex(e => e.NameTitle, "IX_Subject_tbRealNameTitle")
+                    .HasFillFactor((byte)90);
+
+                entity.HasIndex(e => e.SubjectCode, "IX_Subject_tbReal_AccountCode")
+                    .HasFillFactor((byte)90);
+
+                entity.Property(e => e.OnMailingList).HasDefaultValueSql("((1))");
+
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
+
+                entity.HasOne(d => d.SubjectCodeNavigation)
+                    .WithOne(p => p.TbReal)
+                    .HasForeignKey<Subject_tbReal>(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbReal_tbSubject");
+            });
+
+            modelBuilder.Entity<Subject_tbVirtual>(entity =>
+            {
+                entity.HasKey(e => e.SubjectCode)
+                    .HasName("PK_Subject_tbVirtual")
+                    .IsClustered(false);
+
+                entity.Property(e => e.NumberOfEmployees).HasDefaultValueSql("((0))");
+                entity.Property(e => e.Eujurisdiction).HasDefaultValueSql("((0))");
+                entity.Property(e => e.Turnover).HasDefaultValueSql("((0))");
+
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
+
+                entity.HasOne(d => d.SubjectCodeNavigation)
+                    .WithOne(p => p.TbVirtual)
+                    .HasForeignKey<Subject_tbVirtual>(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbVirtual_tbSubject");
+            });
+
+            modelBuilder.Entity<Subject_tbStructural>(entity =>
+            {
+                entity.HasKey(e => e.SubjectCode)
+                    .HasName("PK_Subject_tbStructural")
+                    .IsClustered(false);
+
+                entity.HasOne(d => d.SubjectCodeNavigation)
+                    .WithOne(p => p.TbStructural)
+                    .HasForeignKey<Subject_tbStructural>(d => d.SubjectCode)
+                    .HasConstraintName("FK_Subject_tbStructural_tbSubject");
+            });
+
+            modelBuilder.Entity<Subject_tbNamespace>(entity =>
+            {
+                entity.HasKey(e => new { e.ParentSubjectCode, e.ChildSubjectCode })
+                    .HasName("PK_Subject_tbNamespace");
+
+                entity.HasIndex(e => e.ChildSubjectCode, "IX_Subject_tbNamespace_Child")
+                    .HasFillFactor((byte)90);
+
+                entity.HasIndex(e => e.ParentSubjectCode, "IX_Subject_tbNamespace_Parent")
+                    .HasFillFactor((byte)90);
+
+                entity.HasIndex(e => new { e.ParentSubjectCode, e.IsDefault }, "IX_Subject_tbNamespace_Parent_IsDefault")
+                    .HasFillFactor((byte)90);
+
+                entity.Property(e => e.IsDefault).HasDefaultValueSql("((0))");
+
+                entity.HasOne(d => d.ChildSubjectCodeNavigation)
+                    .WithMany(p => p.TbParentNamespaces)
+                    .HasForeignKey(d => d.ChildSubjectCode);
+
+                entity.HasOne(d => d.ParentSubjectCodeNavigation)
+                    .WithMany(p => p.TbChildNamespaces)
+                    .HasForeignKey(d => d.ParentSubjectCode);
+            });
+
+            modelBuilder.Entity<Subject_tbClass>(entity =>
+            {
+                entity.HasKey(e => e.SubjectClassCode)
+                    .HasName("PK_Subject_tbClass");
+
+                entity.Property(e => e.SubjectClassCode).ValueGeneratedNever();
+            });
             modelBuilder.Entity<Cash_tbPayment>(entity =>
             {
                 entity.HasKey(e => e.PaymentCode)
@@ -2539,12 +2610,23 @@ namespace TradeControl.Web.Data
                     .IsClustered(false);
 
                 entity.Property(e => e.SubjectTypeCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.SubjectClassCode).HasDefaultValueSql("((0))");
+
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.CashPolarityCodeNavigation)
                     .WithMany(p => p.TbSubjectType)
                     .HasForeignKey(d => d.CashPolarityCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_Subject_tbType_Cash_tbPolarity");
+
+                entity.HasOne(d => d.SubjectClassCodeNavigation)
+                    .WithMany(p => p.TbTypes)
+                    .HasForeignKey(d => d.SubjectClassCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Subject_tbType_tbClass");
             });
 
             modelBuilder.Entity<App_tbUoc>(entity =>
@@ -2992,11 +3074,6 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Subject_vwCompanyLogo>(entity =>
             {
                 entity.ToView("vwCompanyLogo", "Subject");
-            });
-
-            modelBuilder.Entity<Subject_vwContact>(entity =>
-            {
-                entity.ToView("vwContacts", "Subject");
             });
 
             modelBuilder.Entity<Subject_vwAddressList>(entity =>

@@ -57,13 +57,16 @@
                 Proceed to demo data setup
             </a>
 
-            @if (!string.IsNullOrWhiteSpace(returnNode))
+            @if (!embedded)
             {
-                <a href="/Admin/Manager/Index?node=@returnNode" class="btn btn-outline-secondary">Cancel</a>
-            }
-            else if (!embedded)
-            {
-                <a asp-page="/Admin/Manager/Index" class="btn btn-outline-secondary">Cancel</a>
+                if (!string.IsNullOrWhiteSpace(returnNode))
+                {
+                    <a href="/Admin/Manager/Index?node=@returnNode" class="btn btn-outline-secondary">Cancel</a>
+                }
+                else
+                {
+                    <a asp-page="/Admin/Manager/Index" class="btn btn-outline-secondary">Cancel</a>
+                }
             }
         </div>
     </div>

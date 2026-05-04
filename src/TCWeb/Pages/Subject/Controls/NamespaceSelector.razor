@@ -1,0 +1,73 @@
+@using Microsoft.AspNetCore.Components
+@using System.Threading
+
+<div class="input-group">
+    <input class="form-control"
+           value="@_filterText"
+           @oninput="HandleInputAsync"
+           placeholder="Filter namespace…"
+           autocomplete="off" />
+
+    <button type="button"
+            class="btn btn-outline-secondary"
+            @onclick="ClearAsync"
+            disabled="@string.IsNullOrWhiteSpace(_filterText)">
+        <i class="bi bi-x-circle" aria-hidden="true"></i>
+        <span class="visually-hidden">Clear</span>
+    </button>
+</div>
+
+@code {
+    [Parameter] public string FilterText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnFilterChanged { get; set; }
+    [Parameter] public bool MultiSelect { get; set; }
+
+    private string _filterText = string.Empty;
+    private CancellationTokenSource? _debounceCts;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_filterText, FilterText, StringComparison.Ordinal))
+        {
+            _filterText = FilterText ?? string.Empty;
+        }
+    }
+
+    private async Task HandleInputAsync(ChangeEventArgs args)
+    {
+        _filterText = args.Value?.ToString() ?? string.Empty;
+        await DebounceEmitAsync(_filterText);
+    }
+
+    private async Task ClearAsync()
+    {
+        if (string.IsNullOrEmpty(_filterText))
+            return;
+
+        _filterText = string.Empty;
+        await DebounceEmitAsync(_filterText, immediate: true);
+    }
+
+    private async Task DebounceEmitAsync(string value, bool immediate = false)
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+
+        try
+        {
+            if (!immediate)
+            {
+                await Task.Delay(250, _debounceCts.Token);
+            }
+
+            if (OnFilterChanged.HasDelegate)
+            {
+                await OnFilterChanged.InvokeAsync(value);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+}

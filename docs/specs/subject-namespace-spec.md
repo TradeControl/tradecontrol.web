@@ -47,9 +47,9 @@ These rules must be understood when interpreting both Phase 1 and Phase 2.
 - [Phase 2.1 — Model Integration](#phase21)
 - [Phase 2.2 — Remove Legacy Code](#phase22)
 - [Phase 2.3 — Substitute tbContact](#phase23)
-- [Phase 2.4 — Subject Tree UI](#phase24)
+- [Phase 2.4 — Subject Browser UI](#phase24)
     - [2.4.1 Conceptual Overview](#phase241)
-    - [2.4.2 Purpose of the Subject Tree UI](#phase242)
+    - [2.4.2 Purpose of the Subject Browser UI](#phase242)
     - [2.4.3 Functional Specification](#phase243)
     - [2.4.4 Component Interaction Flow](#phase244)
     - [2.4.5 Data Loading Contracts](#phase245)
@@ -142,7 +142,7 @@ A Namespace allows Subjects to represent:
 - A **compatibility view** will replace `tbContact` during transition  
 - The **synthetic dataset** will be updated to use the new model  
 - The UI will gain:
-      - a **Subject Tree**
+      - a **Subject Browser**
       - a **Namespace Selector**
 
 ## Deterministic Identity {#deterministic-identity}
@@ -790,14 +790,14 @@ The work proceeds in the following order:
    - Delete obsolete Subject UI folders.
    - Retain only `Invoice`, `Payments`, and `Statement` under Enquiry.
    - Leave `System.Reports` untouched.
-   - Replace the root Subject Index with a search redirect into `SubjectTree/Index`.
+   - Replace the root Subject Index with a search redirect into `Subject/Browser/Index`.
 
 3. **Substitute `tbContact` with `vwReal`**
    - Replace all remaining references to `tbContact`.
    - Update any queries, models, or UI components that depend on contact data.
    - Ensure compatibility with the new Subject identity model.
 
-4. **Subject Tree UI**
+4. **Subject Browser UI**
    - Implement the new hierarchical Subject browser.
    - Support structural, real, and virtual Subjects.
    - Provide filtering, selection, expansion, and navigation.
@@ -806,7 +806,7 @@ The work proceeds in the following order:
 5. **Namespace Selector Control**
    - Implement a reusable UI component for selecting a Subject Namespace.
    - Support single‑select and multi‑select modes.
-   - Integrate with the Subject Tree and all relevant workflows.
+   - Integrate with the Subject Browser and all relevant workflows.
 
 6. **Workflow Updates**
    - Update any remaining pages that interact with Subjects.
@@ -906,7 +906,7 @@ Replace:
 
 with a search page that redirects into:
 
-`SubjectTree/Index`
+`Subject/Browser/Index`
 
 with filtered results.
 
@@ -922,7 +922,7 @@ Any remaining Subject UI that:
 - navigates  
 - displays  
 
-Subjects is removed and replaced by the new **Subject Tree UI** and **Namespace Selector Control**.
+Subjects is removed and replaced by the new **Subject Browser UI** and **Namespace Selector Control**.
 
 ## Phase 2.3 - Substitute `tbContact` with `vwReal` {#phase23}
 
@@ -974,9 +974,9 @@ Ensure that all updated components now operate using:
 
 This completes the replacement of the legacy `tbContact` table with the compatibility view introduced in Phase 1.
 
-## Phase 2.4 - Subject Tree UI {#phase24}
+## Phase 2.4 - Subject Browser UI {#phase24}
 
-## Phase 2.4.1 — Subject Tree UI (Conceptual Overview) {#phase241}
+## Phase 2.4.1 — Subject Browser UI (Conceptual Overview) {#phase241}
 
 Before defining the UI, it is essential to understand the flexibility of the underlying Subject Namespace model.
 
@@ -1047,7 +1047,7 @@ This flexibility is a core advantage of the platform.
 
 ### 5. Summary
 
-The Subject Tree UI must:
+The Subject Browser UI must:
 
 - render a forest, not a single tree  
 - support arbitrary user‑defined structure  
@@ -1061,7 +1061,7 @@ This conceptual foundation informs the detailed UI specification that follows.
 
 ### General Instructions (Critical)
 
-Before implementing the Subject Tree UI, the following constraints apply.  
+Before implementing the Subject Browser UI, the following constraints apply.  
 These instructions override any default behaviour of the model.
 
 1. **Do not generate large JavaScript files.**  
@@ -1101,9 +1101,9 @@ These instructions override any default behaviour of the model.
 
 These constraints must be applied before any functional or structural work begins.
 
-## Phase 2.4.2 - Purpose of the Subject Tree UI {#phase242}
+## Phase 2.4.2 - Purpose of the Subject Browser UI {#phase242}
 
-The Subject Tree UI serves three distinct purposes.  
+The Subject Browser UI serves three distinct purposes.  
 All three must be supported by the same component set (`TreeShell`, `TreeBranch`, `TreeNode`), without creating separate UIs or divergent code paths.
 
 ### 1. Read‑Only Enquiries and Reporting
@@ -1159,9 +1159,9 @@ The UI must therefore:
 
 These purposes inform the functional specification that follows.
 
-## Phase 2.4.3 — Subject Tree UI (Functional Specification) {#phase243}
+## Phase 2.4.3 — Subject Browser UI (Functional Specification) {#phase243}
 
-The Subject Tree UI must be implemented using a **Subject‑specific wrapper layer** that sits on top of the existing generic tree components located in:
+The Subject Browser UI must be implemented using a **Subject‑specific wrapper layer** that sits on top of the existing generic tree components located in:
 
 ``` text
 Shared/Tree/
@@ -1175,31 +1175,31 @@ All Subject‑specific behaviour must be implemented in a new namespace:
 
 ``` text
 Subject/Tree/
-SubjectTreeShell.razor
-SubjectTreeBranch.razor
-SubjectTreeNode.cs
+SubjectBrowserShell.razor
+SubjectBrowserBranch.razor
+SubjectBrowserNode.cs
 ```
 
 This mirrors the architecture used by `Admin.Manager` and ensures the Shared.Tree components remain generic and reusable.
 
 ## 1. Component Architecture
 
-### 1.1 SubjectTreeShell.razor
+### 1.1 SubjectBrowserShell.razor
 
-Acts as the **host** for the Subject Tree.  
+Acts as the **host** for the Subject Browser.  
 Responsibilities:
 
 - initialise the tree
 - apply Namespace Selector filters
 - load root nodes lazily
 - manage UI mode (Enquiry / Namespace / Subject)
-- coordinate loading of children via SubjectTreeBranch
+- coordinate loading of children via SubjectBrowserBranch
 - host the Subject detail panel
 - pass data to Shared.TreeShell without modifying Shared.Tree
 
-### 1.2 SubjectTreeBranch.razor
+### 1.2 SubjectBrowserBranch.razor
 
-Represents a branch in the Subject tree.  
+Represents a branch in the Subject Browser.  
 Responsibilities:
 
 - lazy loading of children
@@ -1208,7 +1208,7 @@ Responsibilities:
 - exposing Subject‑specific context menus based on mode
 - passing generic node data to Shared.TreeBranch
 
-### 1.3 SubjectTreeNode.cs
+### 1.3 SubjectBrowserNode.cs
 
 The Subject‑specific node model.  
 Responsibilities:
@@ -1225,8 +1225,8 @@ Lazy loading must be implemented **only** in the Subject‑specific layer.
 
 ### Required behaviour
 
-- Root nodes load only when SubjectTreeShell initialises.
-- Children load only when SubjectTreeBranch is expanded.
+- Root nodes load only when SubjectBrowserShell initialises.
+- Children load only when SubjectBrowserBranch is expanded.
 - If a node has many children:
       - load in pages (e.g., 50 at a time)
       - show a “Load more…” indicator
@@ -1238,18 +1238,18 @@ The Namespace Selector is a **filtering lens** over the tree.
 
 ### Required behaviour
 
-- As the user types, SubjectTreeShell recalculates the visible root set.
+- As the user types, SubjectBrowserShell recalculates the visible root set.
 - All branches collapse when the filter changes.
 - Only nodes whose namespace path matches the filter remain visible.
 - Filtering applies before any lazy loading.
 - Filtering must not modify data — only visibility.
 
 Shared.Tree must not implement filtering.  
-Filtering is entirely the responsibility of SubjectTreeShell and SubjectTreeBranch.
+Filtering is entirely the responsibility of SubjectBrowserShell and SubjectBrowserBranch.
 
 ## 4. UI Modes
 
-The Subject Tree supports three modes:
+The Subject Browser supports three modes:
 
 - **EnquiryMode** — read‑only browsing and reporting
 - **NamespaceMode** — structural editing (add/remove/reparent)
@@ -1257,13 +1257,13 @@ The Subject Tree supports three modes:
 
 ### Required behaviour
 
-- SubjectTreeShell exposes the current mode.
-- SubjectTreeBranch shows context menus appropriate to the mode.
+- SubjectBrowserShell exposes the current mode.
+- SubjectBrowserBranch shows context menus appropriate to the mode.
 - Shared.Tree remains unaware of modes.
 
 ## 5. Detail Panel
 
-Selecting a node must load a detail panel hosted by SubjectTreeShell.
+Selecting a node must load a detail panel hosted by SubjectBrowserShell.
 
 ### Required behaviour
 
@@ -1303,7 +1303,7 @@ All performance logic lives in the Subject‑specific layer.
 
 ## 8. Summary
 
-The Subject Tree UI is a Subject‑specific wrapper around the generic Shared.Tree components.  
+The Subject Browser UI is a Subject‑specific wrapper around the generic Shared.Tree components.  
 It must:
 
 - support enquiries, namespace construction, and Subject maintenance  
@@ -1325,12 +1325,12 @@ All Subject‑specific behaviour is implemented in the `Subject.Tree` namespace.
 
 ### 1. High‑Level Overview
 
-The Subject Tree UI consists of two layers:
+The Subject Browser UI consists of two layers:
 
 1. **Subject‑specific layer (intelligent)**
-   - SubjectTreeShell.razor
-   - SubjectTreeBranch.razor
-   - SubjectTreeNode.cs
+   - SubjectBrowserShell.razor
+   - SubjectBrowserBranch.razor
+   - SubjectBrowserNode.cs
 
 2. **Shared generic layer (dumb renderer)**
    - TreeShell.razor
@@ -1343,7 +1343,7 @@ The Subject layer:
 - applies namespace filters  
 - performs lazy loading  
 - manages UI modes  
-- maps SubjectTreeNode → TreeNode  
+- maps SubjectBrowserNode → TreeNode  
 
 The Shared layer:
 
@@ -1353,9 +1353,9 @@ The Shared layer:
 
 ### 2. Component Responsibilities and Flow
 
-#### 2.1 SubjectTreeShell → TreeShell
+#### 2.1 SubjectBrowserShell → TreeShell
 
-`SubjectTreeShell` is the **host** and the entry point.
+`SubjectBrowserShell` is the **host** and the entry point.
 
 **Responsibilities:**
 
@@ -1365,11 +1365,11 @@ The Shared layer:
 - Manage UI mode (Enquiry / Namespace / Subject)
 - Host the Subject detail panel
 - Provide callbacks for node selection
-- Map SubjectTreeNode → TreeNode for Shared.TreeShell
+- Map SubjectBrowserNode → TreeNode for Shared.TreeShell
 
 **Flow:**
 
-1. SubjectTreeShell loads root `SubjectTreeNode` objects.
+1. SubjectBrowserShell loads root `SubjectBrowserNode` objects.
 2. It converts them into generic `TreeNode` objects.
 3. It passes the generic nodes into `TreeShell`.
 4. It registers callbacks for:
@@ -1379,42 +1379,42 @@ The Shared layer:
 
 `TreeShell` does not know anything about Subjects or Namespaces.
 
-#### 2.2 TreeShell → SubjectTreeBranch
+#### 2.2 TreeShell → SubjectBrowserBranch
 
 When a user expands a node:
 
 1. `TreeShell` raises an **OnExpand** callback.
-2. The callback is handled by `SubjectTreeShell`.
-3. `SubjectTreeShell` delegates the load request to `SubjectTreeBranch`.
+2. The callback is handled by `SubjectBrowserShell`.
+3. `SubjectBrowserShell` delegates the load request to `SubjectBrowserBranch`.
 
 Shared.Tree never loads children itself.
 
-#### 2.3 SubjectTreeBranch → TreeBranch
+#### 2.3 SubjectBrowserBranch → TreeBranch
 
-`SubjectTreeBranch` is responsible for loading children.
+`SubjectBrowserBranch` is responsible for loading children.
 
 **Responsibilities:**
 
 - Lazy loading
 - Paging large child sets
 - Applying namespace filters before loading
-- Mapping SubjectTreeNode → TreeNode
+- Mapping SubjectBrowserNode → TreeNode
 - Passing generic nodes to TreeBranch
 
 **Flow:**
 
-1. SubjectTreeBranch receives a request to load children.
+1. SubjectBrowserBranch receives a request to load children.
 2. It queries the database (or API) for child Subjects.
 3. It applies namespace filtering (if active).
-4. It creates `SubjectTreeNode` objects.
+4. It creates `SubjectBrowserNode` objects.
 5. It maps them to generic `TreeNode` objects.
 6. It passes the generic nodes to `TreeBranch`.
 
 `TreeBranch` simply renders them.
 
-#### 2.4 SubjectTreeNode → TreeNode
+#### 2.4 SubjectBrowserNode → TreeNode
 
-`SubjectTreeNode` is the Subject‑aware node model.
+`SubjectBrowserNode` is the Subject‑aware node model.
 
 **Responsibilities:**
 
@@ -1425,10 +1425,10 @@ Shared.Tree never loads children itself.
 
 **Mapping Rules:**
 
-- `SubjectTreeNode.Name` → `TreeNode.Name`
-- `SubjectTreeNode.HasChildren` → `TreeNode.HasChildren`
-- `SubjectTreeNode.ChildCount` → `TreeNode.ChildCount`
-- `SubjectTreeNode.SubjectCode` → `TreeNode.Key`
+- `SubjectBrowserNode.Name` → `TreeNode.Name`
+- `SubjectBrowserNode.HasChildren` → `TreeNode.HasChildren`
+- `SubjectBrowserNode.ChildCount` → `TreeNode.ChildCount`
+- `SubjectBrowserNode.SubjectCode` → `TreeNode.Key`
 - Node type flags are mapped to TreeNode metadata (icons, CSS classes)
 
 Shared.Tree never sees Subject‑specific fields.
@@ -1439,23 +1439,23 @@ Shared.Tree never sees Subject‑specific fields.
 
 1. User selects a node in Shared.Tree.
 2. `TreeShell` raises OnSelect.
-3. `SubjectTreeShell` receives the callback.
-4. `SubjectTreeShell` loads Subject details.
+3. `SubjectBrowserShell` receives the callback.
+4. `SubjectBrowserShell` loads Subject details.
 5. The detail panel updates.
 
 #### 3.2 Expansion
 
 1. User expands a node.
 2. `TreeShell` raises OnExpand.
-3. `SubjectTreeShell` delegates to SubjectTreeBranch.
-4. SubjectTreeBranch loads children.
+3. `SubjectBrowserShell` delegates to SubjectBrowserBranch.
+4. SubjectBrowserBranch loads children.
 5. Children are mapped to TreeNode.
 6. Shared.Tree renders them.
 
 #### 3.3 Namespace Filtering
 
 1. User types into Namespace Selector.
-2. SubjectTreeShell recalculates visible roots.
+2. SubjectBrowserShell recalculates visible roots.
 3. All branches collapse.
 4. Only matching nodes remain visible.
 5. Lazy loading applies under the new filter.
@@ -1464,7 +1464,7 @@ Shared.Tree is unaware filtering is happening.
 
 ### 4. Mode Flow (Enquiry / Namespace / Subject)
 
-`SubjectTreeShell` exposes a mode flag:
+`SubjectBrowserShell` exposes a mode flag:
 
 - EnquiryMode
 - NamespaceMode
@@ -1472,18 +1472,18 @@ Shared.Tree is unaware filtering is happening.
 
 **Flow:**
 
-1. Mode is set in SubjectTreeShell.
-2. SubjectTreeBranch adjusts context menus.
-3. SubjectTreeNode adjusts available actions.
+1. Mode is set in SubjectBrowserShell.
+2. SubjectBrowserBranch adjusts context menus.
+3. SubjectBrowserNode adjusts available actions.
 4. Shared.Tree remains unaware of modes.
 
 ### 5. Summary
 
-The Subject Tree UI is a **wrapper** around the generic Shared.Tree components.
+The Subject Browser UI is a **wrapper** around the generic Shared.Tree components.
 
-- SubjectTreeShell controls the tree.
-- SubjectTreeBranch loads children.
-- SubjectTreeNode holds Subject data.
+- SubjectBrowserShell controls the tree.
+- SubjectBrowserBranch loads children.
+- SubjectBrowserNode holds Subject data.
 - Shared.Tree renders nodes and raises callbacks.
 
 This architecture ensures:
@@ -1505,7 +1505,7 @@ All loading, filtering, and paging logic lives in the `Subject.Tree` layer.
 
 ### 1. Root loading contract
 
-**Caller:** `SubjectTreeShell`  
+**Caller:** `SubjectBrowserShell`  
 **Purpose:** Load the initial set of root nodes for the tree.
 
 **Input:**
@@ -1517,7 +1517,7 @@ All loading, filtering, and paging logic lives in the `Subject.Tree` layer.
 
 **Output:**
 
-- `IEnumerable<SubjectTreeNode> Roots`
+- `IEnumerable<SubjectBrowserNode> Roots`
 - `int TotalRootCount`
 - `bool HasMorePages`
 
@@ -1526,11 +1526,11 @@ All loading, filtering, and paging logic lives in the `Subject.Tree` layer.
 - If `NamespaceFilter` is empty → return all roots (paged).
 - If `NamespaceFilter` is set → return only roots whose namespace path matches.
 - Do not load children here.
-- Map `SubjectTreeNode` → `TreeNode` before passing to `Shared.TreeShell`.
+- Map `SubjectBrowserNode` → `TreeNode` before passing to `Shared.TreeShell`.
 
 ### 2. Child loading contract
 
-**Caller:** `SubjectTreeBranch` (via callback from `SubjectTreeShell`)  
+**Caller:** `SubjectBrowserBranch` (via callback from `SubjectBrowserShell`)  
 **Purpose:** Load children for a given parent node.
 
 **Input:**
@@ -1542,7 +1542,7 @@ All loading, filtering, and paging logic lives in the `Subject.Tree` layer.
 
 **Output:**
 
-- `IEnumerable<SubjectTreeNode> Children`
+- `IEnumerable<SubjectBrowserNode> Children`
 - `int TotalChildCount`
 - `bool HasMorePages`
 
@@ -1551,11 +1551,11 @@ All loading, filtering, and paging logic lives in the `Subject.Tree` layer.
 - Apply `NamespaceFilter` before returning children.
 - If `TotalChildCount` is large, rely on paging.
 - Do not attempt to load grandchildren.
-- Map `SubjectTreeNode` → `TreeNode` before passing to `Shared.TreeBranch`.
+- Map `SubjectBrowserNode` → `TreeNode` before passing to `Shared.TreeBranch`.
 
-### 3. SubjectTreeNode shape
+### 3. SubjectBrowserNode shape
 
-`SubjectTreeNode` must expose at least:
+`SubjectBrowserNode` must expose at least:
 
 - `string SubjectCode`
 - `string SubjectClassCode`
@@ -1578,14 +1578,14 @@ These fields are used for:
 - lazy loading decisions
 - visual differentiation (icons / styles)
 
-### 4. Mapping contract: SubjectTreeNode → TreeNode
+### 4. Mapping contract: SubjectBrowserNode → TreeNode
 
 Before passing data into `Shared.Tree`, the Subject layer must map:
 
-- `TreeNode.Key` ← `SubjectTreeNode.SubjectCode`
-- `TreeNode.Name` ← `SubjectTreeNode.Name` or `DisplayLabel`
-- `TreeNode.HasChildren` ← `SubjectTreeNode.HasChildren`
-- `TreeNode.ChildCount` ← `SubjectTreeNode.ChildCount`
+- `TreeNode.Key` ← `SubjectBrowserNode.SubjectCode`
+- `TreeNode.Name` ← `SubjectBrowserNode.Name` or `DisplayLabel`
+- `TreeNode.HasChildren` ← `SubjectBrowserNode.HasChildren`
+- `TreeNode.ChildCount` ← `SubjectBrowserNode.ChildCount`
 - `TreeNode.Metadata` (or equivalent) ← node type flags (structural / real / virtual)
 
 `Shared.Tree` must not see Subject‑specific fields directly.
@@ -1617,7 +1617,7 @@ If a load operation returns:
 
 - `TotalRootCount == 0` → show “No Subjects found” in the tree area.
 - `TotalChildCount == 0` → show no children; do not show an expand arrow.
-- Errors (connectivity, query failure, etc.) → surface a non‑blocking message in `SubjectTreeShell`; do not break `Shared.Tree`.
+- Errors (connectivity, query failure, etc.) → surface a non‑blocking message in `SubjectBrowserShell`; do not break `Shared.Tree`.
 
 `Shared.Tree` must remain functional even if data loading fails.
 
@@ -1631,13 +1631,13 @@ These contracts define:
 - how mapping to `Shared.Tree` works  
 - how filtering and paging are applied  
 
-They are mandatory for any implementation of the Subject Tree UI.
+They are mandatory for any implementation of the Subject Browser UI.
 
 ## Phase 2.5 — Namespace Selector Component Specification {#phase25}
 
 The Namespace Selector is a reusable UI component that provides a dynamic filtering lens over
 the Subject Namespace.  
-It is used by the Subject Tree, by search workflows, and by any UI that needs to restrict
+It is used by the Subject Browser, by search workflows, and by any UI that needs to restrict
 Subject visibility to a subset of the Namespace.
 
 The selector must be implemented as a standalone component:
@@ -1670,7 +1670,7 @@ This ensures:
 
 The Namespace Selector provides:
 
-- real‑time filtering of the Subject Tree  
+- real‑time filtering of the Subject Browser  
 - namespace‑aware search  
 - a consistent mechanism for selecting a structural context  
 - a reusable control for future workflows (e.g., project assignment, cost centre selection)
@@ -1683,7 +1683,7 @@ It is a **namespace filter**.
 The selector must:
 
 1. Accept user input (free‑text).
-2. Emit filter events to its parent (e.g., SubjectTreeShell).
+2. Emit filter events to its parent (e.g., SubjectBrowserShell).
 3. Maintain internal state (current filter string).
 4. Provide debounced updates (to avoid excessive reloads).
 5. Support both:
@@ -1724,7 +1724,7 @@ As the user types:
 - The component updates its internal `FilterText`.
 - After a short debounce (e.g., 250ms), it raises `OnFilterChanged(FilterText)`.
 
-The parent (SubjectTreeShell) is responsible for:
+The parent (SubjectBrowserShell) is responsible for:
 
 - recalculating visible roots  
 - collapsing branches  
@@ -1767,14 +1767,14 @@ This is a lightweight control.
 
 The selector must integrate with:
 
-- `SubjectTreeShell` (mandatory)
+- `SubjectBrowserShell` (mandatory)
 - any future workflow requiring namespace restriction (optional)
 
 **Flow:**
 
 1. User types into selector.  
 2. Selector raises `OnFilterChanged`.  
-3. SubjectTreeShell:
+3. SubjectBrowserShell:
    - collapses all branches  
    - reloads roots using the filter  
    - triggers lazy loading under the new filter  
@@ -1797,7 +1797,7 @@ It must always emit a valid string.
 The Namespace Selector is a simple, reusable, event‑driven component that:
 
 - emits filter text  
-- drives the Subject Tree  
+- drives the Subject Browser  
 - never loads data  
 - never interacts with Shared.Tree  
 - never applies semantics itself  
@@ -1807,12 +1807,12 @@ It is the filtering lens through which the user views the Subject Namespace.
 ## Phase 2.6 — Subject Detail Panel Specification {#phase26}
 
 The Subject Detail Panel is the right‑hand contextual panel displayed when a user selects a
-node in the Subject Tree.  
+node in the Subject Browser.  
 It provides identity, namespace, and maintenance actions for the selected Subject.
 
 The panel is hosted exclusively by:
 
-`Subject/Tree/SubjectTreeShell.razor`
+`Subject/Tree/SubjectBrowserShell.razor`
 
 Shared.Tree must not render or manage the detail panel.
 
@@ -1831,8 +1831,8 @@ It is the primary “inspection and action” surface for the Subject model.
 
 1. User selects a node in Shared.Tree.  
 2. `TreeShell` raises `OnSelect(nodeKey)`.  
-3. `SubjectTreeShell` receives the callback.  
-4. `SubjectTreeShell` loads Subject details using `nodeKey` (SubjectCode).  
+3. `SubjectBrowserShell` receives the callback.  
+4. `SubjectBrowserShell` loads Subject details using `nodeKey` (SubjectCode).  
 5. The detail panel updates with the loaded data.
 
 Shared.Tree is unaware that a detail panel exists.
@@ -1953,7 +1953,7 @@ This is a platform requirement because Razor Pages:
 
 ## 7. Action Contracts
 
-All actions must be routed through `SubjectTreeShell`.
+All actions must be routed through `SubjectBrowserShell`.
 
 ### 7.1 Edit Subject
 
@@ -2034,7 +2034,7 @@ If an action fails:
 
 The Subject Detail Panel:
 
-- is hosted by SubjectTreeShell  
+- is hosted by SubjectBrowserShell  
 - activates on node selection  
 - loads Subject details via SubjectCode  
 - adapts to UI mode  
@@ -2054,8 +2054,8 @@ This section defines how namespace paths are constructed, resolved, filtered, an
 These rules are mandatory and must be followed by all components that interact with the
 namespace, including:
 
-- SubjectTreeShell  
-- SubjectTreeBranch  
+- SubjectBrowserShell  
+- SubjectBrowserBranch  
 - NamespaceSelector  
 - Subject maintenance Razor Pages  
 - Subject services  
@@ -2252,7 +2252,7 @@ The following workflows are in scope:
 
 All workflows are initiated from:
 
-- the Subject Tree
+- the Subject Browser
 - the Subject Detail Panel
 - or a future Subject search/listing surface
 
@@ -2268,7 +2268,7 @@ All workflows are initiated from:
 **Flow:**
 
 1. User triggers “Add structural child” (or root).
-2. `SubjectTreeShell` opens `Subject/Tree/EditStructural.cshtml` with:
+2. `SubjectBrowserShell` opens `Subject/Tree/EditStructural.cshtml` with:
    - `ParentSubjectCode` (optional for root)
    - `IsEmbedded` flag set appropriately.
 3. Razor Page:
@@ -2278,7 +2278,7 @@ All workflows are initiated from:
    - creates namespace relationship to parent (if provided)
 4. On success:
    - Razor Page returns `SubjectCode` of new node.
-   - `SubjectTreeShell` reloads the relevant branch (or roots).
+   - `SubjectBrowserShell` reloads the relevant branch (or roots).
    - Detail panel selects and displays the new Subject.
 
 **Rules:**
@@ -2297,7 +2297,7 @@ All workflows are initiated from:
 **Flow:**
 
 1. User triggers “Add real child” or “New real Subject”.
-2. `SubjectTreeShell` opens `Subject/Tree/EditReal.cshtml` with:
+2. `SubjectBrowserShell` opens `Subject/Tree/EditReal.cshtml` with:
    - optional `ParentSubjectCode`
    - `IsEmbedded` flag.
 3. Razor Page:
@@ -2307,7 +2307,7 @@ All workflows are initiated from:
    - creates namespace relationship to parent (if provided)
 4. On success:
    - Razor Page returns `SubjectCode`.
-   - `SubjectTreeShell` reloads branch/roots.
+   - `SubjectBrowserShell` reloads branch/roots.
    - Detail panel selects and displays the new Subject.
 
 **Rules:**
@@ -2326,7 +2326,7 @@ All workflows are initiated from:
 **Flow:**
 
 1. User triggers “Add virtual child”.
-2. `SubjectTreeShell` opens `Subject/Tree/EditVirtual.cshtml` with:
+2. `SubjectBrowserShell` opens `Subject/Tree/EditVirtual.cshtml` with:
    - `ParentSubjectCode`
    - `IsEmbedded` flag.
 3. Razor Page:
@@ -2336,7 +2336,7 @@ All workflows are initiated from:
    - creates namespace relationship to parent
 4. On success:
    - Razor Page returns `SubjectCode`.
-   - `SubjectTreeShell` reloads branch.
+   - `SubjectBrowserShell` reloads branch.
    - Detail panel selects and displays the new Subject.
 
 **Rules:**
@@ -2354,7 +2354,7 @@ All workflows are initiated from:
 **Flow:**
 
 1. User clicks “Edit Subject”.
-2. `SubjectTreeShell` determines `SubjectClassCode` and opens:
+2. `SubjectBrowserShell` determines `SubjectClassCode` and opens:
    - Real → `Subject/Tree/EditReal.cshtml`
    - Virtual → `Subject/Tree/EditVirtual.cshtml`
    - Structural → `Subject/Tree/EditStructural.cshtml`
@@ -2364,7 +2364,7 @@ All workflows are initiated from:
    - validates and saves changes
 4. On success:
    - Razor Page returns updated `SubjectCode` (unchanged) and any changed display fields.
-   - `SubjectTreeShell`:
+   - `SubjectBrowserShell`:
      - refreshes the selected node in the tree (name/label/type)
      - reloads the detail panel.
 
@@ -2383,7 +2383,7 @@ All workflows are initiated from:
 **Flow:**
 
 1. User triggers “Change Subject type”.
-2. `SubjectTreeShell` opens an appropriate UI (dialog or Razor Page) to:
+2. `SubjectBrowserShell` opens an appropriate UI (dialog or Razor Page) to:
    - select new `SubjectTypeCode`
    - confirm implications (fields gained/lost).
 3. Service layer:
@@ -2391,7 +2391,7 @@ All workflows are initiated from:
    - migrates identity/attribute data as required
    - updates `SubjectTypeCode` and related metadata.
 4. On success:
-   - `SubjectTreeShell` refreshes:
+   - `SubjectBrowserShell` refreshes:
      - tree node metadata (Real/Virtual/Structural flags)
      - detail panel
    - future edits route to the correct Razor Page.
@@ -2420,7 +2420,7 @@ Namespace relationships are managed in **NamespaceMode**.
 4. Service layer:
    - creates a new parent–child relationship.
 5. On success:
-   - `SubjectTreeShell` reloads the relevant branches.
+   - `SubjectBrowserShell` reloads the relevant branches.
    - Subject now appears under multiple paths.
 
 #### 7.2 Reparent Subject
@@ -2439,7 +2439,7 @@ Namespace relationships are managed in **NamespaceMode**.
    - removes the old parent–child relationship for that path
    - creates a new parent–child relationship.
 5. On success:
-   - `SubjectTreeShell` reloads affected branches.
+   - `SubjectBrowserShell` reloads affected branches.
 
 #### 7.3 Remove from namespace
 
@@ -2482,7 +2482,7 @@ This is required in particular for contact maintenance, where a Real Subject may
    - sets `Subject.tbNamespace.IsDefault = 1` for the selected `(ParentSubjectCode, ChildSubjectCode)` row
    - clears `IsDefault` on all sibling rows for the same `ParentSubjectCode`
 4. On success:
-   - `SubjectTreeShell` refreshes only the affected branch
+   - `SubjectBrowserShell` refreshes only the affected branch
    - the UI marks the selected child as the default instance for that parent
 
 **Rules:**
@@ -2515,7 +2515,7 @@ This workflow enables the platform to resolve default contacts for customers, su
      - all namespace relationships
      - related attributes/identity records as per business rules.
 4. On success:
-   - `SubjectTreeShell`:
+   - `SubjectBrowserShell`:
      - removes all instances of the Subject from the tree
      - clears the detail panel.
 
@@ -2530,14 +2530,14 @@ All Razor Pages must respect the `IsEmbedded` flag:
 
 - **IsEmbedded = true**
       - Page renders without full layout chrome.
-      - Navigation is delegated back to the host (SubjectTreeShell).
+      - Navigation is delegated back to the host (SubjectBrowserShell).
       - Suitable for panel‑style or modal embedding.
 
 - **IsEmbedded = false**
       - Page behaves as a standalone full‑screen editor.
       - Suitable for mobile or direct navigation.
 
-SubjectTreeShell must set `IsEmbedded` appropriately based on hosting context.
+SubjectBrowserShell must set `IsEmbedded` appropriately based on hosting context.
 
 ### 10. Summary
 
@@ -2598,7 +2598,7 @@ No parsing or formatting of `Address` is required beyond preserving line breaks.
 **Flow:**
 
 1. User clicks “Add address”.
-2. `SubjectTreeShell` opens `Subject/Tree/EditReal.cshtml` (Real Subjects only),
+2. `SubjectBrowserShell` opens `Subject/Tree/EditReal.cshtml` (Real Subjects only),
    with `SubjectCode` and `IsEmbedded` as usual.
 3. Razor Page:
    - presents a multiline text area for `Address`
@@ -2609,7 +2609,7 @@ No parsing or formatting of `Address` is required beyond preserving line breaks.
      the insert trigger sets it to the new `AddressCode` (first address becomes default).
 5. On success:
    - Razor Page returns to host
-   - `SubjectTreeShell` reloads the address list in the detail panel.
+   - `SubjectBrowserShell` reloads the address list in the detail panel.
 
 #### 3. Edit address workflow
 
@@ -2625,7 +2625,7 @@ No parsing or formatting of `Address` is required beyond preserving line breaks.
 4. On save:
    - the row is updated
    - the update trigger refreshes `UpdatedBy` / `UpdatedOn`.
-5. `SubjectTreeShell` reloads the address list in the detail panel.
+5. `SubjectBrowserShell` reloads the address list in the detail panel.
 
 The default flag is unaffected by editing; it is controlled solely by `Subject.tbSubject.AddressCode`.
 
@@ -2644,7 +2644,7 @@ The default flag is unaffected by editing; it is controlled solely by `Subject.t
      - either set `Subject.tbSubject.AddressCode` to NULL, or
      - set it to another existing `AddressCode` for that Subject
    - this logic belongs in the service layer (not in a trigger).
-4. `SubjectTreeShell` reloads the address list and default indicator.
+4. `SubjectBrowserShell` reloads the address list and default indicator.
 
 #### 5. Change default address workflow
 
@@ -2660,7 +2660,7 @@ The default is defined by `Subject.tbSubject.AddressCode`.
 1. User selects an address row (by `AddressCode`).
 2. Service layer:
    - updates `Subject.tbSubject.AddressCode` to the selected `AddressCode`.
-3. `SubjectTreeShell` reloads the address list; the default indicator moves accordingly.
+3. `SubjectBrowserShell` reloads the address list; the default indicator moves accordingly.
 
 No changes are made to `Subject.tbAddress` rows for this operation.
 
@@ -2784,7 +2784,7 @@ Shared.Tree must:
 - never infer behaviour from SubjectName
 - never assume a Subject has only one parent
 
-SubjectTreeShell is the only component allowed to:
+SubjectBrowserShell is the only component allowed to:
 
 - load Subject details
 - refresh branches
@@ -2870,9 +2870,9 @@ Prohibited:
 
 Components:
 
-- `Subject/Tree/SubjectTreeShell.razor`
-- `Subject/Tree/SubjectTreeBranch.razor`
-- `Subject/Tree/SubjectTreeNode.cs`
+- `Subject/Tree/SubjectBrowserShell.razor`
+- `Subject/Tree/SubjectBrowserBranch.razor`
+- `Subject/Tree/SubjectBrowserNode.cs`
 
 Responsibilities:
 
@@ -2880,7 +2880,7 @@ Responsibilities:
 - apply namespace filtering
 - implement lazy loading and paging
 - manage UI mode (Enquiry / Namespace / Subject)
-- map `SubjectTreeNode` → `TreeNode`
+- map `SubjectBrowserNode` → `TreeNode`
 - host the Subject Detail Panel
 - route actions to Razor Pages or service layer
 
@@ -3277,7 +3277,7 @@ Partial updates are not permitted.
 
 The UI must:
 
-- initiate operations via SubjectTreeShell  
+- initiate operations via SubjectBrowserShell  
 - never modify `Subject.tbNamespace` directly  
 - refresh only affected branches  
 - surface validation errors without collapsing the tree  

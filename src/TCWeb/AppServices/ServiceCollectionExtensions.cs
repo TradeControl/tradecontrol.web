@@ -14,6 +14,7 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<IInvoiceTypeLookup, InvoiceTypeLookup>();
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
+            services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
 
             services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();
             services.AddScoped<IExecutionQueue, ExecutionQueue>();

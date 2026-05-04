@@ -1,0 +1,23 @@
+@using TradeControl.Web.Pages.Shared.Tree
+
+<TreeBranch IsRoot="@IsRoot"
+            RootNodes="@RootNodes"
+            Node="@Node"
+            GetChildren="@GetChildren"
+            OnLeafSelected="@OnLeafSelected"
+            SelectedKey="@SelectedKey"
+            ExpandToKey="@ExpandToKey"
+            OnNodeSelected="@OnNodeSelected"
+            RefreshToken="@RefreshToken" />
+
+@code {
+    [Parameter] public bool IsRoot { get; set; }
+    [Parameter] public IReadOnlyList<TreeNode> RootNodes { get; set; } = Array.Empty<TreeNode>();
+    [Parameter] public TreeNode? Node { get; set; }
+    [Parameter] public Func<TreeNode, Task<IReadOnlyList<TreeNode>>> GetChildren { get; set; } = default!;
+    [Parameter] public EventCallback<TreeNode> OnLeafSelected { get; set; }
+    [Parameter] public EventCallback<TreeNode> OnNodeSelected { get; set; }
+    [Parameter] public string? SelectedKey { get; set; }
+    [Parameter] public string? ExpandToKey { get; set; }
+    [Parameter] public long RefreshToken { get; set; }
+}

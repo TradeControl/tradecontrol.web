@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using TradeControl.Web.Data;
 
-namespace TradeControl.Web.Pages.Subject
+namespace TradeControl.Web.Pages.Subject.Browser
 {
     public class IndexModel : DI_BasePageModel
     {
