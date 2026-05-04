@@ -33,16 +33,43 @@
                     <div class="text-uppercase small text-muted px-2" style="letter-spacing:0.06em;">Company</div>
                 </div>
 
-                <button type="button"
-                        class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="SelectSetupAsync"
-                        @onpointerdown="() => SetPressTarget(ManagerNode.Setup)">
-                    <span class="tc-tree-expander" aria-hidden="true">
-                        <i class="bi bi-dot"></i>
-                    </span>
-                    <i class="bi bi-gear me-2 tc-tree-icon tc-tree-icon-setup" aria-hidden="true"></i>
-                    <span class="tc-tree-label @(_selected == ManagerNode.Setup ? "tc-tree-label-selected" : "")">Setup</span>
-                </button>
+                <div class="d-flex align-items-center">
+                    <button type="button"
+                            class="btn btn-link text-start tc-tree-row p-0"
+                            style="width:1.6rem;"
+                            @onclick="ToggleSetupExpandAsync"
+                            @onpointerdown="() => SetPressTarget(ManagerNode.Setup)"
+                            aria-expanded="@_setupExpanded"
+                            title="Expand">
+                        <span class="tc-tree-expander" aria-hidden="true">
+                            <i class="bi @(_setupExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill")"></i>
+                        </span>
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-link text-start w-100 tc-tree-row"
+                            @onclick="SelectSetupAsync"
+                            @onpointerdown="() => SetPressTarget(ManagerNode.Setup)">
+                        <i class="bi bi-gear me-2 tc-tree-icon tc-tree-icon-setup" aria-hidden="true"></i>
+                        <span class="tc-tree-label @(_selected == ManagerNode.Setup ? "tc-tree-label-selected" : "")">Setup</span>
+                    </button>
+                </div>
+
+                @if (_setupExpanded)
+                {
+                    <div class="ps-3">
+                        <button type="button"
+                                class="btn btn-link text-start w-100 tc-tree-row"
+                                @onclick="SelectDemoDataAsync"
+                                @onpointerdown="() => SetPressTarget(ManagerNode.DemoData)">
+                            <span class="tc-tree-expander" aria-hidden="true">
+                                <i class="bi bi-dot"></i>
+                            </span>
+                            <i class="bi bi-database me-2 tc-tree-icon" aria-hidden="true"></i>
+                            <span class="tc-tree-label @(_selected == ManagerNode.DemoData ? "tc-tree-label-selected" : "")">Synthetic Demo Data</span>
+                        </button>
+                    </div>
+                }
 
                 <div class="d-flex align-items-center">
                     <button type="button"
@@ -295,6 +322,12 @@
         if (_selected == ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(InitialContentType))
             _selectedContentType = InitialContentType;
 
+        if (_selected == ManagerNode.Setup || _selected == ManagerNode.DemoData)
+        {
+            _rootExpanded = true;
+            _setupExpanded = true;
+        }
+
         if (_selected == ManagerNode.FileTransfer || _selected == ManagerNode.FileTransferContentType)
         {
             _rootExpanded = true;
@@ -325,6 +358,7 @@
     {
         Root,
         Setup,
+        DemoData,
 
         Periods,
         FileTransfer,
@@ -382,6 +416,7 @@
     [Parameter] public EventCallback<TemplateTreeAction> OnTemplateTreeAction { get; set; }
 
     private bool _rootExpanded = true;
+    private bool _setupExpanded;
     private bool _fileTransferExpanded;
     private bool _templatesExpanded;
     private bool _templateInvoicesExpanded;
@@ -412,12 +447,32 @@
     {
         _selected = ManagerNode.Setup;
         _selectedContentType = null;
+        _setupExpanded = true;
 
         if (OnNodeSelected.HasDelegate)
             await OnNodeSelected.InvokeAsync(ManagerNode.Setup);
 
         if (OnNodeSelectedEx.HasDelegate)
             await OnNodeSelectedEx.InvokeAsync((ManagerNode.Setup, null));
+    }
+
+    private Task ToggleSetupExpandAsync()
+    {
+        _setupExpanded = !_setupExpanded;
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectDemoDataAsync()
+    {
+        _selected = ManagerNode.DemoData;
+        _selectedContentType = null;
+        _setupExpanded = true;
+
+        if (OnNodeSelected.HasDelegate)
+            await OnNodeSelected.InvokeAsync(ManagerNode.DemoData);
+
+        if (OnNodeSelectedEx.HasDelegate)
+            await OnNodeSelectedEx.InvokeAsync((ManagerNode.DemoData, null));
     }
 
     private async Task SelectPlaceholderAsync(ManagerNode node)

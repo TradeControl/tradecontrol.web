@@ -34,5 +34,9 @@ namespace TradeControl.Web.Data
         public enum AssetType { Debtors, Creditors, Bank, Cash, CashAccounts, Capital };
         public enum ContentType { Documents, Images, Templates, Invalid };
         public enum SyntaxType { Both, LibreOffice, Excel };
+
+        public enum ExecutionStatus { Pending, Running, Succeeded, Failed, Cancelled };
+        public enum ExecutionType { SyntheticDataset };
+
     }
 }

@@ -22,9 +22,9 @@ CREATE TABLE #Scenarios
 INSERT INTO #Scenarios (ScenarioName, IsVatRegistered, PriceRatio)
 VALUES
     (N'VAT=1, PriceRatio=3.0 (profit)', 1, 3.0)
-    --, (N'VAT=1, PriceRatio=0.5 (loss)',   1, 0.5)
-    --, (N'VAT=0, PriceRatio=3.0 (profit)', 0, 3.0)
-    --, (N'VAT=0, PriceRatio=0.5 (loss)',   0, 0.5)
+    , (N'VAT=1, PriceRatio=0.5 (loss)',   1, 0.5)
+    , (N'VAT=0, PriceRatio=3.0 (profit)', 0, 3.0)
+    , (N'VAT=0, PriceRatio=0.5 (loss)',   0, 0.5)
     ;
 
 IF OBJECT_ID('tempdb..#EquityRecon') IS NOT NULL DROP TABLE #EquityRecon;

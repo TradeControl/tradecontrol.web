@@ -703,6 +703,9 @@
     <Build Include="Subject\Stored Procedures\proc_DefaultAccountCode.sql" />
     <Build Include="Subject\Views\vwVirtual.sql" />
     <Build Include="Subject\Functions\fnSubjectNamespace.sql" />
+    <Build Include="App\Tables\tbTemplateDataset.sql" />
+    <Build Include="App\Tables\tbExecutionStatus.sql" />
+    <Build Include="App\Tables\tbExecution.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />

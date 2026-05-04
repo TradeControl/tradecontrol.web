@@ -114,6 +114,9 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbTaxCode> App_tbTaxCodes { get; set; }
         public virtual DbSet<Cash_tbTaxType> Cash_tbTaxTypes { get; set; }
         public virtual DbSet<App_tbTemplate> App_tbTemplates { get; set; }
+        public virtual DbSet<App_tbTemplateDataset> App_tbTemplateDatasets { get; set; }
+        public virtual DbSet<App_tbExecution> App_tbExecutions { get; set; }
+        public virtual DbSet<App_tbExecutionStatus> App_tbExecutionStatuses { get; set; }
         public virtual DbSet<App_tbText> App_tbTexts { get; set; }
         public virtual DbSet<Subject_tbTransmitStatus> Subject_tbTransmitStatuses { get; set; }
         public virtual DbSet<Cash_tbTx> Cash_tbTxs { get; set; }

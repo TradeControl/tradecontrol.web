@@ -2458,7 +2458,169 @@ namespace TradeControl.Web.Data
                 throw;
             }
         }
+
+        public async Task GenerateSyntheticDataset
+        (
+            bool isCompany = true,
+            bool useStdCompanyTemplate = false,
+            bool? isVatRegistered = null,
+            int misOrdersPerMonth = 2,
+            int monthsForward = 3,
+            decimal priceRatio = 1.0000000m,
+            decimal quantityRatio = 1.0000000m,
+            decimal floatRatio = 0.25m            
+        )
+        {
+            try
+            {
+                bool enableProjects = true;
+                bool enableInvoices = true;
+                bool enableProjectPayments = true;
+                bool enablePayables = true;
+                bool enableMiscPayments = true;
+                bool enableWages = true;
+                bool enableExpenses = true;
+                bool enableAssets = true;
+                bool enableTax = true;
+                bool enableTransfers = true;
+                bool enableOpeningBalance = true;
+
+                using SqlConnection _connection = new(Database.GetConnectionString());
+                _connection.Open();
+
+                using (SqlCommand command = _connection.CreateCommand())
+                {
+                    command.CommandText = "App.proc_DatasetSyntheticMIS";
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandTimeout = 600;
+
+                    SqlParameter p0 = command.CreateParameter();
+                    p0.DbType = DbType.Boolean;
+                    p0.ParameterName = "@IsCompany";
+                    p0.Value = isCompany;
+                    command.Parameters.Add(p0);
+
+                    SqlParameter p1 = command.CreateParameter();
+                    p1.DbType = DbType.Boolean;
+                    p1.ParameterName = "@IsVatRegistered";
+                    p1.Value = isVatRegistered.HasValue ? isVatRegistered.Value : DBNull.Value;
+                    command.Parameters.Add(p1);
+
+                    SqlParameter p2 = command.CreateParameter();
+                    p2.DbType = DbType.Int32;
+                    p2.ParameterName = "@MisOrdersPerMonth";
+                    p2.Value = misOrdersPerMonth;
+                    command.Parameters.Add(p2);
+
+                    SqlParameter p3 = command.CreateParameter();
+                    p3.DbType = DbType.Int32;
+                    p3.ParameterName = "@MonthsForward";
+                    p3.Value = monthsForward;
+                    command.Parameters.Add(p3);
+
+                    SqlParameter p4 = command.CreateParameter();
+                    p4.DbType = DbType.Decimal;
+                    p4.ParameterName = "@PriceRatio";
+                    p4.Value = priceRatio;
+                    command.Parameters.Add(p4);
+
+                    SqlParameter p5 = command.CreateParameter();
+                    p5.DbType = DbType.Decimal;
+                    p5.ParameterName = "@QuantityRatio";
+                    p5.Value = quantityRatio;
+                    command.Parameters.Add(p5);
+
+                    SqlParameter p6 = command.CreateParameter();
+                    p6.DbType = DbType.Decimal;
+                    p6.ParameterName = "@FloatRatio";
+                    p6.Value = floatRatio;
+                    command.Parameters.Add(p6);
+
+                    SqlParameter p7 = command.CreateParameter();
+                    p7.DbType = DbType.Boolean;
+                    p7.ParameterName = "@EnableProjects";
+                    p7.Value = enableProjects;
+                    command.Parameters.Add(p7);
+
+                    SqlParameter p8 = command.CreateParameter();
+                    p8.DbType = DbType.Boolean;
+                    p8.ParameterName = "@EnableInvoices";
+                    p8.Value = enableInvoices;
+                    command.Parameters.Add(p8);
+
+                    SqlParameter p9 = command.CreateParameter();
+                    p9.DbType = DbType.Boolean;
+                    p9.ParameterName = "@EnableProjectPayments";
+                    p9.Value = enableProjectPayments;
+                    command.Parameters.Add(p9);
+
+                    SqlParameter p10 = command.CreateParameter();
+                    p10.DbType = DbType.Boolean;
+                    p10.ParameterName = "@EnablePayables";
+                    p10.Value = enablePayables;
+                    command.Parameters.Add(p10);
+
+                    SqlParameter p11 = command.CreateParameter();
+                    p11.DbType = DbType.Boolean;
+                    p11.ParameterName = "@EnableMiscPayments";
+                    p11.Value = enableMiscPayments;
+                    command.Parameters.Add(p11);
+
+                    SqlParameter p12 = command.CreateParameter();
+                    p12.DbType = DbType.Boolean;
+                    p12.ParameterName = "@EnableWages";
+                    p12.Value = enableWages;
+                    command.Parameters.Add(p12);
+
+                    SqlParameter p13 = command.CreateParameter();
+                    p13.DbType = DbType.Boolean;
+                    p13.ParameterName = "@EnableExpenses";
+                    p13.Value = enableExpenses;
+                    command.Parameters.Add(p13);
+
+                    SqlParameter p14 = command.CreateParameter();
+                    p14.DbType = DbType.Boolean;
+                    p14.ParameterName = "@EnableAssets";
+                    p14.Value = enableAssets;
+                    command.Parameters.Add(p14);
+
+                    SqlParameter p15 = command.CreateParameter();
+                    p15.DbType = DbType.Boolean;
+                    p15.ParameterName = "@EnableTax";
+                    p15.Value = enableTax;
+                    command.Parameters.Add(p15);
+
+                    SqlParameter p16 = command.CreateParameter();
+                    p16.DbType = DbType.Boolean;
+                    p16.ParameterName = "@EnableTransfers";
+                    p16.Value = enableTransfers;
+                    command.Parameters.Add(p16);
+
+                    SqlParameter p17 = command.CreateParameter();
+                    p17.DbType = DbType.Boolean;
+                    p17.ParameterName = "@EnableOpeningBalance";
+                    p17.Value = enableOpeningBalance;
+                    command.Parameters.Add(p17);
+
+                    SqlParameter p18 = command.CreateParameter();
+                    p18.DbType = DbType.Boolean;
+                    p18.ParameterName = "@UseStdCompanyTemplate";
+                    p18.Value = useStdCompanyTemplate;
+                    command.Parameters.Add(p18);
+
+                    await command.ExecuteNonQueryAsync();
+                }
+
+                _connection.Close();
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                throw;
+            }
+        }
         #endregion
+
 
         #region Users
         public async Task<string> UserIdDefault(string userName)

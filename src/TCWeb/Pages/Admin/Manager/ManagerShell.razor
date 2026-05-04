@@ -178,6 +178,7 @@
     {
         ManagerTreeHost.ManagerNode.Root => _companyName,
         ManagerTreeHost.ManagerNode.Setup => $"{_companyName} / Setup",
+        ManagerTreeHost.ManagerNode.DemoData => $"{_companyName} / Synthetic Demo Data",
         ManagerTreeHost.ManagerNode.FileTransfer => $"{_companyName} / File Transfer",
         ManagerTreeHost.ManagerNode.FileTransferContentType => $"{_companyName} / File Transfer / {_selectedContentType}",
         ManagerTreeHost.ManagerNode.Host => $"{_companyName} / Mail Host",
@@ -243,6 +244,9 @@
             _iframeSrc = _selected switch
             {
                 ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
+
+                ManagerTreeHost.ManagerNode.DemoData =>
+                    "/Admin/DemoData/Index?embedded=1&returnNode=DemoData",
 
                 ManagerTreeHost.ManagerNode.FileTransfer =>
                     $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
@@ -348,6 +352,9 @@
             if (node == ManagerTreeHost.ManagerNode.Setup)
                 NavigationManager.NavigateTo($"/Admin/Setup/Index?returnNode={node}", forceLoad: true);
 
+            if (node == ManagerTreeHost.ManagerNode.DemoData)
+                NavigationManager.NavigateTo("/Admin/DemoData/Index?returnNode=DemoData", forceLoad: true);
+
             if (node == ManagerTreeHost.ManagerNode.FileTransfer)
                 NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&pageSize={_fileTransferPageSize}", forceLoad: true);
 
@@ -396,6 +403,7 @@
         _iframeSrc = node switch
         {
             ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
+            ManagerTreeHost.ManagerNode.DemoData => "/Admin/DemoData/Index?embedded=1&returnNode=DemoData",
             ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
             ManagerTreeHost.ManagerNode.Host => "/Admin/Host/Index?embedded=1&returnNode=Host",
             ManagerTreeHost.ManagerNode.Users => "/Admin/Users/Index?embedded=1&returnNode=Users",

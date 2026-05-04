@@ -74,6 +74,11 @@ namespace TradeControl.Web.Areas.Identity
                     options.SlidingExpiration = true;
                 });
 
+                services.Configure<SecurityStampValidatorOptions>(options =>
+                {
+                    options.ValidationInterval = TimeSpan.FromHours(12);
+                });
+
                 services.AddDistributedMemoryCache();
 
                 string cultureName = context.Configuration.GetSection("Settings")["CultureName"];

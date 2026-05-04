@@ -21,7 +21,6 @@ BEGIN TRY
 	DELETE FROM Usr.tbMenu;
 	DELETE FROM Usr.tbUser;
 	DELETE FROM App.tbCalendar;
-
 	DELETE FROM App.tbYear;
 	DELETE FROM App.tbBucket;
 	DELETE FROM App.tbUom;
@@ -65,37 +64,58 @@ BEGIN TRY
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbTemplate])
         INSERT INTO [App].[tbTemplate]
-            ([TemplateName], [StoredProcedure], [TemplateDescription], [IsVatRegistered])
+            ([TemplateCode], [TemplateName], [StoredProcedure], [TemplateDescription], [IsVatRegistered])
         VALUES
-            ('Minimal Micro Company Accounts 2026',
+            ('COMIN26',
+             'Minimal Micro Company Accounts 2026',
              'App.proc_Template_CO_MICRO_CUR_MIN_2026',
              'Ultra‑minimal micro‑entity accounts for very simple companies. One sales code, one cost code, one wages code, one admin code. Ideal for side‑hustles, dormant companies, and very small operations.', 1),
 
-            ('Standard Micro Company Accounts 2026',
+            ('COSTD26',
+             'Standard Micro Company Accounts 2026',
              'App.proc_Template_CO_MICRO_CUR_STD_2026',
              'Enhanced micro‑entity accounts with real‑world business categories. Splits sales into labour/materials, direct costs into materials/subs/fuel/travel, full admin breakdown, and detailed depreciation classes. Ideal for tradesmen, small agencies, and micro‑manufacturers who want meaningful reporting without leaving the micro‑entity regime.', 1),
 
-            ('Minimal Sole Trader Accounts 2026',
+            ('STMIN26',
+             'Minimal Sole Trader Accounts 2026',
              'App.proc_Template_ST_SOLE_CUR_MIN_2026',
              'Simple, MTD‑ready sole trader accounts. No balance sheet, no corporation tax, optional VAT, and a clean income/expense structure aligned with HMRC reporting groups. Ideal for tradespeople, freelancers, and self‑employed individuals preparing for Making Tax Digital.', 0),
 
-            ('Standard Sole Trader Accounts 2026',
+            ('STSTD26',
+             'Standard Sole Trader Accounts 2026',
              'App.proc_Template_ST_SOLE_CUR_STD_2026',
              'Sole trader accounts with a more realistic expense breakdown (motor, premises, phone, insurance, bank charges, professional fees, advertising, repairs). Designed to reduce manual reclassification before MTD ITSA submissions.', 0);
 
-	IF NOT EXISTS (SELECT * FROM [Subject].[tbAccountType])
-		INSERT INTO [Subject].[tbAccountType] ([AccountTypeCode], [AccountType])
+	IF NOT EXISTS (SELECT * FROM [App].[tbTemplateDataset])
+		INSERT INTO [App].[tbTemplateDataset]
+		(
+			[DatasetCode],
+			[TemplateCode],
+			[DatasetTitle],
+			[Notes],
+			[IsCompany],
+			[IsVatRegistered],
+			[UseStdCompanyTemplate],
+			[MisOrdersPerMonth],
+			[MonthsForward],
+			[PriceRatio],
+			[QuantityRatio],
+			[FloatRatio]
+		)
 		VALUES
-		    (0, 'CASH')
-		    , (1, 'DUMMY')
-		    , (2, 'ASSET')
+			('COMIPFVT1', 'COMIN26', 'VAT registered profit scenario', 'Generates a VAT-registered synthetic company dataset with profitable trading assumptions.', 1, 1, 0, 2, 3, 3.0000000, 10.0000000, 0.2500000),
+			('COMILFVT1', 'COMIN26', 'VAT registered loss scenario', 'Generates a VAT-registered synthetic company dataset with loss-making trading assumptions.', 1, 1, 0, 2, 3, 0.5000000, 10.0000000, 0.2500000),			('COMIPFVT0', 'COMIN26', 'Non-VAT profit scenario', 'Generates a non-VAT synthetic company dataset with profitable trading assumptions.', 1, 0, 0, 2, 3, 3.0000000, 10.0000000, 0.2500000),
+			('COMILFVT0', 'COMIN26', 'Non-VAT loss scenario', 'Generates a non-VAT synthetic company dataset with loss-making trading assumptions.', 1, 0, 0, 2, 3, 0.5000000, 10.0000000, 0.2500000),
 
-    IF NOT EXISTS (SELECT * FROM [Subject].[tbBalanceConstraint])
-        INSERT INTO [Subject].[tbBalanceConstraint] ([BalanceConstraintCode], [BalanceConstraint])
-        VALUES
-            (0, N'Neutral'),
-            (1, N'No Negatives'),
-            (2, N'No Positives');
+			('STMIPFVT1', 'STMIN26', 'VAT registered profit scenario', 'Generates a VAT-registered synthetic sole trader dataset using the minimal template and profitable trading assumptions.', 0, 1, 0, 2, 3, 3.0000000, 10.0000000, 0.2500000),
+			('STMILFVT1', 'STMIN26', 'VAT registered loss scenario', 'Generates a VAT-registered synthetic sole trader dataset using the minimal template and loss-making trading assumptions.', 0, 1, 0, 2, 3, 0.5000000, 10.0000000, 0.2500000),
+			('STMIPFVT0', 'STMIN26', 'Non-VAT profit scenario', 'Generates a non-VAT synthetic sole trader dataset using the minimal template and profitable trading assumptions.', 0, 0, 0, 2, 3, 3.0000000, 10.0000000, 0.2500000),
+			('STMILFVT0', 'STMIN26', 'Non-VAT loss scenario', 'Generates a non-VAT synthetic sole trader dataset using the minimal template and loss-making trading assumptions.', 0, 0, 0, 2, 3, 0.5000000, 10.0000000, 0.2500000),
+
+			('STSIPFVT1', 'STSTD26', 'VAT registered profit scenario', 'Generates a VAT-registered synthetic sole trader dataset using the standard template and profitable trading assumptions.', 0, 1, 1, 2, 3, 3.0000000, 10.0000000, 0.2500000),
+			('STSILFVT1', 'STSTD26', 'VAT registered loss scenario', 'Generates a VAT-registered synthetic sole trader dataset using the standard template and loss-making trading assumptions.', 0, 1, 1, 2, 3, 0.5000000, 10.0000000, 0.2500000),
+			('STSIPFVT0', 'STSTD26', 'Non-VAT profit scenario', 'Generates a non-VAT synthetic sole trader dataset using the standard template and profitable trading assumptions.', 0, 0, 1, 2, 3, 3.0000000, 10.0000000, 0.2500000),
+			('STSILFVT0', 'STSTD26', 'Non-VAT loss scenario', 'Generates a non-VAT synthetic sole trader dataset using the standard template and loss-making trading assumptions.', 0, 0, 1, 2, 3, 0.5000000, 10.0000000, 0.2500000);
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbUoc])
 		INSERT INTO [App].[tbUoc] ([UnitOfCharge], [UocSymbol], [UocName])
@@ -198,6 +218,29 @@ BEGIN TRY
         INSERT INTO App.tbJurisdiction (JurisdictionCode, JurisdictionName, UocCode)
         VALUES
         ('UK', 'United Kingdom', 'GBP');
+
+	IF NOT EXISTS (SELECT * FROM [Subject].[tbAccountType])
+		INSERT INTO [Subject].[tbAccountType] ([AccountTypeCode], [AccountType])
+		VALUES
+		    (0, 'CASH')
+		    , (1, 'DUMMY')
+		    , (2, 'ASSET')
+
+    IF NOT EXISTS (SELECT * FROM [Subject].[tbBalanceConstraint])
+        INSERT INTO [Subject].[tbBalanceConstraint] ([BalanceConstraintCode], [BalanceConstraint])
+        VALUES
+            (0, N'Neutral'),
+            (1, N'No Negatives'),
+            (2, N'No Positives');
+
+	IF NOT EXISTS (SELECT * FROM [App].[tbExecutionStatus])
+		INSERT INTO [App].[tbExecutionStatus] ([ExecutionStatusCode], [ExecutionStatus])
+		VALUES
+			(0, 'Pending')
+			, (1, 'Running')
+			, (2, 'Succeeded')
+			, (3, 'Failed')
+			, (4, 'Cancelled')
 
 	IF NOT EXISTS (SELECT * FROM [App].[tbEventType])
 		INSERT INTO [App].[tbEventType] ([EventTypeCode], [EventType])

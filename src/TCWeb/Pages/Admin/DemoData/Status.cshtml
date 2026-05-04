@@ -1,0 +1,249 @@
+@page
+@model TradeControl.Web.Pages.Admin.DemoData.StatusModel
+@{
+    ViewData["Title"] = "Synthetic Demo Data Status";
+
+    var embedded = false;
+    if (Request?.Query.ContainsKey("embedded") == true)
+    {
+        embedded = string.Equals(Request.Query["embedded"], "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Request.Query["embedded"], "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var returnNode = (Request?.Query.ContainsKey("returnNode") == true)
+        ? (Request.Query["returnNode"].ToString() ?? string.Empty)
+        : string.Empty;
+
+    if (embedded)
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+
+    var configHref = embedded
+        ? (!string.IsNullOrWhiteSpace(returnNode)
+            ? $"/Admin/DemoData/Config?embedded=1&returnNode={Uri.EscapeDataString(returnNode)}"
+            : "/Admin/DemoData/Config?embedded=1")
+        : (!string.IsNullOrWhiteSpace(returnNode)
+            ? $"/Admin/DemoData/Config?returnNode={Uri.EscapeDataString(returnNode)}"
+            : "/Admin/DemoData/Config");
+
+    var cancelHref = embedded
+        ? (!string.IsNullOrWhiteSpace(returnNode)
+            ? $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}"
+            : "/Admin/Manager/Index")
+        : (!string.IsNullOrWhiteSpace(returnNode)
+            ? $"/Admin/Manager/Index?node={Uri.EscapeDataString(returnNode)}"
+            : "/Admin/Manager/Index");
+
+    var stateUrl = Url.Page("./Status", pageHandler: "State") ?? "/Admin/DemoData/Status?handler=State";
+}
+
+<div class="container-fluid py-2">
+    @if (!embedded)
+    {
+        <h1 class="h4 mb-3">@ViewData["Title"]</h1>
+    }
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-8 d-flex">
+            <div class="card shadow-sm h-100 w-100">
+                <div class="card-header bg-white">
+                    <div class="fw-semibold">Execution</div>
+                    <div class="text-muted small">The dataset installation is running in the background.</div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3" id="statusBanner" role="status">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="spinner-border spinner-border-sm" id="statusSpinner" role="status" aria-hidden="true"></div>
+                            <div>
+                                <div class="fw-semibold" id="statusText">@Model.Execution.ExecutionStatus</div>
+                                <div id="progressText">@Model.Execution.ProgressMessage</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Execution Code</dt>
+                        <dd class="col-sm-9" id="executionCode">@Model.Execution.ExecutionCode</dd>
+
+                        <dt class="col-sm-3">Execution Type</dt>
+                        <dd class="col-sm-9" id="executionType">@Model.Execution.ExecutionType</dd>
+
+                        <dt class="col-sm-3">Queued On</dt>
+                        <dd class="col-sm-9" id="queuedOn">@Model.Execution.QueuedOn.ToString("g")</dd>
+
+                        <dt class="col-sm-3">Started On</dt>
+                        <dd class="col-sm-9" id="startedOn">@(Model.Execution.StartedOn?.ToString("g") ?? "-")</dd>
+
+                        <dt class="col-sm-3">Completed On</dt>
+                        <dd class="col-sm-9" id="completedOn">@(Model.Execution.CompletedOn?.ToString("g") ?? "-")</dd>
+                    </dl>
+
+                    <div class="alert alert-danger mt-3 mb-0" id="errorPanel" role="alert" style="display:@(string.IsNullOrWhiteSpace(Model.Execution.ErrorMessage) ? "none" : "")">
+                        <div class="fw-semibold">Execution failed</div>
+                        <div id="errorText">@Model.Execution.ErrorMessage</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="@configHref" class="btn btn-outline-primary">Queue another dataset</a>
+                <a href="@cancelHref" class="btn btn-outline-secondary">Back</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function ()
+    {
+        const executionCode = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Execution.ExecutionCode));
+        const stateUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(stateUrl));
+        const initialState = {
+            executionStatusCode: @Model.Execution.ExecutionStatusCode,
+            executionStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Execution.ExecutionStatus ?? string.Empty)),
+            progressMessage: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Execution.ProgressMessage ?? string.Empty)),
+            startedOn: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Execution.StartedOn?.ToString("g"))),
+            completedOn: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Execution.CompletedOn?.ToString("g"))),
+            errorMessage: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Execution.ErrorMessage ?? string.Empty)),
+            isComplete: @(Model.Execution.IsComplete ? "true" : "false"),
+            isSucceeded: @(Model.Execution.IsSucceeded ? "true" : "false")
+        };
+
+        const statusBanner = document.getElementById("statusBanner");
+        const statusSpinner = document.getElementById("statusSpinner");
+        const statusText = document.getElementById("statusText");
+        const progressText = document.getElementById("progressText");
+        const startedOn = document.getElementById("startedOn");
+        const completedOn = document.getElementById("completedOn");
+        const errorPanel = document.getElementById("errorPanel");
+        const errorText = document.getElementById("errorText");
+
+        if (!executionCode || !stateUrl)
+        {
+            return;
+        }
+
+        function setBannerState(state)
+        {
+            if (!statusBanner || !statusSpinner)
+            {
+                return;
+            }
+
+            statusBanner.classList.remove("alert-info", "alert-success", "alert-danger", "alert-warning");
+
+            if (state.isSucceeded)
+            {
+                statusBanner.classList.add("alert-success");
+                statusSpinner.style.display = "none";
+            }
+            else if (state.isComplete)
+            {
+                statusBanner.classList.add("alert-danger");
+                statusSpinner.style.display = "none";
+            }
+            else if (state.executionStatusCode === 0)
+            {
+                statusBanner.classList.add("alert-warning");
+                statusSpinner.style.display = "";
+            }
+            else
+            {
+                statusBanner.classList.add("alert-info");
+                statusSpinner.style.display = "";
+            }
+        }
+
+        function applyState(state)
+        {
+            if (statusText)
+            {
+                statusText.textContent = state.executionStatus || "";
+            }
+
+            if (progressText)
+            {
+                progressText.textContent = state.progressMessage || "";
+            }
+
+            if (startedOn)
+            {
+                startedOn.textContent = state.startedOn || "-";
+            }
+
+            if (completedOn)
+            {
+                completedOn.textContent = state.completedOn || "-";
+            }
+
+            if (errorPanel && errorText)
+            {
+                if (state.errorMessage)
+                {
+                    errorText.textContent = state.errorMessage;
+                    errorPanel.style.display = "";
+                }
+                else
+                {
+                    errorText.textContent = "";
+                    errorPanel.style.display = "none";
+                }
+            }
+
+            setBannerState(state);
+        }
+
+        async function poll()
+        {
+            try
+            {
+                const url = `${stateUrl}&executionCode=${encodeURIComponent(executionCode)}&tick=${Date.now()}`;
+                const response = await fetch(url, {
+                    cache: "no-store",
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+
+                if (!response.ok)
+                {
+                    return true;
+                }
+
+                const state = await response.json();
+                applyState(state);
+
+                return state.isComplete !== true;
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        async function startPolling()
+        {
+            let keepGoing = initialState.isComplete !== true;
+
+            if (!keepGoing)
+            {
+                applyState(initialState);
+                return;
+            }
+
+            while (keepGoing)
+            {
+                await new Promise(function (resolve)
+                {
+                    window.setTimeout(resolve, 2000);
+                });
+
+                keepGoing = await poll();
+            }
+        }
+
+        applyState(initialState);
+        startPolling();
+    })();
+</script>

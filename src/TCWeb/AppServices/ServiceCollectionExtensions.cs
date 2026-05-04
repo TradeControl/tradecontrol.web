@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using TradeControl.Web.AppServices.Execution;
 
 namespace TradeControl.Web.AppServices
 {
@@ -13,6 +14,11 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<IInvoiceTypeLookup, InvoiceTypeLookup>();
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
+
+            services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();
+            services.AddScoped<IExecutionQueue, ExecutionQueue>();
+            services.AddScoped<IExecutionHandler, SyntheticDatasetExecutionHandler>();
+            services.AddHostedService<ExecutionWorker>();
 
             return services;
         }
