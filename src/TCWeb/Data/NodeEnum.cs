@@ -38,6 +38,14 @@ namespace TradeControl.Web.Data
 
         public enum ExecutionStatus { Pending, Running, Succeeded, Failed, Cancelled };
         public enum ExecutionType { SyntheticDataset };
+        public enum ActionCode
+        {
+            Blocked = 0,
+            RemoveRelationshipOnly,
+            DeleteDetachedClosure,
+            ReparentRelationship,
+            AddRelationship
+        }
 
     }
 }

@@ -11,6 +11,7 @@ namespace TradeControl.Web.Pages.Subject.Browser
         public string Name { get; init; } = string.Empty;
         public string DisplayLabel { get; init; } = string.Empty;
         public NodeEnum.SubjectClass SubjectClass { get; init; }
+        public NodeEnum.CashPolarity CashPolarity { get; init; } = NodeEnum.CashPolarity.Neutral;
         public int ChildCount { get; init; }
         public bool IsDefaultChild { get; init; }
 
@@ -37,7 +38,7 @@ namespace TradeControl.Web.Pages.Subject.Browser
                 ? "bi-diagram-3 tc-subject-browser-icon-structural"
                 : IsReal
                     ? "bi-person-fill tc-subject-browser-icon-real"
-                    : "bi-building tc-subject-browser-icon-virtual";
+                    : GetVirtualIconClass();
 
             if (IsDefaultChild)
             {
@@ -47,6 +48,15 @@ namespace TradeControl.Web.Pages.Subject.Browser
             }
 
             return iconClass;
+        }
+
+        private string GetVirtualIconClass()
+        {
+            return CashPolarity switch {
+                NodeEnum.CashPolarity.Expense => "bi-building-fill tc-subject-browser-icon-virtual-expense",
+                NodeEnum.CashPolarity.Income => "bi-building-fill tc-subject-browser-icon-virtual-income",
+                _ => "bi-building-fill tc-subject-browser-icon-virtual-neutral"
+            };
         }
     }
 }

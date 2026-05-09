@@ -1,0 +1,492 @@
+@using System.Globalization
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Data
+@inject ISubjectEnquiryService SubjectEnquiryService
+
+<div class="bg-white border rounded p-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+        <div>
+            <div class="fw-semibold">@GetHeading()</div>
+            <div class="text-muted small"><code>@SubjectCode</code></div>
+
+            @if (_summary is not null)
+            {
+                <div class="small mt-2">
+                    <span class="badge text-bg-light border me-1">@_summary.SubjectType</span>
+                    <span class="badge @GetPolarityBadgeCssClass()">@_summary.CashPolarity</span>
+                </div>
+            }
+        </div>
+
+        <div class="btn-group btn-group-sm" role="group" aria-label="Enquiry view">
+            <button type="button"
+                    class="btn @GetViewButtonClass(SubjectEnquiryView.Invoices)"
+                    @onclick="() => SetViewAsync(SubjectEnquiryView.Invoices)">
+                Invoices
+            </button>
+            <button type="button"
+                    class="btn @GetViewButtonClass(SubjectEnquiryView.Payments)"
+                    @onclick="() => SetViewAsync(SubjectEnquiryView.Payments)">
+                Payments
+            </button>
+            <button type="button"
+                    class="btn @GetViewButtonClass(SubjectEnquiryView.Statement)"
+                    @onclick="() => SetViewAsync(SubjectEnquiryView.Statement)">
+                Statement
+            </button>
+        </div>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 bg-light border rounded px-3 py-2 mb-3">
+            <div class="small text-muted">Current Balance</div>
+            <div class="@GetBalanceCssClass()">@FormatDouble(_summary.CurrentBalance)</div>
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="small text-muted">
+            @GetSummaryText()
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <label class="small text-muted mb-0" for="subject-enquiry-page-size">Rows</label>
+            <select id="subject-enquiry-page-size"
+                    class="form-select form-select-sm w-auto"
+                    value="@_pageSize"
+                    @onchange="HandlePageSizeChangedAsync">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-muted small py-2">Loading…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-0" role="alert">@_errorMessage</div>
+    }
+    else
+    {
+        @switch (_activeView)
+        {
+            case SubjectEnquiryView.Invoices:
+                @RenderInvoices()
+                break;
+
+            case SubjectEnquiryView.Payments:
+                @RenderPayments()
+                break;
+
+            case SubjectEnquiryView.Statement:
+                @RenderStatement()
+                break;
+        }
+    }
+
+    @if (GetTotalPages() > 1)
+    {
+        <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    disabled="@(_pageNumber <= 1)"
+                    @onclick="() => GoToPageAsync(_pageNumber - 1)">
+                Previous
+            </button>
+
+            <div class="small text-muted">
+                Page @_pageNumber of @GetTotalPages()
+            </div>
+
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    disabled="@(_pageNumber >= GetTotalPages())"
+                    @onclick="() => GoToPageAsync(_pageNumber + 1)">
+                Next
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string SubjectCode { get; set; } = string.Empty;
+    [Parameter] public string? DisplayLabel { get; set; }
+    [Parameter] public SubjectEnquiryView View { get; set; } = SubjectEnquiryView.Statement;
+    [Parameter] public bool IsEmbedded { get; set; } = true;
+
+    private string _currentSubjectCode = string.Empty;
+    private SubjectEnquiryView _activeView = SubjectEnquiryView.Statement;
+    private int _pageNumber = 1;
+    private int _pageSize = 25;
+    private int _totalCount;
+    private bool _isLoading;
+    private string? _errorMessage;
+    private SubjectEnquirySummary? _summary;
+
+    private IReadOnlyList<SubjectEnquiryInvoiceItem> _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
+    private IReadOnlyList<SubjectEnquiryPaymentItem> _payments = Array.Empty<SubjectEnquiryPaymentItem>();
+    private IReadOnlyList<SubjectEnquiryStatementItem> _statement = Array.Empty<SubjectEnquiryStatementItem>();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var normalizedSubjectCode = SubjectCode?.Trim() ?? string.Empty;
+        var subjectChanged = !string.Equals(_currentSubjectCode, normalizedSubjectCode, StringComparison.OrdinalIgnoreCase);
+        var viewChanged = _activeView != View;
+
+        if (subjectChanged)
+        {
+            _currentSubjectCode = normalizedSubjectCode;
+            _pageNumber = 1;
+        }
+
+        if (viewChanged)
+        {
+            _activeView = View;
+            _pageNumber = 1;
+        }
+
+        if (subjectChanged || viewChanged)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task SetViewAsync(SubjectEnquiryView view)
+    {
+        if (_activeView == view)
+            return;
+
+        _activeView = view;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task HandlePageSizeChangedAsync(ChangeEventArgs args)
+    {
+        if (!int.TryParse(args.Value?.ToString(), out var pageSize))
+            return;
+
+        if (_pageSize == pageSize)
+            return;
+
+        _pageSize = pageSize;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int pageNumber)
+    {
+        if (pageNumber < 1 || pageNumber == _pageNumber || pageNumber > GetTotalPages())
+            return;
+
+        _pageNumber = pageNumber;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_currentSubjectCode))
+        {
+            _summary = null;
+            _totalCount = 0;
+            _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
+            _payments = Array.Empty<SubjectEnquiryPaymentItem>();
+            _statement = Array.Empty<SubjectEnquiryStatementItem>();
+            return;
+        }
+
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+
+            _summary = await SubjectEnquiryService.GetSummaryAsync(_currentSubjectCode);
+
+            switch (_activeView)
+            {
+                case SubjectEnquiryView.Invoices:
+                    var invoices = await SubjectEnquiryService.GetInvoicesAsync(_currentSubjectCode, _pageNumber, _pageSize);
+                    _invoices = invoices.Items;
+                    _payments = Array.Empty<SubjectEnquiryPaymentItem>();
+                    _statement = Array.Empty<SubjectEnquiryStatementItem>();
+                    _totalCount = invoices.TotalCount;
+                    _pageNumber = invoices.PageNumber;
+                    _pageSize = invoices.PageSize;
+                    break;
+
+                case SubjectEnquiryView.Payments:
+                    var payments = await SubjectEnquiryService.GetPaymentsAsync(_currentSubjectCode, _pageNumber, _pageSize);
+                    _payments = payments.Items;
+                    _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
+                    _statement = Array.Empty<SubjectEnquiryStatementItem>();
+                    _totalCount = payments.TotalCount;
+                    _pageNumber = payments.PageNumber;
+                    _pageSize = payments.PageSize;
+                    break;
+
+                default:
+                    var statement = await SubjectEnquiryService.GetStatementAsync(_currentSubjectCode, _pageNumber, _pageSize);
+                    _statement = statement.Items;
+                    _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
+                    _payments = Array.Empty<SubjectEnquiryPaymentItem>();
+                    _totalCount = statement.TotalCount;
+                    _pageNumber = statement.PageNumber;
+                    _pageSize = statement.PageSize;
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _summary = null;
+            _totalCount = 0;
+            _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
+            _payments = Array.Empty<SubjectEnquiryPaymentItem>();
+            _statement = Array.Empty<SubjectEnquiryStatementItem>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetHeading()
+    {
+        if (!string.IsNullOrWhiteSpace(DisplayLabel))
+            return DisplayLabel!;
+
+        if (!string.IsNullOrWhiteSpace(_summary?.SubjectName))
+            return _summary.SubjectName;
+
+        return _currentSubjectCode;
+    }
+
+    private string GetSummaryText()
+    {
+        var itemLabel = _totalCount == 1 ? "item" : "items";
+
+        return _activeView switch
+        {
+            SubjectEnquiryView.Invoices => $"{_totalCount} invoice {itemLabel}",
+            SubjectEnquiryView.Payments => $"{_totalCount} payment {itemLabel}",
+            _ => $"{_totalCount} statement {itemLabel}"
+        };
+    }
+
+    private int GetTotalPages()
+    {
+        return Math.Max(1, (int)Math.Ceiling(_totalCount / (double)Math.Max(_pageSize, 1)));
+    }
+
+    private string GetViewButtonClass(SubjectEnquiryView view)
+    {
+        return _activeView == view ? "btn-primary" : "btn-outline-primary";
+    }
+
+    private string GetPolarityBadgeCssClass()
+    {
+        return _summary?.CashPolarity switch
+        {
+            NodeEnum.CashPolarity.Expense => "text-bg-danger",
+            NodeEnum.CashPolarity.Income => "text-bg-success",
+            _ => "text-bg-secondary"
+        };
+    }
+
+    private string GetBalanceCssClass()
+    {
+        if (_summary is null)
+            return "fw-semibold text-dark";
+
+        return _summary.CurrentBalance < 0
+            ? "fw-semibold text-danger"
+            : "fw-semibold text-dark";
+    }
+
+    private string GetInvoiceRowClass(SubjectEnquiryInvoiceItem item)
+    {
+        if (_summary is null)
+            return string.Empty;
+
+        var invoiceType = item.InvoiceType ?? string.Empty;
+        var isCredit = invoiceType.Contains("Credit", StringComparison.OrdinalIgnoreCase);
+        var isDebitOrInvoice = invoiceType.Contains("Debit", StringComparison.OrdinalIgnoreCase)
+            || invoiceType.Contains("Invoice", StringComparison.OrdinalIgnoreCase);
+
+        return _summary.CashPolarity switch
+        {
+            NodeEnum.CashPolarity.Expense when isCredit => "table-success",
+            NodeEnum.CashPolarity.Expense when isDebitOrInvoice => "table-danger",
+            NodeEnum.CashPolarity.Income when isCredit => "table-danger",
+            NodeEnum.CashPolarity.Income when isDebitOrInvoice => "table-success",
+            _ => string.Empty
+        };
+    }
+
+    private string GetPaidOutClass()
+    {
+        return _summary?.CashPolarity == NodeEnum.CashPolarity.Expense
+            ? "text-danger fw-semibold"
+            : string.Empty;
+    }
+
+    private string GetPaidInClass()
+    {
+        return _summary?.CashPolarity == NodeEnum.CashPolarity.Income
+            ? "text-success fw-semibold"
+            : string.Empty;
+    }
+
+    private static string FormatDouble(double value)
+    {
+        return value.ToString("N2", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatDecimal(decimal value)
+    {
+        return value.ToString("N2", CultureInfo.CurrentCulture);
+    }
+
+    private RenderFragment RenderInvoices() => @<div>
+@if (_invoices.Count == 0)
+    {
+    <div class="text-muted small py-2">No invoices found.</div>
+    }
+    else
+    {
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Invoiced</th>
+                    <th>Invoice</th>
+                    <th>Type</th>
+                    <th class="text-end">Charge</th>
+                    <th class="text-end">Tax</th>
+                    <th class="text-end">Paid</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _invoices)
+                                {
+                <tr class="@GetInvoiceRowClass(item)">
+                    <td>@item.InvoicedOn.ToString("d", CultureInfo.CurrentCulture)</td>
+                    <td><code>@item.InvoiceNumber</code></td>
+                    <td>@item.InvoiceType</td>
+                    <td class="text-end">@FormatDouble(item.InvoiceValue)</td>
+                    <td class="text-end">@FormatDouble(item.TaxValue)</td>
+                    <td class="text-end">@FormatDouble(item.TotalPaidValue)</td>
+                    <td>@item.InvoiceStatus</td>
+                    <td class="text-end">
+                        <a class="btn btn-outline-secondary btn-sm"
+                           href="@item.RegisterUrl"
+                           title="Open invoice register entry">
+                            <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                            <span class="visually-hidden">Open invoice register entry</span>
+                        </a>
+                    </td>
+                </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>;
+
+private RenderFragment RenderPayments() => @<div>
+@if (_payments.Count == 0)
+{
+        <div class="text-muted small py-2">No payments found.</div>
+}
+else
+{
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Paid</th>
+                        <th>Reference</th>
+                        <th class="text-end">Out</th>
+                        <th class="text-end">In</th>
+                        <th>Cash Account</th>
+                        <th>User</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _payments)
+                    {
+                        <tr>
+                            <td>@item.PaidOn.ToString("d", CultureInfo.CurrentCulture)</td>
+                            <td>
+                                @if (string.IsNullOrWhiteSpace(item.PaymentReference))
+                                {
+                                    <code>@item.PaymentCode</code>
+                                }
+                                else
+                                {
+                                    @item.PaymentReference
+                                }
+                            </td>
+                            <td class="text-end @GetPaidOutClass()">@FormatDecimal(item.PaidOutValue)</td>
+                            <td class="text-end @GetPaidInClass()">@FormatDecimal(item.PaidInValue)</td>
+                            <td>@item.AccountName</td>
+                            <td>@item.UserName</td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="@item.DetailsUrl"
+                                   title="Open cash account entry">
+                                    <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Open cash account entry</span>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+}
+</div>;
+
+private RenderFragment RenderStatement() => @<div>
+@if (_statement.Count == 0)
+{
+        <div class="text-muted small py-2">No statement items found.</div>
+}
+else
+{
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Transacted</th>
+                        <th>Reference</th>
+                        <th>Type</th>
+                        <th class="text-end">Charge</th>
+                        <th class="text-end">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _statement)
+                    {
+                        <tr>
+                            <td>@item.TransactedOn.ToString("d", CultureInfo.CurrentCulture)</td>
+                            <td>@item.Reference</td>
+                            <td>@item.StatementType</td>
+                            <td class="text-end">@FormatDouble(item.Charge)</td>
+                            <td class="text-end">@FormatDouble(item.Balance)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+}
+</div>;
+}

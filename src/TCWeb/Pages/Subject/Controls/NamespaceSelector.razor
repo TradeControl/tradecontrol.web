@@ -1,29 +1,104 @@
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
 @using System.Threading
 
-<div class="input-group">
-    <input class="form-control"
-           value="@_filterText"
-           @oninput="HandleInputAsync"
-           placeholder="Filter namespace…"
-           autocomplete="off" />
+<div class="position-relative">
+    <div class="input-group">
+        <input class="form-control"
+               value="@_filterText"
+               @oninput="HandleInputAsync"
+               @onkeydown="HandleKeyDownAsync"
+               @onfocus="HandleFocus"
+               @onblur="HandleBlurAsync"
+               placeholder="Filter namespace…"
+               autocomplete="off"
+               spellcheck="false"
+               autocorrect="off"
+               autocapitalize="off" />
 
-    <button type="button"
-            class="btn btn-outline-secondary"
-            @onclick="ClearAsync"
-            disabled="@string.IsNullOrWhiteSpace(_filterText)">
-        <i class="bi bi-x-circle" aria-hidden="true"></i>
-        <span class="visually-hidden">Clear</span>
-    </button>
+        @if (ShowApplyButton)
+        {
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    title="@ApplyButtonTitle"
+                    @onclick="ApplyAsync"
+                    disabled="@string.IsNullOrWhiteSpace(_filterText)">
+                <i class="bi bi-funnel" aria-hidden="true"></i>
+                <span class="visually-hidden">@ApplyButtonTitle</span>
+            </button>
+        }
+
+        <button type="button"
+                class="btn btn-outline-secondary"
+                @onclick="ClearAsync"
+                disabled="@string.IsNullOrWhiteSpace(_filterText)">
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+            <span class="visually-hidden">Clear</span>
+        </button>
+    </div>
+
+    @if (ShouldShowSuggestions())
+    {
+        <div class="list-group position-absolute w-100 shadow-sm mt-1"
+             style="z-index:1050; max-height:16rem; overflow:auto;">
+            @if (IsLoadingSuggestions)
+            {
+                <div class="list-group-item small text-muted">Loading…</div>
+            }
+            else if (Suggestions.Count == 0)
+            {
+                <div class="list-group-item small text-muted">No suggestions</div>
+            }
+            else
+            {
+                @for (var index = 0; index < Suggestions.Count; index++)
+                {
+                    var suggestion = Suggestions[index];
+                    var isActive = index == _selectedSuggestionIndex;
+
+                    <button type="button"
+                            class="list-group-item list-group-item-action @(isActive ? "active" : null)"
+                            @onmousedown:preventDefault="true"
+                            @onclick="() => SelectSuggestionAsync(suggestion)">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div class="text-start">
+                                <div class="fw-semibold">@suggestion.Segment</div>
+
+                                @if (!string.IsNullOrWhiteSpace(suggestion.DisplayLabel))
+                                {
+                                    <div class="small opacity-75">@suggestion.DisplayLabel</div>
+                                }
+
+                                <div class="small opacity-75"><code>@suggestion.FullPath</code></div>
+                            </div>
+
+                            @if (suggestion.HasChildren)
+                            {
+                                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                            }
+                        </div>
+                    </button>
+                }
+            }
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public string FilterText { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> OnFilterChanged { get; set; }
+    [Parameter] public EventCallback<string> OnFilterCommitted { get; set; }
     [Parameter] public bool MultiSelect { get; set; }
+    [Parameter] public IReadOnlyList<NamespaceSelectorSuggestion> Suggestions { get; set; } = Array.Empty<NamespaceSelectorSuggestion>();
+    [Parameter] public bool IsLoadingSuggestions { get; set; }
+    [Parameter] public bool ShowApplyButton { get; set; }
+    [Parameter] public string ApplyButtonTitle { get; set; } = "Apply filter";
 
     private string _filterText = string.Empty;
     private CancellationTokenSource? _debounceCts;
+    private bool _showSuggestions;
+    private int _selectedSuggestionIndex = -1;
+    private string? _selectedSuggestionPath;
 
     protected override void OnParametersSet()
     {
@@ -31,12 +106,127 @@
         {
             _filterText = FilterText ?? string.Empty;
         }
+
+        if (Suggestions.Count == 0)
+        {
+            _selectedSuggestionIndex = -1;
+            _selectedSuggestionPath = null;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_selectedSuggestionPath))
+        {
+            var preservedIndex = Suggestions
+                .Select((suggestion, index) => new { suggestion.FullPath, index })
+                .FirstOrDefault(item => string.Equals(item.FullPath, _selectedSuggestionPath, StringComparison.OrdinalIgnoreCase));
+
+            if (preservedIndex is not null)
+            {
+                _selectedSuggestionIndex = preservedIndex.index;
+                return;
+            }
+        }
+
+        if (_selectedSuggestionIndex < 0 || _selectedSuggestionIndex >= Suggestions.Count)
+        {
+            _selectedSuggestionIndex = 0;
+            _selectedSuggestionPath = Suggestions[0].FullPath;
+        }
     }
 
     private async Task HandleInputAsync(ChangeEventArgs args)
     {
         _filterText = args.Value?.ToString() ?? string.Empty;
+        _showSuggestions = true;
+        _selectedSuggestionIndex = Suggestions.Count > 0 ? 0 : -1;
+        _selectedSuggestionPath = Suggestions.Count > 0 ? Suggestions[0].FullPath : null;
         await DebounceEmitAsync(_filterText);
+    }
+
+    private Task HandleFocus(FocusEventArgs _)
+    {
+        _showSuggestions = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleBlurAsync(FocusEventArgs _)
+    {
+        await Task.Delay(150);
+        _showSuggestions = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key == "ArrowDown")
+        {
+            if (Suggestions.Count > 0)
+            {
+                _showSuggestions = true;
+                _selectedSuggestionIndex = _selectedSuggestionIndex < Suggestions.Count - 1
+                    ? _selectedSuggestionIndex + 1
+                    : 0;
+                _selectedSuggestionPath = Suggestions[_selectedSuggestionIndex].FullPath;
+            }
+
+            return;
+        }
+
+        if (args.Key == "ArrowUp")
+        {
+            if (Suggestions.Count > 0)
+            {
+                _showSuggestions = true;
+                _selectedSuggestionIndex = _selectedSuggestionIndex > 0
+                    ? _selectedSuggestionIndex - 1
+                    : Suggestions.Count - 1;
+                _selectedSuggestionPath = Suggestions[_selectedSuggestionIndex].FullPath;
+            }
+
+            return;
+        }
+
+        if (args.Key == "Escape")
+        {
+            _showSuggestions = false;
+            return;
+        }
+
+        if (args.Key is "Enter" or "Tab")
+        {
+            if (_showSuggestions
+                && Suggestions.Count > 0
+                && _selectedSuggestionIndex >= 0
+                && _selectedSuggestionIndex < Suggestions.Count)
+            {
+                await SelectSuggestionAsync(Suggestions[_selectedSuggestionIndex]);
+                return;
+            }
+
+            await CommitCurrentFilterAsync();
+        }
+    }
+
+    private async Task SelectSuggestionAsync(NamespaceSelectorSuggestion suggestion)
+    {
+        _filterText = suggestion.FullPath;
+        _showSuggestions = false;
+        _selectedSuggestionPath = suggestion.FullPath;
+        await EmitImmediateAsync(_filterText, commit: true);
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_filterText))
+            return;
+
+        await CommitCurrentFilterAsync();
+    }
+
+    private async Task CommitCurrentFilterAsync()
+    {
+        _showSuggestions = false;
+        await EmitImmediateAsync(_filterText, commit: true);
     }
 
     private async Task ClearAsync()
@@ -45,10 +235,13 @@
             return;
 
         _filterText = string.Empty;
-        await DebounceEmitAsync(_filterText, immediate: true);
+        _showSuggestions = false;
+        _selectedSuggestionIndex = -1;
+        _selectedSuggestionPath = null;
+        await EmitImmediateAsync(_filterText, commit: false);
     }
 
-    private async Task DebounceEmitAsync(string value, bool immediate = false)
+    private async Task DebounceEmitAsync(string value)
     {
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
@@ -56,10 +249,7 @@
 
         try
         {
-            if (!immediate)
-            {
-                await Task.Delay(250, _debounceCts.Token);
-            }
+            await Task.Delay(250, _debounceCts.Token);
 
             if (OnFilterChanged.HasDelegate)
             {
@@ -69,5 +259,28 @@
         catch (TaskCanceledException)
         {
         }
+    }
+
+    private async Task EmitImmediateAsync(string value, bool commit)
+    {
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = null;
+
+        if (OnFilterChanged.HasDelegate)
+        {
+            await OnFilterChanged.InvokeAsync(value);
+        }
+
+        if (commit && OnFilterCommitted.HasDelegate)
+        {
+            await OnFilterCommitted.InvokeAsync(value);
+        }
+    }
+
+    private bool ShouldShowSuggestions()
+    {
+        return _showSuggestions
+            && (_filterText.Length > 0 || Suggestions.Count > 0 || IsLoadingSuggestions);
     }
 }

@@ -493,6 +493,262 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Subjects
+        public async Task<SubjectAddParentPlan> SubjectAddParentPreview(string parentSubjectCode, string childSubjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_AddParentPreview";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@ParentSubjectCode", SqlDbType.NVarChar, 50) { Value = parentSubjectCode });
+                command.Parameters.Add(new SqlParameter("@ChildSubjectCode", SqlDbType.NVarChar, 50) { Value = childSubjectCode });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return new SubjectAddParentPlan {
+                        ActionCode = (NodeEnum.ActionCode)Convert.ToInt16(reader["ActionCode"]),
+                        CanProceed = Convert.ToBoolean(reader["CanProceed"]),
+                        Message = Convert.ToString(reader["Message"]) ?? string.Empty,
+                        ParentSubjectCode = Convert.ToString(reader["ParentSubjectCode"]) ?? string.Empty,
+                        ChildSubjectCode = Convert.ToString(reader["ChildSubjectCode"]) ?? string.Empty
+                    };
+                }
+
+                return new SubjectAddParentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "No add-parent preview was returned."
+                };
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new SubjectAddParentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "Unable to evaluate namespace addition."
+                };
+            }
+        }
+
+        public async Task<SubjectAddParentPlan> SubjectAddParent(string parentSubjectCode, string childSubjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_AddParent";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@ParentSubjectCode", SqlDbType.NVarChar, 50) { Value = parentSubjectCode });
+                command.Parameters.Add(new SqlParameter("@ChildSubjectCode", SqlDbType.NVarChar, 50) { Value = childSubjectCode });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return new SubjectAddParentPlan {
+                        ActionCode = (NodeEnum.ActionCode)Convert.ToInt16(reader["ActionCode"]),
+                        CanProceed = Convert.ToBoolean(reader["CanProceed"]),
+                        Message = Convert.ToString(reader["Message"]) ?? string.Empty,
+                        ParentSubjectCode = Convert.ToString(reader["ParentSubjectCode"]) ?? string.Empty,
+                        ChildSubjectCode = Convert.ToString(reader["ChildSubjectCode"]) ?? string.Empty
+                    };
+                }
+
+                return new SubjectAddParentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "No add-parent result was returned."
+                };
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new SubjectAddParentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "Unable to add the namespace relationship."
+                };
+            }
+        }
+
+        public async Task<SubjectRemovalPlan> SubjectRemoveNamespacePreview(string parentSubjectCode, string childSubjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_RemoveNamespacePreview";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@ParentSubjectCode", SqlDbType.NVarChar, 50) { Value = parentSubjectCode });
+                command.Parameters.Add(new SqlParameter("@ChildSubjectCode", SqlDbType.NVarChar, 50) { Value = childSubjectCode });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return ReadSubjectRemovalPlan(reader);
+                }
+
+                return new SubjectRemovalPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "No removal preview was returned."
+                };
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new SubjectRemovalPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "Unable to evaluate namespace removal."
+                };
+            }
+        }
+
+        public async Task<SubjectRemovalPlan> SubjectRemoveNamespace(string parentSubjectCode, string childSubjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_RemoveNamespace";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@ParentSubjectCode", SqlDbType.NVarChar, 50) { Value = parentSubjectCode });
+                command.Parameters.Add(new SqlParameter("@ChildSubjectCode", SqlDbType.NVarChar, 50) { Value = childSubjectCode });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return ReadSubjectRemovalPlan(reader);
+                }
+
+                return new SubjectRemovalPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "No namespace removal result was returned."
+                };
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new SubjectRemovalPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "Unable to remove the namespace relationship."
+                };
+            }
+        }
+
+        private static SubjectRemovalPlan ReadSubjectRemovalPlan(SqlDataReader reader)
+        {
+            return new SubjectRemovalPlan {
+                ActionCode = (NodeEnum.ActionCode)Convert.ToInt16(reader["ActionCode"]),
+                CanProceed = Convert.ToBoolean(reader["CanProceed"]),
+                Message = Convert.ToString(reader["Message"]) ?? string.Empty,
+                HasOtherParents = Convert.ToBoolean(reader["HasOtherParents"]),
+                AffectedSubjectCount = Convert.ToInt32(reader["AffectedSubjectCount"]),
+                InvoiceCount = Convert.ToInt32(reader["InvoiceCount"]),
+                PaymentCount = Convert.ToInt32(reader["PaymentCount"]),
+                ProjectCount = Convert.ToInt32(reader["ProjectCount"])
+            };
+        }
+
+        public async Task<SubjectReparentPlan> SubjectReparentPreview(string oldParentSubjectCode, string childSubjectCode, string newParentSubjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_ReparentPreview";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@OldParentSubjectCode", SqlDbType.NVarChar, 50) { Value = oldParentSubjectCode });
+                command.Parameters.Add(new SqlParameter("@ChildSubjectCode", SqlDbType.NVarChar, 50) { Value = childSubjectCode });
+                command.Parameters.Add(new SqlParameter("@NewParentSubjectCode", SqlDbType.NVarChar, 50) { Value = newParentSubjectCode });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return ReadSubjectReparentPlan(reader);
+                }
+
+                return new SubjectReparentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "No move preview was returned."
+                };
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new SubjectReparentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "Unable to evaluate move."
+                };
+            }
+        }
+
+        public async Task<SubjectReparentPlan> SubjectReparent(string oldParentSubjectCode, string childSubjectCode, string newParentSubjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_Reparent";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@OldParentSubjectCode", SqlDbType.NVarChar, 50) { Value = oldParentSubjectCode });
+                command.Parameters.Add(new SqlParameter("@ChildSubjectCode", SqlDbType.NVarChar, 50) { Value = childSubjectCode });
+                command.Parameters.Add(new SqlParameter("@NewParentSubjectCode", SqlDbType.NVarChar, 50) { Value = newParentSubjectCode });
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return ReadSubjectReparentPlan(reader);
+                }
+
+                return new SubjectReparentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "No move result was returned."
+                };
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new SubjectReparentPlan {
+                    ActionCode = NodeEnum.ActionCode.Blocked,
+                    CanProceed = false,
+                    Message = "Unable to move the namespace relationship."
+                };
+            }
+        }
+
+        private static SubjectReparentPlan ReadSubjectReparentPlan(SqlDataReader reader)
+        {
+            return new SubjectReparentPlan {
+                ActionCode = (NodeEnum.ActionCode)Convert.ToInt16(reader["ActionCode"]),
+                CanProceed = Convert.ToBoolean(reader["CanProceed"]),
+                Message = Convert.ToString(reader["Message"]) ?? string.Empty,
+                OldParentSubjectCode = Convert.ToString(reader["OldParentSubjectCode"]) ?? string.Empty,
+                NewParentSubjectCode = Convert.ToString(reader["NewParentSubjectCode"]) ?? string.Empty,
+                ChildSubjectCode = Convert.ToString(reader["ChildSubjectCode"]) ?? string.Empty
+            };
+        }
+
         public async Task<string> NextAddressCode(string accountCode)
         {
             try

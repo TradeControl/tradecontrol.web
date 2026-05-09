@@ -1,3 +1,6 @@
 [submodule "src/TCExports"]
 	path = src/TCExports
 	url = https://github.com/TradeControl/tradecontrol-exports.git
+[submodule "src/sqlnode"]
+	path = src/sqlnode
+	url = https://github.com/TradeControl/sqlnode.git

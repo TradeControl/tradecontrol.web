@@ -25,7 +25,7 @@ namespace TradeControl.Web.Models
 
         [Required]
         [Display(Name = "On Mail List?")]
-        public bool OnMailingList { get; set; }
+        public bool OnMailingList { get; set; } = false;
 
         [StringLength(25)]
         [Display(Name = "Title")]

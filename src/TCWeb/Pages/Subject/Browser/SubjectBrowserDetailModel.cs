@@ -14,6 +14,7 @@ namespace TradeControl.Web.Pages.Subject.Browser
         public string Name { get; init; } = string.Empty;
         public string DisplayLabel { get; init; } = string.Empty;
         public string? Notes { get; init; }
+        public bool IsDefaultInNamespace { get; init; }
         public IReadOnlyList<string> NamespacePaths { get; init; } = Array.Empty<string>();
         public IReadOnlyList<SubjectBrowserDetailField> IdentityFields { get; init; } = Array.Empty<SubjectBrowserDetailField>();
         public IReadOnlyList<SubjectBrowserAddressItem> Addresses { get; init; } = Array.Empty<SubjectBrowserAddressItem>();
@@ -24,13 +25,16 @@ namespace TradeControl.Web.Pages.Subject.Browser
         public string SubjectClassCode => ((short)SubjectClass).ToString(CultureInfo.InvariantCulture);
         public string SubjectClassName => SubjectClass.ToString();
 
-        public string DetailSectionTitle => SubjectClass switch
-        {
+        public string DetailSectionTitle => SubjectClass switch {
             NodeEnum.SubjectClass.Real => "Person Details",
             NodeEnum.SubjectClass.Virtual => "Organisation Details",
             NodeEnum.SubjectClass.Structural => "Structural Details",
             _ => "Details"
         };
+
+        public string DefaultBadgeCssClass => IsReal
+            ? "text-bg-success"
+            : "text-bg-light border text-secondary";
     }
 
     public sealed record SubjectBrowserDetailField(string Label, string Value);

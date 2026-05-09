@@ -80,7 +80,7 @@ namespace TradeControl.Web.Models
 
         [Required]
         [Display(Name = "Pay Balance?")]
-        public bool PayBalance { get; set; }
+        public bool PayBalance { get; set; } = true;
 
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Opening Balance")]

@@ -1,13 +1,19 @@
+@using System.Linq
 @using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.JSInterop
+@using Wangkanai.Detection.Models
+
 @using TradeControl.Web.AppServices
+@using TradeControl.Web.Data
 @using TradeControl.Web.Pages.Shared.Tree
 @using TradeControl.Web.Pages.Subject.Controls
-@using Wangkanai.Detection.Models
+@using TradeControl.Web.Pages.Subject.Browser.Components
+
 @inject NavigationManager NavigationManager
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @inject IJSRuntime JSRuntime
 @inject ISubjectBrowserService SubjectBrowserService
+@inject NodeContext NodeContext
 
 @if (_isEmbedded)
 {
@@ -39,25 +45,19 @@
 else if (_isMobile)
 {
     <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div>
-                <h1 class="h4 mb-1">Subject Browser</h1>
-                <div class="text-muted small">Namespace-aware browsing for structural, real, and virtual Subjects</div>
-            </div>
-
-            <div class="text-muted small">
-                <span>@_rootCount root subject@(_rootCount == 1 ? string.Empty : "s")</span>
-            </div>
-        </div>
-
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="alert alert-danger py-2 mb-0" role="alert">@_errorMessage</div>
         }
 
-        <div class="mb-3">
+        <div class="p-2 mb-1">
             <NamespaceSelector FilterText="@_namespaceFilter"
-                               OnFilterChanged="HandleFilterChangedAsync" />
+                               Suggestions="@_namespaceSuggestions"
+                               IsLoadingSuggestions="@_isLoadingNamespaceSuggestions"
+                               ShowApplyButton="true"
+                               ApplyButtonTitle="Apply namespace filter"
+                               OnFilterChanged="HandleFilterChangedAsync"
+                               OnFilterCommitted="HandleFilterCommittedAsync" />
         </div>
 
         <div class="btn-group mb-3" role="group" aria-label="Browser mode">
@@ -82,7 +82,8 @@ else if (_isMobile)
             @_rootCount subject@(_rootCount == 1 ? string.Empty : "s")
         </div>
 
-        <div class="flex-grow-1 d-flex flex-column tc-subject-browser-tree tc-tree-host" style="min-height:0; overflow:hidden;">
+        <div class="flex-grow-1 d-flex flex-column tc-subject-browser-tree tc-tree-host"
+             style="min-height:0; overflow:auto; padding-bottom:calc(96px + env(safe-area-inset-bottom));">
             @if (_rootNodes.Count == 0)
             {
                 <div class="text-muted small py-2">No Subjects found.</div>
@@ -96,9 +97,20 @@ else if (_isMobile)
                                       OnNodeSelected="HandleNodeSelectedAsync"
                                       SelectedKey="@_selectedBranchKey"
                                       ExpandToKey="@_expandToKey"
-                                      RefreshToken="@_refreshToken" />
+                                      RefreshToken="@_refreshToken"
+                                      CanDrag="CanDragTreeNode"
+                                      CanDrop="CanDropTreeNode"
+                                      DraggedKey="@_dragSourceKey"
+                                      DropTargetKey="@_dropTargetKey"
+                                      OnDragStarted="HandleTreeDragStartedAsync"
+                                      OnDragEnded="HandleTreeDragEndedAsync"
+                                      OnNodeDropped="HandleTreeNodeDroppedAsync" />
             }
         </div>
+
+        @{
+            var mobileActions = GetMobileShortcutActions();
+        }
 
         <div class="tc-mobile-actionbar tc-visible" role="toolbar" aria-label="Subject browser actions">
             <div class="tc-mobile-action-summary me-2">
@@ -113,6 +125,17 @@ else if (_isMobile)
                 <i class="bi bi-eye" aria-hidden="true"></i>
                 <span>Details</span>
             </button>
+
+            @foreach (var action in mobileActions)
+            {
+                <button type="button"
+                        class="btn-action"
+                        disabled="@(!action.IsEnabled)"
+                        @onclick="action.ExecuteAsync">
+                    <i class="bi @action.IconClass" aria-hidden="true"></i>
+                    <span>@action.Text</span>
+                </button>
+            }
         </div>
     </div>
 }
@@ -141,7 +164,12 @@ else
                     <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
                         <div class="mb-3">
                             <NamespaceSelector FilterText="@_namespaceFilter"
-                                               OnFilterChanged="HandleFilterChangedAsync" />
+                                               Suggestions="@_namespaceSuggestions"
+                                               IsLoadingSuggestions="@_isLoadingNamespaceSuggestions"
+                                               ShowApplyButton="true"
+                                               ApplyButtonTitle="Apply namespace filter"
+                                               OnFilterChanged="HandleFilterChangedAsync"
+                                               OnFilterCommitted="HandleFilterCommittedAsync" />
                         </div>
 
                         <div class="btn-group mb-3" role="group" aria-label="Browser mode">
@@ -180,7 +208,14 @@ else
                                                       OnNodeSelected="HandleNodeSelectedAsync"
                                                       SelectedKey="@_selectedBranchKey"
                                                       ExpandToKey="@_expandToKey"
-                                                      RefreshToken="@_refreshToken" />
+                                                      RefreshToken="@_refreshToken"
+                                                      CanDrag="CanDragTreeNode"
+                                                      CanDrop="CanDropTreeNode"
+                                                      DraggedKey="@_dragSourceKey"
+                                                      DropTargetKey="@_dropTargetKey"
+                                                      OnDragStarted="HandleTreeDragStartedAsync"
+                                                      OnDragEnded="HandleTreeDragEndedAsync"
+                                                      OnNodeDropped="HandleTreeNodeDroppedAsync" />
                             }
                         </div>
                     </div>
@@ -205,6 +240,10 @@ else
     [Parameter] public string? InitialFilter { get; set; }
 
     private const int PageSize = 50;
+    private const int SuggestionPageSize = 12;
+
+    private IReadOnlyList<NamespaceSelectorSuggestion> _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private bool _isLoadingNamespaceSuggestions;
 
     private enum SubjectBrowserMode
     {
@@ -213,9 +252,18 @@ else
         Subject
     }
 
+    private sealed record SubjectBrowserAction(
+        string Id,
+        string Text,
+        string IconClass,
+        string ButtonCssClass,
+        bool IsEnabled,
+        Func<Task> ExecuteAsync);
+
     private bool _isMobile;
     private bool _isEmbedded;
     private string _namespaceFilter = string.Empty;
+    private string _appliedNamespaceFilter = string.Empty;
     private string? _selectedBranchKey;
     private string? _expandToKey;
     private string? _returnNodeKey;
@@ -223,9 +271,37 @@ else
     private SubjectBrowserMode _mode = SubjectBrowserMode.Enquiry;
     private SubjectBrowserDetailModel? _selectedDetail;
     private string? _errorMessage;
+    private string? _actionMessage;
+    private string _actionMessageCssClass = "alert-warning";
     private int _rootPageNumber = 1;
     private int _rootCount;
     private long _refreshToken;
+    private string? _committedNamespacePath;
+    private SubjectEnquiryView _activeEnquiryView = SubjectEnquiryView.None;
+    private NodeEnum.SubjectClass? _pendingCreateSubjectClass;
+    private string _pendingCreateName = string.Empty;
+    private string? _pendingCreateErrorMessage;
+    private bool _isCreatingSubject;
+    private SubjectRemovalPlan? _pendingRemovalPlan;
+    private bool _isLoadingRemovalPreview;
+    private bool _isRemovingNamespace;
+    private bool _loadRemovalPreview;
+    private string _pendingMoveTargetPath = string.Empty;
+    private string _resolvedMoveTargetPath = string.Empty;
+    private IReadOnlyList<NamespaceSelectorSuggestion> _moveTargetSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private bool _isLoadingMoveTargetSuggestions;
+    private SubjectReparentPlan? _pendingReparentPlan;
+    private bool _isReparenting;
+    private bool _isMovePanelOpen;
+    private string _pendingAddSubjectPath = string.Empty;
+    private string _resolvedAddSubjectPath = string.Empty;
+    private IReadOnlyList<NamespaceSelectorSuggestion> _addSubjectSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private bool _isLoadingAddSubjectSuggestions;
+    private SubjectAddParentPlan? _pendingAddParentPlan;
+    private bool _isAddingToNamespace;
+    private bool _isAddExistingPanelOpen;
+    private string? _dragSourceKey;
+    private string? _dropTargetKey;
 
     private readonly List<TreeNode> _rootNodes = new();
     private readonly Dictionary<string, SubjectBrowserNode> _nodeIndex = new(StringComparer.OrdinalIgnoreCase);
@@ -235,6 +311,7 @@ else
     {
         _namespaceFilter = InitialFilter?.Trim() ?? string.Empty;
         ParseQueryParameters();
+        _appliedNamespaceFilter = _namespaceFilter;
 
         _isMobile = Detection?.Device?.Type == Device.Mobile;
 
@@ -244,11 +321,12 @@ else
             return;
         }
 
+        await RefreshNamespaceSuggestionsAsync();
         await LoadRootsAsync();
 
         if (!string.IsNullOrWhiteSpace(_initialSelectKey))
         {
-            await LoadDetailFromKeyAsync(_initialSelectKey);
+            await ApplyCommittedNamespaceSelectionAsync(_initialSelectKey, _namespaceFilter, applyFilter: false);
         }
     }
 
@@ -273,6 +351,25 @@ else
         _isEmbedded = query.TryGetValue("embedded", out var embeddedValue) && embeddedValue == "1";
         _returnNodeKey = query.TryGetValue("returnNode", out var returnValue) ? returnValue.ToString() : null;
         _initialSelectKey = query.TryGetValue("select", out var selectValue) ? selectValue.ToString() : null;
+        _loadRemovalPreview = query.TryGetValue("removePreview", out var removeValue) && removeValue == "1";
+
+        if (query.TryGetValue("mode", out var modeValue)
+            && TryParseMode(modeValue.ToString(), out var mode))
+        {
+            _mode = mode;
+        }
+
+        if (query.TryGetValue("enquiry", out var enquiryValue)
+            && TryParseEnquiryView(enquiryValue.ToString(), out var enquiryView))
+        {
+            _activeEnquiryView = enquiryView;
+        }
+
+        if (query.TryGetValue("create", out var createValue)
+            && TryParseSubjectClass(createValue.ToString(), out var createClass))
+        {
+            _pendingCreateSubjectClass = createClass;
+        }
 
         if (string.IsNullOrWhiteSpace(_namespaceFilter) && query.TryGetValue("namespaceFilter", out var filterValue))
         {
@@ -289,26 +386,137 @@ else
             _selectedDetail = null;
             _selectedBranchKey = null;
             _expandToKey = null;
+            ClearActionMessage();
             return;
         }
 
         await LoadDetailFromKeyAsync(_initialSelectKey);
+
+        if (_loadRemovalPreview)
+        {
+            await LoadRemoveNamespacePreviewAsync();
+        }
     }
 
     private async Task HandleFilterChangedAsync(string filterText)
     {
         _namespaceFilter = filterText?.Trim() ?? string.Empty;
+        _appliedNamespaceFilter = _namespaceFilter;
         _rootPageNumber = 1;
         _selectedBranchKey = null;
         _selectedDetail = null;
         _expandToKey = null;
         _childPageNumbers.Clear();
+        ClearActionMessage();
+
+        await RefreshNamespaceSuggestionsAsync();
         await LoadRootsAsync();
+        UpdateBrowserUrl();
+    }
+
+    private async Task HandleFilterCommittedAsync(string filterText)
+    {
+        var committedFilter = filterText?.Trim() ?? string.Empty;
+
+        if (!string.Equals(_namespaceFilter, committedFilter, StringComparison.Ordinal))
+        {
+            await HandleFilterChangedAsync(committedFilter);
+        }
+
+        if (committedFilter.EndsWith(".", StringComparison.Ordinal))
+        {
+            var branchKey = committedFilter.TrimEnd('.');
+
+            if (!string.IsNullOrWhiteSpace(branchKey))
+            {
+                await ApplyCommittedNamespaceSelectionAsync(branchKey, committedFilter);
+            }
+
+            return;
+        }
+
+        var nearestMatch = GetNearestNamespaceSuggestion(committedFilter);
+        if (nearestMatch is null)
+            return;
+
+        await ApplyCommittedNamespaceSelectionAsync(nearestMatch.FullPath, committedFilter);
+    }
+
+    private NamespaceSelectorSuggestion? GetNearestNamespaceSuggestion(string filterText)
+    {
+        if (_namespaceSuggestions.Count == 0 || string.IsNullOrWhiteSpace(filterText))
+            return null;
+
+        return _namespaceSuggestions.FirstOrDefault(suggestion =>
+                   string.Equals(suggestion.FullPath, filterText, StringComparison.OrdinalIgnoreCase))
+            ?? _namespaceSuggestions.FirstOrDefault(suggestion =>
+                   suggestion.FullPath.StartsWith($"{filterText}.", StringComparison.OrdinalIgnoreCase))
+            ?? _namespaceSuggestions.FirstOrDefault(suggestion =>
+                   suggestion.FullPath.Contains(filterText, StringComparison.OrdinalIgnoreCase))
+            ?? _namespaceSuggestions[0];
+    }
+
+    private async Task ApplyCommittedNamespaceSelectionAsync(
+        string branchKey,
+        string? filterText = null,
+        bool applyFilter = true)
+    {
+        _committedNamespacePath = branchKey;
+        _namespaceFilter = filterText ?? branchKey;
+
+        if (applyFilter)
+        {
+            _appliedNamespaceFilter = _namespaceFilter;
+        }
+
+        _selectedBranchKey = branchKey;
+        _expandToKey = BuildExpandPath(branchKey);
+
+        await LoadDetailFromKeyAsync(branchKey);
+        await RefreshNamespaceSuggestionsAsync();
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshNamespaceSuggestionsAsync()
+    {
+        try
+        {
+            _isLoadingNamespaceSuggestions = true;
+            _namespaceSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+                _namespaceFilter,
+                SuggestionPageSize);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        }
+        finally
+        {
+            _isLoadingNamespaceSuggestions = false;
+        }
     }
 
     private async Task SetModeAsync(SubjectBrowserMode mode)
     {
         _mode = mode;
+        ClearActionMessage();
+
+        if (mode != SubjectBrowserMode.Enquiry)
+        {
+            _activeEnquiryView = SubjectEnquiryView.None;
+        }
+
+        if (mode != SubjectBrowserMode.Namespace)
+        {
+            ClearCreateState();
+            ClearRemovalPreview();
+            ClearMoveState();
+            ClearAddExistingState();
+        }
+
+        UpdateBrowserUrl();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -326,7 +534,7 @@ else
             _nodeIndex.Clear();
 
             var result = await SubjectBrowserService.GetRootNodesAsync(
-                _namespaceFilter,
+                _appliedNamespaceFilter,
                 _rootPageNumber,
                 PageSize);
 
@@ -369,6 +577,7 @@ else
             var result = await SubjectBrowserService.GetChildNodesAsync(
                 browserNode.SubjectCode,
                 browserNode.NamespacePath,
+                _appliedNamespaceFilter,
                 page,
                 PageSize);
 
@@ -416,12 +625,15 @@ else
             return;
         }
 
-        await LoadDetailFromKeyAsync(treeNode.Key);
+        await ApplyCommittedNamespaceSelectionAsync(treeNode.Key, treeNode.Key, applyFilter: false);
     }
 
     private async Task LoadDetailFromKeyAsync(string key)
     {
         _expandToKey = BuildExpandPath(key);
+        ClearActionMessage();
+
+        var parentSubjectCode = ExtractParentSubjectCode(key);
 
         if (!_nodeIndex.TryGetValue(key, out var browserNode))
         {
@@ -430,12 +642,12 @@ else
                 return;
 
             _selectedBranchKey = key;
-            _selectedDetail = await SubjectBrowserService.GetDetailAsync(subjectCode);
+            _selectedDetail = await SubjectBrowserService.GetDetailAsync(subjectCode, parentSubjectCode);
             return;
         }
 
         _selectedBranchKey = browserNode.BranchKey;
-        _selectedDetail = await SubjectBrowserService.GetDetailAsync(browserNode.SubjectCode);
+        _selectedDetail = await SubjectBrowserService.GetDetailAsync(browserNode.SubjectCode, parentSubjectCode);
     }
 
     private bool CanOpenDetails()
@@ -474,7 +686,988 @@ else
         return $"{_selectedDetail.SubjectType} · {_selectedDetail.SubjectCode}";
     }
 
-    private string BuildUrl(bool embedded, string? selectKey = null, string? returnNodeKey = null)
+    private IReadOnlyList<SubjectBrowserAction> GetDetailActions()
+    {
+        if (_selectedDetail is null)
+            return Array.Empty<SubjectBrowserAction>();
+
+        return _mode switch
+        {
+            SubjectBrowserMode.Enquiry => CreateEnquiryActions(),
+            SubjectBrowserMode.Namespace => CreateNamespaceActions(),
+            SubjectBrowserMode.Subject => CreateSubjectActions(),
+            _ => Array.Empty<SubjectBrowserAction>()
+        };
+    }
+
+    private IReadOnlyList<SubjectBrowserAction> GetMobileShortcutActions()
+    {
+        if (_selectedDetail is null)
+            return Array.Empty<SubjectBrowserAction>();
+
+        var actions = GetDetailActions();
+
+        return _mode switch
+        {
+            SubjectBrowserMode.Enquiry => actions.Take(2).ToArray(),
+            SubjectBrowserMode.Namespace => CreateNamespaceMobileShortcutActions(actions),
+            SubjectBrowserMode.Subject => actions.Where(action => action.Id is "edit" or "change-type").Take(2).ToArray(),
+            _ => Array.Empty<SubjectBrowserAction>()
+        };
+    }
+
+    private SubjectBrowserAction CreateEnquiryAction(
+    string id,
+    string text,
+    string iconClass,
+    SubjectEnquiryView enquiryView)
+    {
+        return new SubjectBrowserAction(
+            id,
+            text,
+            iconClass,
+            "btn btn-outline-primary btn-sm",
+            _selectedDetail is not null,
+            () => OpenEnquiryAsync(enquiryView));
+    }
+
+    private async Task OpenEnquiryAsync(SubjectEnquiryView enquiryView)
+    {
+        if (_selectedDetail is null || _selectedDetail.IsStructural)
+            return;
+
+        ClearActionMessage();
+        ClearCreateState();
+
+        if (_isMobile && !_isEmbedded)
+        {
+            _activeEnquiryView = enquiryView;
+
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey),
+                forceLoad: true);
+
+            return;
+        }
+
+        _activeEnquiryView = enquiryView;
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private IReadOnlyList<SubjectBrowserAction> CreateEnquiryActions()
+    {
+        if (_selectedDetail is null || _selectedDetail.IsStructural)
+            return Array.Empty<SubjectBrowserAction>();
+
+        return
+        [
+            CreateEnquiryAction("invoices", "Invoices", "bi-receipt", SubjectEnquiryView.Invoices),
+            CreateEnquiryAction("payments", "Payments", "bi-cash-stack", SubjectEnquiryView.Payments),
+            CreateEnquiryAction("statement", "Statement", "bi-list-columns-reverse", SubjectEnquiryView.Statement)
+        ];
+    }
+
+    private IReadOnlyList<SubjectBrowserAction> CreateNamespaceActions()
+    {
+        if (_selectedDetail is null)
+            return Array.Empty<SubjectBrowserAction>();
+
+        var parentSubjectCode = GetSelectedParentSubjectCode();
+        var hasParent = !string.IsNullOrWhiteSpace(parentSubjectCode);
+
+        return
+        [
+            CreateShellAction(
+                "add-structural",
+                "Add Structural",
+                "bi-plus-square",
+                () => BeginCreateChildAsync(NodeEnum.SubjectClass.Structural)),
+
+            CreateShellAction(
+                "add-person",
+                "Add Person",
+                "bi-person-plus",
+                () => BeginCreateChildAsync(NodeEnum.SubjectClass.Real)),
+
+            CreateShellAction(
+                "add-organisation",
+                "Add Organisation",
+                "bi-building",
+                () => BeginCreateChildAsync(NodeEnum.SubjectClass.Virtual)),
+
+            CreateShellAction(
+                "add-existing",
+                "Add Existing",
+                "bi-node-plus",
+                BeginAddExistingAsync),
+
+            CreateShellAction(
+                "move",
+                "Move",
+                "bi-arrow-left-right",
+                BeginMoveAsync,
+                isEnabled: hasParent),
+
+            CreateSubjectsAction(
+                "default",
+                "Default",
+                "bi-bookmark-star",
+                subjects => subjects.SetDefaultNamespaceChildAsync(parentSubjectCode ?? string.Empty),
+                isEnabled: hasParent && !_selectedDetail.IsDefaultInNamespace),
+
+            CreateShellAction(
+                "remove",
+                "Remove",
+                "bi-x-circle",
+                BeginRemoveNamespaceAsync,
+                buttonCssClass: "btn btn-outline-danger btn-sm",
+                isEnabled: hasParent)
+        ];
+    }
+
+    private SubjectBrowserAction CreateShellAction(
+    string id,
+    string text,
+    string iconClass,
+    Func<Task> executeAsync,
+    string buttonCssClass = "btn btn-outline-primary btn-sm",
+    bool isEnabled = true)
+    {
+        return new SubjectBrowserAction(
+            id,
+            text,
+            iconClass,
+            buttonCssClass,
+            isEnabled && _selectedDetail is not null,
+            executeAsync);
+    }
+
+    private async Task BeginMoveAsync()
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey))
+            return;
+
+        ClearActionMessage();
+        ClearCreateState();
+        ClearRemovalPreview();
+        ClearMoveState();
+        ClearAddExistingState();
+
+        _isMovePanelOpen = true;
+        _pendingMoveTargetPath = string.Empty;
+        _resolvedMoveTargetPath = string.Empty;
+        await RefreshMoveTargetSuggestionsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task BeginAddExistingAsync()
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey))
+            return;
+
+        ClearActionMessage();
+        ClearCreateState();
+        ClearRemovalPreview();
+        ClearMoveState();
+        ClearAddExistingState();
+
+        _isAddExistingPanelOpen = true;
+        await RefreshAddSubjectSuggestionsAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleAddSubjectChangedAsync(string filterText)
+    {
+        _pendingAddSubjectPath = filterText?.Trim() ?? string.Empty;
+        _resolvedAddSubjectPath = string.Empty;
+        _pendingAddParentPlan = null;
+        await RefreshAddSubjectSuggestionsAsync();
+    }
+
+    private async Task HandleAddSubjectCommittedAsync(string filterText)
+    {
+        _pendingAddSubjectPath = filterText?.Trim() ?? string.Empty;
+        _resolvedAddSubjectPath = ResolveAddSubjectPath(_pendingAddSubjectPath);
+        _pendingAddParentPlan = null;
+        await RefreshAddSubjectSuggestionsAsync();
+    }
+
+    private async Task RefreshAddSubjectSuggestionsAsync()
+    {
+        try
+        {
+            _isLoadingAddSubjectSuggestions = true;
+            _addSubjectSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+                _pendingAddSubjectPath,
+                SuggestionPageSize);
+        }
+        finally
+        {
+            _isLoadingAddSubjectSuggestions = false;
+        }
+    }
+
+    private string ResolveAddSubjectPath(string? filterText)
+    {
+        var normalized = filterText?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalized))
+            return string.Empty;
+
+        var exact = _addSubjectSuggestions.FirstOrDefault(suggestion =>
+            string.Equals(suggestion.FullPath, normalized, StringComparison.OrdinalIgnoreCase));
+
+        if (exact is not null)
+            return exact.FullPath;
+
+        return _addSubjectSuggestions.FirstOrDefault()?.FullPath ?? normalized;
+    }
+
+    private async Task ConfirmAddExistingAsync()
+    {
+        if (_selectedDetail is null)
+            return;
+
+        var parentSubjectCode = _selectedDetail.SubjectCode;
+        _resolvedAddSubjectPath = ResolveAddSubjectPath(_pendingAddSubjectPath);
+        var childSubjectCode = ExtractSubjectCode(_resolvedAddSubjectPath);
+
+        if (string.IsNullOrWhiteSpace(childSubjectCode))
+        {
+            _pendingAddParentPlan = new SubjectAddParentPlan
+            {
+                ActionCode = NodeEnum.ActionCode.Blocked,
+                CanProceed = false,
+                Message = "A Subject to add is required."
+            };
+
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            _isAddingToNamespace = true;
+
+            var subject = new Subjects(NodeContext, childSubjectCode);
+
+            var preview = await subject.PreviewAddToNamespaceAsync(parentSubjectCode);
+            _pendingAddParentPlan = preview;
+
+            if (!preview.CanProceed)
+            {
+                return;
+            }
+
+            var result = await subject.AddToNamespaceAsync(parentSubjectCode);
+
+            if (!result.Succeeded)
+            {
+                _pendingAddParentPlan = preview with
+                {
+                    CanProceed = false,
+                    Message = result.Message
+                };
+                return;
+            }
+
+            SubjectBrowserService.InvalidateSnapshot();
+
+            var parentBranchKey = _selectedBranchKey;
+            var newSelectionKey = string.IsNullOrWhiteSpace(parentBranchKey)
+                ? childSubjectCode
+                : $"{parentBranchKey}.{childSubjectCode}";
+
+            ClearAddExistingState();
+
+            if (!string.IsNullOrWhiteSpace(parentBranchKey))
+            {
+                _childPageNumbers.Remove(parentBranchKey);
+            }
+
+            _refreshToken++;
+            _selectedBranchKey = newSelectionKey;
+            _expandToKey = BuildExpandPath(newSelectionKey);
+            await LoadDetailFromKeyAsync(newSelectionKey);
+            await SetActionMessageAsync(result.Message, "alert-success");
+        }
+        finally
+        {
+            _isAddingToNamespace = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CancelAddExistingAsync()
+    {
+        ClearAddExistingState();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearAddExistingState()
+    {
+        _pendingAddSubjectPath = string.Empty;
+        _resolvedAddSubjectPath = string.Empty;
+        _addSubjectSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        _isLoadingAddSubjectSuggestions = false;
+        _pendingAddParentPlan = null;
+        _isAddingToNamespace = false;
+        _isAddExistingPanelOpen = false;
+    }
+
+    private async Task HandleMoveTargetChangedAsync(string filterText)
+    {
+        _pendingMoveTargetPath = filterText?.Trim() ?? string.Empty;
+        _resolvedMoveTargetPath = string.Empty;
+        _pendingReparentPlan = null;
+        await RefreshMoveTargetSuggestionsAsync();
+    }
+
+    private async Task HandleMoveTargetCommittedAsync(string filterText)
+    {
+        _pendingMoveTargetPath = filterText?.Trim() ?? string.Empty;
+        _resolvedMoveTargetPath = ResolveMoveTargetPath(_pendingMoveTargetPath);
+        _pendingReparentPlan = null;
+        await RefreshMoveTargetSuggestionsAsync();
+    }
+
+    private async Task RefreshMoveTargetSuggestionsAsync()
+    {
+        try
+        {
+            _isLoadingMoveTargetSuggestions = true;
+            _moveTargetSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+                _pendingMoveTargetPath,
+                SuggestionPageSize);
+        }
+        finally
+        {
+            _isLoadingMoveTargetSuggestions = false;
+        }
+    }
+
+    private string ResolveMoveTargetPath(string? filterText)
+    {
+        var normalized = filterText?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalized))
+            return string.Empty;
+
+        var exact = _moveTargetSuggestions.FirstOrDefault(suggestion =>
+            string.Equals(suggestion.FullPath, normalized, StringComparison.OrdinalIgnoreCase));
+
+        if (exact is not null)
+            return exact.FullPath;
+
+        return _moveTargetSuggestions.FirstOrDefault()?.FullPath ?? normalized;
+    }
+
+    private async Task ConfirmMoveAsync()
+    {
+        if (_selectedDetail is null)
+            return;
+
+        var currentSelectionKey = _selectedBranchKey;
+        var currentParentSubjectCode = GetSelectedParentSubjectCode();
+        _resolvedMoveTargetPath = ResolveMoveTargetPath(_pendingMoveTargetPath);
+        var newParentSubjectCode = ExtractSubjectCode(_resolvedMoveTargetPath);
+
+        if (string.IsNullOrWhiteSpace(currentParentSubjectCode) || string.IsNullOrWhiteSpace(newParentSubjectCode))
+        {
+            _pendingReparentPlan = new SubjectReparentPlan
+            {
+                ActionCode = NodeEnum.ActionCode.Blocked,
+                CanProceed = false,
+                Message = "A target namespace is required."
+            };
+
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            _isReparenting = true;
+
+            var subject = new Subjects(NodeContext, _selectedDetail.SubjectCode);
+
+            var preview = await subject.PreviewReparentAsync(currentParentSubjectCode, newParentSubjectCode);
+            _pendingReparentPlan = preview;
+
+            if (!preview.CanProceed)
+            {
+                return;
+            }
+
+            var result = await subject.ReparentAsync(currentParentSubjectCode, newParentSubjectCode);
+
+            if (!result.Succeeded)
+            {
+                _pendingReparentPlan = preview with
+                {
+                    CanProceed = false,
+                    Message = result.Message
+                };
+                return;
+            }
+
+            SubjectBrowserService.InvalidateSnapshot();
+
+            var movedSubjectCode = _selectedDetail.SubjectCode;
+            var oldParentBranchKey = BuildParentBranchKey(currentSelectionKey);
+            var newParentBranchKey = _resolvedMoveTargetPath;
+            var newSelectionKey = string.IsNullOrWhiteSpace(newParentBranchKey)
+                ? movedSubjectCode
+                : $"{newParentBranchKey}.{movedSubjectCode}";
+
+            ClearMoveState();
+
+            if (!string.IsNullOrWhiteSpace(oldParentBranchKey))
+            {
+                _childPageNumbers.Remove(oldParentBranchKey);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newParentBranchKey))
+            {
+                _childPageNumbers.Remove(newParentBranchKey);
+            }
+
+            _refreshToken++;
+            _selectedBranchKey = newSelectionKey;
+            _expandToKey = BuildExpandPath(newSelectionKey);
+            await LoadDetailFromKeyAsync(newSelectionKey);
+            await SetActionMessageAsync(result.Message, "alert-success");
+        }
+        finally
+        {
+            _isReparenting = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CancelMoveAsync()
+    {
+        ClearMoveState();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearMoveState()
+    {
+        _isMovePanelOpen = false;
+        _pendingMoveTargetPath = string.Empty;
+        _resolvedMoveTargetPath = string.Empty;
+        _moveTargetSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        _isLoadingMoveTargetSuggestions = false;
+        _pendingReparentPlan = null;
+        _isReparenting = false;
+    }
+
+    private async Task BeginRemoveNamespaceAsync()
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey))
+            return;
+
+        ClearActionMessage();
+        ClearCreateState();
+        ClearMoveState();
+        ClearAddExistingState();
+
+        if (_isMobile && !_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    removePreview: true),
+                forceLoad: true);
+
+            return;
+        }
+
+        await LoadRemoveNamespacePreviewAsync();
+    }
+
+    private async Task LoadRemoveNamespacePreviewAsync()
+    {
+        if (_selectedDetail is null)
+            return;
+
+        var parentSubjectCode = GetSelectedParentSubjectCode();
+        if (string.IsNullOrWhiteSpace(parentSubjectCode))
+            return;
+
+        try
+        {
+            _isLoadingRemovalPreview = true;
+            var subjects = new Subjects(NodeContext, _selectedDetail.SubjectCode);
+            _pendingRemovalPlan = await subjects.PreviewRemoveFromNamespaceAsync(parentSubjectCode);
+            UpdateBrowserUrl();
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            _isLoadingRemovalPreview = false;
+        }
+    }
+
+    private async Task ConfirmRemoveNamespaceAsync()
+    {
+        if (_selectedDetail is null || _pendingRemovalPlan is null)
+            return;
+
+        var parentSubjectCode = GetSelectedParentSubjectCode();
+        if (string.IsNullOrWhiteSpace(parentSubjectCode))
+            return;
+
+        try
+        {
+            _isRemovingNamespace = true;
+
+            var currentSelectionKey = _selectedBranchKey;
+            var subject = new Subjects(NodeContext, _selectedDetail.SubjectCode);
+            var result = await subject.RemoveFromNamespaceAsync(parentSubjectCode);
+
+            if (result.Succeeded)
+            {
+                SubjectBrowserService.InvalidateSnapshot();
+                ClearRemovalPreview();
+
+                var nextSelectionKey = ResolvePostActionSelectionKey("remove", currentSelectionKey);
+                await RefreshBrowserAfterActionAsync("remove", currentSelectionKey, nextSelectionKey);
+                await SetActionMessageAsync(result.Message, "alert-success");
+                return;
+            }
+
+            _pendingRemovalPlan = _pendingRemovalPlan with
+            {
+                CanProceed = false,
+                Message = result.Message
+            };
+        }
+        catch (Exception ex)
+        {
+            _pendingRemovalPlan = _pendingRemovalPlan with
+            {
+                CanProceed = false,
+                Message = ex.Message
+            };
+        }
+        finally
+        {
+            _isRemovingNamespace = false;
+            UpdateBrowserUrl();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CancelRemoveNamespaceAsync()
+    {
+        ClearRemovalPreview();
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearRemovalPreview()
+    {
+        _pendingRemovalPlan = null;
+        _isLoadingRemovalPreview = false;
+        _isRemovingNamespace = false;
+        _loadRemovalPreview = false;
+    }
+
+    private string GetRemovalActionTitle()
+    {
+        if (_pendingRemovalPlan is null)
+            return "Remove Namespace";
+
+        return _pendingRemovalPlan.ActionCode switch
+        {
+            NodeEnum.ActionCode.RemoveRelationshipOnly => "Remove Namespace Relationship",
+            NodeEnum.ActionCode.DeleteDetachedClosure => "Delete Detached Closure",
+            _ => "Removal Blocked"
+        };
+    }
+
+    private async Task BeginCreateChildAsync(NodeEnum.SubjectClass subjectClass)
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey))
+            return;
+
+        ClearActionMessage();
+        ClearMoveState();
+        ClearRemovalPreview();
+        ClearAddExistingState();
+
+        if (_isMobile && !_isEmbedded)
+        {
+            _pendingCreateSubjectClass = subjectClass;
+
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    createClass: subjectClass),
+                forceLoad: true);
+
+            return;
+        }
+
+        _pendingCreateSubjectClass = subjectClass;
+        _pendingCreateName = string.Empty;
+        _pendingCreateErrorMessage = null;
+        _activeEnquiryView = SubjectEnquiryView.None;
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CancelCreateAsync()
+    {
+        ClearCreateState();
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SubmitCreateAsync()
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey) || !_pendingCreateSubjectClass.HasValue)
+            return;
+
+        var subjectName = _pendingCreateName?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(subjectName))
+        {
+            _pendingCreateErrorMessage = "A name is required.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        try
+        {
+            _isCreatingSubject = true;
+            _pendingCreateErrorMessage = null;
+
+            var subjects = new Subjects(NodeContext);
+            SubjectActionResult result = _pendingCreateSubjectClass.Value switch
+            {
+                NodeEnum.SubjectClass.Structural => await subjects.AddStructuralChildAsync(_selectedDetail.SubjectCode, subjectName),
+                NodeEnum.SubjectClass.Real => await subjects.AddRealChildAsync(_selectedDetail.SubjectCode, subjectName),
+                NodeEnum.SubjectClass.Virtual => await subjects.AddVirtualChildAsync(_selectedDetail.SubjectCode, subjectName),
+                _ => SubjectActionResult.Failure("Unsupported Subject class.")
+            };
+
+            if (!result.Succeeded)
+            {
+                _pendingCreateErrorMessage = result.Message;
+                return;
+            }
+
+            SubjectBrowserService.InvalidateSnapshot();
+
+            var parentBranchKey = _selectedBranchKey;
+            var createdBranchKey = BuildCreatedBranchKey(parentBranchKey, result.SelectedSubjectCode);
+
+            ClearCreateState();
+            await SetActionMessageAsync(result.Message, "alert-success");
+            await RefreshCreatedChildAsync(parentBranchKey, createdBranchKey);
+        }
+        catch (Exception ex)
+        {
+            _pendingCreateErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isCreatingSubject = false;
+        }
+    }
+
+    private async Task RefreshCreatedChildAsync(string? parentBranchKey, string? createdBranchKey)
+    {
+        if (!string.IsNullOrWhiteSpace(parentBranchKey))
+        {
+            _childPageNumbers.Remove(parentBranchKey);
+        }
+
+        _refreshToken++;
+
+        if (!string.IsNullOrWhiteSpace(createdBranchKey))
+        {
+            _selectedBranchKey = createdBranchKey;
+            _expandToKey = BuildExpandPath(createdBranchKey);
+            await LoadDetailFromKeyAsync(createdBranchKey);
+        }
+
+        if (_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _returnNodeKey ?? parentBranchKey),
+                replace: true);
+        }
+        else
+        {
+            UpdateBrowserUrl();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string? BuildCreatedBranchKey(string? parentBranchKey, string? selectedSubjectCode)
+    {
+        if (string.IsNullOrWhiteSpace(selectedSubjectCode))
+            return parentBranchKey;
+
+        return string.IsNullOrWhiteSpace(parentBranchKey)
+            ? selectedSubjectCode
+            : $"{parentBranchKey}.{selectedSubjectCode}";
+    }
+
+    private static bool TryParseSubjectClass(string? value, out NodeEnum.SubjectClass subjectClass)
+    {
+        return Enum.TryParse(value, ignoreCase: true, out subjectClass);
+    }
+
+    private void ClearCreateState()
+    {
+        _pendingCreateSubjectClass = null;
+        _pendingCreateName = string.Empty;
+        _pendingCreateErrorMessage = null;
+        _isCreatingSubject = false;
+    }
+
+    private string GetPendingCreateHeading()
+    {
+        return _pendingCreateSubjectClass switch
+        {
+            NodeEnum.SubjectClass.Structural => "Create Structural Subject",
+            NodeEnum.SubjectClass.Real => "Create Person",
+            NodeEnum.SubjectClass.Virtual => "Create Organisation",
+            _ => "Create Subject"
+        };
+    }
+
+    private string GetPendingCreateHelpText()
+    {
+        return _pendingCreateSubjectClass switch
+        {
+            NodeEnum.SubjectClass.Structural => "Create a structural child under the selected parent.",
+            NodeEnum.SubjectClass.Real => "Create a real Subject under the selected parent.",
+            NodeEnum.SubjectClass.Virtual => "Create a virtual Subject under the selected parent.",
+            _ => "Create a child under the selected parent."
+        };
+    }
+
+    private string GetPendingCreateNameLabel()
+    {
+        return _pendingCreateSubjectClass switch
+        {
+            NodeEnum.SubjectClass.Structural => "Structural Name",
+            NodeEnum.SubjectClass.Real => "Person Name",
+            NodeEnum.SubjectClass.Virtual => "Organisation Name",
+            _ => "Name"
+        };
+    }
+
+    private static IReadOnlyList<SubjectBrowserAction> CreateNamespaceMobileShortcutActions(IReadOnlyList<SubjectBrowserAction> actions)
+    {
+        var shortcuts = new List<SubjectBrowserAction>();
+
+        var defaultAction = actions.FirstOrDefault(action => action.Id == "default");
+        if (defaultAction is not null)
+        {
+            shortcuts.Add(defaultAction);
+        }
+
+        var removeAction = actions.FirstOrDefault(action => action.Id == "remove");
+        if (removeAction is not null)
+        {
+            shortcuts.Add(removeAction);
+        }
+
+        return shortcuts.Take(2).ToArray();
+    }
+
+    private IReadOnlyList<SubjectBrowserAction> CreateSubjectActions()
+    {
+        if (_selectedDetail is null)
+            return Array.Empty<SubjectBrowserAction>();
+
+        return
+        [
+            CreatePendingAction("edit", "Edit", "bi-pencil-square"),
+            CreateSubjectsAction("change-type", "Change Type", "bi-sliders", subjects => subjects.ChangeTypeAsync(0)),
+            CreateSubjectsAction("delete", "Delete", "bi-trash", subjects => subjects.DeleteAsync(), "btn btn-outline-danger btn-sm")
+        ];
+    }
+
+    private SubjectBrowserAction CreateSubjectsAction(
+        string id,
+        string text,
+        string iconClass,
+        Func<Subjects, Task<SubjectActionResult>> executeAsync,
+        string buttonCssClass = "btn btn-outline-primary btn-sm",
+        bool isEnabled = true)
+    {
+        return new SubjectBrowserAction(
+            id,
+            text,
+            iconClass,
+            buttonCssClass,
+            isEnabled && _selectedDetail is not null,
+            () => ExecuteSubjectsActionAsync(id, executeAsync));
+    }
+
+    private SubjectBrowserAction CreatePendingAction(
+        string id,
+        string text,
+        string iconClass,
+        string buttonCssClass = "btn btn-outline-primary btn-sm")
+    {
+        return new SubjectBrowserAction(
+            id,
+            text,
+            iconClass,
+            buttonCssClass,
+            _selectedDetail is not null,
+            () => SetActionMessageAsync($"{text} is not implemented yet.", "alert-warning"));
+    }
+
+
+    private async Task ExecuteSubjectsActionAsync(
+        string actionId,
+        Func<Subjects, Task<SubjectActionResult>> executeAsync)
+    {
+        if (_selectedDetail is null)
+            return;
+
+        try
+        {
+            var currentSelectionKey = _selectedBranchKey;
+            var subject = new Subjects(NodeContext, _selectedDetail.SubjectCode);
+            var result = await executeAsync(subject);
+
+            if (result.Succeeded)
+            {
+                SubjectBrowserService.InvalidateSnapshot();
+
+                var nextSelectionKey = ResolvePostActionSelectionKey(actionId, currentSelectionKey);
+
+                await RefreshBrowserAfterActionAsync(
+                    actionId,
+                    currentSelectionKey,
+                    nextSelectionKey);
+            }
+
+            await SetActionMessageAsync(result.Message, result.Succeeded ? "alert-success" : "alert-warning");
+        }
+        catch (Exception ex)
+        {
+            await SetActionMessageAsync(ex.Message, "alert-danger");
+        }
+    }
+
+    private string? ResolvePostActionSelectionKey(string actionId, string? currentSelectionKey)
+    {
+        if (string.IsNullOrWhiteSpace(currentSelectionKey))
+            return null;
+
+        return string.Equals(actionId, "remove", StringComparison.OrdinalIgnoreCase)
+            ? BuildParentBranchKey(currentSelectionKey)
+            : currentSelectionKey;
+    }
+
+    private async Task RefreshBrowserAfterActionAsync(
+        string actionId,
+        string? currentSelectionKey,
+        string? selectionKey)
+    {
+        if (string.Equals(actionId, "default", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(actionId, "remove", StringComparison.OrdinalIgnoreCase))
+        {
+            var parentBranchKey = BuildParentBranchKey(currentSelectionKey);
+
+            if (!string.IsNullOrWhiteSpace(parentBranchKey))
+            {
+                _childPageNumbers.Remove(parentBranchKey);
+            }
+
+            _refreshToken++;
+
+            if (string.IsNullOrWhiteSpace(selectionKey))
+            {
+                _selectedBranchKey = null;
+                _selectedDetail = null;
+                _expandToKey = null;
+                UpdateBrowserUrl();
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            _selectedBranchKey = selectionKey;
+            _expandToKey = BuildExpandPath(selectionKey);
+            await LoadDetailFromKeyAsync(selectionKey);
+            UpdateBrowserUrl();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _rootPageNumber = 1;
+        _childPageNumbers.Clear();
+
+        await LoadRootsAsync();
+
+        if (string.IsNullOrWhiteSpace(selectionKey))
+        {
+            _selectedBranchKey = null;
+            _selectedDetail = null;
+            _expandToKey = null;
+            UpdateBrowserUrl();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _selectedBranchKey = selectionKey;
+        _expandToKey = BuildExpandPath(selectionKey);
+        await LoadDetailFromKeyAsync(selectionKey);
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string? BuildParentBranchKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var index = key.LastIndexOf(".", StringComparison.Ordinal);
+
+        return index < 0
+            ? null
+            : key[..index];
+    }
+
+    private Task SetActionMessageAsync(string message, string cssClass)
+    {
+        _actionMessage = message;
+        _actionMessageCssClass = cssClass;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void ClearActionMessage()
+    {
+        _actionMessage = null;
+        _actionMessageCssClass = "alert-warning";
+    }
+    private string BuildUrl(
+        bool embedded,
+        string? selectKey = null,
+        string? returnNodeKey = null,
+        NodeEnum.SubjectClass? createClass = null,
+        bool includeCreateState = false,
+        bool removePreview = false,
+        bool includeRemovePreviewState = false)
     {
         var baseUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/Subject/Browser/Index";
         var query = new List<string>();
@@ -482,18 +1675,86 @@ else
         if (embedded)
             query.Add("embedded=1");
 
+        query.Add($"mode={Uri.EscapeDataString(GetModeQueryValue())}");
+
+        if (_mode == SubjectBrowserMode.Enquiry && _activeEnquiryView != SubjectEnquiryView.None)
+        {
+            query.Add($"enquiry={Uri.EscapeDataString(_activeEnquiryView.ToString())}");
+        }
+
+        var effectiveCreateClass = includeCreateState
+            ? _pendingCreateSubjectClass ?? createClass
+            : createClass;
+
+        if (_mode == SubjectBrowserMode.Namespace && effectiveCreateClass.HasValue)
+        {
+            query.Add($"create={Uri.EscapeDataString(effectiveCreateClass.Value.ToString())}");
+        }
+
+        var effectiveRemovePreview = includeRemovePreviewState
+            ? _pendingRemovalPlan is not null
+            : removePreview;
+
+        if (effectiveRemovePreview)
+        {
+            query.Add("removePreview=1");
+        }
+
         if (!string.IsNullOrWhiteSpace(selectKey))
             query.Add($"select={Uri.EscapeDataString(selectKey)}");
 
         if (!string.IsNullOrWhiteSpace(returnNodeKey))
             query.Add($"returnNode={Uri.EscapeDataString(returnNodeKey)}");
 
-        if (!string.IsNullOrWhiteSpace(_namespaceFilter))
-            query.Add($"namespaceFilter={Uri.EscapeDataString(_namespaceFilter)}");
+        if (!string.IsNullOrWhiteSpace(_appliedNamespaceFilter))
+            query.Add($"namespaceFilter={Uri.EscapeDataString(_appliedNamespaceFilter)}");
 
         return query.Count == 0
             ? baseUrl
             : $"{baseUrl}?{string.Join("&", query)}";
+    }
+
+    private static bool TryParseEnquiryView(string? value, out SubjectEnquiryView enquiryView)
+    {
+        if (Enum.TryParse(value, ignoreCase: true, out enquiryView)
+            && enquiryView != SubjectEnquiryView.None)
+        {
+            return true;
+        }
+
+        enquiryView = SubjectEnquiryView.None;
+        return false;
+    }
+
+    private void UpdateBrowserUrl()
+    {
+        if (_isEmbedded)
+            return;
+
+        var targetUrl = BuildUrl(
+            embedded: false,
+            selectKey: _selectedBranchKey,
+            createClass: _pendingCreateSubjectClass,
+            includeCreateState: true,
+            includeRemovePreviewState: true);
+
+        var current = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var target = NavigationManager.ToAbsoluteUri(targetUrl);
+
+        if (string.Equals(current.PathAndQuery, target.PathAndQuery, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        NavigationManager.NavigateTo(targetUrl, replace: true);
+    }
+
+    private string GetModeQueryValue()
+    {
+        return _mode.ToString();
+    }
+
+    private static bool TryParseMode(string? value, out SubjectBrowserMode mode)
+    {
+        return Enum.TryParse(value, ignoreCase: true, out mode);
     }
 
     private Task NavigateBackAsync()
@@ -511,6 +1772,11 @@ else
         return Task.CompletedTask;
     }
 
+    private string? GetSelectedParentSubjectCode()
+    {
+        return ExtractParentSubjectCode(_selectedBranchKey);
+    }
+
     private static string ExtractSubjectCode(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
@@ -518,6 +1784,18 @@ else
 
         var segments = key.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return segments.Length == 0 ? key : segments[^1];
+    }
+
+    private static string? ExtractParentSubjectCode(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var segments = key.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return segments.Length < 2
+            ? null
+            : segments[^2];
     }
 
     private static string BuildExpandPath(string key)
@@ -542,95 +1820,6 @@ else
         return string.Join('|', expandKeys);
     }
 
-    private RenderFragment RenderDetailPane() => @<div class="flex-grow-1 overflow-auto" style="min-height:0;">
-
-        @if (_selectedDetail is null)
-        {
-            <div class="text-muted">Select a Subject to view its details.</div>
-        }
-        else
-        {
-            <div class="bg-white border rounded p-3 mb-3">
-                <div class="fw-semibold">@_selectedDetail.DisplayLabel</div>
-
-                @if (!string.Equals(_selectedDetail.DisplayLabel, _selectedDetail.Name, StringComparison.OrdinalIgnoreCase))
-                {
-                    <div class="text-muted small">@_selectedDetail.Name</div>
-                }
-
-                <div class="text-muted small">@_selectedDetail.SubjectCode</div>
-                <div class="small mt-2">
-                    <span class="badge text-bg-secondary me-1">@_selectedDetail.SubjectType</span>
-                    <span class="badge text-bg-light border">@_selectedDetail.SubjectClassName</span>
-                </div>
-            </div>
-
-            @if (_selectedDetail.IdentityFields.Count > 0)
-            {
-                <div class="bg-white border rounded p-3 mb-3">
-                    <div class="fw-semibold mb-2">@_selectedDetail.DetailSectionTitle</div>
-                    <dl class="row mb-0">
-                        @foreach (var field in _selectedDetail.IdentityFields)
-                        {
-                            <dt class="col-sm-4 small text-muted">@field.Label</dt>
-                            <dd class="col-sm-8 small">@field.Value</dd>
-                        }
-                    </dl>
-                </div>
-            }
-
-            <div class="bg-white border rounded p-3 mb-3">
-                <div class="fw-semibold mb-2">Namespace</div>
-
-                @if (_selectedDetail.NamespacePaths.Count == 0)
-                {
-                    <div class="text-muted small">No namespace paths.</div>
-                }
-                else
-                {
-                    <ul class="list-unstyled mb-0">
-                        @foreach (var path in _selectedDetail.NamespacePaths)
-                        {
-                            <li class="small mb-1"><code>@path</code></li>
-                        }
-                    </ul>
-                }
-            </div>
-
-            <div class="bg-white border rounded p-3 mb-3">
-                <div class="fw-semibold mb-2">Addresses</div>
-
-                @if (_selectedDetail.Addresses.Count == 0)
-                {
-                    <div class="text-muted small">No addresses.</div>
-                }
-                else
-                {
-                    @foreach (var address in _selectedDetail.Addresses)
-                    {
-                        <div class="border rounded p-2 mb-2 @(address.IsDefault ? "border-primary" : string.Empty)">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                <div class="small" style="white-space:pre-line;">@address.Address</div>
-                                @if (address.IsDefault)
-                                {
-                                    <span class="badge text-bg-primary">Default</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                }
-            </div>
-
-            @if (_selectedDetail.IsStructural || !string.IsNullOrWhiteSpace(_selectedDetail.Notes))
-            {
-                <div class="bg-white border rounded p-3">
-                    <div class="fw-semibold mb-2">Notes</div>
-                    <div class="small" style="white-space:pre-line;">@(string.IsNullOrWhiteSpace(_selectedDetail.Notes) ? "—" : _selectedDetail.Notes)</div>
-                </div>
-            }
-        }
-    </div>;
-
     private static TreeNode CreateLoadMoreNode(string key)
     {
         return new TreeNode(key, "Load more…", "bi-three-dots", false);
@@ -653,4 +1842,557 @@ else
         parentBranchKey = string.Empty;
         return false;
     }
+
+    private static bool IsLoadMoreNodeKey(string? key)
+    {
+        return !string.IsNullOrWhiteSpace(key)
+            && key.StartsWith("loadmore::", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool CanDragTreeNode(TreeNode node)
+    {
+        return !IsLoadMoreNodeKey(node.Key);
+    }
+
+    private bool CanDropTreeNode(TreeNode node)
+    {
+        return !IsLoadMoreNodeKey(node.Key);
+    }
+
+    private async Task HandleTreeDragStartedAsync(TreeNode node)
+    {
+        _dragSourceKey = node.Key;
+        _dropTargetKey = null;
+        ClearActionMessage();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleTreeDragEndedAsync()
+    {
+        _dragSourceKey = null;
+        _dropTargetKey = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleTreeNodeDroppedAsync(TreeNode targetNode)
+    {
+        if (string.IsNullOrWhiteSpace(_dragSourceKey) || IsLoadMoreNodeKey(targetNode.Key))
+            return;
+
+        var sourceKey = _dragSourceKey;
+        _dropTargetKey = targetNode.Key;
+
+        try
+        {
+            ClearActionMessage();
+            ClearCreateState();
+            ClearRemovalPreview();
+            ClearMoveState();
+            ClearAddExistingState();
+
+            if (string.Equals(sourceKey, targetNode.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                await SetActionMessageAsync("A Subject cannot be dropped onto itself.", "alert-warning");
+                return;
+            }
+
+            var sourceSubjectCode = ExtractSubjectCode(sourceKey);
+            var targetParentSubjectCode = ExtractSubjectCode(targetNode.Key);
+            var currentParentSubjectCode = ExtractParentSubjectCode(sourceKey);
+
+            if (string.IsNullOrWhiteSpace(sourceSubjectCode) || string.IsNullOrWhiteSpace(targetParentSubjectCode))
+            {
+                await SetActionMessageAsync("The drag/drop operation could not be resolved.", "alert-warning");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentParentSubjectCode))
+            {
+                await ExecuteTreeAddExistingAsync(sourceSubjectCode, targetNode.Key, targetParentSubjectCode);
+                return;
+            }
+
+            await ExecuteTreeMoveAsync(sourceKey, sourceSubjectCode, currentParentSubjectCode, targetNode.Key, targetParentSubjectCode);
+        }
+        finally
+        {
+            _dragSourceKey = null;
+            _dropTargetKey = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ExecuteTreeAddExistingAsync(
+        string childSubjectCode,
+        string targetParentBranchKey,
+        string targetParentSubjectCode)
+    {
+        var subject = new Subjects(NodeContext, childSubjectCode);
+
+        var preview = await subject.PreviewAddToNamespaceAsync(targetParentSubjectCode);
+        if (!preview.CanProceed)
+        {
+            await SetActionMessageAsync(preview.Message, "alert-warning");
+            return;
+        }
+
+        var result = await subject.AddToNamespaceAsync(targetParentSubjectCode);
+        if (!result.Succeeded)
+        {
+            await SetActionMessageAsync(result.Message, "alert-warning");
+            return;
+        }
+
+        SubjectBrowserService.InvalidateSnapshot();
+
+        _childPageNumbers.Remove(targetParentBranchKey);
+        _refreshToken++;
+
+        var selectionKey = $"{targetParentBranchKey}.{childSubjectCode}";
+        _selectedBranchKey = selectionKey;
+        _expandToKey = BuildExpandPath(selectionKey);
+        await LoadDetailFromKeyAsync(selectionKey);
+        await SetActionMessageAsync(result.Message, "alert-success");
+    }
+
+    private async Task ExecuteTreeMoveAsync(
+        string sourceKey,
+        string sourceSubjectCode,
+        string currentParentSubjectCode,
+        string targetParentBranchKey,
+        string targetParentSubjectCode)
+    {
+        var subject = new Subjects(NodeContext, sourceSubjectCode);
+
+        var preview = await subject.PreviewReparentAsync(currentParentSubjectCode, targetParentSubjectCode);
+        if (!preview.CanProceed)
+        {
+            await SetActionMessageAsync(preview.Message, "alert-warning");
+            return;
+        }
+
+        var result = await subject.ReparentAsync(currentParentSubjectCode, targetParentSubjectCode);
+        if (!result.Succeeded)
+        {
+            await SetActionMessageAsync(result.Message, "alert-warning");
+            return;
+        }
+
+        SubjectBrowserService.InvalidateSnapshot();
+
+        var oldParentBranchKey = BuildParentBranchKey(sourceKey);
+
+        if (!string.IsNullOrWhiteSpace(oldParentBranchKey))
+        {
+            _childPageNumbers.Remove(oldParentBranchKey);
+        }
+
+        _childPageNumbers.Remove(targetParentBranchKey);
+        _refreshToken++;
+
+        var selectionKey = $"{targetParentBranchKey}.{sourceSubjectCode}";
+        _selectedBranchKey = selectionKey;
+        _expandToKey = BuildExpandPath(selectionKey);
+        await LoadDetailFromKeyAsync(selectionKey);
+        await SetActionMessageAsync(result.Message, "alert-success");
+    }
+
+    private RenderFragment RenderDetailPane() =>
+    @<div class="flex-grow-1 overflow-auto" style="min-height:0;">
+        @RenderDetailPaneContent()
+    </div>;
+
+    private RenderFragment RenderDetailPaneContent()
+    {
+        if (ShouldRenderActiveEnquiry())
+            return RenderEnquiryPane();
+
+        if (ShouldRenderAddExistingPanel())
+            return RenderAddExistingPane();
+
+        if (ShouldRenderMovePanel())
+            return RenderMovePane();
+
+        if (ShouldRenderRemovalPanel())
+            return RenderRemovalPane();
+
+        if (ShouldRenderCreatePanel())
+            return RenderCreatePane();
+
+        if (_selectedDetail is null)
+            return RenderEmptyDetailPane();
+
+        return RenderSelectedDetailPane();
+    }
+
+    private bool ShouldRenderActiveEnquiry()
+    {
+        return _mode == SubjectBrowserMode.Enquiry
+            && _activeEnquiryView != SubjectEnquiryView.None
+            && _selectedDetail is not null
+            && !_selectedDetail.IsStructural;
+    }
+
+    private bool ShouldRenderAddExistingPanel()
+    {
+        return _mode == SubjectBrowserMode.Namespace
+            && _isAddExistingPanelOpen
+            && _selectedDetail is not null;
+    }
+
+    private bool ShouldRenderMovePanel()
+    {
+        return _mode == SubjectBrowserMode.Namespace
+            && _isMovePanelOpen
+            && _selectedDetail is not null;
+    }
+
+    private bool ShouldRenderRemovalPanel()
+    {
+        return _mode == SubjectBrowserMode.Namespace
+            && _pendingRemovalPlan is not null
+            && _selectedDetail is not null;
+    }
+
+    private bool ShouldRenderCreatePanel()
+    {
+        return _mode == SubjectBrowserMode.Namespace
+            && _pendingCreateSubjectClass.HasValue
+            && _selectedDetail is not null;
+    }
+
+    private RenderFragment RenderEnquiryPane() => @<SubjectEnquiryShell SubjectCode="@_selectedDetail!.SubjectCode"
+                         DisplayLabel="@_selectedDetail.DisplayLabel"
+                         View="@_activeEnquiryView"
+                         IsEmbedded="true" />;
+
+    private RenderFragment RenderAddExistingPane() => @<div class="bg-white border rounded p-3">
+    <div class="fw-semibold mb-1">Add Existing Subject</div>
+    <div class="text-muted small mb-3">
+        Parent: <code>@_selectedDetail!.SubjectCode</code>
+    </div>
+
+    <div class="mb-3">
+        <NamespaceSelector FilterText="@_pendingAddSubjectPath"
+                           Suggestions="@_addSubjectSuggestions"
+                           IsLoadingSuggestions="@_isLoadingAddSubjectSuggestions"
+                           OnFilterChanged="HandleAddSubjectChangedAsync"
+                           OnFilterCommitted="HandleAddSubjectCommittedAsync" />
+    </div>
+
+@if (_pendingAddParentPlan is not null)
+    {
+    <div class="alert @(_pendingAddParentPlan.CanProceed ? "alert-warning" : "alert-danger") py-2 mb-3" role="alert">
+        @_pendingAddParentPlan.Message
+    </div>
+    }
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button"
+                class="btn btn-primary btn-sm"
+                disabled="@(string.IsNullOrWhiteSpace(_pendingAddSubjectPath) || _isAddingToNamespace)"
+                @onclick="ConfirmAddExistingAsync">
+            @if (_isAddingToNamespace)
+                        {
+            <span>Adding…</span>
+                        }
+                        else
+            {
+                <span>Add</span>
+            }
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                disabled="@_isAddingToNamespace"
+                @onclick="CancelAddExistingAsync">
+            Cancel
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderMovePane() => @<div class="bg-white border rounded p-3">
+    <div class="fw-semibold mb-1">Move Subject</div>
+    <div class="text-muted small mb-3">
+        Current parent: <code>@GetSelectedParentSubjectCode()</code><br />
+        Child: <code>@_selectedDetail!.SubjectCode</code>
+    </div>
+
+    <div class="mb-3">
+        <NamespaceSelector FilterText="@_pendingMoveTargetPath"
+                           Suggestions="@_moveTargetSuggestions"
+                           IsLoadingSuggestions="@_isLoadingMoveTargetSuggestions"
+                           OnFilterChanged="HandleMoveTargetChangedAsync"
+                           OnFilterCommitted="HandleMoveTargetCommittedAsync" />
+    </div>
+
+@if (_pendingReparentPlan is not null)
+{
+        <div class="alert @(_pendingReparentPlan.CanProceed ? "alert-warning" : "alert-danger") py-2 mb-3" role="alert">
+            @_pendingReparentPlan.Message
+        </div>
+}
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button"
+                class="btn btn-primary btn-sm"
+                disabled="@(string.IsNullOrWhiteSpace(_pendingMoveTargetPath) || _isReparenting)"
+                @onclick="ConfirmMoveAsync">
+            @if (_isReparenting)
+            {
+                <span>Moving…</span>
+            }
+            else
+            {
+                <span>Move</span>
+            }
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                disabled="@_isReparenting"
+                @onclick="CancelMoveAsync">
+            Cancel
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderRemovalPane() => @<div class="bg-white border rounded p-3">
+    <div class="fw-semibold mb-1">@GetRemovalActionTitle()</div>
+    <div class="text-muted small mb-3">
+        Parent: <code>@GetSelectedParentSubjectCode()</code><br />
+        Child: <code>@_selectedDetail!.SubjectCode</code>
+    </div>
+
+    <div class="alert @(_pendingRemovalPlan!.CanProceed ? "alert-warning" : "alert-danger") py-2 mb-3" role="alert">
+        @_pendingRemovalPlan.Message
+    </div>
+
+    <dl class="row mb-3 small">
+        <dt class="col-sm-5 text-muted">Affected Subjects</dt>
+        <dd class="col-sm-7">@_pendingRemovalPlan.AffectedSubjectCount</dd>
+
+        <dt class="col-sm-5 text-muted">Invoices</dt>
+        <dd class="col-sm-7">@_pendingRemovalPlan.InvoiceCount</dd>
+
+        <dt class="col-sm-5 text-muted">Payments</dt>
+        <dd class="col-sm-7">@_pendingRemovalPlan.PaymentCount</dd>
+
+        <dt class="col-sm-5 text-muted">Projects</dt>
+        <dd class="col-sm-7">@_pendingRemovalPlan.ProjectCount</dd>
+    </dl>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button"
+                class="btn btn-danger btn-sm"
+                disabled="@(!_pendingRemovalPlan.CanProceed || _isRemovingNamespace)"
+                @onclick="ConfirmRemoveNamespaceAsync">
+            @if (_isRemovingNamespace)
+            {
+                <span>Removing…</span>
+            }
+            else
+            {
+                <span>Confirm</span>
+            }
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                disabled="@_isRemovingNamespace"
+                @onclick="CancelRemoveNamespaceAsync">
+            Cancel
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderCreatePane() => @<div class="bg-white border rounded p-3">
+    <div class="fw-semibold mb-1">@GetPendingCreateHeading()</div>
+    <div class="text-muted small mb-3">@GetPendingCreateHelpText()</div>
+
+    <div class="small mb-3">
+        <div class="text-muted">Parent</div>
+        <div class="fw-semibold">@_selectedDetail!.DisplayLabel</div>
+        <div><code>@_selectedDetail.SubjectCode</code></div>
+    </div>
+
+@if (!string.IsNullOrWhiteSpace(_pendingCreateErrorMessage))
+{
+        <div class="alert alert-danger py-2 mb-3" role="alert">@_pendingCreateErrorMessage</div>
+}
+
+    <div class="mb-3">
+        <label class="form-label">@GetPendingCreateNameLabel()</label>
+        <input class="form-control"
+               value="@_pendingCreateName"
+               @oninput="args => _pendingCreateName = args.Value?.ToString() ?? string.Empty"
+               placeholder="Enter name..." />
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button"
+                class="btn btn-primary btn-sm"
+                disabled="@_isCreatingSubject"
+                @onclick="SubmitCreateAsync">
+            @if (_isCreatingSubject)
+            {
+                <span>Creating…</span>
+            }
+            else
+            {
+                <span>Create</span>
+            }
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                disabled="@_isCreatingSubject"
+                @onclick="CancelCreateAsync">
+            Cancel
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderEmptyDetailPane() => @<div class="text-muted">
+    Select a Subject to view its details.
+</div>;
+
+private RenderFragment RenderSelectedDetailPane() => @<div>
+@{
+    var detailActions = GetDetailActions();
+}
+
+@RenderSubjectSummaryCard()
+@RenderActionCard(detailActions)
+@RenderActionMessage()
+@RenderIdentityFieldsCard()
+@RenderNamespacePathsCard()
+@RenderAddressesCard()
+@RenderNotesCard()
+</div>;
+
+private RenderFragment RenderSubjectSummaryCard() => @<div class="bg-white border rounded p-3 mb-3">
+    <div class="fw-semibold">@_selectedDetail!.DisplayLabel</div>
+
+@if (!string.Equals(_selectedDetail.DisplayLabel, _selectedDetail.Name, StringComparison.OrdinalIgnoreCase))
+{
+        <div class="text-muted small">@_selectedDetail.Name</div>
+}
+
+    <div class="text-muted small">@_selectedDetail.SubjectCode</div>
+
+    <div class="small mt-2">
+        <span class="badge text-bg-secondary me-1">@_selectedDetail.SubjectType</span>
+        <span class="badge text-bg-light border me-1">@_selectedDetail.SubjectClassName</span>
+
+        @if (_selectedDetail.IsDefaultInNamespace)
+        {
+            <span class="badge @_selectedDetail.DefaultBadgeCssClass">Default</span>
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderActionCard(IReadOnlyList<SubjectBrowserAction> detailActions) => @<text>
+@if (detailActions.Count > 0)
+{
+        <div class="bg-white border rounded p-3 mb-3">
+            <div class="fw-semibold mb-2">Actions</div>
+
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var action in detailActions)
+                {
+                    <button type="button"
+                            class="@action.ButtonCssClass"
+                            disabled="@(!action.IsEnabled)"
+                            @onclick="action.ExecuteAsync">
+                        <i class="bi @action.IconClass me-1" aria-hidden="true"></i>@action.Text
+                    </button>
+                }
+            </div>
+        </div>
+}
+</text>;
+
+private RenderFragment RenderActionMessage() => @<text>
+@if (!string.IsNullOrWhiteSpace(_actionMessage))
+{
+        <div class="alert @_actionMessageCssClass py-2 mb-3" role="alert">@_actionMessage</div>
+}
+</text>;
+
+private RenderFragment RenderIdentityFieldsCard() => @<text>
+@if (_selectedDetail!.IdentityFields.Count > 0)
+{
+        <div class="bg-white border rounded p-3 mb-3">
+            <div class="fw-semibold mb-2">@_selectedDetail.DetailSectionTitle</div>
+
+            <dl class="row mb-0">
+                @foreach (var field in _selectedDetail.IdentityFields)
+                {
+                    <dt class="col-sm-4 small text-muted">@field.Label</dt>
+                    <dd class="col-sm-8 small">@field.Value</dd>
+                }
+            </dl>
+        </div>
+}
+</text>;
+
+private RenderFragment RenderNamespacePathsCard() => @<div class="bg-white border rounded p-3 mb-3">
+    <div class="fw-semibold mb-2">Namespace</div>
+
+@if (_selectedDetail!.NamespacePaths.Count == 0)
+{
+        <div class="text-muted small">No namespace paths.</div>
+}
+else
+{
+        <ul class="list-unstyled mb-0">
+            @foreach (var path in _selectedDetail.NamespacePaths)
+            {
+                <li class="small mb-1"><code>@path</code></li>
+            }
+        </ul>
+}
+</div>;
+
+private RenderFragment RenderAddressesCard() => @<text>
+@if (_selectedDetail is not null && !_selectedDetail.IsStructural)
+{
+        <div class="bg-white border rounded p-3 mb-3">
+            <div class="fw-semibold mb-2">Addresses</div>
+
+            @if (_selectedDetail.Addresses.Count == 0)
+            {
+                <div class="text-muted small">No addresses.</div>
+            }
+            else
+            {
+                @foreach (var address in _selectedDetail.Addresses)
+                {
+                    <div class="border rounded p-2 mb-2 @(address.IsDefault ? "border-primary" : string.Empty)">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="small" style="white-space:pre-line;">@address.Address</div>
+
+                            @if (address.IsDefault)
+                            {
+                                <span class="badge text-bg-primary">Default</span>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+}
+</text>;
+
+private RenderFragment RenderNotesCard() => @<text>
+@if (_selectedDetail is not null
+    && (_selectedDetail.IsStructural || !string.IsNullOrWhiteSpace(_selectedDetail.Notes)))
+{
+        <div class="bg-white border rounded p-3">
+            <div class="fw-semibold mb-2">Notes</div>
+            <div class="small" style="white-space:pre-line;">@(string.IsNullOrWhiteSpace(_selectedDetail.Notes) ? "—" : _selectedDetail.Notes)</div>
+        </div>
+}
+</text>;
 }

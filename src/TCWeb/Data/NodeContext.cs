@@ -1955,8 +1955,9 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.TransmitStatusCode).HasDefaultValueSql("((0))");
                 entity.Property(e => e.ExpectedDays).HasDefaultValueSql("((0))");
                 entity.Property(e => e.PaymentDays).HasDefaultValueSql("((0))");
-                entity.Property(e => e.PayDaysFromMonthEnd).HasDefaultValueSql("((0))");
-                entity.Property(e => e.PayBalance).HasDefaultValueSql("((1))");
+                entity.Property(e => e.PayBalance)
+                    .HasDefaultValueSql("((1))")
+                    .HasSentinel(true);
                 entity.Property(e => e.OpeningBalance).HasDefaultValueSql("((0))");
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
@@ -2014,7 +2015,9 @@ namespace TradeControl.Web.Data
                 entity.HasIndex(e => e.SubjectCode, "IX_Subject_tbReal_AccountCode")
                     .HasFillFactor((byte)90);
 
-                entity.Property(e => e.OnMailingList).HasDefaultValueSql("((1))");
+                entity.Property(e => e.OnMailingList)
+                    .HasDefaultValueSql("((0))")
+                    .HasSentinel(true);
 
                 //entity.Property(e => e.RowVer)
                 //    .IsRowVersion()
@@ -2033,8 +2036,8 @@ namespace TradeControl.Web.Data
                     .IsClustered(false);
 
                 entity.Property(e => e.NumberOfEmployees).HasDefaultValueSql("((0))");
-                entity.Property(e => e.Eujurisdiction).HasDefaultValueSql("((0))");
                 entity.Property(e => e.Turnover).HasDefaultValueSql("((0))");
+                entity.Property(e => e.Eujurisdiction).HasDefaultValueSql("((0))").HasSentinel(true);
 
                 //entity.Property(e => e.RowVer)
                 //    .IsRowVersion()
@@ -2072,7 +2075,7 @@ namespace TradeControl.Web.Data
                 entity.HasIndex(e => new { e.ParentSubjectCode, e.IsDefault }, "IX_Subject_tbNamespace_Parent_IsDefault")
                     .HasFillFactor((byte)90);
 
-                entity.Property(e => e.IsDefault).HasDefaultValueSql("((0))");
+                entity.Property(e => e.IsDefault).HasDefaultValueSql("((0))").HasSentinel(true);
 
                 entity.HasOne(d => d.ChildSubjectCodeNavigation)
                     .WithMany(p => p.TbParentNamespaces)

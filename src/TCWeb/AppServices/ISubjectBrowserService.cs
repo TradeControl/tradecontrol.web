@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TradeControl.Web.Pages.Subject.Browser;
+using TradeControl.Web.Pages.Subject.Controls;
 
 namespace TradeControl.Web.AppServices
 {
@@ -24,12 +25,21 @@ namespace TradeControl.Web.AppServices
         Task<SubjectBrowserPageResult<SubjectBrowserNode>> GetChildNodesAsync(
             string parentSubjectCode,
             string parentNamespacePath,
+            string namespaceFilter,
             int pageNumber,
             int pageSize,
             CancellationToken cancellationToken = default);
 
+        Task<IReadOnlyList<NamespaceSelectorSuggestion>> GetNamespaceSuggestionsAsync(
+            string filterText,
+            int maxResults,
+            CancellationToken cancellationToken = default);
+
         Task<SubjectBrowserDetailModel?> GetDetailAsync(
             string subjectCode,
+            string? parentSubjectCode,
             CancellationToken cancellationToken = default);
+
+        void InvalidateSnapshot();
     }
 }

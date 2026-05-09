@@ -16,7 +16,14 @@
                     SelectedKey="@SelectedKey"
                     ExpandToKey="@ExpandToKey"
                     OnNodeSelected="OnNodeSelected"
-                    RefreshToken="RefreshToken" />
+                    RefreshToken="RefreshToken"
+                    CanDrag="CanDrag"
+                    CanDrop="CanDrop"
+                    DraggedKey="DraggedKey"
+                    DropTargetKey="DropTargetKey"
+                    OnDragStarted="OnDragStarted"
+                    OnDragEnded="OnDragEnded"
+                    OnNodeDropped="OnNodeDropped" />
     }
 }
 else if (Node is not null)
@@ -43,7 +50,12 @@ else if (Node is not null)
         }
 
         <button type="button"
-                class="btn btn-link text-start w-100 tc-tree-row"
+                class="btn btn-link text-start w-100 tc-tree-row @GetDropTargetCssClass(Node)"
+                draggable="@(IsDraggable(Node) ? "true" : "false")"
+                @ondragstart="HandleDragStartAsync"
+                @ondragend="HandleDragEndAsync"
+                ondragover="event.preventDefault(); event.dataTransfer.dropEffect='move';"
+                @ondrop="HandleDropAsync"
                 @onclick="OnClickAsync">
             <i class="bi @Node.IconClass me-2 tc-tree-icon @(GetNodeStateClass(Node))" aria-hidden="true"></i>
             <span class="tc-tree-label @(IsSelected(Node, SelectedKey) ? "tc-tree-label-selected" : "")">@Node.Text</span>
@@ -85,7 +97,14 @@ else if (Node is not null)
                                 SelectedKey="@SelectedKey"
                                 ExpandToKey="@ExpandToKey"
                                 OnNodeSelected="OnNodeSelected"
-                                RefreshToken="RefreshToken" />
+                                RefreshToken="RefreshToken"
+                                CanDrag="CanDrag"
+                                CanDrop="CanDrop"
+                                DraggedKey="DraggedKey"
+                                DropTargetKey="DropTargetKey"
+                                OnDragStarted="OnDragStarted"
+                                OnDragEnded="OnDragEnded"
+                                OnNodeDropped="OnNodeDropped" />
                 }
             }
         </div>
@@ -99,13 +118,18 @@ else if (Node is not null)
 
     [Parameter] public Func<TreeNode, Task<IReadOnlyList<TreeNode>>> GetChildren { get; set; } = default!;
     [Parameter] public EventCallback<TreeNode> OnLeafSelected { get; set; }
-
     [Parameter] public string? SelectedKey { get; set; }
     [Parameter] public string? ExpandToKey { get; set; }
-
     [Parameter] public EventCallback<TreeNode> OnNodeSelected { get; set; }
-
     [Parameter] public long RefreshToken { get; set; }
+
+    [Parameter] public Func<TreeNode, bool>? CanDrag { get; set; }
+    [Parameter] public Func<TreeNode, bool>? CanDrop { get; set; }
+    [Parameter] public string? DraggedKey { get; set; }
+    [Parameter] public string? DropTargetKey { get; set; }
+    [Parameter] public EventCallback<TreeNode> OnDragStarted { get; set; }
+    [Parameter] public EventCallback OnDragEnded { get; set; }
+    [Parameter] public EventCallback<TreeNode> OnNodeDropped { get; set; }
 
     private long _lastRefreshToken;
     private bool _expanded;
@@ -167,6 +191,43 @@ else if (Node is not null)
 
         var segments = target.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return segments.Any(segment => string.Equals(segment, node.Key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool IsDraggable(TreeNode node) => CanDrag?.Invoke(node) ?? false;
+
+    private bool IsDroppable(TreeNode node) => CanDrop?.Invoke(node) ?? false;
+
+    private string GetDropTargetCssClass(TreeNode node)
+    {
+        return IsDroppable(node)
+            && !string.IsNullOrWhiteSpace(DropTargetKey)
+            && string.Equals(node.Key, DropTargetKey, StringComparison.OrdinalIgnoreCase)
+                ? "tc-tree-drop-target-active"
+                : string.Empty;
+    }
+
+    private async Task HandleDragStartAsync()
+    {
+        if (Node is null || !IsDraggable(Node))
+            return;
+
+        if (OnDragStarted.HasDelegate)
+            await OnDragStarted.InvokeAsync(Node);
+    }
+
+    private async Task HandleDragEndAsync()
+    {
+        if (OnDragEnded.HasDelegate)
+            await OnDragEnded.InvokeAsync();
+    }
+
+    private async Task HandleDropAsync()
+    {
+        if (Node is null || !IsDroppable(Node))
+            return;
+
+        if (OnNodeDropped.HasDelegate)
+            await OnNodeDropped.InvokeAsync(Node);
     }
 
     private async Task ToggleExpandAsync()

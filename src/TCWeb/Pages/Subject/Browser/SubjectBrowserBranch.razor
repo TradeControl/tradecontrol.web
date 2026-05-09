@@ -8,7 +8,14 @@
             SelectedKey="@SelectedKey"
             ExpandToKey="@ExpandToKey"
             OnNodeSelected="@OnNodeSelected"
-            RefreshToken="@RefreshToken" />
+            RefreshToken="@RefreshToken"
+            CanDrag="@CanDrag"
+            CanDrop="@CanDrop"
+            DraggedKey="@DraggedKey"
+            DropTargetKey="@DropTargetKey"
+            OnDragStarted="@OnDragStarted"
+            OnDragEnded="@OnDragEnded"
+            OnNodeDropped="@OnNodeDropped" />
 
 @code {
     [Parameter] public bool IsRoot { get; set; }
@@ -20,4 +27,12 @@
     [Parameter] public string? SelectedKey { get; set; }
     [Parameter] public string? ExpandToKey { get; set; }
     [Parameter] public long RefreshToken { get; set; }
+
+    [Parameter] public Func<TreeNode, bool>? CanDrag { get; set; }
+    [Parameter] public Func<TreeNode, bool>? CanDrop { get; set; }
+    [Parameter] public string? DraggedKey { get; set; }
+    [Parameter] public string? DropTargetKey { get; set; }
+    [Parameter] public EventCallback<TreeNode> OnDragStarted { get; set; }
+    [Parameter] public EventCallback OnDragEnded { get; set; }
+    [Parameter] public EventCallback<TreeNode> OnNodeDropped { get; set; }
 }

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Subject.Browser;
+using TradeControl.Web.Pages.Subject.Controls;
 
 namespace TradeControl.Web.AppServices
 {
@@ -22,6 +23,11 @@ namespace TradeControl.Web.AppServices
             _nodeContext = nodeContext;
         }
 
+        public void InvalidateSnapshot()
+        {
+            _snapshot = null;
+        }
+
         public async Task<SubjectBrowserPageResult<SubjectBrowserNode>> GetRootNodesAsync(
             string namespaceFilter,
             int pageNumber,
@@ -29,19 +35,19 @@ namespace TradeControl.Web.AppServices
             CancellationToken cancellationToken = default)
         {
             var snapshot = await EnsureSnapshotAsync(cancellationToken);
+            var filterContext = ParseNamespaceFilter(namespaceFilter);
 
             var roots = snapshot.Subjects.Values
                 .Where(subject => !snapshot.ParentsByChild.ContainsKey(subject.SubjectCode))
                 .Select(subject => CreateNode(snapshot, subject, subject.SubjectCode, null))
                 .ToList();
 
-            if (!string.IsNullOrWhiteSpace(namespaceFilter))
+            if (!filterContext.IsEmpty)
             {
-                var filter = namespaceFilter.Trim();
                 var matchCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
                 roots = roots
-                    .Where(node => MatchesBranchOrDescendants(snapshot, node.SubjectCode, node.NamespacePath, filter, matchCache))
+                    .Where(node => MatchesBranchOrDescendants(snapshot, node.SubjectCode, node.NamespacePath, filterContext, matchCache))
                     .ToList();
             }
 
@@ -63,13 +69,15 @@ namespace TradeControl.Web.AppServices
         }
 
         public async Task<SubjectBrowserPageResult<SubjectBrowserNode>> GetChildNodesAsync(
-            string parentSubjectCode,
-            string parentNamespacePath,
-            int pageNumber,
-            int pageSize,
-            CancellationToken cancellationToken = default)
+           string parentSubjectCode,
+           string parentNamespacePath,
+           string namespaceFilter,
+           int pageNumber,
+           int pageSize,
+           CancellationToken cancellationToken = default)
         {
             var snapshot = await EnsureSnapshotAsync(cancellationToken);
+            var filterContext = ParseNamespaceFilter(namespaceFilter);
 
             if (!snapshot.ChildrenByParent.TryGetValue(parentSubjectCode, out var namespaceRows))
             {
@@ -86,9 +94,13 @@ namespace TradeControl.Web.AppServices
                     row))
                 .ToList();
 
-            if (!string.IsNullOrWhiteSpace(parentNamespacePath) && !string.IsNullOrWhiteSpace(parentNamespacePath))
+            if (!filterContext.IsEmpty)
             {
-                var filter = parentNamespacePath;
+                var matchCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+                children = children
+                    .Where(node => MatchesBranchOrDescendants(snapshot, node.SubjectCode, node.NamespacePath, filterContext, matchCache))
+                    .ToList();
             }
 
             var totalCount = children.Count;
@@ -104,8 +116,27 @@ namespace TradeControl.Web.AppServices
             };
         }
 
+        public async Task<IReadOnlyList<NamespaceSelectorSuggestion>> GetNamespaceSuggestionsAsync
+        (
+            string filterText,
+            int maxResults,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var snapshot = await EnsureSnapshotAsync(cancellationToken);
+            var filterContext = ParseNamespaceFilter(filterText);
+            var take = Math.Max(maxResults, 1);
+
+            var suggestions = filterContext.HasCompletedPrefix
+                ? GetStructuredSuggestions(snapshot, filterContext, take)
+                : GetGeneralSuggestions(snapshot, filterContext, take);
+
+            return suggestions;
+        }
+
         public async Task<SubjectBrowserDetailModel?> GetDetailAsync(
             string subjectCode,
+            string? parentSubjectCode,
             CancellationToken cancellationToken = default)
         {
             var snapshot = await EnsureSnapshotAsync(cancellationToken);
@@ -129,7 +160,14 @@ namespace TradeControl.Web.AppServices
                     address.AddressCode == subject.AddressCode))
                 .ToListAsync(cancellationToken);
 
-            var detail = new SubjectBrowserDetailModel {
+            var isDefaultInNamespace = !string.IsNullOrWhiteSpace(parentSubjectCode)
+                && snapshot.ParentsByChild.TryGetValue(subjectCode, out var parentRows)
+                && parentRows.Any(row =>
+                    string.Equals(row.ParentSubjectCode, parentSubjectCode, StringComparison.OrdinalIgnoreCase)
+                    && row.IsDefault);
+
+            var detail = new SubjectBrowserDetailModel
+            {
                 SubjectCode = subject.SubjectCode,
                 SubjectTypeCode = subject.SubjectTypeCode,
                 SubjectType = subjectType.SubjectType,
@@ -139,7 +177,9 @@ namespace TradeControl.Web.AppServices
                 NamespacePaths = namespacePaths,
                 IdentityFields = CreateIdentityFields(snapshot, subject, subjectClass),
                 Addresses = addresses,
-                Notes = subjectClass switch {
+                IsDefaultInNamespace = isDefaultInNamespace,
+                Notes = subjectClass switch
+                {
                     NodeEnum.SubjectClass.Structural when snapshot.Structurals.TryGetValue(subjectCode, out var structural) => structural.Notes,
                     _ => null
                 }
@@ -188,7 +228,8 @@ namespace TradeControl.Web.AppServices
                     .Select(type => new SubjectTypeRecord(
                         type.SubjectTypeCode,
                         type.SubjectType,
-                        type.SubjectClassCode))
+                        type.SubjectClassCode,
+                        type.CashPolarityCode))
                     .ToListAsync(cancellationToken);
 
                 var reals = await _nodeContext.Subject_tbReals
@@ -241,7 +282,7 @@ namespace TradeControl.Web.AppServices
                         ns.IsDefault))
                     .ToListAsync(cancellationToken);
 
-                _snapshot = new SubjectSnapshot(
+                var baseSnapshot = new SubjectSnapshot(
                     subjects.ToDictionary(subject => subject.SubjectCode, StringComparer.OrdinalIgnoreCase),
                     types.ToDictionary(type => type.SubjectTypeCode),
                     reals.ToDictionary(real => real.SubjectCode, StringComparer.OrdinalIgnoreCase),
@@ -253,7 +294,12 @@ namespace TradeControl.Web.AppServices
                         .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase),
                     namespaces
                         .GroupBy(ns => ns.ChildSubjectCode, StringComparer.OrdinalIgnoreCase)
-                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase));
+                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase),
+                    Array.Empty<NamespacePathRecord>());
+
+                _snapshot = baseSnapshot with {
+                    Paths = BuildPathRecords(baseSnapshot)
+                };
 
                 return _snapshot;
             }
@@ -271,6 +317,7 @@ namespace TradeControl.Web.AppServices
         {
             var subjectType = snapshot.Types[subject.SubjectTypeCode];
             var subjectClass = (NodeEnum.SubjectClass)subjectType.SubjectClassCode;
+            var cashPolarity = (NodeEnum.CashPolarity)subjectType.CashPolarityCode;
             var childCount = snapshot.ChildrenByParent.TryGetValue(subject.SubjectCode, out var children)
                 ? children.Count
                 : 0;
@@ -282,6 +329,7 @@ namespace TradeControl.Web.AppServices
                 Name = subject.SubjectName,
                 DisplayLabel = GetDisplayLabel(snapshot, subject.SubjectCode),
                 SubjectClass = subjectClass,
+                CashPolarity = cashPolarity,
                 ChildCount = childCount,
                 IsDefaultChild = namespaceRecord?.IsDefault ?? false
             };
@@ -301,23 +349,17 @@ namespace TradeControl.Web.AppServices
             SubjectSnapshot snapshot,
             string subjectCode,
             string namespacePath,
-            string filter,
+            NamespaceFilterContext filterContext,
             IDictionary<string, bool> cache)
         {
-            var cacheKey = $"{filter}::{namespacePath}";
+            var cacheKey = $"{filterContext.NormalizedFilter}::{namespacePath}";
 
             if (cache.TryGetValue(cacheKey, out var cached))
             {
                 return cached;
             }
 
-            var subject = snapshot.Subjects[subjectCode];
-            var displayLabel = GetDisplayLabel(snapshot, subjectCode);
-
-            if (Contains(namespacePath, filter)
-                || Contains(subject.SubjectCode, filter)
-                || Contains(subject.SubjectName, filter)
-                || Contains(displayLabel, filter))
+            if (PathMatchesFilter(snapshot, subjectCode, namespacePath, filterContext))
             {
                 cache[cacheKey] = true;
                 return true;
@@ -329,7 +371,7 @@ namespace TradeControl.Web.AppServices
                 {
                     var childPath = $"{namespacePath}.{child.ChildSubjectCode}";
 
-                    if (MatchesBranchOrDescendants(snapshot, child.ChildSubjectCode, childPath, filter, cache))
+                    if (MatchesBranchOrDescendants(snapshot, child.ChildSubjectCode, childPath, filterContext, cache))
                     {
                         cache[cacheKey] = true;
                         return true;
@@ -339,6 +381,362 @@ namespace TradeControl.Web.AppServices
 
             cache[cacheKey] = false;
             return false;
+        }
+
+        private static bool PathMatchesFilter(
+            SubjectSnapshot snapshot,
+            string subjectCode,
+            string namespacePath,
+            NamespaceFilterContext filterContext)
+        {
+            if (filterContext.IsEmpty)
+            {
+                return true;
+            }
+
+            var subject = snapshot.Subjects[subjectCode];
+            var displayLabel = GetDisplayLabel(snapshot, subjectCode);
+
+            if (filterContext.IsCompletionMode)
+            {
+                return string.Equals(namespacePath, filterContext.CompletedPrefix, StringComparison.OrdinalIgnoreCase)
+                    || namespacePath.StartsWith($"{filterContext.CompletedPrefix}.", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (filterContext.HasCompletedPrefix)
+            {
+                if (string.Equals(namespacePath, filterContext.NormalizedFilter, StringComparison.OrdinalIgnoreCase)
+                    || namespacePath.StartsWith($"{filterContext.NormalizedFilter}.", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (namespacePath.StartsWith($"{filterContext.CompletedPrefix}.", StringComparison.OrdinalIgnoreCase))
+                {
+                    var nextSegment = GetNextSegment(namespacePath, filterContext.CompletedPrefix);
+
+                    if (!string.IsNullOrWhiteSpace(nextSegment)
+                        && nextSegment.StartsWith(filterContext.ActiveSegment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return Contains(namespacePath, filterContext.NormalizedFilter)
+                || Contains(subject.SubjectCode, filterContext.NormalizedFilter)
+                || Contains(subject.SubjectName, filterContext.NormalizedFilter)
+                || Contains(displayLabel, filterContext.NormalizedFilter);
+        }
+
+        private static IReadOnlyList<NamespaceSelectorSuggestion> GetStructuredSuggestions(
+            SubjectSnapshot snapshot,
+            NamespaceFilterContext filterContext,
+            int maxResults)
+        {
+            var suggestions = snapshot.Paths
+                .Where(path => string.Equals(path.ParentNamespacePath, filterContext.CompletedPrefix, StringComparison.OrdinalIgnoreCase));
+
+            if (!suggestions.Any())
+            {
+                return GetGeneralSuggestions(snapshot, filterContext, maxResults);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filterContext.ActiveSegment))
+            {
+                suggestions = suggestions.Where(path => MatchesSuggestion(snapshot, path, filterContext.ActiveSegment));
+            }
+
+            return RankSuggestions(snapshot, suggestions, filterContext, maxResults);
+        }
+
+        private static IReadOnlyList<NamespaceSelectorSuggestion> GetGeneralSuggestions(
+            SubjectSnapshot snapshot,
+            NamespaceFilterContext filterContext,
+            int maxResults)
+        {
+            IEnumerable<NamespacePathRecord> suggestions;
+
+            if (filterContext.IsEmpty)
+            {
+                suggestions = snapshot.Paths
+                    .Where(path => path.ParentNamespacePath is null);
+            }
+            else
+            {
+                suggestions = snapshot.Paths
+                    .Where(path => MatchesSuggestion(snapshot, path, filterContext.NormalizedFilter));
+            }
+
+            return RankSuggestions(snapshot, suggestions, filterContext, maxResults);
+        }
+
+        private static IReadOnlyList<NamespaceSelectorSuggestion> RankSuggestions(
+            SubjectSnapshot snapshot,
+            IEnumerable<NamespacePathRecord> suggestions,
+            NamespaceFilterContext filterContext,
+            int maxResults)
+        {
+            return suggestions
+                .Select(path => new {
+                    Suggestion = CreateSuggestion(snapshot, path),
+                    Rank = GetSuggestionRank(snapshot, path, filterContext)
+                })
+                .GroupBy(item => item.Suggestion.FullPath, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group
+                    .OrderBy(item => item.Rank)
+                    .ThenBy(item => item.Suggestion.Segment, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(item => item.Suggestion.FullPath, StringComparer.OrdinalIgnoreCase)
+                    .First())
+                .OrderBy(item => item.Rank)
+                .ThenBy(item => item.Suggestion.Segment, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Suggestion.FullPath, StringComparer.OrdinalIgnoreCase)
+                .Take(maxResults)
+                .Select(item => item.Suggestion)
+                .ToList();
+        }
+
+        private static int GetSuggestionRank(
+            SubjectSnapshot snapshot,
+            NamespacePathRecord path,
+            NamespaceFilterContext filterContext)
+        {
+            if (IsDefaultNamespacePath(snapshot, path))
+            {
+                return -1;
+            }
+
+            if (filterContext.IsCompletionMode && string.IsNullOrWhiteSpace(filterContext.ActiveSegment))
+            {
+                return 100;
+            }
+
+            var subject = snapshot.Subjects[path.SubjectCode];
+            var segment = ExtractLastSegment(path.NamespacePath);
+            var displayLabel = GetDisplayLabel(snapshot, path.SubjectCode);
+            var term = !string.IsNullOrWhiteSpace(filterContext.ActiveSegment)
+                ? filterContext.ActiveSegment
+                : filterContext.NormalizedFilter;
+            var isPathSearch = IsNamespacePathSearch(filterContext.NormalizedFilter);
+
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                return 100;
+            }
+
+            if (string.Equals(path.NamespacePath, filterContext.NormalizedFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            if (string.Equals(segment, term, StringComparison.OrdinalIgnoreCase))
+            {
+                return 1;
+            }
+
+            if (string.Equals(subject.SubjectCode, term, StringComparison.OrdinalIgnoreCase))
+            {
+                return 2;
+            }
+
+            if (string.Equals(displayLabel, term, StringComparison.OrdinalIgnoreCase))
+            {
+                return 3;
+            }
+
+            if (segment.StartsWith(term, StringComparison.OrdinalIgnoreCase))
+            {
+                return 4;
+            }
+
+            if (subject.SubjectCode.StartsWith(term, StringComparison.OrdinalIgnoreCase))
+            {
+                return 5;
+            }
+
+            if (Contains(displayLabel, term))
+            {
+                return 6;
+            }
+
+            if (Contains(subject.SubjectName, term))
+            {
+                return 7;
+            }
+
+            if (isPathSearch && path.NamespacePath.StartsWith(filterContext.NormalizedFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                return 8;
+            }
+
+            if (isPathSearch && Contains(path.NamespacePath, filterContext.NormalizedFilter))
+            {
+                return 9;
+            }
+
+            return 10;
+        }
+
+        private static bool IsDefaultNamespacePath
+        (
+            SubjectSnapshot snapshot,
+            NamespacePathRecord path
+        )
+        {
+            if (string.IsNullOrWhiteSpace(path.ParentNamespacePath))
+            {
+                return false;
+            }
+
+            var parentSubjectCode = ExtractLastSegment(path.ParentNamespacePath);
+
+            return snapshot.ChildrenByParent.TryGetValue(parentSubjectCode, out var children)
+                && children.Any(child =>
+                    string.Equals(child.ChildSubjectCode, path.SubjectCode, StringComparison.OrdinalIgnoreCase)
+                    && child.IsDefault);
+        }
+
+        private static NamespaceSelectorSuggestion CreateSuggestion(SubjectSnapshot snapshot, NamespacePathRecord path)
+        {
+            return new NamespaceSelectorSuggestion {
+                Segment = ExtractLastSegment(path.NamespacePath),
+                FullPath = path.NamespacePath,
+                HasChildren = snapshot.ChildrenByParent.TryGetValue(path.SubjectCode, out var children) && children.Count > 0,
+                DisplayLabel = GetDisplayLabel(snapshot, path.SubjectCode)
+            };
+        }
+
+        private static bool IsNamespacePathSearch(string filter)
+        {
+            return !string.IsNullOrWhiteSpace(filter)
+                && filter.Contains('.', StringComparison.Ordinal);
+        }
+
+        private static bool MatchesSuggestion(
+            SubjectSnapshot snapshot,
+            NamespacePathRecord path,
+            string filter)
+        {
+            var subject = snapshot.Subjects[path.SubjectCode];
+            var displayLabel = GetDisplayLabel(snapshot, path.SubjectCode);
+            var segment = ExtractLastSegment(path.NamespacePath);
+            var isPathSearch = IsNamespacePathSearch(filter);
+
+            return string.Equals(segment, filter, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(subject.SubjectCode, filter, StringComparison.OrdinalIgnoreCase)
+                || segment.StartsWith(filter, StringComparison.OrdinalIgnoreCase)
+                || subject.SubjectCode.StartsWith(filter, StringComparison.OrdinalIgnoreCase)
+                || Contains(segment, filter)
+                || Contains(subject.SubjectName, filter)
+                || Contains(displayLabel, filter)
+                || (isPathSearch && Contains(path.NamespacePath, filter));
+        }
+
+        private static NamespaceFilterContext ParseNamespaceFilter(string? filterText)
+        {
+            var normalized = filterText?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return new NamespaceFilterContext(string.Empty, string.Empty, string.Empty, false);
+            }
+
+            var endsWithDot = normalized.EndsWith(".", StringComparison.Ordinal);
+            var segments = normalized
+                .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (segments.Length == 0)
+            {
+                return new NamespaceFilterContext(normalized, string.Empty, string.Empty, endsWithDot);
+            }
+
+            if (endsWithDot)
+            {
+                return new NamespaceFilterContext(
+                    normalized,
+                    string.Join('.', segments),
+                    string.Empty,
+                    true);
+            }
+
+            if (segments.Length == 1)
+            {
+                return new NamespaceFilterContext(
+                    normalized,
+                    string.Empty,
+                    segments[0],
+                    false);
+            }
+
+            return new NamespaceFilterContext(
+                normalized,
+                string.Join('.', segments[..^1]),
+                segments[^1],
+                false);
+        }
+
+        private static IReadOnlyList<NamespacePathRecord> BuildPathRecords(SubjectSnapshot snapshot)
+        {
+            var cache = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+
+            return snapshot.Subjects.Keys
+                .SelectMany(subjectCode => ResolvePaths(snapshot, subjectCode, cache)
+                    .Select(path => new NamespacePathRecord(
+                        subjectCode,
+                        path,
+                        ExtractParentNamespacePath(path))))
+                .GroupBy(path => path.NamespacePath, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .OrderBy(path => path.NamespacePath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static string? ExtractParentNamespacePath(string namespacePath)
+        {
+            if (string.IsNullOrWhiteSpace(namespacePath))
+            {
+                return null;
+            }
+
+            var index = namespacePath.LastIndexOf(".", StringComparison.Ordinal);
+
+            return index < 0
+                ? null
+                : namespacePath[..index];
+        }
+
+        private static string ExtractLastSegment(string namespacePath)
+        {
+            if (string.IsNullOrWhiteSpace(namespacePath))
+            {
+                return string.Empty;
+            }
+
+            var index = namespacePath.LastIndexOf(".", StringComparison.Ordinal);
+
+            return index < 0
+                ? namespacePath
+                : namespacePath[(index + 1)..];
+        }
+
+        private static string? GetNextSegment(string namespacePath, string completedPrefix)
+        {
+            if (string.IsNullOrWhiteSpace(completedPrefix))
+            {
+                return ExtractLastSegment(namespacePath);
+            }
+
+            if (!namespacePath.StartsWith($"{completedPrefix}.", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            var remainder = namespacePath[(completedPrefix.Length + 1)..];
+            var separatorIndex = remainder.IndexOf('.', StringComparison.Ordinal);
+
+            return separatorIndex < 0
+                ? remainder
+                : remainder[..separatorIndex];
         }
 
         private static IReadOnlyList<string> GetNamespacePaths(SubjectSnapshot snapshot, string subjectCode)
@@ -486,7 +884,8 @@ namespace TradeControl.Web.AppServices
         private sealed record SubjectTypeRecord(
             short SubjectTypeCode,
             string SubjectType,
-            short SubjectClassCode);
+            short SubjectClassCode,
+            short CashPolarityCode);
 
         private sealed record RealRecord(
             string SubjectCode,
@@ -526,6 +925,22 @@ namespace TradeControl.Web.AppServices
             int Ordinal,
             bool IsDefault);
 
+        private sealed record NamespacePathRecord(
+            string SubjectCode,
+            string NamespacePath,
+            string? ParentNamespacePath);
+
+        private sealed record NamespaceFilterContext(
+            string NormalizedFilter,
+            string CompletedPrefix,
+            string ActiveSegment,
+            bool EndsWithDot)
+        {
+            public bool IsEmpty => string.IsNullOrWhiteSpace(NormalizedFilter);
+            public bool HasCompletedPrefix => !string.IsNullOrWhiteSpace(CompletedPrefix);
+            public bool IsCompletionMode => EndsWithDot && HasCompletedPrefix;
+        }
+
         private sealed record SubjectSnapshot(
             IDictionary<string, SubjectRecord> Subjects,
             IDictionary<short, SubjectTypeRecord> Types,
@@ -534,6 +949,7 @@ namespace TradeControl.Web.AppServices
             IDictionary<string, StructuralRecord> Structurals,
             IReadOnlyList<NamespaceRecord> Namespaces,
             IDictionary<string, List<NamespaceRecord>> ChildrenByParent,
-            IDictionary<string, List<NamespaceRecord>> ParentsByChild);
+            IDictionary<string, List<NamespaceRecord>> ParentsByChild,
+            IReadOnlyList<NamespacePathRecord> Paths);
     }
 }

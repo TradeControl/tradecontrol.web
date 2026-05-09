@@ -1651,7 +1651,7 @@ It must not modify or depend on Shared.Tree.
 The Subject Namespace is constructed from `SubjectCode`, not `SubjectName`.
 
 - `SubjectCode` is deterministic, stable, and free of illegal characters.
-- `SubjectName` is user‑entered, may contain spaces, punctuation, and illegal characters, and is not suitable for namespace paths.
+- `SubjectName` is user-entered, may contain spaces, punctuation, and illegal characters, and is not suitable for namespace paths.
 
 Therefore:
 
@@ -1670,30 +1670,33 @@ This ensures:
 
 The Namespace Selector provides:
 
-- real‑time filtering of the Subject Browser  
-- namespace‑aware search  
-- a consistent mechanism for selecting a structural context  
+- real-time filtering of the Subject Browser
+- namespace-aware search
+- namespace-aware dot-notation completion
+- a consistent mechanism for selecting a structural context
 - a reusable control for future workflows (e.g., project assignment, cost centre selection)
 
-It is not a search box.  
-It is a **namespace filter**.
+It is not merely a search box.  
+It is a **namespace filter and path-construction aid**.
 
 ### 2. Component Responsibilities
 
 The selector must:
 
-1. Accept user input (free‑text).
+1. Accept user input in dot-notation namespace form.
 2. Emit filter events to its parent (e.g., SubjectBrowserShell).
-3. Maintain internal state (current filter string).
-4. Provide debounced updates (to avoid excessive reloads).
-5. Support both:
-   - **Single‑select mode** (default)
-   - **Multi‑select mode** (future workflows)
-6. Never load Subjects directly.
-7. Never query the database directly.
-8. Never interact with Shared.Tree.
+3. Maintain internal state (current filter string, active segment, suggestion state).
+4. Provide debounced updates for free typing.
+5. Provide context-aware suggestions for the next namespace segment.
+6. Support keyboard and pointer selection of suggestions.
+7. Support both:
+   - **Single-select mode** (default)
+   - **Multi-select mode** (future workflows)
+8. Never load tree nodes directly.
+9. Never query the database directly.
+10. Never interact with Shared.Tree.
 
-It is a pure UI → event emitter.
+It is a pure UI → event emitter with suggestion presentation.
 
 ### 3. Public API (Mandatory)
 
@@ -1705,104 +1708,205 @@ The component must expose:
   Current filter value.
 
 - `EventCallback<string> OnFilterChanged`  
-  Raised whenever the filter changes.
+  Raised whenever the effective filter changes.
+
+- `EventCallback<string> OnFilterCommitted`  
+  Raised when the user explicitly accepts a suggestion or commits the current path.
 
 - `bool MultiSelect` (default: false)  
   Reserved for future workflows.
 
+- `IReadOnlyList<NamespaceSelectorSuggestion> Suggestions`  
+  The current suggestion set supplied by the host.
+
+- `bool IsLoadingSuggestions`  
+  Indicates that the host is resolving the current suggestion set.
+
 #### 3.2 Events
 
 - `OnFilterChanged`  
-  Fired after debounce when the user types.
+  Fired after debounce while the user types.
+
+- `OnFilterCommitted`  
+  Fired when the user accepts the current filter path or selects a suggestion.
 
 ### 4. Behavioural Specification
 
-#### 4.1 Real‑Time Filtering
+#### 4.1 Real-Time Filtering
 
 As the user types:
 
 - The component updates its internal `FilterText`.
 - After a short debounce (e.g., 250ms), it raises `OnFilterChanged(FilterText)`.
 
-The parent (SubjectBrowserShell) is responsible for:
+The parent (`SubjectBrowserShell`) is responsible for:
 
-- recalculating visible roots  
-- collapsing branches  
-- triggering lazy loading under the new filter  
+- recalculating visible roots
+- collapsing branches where required by the active filter mode
+- triggering lazy loading under the new filter
+- resolving the suggestion list for the current namespace context
 
 The selector does not manipulate the tree directly.
 
-#### 4.2 Filter Semantics
+#### 4.2 Dot-Notation Completion Mode
 
-The filter string must be interpreted as:
+The selector must support namespace-aware completion using `.` as the namespace separator.
 
-- case‑insensitive  
-- substring match  
-- applied to `NamespacePath`  
-- optionally applied to `Name` / `DisplayLabel`  
+The input is interpreted as:
 
-The selector does not apply semantics itself — it only emits the string.
+- **CompletedPrefix** — the fully accepted namespace path before the active segment
+- **ActiveSegment** — the segment currently being typed
+- **CompletionBoundary** — the position of the most recent dot
 
-#### 4.3 Clear Behaviour
+Examples:
+
+- `BellMaker`
+  - `CompletedPrefix = ""`
+  - `ActiveSegment = "BellMaker"`
+
+- `BellMaker.`
+  - `CompletedPrefix = "BellMaker"`
+  - `ActiveSegment = ""`
+
+- `BellMaker.Found`
+  - `CompletedPrefix = "BellMaker"`
+  - `ActiveSegment = "Found"`
+
+- `BellMaker.Foundry.Production.`
+  - `CompletedPrefix = "BellMaker.Foundry.Production"`
+  - `ActiveSegment = ""`
+
+When the input ends with `.`:
+
+- the preceding path is treated as a completed namespace context
+- the suggestion list must contain only valid immediate child segments beneath that context
+
+When the input does not end with `.`:
+
+- the final segment is treated as a partial segment
+- suggestions must be filtered within the current completed context
+
+#### 4.3 Suggestion Selection Behaviour
+
+When the user selects a suggestion:
+
+- the active segment is replaced with the selected segment
+- the resulting filter text becomes the accepted path
+- if the selected suggestion has children, the selector may append `.` automatically only if explicitly configured to do so
+- `OnFilterCommitted` must fire with the accepted path
+- `OnFilterChanged` may also fire if the accepted path changes visibility immediately
+
+The selector must support:
+
+- pointer/tap selection
+- keyboard navigation using Up/Down
+- accept using Enter/Tab
+- dismiss using Escape
+
+#### 4.4 Clear Behaviour
 
 If the user clears the filter:
 
-- `FilterText` becomes empty  
-- `OnFilterChanged("")` fires  
-- The tree resets to full root set (paged)
+- `FilterText` becomes empty
+- the suggestion list closes
+- `OnFilterChanged("")` fires
+- the tree resets to the full root set (paged)
+
+#### 4.5 Free-Text Fallback
+
+The selector must remain usable even when the user input does not map cleanly to a valid completed namespace prefix.
+
+In this case:
+
+- the control continues to emit `FilterText`
+- the host may resolve broad matching suggestions
+- the tree applies general namespace-aware filtering rather than strict completion-only filtering
+
+This ensures that the selector remains useful for discovery and partial search.
 
 ### 5. Visual Requirements
 
 The selector must:
 
-- appear as a simple text input  
-- include a clear/reset button  
-- include optional placeholder text (“Filter namespace…”)  
-- avoid heavy UI chrome  
-- avoid dropdowns, popovers, or complex UI elements  
+- appear as a lightweight text input with clear/reset button
+- include optional placeholder text such as `Filter namespace…`
+- show a suggestion list anchored to the input
+- visually distinguish:
+  - completed prefix
+  - active segment
+  - selectable suggestions
+- support mouse, touch, and keyboard interaction
+- avoid heavy UI chrome, modal popovers, or large custom JavaScript frameworks
 
-This is a lightweight control.
+The suggestion UI should behave more like a lightweight namespace completion surface than a search dialog.
 
-### 6. Integration Contract
+### 6. Suggestion Contract
+
+The host must resolve suggestions using namespace context, not simple full-path substring matching alone.
+
+A suggestion item must contain at least:
+
+- `string Segment`
+- `string FullPath`
+- `bool HasChildren`
+- `string? DisplayLabel`
+
+Rules:
+
+- `Segment` is the selectable namespace token for the current completion step
+- `FullPath` is the resulting accepted namespace path
+- `HasChildren` indicates whether deeper completion is possible
+- `DisplayLabel` is optional and must not replace `SubjectCode` as structural identity
+
+### 7. Integration Contract
 
 The selector must integrate with:
 
 - `SubjectBrowserShell` (mandatory)
-- any future workflow requiring namespace restriction (optional)
+- future workflows requiring namespace restriction (optional)
 
-**Flow:**
+Flow:
 
-1. User types into selector.  
-2. Selector raises `OnFilterChanged`.  
+1. User types into selector.
+2. Selector raises `OnFilterChanged`.
 3. SubjectBrowserShell:
-   - collapses all branches  
-   - reloads roots using the filter  
-   - triggers lazy loading under the new filter  
+   - parses the filter as dot-notation
+   - resolves the current namespace context
+   - requests suggestions for the next valid segment set
+   - reloads the visible tree using the active filter
+4. Selector renders the returned suggestion set.
+5. User accepts a suggestion or commits the current path.
+6. Selector raises `OnFilterCommitted`.
+7. SubjectBrowserShell recentres or filters the tree accordingly.
 
-Shared.Tree remains unaware of filtering.
+Shared.Tree remains unaware of suggestions and filtering mechanics.
 
-### 7. Error Handling
+### 8. Error Handling
 
 The selector must not throw exceptions for:
 
-- empty input  
-- whitespace input  
-- rapid typing  
-- rapid clearing  
+- empty input
+- whitespace input
+- trailing dots
+- repeated dots entered by mistake
+- rapid typing
+- rapid clearing
+- empty suggestion sets
 
-It must always emit a valid string.
+It must always emit a valid filter string and remain operable even when no suggestions are available.
 
-### 8. Summary
+### 9. Summary
 
-The Namespace Selector is a simple, reusable, event‑driven component that:
+The Namespace Selector is a reusable, event-driven component that:
 
-- emits filter text  
-- drives the Subject Browser  
-- never loads data  
-- never interacts with Shared.Tree  
-- never applies semantics itself  
+- emits filter text
+- supports dot-notation namespace completion
+- presents context-aware suggestions for the next namespace segment
+- drives the Subject Browser without directly loading tree nodes
+- never interacts with Shared.Tree directly
+- preserves `SubjectCode` as the structural basis of namespace identity
 
-It is the filtering lens through which the user views the Subject Namespace.
+It is the namespace-aware filtering and path-construction lens through which the user views the Subject Namespace.
 
 ## Phase 2.6 — Subject Detail Panel Specification {#phase26}
 
@@ -3468,8 +3572,15 @@ Paths must be stable, reproducible, and updated automatically when structural ch
 ## Semantics 3.6 — Filtering and Search Semantics {#semantics36}
 
 Filtering and search allow users to locate Subjects within the Namespace quickly and efficiently.  
-Filtering operates on **namespace paths**, which use dot‑notation.  
+Filtering operates on **namespace paths**, which use dot-notation.  
 Search operates on Subject identity fields.
+
+Filtering must support both:
+
+- **general namespace-aware filtering**
+- **dot-notation completion filtering**
+
+The two behaviours are related but not identical.
 
 ### 1. Namespace Filtering Semantics
 
@@ -3477,82 +3588,184 @@ Filtering applies to namespace paths of the form:
 
 `A01.B14.C07`
 
-Filtering is **namespace‑aware**, not free‑text.
+Filtering is namespace-aware, not merely free-text.
 
 Rules:
 
-- filtering is case‑insensitive  
-- filtering matches against **dot‑separated segments**  
-- filtering supports:  
-      - prefix matching (`A01.` behaves like `System.` in .NET)  
-      - infix matching (`.B14.` matches any branch containing B14)  
-      - multi‑segment matching (`A01.B14`)  
-- filtering must not collapse the tree structure  
-- filtering must highlight matching branches without altering relationships  
+- filtering is case-insensitive
+- filtering operates on dot-separated namespace segments
+- filtering must preserve namespace identity based on `SubjectCode`
+- filtering must not use `SubjectName` as structural identity
+- filtering must not alter data or relationships
 
-### 2. Dot‑Notation Filtering Behaviour
+### 2. Two Filtering Modes
 
-Dot‑notation filtering behaves like .NET namespace filtering:
+The system must support two compatible filtering modes.
 
-- typing `A01.` restricts results to Subjects **within** the A01 subtree  
-- typing `A01.B14.` restricts results to Subjects **within** that deeper subtree  
-- typing `B14` matches any segment containing `B14`  
-- typing `A01.B14` matches any path containing that ordered sequence  
+#### 2.1 General Filter Mode
 
-This ensures predictable, hierarchical filtering.
+General filter mode applies when the user enters free text or partial namespace text without committing to a valid completed namespace prefix.
 
-### 3. Search Semantics
+Rules:
 
-Search operates on Subject identity fields:
+- partial segment matching is allowed
+- matching may consider:
+  - `NamespacePath`
+  - `DisplayLabel`
+  - `Name`
+- results may include multiple unrelated branches
+- this mode is discovery-oriented
 
-- exact or prefix match on `SubjectCode`  
-- optional match on `DisplayLabel` or `Name`  
-- search results must be deterministic  
-- search must not modify tree state  
+Examples:
 
-### 4. Performance Requirements
+- `Bell`
+- `Found`
+- `Warehouse`
+- `BellMaker.Fou`
 
-Filtering and search must:
+#### 2.2 Completion Filter Mode
 
-- operate without full‑tree loading  
-- use lazy loading  
-- avoid client‑side recursion  
-- avoid recomputing paths unnecessarily  
-- remain performant for large datasets  
+Completion filter mode applies when the user has entered a valid completed namespace prefix, especially when the input ends with `.`.
 
-### 5. UI Responsibilities
+Rules:
+
+- the prefix before the trailing `.` is treated as a completed namespace context
+- the next suggestion set must contain only valid immediate child segments beneath that context
+- the tree filter must narrow to the selected subtree or subtree candidates
+- this mode is structural and context-aware
+
+Examples:
+
+- `BellMaker.` → immediate children under `BellMaker`
+- `BellMaker.Foundry.` → immediate children under `BellMaker.Foundry`
+- `BellMaker.Foundry.Production.` → immediate children under that exact namespace path
+
+### 3. Dot-Notation Filtering Behaviour
+
+Dot-notation filtering behaves similarly to .NET namespace completion and narrowing.
+
+Rules:
+
+- typing `A01.` restricts results to Subjects within the `A01` subtree
+- typing `A01.B14.` restricts results to Subjects within the `A01.B14` subtree
+- typing `A01.B14` without a trailing dot may represent:
+  - an exact completed path, or
+  - a partial final segment
+- typing `B14` matches any path containing a matching segment when the selector is in general filter mode
+- typing `A01.B14.C` narrows suggestions to valid next segments beginning with `C` within the `A01.B14` context
+
+This ensures predictable, hierarchical filtering while retaining discovery behaviour.
+
+### 4. Suggestion Resolution Semantics
+
+When the Namespace Selector requests suggestions, the service layer must resolve them according to the current namespace context.
+
+Inputs:
+
+- `FilterText`
+- `CompletedPrefix`
+- `ActiveSegment`
+
+Outputs:
+
+- zero or more valid suggestion segments
+- each suggestion mapped to a resulting full namespace path
+- indication of whether deeper completion is available
+
+Rules:
+
+- if `CompletedPrefix` is empty, suggestions are drawn from matching root segments
+- if `CompletedPrefix` is valid, suggestions are drawn only from immediate children of that completed path
+- if `CompletedPrefix` is invalid or ambiguous, the service layer may fall back to broader matching
+- suggestion resolution must respect multi-parent semantics and may return the same segment under different full paths where valid
+
+### 5. Multi-Parent Semantics in Filtering
+
+Because the Namespace is a DAG:
+
+- a Subject may appear in multiple namespace paths
+- filtering must consider all valid paths
+- completion suggestions must be path-specific, not merely Subject-specific
+- selecting a suggestion binds to the resulting namespace path instance, not just the final SubjectCode
+
+Example:
+
+- `A.B.C`
+- `X.B.C`
+
+If the user filters by `A.B.`, only the first path is in scope.  
+If the user filters by `X.B.`, only the second path is in scope.  
+If the user filters by `B.C` in general filter mode, both appearances may be returned.
+
+### 6. Search Semantics
+
+Search operates on Subject identity fields and complements namespace filtering.
+
+Rules:
+
+- exact or prefix match on `SubjectCode`
+- optional match on `DisplayLabel`
+- optional match on `Name`
+- search results must be deterministic
+- search must not mutate tree state directly
+- search results may be used to seed namespace filtering or recentering
+
+Search is identity-oriented.  
+Filtering is namespace-oriented.
+
+### 7. Performance Requirements
+
+Filtering and suggestion resolution must:
+
+- operate without full-tree loading
+- use lazy loading
+- avoid client-side recursion
+- avoid recomputing unaffected paths unnecessarily
+- avoid returning full trees when only suggestion segments are required
+- remain performant for large datasets
+
+Suggestion endpoints must return only the minimum data required to render the selector dropdown.
+
+### 8. UI Responsibilities
 
 The UI must:
 
-- debounce filter input  
-- apply filters only after user pauses typing  
-- highlight matching nodes  
-- preserve expansion state where possible  
-- avoid collapsing unrelated branches  
+- debounce free typing
+- request suggestions only for the current input state
+- support keyboard and pointer acceptance of suggestions
+- highlight matching branches where possible
+- preserve expansion state where consistent with the active filter mode
+- avoid collapsing unrelated branches unnecessarily in general filter mode
+- permit stricter narrowing in completion filter mode
 
-### 6. Service Layer Responsibilities
+### 9. Service Layer Responsibilities
 
 The service layer must:
 
-- provide efficient filtering endpoints  
-- provide efficient search endpoints  
-- return only the necessary nodes  
-- avoid returning full trees  
-- ensure results are consistent with namespace semantics  
+- provide efficient filtering endpoints
+- provide efficient suggestion endpoints
+- interpret dot-notation according to namespace semantics
+- return only the necessary nodes or suggestion segments
+- avoid returning full trees
+- ensure results are path-specific where required by the DAG
+- ensure results remain consistent with namespace identity rules
 
-### 7. Error Handling
+### 10. Error Handling
 
 Filtering and search must fail safely:
 
-- invalid input must not break the UI  
-- empty filters must restore the full root set  
-- service errors must be surfaced without collapsing the tree  
+- invalid input must not break the UI
+- empty filters must restore the full root set
+- invalid completed prefixes must degrade gracefully to general filter mode where possible
+- empty suggestion sets must not be treated as errors
+- service errors must be surfaced without collapsing the tree
 
-### 8. Summary
+### 11. Summary
 
 Filtering and search provide fast, deterministic navigation of the Namespace.  
-Filtering operates on **dot‑notation namespace paths**; search operates on identity.  
-Both must be performant, stable, and consistent with the DAG structure.
+Filtering operates on dot-notation namespace paths and supports both general discovery and context-aware completion.  
+Search operates on Subject identity.  
+Both must be performant, stable, multi-parent aware, and consistent with the DAG structure.
 
 ## Semantics 3.7 — UI Workflows for Namespace Editing {#semantics37}
 
