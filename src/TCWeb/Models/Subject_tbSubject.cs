@@ -119,7 +119,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
 
-        public byte[] RowVer { get; set; }
+        //public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(AddressCode))]
         [InverseProperty(nameof(Subject_tbAddress.TbSubjects))]

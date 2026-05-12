@@ -1964,9 +1964,9 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
+                //entity.Property(e => e.RowVer)
+                //    .IsRowVersion()
+                //    .IsConcurrencyToken();
 
                 entity.HasOne(d => d.AddressCodeNavigation)
                     .WithMany(p => p.TbSubjects)
@@ -3307,6 +3307,11 @@ namespace TradeControl.Web.Data
             {
                 entity.ToView("vwJobTitles", "Subject");
             });
+
+            modelBuilder.Entity<Subject_vwNameTitle>(entity => {
+                entity.ToView("vwNameTitles", "Subject");
+            });
+
 
             modelBuilder.Entity<Subject_vwListActive>(entity =>
             {

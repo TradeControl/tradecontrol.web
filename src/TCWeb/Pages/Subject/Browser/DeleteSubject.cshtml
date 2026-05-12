@@ -1,0 +1,125 @@
+@page "/Subject/Browser/DeleteSubject"
+@model TradeControl.Web.Pages.Subject.Browser.DeleteSubjectModel
+@{
+    if (Model.IsEmbedded == "1")
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+}
+
+@if (Model.IsEmbedded == "1" && !string.IsNullOrWhiteSpace(Model.Done))
+{
+    <div class="alert alert-success py-2 mb-0">Returning to Subject Browser…</div>
+
+    <script>
+        window.parent.postMessage(
+        {
+            type: "tc-subject-browser-close",
+            action: "@Model.Done",
+            returnNode: "@Model.ReturnNode",
+            subjectCode: "@Model.SubjectCode"
+        }, window.location.origin);
+    </script>
+}
+else
+{
+    <div class="container-fluid py-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                    <div>
+                        <h1 class="h4 mb-1 text-danger">Delete Subject</h1>
+                        <div class="text-muted small">Review the selected Subject before confirming deletion.</div>
+                    </div>
+
+                    @if (Model.Subject is not null)
+                    {
+                        <div class="text-muted small text-end">
+                            <div>Subject Code</div>
+                            <div><code>@Model.Subject.SubjectCode</code></div>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.ActionMessage))
+                {
+                    <div class="alert alert-warning py-2 mb-4" role="alert">@Model.ActionMessage</div>
+                }
+
+                @if (Model.Subject is not null)
+                {
+                    <div class="rounded border overflow-hidden mb-4">
+                        <div class="px-3 py-2 text-bg-danger fw-semibold">Summary</div>
+                        <div class="bg-white p-3">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-3 text-muted">Name</dt>
+                                <dd class="col-sm-9">@Model.Subject.SubjectName</dd>
+
+                                <dt class="col-sm-3 text-muted">Type</dt>
+                                <dd class="col-sm-9">@Model.SubjectType</dd>
+
+                                <dt class="col-sm-3 text-muted">Class</dt>
+                                <dd class="col-sm-9">@Model.SubjectClass</dd>
+                            </dl>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.RemovalPlan is not null)
+                {
+                    <div class="alert @(Model.RemovalPlan.CanProceed ? "alert-warning" : "alert-danger") py-2 mb-4" role="alert">
+                        @Model.RemovalPlan.Message
+                    </div>
+
+                    <div class="bg-white border rounded p-3 mb-4">
+                        <div class="fw-semibold mb-3">Impact</div>
+
+                        <dl class="row mb-0 small">
+                            <dt class="col-sm-4 text-muted">Affected Subjects</dt>
+                            <dd class="col-sm-8">@Model.RemovalPlan.AffectedSubjectCount</dd>
+
+                            <dt class="col-sm-4 text-muted">Invoices</dt>
+                            <dd class="col-sm-8">@Model.RemovalPlan.InvoiceCount</dd>
+
+                            <dt class="col-sm-4 text-muted">Payments</dt>
+                            <dd class="col-sm-8">@Model.RemovalPlan.PaymentCount</dd>
+
+                            <dt class="col-sm-4 text-muted">Projects</dt>
+                            <dd class="col-sm-8">@Model.RemovalPlan.ProjectCount</dd>
+                        </dl>
+                    </div>
+                }
+
+                <form method="post" class="d-flex flex-wrap gap-2">
+                    <input type="hidden" asp-for="SubjectCode" />
+                    <input type="hidden" asp-for="ReturnNode" />
+                    <input type="hidden" asp-for="IsEmbedded" />
+
+                    <button type="submit"
+                            class="btn btn-danger"
+                            disabled="@(Model.RemovalPlan is not null && !Model.RemovalPlan.CanProceed)">
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                    </button>
+
+                    @if (Model.IsEmbedded == "1")
+                    {
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                onclick='window.parent.postMessage({ type: "tc-subject-browser-close", action: "cancel", returnNode: "@Model.ReturnNode", subjectCode: "@Model.SubjectCode" }, window.location.origin);'>
+                            Cancel
+                        </button>
+                    }
+                    else
+                    {
+                        <a asp-page="/Subject/Browser/Index"
+                           asp-route-mode="Subject"
+                           asp-route-select="@Model.ReturnNode"
+                           class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    }
+                </form>
+            </div>
+        </div>
+    </div>
+}

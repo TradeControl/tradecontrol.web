@@ -263,13 +263,13 @@ body {
     position: fixed;
     inset: 0;
     background: transparent;
-    z-index: 2000;
+    z-index: 2060;
 }
 
 .tc-tree-ctx-menu {
     position: fixed;
     min-width: 180px;
-    z-index: 2010;
+    z-index: 2070;
 }
 
     .tc-tree-ctx-menu .dropdown-item {
@@ -365,6 +365,9 @@ body {
             background: transparent;
             color: inherit;
             display: flex;
+            flex: 0 0 76px;
+            width: 76px;
+            min-height: 72px;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -372,21 +375,62 @@ body {
             font-size: 0.9rem;
             padding: 10px 6px;
             line-height: 1.1;
-            border-radius: 6px;
-            min-width: 64px;
+            border-radius: 10px;
             text-align: center;
-            white-space: nowrap;
+            white-space: normal;
         }
 
-            .tc-mobile-actionbar .btn-action:active {
-                background: rgba(255, 255, 255, 0.15);
-            }
+        .tc-mobile-actionbar .btn-action span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2.4em;
+            width: 100%;
+            text-align: center;
+        }
 
-            .tc-mobile-actionbar .btn-action i {
-                margin-right: 0;
-                font-size: 1.1rem;
-                line-height: 1;
-            }
+        .tc-mobile-actionbar .btn-action:active {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(1px) scale(0.98);
+        }
+
+        .tc-mobile-actionbar .btn-action i {
+            margin-right: 0;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+    .tc-subject-browser-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.35rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 999px;
+        border: 0;
+        background: linear-gradient(135deg, #ff9a3d 0%, #ff7a00 100%);
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 6px 14px rgba(255, 122, 0, 0.28);
+        transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+    }
+
+    .tc-subject-browser-back-btn:hover,
+    .tc-subject-browser-back-btn:focus-visible {
+        color: #fff;
+        filter: brightness(1.03);
+        box-shadow: 0 8px 18px rgba(255, 122, 0, 0.34);
+    }
+
+    .tc-subject-browser-back-btn:active {
+        transform: translateY(1px) scale(0.97);
+        box-shadow: 0 3px 8px rgba(255, 122, 0, 0.24);
+    }
+
+    .tc-subject-browser-back-btn i {
+        font-size: 1rem;
+        line-height: 1;
+    }
 
     .tc-tree-workspace {
         position: static;

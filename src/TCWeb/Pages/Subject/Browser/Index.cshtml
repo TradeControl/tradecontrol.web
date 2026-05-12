@@ -1,12 +1,24 @@
 @page
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@using Wangkanai.Detection.Models
 @model TradeControl.Web.Pages.Subject.Browser.IndexModel
 @{
     ViewData["Title"] = "Subject Browser";
+    var isMobile = Detection?.Device?.Type == Device.Mobile;
 }
 
 <link href="~/css/blazorTree.css" rel="stylesheet" />
 
 <div class="tc-tree-workspace">
+    @if (!isMobile)
+    {
+        <div class="mb-3 d-flex align-items-center gap-2">
+            <div>
+                <h4 class="mb-0">@ViewData["Title"]</h4>
+            </div>
+        </div>
+    }
+
     <component type="typeof(TradeControl.Web.Pages.Subject.Browser.SubjectBrowserShell)"
                render-mode="ServerPrerendered"
                param-InitialFilter="Model.NamespaceFilter" />
@@ -90,6 +102,39 @@
 
         left.dataset.splitInitialized = "true";
         dropInitialClasses();
+    };
+
+    window.subjectBrowser.initEditorMessaging = function (dotNetRef)
+    {
+        if (window.subjectBrowser._editorMessageHandler)
+            return;
+
+        window.subjectBrowser._editorMessageHandler = function (event)
+        {
+            if (event.origin !== window.location.origin)
+                return;
+
+            const data = event.data;
+            if (!data || data.type !== "tc-subject-browser-close")
+                return;
+
+            dotNetRef.invokeMethodAsync(
+                "HandleHostedPageClosed",
+                data.action || "",
+                data.returnNode || "",
+                data.subjectCode || "");
+        };
+
+        window.addEventListener("message", window.subjectBrowser._editorMessageHandler);
+    };
+
+    window.subjectBrowser.disposeEditorMessaging = function ()
+    {
+        if (!window.subjectBrowser._editorMessageHandler)
+            return;
+
+        window.removeEventListener("message", window.subjectBrowser._editorMessageHandler);
+        window.subjectBrowser._editorMessageHandler = null;
     };
 
     (function ()

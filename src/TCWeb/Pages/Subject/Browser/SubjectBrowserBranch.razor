@@ -15,7 +15,9 @@
             DropTargetKey="@DropTargetKey"
             OnDragStarted="@OnDragStarted"
             OnDragEnded="@OnDragEnded"
-            OnNodeDropped="@OnNodeDropped" />
+            OnNodeDropped="@OnNodeDropped"
+            IsMobile="@IsMobile"
+            OnNodeContextMenu="@OnNodeContextMenu" />
 
 @code {
     [Parameter] public bool IsRoot { get; set; }
@@ -34,5 +36,8 @@
     [Parameter] public string? DropTargetKey { get; set; }
     [Parameter] public EventCallback<TreeNode> OnDragStarted { get; set; }
     [Parameter] public EventCallback OnDragEnded { get; set; }
-    [Parameter] public EventCallback<TreeNode> OnNodeDropped { get; set; }
+    [Parameter] public EventCallback<DropInfo> OnNodeDropped { get; set; }
+
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback<TreeContextMenuRequest> OnNodeContextMenu { get; set; }
 }

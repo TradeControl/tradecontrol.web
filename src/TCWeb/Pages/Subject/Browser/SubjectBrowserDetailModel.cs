@@ -39,5 +39,12 @@ namespace TradeControl.Web.Pages.Subject.Browser
 
     public sealed record SubjectBrowserDetailField(string Label, string Value);
 
-    public sealed record SubjectBrowserAddressItem(string AddressCode, string Address, bool IsDefault);
+    public sealed record SubjectBrowserAddressItem
+    (
+        string AddressCode,
+        string Address,
+        bool IsDefault,
+        bool CanDelete,
+        int ProjectReferenceCount
+    );
 }

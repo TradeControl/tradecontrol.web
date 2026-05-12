@@ -1,0 +1,105 @@
+@page "/Subject/Browser/EditStructural"
+@model TradeControl.Web.Pages.Subject.Browser.EditStructuralModel
+@{
+    if (Model.IsEmbedded == "1")
+    {
+        Layout = "/Pages/Shared/_EmbeddedLayout.cshtml";
+    }
+}
+
+@if (Model.IsEmbedded == "1" && !string.IsNullOrWhiteSpace(Model.Done))
+{
+    <div class="alert alert-success py-2 mb-0">Returning to Subject Browser…</div>
+
+    <script>
+        window.parent.postMessage(
+        {
+            type: "tc-subject-browser-close",
+            action: "@Model.Done",
+            returnNode: "@Model.ReturnNode",
+            subjectCode: "@Model.SubjectCode"
+        }, window.location.origin);
+    </script>
+}
+else
+{
+    <div class="container-fluid py-2">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                    <div>
+                        <h1 class="h4 mb-1">Edit Structural Subject</h1>
+                        <div class="text-muted small">Update the structural subject name and notes.</div>
+                    </div>
+
+                    <div class="text-muted small text-end">
+                        <div>Subject Code</div>
+                        <div><code>@Model.SubjectCode</code></div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    <input type="hidden" asp-for="SubjectCode" />
+                    <input type="hidden" asp-for="ReturnNode" />
+                    <input type="hidden" asp-for="IsEmbedded" />
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 mb-4"></div>
+
+                    <div class="rounded border overflow-hidden mb-4">
+                        <div class="px-3 py-2 text-bg-primary fw-semibold">Identity</div>
+                        <div class="bg-white p-3">
+                            <div class="row g-3">
+                                <div class="col-lg-3">
+                                    <label class="form-label">Subject Code</label>
+                                    <input class="form-control" value="@Model.SubjectCode" readonly />
+                                </div>
+                                <div class="col-lg-5">
+                                    <label class="form-label" for="SubjectName">Account Name</label>
+                                    <input asp-for="SubjectName" class="form-control" />
+                                    <span asp-validation-for="SubjectName" class="text-danger small"></span>
+                                </div>
+                                <div class="col-lg-4">
+                                    <label class="form-label" for="SubjectTypeCode">Type</label>
+                                    <select asp-for="SubjectTypeCode" asp-items="Model.SubjectTypeOptions" class="form-select"></select>
+                                    <span asp-validation-for="SubjectTypeCode" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded border overflow-hidden mb-4">
+                        <div class="px-3 py-2 text-bg-secondary fw-semibold">Notes</div>
+                        <div class="bg-white p-3">
+                            <label class="form-label" for="Notes">Notes</label>
+                            <textarea asp-for="Notes" class="form-control" rows="10"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-floppy me-1" aria-hidden="true"></i>Save
+                        </button>
+
+                        @if (Model.IsEmbedded == "1")
+                        {
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    onclick='window.parent.postMessage({ type: "tc-subject-browser-close", action: "cancel", returnNode: "@Model.ReturnNode", subjectCode: "@Model.SubjectCode" }, window.location.origin);'>
+                                Cancel
+                            </button>
+                        }
+                        else
+                        {
+                            <a asp-page="/Subject/Browser/Index"
+                               asp-route-mode="Subject"
+                               asp-route-select="@(string.IsNullOrWhiteSpace(Model.ReturnNode) ? Model.SubjectCode : Model.ReturnNode)"
+                               class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

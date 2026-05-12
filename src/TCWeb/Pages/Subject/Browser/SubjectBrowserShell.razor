@@ -15,12 +15,17 @@
 @inject ISubjectBrowserService SubjectBrowserService
 @inject NodeContext NodeContext
 
+@implements IAsyncDisposable
+
 @if (_isEmbedded)
 {
     <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
         <div class="d-flex align-items-center justify-content-between gap-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="NavigateBackAsync">
-                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+            <button type="button"
+                    class="btn tc-subject-browser-back-btn"
+                    @onclick="NavigateBackAsync">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                <span>Back</span>
             </button>
 
             <div class="text-muted small text-end">
@@ -104,7 +109,9 @@ else if (_isMobile)
                                       DropTargetKey="@_dropTargetKey"
                                       OnDragStarted="HandleTreeDragStartedAsync"
                                       OnDragEnded="HandleTreeDragEndedAsync"
-                                      OnNodeDropped="HandleTreeNodeDroppedAsync" />
+                                      OnNodeDropped="HandleTreeNodeDroppedAsync"
+                                      IsMobile="@_isMobile"
+                                      OnNodeContextMenu="HandleNodeContextMenuAsync" />
             }
         </div>
 
@@ -142,16 +149,6 @@ else if (_isMobile)
 else
 {
     <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <div>
-                <h1 class="h4 mb-1">Subject Browser</h1>
-                <div class="text-muted small">Namespace-aware browsing for structural, real, and virtual Subjects</div>
-            </div>
-
-            <div class="text-muted small">
-                <span>@_rootCount root subject@(_rootCount == 1 ? string.Empty : "s")</span>
-            </div>
-        </div>
 
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
@@ -236,6 +233,8 @@ else
     </div>
 }
 
+@RenderContextMenu()
+
 @code {
     [Parameter] public string? InitialFilter { get; set; }
 
@@ -302,18 +301,33 @@ else
     private bool _isAddExistingPanelOpen;
     private string? _dragSourceKey;
     private string? _dropTargetKey;
+    private string? _detailPageSrc;
+    private bool _loadMovePanel;
+    private bool _loadAddExistingPanel;
+
+    private DotNetObjectReference<SubjectBrowserShell>? _dotNetRef;
 
     private readonly List<TreeNode> _rootNodes = new();
     private readonly Dictionary<string, SubjectBrowserNode> _nodeIndex = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _childPageNumbers = new(StringComparer.OrdinalIgnoreCase);
 
+    private ContextMenuState _contextMenu = new();
+
     protected override async Task OnInitializedAsync()
     {
         _namespaceFilter = InitialFilter?.Trim() ?? string.Empty;
         ParseQueryParameters();
-        _appliedNamespaceFilter = _namespaceFilter;
 
         _isMobile = Detection?.Device?.Type == Device.Mobile;
+
+        if (_isMobile
+            && string.IsNullOrWhiteSpace(_namespaceFilter)
+            && !string.IsNullOrWhiteSpace(_initialSelectKey))
+        {
+            _namespaceFilter = _initialSelectKey;
+        }
+
+        _appliedNamespaceFilter = _namespaceFilter;
 
         if (_isEmbedded)
         {
@@ -330,17 +344,40 @@ else
         }
     }
 
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (!firstRender)
+    //         return;
+
+    //     if (_isEmbedded)
+    //         return;
+
+    //     await JSRuntime.InvokeVoidAsync("subjectBrowser.updateViewportHeight");
+    //     await JSRuntime.InvokeVoidAsync("subjectBrowser.updateHeaderOffset");
+    //     await JSRuntime.InvokeVoidAsync("subjectBrowser.initSplit");
+    // }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-            return;
+        if (firstRender && !_isMobile && !_isEmbedded)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("subjectBrowser.initEditorMessaging", _dotNetRef);
+        }
+    }
 
-        if (_isEmbedded)
-            return;
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (!_isMobile && !_isEmbedded)
+                await JSRuntime.InvokeVoidAsync("subjectBrowser.disposeEditorMessaging");
+        }
+        catch
+        {
+        }
 
-        await JSRuntime.InvokeVoidAsync("subjectBrowser.updateViewportHeight");
-        await JSRuntime.InvokeVoidAsync("subjectBrowser.updateHeaderOffset");
-        await JSRuntime.InvokeVoidAsync("subjectBrowser.initSplit");
+        _dotNetRef?.Dispose();
     }
 
     private void ParseQueryParameters()
@@ -352,6 +389,8 @@ else
         _returnNodeKey = query.TryGetValue("returnNode", out var returnValue) ? returnValue.ToString() : null;
         _initialSelectKey = query.TryGetValue("select", out var selectValue) ? selectValue.ToString() : null;
         _loadRemovalPreview = query.TryGetValue("removePreview", out var removeValue) && removeValue == "1";
+        _loadMovePanel = query.TryGetValue("move", out var moveValue) && moveValue == "1";
+        _loadAddExistingPanel = query.TryGetValue("addExisting", out var addExistingValue) && addExistingValue == "1";
 
         if (query.TryGetValue("mode", out var modeValue)
             && TryParseMode(modeValue.ToString(), out var mode))
@@ -387,10 +426,25 @@ else
             _selectedBranchKey = null;
             _expandToKey = null;
             ClearActionMessage();
+            ClearMoveState();
+            ClearAddExistingState();
             return;
         }
 
         await LoadDetailFromKeyAsync(_initialSelectKey);
+
+        if (_loadAddExistingPanel)
+        {
+            ClearMoveState();
+            _isAddExistingPanelOpen = true;
+            await RefreshAddSubjectSuggestionsAsync();
+        }
+        else if (_loadMovePanel)
+        {
+            ClearAddExistingState();
+            _isMovePanelOpen = true;
+            await RefreshMoveTargetSuggestionsAsync();
+        }
 
         if (_loadRemovalPreview)
         {
@@ -400,17 +454,32 @@ else
 
     private async Task HandleFilterChangedAsync(string filterText)
     {
+        CloseContextMenu();
+
+        var currentSelectionKey = _selectedBranchKey;
+
         _namespaceFilter = filterText?.Trim() ?? string.Empty;
         _appliedNamespaceFilter = _namespaceFilter;
         _rootPageNumber = 1;
-        _selectedBranchKey = null;
-        _selectedDetail = null;
-        _expandToKey = null;
         _childPageNumbers.Clear();
         ClearActionMessage();
 
+        SubjectBrowserService.InvalidateSnapshot();
+
         await RefreshNamespaceSuggestionsAsync();
         await LoadRootsAsync();
+
+        if (!string.IsNullOrWhiteSpace(currentSelectionKey))
+        {
+            await LoadDetailFromKeyAsync(currentSelectionKey);
+        }
+        else
+        {
+            _selectedBranchKey = null;
+            _selectedDetail = null;
+            _expandToKey = null;
+        }
+
         UpdateBrowserUrl();
     }
 
@@ -500,8 +569,11 @@ else
 
     private async Task SetModeAsync(SubjectBrowserMode mode)
     {
+        CloseContextMenu();
+
         _mode = mode;
         ClearActionMessage();
+        ClearHostedDetailPage();
 
         if (mode != SubjectBrowserMode.Enquiry)
         {
@@ -630,8 +702,11 @@ else
 
     private async Task LoadDetailFromKeyAsync(string key)
     {
+        CloseContextMenu();
+
         _expandToKey = BuildExpandPath(key);
         ClearActionMessage();
+        ClearHostedDetailPage();
 
         var parentSubjectCode = ExtractParentSubjectCode(key);
 
@@ -653,6 +728,117 @@ else
     private bool CanOpenDetails()
     {
         return !string.IsNullOrWhiteSpace(_selectedBranchKey) && _selectedDetail is not null;
+    }
+
+    private bool CanMaintainAddresses()
+    {
+        return _mode == SubjectBrowserMode.Subject
+            && _selectedDetail is not null
+            && !_selectedDetail.IsStructural;
+    }
+
+    private async Task BeginEditAddressAsync(string addressCode)
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(addressCode))
+            return;
+
+        var returnNode = !string.IsNullOrWhiteSpace(_selectedBranchKey)
+            ? _selectedBranchKey
+            : _selectedDetail.SubjectCode;
+
+        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
+        var url = BuildAddressMaintenanceUrl("EditAddress", addressCode, returnNode, embedded);
+
+        if (_isMobile || _isEmbedded)
+        {
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            return;
+        }
+
+        _detailPageSrc = url;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetDefaultAddressAsync(string addressCode)
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(addressCode))
+            return;
+
+        try
+        {
+            var subjects = new Subjects(NodeContext, _selectedDetail.SubjectCode);
+            var result = await subjects.SetDefaultAddressAsync(addressCode);
+
+            if (result.Succeeded)
+            {
+                SubjectBrowserService.InvalidateSnapshot();
+                _refreshToken++;
+
+                if (!string.IsNullOrWhiteSpace(_selectedBranchKey))
+                {
+                    await LoadDetailFromKeyAsync(_selectedBranchKey);
+                }
+            }
+
+            await SetActionMessageAsync(result.Message, result.Succeeded ? "alert-success" : "alert-warning");
+        }
+        catch (Exception ex)
+        {
+            await SetActionMessageAsync(ex.Message, "alert-danger");
+        }
+    }
+
+    private async Task ConfirmDeleteAddressAsync(string addressCode)
+    {
+        if (_selectedDetail is null || string.IsNullOrWhiteSpace(addressCode))
+            return;
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Delete this address?");
+        if (!confirmed)
+            return;
+
+        try
+        {
+            var subjects = new Subjects(NodeContext, _selectedDetail.SubjectCode);
+            var result = await subjects.DeleteAddressAsync(addressCode);
+
+            if (result.Succeeded)
+            {
+                SubjectBrowserService.InvalidateSnapshot();
+                _refreshToken++;
+
+                if (!string.IsNullOrWhiteSpace(_selectedBranchKey))
+                {
+                    await LoadDetailFromKeyAsync(_selectedBranchKey);
+                }
+            }
+
+            await SetActionMessageAsync(result.Message, result.Succeeded ? "alert-success" : "alert-warning");
+        }
+        catch (Exception ex)
+        {
+            await SetActionMessageAsync(ex.Message, "alert-danger");
+        }
+    }
+
+    private string BuildAddressMaintenanceUrl(string pageName, string? addressCode, string? returnNode, bool embedded)
+    {
+        var baseUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/Subject/Browser/{pageName}";
+        var query = new List<string>
+        {
+            $"subjectCode={Uri.EscapeDataString(_selectedDetail!.SubjectCode)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(addressCode))
+            query.Add($"addressCode={Uri.EscapeDataString(addressCode)}");
+
+        if (!string.IsNullOrWhiteSpace(returnNode))
+            query.Add($"returnNode={Uri.EscapeDataString(returnNode)}");
+
+        if (embedded)
+            query.Add("isEmbedded=1");
+
+        return $"{baseUrl}?{string.Join("&", query)}";
     }
 
     private Task OpenEmbeddedDetailsAsync()
@@ -711,7 +897,7 @@ else
         {
             SubjectBrowserMode.Enquiry => actions.Take(2).ToArray(),
             SubjectBrowserMode.Namespace => CreateNamespaceMobileShortcutActions(actions),
-            SubjectBrowserMode.Subject => actions.Where(action => action.Id is "edit" or "change-type").Take(2).ToArray(),
+            SubjectBrowserMode.Subject => actions.Where(action => action.Id is "edit" or "add-address").Take(2).ToArray(),
             _ => Array.Empty<SubjectBrowserAction>()
         };
     }
@@ -857,6 +1043,19 @@ else
         ClearMoveState();
         ClearAddExistingState();
 
+        if (_isMobile && !_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    movePanel: true),
+                forceLoad: true);
+
+            return;
+        }
+
         _isMovePanelOpen = true;
         _pendingMoveTargetPath = string.Empty;
         _resolvedMoveTargetPath = string.Empty;
@@ -874,6 +1073,19 @@ else
         ClearRemovalPreview();
         ClearMoveState();
         ClearAddExistingState();
+
+        if (_isMobile && !_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    addExistingPanel: true),
+                forceLoad: true);
+
+            return;
+        }
 
         _isAddExistingPanelOpen = true;
         await RefreshAddSubjectSuggestionsAsync();
@@ -1016,6 +1228,7 @@ else
         _pendingAddParentPlan = null;
         _isAddingToNamespace = false;
         _isAddExistingPanelOpen = false;
+        _loadAddExistingPanel = false;
     }
 
     private async Task HandleMoveTargetChangedAsync(string filterText)
@@ -1162,6 +1375,7 @@ else
         _isLoadingMoveTargetSuggestions = false;
         _pendingReparentPlan = null;
         _isReparenting = false;
+        _loadMovePanel = false;
     }
 
     private async Task BeginRemoveNamespaceAsync()
@@ -1188,6 +1402,116 @@ else
         }
 
         await LoadRemoveNamespacePreviewAsync();
+    }
+
+    private async Task BeginEditSubjectAsync()
+    {
+        if (_selectedDetail is null)
+            return;
+
+        var pageName = _selectedDetail.SubjectClass switch
+        {
+            NodeEnum.SubjectClass.Real => "EditReal",
+            NodeEnum.SubjectClass.Virtual => "EditVirtual",
+            NodeEnum.SubjectClass.Structural => "EditStructural",
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(pageName))
+        {
+            await SetActionMessageAsync("Editing is not available for this Subject class yet.", "alert-warning");
+            return;
+        }
+
+        var returnNode = !string.IsNullOrWhiteSpace(_selectedBranchKey)
+            ? _selectedBranchKey
+            : _selectedDetail.SubjectCode;
+
+        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
+        var url = BuildSubjectMaintenanceUrl(pageName, returnNode, embedded);
+
+        if (_isMobile || _isEmbedded)
+        {
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            return;
+        }
+
+        _detailPageSrc = url;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task BeginDeleteSubjectAsync()
+    {
+        if (_selectedDetail is null)
+            return;
+
+        if (_selectedDetail.SubjectClass is not (NodeEnum.SubjectClass.Real or NodeEnum.SubjectClass.Virtual))
+        {
+            await SetActionMessageAsync("Delete is not available for this Subject class yet.", "alert-warning");
+            return;
+        }
+
+        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
+        var url = BuildSubjectMaintenanceUrl("DeleteSubject", BuildParentBranchKey(_selectedBranchKey), embedded);
+
+        if (_isMobile || _isEmbedded)
+        {
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            return;
+        }
+
+        _detailPageSrc = url;
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private async Task BeginAddAddressAsync()
+    {
+        if (_selectedDetail is null)
+            return;
+
+        if (_selectedDetail.SubjectClass is NodeEnum.SubjectClass.Structural)
+        {
+            await SetActionMessageAsync("Addresses are not available for Structural Subjects.", "alert-warning");
+            return;
+        }
+
+        var returnNode = !string.IsNullOrWhiteSpace(_selectedBranchKey)
+            ? _selectedBranchKey
+            : _selectedDetail.SubjectCode;
+
+        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
+        var url = BuildAddressMaintenanceUrl("EditAddress", null, returnNode, embedded);
+
+        if (_isMobile || _isEmbedded)
+        {
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            return;
+        }
+
+        _detailPageSrc = url;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string BuildSubjectMaintenanceUrl(string pageName, string? returnNode, bool embedded, string? subjectCode = null)
+    {
+        var baseUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/Subject/Browser/{pageName}";
+        var resolvedSubjectCode = string.IsNullOrWhiteSpace(subjectCode)
+            ? _selectedDetail!.SubjectCode
+            : subjectCode;
+
+        var query = new List<string>
+        {
+            $"subjectCode={Uri.EscapeDataString(resolvedSubjectCode)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(returnNode))
+            query.Add($"returnNode={Uri.EscapeDataString(returnNode)}");
+
+        if (embedded)
+            query.Add("isEmbedded=1");
+
+        return $"{baseUrl}?{string.Join("&", query)}";
     }
 
     private async Task LoadRemoveNamespacePreviewAsync()
@@ -1278,6 +1602,22 @@ else
         _loadRemovalPreview = false;
     }
 
+    private void ClearHostedDetailPage()
+    {
+        _detailPageSrc = null;
+    }
+
+    private bool ShouldRenderHostedDetailPage()
+    {
+        return !_isMobile
+            && !_isEmbedded
+            && !string.IsNullOrWhiteSpace(_detailPageSrc);
+    }
+
+    private RenderFragment RenderHostedDetailPage() => @<iframe class="w-100 h-100 border rounded bg-white tc-details-frame"
+                                                                    title="Subject maintenance"
+                                                                    src="@_detailPageSrc"></iframe>;
+
     private string GetRemovalActionTitle()
     {
         if (_pendingRemovalPlan is null)
@@ -1336,7 +1676,9 @@ else
         if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey) || !_pendingCreateSubjectClass.HasValue)
             return;
 
+        var subjectClass = _pendingCreateSubjectClass.Value;
         var subjectName = _pendingCreateName?.Trim() ?? string.Empty;
+
         if (string.IsNullOrWhiteSpace(subjectName))
         {
             _pendingCreateErrorMessage = "A name is required.";
@@ -1350,7 +1692,7 @@ else
             _pendingCreateErrorMessage = null;
 
             var subjects = new Subjects(NodeContext);
-            SubjectActionResult result = _pendingCreateSubjectClass.Value switch
+            SubjectActionResult result = subjectClass switch
             {
                 NodeEnum.SubjectClass.Structural => await subjects.AddStructuralChildAsync(_selectedDetail.SubjectCode, subjectName),
                 NodeEnum.SubjectClass.Real => await subjects.AddRealChildAsync(_selectedDetail.SubjectCode, subjectName),
@@ -1372,6 +1714,7 @@ else
             ClearCreateState();
             await SetActionMessageAsync(result.Message, "alert-success");
             await RefreshCreatedChildAsync(parentBranchKey, createdBranchKey);
+            await OpenCreatedSubjectEditorAsync(subjectClass, createdBranchKey, result.SelectedSubjectCode);
         }
         catch (Exception ex)
         {
@@ -1381,6 +1724,35 @@ else
         {
             _isCreatingSubject = false;
         }
+    }
+
+    private async Task OpenCreatedSubjectEditorAsync(NodeEnum.SubjectClass subjectClass, string? createdBranchKey, string? subjectCode)
+    {
+        if (subjectClass is not (NodeEnum.SubjectClass.Real or NodeEnum.SubjectClass.Virtual))
+            return;
+
+        if (string.IsNullOrWhiteSpace(subjectCode))
+            return;
+
+        var pageName = subjectClass == NodeEnum.SubjectClass.Real
+            ? "EditReal"
+            : "EditVirtual";
+
+        var returnNode = !string.IsNullOrWhiteSpace(createdBranchKey)
+            ? createdBranchKey
+            : subjectCode;
+
+        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
+        var url = BuildSubjectMaintenanceUrl(pageName, returnNode, embedded, subjectCode);
+
+        if (_isMobile || _isEmbedded)
+        {
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            return;
+        }
+
+        _detailPageSrc = url;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RefreshCreatedChildAsync(string? parentBranchKey, string? createdBranchKey)
@@ -1495,11 +1867,36 @@ else
         if (_selectedDetail is null)
             return Array.Empty<SubjectBrowserAction>();
 
+        var supportsSubjectEditing = _selectedDetail.SubjectClass is NodeEnum.SubjectClass.Real
+            or NodeEnum.SubjectClass.Virtual
+            or NodeEnum.SubjectClass.Structural;
+
+        var supportsAddressMaintenance = _selectedDetail.SubjectClass is NodeEnum.SubjectClass.Real
+            or NodeEnum.SubjectClass.Virtual;
+
         return
         [
-            CreatePendingAction("edit", "Edit", "bi-pencil-square"),
-            CreateSubjectsAction("change-type", "Change Type", "bi-sliders", subjects => subjects.ChangeTypeAsync(0)),
-            CreateSubjectsAction("delete", "Delete", "bi-trash", subjects => subjects.DeleteAsync(), "btn btn-outline-danger btn-sm")
+            CreateShellAction(
+                "edit",
+                "Edit",
+                "bi-pencil-square",
+                BeginEditSubjectAsync,
+                isEnabled: supportsSubjectEditing),
+
+            CreateShellAction(
+                "add-address",
+                "Add Address",
+                "bi-geo-alt",
+                BeginAddAddressAsync,
+                isEnabled: supportsAddressMaintenance),
+
+            CreateShellAction(
+                "delete",
+                "Delete",
+                "bi-trash",
+                BeginDeleteSubjectAsync,
+                buttonCssClass: "btn btn-outline-danger btn-sm",
+                isEnabled: supportsSubjectEditing)
         ];
     }
 
@@ -1519,22 +1916,6 @@ else
             isEnabled && _selectedDetail is not null,
             () => ExecuteSubjectsActionAsync(id, executeAsync));
     }
-
-    private SubjectBrowserAction CreatePendingAction(
-        string id,
-        string text,
-        string iconClass,
-        string buttonCssClass = "btn btn-outline-primary btn-sm")
-    {
-        return new SubjectBrowserAction(
-            id,
-            text,
-            iconClass,
-            buttonCssClass,
-            _selectedDetail is not null,
-            () => SetActionMessageAsync($"{text} is not implemented yet.", "alert-warning"));
-    }
-
 
     private async Task ExecuteSubjectsActionAsync(
         string actionId,
@@ -1660,6 +2041,7 @@ else
         _actionMessage = null;
         _actionMessageCssClass = "alert-warning";
     }
+
     private string BuildUrl(
         bool embedded,
         string? selectKey = null,
@@ -1667,7 +2049,9 @@ else
         NodeEnum.SubjectClass? createClass = null,
         bool includeCreateState = false,
         bool removePreview = false,
-        bool includeRemovePreviewState = false)
+        bool includeRemovePreviewState = false,
+        bool movePanel = false,
+        bool addExistingPanel = false)
     {
         var baseUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/Subject/Browser/Index";
         var query = new List<string>();
@@ -1698,6 +2082,16 @@ else
         if (effectiveRemovePreview)
         {
             query.Add("removePreview=1");
+        }
+
+        if (movePanel)
+        {
+            query.Add("move=1");
+        }
+
+        if (addExistingPanel)
+        {
+            query.Add("addExisting=1");
         }
 
         if (!string.IsNullOrWhiteSpace(selectKey))
@@ -1861,6 +2255,7 @@ else
 
     private async Task HandleTreeDragStartedAsync(TreeNode node)
     {
+        CloseContextMenu();
         _dragSourceKey = node.Key;
         _dropTargetKey = null;
         ClearActionMessage();
@@ -1874,13 +2269,16 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleTreeNodeDroppedAsync(TreeNode targetNode)
+    private async Task HandleTreeNodeDroppedAsync(DropInfo dropInfo)
     {
-        if (string.IsNullOrWhiteSpace(_dragSourceKey) || IsLoadMoreNodeKey(targetNode.Key))
+        if (dropInfo.Node is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_dragSourceKey) || IsLoadMoreNodeKey(dropInfo.Node.Key))
             return;
 
         var sourceKey = _dragSourceKey;
-        _dropTargetKey = targetNode.Key;
+        _dropTargetKey = dropInfo.Node.Key;
 
         try
         {
@@ -1890,14 +2288,14 @@ else
             ClearMoveState();
             ClearAddExistingState();
 
-            if (string.Equals(sourceKey, targetNode.Key, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(sourceKey, dropInfo.Node.Key, StringComparison.OrdinalIgnoreCase))
             {
                 await SetActionMessageAsync("A Subject cannot be dropped onto itself.", "alert-warning");
                 return;
             }
 
             var sourceSubjectCode = ExtractSubjectCode(sourceKey);
-            var targetParentSubjectCode = ExtractSubjectCode(targetNode.Key);
+            var targetParentSubjectCode = ExtractSubjectCode(dropInfo.Node.Key);
             var currentParentSubjectCode = ExtractParentSubjectCode(sourceKey);
 
             if (string.IsNullOrWhiteSpace(sourceSubjectCode) || string.IsNullOrWhiteSpace(targetParentSubjectCode))
@@ -1906,13 +2304,19 @@ else
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(currentParentSubjectCode))
+            if (dropInfo.IsCtrlKey)
             {
-                await ExecuteTreeAddExistingAsync(sourceSubjectCode, targetNode.Key, targetParentSubjectCode);
+                await ExecuteTreeAddExistingAsync(sourceSubjectCode, dropInfo.Node.Key, targetParentSubjectCode);
                 return;
             }
 
-            await ExecuteTreeMoveAsync(sourceKey, sourceSubjectCode, currentParentSubjectCode, targetNode.Key, targetParentSubjectCode);
+            if (string.IsNullOrWhiteSpace(currentParentSubjectCode))
+            {
+                await ExecuteTreeAddExistingAsync(sourceSubjectCode, dropInfo.Node.Key, targetParentSubjectCode);
+                return;
+            }
+
+            await ExecuteTreeMoveAsync(sourceKey, sourceSubjectCode, currentParentSubjectCode, dropInfo.Node.Key, targetParentSubjectCode);
         }
         finally
         {
@@ -1920,6 +2324,145 @@ else
             _dropTargetKey = null;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    [JSInvokable]
+    public async Task HandleHostedPageClosed(string action, string returnNode, string subjectCode)
+    {
+        ClearHostedDetailPage();
+
+        if (string.Equals(action, "save", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase))
+        {
+            SubjectBrowserService.InvalidateSnapshot();
+            _refreshToken++;
+        }
+
+        if (string.Equals(action, "delete", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(returnNode))
+        {
+            _selectedBranchKey = null;
+            _selectedDetail = null;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var nextSelection = !string.IsNullOrWhiteSpace(returnNode)
+            ? returnNode
+            : (!string.IsNullOrWhiteSpace(_selectedBranchKey) ? _selectedBranchKey : subjectCode);
+
+        if (!string.IsNullOrWhiteSpace(nextSelection))
+        {
+            await LoadDetailFromKeyAsync(nextSelection);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleNodeContextMenuAsync(TreeContextMenuRequest request)
+    {
+        if (IsLoadMoreNodeKey(request.Node.Key))
+            return;
+
+        if (!string.Equals(_selectedBranchKey, request.Node.Key, StringComparison.OrdinalIgnoreCase))
+        {
+            _selectedBranchKey = request.Node.Key;
+            _expandToKey = BuildExpandPath(request.Node.Key);
+            await LoadDetailFromKeyAsync(request.Node.Key);
+            UpdateBrowserUrl();
+        }
+
+        if (_selectedDetail is null)
+        {
+            CloseContextMenu();
+            return;
+        }
+
+        _contextMenu = new ContextMenuState
+        {
+            IsOpen = true,
+            NodeKey = request.Node.Key,
+            X = request.X,
+            Y = request.Y
+        };
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private IReadOnlyList<SubjectBrowserAction> GetContextMenuActions()
+    {
+        if (_selectedDetail is null || !_contextMenu.IsOpen)
+            return Array.Empty<SubjectBrowserAction>();
+
+        var refreshAction = new SubjectBrowserAction(
+            "refresh",
+            "Refresh",
+            "bi-arrow-clockwise",
+            "dropdown-item",
+            true,
+            RefreshSelectedNodeAsync);
+
+        return
+        [
+            refreshAction,
+            .. GetDetailActions().Select(action => action with { ButtonCssClass = "dropdown-item" })
+        ];
+    }
+
+    private async Task ExecuteContextMenuActionAsync(Func<Task> executeAsync)
+    {
+        CloseContextMenu();
+        await executeAsync();
+    }
+
+    private async Task RefreshSelectedNodeAsync()
+    {
+        CloseContextMenu();
+
+        if (string.IsNullOrWhiteSpace(_selectedBranchKey))
+            return;
+
+        SubjectBrowserService.InvalidateSnapshot();
+        _refreshToken++;
+        await LoadDetailFromKeyAsync(_selectedBranchKey);
+        await SetActionMessageAsync("Subject refreshed.", "alert-success");
+    }
+
+    private void CloseContextMenu()
+    {
+        if (_contextMenu.IsOpen)
+            _contextMenu = _contextMenu with { IsOpen = false };
+    }
+
+    private RenderFragment RenderContextMenu() => @<text>
+    @if (_contextMenu.IsOpen)
+    {
+            var actions = GetContextMenuActions();
+
+            <div class="tc-tree-ctx-backdrop" @onclick="CloseContextMenu"></div>
+
+            <div class="dropdown-menu show tc-tree-ctx-menu"
+                 style="left:@($"{_contextMenu.X}px"); top:@($"{_contextMenu.Y}px");"
+                 role="menu">
+                @foreach (var action in actions)
+                {
+                    <button type="button"
+                            class="@action.ButtonCssClass"
+                            disabled="@(!action.IsEnabled)"
+                            @onclick="() => ExecuteContextMenuActionAsync(action.ExecuteAsync)">
+                        <i class="bi @action.IconClass me-2" aria-hidden="true"></i>@action.Text
+                    </button>
+                }
+            </div>
+    }
+    </text>;
+
+    private sealed record ContextMenuState
+    {
+        public bool IsOpen { get; init; }
+        public string? NodeKey { get; init; }
+        public int X { get; init; }
+        public int Y { get; init; }
     }
 
     private async Task ExecuteTreeAddExistingAsync(
@@ -2004,6 +2547,9 @@ else
 
     private RenderFragment RenderDetailPaneContent()
     {
+        if (ShouldRenderHostedDetailPage())
+            return RenderHostedDetailPage();
+
         if (ShouldRenderActiveEnquiry())
             return RenderEnquiryPane();
 
@@ -2059,6 +2605,11 @@ else
         return _mode == SubjectBrowserMode.Namespace
             && _pendingCreateSubjectClass.HasValue
             && _selectedDetail is not null;
+    }
+
+    private static bool ShouldUseEmbeddedMaintenancePage(bool isMobile)
+    {
+        return !isMobile;
     }
 
     private RenderFragment RenderEnquiryPane() => @<SubjectEnquiryShell SubjectCode="@_selectedDetail!.SubjectCode"
@@ -2257,18 +2808,25 @@ private RenderFragment RenderEmptyDetailPane() => @<div class="text-muted">
     Select a Subject to view its details.
 </div>;
 
-private RenderFragment RenderSelectedDetailPane() => @<div>
+private RenderFragment RenderSelectedDetailPane() => @<div class="h-100 d-flex flex-column" style="min-height:0;">
 @{
     var detailActions = GetDetailActions();
 }
 
-@RenderSubjectSummaryCard()
-@RenderActionCard(detailActions)
-@RenderActionMessage()
-@RenderIdentityFieldsCard()
-@RenderNamespacePathsCard()
-@RenderAddressesCard()
-@RenderNotesCard()
+@if (ShouldRenderHostedDetailPage())
+{
+    @RenderHostedDetailPage()
+}
+else
+{
+    @RenderSubjectSummaryCard()
+    @RenderActionCard(detailActions)
+    @RenderActionMessage()
+    @RenderIdentityFieldsCard()
+    @RenderNamespacePathsCard()
+    @RenderAddressesCard()
+    @RenderNotesCard()
+}
 </div>;
 
 private RenderFragment RenderSubjectSummaryCard() => @<div class="bg-white border rounded p-3 mb-3">
@@ -2359,7 +2917,18 @@ private RenderFragment RenderAddressesCard() => @<text>
 @if (_selectedDetail is not null && !_selectedDetail.IsStructural)
 {
         <div class="bg-white border rounded p-3 mb-3">
-            <div class="fw-semibold mb-2">Addresses</div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-semibold">Addresses</div>
+
+                @if (CanMaintainAddresses())
+                {
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            @onclick="BeginAddAddressAsync">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add
+                    </button>
+                }
+            </div>
 
             @if (_selectedDetail.Addresses.Count == 0)
             {
@@ -2378,6 +2947,44 @@ private RenderFragment RenderAddressesCard() => @<text>
                                 <span class="badge text-bg-primary">Default</span>
                             }
                         </div>
+
+                        @if (CanMaintainAddresses())
+                        {
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <button type="button"
+                                        class="btn btn-outline-secondary btn-sm"
+                                        @onclick="() => BeginEditAddressAsync(address.AddressCode)">
+                                    <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Edit
+                                </button>
+
+                                @if (!address.IsDefault)
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm"
+                                            @onclick="() => SetDefaultAddressAsync(address.AddressCode)">
+                                        <i class="bi bi-bookmark-star me-1" aria-hidden="true"></i>Set Default
+                                    </button>
+                                }
+
+                                @if (address.CanDelete)
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ConfirmDeleteAddressAsync(address.AddressCode)">
+                                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            disabled="true"
+                                            title="This address is referenced by @address.ProjectReferenceCount project@(address.ProjectReferenceCount == 1 ? string.Empty : "s").">
+                                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                                    </button>
+                                }
+                            </div>
+                        }
                     </div>
                 }
             }

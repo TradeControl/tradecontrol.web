@@ -1,0 +1,143 @@
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Pages.Subject.Controls
+
+@inject NavigationManager NavigationManager
+@inject ISubjectBrowserService SubjectBrowserService
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <h1 class="h3 mb-3">Subject Search</h1>
+        <p class="text-muted mb-4">
+            Search the namespace, then continue into the Subject Browser.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label">Namespace Filter</label>
+                <NamespaceSelector FilterText="@_namespaceFilter"
+                                   Suggestions="@_namespaceSuggestions"
+                                   IsLoadingSuggestions="@_isLoadingNamespaceSuggestions"
+                                   ShowApplyButton="true"
+                                   ApplyButtonTitle="Open Subject Browser"
+                                   OnFilterChanged="HandleFilterChangedAsync"
+                                   OnFilterCommitted="HandleFilterCommittedAsync" />
+            </div>
+
+            <div class="col-12 d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary" @onclick="OpenBrowserAsync">
+                    <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>Open Subject Browser
+                </button>
+
+                <button type="button" class="btn btn-outline-secondary" @onclick="BrowseAllAsync">
+                    <i class="bi bi-list-nested me-1" aria-hidden="true"></i>Browse All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? InitialFilter { get; set; }
+
+    private const int SuggestionPageSize = 12;
+
+    private string _namespaceFilter = string.Empty;
+    private IReadOnlyList<NamespaceSelectorSuggestion> _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private bool _isLoadingNamespaceSuggestions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _namespaceFilter = InitialFilter?.Trim() ?? string.Empty;
+        await RefreshNamespaceSuggestionsAsync();
+    }
+
+    private async Task HandleFilterChangedAsync(string filterText)
+    {
+        _namespaceFilter = filterText?.Trim() ?? string.Empty;
+        await RefreshNamespaceSuggestionsAsync();
+    }
+
+    private async Task HandleFilterCommittedAsync(string filterText)
+    {
+        _namespaceFilter = filterText?.Trim() ?? string.Empty;
+        await RefreshNamespaceSuggestionsAsync();
+        await OpenBrowserAsync();
+    }
+
+    private async Task RefreshNamespaceSuggestionsAsync()
+    {
+        try
+        {
+            _isLoadingNamespaceSuggestions = true;
+            _namespaceSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+                _namespaceFilter,
+                SuggestionPageSize);
+        }
+        finally
+        {
+            _isLoadingNamespaceSuggestions = false;
+        }
+    }
+
+    private Task OpenBrowserAsync()
+    {
+        NavigationManager.NavigateTo(BuildBrowserUrl(_namespaceFilter), forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private Task BrowseAllAsync()
+    {
+        NavigationManager.NavigateTo("/Subject/Browser/Index", forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private string BuildBrowserUrl(string? namespaceFilter)
+    {
+        var baseUrl = "/Subject/Browser/Index";
+        var filter = namespaceFilter?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(filter))
+            return baseUrl;
+
+        var selectKey = ResolveSelectionKey(filter);
+
+        var query = new List<string>
+        {
+            $"namespaceFilter={Uri.EscapeDataString(filter)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(selectKey))
+            query.Add($"select={Uri.EscapeDataString(selectKey)}");
+
+        return $"{baseUrl}?{string.Join("&", query)}";
+    }
+
+    private string ResolveSelectionKey(string filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return string.Empty;
+
+        if (filter.EndsWith(".", StringComparison.Ordinal))
+            return filter.TrimEnd('.');
+
+        var exact = _namespaceSuggestions.FirstOrDefault(suggestion =>
+            string.Equals(suggestion.FullPath, filter, StringComparison.OrdinalIgnoreCase));
+
+        if (exact is not null)
+            return exact.FullPath;
+
+        var startsWith = _namespaceSuggestions.FirstOrDefault(suggestion =>
+            suggestion.FullPath.StartsWith($"{filter}.", StringComparison.OrdinalIgnoreCase));
+
+        if (startsWith is not null)
+            return startsWith.FullPath;
+
+        var contains = _namespaceSuggestions.FirstOrDefault(suggestion =>
+            suggestion.FullPath.Contains(filter, StringComparison.OrdinalIgnoreCase));
+
+        if (contains is not null)
+            return contains.FullPath;
+
+        return filter;
+    }
+}

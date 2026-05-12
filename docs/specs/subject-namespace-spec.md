@@ -2330,7 +2330,6 @@ This section defines the end‑to‑end workflows for maintaining Subjects:
 
 - creating new Subjects
 - editing existing Subjects
-- changing Subject type
 - managing namespace relationships
 - deleting Subjects (where allowed)
 
@@ -2342,7 +2341,7 @@ All workflows must:
 - preserve namespace DAG semantics
 - avoid direct interaction with Shared.Tree
 
-### 1. Workflow overview
+### Workflow overview
 
 The following workflows are in scope:
 
@@ -2350,9 +2349,8 @@ The following workflows are in scope:
 2. Create Real Subject
 3. Create Virtual Subject
 4. Edit Subject (Real / Virtual / Structural)
-5. Change Subject Type
-6. Manage Namespace Relationships (add / reparent / remove)
-7. Delete Subject
+5. Manage Namespace Relationships (add / reparent / remove)
+6. Delete Subject
 
 All workflows are initiated from:
 
@@ -2360,7 +2358,7 @@ All workflows are initiated from:
 - the Subject Detail Panel
 - or a future Subject search/listing surface
 
-### 2. Create Structural Subject
+### 1. Create Structural Subject
 
 **Entry points:**
 
@@ -2390,7 +2388,7 @@ All workflows are initiated from:
 - Structural Subjects must not carry Real/Virtual identity fields.
 - Structural Subjects may appear in multiple namespace paths later via reparenting.
 
-### 3. Create Real Subject
+### 2. Create Real Subject
 
 **Entry points:**
 
@@ -2419,7 +2417,7 @@ All workflows are initiated from:
 - Identity fields are defined by `SubjectTypeCode`.
 - No dependency on legacy `tbContact` or `vwReal`.
 
-### 4. Create Virtual Subject
+### 3. Create Virtual Subject
 
 **Entry points:**
 
@@ -2448,7 +2446,7 @@ All workflows are initiated from:
 - Virtual Subjects must be clearly distinguishable in the tree (metadata/flags).
 - Virtual Subjects may also be multi‑parent.
 
-### 5. Edit Subject
+### 4. Edit Subject
 
 **Entry points:**
 
@@ -2477,7 +2475,11 @@ All workflows are initiated from:
 - SubjectCode must not change as part of edit.
 - If SubjectType changes, see “Change Subject Type” workflow.
 
-### 6. Change Subject Type
+### Change Subject Type
+
+⚠️ **This workflow is deprecated.**
+
+> Subject reclassification is achieved through the existing Subject maintenance workflows and namespace operations rather than an in-place “change type” operation. The UI must not expose a dedicated Change Subject Type action.
 
 **Entry points:**
 
@@ -2505,11 +2507,11 @@ All workflows are initiated from:
 - Not all transitions may be allowed (e.g., Structural → Real may be restricted).
 - The service layer, not the UI, enforces allowed transitions.
 
-### 7. Manage namespace relationships
+### 5. Manage namespace relationships
 
 Namespace relationships are managed in **NamespaceMode**.
 
-#### 7.1 Add to namespace (additional parent)
+#### 5.1 Add to namespace (additional parent)
 
 **Entry points:**
 
@@ -2527,7 +2529,7 @@ Namespace relationships are managed in **NamespaceMode**.
    - `SubjectBrowserShell` reloads the relevant branches.
    - Subject now appears under multiple paths.
 
-#### 7.2 Reparent Subject
+#### 5.2 Reparent Subject
 
 **Entry points:**
 
@@ -2545,7 +2547,7 @@ Namespace relationships are managed in **NamespaceMode**.
 5. On success:
    - `SubjectBrowserShell` reloads affected branches.
 
-#### 7.3 Remove from namespace
+#### 5.3 Remove from namespace
 
 **Entry points:**
 
@@ -2567,7 +2569,7 @@ Namespace relationships are managed in **NamespaceMode**.
 - Removing the last namespace relationship may be disallowed or treated as “orphaned Subject” (business rule).
 - All operations are path‑specific; other instances are unaffected.
 
-#### 7.4 Set default namespace child
+#### 5.4 Set default namespace child
 
 The UI must support a **Set Default** action for namespace relationships where the selected child is intended to be the default contextual Subject for its parent.
 
@@ -2601,7 +2603,7 @@ This is required in particular for contact maintenance, where a Real Subject may
 
 This workflow enables the platform to resolve default contacts for customers, suppliers, and other contextual relationships when creating or configuring projects, orders, and related workflows.
 
-### 8. Delete Subject
+### 6. Delete Subject
 
 **Entry points:**
 
@@ -2628,7 +2630,7 @@ This workflow enables the platform to resolve default contacts for customers, su
 - Deletion may be restricted to certain SubjectTypes or environments.
 - Soft‑delete vs hard‑delete is a service‑layer decision, not a UI concern.
 
-### 9. IsEmbedded behaviour
+### 7. IsEmbedded behaviour
 
 All Razor Pages must respect the `IsEmbedded` flag:
 
@@ -2643,7 +2645,7 @@ All Razor Pages must respect the `IsEmbedded` flag:
 
 SubjectBrowserShell must set `IsEmbedded` appropriately based on hosting context.
 
-### 10. Summary
+### 8. Summary
 
 Subject maintenance workflows:
 
@@ -2848,18 +2850,9 @@ The service layer must reject:
 
 ### 4. Subject type transition validation
 
-Changing `SubjectTypeCode` must satisfy:
+⚠️ **Dedicated Subject type transition is deprecated in Phase 2.**
 
-- the transition is allowed by business rules
-- required identity fields for the new type are present
-- incompatible fields are removed or migrated
-- the SubjectClassCode implied by the new type matches the existing extension table
-
-The service layer must reject:
-
-- transitions that would leave the Subject in an incomplete state
-- transitions that require moving the Subject between extension tables (this is not supported in Phase 2)
-- transitions that violate class/polarity compatibility
+The service layer must not expose an in-place Change Subject Type workflow. Reclassification must instead be modelled through the existing maintenance and namespace operations supported by the platform.
 
 ### 5. Razor Page guardrails
 

@@ -1,8 +1,10 @@
 @using System
 @using System.Collections.Generic
 @using System.Linq
+@using System.Threading
 @using System.Threading.Tasks
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
 @using TradeControl.Web.Pages.Shared.Tree
 
 @if (IsRoot)
@@ -23,7 +25,9 @@
                     DropTargetKey="DropTargetKey"
                     OnDragStarted="OnDragStarted"
                     OnDragEnded="OnDragEnded"
-                    OnNodeDropped="OnNodeDropped" />
+                    OnNodeDropped="OnNodeDropped"
+                    IsMobile="IsMobile"
+                    OnNodeContextMenu="OnNodeContextMenu" />
     }
 }
 else if (Node is not null)
@@ -56,7 +60,12 @@ else if (Node is not null)
                 @ondragend="HandleDragEndAsync"
                 ondragover="event.preventDefault(); event.dataTransfer.dropEffect='move';"
                 @ondrop="HandleDropAsync"
-                @onclick="OnClickAsync">
+                @onclick="OnClickAsync"
+                @oncontextmenu="HandleContextMenuAsync"
+                @oncontextmenu:preventDefault="true"
+                @onpointerdown="HandlePointerDown"
+                @onpointerup="HandlePointerUp"
+                @onpointercancel="HandlePointerCancel">
             <i class="bi @Node.IconClass me-2 tc-tree-icon @(GetNodeStateClass(Node))" aria-hidden="true"></i>
             <span class="tc-tree-label @(IsSelected(Node, SelectedKey) ? "tc-tree-label-selected" : "")">@Node.Text</span>
 
@@ -104,7 +113,9 @@ else if (Node is not null)
                                 DropTargetKey="DropTargetKey"
                                 OnDragStarted="OnDragStarted"
                                 OnDragEnded="OnDragEnded"
-                                OnNodeDropped="OnNodeDropped" />
+                                OnNodeDropped="OnNodeDropped"
+                                IsMobile="IsMobile"
+                                OnNodeContextMenu="OnNodeContextMenu" />
                 }
             }
         </div>
@@ -129,7 +140,10 @@ else if (Node is not null)
     [Parameter] public string? DropTargetKey { get; set; }
     [Parameter] public EventCallback<TreeNode> OnDragStarted { get; set; }
     [Parameter] public EventCallback OnDragEnded { get; set; }
-    [Parameter] public EventCallback<TreeNode> OnNodeDropped { get; set; }
+    [Parameter] public EventCallback<DropInfo> OnNodeDropped { get; set; }
+
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback<TreeContextMenuRequest> OnNodeContextMenu { get; set; }
 
     private long _lastRefreshToken;
     private bool _expanded;
@@ -137,6 +151,8 @@ else if (Node is not null)
     private bool _loaded;
     private string? _error;
     private List<TreeNode> _children = new();
+    private CancellationTokenSource? _pressCts;
+    private bool _suppressNextClick;
 
     protected override void OnParametersSet()
     {
@@ -221,13 +237,63 @@ else if (Node is not null)
             await OnDragEnded.InvokeAsync();
     }
 
-    private async Task HandleDropAsync()
+    private async Task HandleDropAsync(DragEventArgs e)
     {
         if (Node is null || !IsDroppable(Node))
             return;
 
+        var isCtrl = e is not null && e.CtrlKey;
+
         if (OnNodeDropped.HasDelegate)
-            await OnNodeDropped.InvokeAsync(Node);
+            await OnNodeDropped.InvokeAsync(new DropInfo(Node, isCtrl));
+    }
+
+    private async Task HandleContextMenuAsync(MouseEventArgs e)
+    {
+        if (Node is null || !OnNodeContextMenu.HasDelegate)
+            return;
+
+        if (OnNodeSelected.HasDelegate && !IsSelected(Node, SelectedKey))
+            await OnNodeSelected.InvokeAsync(Node);
+
+        await OnNodeContextMenu.InvokeAsync(new TreeContextMenuRequest(Node, (int)e.ClientX, (int)e.ClientY));
+    }
+
+    private void HandlePointerDown(PointerEventArgs e)
+    {
+        if (!IsMobile || Node is null || !OnNodeContextMenu.HasDelegate)
+            return;
+
+        _pressCts?.Cancel();
+        _pressCts = new CancellationTokenSource();
+        _suppressNextClick = false;
+
+        _ = OpenLongPressMenuAsync((int)e.ClientX, (int)e.ClientY, _pressCts.Token);
+    }
+
+    private void HandlePointerUp(PointerEventArgs e) => _pressCts?.Cancel();
+
+    private void HandlePointerCancel(PointerEventArgs e) => _pressCts?.Cancel();
+
+    private async Task OpenLongPressMenuAsync(int x, int y, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(550, token);
+
+            if (Node is null || !OnNodeContextMenu.HasDelegate)
+                return;
+
+            _suppressNextClick = true;
+
+            if (OnNodeSelected.HasDelegate && !IsSelected(Node, SelectedKey))
+                await OnNodeSelected.InvokeAsync(Node);
+
+            await OnNodeContextMenu.InvokeAsync(new TreeContextMenuRequest(Node, x, y));
+        }
+        catch (TaskCanceledException)
+        {
+        }
     }
 
     private async Task ToggleExpandAsync()
@@ -265,6 +331,14 @@ else if (Node is not null)
 
     private async Task OnClickAsync()
     {
+        _pressCts?.Cancel();
+
+        if (_suppressNextClick)
+        {
+            _suppressNextClick = false;
+            return;
+        }
+
         if (Node is null)
             return;
 

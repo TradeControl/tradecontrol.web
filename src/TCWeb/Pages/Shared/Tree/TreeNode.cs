@@ -27,4 +27,8 @@ namespace TradeControl.Web.Pages.Shared.Tree
         {
         }
     }
+
+    public sealed record DropInfo(TreeNode Node, bool IsCtrlKey);
+
+    public sealed record TreeContextMenuRequest(TreeNode Node, int X, int Y);
 }

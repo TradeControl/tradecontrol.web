@@ -150,15 +150,24 @@ namespace TradeControl.Web.AppServices
             var subjectClass = (NodeEnum.SubjectClass)subjectType.SubjectClassCode;
             var namespacePaths = GetNamespacePaths(snapshot, subjectCode);
 
-            var addresses = await _nodeContext.Subject_tbAddresses
-                .AsNoTracking()
-                .Where(address => address.SubjectCode == subjectCode)
-                .OrderBy(address => address.AddressCode)
-                .Select(address => new SubjectBrowserAddressItem(
-                    address.AddressCode,
-                    address.Address,
-                    address.AddressCode == subject.AddressCode))
-                .ToListAsync(cancellationToken);
+            var addresses = snapshot.Addresses.TryGetValue(subjectCode, out var addressList)
+                ? addressList
+                    .OrderBy(address => address.AddressCode, StringComparer.OrdinalIgnoreCase)
+                    .Select(address => {
+                        var projectReferenceCount =
+                            snapshot.ProjectAddressUsage.TryGetValue(address.AddressCode, out var usageCount)
+                                ? usageCount
+                                : 0;
+
+                        return new SubjectBrowserAddressItem(
+                            address.AddressCode,
+                            address.Address,
+                            string.Equals(subject.AddressCode, address.AddressCode, StringComparison.OrdinalIgnoreCase),
+                            projectReferenceCount == 0,
+                            projectReferenceCount);
+                    })
+                    .ToArray()
+                : Array.Empty<SubjectBrowserAddressItem>();
 
             var isDefaultInNamespace = !string.IsNullOrWhiteSpace(parentSubjectCode)
                 && snapshot.ParentsByChild.TryGetValue(subjectCode, out var parentRows)
@@ -166,8 +175,7 @@ namespace TradeControl.Web.AppServices
                     string.Equals(row.ParentSubjectCode, parentSubjectCode, StringComparison.OrdinalIgnoreCase)
                     && row.IsDefault);
 
-            var detail = new SubjectBrowserDetailModel
-            {
+            return new SubjectBrowserDetailModel {
                 SubjectCode = subject.SubjectCode,
                 SubjectTypeCode = subject.SubjectTypeCode,
                 SubjectType = subjectType.SubjectType,
@@ -178,14 +186,11 @@ namespace TradeControl.Web.AppServices
                 IdentityFields = CreateIdentityFields(snapshot, subject, subjectClass),
                 Addresses = addresses,
                 IsDefaultInNamespace = isDefaultInNamespace,
-                Notes = subjectClass switch
-                {
+                Notes = subjectClass switch {
                     NodeEnum.SubjectClass.Structural when snapshot.Structurals.TryGetValue(subjectCode, out var structural) => structural.Notes,
                     _ => null
                 }
             };
-
-            return detail;
         }
 
         private async Task<SubjectSnapshot> EnsureSnapshotAsync(CancellationToken cancellationToken)
@@ -273,14 +278,62 @@ namespace TradeControl.Web.AppServices
                         structural.Notes))
                     .ToListAsync(cancellationToken);
 
+                var addresses = await _nodeContext.Subject_tbAddresses
+                    .AsNoTracking()
+                    .Select(address => new AddressRecord(
+                        address.AddressCode,
+                        address.Address,
+                        address.SubjectCode))
+                    .ToListAsync(cancellationToken);
+
                 var namespaces = await _nodeContext.Subject_tbNamespaces
                     .AsNoTracking()
-                    .Select(ns => new NamespaceRecord(
+                    .Select(ns => new NamespaceLinkRecord(
                         ns.ParentSubjectCode,
                         ns.ChildSubjectCode,
                         ns.Ordinal,
                         ns.IsDefault))
                     .ToListAsync(cancellationToken);
+
+                var addressCodeFroms = await _nodeContext.Project_tbProjects
+                    .AsNoTracking()
+                    .Where(project => !string.IsNullOrWhiteSpace(project.AddressCodeFrom))
+                    .Select(project => project.AddressCodeFrom!)
+                    .ToListAsync(cancellationToken);
+
+                var addressCodeTos = await _nodeContext.Project_tbProjects
+                    .AsNoTracking()
+                    .Where(project => !string.IsNullOrWhiteSpace(project.AddressCodeTo))
+                    .Select(project => project.AddressCodeTo!)
+                    .ToListAsync(cancellationToken);
+
+                var projectAddressUsage = addressCodeFroms
+                    .Concat(addressCodeTos)
+                    .GroupBy(addressCode => addressCode, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+                var addressLookup = addresses
+                    .GroupBy(address => address.SubjectCode, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => (IReadOnlyList<AddressRecord>)group
+                            .OrderBy(address => address.AddressCode, StringComparer.OrdinalIgnoreCase)
+                            .ToList(),
+                        StringComparer.OrdinalIgnoreCase);
+
+                var childrenByParent = namespaces
+                    .GroupBy(link => link.ParentSubjectCode, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => (IReadOnlyList<NamespaceLinkRecord>)group.ToList(),
+                        StringComparer.OrdinalIgnoreCase);
+
+                var parentsByChild = namespaces
+                    .GroupBy(link => link.ChildSubjectCode, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        group => group.Key,
+                        group => (IReadOnlyList<NamespaceLinkRecord>)group.ToList(),
+                        StringComparer.OrdinalIgnoreCase);
 
                 var baseSnapshot = new SubjectSnapshot(
                     subjects.ToDictionary(subject => subject.SubjectCode, StringComparer.OrdinalIgnoreCase),
@@ -288,13 +341,10 @@ namespace TradeControl.Web.AppServices
                     reals.ToDictionary(real => real.SubjectCode, StringComparer.OrdinalIgnoreCase),
                     virtuals.ToDictionary(virtualSubject => virtualSubject.SubjectCode, StringComparer.OrdinalIgnoreCase),
                     structurals.ToDictionary(structural => structural.SubjectCode, StringComparer.OrdinalIgnoreCase),
-                    namespaces,
-                    namespaces
-                        .GroupBy(ns => ns.ParentSubjectCode, StringComparer.OrdinalIgnoreCase)
-                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase),
-                    namespaces
-                        .GroupBy(ns => ns.ChildSubjectCode, StringComparer.OrdinalIgnoreCase)
-                        .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase),
+                    addressLookup,
+                    projectAddressUsage,
+                    childrenByParent,
+                    parentsByChild,
                     Array.Empty<NamespacePathRecord>());
 
                 _snapshot = baseSnapshot with {
@@ -313,7 +363,7 @@ namespace TradeControl.Web.AppServices
             SubjectSnapshot snapshot,
             SubjectRecord subject,
             string namespacePath,
-            NamespaceRecord? namespaceRecord)
+            NamespaceLinkRecord? namespaceRecord)
         {
             var subjectType = snapshot.Types[subject.SubjectTypeCode];
             var subjectClass = (NodeEnum.SubjectClass)subjectType.SubjectClassCode;
@@ -791,6 +841,16 @@ namespace TradeControl.Web.AppServices
             switch (subjectClass)
             {
                 case NodeEnum.SubjectClass.Real:
+                    AddField(fields, "Tax Code", subject.TaxCode);
+                    AddField(fields, "Payment Terms", subject.PaymentTerms);
+                    AddField(fields, "Expected Days", subject.ExpectedDays.ToString(CultureInfo.InvariantCulture));
+                    AddField(fields, "Payment Days", subject.PaymentDays.ToString(CultureInfo.InvariantCulture));
+                    AddField(fields, "Days From Month End", FormatBool(subject.PayDaysFromMonthEnd));
+                    AddField(fields, "Pay Balance", FormatBool(subject.PayBalance));
+                    AddField(fields, "Area", subject.AreaCode);
+                    AddField(fields, "Main Phone", subject.PhoneNumber);
+                    AddField(fields, "Main Email", subject.EmailAddress);
+
                     if (snapshot.Reals.TryGetValue(subject.SubjectCode, out var real))
                     {
                         AddField(fields, "Title", real.NameTitle);
@@ -919,7 +979,12 @@ namespace TradeControl.Web.AppServices
             string SubjectCode,
             string? Notes);
 
-        private sealed record NamespaceRecord(
+        private sealed record AddressRecord(
+            string AddressCode,
+            string Address,
+            string SubjectCode);
+
+        private sealed record NamespaceLinkRecord(
             string ParentSubjectCode,
             string ChildSubjectCode,
             int Ordinal,
@@ -942,14 +1007,15 @@ namespace TradeControl.Web.AppServices
         }
 
         private sealed record SubjectSnapshot(
-            IDictionary<string, SubjectRecord> Subjects,
-            IDictionary<short, SubjectTypeRecord> Types,
-            IDictionary<string, RealRecord> Reals,
-            IDictionary<string, VirtualRecord> Virtuals,
-            IDictionary<string, StructuralRecord> Structurals,
-            IReadOnlyList<NamespaceRecord> Namespaces,
-            IDictionary<string, List<NamespaceRecord>> ChildrenByParent,
-            IDictionary<string, List<NamespaceRecord>> ParentsByChild,
+            IReadOnlyDictionary<string, SubjectRecord> Subjects,
+            IReadOnlyDictionary<short, SubjectTypeRecord> Types,
+            IReadOnlyDictionary<string, RealRecord> Reals,
+            IReadOnlyDictionary<string, VirtualRecord> Virtuals,
+            IReadOnlyDictionary<string, StructuralRecord> Structurals,
+            IReadOnlyDictionary<string, IReadOnlyList<AddressRecord>> Addresses,
+            IReadOnlyDictionary<string, int> ProjectAddressUsage,
+            IReadOnlyDictionary<string, IReadOnlyList<NamespaceLinkRecord>> ChildrenByParent,
+            IReadOnlyDictionary<string, IReadOnlyList<NamespaceLinkRecord>> ParentsByChild,
             IReadOnlyList<NamespacePathRecord> Paths);
     }
 }
