@@ -1,0 +1,188 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using TradeControl.Web.AppServices
+
+@inject ITemplateSystemService TemplateSystemService
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert alert-success py-2 mb-3" role="status">
+            @_message
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="flex-grow-1 overflow-auto pe-1" style="min-height:0;">
+        @if (_state is null)
+        {
+            <div class="border rounded bg-white p-4 text-muted">
+                Loading system templates…
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">System Templates</div>
+                    <div class="text-muted">Assign templates used by support and user registration workflows.</div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <div class="fw-semibold">Assignments</div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label" for="supportRequestTemplateId">Support request template</label>
+                            <InputSelect id="supportRequestTemplateId"
+                                         @bind-Value="_supportRequestTemplateId"
+                                         class="form-select">
+                                <option value="">(not set)</option>
+                                @foreach (var item in _state.TemplateOptions)
+                                {
+                                    <option value="@item.TemplateId">@item.TemplateFileName</option>
+                                }
+                            </InputSelect>
+                            <div class="form-text">
+                                Template used for support request emails sent to the business.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label" for="userRegistrationTemplateId">User registration template</label>
+                            <InputSelect id="userRegistrationTemplateId"
+                                         @bind-Value="_userRegistrationTemplateId"
+                                         class="form-select">
+                                <option value="">(not set)</option>
+                                @foreach (var item in _state.TemplateOptions)
+                                {
+                                    <option value="@item.TemplateId">@item.TemplateFileName</option>
+                                }
+                            </InputSelect>
+                            <div class="form-text">
+                                Template used for user registration emails.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label" for="userRegistrationConfirmTemplateId">User registration confirmation template</label>
+                            <InputSelect id="userRegistrationConfirmTemplateId"
+                                         @bind-Value="_userRegistrationConfirmTemplateId"
+                                         class="form-select">
+                                <option value="">(not set)</option>
+                                @foreach (var item in _state.TemplateOptions)
+                                {
+                                    <option value="@item.TemplateId">@item.TemplateFileName</option>
+                                }
+                            </InputSelect>
+                            <div class="form-text">
+                                Template used for the email containing the confirmation link.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6">
+                            <label class="form-label" for="userRegistrationAdminNotifyTemplateId">User registration admin notification template</label>
+                            <InputSelect id="userRegistrationAdminNotifyTemplateId"
+                                         @bind-Value="_userRegistrationAdminNotifyTemplateId"
+                                         class="form-select">
+                                <option value="">(not set)</option>
+                                @foreach (var item in _state.TemplateOptions)
+                                {
+                                    <option value="@item.TemplateId">@item.TemplateFileName</option>
+                                }
+                            </InputSelect>
+                            <div class="form-text">
+                                Template used to notify Administrators after email confirmation.
+                            </div>
+                        </div>
+
+                        <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    disabled="@_isBusy"
+                                    @onclick="SaveAsync">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mb-0" role="status">
+                System templates are stored as assignments to HTML files in <code>wwwroot/content/templates</code>.
+            </div>
+        }
+    </div>
+</div>
+
+@code
+{
+    [Parameter] public bool IsMobile { get; set; }
+
+    private TemplateSystemState? _state;
+    private int? _supportRequestTemplateId;
+    private int? _userRegistrationTemplateId;
+    private int? _userRegistrationConfirmTemplateId;
+    private int? _userRegistrationAdminNotifyTemplateId;
+    private string? _message;
+    private string? _errorMessage;
+    private bool _isBusy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_state is null)
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _errorMessage = null;
+        _state = await TemplateSystemService.GetStateAsync();
+
+        _supportRequestTemplateId = _state.SupportRequestTemplateId;
+        _userRegistrationTemplateId = _state.UserRegistrationTemplateId;
+        _userRegistrationConfirmTemplateId = _state.UserRegistrationConfirmTemplateId;
+        _userRegistrationAdminNotifyTemplateId = _state.UserRegistrationAdminNotifyTemplateId;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_state is null)
+            return;
+
+        _isBusy = true;
+        _message = null;
+        _errorMessage = null;
+
+        try
+        {
+            await TemplateSystemService.SaveAsync(new TemplateSystemAssignments
+            {
+                SupportRequestTemplateId = _supportRequestTemplateId,
+                UserRegistrationTemplateId = _userRegistrationTemplateId,
+                UserRegistrationConfirmTemplateId = _userRegistrationConfirmTemplateId,
+                UserRegistrationAdminNotifyTemplateId = _userRegistrationAdminNotifyTemplateId
+            });
+
+            await LoadAsync();
+            _message = "System templates saved.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

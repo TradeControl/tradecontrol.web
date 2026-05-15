@@ -1,0 +1,1092 @@
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using TradeControl.Web.AppServices
+
+@inject ITemplateInvoicesService TemplateInvoicesService
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert alert-success py-2 mb-3" role="status">
+            @_message
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="flex-grow-1 overflow-auto pe-1" style="min-height:0;">
+        @if (_state is null)
+        {
+            <div class="border rounded bg-white p-4 text-muted">
+                Loading templates…
+            </div>
+        }
+        else if (_state.InvoiceTypes.Count == 0)
+        {
+            <div class="border rounded bg-white p-4 text-muted">
+                No invoice types are available.
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">HTML Templates</div>
+                    <div class="text-muted">Manage invoice templates, attachments, images, and parse validation.</div>
+                </div>
+
+                <div class="border rounded bg-white px-3 py-2">
+                    <div class="small text-muted">Invoice Type</div>
+                    <div class="fw-semibold">@_state.InvoiceType</div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-xl-5">
+                            <label class="form-label" for="invoiceTypeCode">Invoice Type</label>
+                            <select id="invoiceTypeCode"
+                                    class="form-select"
+                                    @onchange="HandleInvoiceTypeChangedAsync">
+                                @foreach (var item in _state.InvoiceTypes)
+                                {
+                                    <option value="@item.InvoiceTypeCode" selected="@(item.InvoiceTypeCode == _state.InvoiceTypeCode)">@item.InvoiceType</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-xl-auto">
+                            <button type="button"
+                                    class="btn btn-outline-primary"
+                                    disabled="@(_state.AssignedTemplates.Count == 0 || _isBusy)"
+                                    @onclick="ParseAllAsync">
+                                Parse all
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs mb-3">
+                <li class="nav-item">
+                    <button type="button"
+                            class="nav-link @GetTabClass(TemplateInvoicesTab.Templates)"
+                            @onclick="@(() => SetActiveTab(TemplateInvoicesTab.Templates))">
+                        Templates
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button"
+                            class="nav-link @GetTabClass(TemplateInvoicesTab.Attachments)"
+                            @onclick="@(() => SetActiveTab(TemplateInvoicesTab.Attachments))">
+                        Attachments
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button"
+                            class="nav-link @GetTabClass(TemplateInvoicesTab.Images)"
+                            @onclick="@(() => SetActiveTab(TemplateInvoicesTab.Images))">
+                        Images
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button"
+                            class="nav-link @GetTabClass(TemplateInvoicesTab.Parse)"
+                            @onclick="@(() => SetActiveTab(TemplateInvoicesTab.Parse))">
+                        Parse
+                    </button>
+                </li>
+            </ul>
+
+            @if (_activeTab == TemplateInvoicesTab.Templates)
+            {
+                <div class="row g-3">
+                    <div class="col-12 col-xxl-8 d-flex">
+                        <div class="card shadow-sm h-100 w-100">
+                            <div class="card-header bg-white">
+                                <div class="fw-semibold">Assigned Templates</div>
+                            </div>
+                            <div class="card-body p-0">
+                                @if (_state.AssignedTemplates.Count == 0)
+                                {
+                                    <div class="p-3 text-muted">
+                                        No templates are assigned to <strong>@_state.InvoiceType</strong>.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Template</th>
+                                                    <th>Status</th>
+                                                    <th>Parsed</th>
+                                                    <th>Last Used</th>
+                                                    <th class="text-end" style="width:1%;white-space:nowrap;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in _state.AssignedTemplates)
+                                                {
+                                                    <tr class="@GetSelectedTemplateRowClass(item.TemplateId)">
+                                                        <td class="text-break">@item.TemplateFileName</td>
+                                                        <td>
+                                                            <span class="badge @GetStatusBadgeClass(item.TemplateStatusCode)">
+                                                                @item.TemplateStatus
+                                                            </span>
+                                                        </td>
+                                                        <td>@(item.ParsedOn?.ToString("g") ?? "-")</td>
+                                                        <td>@(item.LastUsedOn?.ToString("g") ?? "-")</td>
+                                                        <td class="text-end">
+                                                            <div class="d-flex flex-wrap justify-content-end gap-2">
+                                                                <button type="button"
+                                                                        class="btn btn-outline-secondary btn-sm d-inline-flex justify-content-center"
+                                                                        style="width:6rem;"
+                                                                        @onclick="@(() => SelectTemplateImagesAsync(item.TemplateId))">
+                                                                    Images
+                                                                </button>
+                                                                <button type="button"
+                                                                        class="btn btn-outline-primary btn-sm d-inline-flex justify-content-center"
+                                                                        style="width:6rem;"
+                                                                        disabled="@_isBusy"
+                                                                        @onclick="@(() => ParseTemplateAsync(item.TemplateId))">
+                                                                    Parse
+                                                                </button>
+                                                                <button type="button"
+                                                                        class="btn btn-outline-danger btn-sm d-inline-flex justify-content-center"
+                                                                        style="width:6rem;"
+                                                                        disabled="@_isBusy"
+                                                                        @onclick="@(() => RemoveTemplateAsync(item.TemplateId))">
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    @if (!string.IsNullOrWhiteSpace(item.ParseMessage))
+                                                    {
+                                                        <tr>
+                                                            <td colspan="5" class="small text-muted">
+                                                                @item.ParseMessage
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xxl-4 d-flex">
+                        <div class="card shadow-sm h-100 w-100">
+                            <div class="card-header bg-white">
+                                <div class="fw-semibold">Assign a New Template</div>
+                            </div>
+                            <div class="card-body">
+                                @if (_availableTemplateFileNames.Count == 0)
+                                {
+                                    <div class="text-muted">
+                                        No available templates to assign.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label" for="templateFileName">Available Templates</label>
+                                        <select id="templateFileName"
+                                                class="form-select"
+                                                @bind="_templateFileName">
+                                            @foreach (var item in _availableTemplateFileNames)
+                                            {
+                                                <option value="@item">@item</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <button type="button"
+                                            class="btn btn-primary"
+                                            disabled="@(_isBusy || string.IsNullOrWhiteSpace(_templateFileName))"
+                                            @onclick="AssignTemplateAsync">
+                                        Assign
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (_activeTab == TemplateInvoicesTab.Attachments)
+            {
+                <div class="row g-3">
+                    <div class="col-12 col-xxl-8 d-flex">
+                        <div class="card shadow-sm h-100 w-100">
+                            <div class="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="fw-semibold">Assigned Documents</div>
+                                <div class="small text-muted">@_state.InvoiceType</div>
+                            </div>
+                            <div class="card-body p-0">
+                                @if (_state.Attachments.Count == 0)
+                                {
+                                    <div class="p-3 text-muted">
+                                        No attachments are assigned to this invoice type.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Document</th>
+                                                    <th class="text-end" style="width:1%;white-space:nowrap;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in _state.Attachments)
+                                                {
+                                                    <tr class="@GetSelectedAttachmentRowClass(item.AttachmentId)">
+                                                        <td class="text-break">@item.AttachmentFileName</td>
+                                                        <td class="text-end">
+                                                            <button type="button"
+                                                                    class="btn btn-outline-danger btn-sm"
+                                                                    disabled="@_isBusy"
+                                                                    @onclick="@(() => RemoveAttachmentAsync(item.AttachmentId))">
+                                                                Remove
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xxl-4 d-flex">
+                        <div class="card shadow-sm h-100 w-100">
+                            <div class="card-header bg-white">
+                                <div class="fw-semibold">Assign a New Document</div>
+                            </div>
+                            <div class="card-body">
+                                @if (_availableAttachmentFileNames.Count == 0)
+                                {
+                                    <div class="text-muted">
+                                        No available documents to assign.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label" for="attachmentFileName">Available Documents</label>
+                                        <select id="attachmentFileName"
+                                                class="form-select"
+                                                @bind="_attachmentFileName">
+                                            @foreach (var item in _availableAttachmentFileNames)
+                                            {
+                                                <option value="@item">@item</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <button type="button"
+                                            class="btn btn-primary"
+                                            disabled="@(_isBusy || string.IsNullOrWhiteSpace(_attachmentFileName))"
+                                            @onclick="AssignAttachmentAsync">
+                                        Assign
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (_activeTab == TemplateInvoicesTab.Images)
+            {
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-12 col-xl-6">
+                                        <label class="form-label" for="selectedTemplateId">Selected Template</label>
+                                        <select id="selectedTemplateId"
+                                                class="form-select"
+                                                @onchange="HandleSelectedTemplateChangedAsync">
+                                            <option value="">-- Select template --</option>
+                                            @foreach (var item in _state.AssignedTemplates)
+                                            {
+                                                <option value="@item.TemplateId" selected="@(item.TemplateId == _state.SelectedTemplateId)">@item.TemplateFileName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xxl-8 d-flex">
+                        <div class="card shadow-sm h-100 w-100">
+                            <div class="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="fw-semibold">Assigned Images</div>
+                                <div class="small text-muted">@SelectedTemplateFileName</div>
+                            </div>
+                            <div class="card-body p-0">
+                                @if (!_state.SelectedTemplateId.HasValue)
+                                {
+                                    <div class="p-3 text-muted">
+                                        Select a template to inspect its assigned images.
+                                    </div>
+                                }
+                                else if (_state.Images.Count == 0)
+                                {
+                                    <div class="p-3 text-muted">
+                                        No images are assigned to the selected template.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Image File</th>
+                                                    <th>Tag</th>
+                                                    <th class="text-end" style="width:1%;white-space:nowrap;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in _state.Images)
+                                                {
+                                                    <tr class="@GetSelectedImageRowClass(item.ImageTag)">
+                                                        <td class="text-break">@item.ImageFileName</td>
+                                                        <td class="text-break"><code>@item.ImageTag</code></td>
+                                                        <td class="text-end">
+                                                            <div class="d-flex flex-wrap justify-content-end gap-2">
+                                                                <button type="button"
+                                                                        class="btn btn-outline-primary btn-sm"
+                                                                        @onclick="@(() => BeginEditImageTag(item.ImageTag))">
+                                                                    Edit tag
+                                                                </button>
+                                                                <button type="button"
+                                                                        class="btn btn-outline-danger btn-sm"
+                                                                        disabled="@_isBusy"
+                                                                        @onclick="@(() => RemoveImageAsync(item.ImageTag))">
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-xxl-4 d-flex">
+                        <div class="d-flex flex-column gap-3 h-100 w-100">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Assign a New Image</div>
+                                </div>
+                                <div class="card-body">
+                                    @if (!_state.SelectedTemplateId.HasValue)
+                                    {
+                                        <div class="text-muted">
+                                            Select a template before assigning images.
+                                        </div>
+                                    }
+                                    else if (_availableImageFileNames.Count == 0)
+                                    {
+                                        <div class="text-muted">
+                                            No available images to assign.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label" for="imageFileName">Available Images</label>
+                                            <select id="imageFileName"
+                                                    class="form-select"
+                                                    @bind="_imageFileName">
+                                                @foreach (var item in _availableImageFileNames)
+                                                {
+                                                    <option value="@item">@item</option>
+                                                }
+                                            </select>
+                                        </div>
+
+                                        <button type="button"
+                                                class="btn btn-primary"
+                                                disabled="@(_isBusy || !_state.SelectedTemplateId.HasValue || string.IsNullOrWhiteSpace(_imageFileName))"
+                                                @onclick="AssignImageAsync">
+                                            Assign
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Edit Image Tag</div>
+                                </div>
+                                <div class="card-body">
+                                    @if (!_state.SelectedTemplateId.HasValue || string.IsNullOrWhiteSpace(_state.SelectedImageTag))
+                                    {
+                                        <div class="text-muted">
+                                            Select an assigned image to edit its tag.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label" for="imageTagEditValue">Image Tag</label>
+                                            <InputText id="imageTagEditValue"
+                                                       @bind-Value="_imageTagEditValue"
+                                                       class="form-control" />
+                                            <div class="form-text">
+                                                This tag is referenced inside the HTML template, for example <code>[LOGO]</code>.
+                                            </div>
+                                        </div>
+
+                                        <button type="button"
+                                                class="btn btn-primary"
+                                                disabled="@(_isBusy || string.IsNullOrWhiteSpace(_imageTagEditValue))"
+                                                @onclick="SaveImageTagAsync">
+                                            Save
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="fw-semibold">Parse Report</div>
+                        @if (_parseResults.Count > 0)
+                        {
+                            <div class="small text-muted">@_parseResults.Count template(s)</div>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (_parseResults.Count == 0)
+                        {
+                            <div class="text-muted">
+                                Run <strong>Parse</strong> or <strong>Parse all</strong> to validate the assigned templates.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-3">
+                                @foreach (var result in _parseResults)
+                                {
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+                                            <div>
+                                                <div class="fw-semibold">@result.TemplateFileName</div>
+                                                <div class="small text-muted">Parsed @(result.ParsedOn?.ToString("g") ?? "not yet")</div>
+                                            </div>
+
+                                            <span class="badge @GetStatusBadgeClass(result.TemplateStatusCode)">
+                                                @result.TemplateStatus
+                                            </span>
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(result.ParseMessage))
+                                        {
+                                            <div class="alert @(result.HasErrors ? "alert-danger" : "alert-success") py-2 mb-3" role="alert">
+                                                @result.ParseMessage
+                                            </div>
+                                        }
+
+                                        <div class="row g-3">
+                                            <div class="col-12 col-xl-6">
+                                                <div class="card h-100">
+                                                    <div class="card-header bg-white fw-semibold">Errors</div>
+                                                    <div class="card-body">
+                                                        @if (!GetErrorSections(result).Any(item => item.Items.Count > 0))
+                                                        {
+                                                            <div class="text-muted">No errors detected.</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            @foreach (var parseSection in GetErrorSections(result).Where(item => item.Items.Count > 0))
+                                                            {
+                                                                <div class="mb-3">
+                                                                    <div class="fw-semibold small mb-1">@parseSection.Title</div>
+                                                                    <ul class="mb-0">
+                                                                        @foreach (var item in parseSection.Items)
+                                                                        {
+                                                                            <li>@item</li>
+                                                                        }
+                                                                    </ul>
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 col-xl-6">
+                                                <div class="card h-100">
+                                                    <div class="card-header bg-white fw-semibold">Info / warnings</div>
+                                                    <div class="card-body">
+                                                        @if (!GetWarningSections(result).Any(item => item.Items.Count > 0))
+                                                        {
+                                                            <div class="text-muted">No warnings detected.</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            @foreach (var parseSection in GetWarningSections(result).Where(item => item.Items.Count > 0))
+                                                            {
+                                                                <div class="mb-3">
+                                                                    <div class="fw-semibold small mb-1">@parseSection.Title</div>
+                                                                    <ul class="mb-0">
+                                                                        @foreach (var item in parseSection.Items)
+                                                                        {
+                                                                            <li>@item</li>
+                                                                        }
+                                                                    </ul>
+                                                                </div>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public string? InitialTemplateKey { get; set; }
+    [Parameter] public ManagerTreeHost.TemplateSelection? Selection { get; set; }
+    [Parameter] public EventCallback<short> OnTemplatesChanged { get; set; }
+
+    private enum TemplateInvoicesTab
+    {
+        Templates,
+        Attachments,
+        Images,
+        Parse
+    }
+
+    private sealed class ParseSection
+    {
+        public string Title { get; init; } = string.Empty;
+        public IReadOnlyList<string> Items { get; init; } = [];
+    }
+
+    private TemplateInvoicesState? _state;
+    private TemplateInvoicesTab _activeTab = TemplateInvoicesTab.Templates;
+    private IReadOnlyList<TemplateParseResult> _parseResults = [];
+    private IReadOnlyList<string> _availableTemplateFileNames = [];
+    private IReadOnlyList<string> _availableAttachmentFileNames = [];
+    private IReadOnlyList<string> _availableImageFileNames = [];
+    private string? _templateFileName;
+    private string? _attachmentFileName;
+    private string? _imageFileName;
+    private string? _imageTagEditValue;
+    private string? _message;
+    private string? _errorMessage;
+    private bool _isBusy;
+    private string? _selectionToken;
+
+    private string SelectedTemplateFileName =>
+        _state?.AssignedTemplates.FirstOrDefault(item => item.TemplateId == _state.SelectedTemplateId)?.TemplateFileName
+        ?? "No template selected";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var token = $"{Selection?.Key}|{Selection?.Kind}|{InitialTemplateKey}";
+
+        if (_selectionToken == token && _state is not null)
+            return;
+
+        _selectionToken = token;
+        _activeTab = ResolveInitialTab();
+        await LoadStateAsync();
+    }
+
+    private async Task LoadStateAsync()
+    {
+        var invoiceTypeCode = Selection?.InvoiceTypeCode;
+        var templateId = Selection?.TemplateId;
+        var attachmentId = Selection?.AttachmentId;
+        var imageTag = Selection?.ImageTag;
+        var key = Selection?.Key ?? InitialTemplateKey;
+
+        await LoadStateCoreAsync(invoiceTypeCode, templateId, attachmentId, imageTag, key);
+    }
+
+    private async Task LoadStateCoreAsync(short? invoiceTypeCode, int? templateId, int? attachmentId, string? imageTag, string? key = null)
+    {
+        _errorMessage = null;
+
+        if (!invoiceTypeCode.HasValue && TryGetInvoiceTypeCode(key, out var parsedInvoiceTypeCode))
+            invoiceTypeCode = parsedInvoiceTypeCode;
+
+        if (!templateId.HasValue && TryGetTemplateId(key, out var parsedTemplateId))
+            templateId = parsedTemplateId;
+
+        _state = await TemplateInvoicesService.GetStateAsync(invoiceTypeCode, templateId, attachmentId, imageTag);
+        await LoadAvailableOptionsAsync();
+    }
+
+    private async Task LoadAvailableOptionsAsync()
+    {
+        if (_state is null)
+            return;
+
+        _availableTemplateFileNames = _state.AvailableTemplateFileNames;
+        _templateFileName = _availableTemplateFileNames.FirstOrDefault();
+
+        _availableAttachmentFileNames = await TemplateInvoicesService.GetAvailableAttachmentFileNamesAsync(_state.InvoiceTypeCode);
+        _attachmentFileName = _availableAttachmentFileNames.FirstOrDefault();
+
+        if (_state.SelectedTemplateId.HasValue)
+        {
+            _availableImageFileNames = await TemplateInvoicesService.GetAvailableImageFileNamesAsync(_state.SelectedTemplateId.Value);
+            _imageFileName = _availableImageFileNames.FirstOrDefault();
+            _imageTagEditValue = _state.SelectedImageTag;
+        }
+        else
+        {
+            _availableImageFileNames = [];
+            _imageFileName = null;
+            _imageTagEditValue = null;
+        }
+    }
+
+    private async Task HandleInvoiceTypeChangedAsync(ChangeEventArgs args)
+    {
+        if (!short.TryParse(args.Value?.ToString(), out var invoiceTypeCode))
+            return;
+
+        _parseResults = [];
+        _activeTab = TemplateInvoicesTab.Templates;
+        _selectionToken = null;
+        await LoadStateCoreAsync(invoiceTypeCode, null, null, null);
+    }
+
+    private async Task HandleSelectedTemplateChangedAsync(ChangeEventArgs args)
+    {
+        if (_state is null)
+            return;
+
+        if (!int.TryParse(args.Value?.ToString(), out var templateId))
+        {
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, null, _state.SelectedAttachmentId, null);
+            return;
+        }
+
+        await LoadStateCoreAsync(_state.InvoiceTypeCode, templateId, _state.SelectedAttachmentId, null);
+        _activeTab = TemplateInvoicesTab.Images;
+    }
+
+    private async Task AssignTemplateAsync()
+    {
+        if (_state is null || string.IsNullOrWhiteSpace(_templateFileName))
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.AssignTemplateAsync(_state.InvoiceTypeCode, _templateFileName);
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, _state.SelectedAttachmentId, _state.SelectedImageTag);
+            _message = "Template assigned.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RemoveTemplateAsync(int templateId)
+    {
+        if (_state is null)
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.RemoveTemplateAsync(_state.InvoiceTypeCode, templateId);
+            _activeTab = TemplateInvoicesTab.Templates;
+            _parseResults = [];
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, null, _state.SelectedAttachmentId, null);
+            _message = "Template removed.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task AssignAttachmentAsync()
+    {
+        if (_state is null || string.IsNullOrWhiteSpace(_attachmentFileName))
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.AssignAttachmentAsync(_state.InvoiceTypeCode, _attachmentFileName);
+            _activeTab = TemplateInvoicesTab.Attachments;
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, null, _state.SelectedImageTag);
+            _message = "Document assigned.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RemoveAttachmentAsync(int attachmentId)
+    {
+        if (_state is null)
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.RemoveAttachmentAsync(_state.InvoiceTypeCode, attachmentId);
+            _activeTab = TemplateInvoicesTab.Attachments;
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, null, _state.SelectedImageTag);
+            _message = "Document removed.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task AssignImageAsync()
+    {
+        if (_state is null || !_state.SelectedTemplateId.HasValue || string.IsNullOrWhiteSpace(_imageFileName))
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.AssignImageAsync(_state.SelectedTemplateId.Value, _imageFileName);
+            _activeTab = TemplateInvoicesTab.Images;
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, _state.SelectedAttachmentId, _state.SelectedImageTag);
+            _message = "Image assigned.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task RemoveImageAsync(string imageTag)
+    {
+        if (_state is null || !_state.SelectedTemplateId.HasValue)
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.RemoveImageAsync(_state.SelectedTemplateId.Value, imageTag);
+            _activeTab = TemplateInvoicesTab.Images;
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, _state.SelectedAttachmentId, null);
+            _message = "Image removed.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void BeginEditImageTag(string imageTag)
+    {
+        if (_state is null)
+            return;
+
+        _state = new TemplateInvoicesState
+        {
+            InvoiceTypeCode = _state.InvoiceTypeCode,
+            InvoiceType = _state.InvoiceType,
+            InvoiceTypes = _state.InvoiceTypes,
+            AssignedTemplates = _state.AssignedTemplates,
+            AvailableTemplateFileNames = _state.AvailableTemplateFileNames,
+            Attachments = _state.Attachments,
+            Images = _state.Images,
+            SelectedTemplateId = _state.SelectedTemplateId,
+            SelectedAttachmentId = _state.SelectedAttachmentId,
+            SelectedImageTag = imageTag
+        };
+
+        _imageTagEditValue = imageTag;
+        _activeTab = TemplateInvoicesTab.Images;
+        _message = null;
+        _errorMessage = null;
+    }
+
+    private async Task SaveImageTagAsync()
+    {
+        if (_state is null || !_state.SelectedTemplateId.HasValue || string.IsNullOrWhiteSpace(_state.SelectedImageTag) || string.IsNullOrWhiteSpace(_imageTagEditValue))
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            await TemplateInvoicesService.UpdateImageTagAsync(_state.SelectedImageTag, _imageTagEditValue);
+            _activeTab = TemplateInvoicesTab.Images;
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, _state.SelectedAttachmentId, _imageTagEditValue);
+            _message = "Image tag updated.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ParseTemplateAsync(int templateId)
+    {
+        if (_state is null)
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            _parseResults = [await TemplateInvoicesService.ParseTemplateAsync(templateId)];
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, _state.SelectedAttachmentId, _state.SelectedImageTag);
+            _activeTab = TemplateInvoicesTab.Parse;
+            _message = "Template parsed.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ParseAllAsync()
+    {
+        if (_state is null)
+            return;
+
+        _isBusy = true;
+        _errorMessage = null;
+        _message = null;
+
+        try
+        {
+            _parseResults = await TemplateInvoicesService.ParseAllAsync(_state.InvoiceTypeCode);
+            await LoadStateCoreAsync(_state.InvoiceTypeCode, _state.SelectedTemplateId, _state.SelectedAttachmentId, _state.SelectedImageTag);
+            _activeTab = TemplateInvoicesTab.Parse;
+            _message = "All assigned templates parsed.";
+            await NotifyTreeChangedAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task SelectTemplateImagesAsync(int templateId)
+    {
+        if (_state is null)
+            return;
+
+        await LoadStateCoreAsync(_state.InvoiceTypeCode, templateId, _state.SelectedAttachmentId, _state.SelectedImageTag);
+        _activeTab = TemplateInvoicesTab.Images;
+    }
+
+    private async Task NotifyTreeChangedAsync()
+    {
+        if (_state is not null && OnTemplatesChanged.HasDelegate)
+            await OnTemplatesChanged.InvokeAsync(_state.InvoiceTypeCode);
+    }
+
+    private void SetActiveTab(TemplateInvoicesTab tab)
+    {
+        _activeTab = tab;
+        _message = null;
+        _errorMessage = null;
+    }
+
+    private string GetTabClass(TemplateInvoicesTab tab) =>
+        _activeTab == tab ? "active" : string.Empty;
+
+    private string GetSelectedTemplateRowClass(int templateId) =>
+        _state?.SelectedTemplateId == templateId ? "table-primary" : string.Empty;
+
+    private string GetSelectedAttachmentRowClass(int attachmentId) =>
+        _state?.SelectedAttachmentId == attachmentId ? "table-primary" : string.Empty;
+
+    private string GetSelectedImageRowClass(string imageTag) =>
+        _state is not null && string.Equals(_state.SelectedImageTag, imageTag, StringComparison.OrdinalIgnoreCase) ? "table-primary" : string.Empty;
+
+    private static string GetStatusBadgeClass(short templateStatusCode) => templateStatusCode switch
+    {
+        1 => "bg-success",
+        2 => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private TemplateInvoicesTab ResolveInitialTab()
+    {
+        return Selection?.Kind switch
+        {
+            "AttachmentsFolder" or "Attachment" => TemplateInvoicesTab.Attachments,
+            "ImagesFolder" or "Image" => TemplateInvoicesTab.Images,
+            _ => TemplateInvoicesTab.Templates
+        };
+    }
+
+    private static bool TryGetInvoiceTypeCode(string? key, out short invoiceTypeCode)
+    {
+        invoiceTypeCode = default;
+
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        if (!key.StartsWith("invoiceType:", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var parts = key.Split(':');
+        return parts.Length >= 2 && short.TryParse(parts[1], out invoiceTypeCode);
+    }
+
+    private static bool TryGetTemplateId(string? key, out int templateId)
+    {
+        templateId = default;
+
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        var parts = key.Split(':');
+
+        for (var i = 0; i < parts.Length - 1; i++)
+        {
+            if (string.Equals(parts[i], "template", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(parts[i + 1], out templateId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<ParseSection> GetErrorSections(TemplateParseResult result)
+    {
+        return
+        [
+            new ParseSection { Title = "Invalid field tags", Items = result.InvalidFieldTags },
+            new ParseSection { Title = "Missing embed directives", Items = result.MissingEmbedDirectives },
+            new ParseSection { Title = "Missing embedded templates", Items = result.MissingEmbedTemplates },
+            new ParseSection { Title = "Invalid embedded templates", Items = result.InvalidEmbedTemplates },
+            new ParseSection { Title = "Missing required output tags", Items = result.MissingRequiredOutputTags },
+            new ParseSection { Title = "Image tags without assignment", Items = result.ImageTagsWithoutAssignment },
+            new ParseSection { Title = "Assigned images missing files", Items = result.AssignedImagesMissingFiles }
+        ];
+    }
+
+    private static IReadOnlyList<ParseSection> GetWarningSections(TemplateParseResult result)
+    {
+        return
+        [
+            new ParseSection { Title = "Assigned image tags without usage", Items = result.AssignedImageTagsWithoutUsage },
+            new ParseSection { Title = "Unused available fields", Items = result.UnusedAvailableFields }
+        ];
+    }
+}

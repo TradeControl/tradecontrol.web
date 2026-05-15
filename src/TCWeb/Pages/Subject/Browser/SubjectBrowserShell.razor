@@ -22,7 +22,7 @@
     <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
         <div class="d-flex align-items-center justify-content-between gap-2">
             <button type="button"
-                    class="btn tc-subject-browser-back-btn"
+                    class="btn tc-back-btn"
                     @onclick="NavigateBackAsync">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i>
                 <span>Back</span>
@@ -344,25 +344,13 @@ else
         }
     }
 
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (!firstRender)
-    //         return;
-
-    //     if (_isEmbedded)
-    //         return;
-
-    //     await JSRuntime.InvokeVoidAsync("subjectBrowser.updateViewportHeight");
-    //     await JSRuntime.InvokeVoidAsync("subjectBrowser.updateHeaderOffset");
-    //     await JSRuntime.InvokeVoidAsync("subjectBrowser.initSplit");
-    // }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_isMobile && !_isEmbedded)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("subjectBrowser.initEditorMessaging", _dotNetRef);
+            await JSRuntime.InvokeVoidAsync("subjectBrowser.initSplit");
         }
     }
 

@@ -1,0 +1,585 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="text-muted small mb-3">
+        Configure the payment timing and posting behaviour for each tax type.
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum TaxSettingsMode
+    {
+        List,
+        Details,
+        Edit
+    }
+
+    private sealed record StringOption(string Value, string Text);
+    private sealed record ShortOption(short Value, string Text);
+
+    private sealed class TaxSettingsEditorModel
+    {
+        public short TaxTypeCode { get; set; }
+        public string TaxType { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; }
+        public string CashCode { get; set; } = string.Empty;
+        public short MonthNumber { get; set; }
+        public short RecurrenceCode { get; set; }
+        public string SubjectCode { get; set; } = string.Empty;
+        public short OffsetDays { get; set; }
+    }
+
+    private readonly List<Cash_vwTaxType> _taxTypes = [];
+    private readonly List<StringOption> _cashCodes = [];
+    private readonly List<ShortOption> _months = [];
+    private readonly List<ShortOption> _recurrences = [];
+    private readonly List<StringOption> _subjects = [];
+
+    private TaxSettingsMode _mode = TaxSettingsMode.List;
+    private Cash_vwTaxType? _selectedTaxType;
+    private TaxSettingsEditorModel _editor = new();
+    private bool _isAdministrator;
+    private bool _isLoading;
+    private string? _errorMessage;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadLookupOptionsAsync();
+        await LoadTaxTypesAsync(false);
+
+        if (!IsMobile && _selectedTaxType is not null)
+            _mode = TaxSettingsMode.Details;
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+    }
+
+    private async Task LoadLookupOptionsAsync()
+    {
+        _cashCodes.Clear();
+        _months.Clear();
+        _recurrences.Clear();
+        _subjects.Clear();
+
+        var cashCodes = await NodeContext.Cash_ExternalCodesLookup
+            .AsNoTracking()
+            .OrderBy(item => item.CashDescription)
+            .Select(item => new StringOption(item.CashCode, item.CashDescription))
+            .ToListAsync();
+
+        var months = await NodeContext.App_tbMonths
+            .AsNoTracking()
+            .OrderBy(item => item.MonthNumber)
+            .Select(item => new ShortOption(item.MonthNumber, item.MonthName))
+            .ToListAsync();
+
+        var recurrences = await NodeContext.App_tbRecurrences
+            .AsNoTracking()
+            .OrderBy(item => item.RecurrenceCode)
+            .Select(item => new ShortOption(item.RecurrenceCode, item.Recurrence))
+            .ToListAsync();
+
+        var subjects = await NodeContext.Subject_tbSubjects
+            .AsNoTracking()
+            .OrderBy(item => item.SubjectName)
+            .Select(item => new StringOption(item.SubjectCode, item.SubjectName))
+            .ToListAsync();
+
+        _cashCodes.AddRange(cashCodes);
+        _months.AddRange(months);
+        _recurrences.AddRange(recurrences);
+        _subjects.AddRange(subjects);
+    }
+
+    private async Task LoadTaxTypesAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedCode = preserveSelection ? _selectedTaxType?.TaxTypeCode : null;
+
+            var rows = await NodeContext.App_TaxTypes
+                .AsNoTracking()
+                .OrderBy(item => item.TaxTypeCode)
+                .ToListAsync();
+
+            _taxTypes.Clear();
+            _taxTypes.AddRange(rows);
+
+            if (_taxTypes.Count == 0)
+            {
+                _selectedTaxType = null;
+                _mode = TaxSettingsMode.List;
+                return;
+            }
+
+            _selectedTaxType = selectedCode.HasValue
+                ? _taxTypes.FirstOrDefault(item => item.TaxTypeCode == selectedCode.Value)
+                : _taxTypes[0];
+
+            _selectedTaxType ??= _taxTypes[0];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load tax settings.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Task SelectAsync(short taxTypeCode)
+    {
+        _selectedTaxType = _taxTypes.FirstOrDefault(item => item.TaxTypeCode == taxTypeCode) ?? _selectedTaxType;
+        _mode = TaxSettingsMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task BeginEditAsync(short taxTypeCode)
+    {
+        try
+        {
+            var current = await NodeContext.Cash_tbTaxTypes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.TaxTypeCode == taxTypeCode);
+
+            if (current is null)
+            {
+                _errorMessage = "Tax setting not found.";
+                return;
+            }
+
+            _editor = new TaxSettingsEditorModel
+            {
+                TaxTypeCode = current.TaxTypeCode,
+                TaxType = current.TaxType,
+                IsEnabled = current.IsEnabled,
+                CashCode = current.CashCode,
+                MonthNumber = current.MonthNumber,
+                RecurrenceCode = current.RecurrenceCode,
+                SubjectCode = current.SubjectCode,
+                OffsetDays = current.OffsetDays
+            };
+
+            _selectedTaxType = _taxTypes.FirstOrDefault(item => item.TaxTypeCode == taxTypeCode) ?? _selectedTaxType;
+            _mode = TaxSettingsMode.Edit;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the tax setting.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task BackToListAsync()
+    {
+        _mode = TaxSettingsMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = IsMobile ? TaxSettingsMode.List : TaxSettingsMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+
+            var entity = await NodeContext.Cash_tbTaxTypes
+                .SingleOrDefaultAsync(item => item.TaxTypeCode == _editor.TaxTypeCode);
+
+            if (entity is null)
+            {
+                _errorMessage = "Tax setting not found.";
+                return;
+            }
+
+            entity.IsEnabled = _editor.IsEnabled;
+            entity.CashCode = _editor.CashCode;
+            entity.MonthNumber = _editor.MonthNumber;
+            entity.RecurrenceCode = _editor.RecurrenceCode;
+            entity.SubjectCode = _editor.SubjectCode;
+            entity.OffsetDays = _editor.OffsetDays;
+
+            await NodeContext.SaveChangesAsync();
+
+            SetActionMessage("Tax setting updated.", "success");
+
+            await LoadTaxTypesAsync(false);
+            _selectedTaxType = _taxTypes.FirstOrDefault(item => item.TaxTypeCode == _editor.TaxTypeCode) ?? _selectedTaxType;
+            _mode = TaxSettingsMode.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to update the tax setting.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private void SetActionMessage(string message, string tone)
+    {
+        _actionMessage = message;
+        _actionTone = tone;
+    }
+
+    private string GetRowClass(Cash_vwTaxType item)
+    {
+        var isSelected = _selectedTaxType?.TaxTypeCode == item.TaxTypeCode;
+        return isSelected ? "table-active" : string.Empty;
+    }
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_mode == TaxSettingsMode.List)
+    {
+@RenderMobileList()
+    }
+    else if (_mode == TaxSettingsMode.Edit)
+    {
+@RenderEditorPane(true)
+    }
+    else
+    {
+@RenderDetailPane(true)
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 56%; min-width:28rem; min-height:0; overflow:hidden;">
+        <div class="px-3 py-2 border-bottom bg-light small text-muted">
+            @_taxTypes.Count tax type@(_taxTypes.Count == 1 ? string.Empty : "s")
+        </div>
+
+        @if (_isLoading && _taxTypes.Count == 0)
+                {
+        <div class="p-3 text-muted">Loading tax settings…</div>
+                }
+                else if (_taxTypes.Count == 0)
+                {
+        <div class="p-3 text-muted">No tax settings found.</div>
+                }
+                else
+                {
+        <div class="table-responsive flex-grow-1" style="min-height:0;">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Tax Type</th>
+                        <th>Cash Code</th>
+                        <th>Month</th>
+                        <th>Recurrence</th>
+                        <th>Account</th>
+                        <th>Offset Days</th>
+                        <th style="width:1%; white-space:nowrap;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _taxTypes)
+                                        {
+                    <tr class="@GetRowClass(item) @(item.IsEnabled ? string.Empty : "text-muted")">
+                        <td>
+                            <button type="button"
+                                    class="btn btn-link p-0 text-start text-decoration-none fw-semibold"
+                                    @onclick="() => SelectAsync(item.TaxTypeCode)">
+                                @item.TaxType
+                            </button>
+
+                            @if (!item.IsEnabled)
+                                                        {
+                            <span class="badge text-bg-secondary ms-2">Disabled</span>
+                                                        }
+                        </td>
+                        <td>@item.CashDescription</td>
+                        <td>@item.MonthName</td>
+                        <td>@item.Recurrence</td>
+                        <td>@item.SubjectName</td>
+                        <td>@item.OffsetDays</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button"
+                                        class="btn btn-outline-primary"
+                                        title="Details"
+                                        @onclick="() => SelectAsync(item.TaxTypeCode)">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                </button>
+
+                                @if (_isAdministrator)
+                                                                {
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        title="Edit"
+                                        @onclick="() => BeginEditAsync(item.TaxTypeCode)">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                                </button>
+                                                                }
+                            </div>
+                        </td>
+                    </tr>
+                                        }
+                </tbody>
+            </table>
+        </div>
+                }
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == TaxSettingsMode.Edit)
+        {
+            @RenderEditorPane(false)
+        }
+        else
+        {
+            @RenderDetailPane(false)
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderMobileList() => @<div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_isLoading && _taxTypes.Count == 0)
+{
+        <div class="p-3 text-muted">Loading tax settings…</div>
+}
+else if (_taxTypes.Count == 0)
+{
+        <div class="p-3 text-muted">No tax settings found.</div>
+}
+else
+{
+        <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+            @foreach (var item in _taxTypes)
+            {
+                <button type="button"
+                        class="list-group-item list-group-item-action px-3 py-3 text-start"
+                        @onclick="() => SelectAsync(item.TaxTypeCode)">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold">
+                                @item.TaxType
+                                @if (!item.IsEnabled)
+                                {
+                                    <span class="badge text-bg-secondary ms-2">Disabled</span>
+                                }
+                            </div>
+                            <div class="small text-muted">@item.CashDescription</div>
+                            <div class="small text-muted">@item.MonthName / @item.Recurrence</div>
+                            <div class="small text-muted">@item.SubjectName</div>
+                        </div>
+                    </div>
+                </button>
+            }
+        </div>
+}
+</div>;
+
+private RenderFragment RenderDetailPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedTaxType is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select a tax type to view its details.
+        </div>
+}
+else
+{
+    @if (showBackToList)
+    {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+    }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">
+                @_selectedTaxType.TaxType
+                @if (!_selectedTaxType.IsEnabled)
+                {
+                    <span class="badge text-bg-secondary ms-2">Disabled</span>
+                }
+            </div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Enabled</dt>
+                <dd class="col-sm-8">@(_selectedTaxType.IsEnabled ? "Yes" : "No")</dd>
+
+                <dt class="col-sm-4">Cash Code</dt>
+                <dd class="col-sm-8">@_selectedTaxType.CashDescription</dd>
+
+                <dt class="col-sm-4">Month</dt>
+                <dd class="col-sm-8">@_selectedTaxType.MonthName</dd>
+
+                <dt class="col-sm-4">Recurrence</dt>
+                <dd class="col-sm-8">@_selectedTaxType.Recurrence</dd>
+
+                <dt class="col-sm-4">Account</dt>
+                <dd class="col-sm-8">@_selectedTaxType.SubjectName</dd>
+
+                <dt class="col-sm-4">Offset Days</dt>
+                <dd class="col-sm-8">@_selectedTaxType.OffsetDays</dd>
+            </dl>
+        </div>
+
+    @if (_isAdministrator)
+    {
+            <div class="px-3 py-3 border-top bg-white">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="() => BeginEditAsync(_selectedTaxType.TaxTypeCode)">
+                    <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+                </button>
+            </div>
+    }
+}
+</div>;
+
+private RenderFragment RenderEditorPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Edit Tax Type</div>
+        <div class="small text-muted">@_editor.TaxType</div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <EditForm Model="@_editor" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-check mb-3">
+                <InputCheckbox id="isEnabled"
+                               @bind-Value="_editor.IsEnabled"
+                               class="form-check-input" />
+                <label class="form-check-label" for="isEnabled">Enabled</label>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="cashCode">Cash Code</label>
+                <InputSelect id="cashCode"
+                             @bind-Value="_editor.CashCode"
+                             class="form-select">
+                    @foreach (var item in _cashCodes)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="recurrenceCode">Recurrence</label>
+                <InputSelect id="recurrenceCode"
+                             @bind-Value="_editor.RecurrenceCode"
+                             class="form-select">
+                    @foreach (var item in _recurrences)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="monthNumber">Month</label>
+                <InputSelect id="monthNumber"
+                             @bind-Value="_editor.MonthNumber"
+                             class="form-select">
+                    @foreach (var item in _months)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="subjectCode">Account</label>
+                <InputSelect id="subjectCode"
+                             @bind-Value="_editor.SubjectCode"
+                             class="form-select">
+                    @foreach (var item in _subjects)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3" style="max-width:16rem;">
+                <label class="form-label" for="offsetDays">Offset Days</label>
+                <InputNumber id="offsetDays"
+                             @bind-Value="_editor.OffsetDays"
+                             class="form-control" />
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">Update</button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>;
+}

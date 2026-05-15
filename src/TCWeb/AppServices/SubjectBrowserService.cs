@@ -843,8 +843,8 @@ namespace TradeControl.Web.AppServices
                 case NodeEnum.SubjectClass.Real:
                     AddField(fields, "Tax Code", subject.TaxCode);
                     AddField(fields, "Payment Terms", subject.PaymentTerms);
-                    AddField(fields, "Expected Days", subject.ExpectedDays.ToString(CultureInfo.InvariantCulture));
-                    AddField(fields, "Payment Days", subject.PaymentDays.ToString(CultureInfo.InvariantCulture));
+                    AddField(fields, "Expected Days", subject.ExpectedDays);
+                    AddField(fields, "Payment Days", subject.PaymentDays);
                     AddField(fields, "Days From Month End", FormatBool(subject.PayDaysFromMonthEnd));
                     AddField(fields, "Pay Balance", FormatBool(subject.PayBalance));
                     AddField(fields, "Area", subject.AreaCode);
@@ -873,19 +873,19 @@ namespace TradeControl.Web.AppServices
                     {
                         AddField(fields, "Tax Code", subject.TaxCode);
                         AddField(fields, "Payment Terms", subject.PaymentTerms);
-                        AddField(fields, "Expected Days", subject.ExpectedDays.ToString(CultureInfo.InvariantCulture));
-                        AddField(fields, "Payment Days", subject.PaymentDays.ToString(CultureInfo.InvariantCulture));
+                        AddField(fields, "Expected Days", subject.ExpectedDays);
+                        AddField(fields, "Payment Days", subject.PaymentDays);
                         AddField(fields, "Days From Month End", FormatBool(subject.PayDaysFromMonthEnd));
                         AddField(fields, "Pay Balance", FormatBool(subject.PayBalance));
-                        AddField(fields, "Opening Balance", FormatDecimal(subject.OpeningBalance));
+                        AddField(fields, "Opening Balance", subject.OpeningBalance);
                         AddField(fields, "Area", subject.AreaCode);
                         AddField(fields, "Phone", subject.PhoneNumber);
                         AddField(fields, "Email", subject.EmailAddress);
-                        AddField(fields, "Employees", virtualSubject.NumberOfEmployees.ToString(CultureInfo.InvariantCulture));
+                        AddField(fields, "Employees", virtualSubject.NumberOfEmployees);
                         AddField(fields, "Company Number", virtualSubject.CompanyNumber);
                         AddField(fields, "VAT Number", virtualSubject.VatNumber);
                         AddField(fields, "EU Jurisdiction", FormatBool(virtualSubject.Eujurisdiction));
-                        AddField(fields, "Turnover", FormatDecimal(virtualSubject.Turnover));
+                        AddField(fields, "Turnover", virtualSubject.Turnover);
                         AddField(fields, "Web Site", virtualSubject.WebSite);
                         AddField(fields, "Source", virtualSubject.SubjectSource);
                         AddField(fields, "Description", virtualSubject.BusinessDescription);
@@ -904,6 +904,30 @@ namespace TradeControl.Web.AppServices
             if (!string.IsNullOrWhiteSpace(value))
             {
                 fields.Add(new SubjectBrowserDetailField(label, value));
+            }
+        }
+
+        private static void AddField(ICollection<SubjectBrowserDetailField> fields, string label, short value)
+        {
+            if (value != 0)
+            {
+                fields.Add(new SubjectBrowserDetailField(label, value.ToString(CultureInfo.InvariantCulture)));
+            }
+        }
+
+        private static void AddField(ICollection<SubjectBrowserDetailField> fields, string label, int value)
+        {
+            if (value != 0)
+            {
+                fields.Add(new SubjectBrowserDetailField(label, value.ToString(CultureInfo.InvariantCulture)));
+            }
+        }
+
+        private static void AddField(ICollection<SubjectBrowserDetailField> fields, string label, decimal value)
+        {
+            if (value != 0)
+            {
+                fields.Add(new SubjectBrowserDetailField(label, FormatDecimal(value)));
             }
         }
 

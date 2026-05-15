@@ -242,13 +242,13 @@
 
                 <button type="button"
                         class="btn btn-link text-start w-100 tc-tree-row"
-                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxCompany)"
-                        @onpointerdown="() => SetPressTarget(ManagerNode.TaxCompany)">
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.TaxRates)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.TaxRates)">
                     <span class="tc-tree-expander" aria-hidden="true">
                         <i class="bi bi-dot"></i>
                     </span>
                     <i class="bi bi-bank me-2 tc-tree-icon" aria-hidden="true"></i>
-                    <span class="tc-tree-label @(_selected == ManagerNode.TaxCompany ? "tc-tree-label-selected" : "")">Tax Rates &amp; Adjustments</span>
+                    <span class="tc-tree-label @(_selected == ManagerNode.TaxRates ? "tc-tree-label-selected" : "")">Tax Rates &amp; Adjustments</span>
                 </button>
 
                 <div class="mt-2 ps-0">
@@ -277,6 +277,20 @@
                     <span class="tc-tree-label @(_selected == ManagerNode.SubjectType ? "tc-tree-label-selected" : "")">Subject Types</span>
                 </button>
 
+                <div class="mt-2 ps-0">
+                    <div class="text-uppercase small text-muted px-2" style="letter-spacing:0.06em;">Diagnostics</div>
+                </div>
+
+                <button type="button"
+                        class="btn btn-link text-start w-100 tc-tree-row"
+                        @onclick="() => SelectPlaceholderAsync(ManagerNode.EventViewer)"
+                        @onpointerdown="() => SetPressTarget(ManagerNode.EventViewer)">
+                    <span class="tc-tree-expander" aria-hidden="true">
+                        <i class="bi bi-dot"></i>
+                    </span>
+                    <i class="bi bi-list-columns-reverse me-2 tc-tree-icon" aria-hidden="true"></i>
+                    <span class="tc-tree-label @(_selected == ManagerNode.EventViewer ? "tc-tree-label-selected" : "")">Event Viewer</span>
+                </button>
             </div>
         }
 
@@ -340,6 +354,11 @@
             _templatesExpanded = true;
         }
 
+        if (_selected == ManagerNode.EventViewer)
+        {
+            _rootExpanded = true;
+        }
+
         if (!string.IsNullOrWhiteSpace(_templateKeyToRestore))
         {
             _rootExpanded = true;
@@ -374,9 +393,10 @@
 
         TaxSettings,
         TaxCode,
-        TaxCompany,
+        TaxRates,
 
-        SubjectType
+        SubjectType,
+        EventViewer
     }
 
     public enum TreeActionType

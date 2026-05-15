@@ -1,0 +1,401 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="text-muted small mb-3">
+        Set the next number for each invoice register. New invoice numbers are constructed from the next number and the user id.
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum InvoiceSettingsMode
+    {
+        List,
+        Edit
+    }
+
+    private readonly List<Invoice_vwType> _types = [];
+    private Invoice_vwType? _selectedType;
+    private Invoice_tbType _editor = new();
+    private InvoiceSettingsMode _mode = InvoiceSettingsMode.List;
+    private bool _isAdministrator;
+    private bool _isLoading;
+    private string? _errorMessage;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadTypesAsync(false);
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+    }
+
+    private async Task LoadTypesAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedCode = preserveSelection ? _selectedType?.InvoiceTypeCode : null;
+
+            var rows = await NodeContext.Invoice_Types
+                .AsNoTracking()
+                .OrderBy(item => item.InvoiceTypeCode)
+                .ToListAsync();
+
+            _types.Clear();
+            _types.AddRange(rows);
+
+            if (_types.Count == 0)
+            {
+                _selectedType = null;
+                _mode = InvoiceSettingsMode.List;
+                return;
+            }
+
+            _selectedType = selectedCode.HasValue
+                ? _types.FirstOrDefault(item => item.InvoiceTypeCode == selectedCode.Value)
+                : _types[0];
+
+            _selectedType ??= _types[0];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load invoice settings.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Task SelectAsync(short invoiceTypeCode)
+    {
+        _selectedType = _types.FirstOrDefault(item => item.InvoiceTypeCode == invoiceTypeCode) ?? _selectedType;
+        _mode = InvoiceSettingsMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task BeginEditAsync(short invoiceTypeCode)
+    {
+        try
+        {
+            var current = await NodeContext.Invoice_tbTypes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.InvoiceTypeCode == invoiceTypeCode);
+
+            if (current is null)
+            {
+                _errorMessage = "Invoice type not found.";
+                return;
+            }
+
+            _editor = new Invoice_tbType
+            {
+                InvoiceTypeCode = current.InvoiceTypeCode,
+                InvoiceType = current.InvoiceType,
+                CashPolarityCode = current.CashPolarityCode,
+                NextNumber = current.NextNumber
+            };
+
+            _selectedType = _types.FirstOrDefault(item => item.InvoiceTypeCode == invoiceTypeCode) ?? _selectedType;
+            _mode = InvoiceSettingsMode.Edit;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the invoice setting.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = InvoiceSettingsMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+
+            var entity = await NodeContext.Invoice_tbTypes
+                .SingleOrDefaultAsync(item => item.InvoiceTypeCode == _editor.InvoiceTypeCode);
+
+            if (entity is null)
+            {
+                _errorMessage = "Invoice type not found.";
+                return;
+            }
+
+            entity.NextNumber = _editor.NextNumber;
+            await NodeContext.SaveChangesAsync();
+
+            _mode = InvoiceSettingsMode.List;
+            await LoadTypesAsync(false);
+            _selectedType = _types.FirstOrDefault(item => item.InvoiceTypeCode == _editor.InvoiceTypeCode) ?? _selectedType;
+
+            SetActionMessage("Invoice setting updated.", "success");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to update the invoice setting.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private void SetActionMessage(string message, string tone)
+    {
+        _actionMessage = message;
+        _actionTone = tone;
+    }
+
+    private string GetRowClass(Invoice_vwType item)
+    {
+        var isSelected = _selectedType?.InvoiceTypeCode == item.InvoiceTypeCode;
+        return isSelected ? "table-active" : string.Empty;
+    }
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_mode == InvoiceSettingsMode.Edit)
+    {
+@RenderEditorPane()
+    }
+    else
+    {
+@RenderMobileList()
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 50%; min-width:24rem; min-height:0; overflow:hidden;">
+        <div class="px-3 py-2 border-bottom bg-light small text-muted">
+            @_types.Count invoice register@(_types.Count == 1 ? string.Empty : "s")
+        </div>
+
+        @if (_isLoading && _types.Count == 0)
+                {
+        <div class="p-3 text-muted">Loading invoice settings…</div>
+                }
+                else if (_types.Count == 0)
+                {
+        <div class="p-3 text-muted">No invoice types found.</div>
+                }
+                else
+                {
+        <div class="table-responsive flex-grow-1" style="min-height:0;">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Polarity</th>
+                        <th>Next Number</th>
+                        @if (_isAdministrator)
+                                                {
+                        <th style="width:1%; white-space:nowrap;"></th>
+                                                }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _types)
+                    {
+                        <tr class="@GetRowClass(item)">
+                            <td>
+                                <button type="button"
+                                        class="btn btn-link p-0 text-start text-decoration-none fw-semibold"
+                                        @onclick="() => SelectAsync(item.InvoiceTypeCode)">
+                                    @item.InvoiceType
+                                </button>
+                            </td>
+                            <td class="text-muted">@item.CashPolarity</td>
+                            <td>@item.NextNumber</td>
+
+                            @if (_isAdministrator)
+                            {
+                                <td>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm"
+                                            title="Edit next number"
+                                            @onclick="() => BeginEditAsync(item.InvoiceTypeCode)">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+                }
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == InvoiceSettingsMode.Edit)
+        {
+            @RenderEditorPane()
+        }
+        else
+        {
+            @RenderDetailPane()
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderMobileList() => @<div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_isLoading && _types.Count == 0)
+{
+        <div class="p-3 text-muted">Loading invoice settings…</div>
+}
+else if (_types.Count == 0)
+{
+        <div class="p-3 text-muted">No invoice types found.</div>
+}
+else
+{
+        <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+            @foreach (var item in _types)
+            {
+                <div class="list-group-item px-3 py-3">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold">@item.InvoiceType</div>
+                            <div class="small text-muted">@item.CashPolarity</div>
+                            <div class="small text-muted">Next number: @item.NextNumber</div>
+                        </div>
+
+                        @if (_isAdministrator)
+                        {
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    title="Edit next number"
+                                    @onclick="() => BeginEditAsync(item.InvoiceTypeCode)">
+                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+}
+</div>;
+
+private RenderFragment RenderDetailPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedType is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select an invoice register to view its details.
+        </div>
+}
+else
+{
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">@_selectedType.InvoiceType</div>
+            <div class="small text-muted">Code @_selectedType.InvoiceTypeCode</div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Polarity</div>
+                    <div>@_selectedType.CashPolarity</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Next Number</div>
+                    <div>@_selectedType.NextNumber</div>
+                </div>
+            </div>
+
+            <div class="small text-muted mt-3">
+                New invoice numbers are generated from the next number and the user id.
+            </div>
+        </div>
+
+    @if (_isAdministrator)
+    {
+            <div class="px-3 py-3 border-top bg-white">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="() => BeginEditAsync(_selectedType.InvoiceTypeCode)">
+                    <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+                </button>
+            </div>
+    }
+}
+</div>;
+
+private RenderFragment RenderEditorPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Edit Invoice Number</div>
+        <div class="small text-muted">@_editor.InvoiceType</div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <EditForm Model="@_editor" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3" style="max-width:22rem;">
+                <label class="form-label" for="nextNumber">Next Number</label>
+                <InputNumber id="nextNumber"
+                             @bind-Value="_editor.NextNumber"
+                             class="form-control" />
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">Update</button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>;
+}

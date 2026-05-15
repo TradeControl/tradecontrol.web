@@ -1,0 +1,689 @@
+@using System
+@using System.Collections.Generic
+@using System.ComponentModel.DataAnnotations
+@using System.Linq
+@using System.Text.Json
+@using System.Threading
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.AppServices.Execution
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Data
+@implements IAsyncDisposable
+
+@inject NodeContext NodeContext
+@inject IExecutionQueue ExecutionQueue
+@inject IExecutionRuntimeState ExecutionRuntimeState
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    @if (_view == DemoDataView.Warning)
+    {
+        <div class="border rounded bg-white p-4">
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="text-danger fs-4">
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold fs-5">Replace current business with demo data</div>
+                    <div class="text-muted">
+                        This process re-initialises the business and replaces the current data with a synthetic demonstration dataset.
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning mb-3">
+                Use this only when you are certain you want to overwrite the existing business data.
+            </div>
+
+            <div class="form-check mb-4">
+                <InputCheckbox id="confirmWipe"
+                               @bind-Value="_confirmWipe"
+                               class="form-check-input" />
+                <label class="form-check-label" for="confirmWipe">
+                    I understand this will permanently delete the existing business data and replace it with synthetic demo data.
+                </label>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-danger"
+                        disabled="@(!_confirmWipe)"
+                        @onclick="ProceedToConfigAsync">
+                    Proceed to demo data setup
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="ResetWarningAsync">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+    else if (_view == DemoDataView.Config)
+    {
+        <div class="overflow-auto" style="min-height:0;">
+            <div class="container-fluid px-0">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                        <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">Synthetic Demo Data</div>
+                        <div class="text-muted">Select a template and scenario, then queue the long-running dataset installation.</div>
+                    </div>
+
+                    <div class="border rounded bg-white px-3 py-2">
+                        <div class="small text-muted">Execution Model</div>
+                        <div class="fw-semibold">Background queue</div>
+                    </div>
+                </div>
+
+                <EditForm Model="@_request" OnValidSubmit="QueueExecutionAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row g-3">
+                        <div class="col-12 col-xl-7 d-flex">
+                            <div class="card shadow-sm h-100 w-100">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Template & Scenario</div>
+                                    <div class="text-muted small">Choose the base template and a matching synthetic dataset scenario.</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="templateName">Configuration Template</label>
+                                        <select id="templateName"
+                                                class="form-select"
+                                                @bind="_request.TemplateName"
+                                                @bind:after="ApplyTemplateDefaultsAsync">
+                                            @foreach (var item in _templateNames)
+                                            {
+                                                <option value="@item">@item</option>
+                                            }
+                                        </select>
+
+                                        @if (!string.IsNullOrWhiteSpace(SelectedTemplateDescription))
+                                        {
+                                            <div class="alert alert-info mt-2 mb-0" role="note">@SelectedTemplateDescription</div>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-3">
+                                        <div>
+                                            <div class="fw-semibold">VAT registration</div>
+                                            <div class="text-muted small">Available scenarios are filtered by the current VAT setting.</div>
+                                        </div>
+
+                                        <button type="button"
+                                                class="btn @(_request.IsVatRegistered ? "btn-success" : "btn-danger")"
+                                                aria-pressed="@_request.IsVatRegistered"
+                                                @onclick="ToggleVatAsync">
+                                            VAT: @(_request.IsVatRegistered ? "On" : "Off")
+                                        </button>
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label" for="datasetCode">Synthetic Dataset Scenario</label>
+                                        <select id="datasetCode"
+                                                class="form-select"
+                                                @bind="_request.DatasetCode">
+                                            <option value="">-- Select synthetic dataset --</option>
+                                            @foreach (var item in FilteredDatasets)
+                                            {
+                                                <option value="@item.DatasetCode">@item.DatasetTitle</option>
+                                            }
+                                        </select>
+                                        <ValidationMessage For="() => _request.DatasetCode" />
+
+                                        <div class="form-text mt-2">
+                                            @DatasetHint
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(SelectedDatasetNotes))
+                                    {
+                                        <div class="alert alert-secondary mt-3 mb-0" role="note">
+                                            @SelectedDatasetNotes
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-xl-5 d-flex">
+                            <div class="card shadow-sm h-100 w-100">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">What happens next</div>
+                                    <div class="text-muted small">The installation runs as a queued background execution.</div>
+                                </div>
+                                <div class="card-body">
+                                    <ol class="mb-3">
+                                        <li>The current business is re-initialised.</li>
+                                        <li>The selected synthetic dataset is queued.</li>
+                                        <li>The execution runs in the background.</li>
+                                        <li>The status view updates until completion.</li>
+                                    </ol>
+
+                                    <div class="alert alert-warning mb-0">
+                                        Do not start another synthetic dataset installation while one is already running.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="submit" class="btn btn-primary">Queue synthetic dataset</button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="ResetWarningAsync">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+    else if (_execution is not null)
+    {
+        <div class="overflow-auto" style="min-height:0;">
+            <div class="container-fluid px-0">
+                <div class="row g-3">
+                    <div class="col-12 col-xl-8 d-flex">
+                        <div class="card shadow-sm h-100 w-100">
+                            <div class="card-header bg-white">
+                                <div class="fw-semibold">Execution</div>
+                                <div class="text-muted small">The dataset installation is running in the background.</div>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert @GetExecutionBannerClass(_execution) mb-3" role="status">
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (!_execution.IsComplete)
+                                        {
+                                            <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+                                        }
+
+                                        <div>
+                                            <div class="fw-semibold">@_execution.ExecutionStatus</div>
+                                            <div>@_execution.ProgressMessage</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-3">Execution Code</dt>
+                                    <dd class="col-sm-9">@_execution.ExecutionCode</dd>
+
+                                    <dt class="col-sm-3">Execution Type</dt>
+                                    <dd class="col-sm-9">@_execution.ExecutionType</dd>
+
+                                    <dt class="col-sm-3">Queued On</dt>
+                                    <dd class="col-sm-9">@_execution.QueuedOn.ToString("g")</dd>
+
+                                    <dt class="col-sm-3">Started On</dt>
+                                    <dd class="col-sm-9">@(_execution.StartedOn?.ToString("g") ?? "-")</dd>
+
+                                    <dt class="col-sm-3">Completed On</dt>
+                                    <dd class="col-sm-9">@(_execution.CompletedOn?.ToString("g") ?? "-")</dd>
+                                </dl>
+
+                                @if (!string.IsNullOrWhiteSpace(_execution.ErrorMessage))
+                                {
+                                    <div class="alert alert-danger mt-3 mb-0" role="alert">
+                                        <div class="fw-semibold">Execution failed</div>
+                                        <div>@_execution.ErrorMessage</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button"
+                                    class="btn btn-outline-primary"
+                                    disabled="@(!_execution.IsComplete)"
+                                    @onclick="QueueAnotherAsync">
+                                Queue another dataset
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    @onclick="ResetWarningAsync">
+                                Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private enum DemoDataView
+    {
+        Warning,
+        Config,
+        Status
+    }
+
+    private sealed class DemoDataRequest
+    {
+        [Required]
+        [Display(Name = "Configuration Template")]
+        public string TemplateName { get; set; } = string.Empty;
+
+        [Display(Name = "VAT Registered")]
+        public bool IsVatRegistered { get; set; }
+
+        [Required]
+        [StringLength(10)]
+        [Display(Name = "Synthetic Dataset Scenario")]
+        public string DatasetCode { get; set; } = string.Empty;
+    }
+
+    private sealed class DemoTemplateDataset
+    {
+        public string DatasetCode { get; init; } = string.Empty;
+        public string DatasetTitle { get; init; } = string.Empty;
+        public string Notes { get; init; } = string.Empty;
+        public bool? IsVatRegistered { get; init; }
+    }
+
+    private sealed class ExecutionStatusInfo
+    {
+        public string ExecutionCode { get; init; } = string.Empty;
+        public string ExecutionType { get; init; } = string.Empty;
+        public short ExecutionStatusCode { get; init; }
+        public string ExecutionStatus { get; init; } = string.Empty;
+        public DateTime QueuedOn { get; init; }
+        public DateTime? StartedOn { get; init; }
+        public DateTime? CompletedOn { get; init; }
+        public string ProgressMessage { get; init; } = string.Empty;
+        public string? ErrorMessage { get; init; }
+
+        public bool IsComplete =>
+            ExecutionStatusCode == (short)NodeEnum.ExecutionStatus.Succeeded
+            || ExecutionStatusCode == (short)NodeEnum.ExecutionStatus.Failed
+            || ExecutionStatusCode == (short)NodeEnum.ExecutionStatus.Cancelled;
+
+        public bool IsSucceeded => ExecutionStatusCode == (short)NodeEnum.ExecutionStatus.Succeeded;
+    }
+
+    private readonly List<string> _templateNames = [];
+    private readonly Dictionary<string, string> _templateDescriptions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, bool> _templateVatDefaults = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<DemoTemplateDataset>> _templateDatasets = new(StringComparer.OrdinalIgnoreCase);
+
+    private DemoDataView _view = DemoDataView.Warning;
+    private DemoDataRequest _request = new();
+    private ExecutionStatusInfo? _execution;
+    private string? _executionCode;
+    private bool _confirmWipe;
+    private string? _errorMessage;
+    private CancellationTokenSource? _pollCts;
+
+    private IEnumerable<DemoTemplateDataset> FilteredDatasets =>
+        _templateDatasets.TryGetValue(_request.TemplateName, out var datasets)
+            ? datasets.Where(IncludeDatasetForCurrentVatSetting).ToList()
+            : [];
+
+    private string SelectedTemplateDescription =>
+        !string.IsNullOrWhiteSpace(_request.TemplateName)
+        && _templateDescriptions.TryGetValue(_request.TemplateName, out var text)
+            ? text
+            : string.Empty;
+
+    private string SelectedDatasetNotes =>
+        FilteredDatasets.FirstOrDefault(item => item.DatasetCode == _request.DatasetCode)?.Notes ?? string.Empty;
+
+    private string DatasetHint =>
+        FilteredDatasets.Any()
+            ? "Select a scenario to queue synthetic demo data installation."
+            : "No synthetic scenarios are available for the current template and VAT setting.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookupsAsync();
+        await LoadDefaultsAsync();
+
+        if (ExecutionRuntimeState.TryGetActiveDatabaseMaintenance(out var runtimeExecution))
+        {
+            _execution = ToExecutionStatusInfo(runtimeExecution);
+            _executionCode = _execution.ExecutionCode;
+            _view = DemoDataView.Status;
+            StartPolling();
+        }
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var templates = await NodeContext.App_tbTemplates
+            .AsNoTracking()
+            .OrderBy(item => item.TemplateName)
+            .Select(item => new
+            {
+                item.TemplateCode,
+                item.TemplateName,
+                item.TemplateDescription,
+                item.IsVatRegistered
+            })
+            .ToListAsync();
+
+        var datasets = await (from dataset in NodeContext.App_tbTemplateDatasets.AsNoTracking()
+                              join template in NodeContext.App_tbTemplates.AsNoTracking()
+                                  on dataset.TemplateCode equals template.TemplateCode
+                              orderby template.TemplateName, dataset.DatasetTitle
+                              select new
+                              {
+                                  template.TemplateName,
+                                  dataset.DatasetCode,
+                                  dataset.DatasetTitle,
+                                  dataset.Notes,
+                                  dataset.IsVatRegistered
+                              })
+            .ToListAsync();
+
+        _templateNames.Clear();
+        _templateNames.AddRange(templates.Select(item => item.TemplateName));
+
+        _templateDescriptions.Clear();
+        foreach (var item in templates)
+            _templateDescriptions[item.TemplateName] = item.TemplateDescription ?? string.Empty;
+
+        _templateVatDefaults.Clear();
+        foreach (var item in templates)
+            _templateVatDefaults[item.TemplateName] = item.IsVatRegistered;
+
+        _templateDatasets.Clear();
+        foreach (var item in templates)
+            _templateDatasets[item.TemplateName] = [];
+
+        foreach (var item in datasets)
+        {
+            if (!_templateDatasets.TryGetValue(item.TemplateName, out var list))
+            {
+                list = [];
+                _templateDatasets[item.TemplateName] = list;
+            }
+
+            list.Add(new DemoTemplateDataset
+            {
+                DatasetCode = item.DatasetCode,
+                DatasetTitle = item.DatasetTitle,
+                Notes = item.Notes ?? string.Empty,
+                IsVatRegistered = item.IsVatRegistered
+            });
+        }
+    }
+
+    private Task LoadDefaultsAsync()
+    {
+        var defaultTemplate = _templateNames.FirstOrDefault() ?? string.Empty;
+
+        _request = new DemoDataRequest
+        {
+            TemplateName = defaultTemplate,
+            IsVatRegistered = _templateVatDefaults.TryGetValue(defaultTemplate, out var isVat) && isVat,
+            DatasetCode = string.Empty
+        };
+
+        return Task.CompletedTask;
+    }
+
+    private bool IncludeDatasetForCurrentVatSetting(DemoTemplateDataset dataset)
+    {
+        if (!dataset.IsVatRegistered.HasValue)
+            return true;
+
+        return dataset.IsVatRegistered.Value == _request.IsVatRegistered;
+    }
+
+    private Task ProceedToConfigAsync()
+    {
+        _view = DemoDataView.Config;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyTemplateDefaultsAsync()
+    {
+        if (_templateVatDefaults.TryGetValue(_request.TemplateName, out var isVat))
+            _request.IsVatRegistered = isVat;
+        else
+            _request.IsVatRegistered = false;
+
+        await EnsureValidDatasetSelectionAsync();
+    }
+
+    private async Task ToggleVatAsync()
+    {
+        _request.IsVatRegistered = !_request.IsVatRegistered;
+        await EnsureValidDatasetSelectionAsync();
+    }
+
+    private Task EnsureValidDatasetSelectionAsync()
+    {
+        if (!FilteredDatasets.Any(item => item.DatasetCode == _request.DatasetCode))
+            _request.DatasetCode = string.Empty;
+
+        return Task.CompletedTask;
+    }
+
+    private async Task QueueExecutionAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+
+            if (string.IsNullOrWhiteSpace(_request.DatasetCode))
+            {
+                _errorMessage = "Select a synthetic dataset scenario.";
+                return;
+            }
+
+            var dataset = await (from item in NodeContext.App_tbTemplateDatasets.AsNoTracking()
+                                 join template in NodeContext.App_tbTemplates.AsNoTracking()
+                                     on item.TemplateCode equals template.TemplateCode
+                                 where template.TemplateName == _request.TemplateName
+                                    && item.DatasetCode == _request.DatasetCode
+                                 select item)
+                .SingleOrDefaultAsync();
+
+            if (dataset is null)
+            {
+                _errorMessage = "The selected synthetic dataset is not valid for this template.";
+                return;
+            }
+
+            if (dataset.IsVatRegistered.HasValue && dataset.IsVatRegistered.Value != _request.IsVatRegistered)
+            {
+                _errorMessage = "The selected synthetic dataset does not match the current VAT setting.";
+                return;
+            }
+
+            var executionArguments = new SyntheticDatasetExecutionArguments
+            {
+                IsCompany = dataset.IsCompany,
+                UseStdCompanyTemplate = dataset.UseStdCompanyTemplate,
+                IsVatRegistered = dataset.IsVatRegistered,
+                MisOrdersPerMonth = dataset.MisOrdersPerMonth,
+                MonthsForward = dataset.MonthsForward,
+                PriceRatio = dataset.PriceRatio,
+                QuantityRatio = dataset.QuantityRatio,
+                FloatRatio = dataset.FloatRatio
+            };
+
+            string? queuedBy = null;
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = await UserManager.GetUserAsync(authState.User);
+
+            if (user is not null)
+            {
+                queuedBy = await NodeContext.GetUserId(user.Id);
+
+                if (string.IsNullOrWhiteSpace(queuedBy))
+                    queuedBy = null;
+            }
+
+            _executionCode = await ExecutionQueue.EnqueueAsync(
+                NodeEnum.ExecutionType.SyntheticDataset,
+                JsonSerializer.Serialize(executionArguments),
+                queuedBy);
+
+            await LoadExecutionStateAsync(_executionCode);
+            _view = DemoDataView.Status;
+            StartPolling();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to queue the synthetic dataset installation.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task LoadExecutionStateAsync(string executionCode)
+    {
+        _execution = await LoadExecutionAsync(executionCode);
+
+        if (_execution is null)
+            _errorMessage = "Unable to load the execution status.";
+    }
+
+    private async Task<ExecutionStatusInfo?> LoadExecutionAsync(string executionCode)
+    {
+        if (ExecutionRuntimeState.TryGet(executionCode, out var runtimeExecution))
+            return ToExecutionStatusInfo(runtimeExecution);
+
+        return await (from execution in NodeContext.App_tbExecutions.AsNoTracking()
+                      join status in NodeContext.App_tbExecutionStatuses.AsNoTracking()
+                          on execution.ExecutionStatusCode equals status.ExecutionStatusCode
+                      where execution.ExecutionCode == executionCode
+                      select new ExecutionStatusInfo
+                      {
+                          ExecutionCode = execution.ExecutionCode,
+                          ExecutionType = execution.ExecutionType,
+                          ExecutionStatusCode = execution.ExecutionStatusCode,
+                          ExecutionStatus = status.ExecutionStatus,
+                          QueuedOn = execution.QueuedOn,
+                          StartedOn = execution.StartedOn,
+                          CompletedOn = execution.CompletedOn,
+                          ProgressMessage = execution.ProgressMessage,
+                          ErrorMessage = execution.ErrorMessage
+                      })
+            .SingleOrDefaultAsync();
+    }
+
+    private static ExecutionStatusInfo ToExecutionStatusInfo(ExecutionRuntimeSnapshot execution)
+    {
+        return new ExecutionStatusInfo
+        {
+            ExecutionCode = execution.ExecutionCode,
+            ExecutionType = execution.ExecutionType,
+            ExecutionStatusCode = execution.ExecutionStatusCode,
+            ExecutionStatus = execution.ExecutionStatus,
+            QueuedOn = execution.QueuedOn,
+            StartedOn = execution.StartedOn,
+            CompletedOn = execution.CompletedOn,
+            ProgressMessage = execution.ProgressMessage,
+            ErrorMessage = execution.ErrorMessage
+        };
+    }
+
+    private void StartPolling()
+    {
+        StopPolling();
+
+        if (_execution is null || _execution.IsComplete || string.IsNullOrWhiteSpace(_executionCode))
+            return;
+
+        _pollCts = new CancellationTokenSource();
+        _ = PollExecutionAsync(_pollCts.Token);
+    }
+
+    private async Task PollExecutionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (string.IsNullOrWhiteSpace(_executionCode))
+                        return;
+
+                    await LoadExecutionStateAsync(_executionCode);
+
+                    if (_execution?.IsComplete == true)
+                        StopPolling();
+
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void StopPolling()
+    {
+        if (_pollCts is null)
+            return;
+
+        _pollCts.Cancel();
+        _pollCts.Dispose();
+        _pollCts = null;
+    }
+
+    private Task QueueAnotherAsync()
+    {
+        StopPolling();
+        _execution = null;
+        _executionCode = null;
+        _view = DemoDataView.Config;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task ResetWarningAsync()
+    {
+        StopPolling();
+        _execution = null;
+        _executionCode = null;
+        _view = DemoDataView.Warning;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private static string GetExecutionBannerClass(ExecutionStatusInfo execution)
+    {
+        if (execution.IsSucceeded)
+            return "alert-success";
+
+        if (execution.IsComplete)
+            return "alert-danger";
+
+        if (execution.ExecutionStatusCode == (short)NodeEnum.ExecutionStatus.Pending)
+            return "alert-warning";
+
+        return "alert-info";
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        StopPolling();
+        return ValueTask.CompletedTask;
+    }
+}

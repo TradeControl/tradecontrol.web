@@ -1,0 +1,615 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.FileProviders
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Mail
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IConfiguration Configuration
+@inject IFileProvider FileProvider
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionMessageTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_loadError
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small text-muted">Type</label>
+            <select class="form-select form-select-sm"
+                    style="width:12rem;"
+                    value="@GetSelectedFilterValue()"
+                    @onchange="HandleFilterChangedAsync">
+                <option value="">All</option>
+                <option value="@((short)NodeEnum.EventType.IsError)">Error</option>
+                <option value="@((short)NodeEnum.EventType.IsWarning)">Warning</option>
+                <option value="@((short)NodeEnum.EventType.IsInformation)">Information</option>
+            </select>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small text-muted">Rows</label>
+            <select class="form-select form-select-sm"
+                    style="width:6rem;"
+                    value="@_pageSize"
+                    @onchange="HandlePageSizeChangedAsync">
+                <option value="10">10</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    disabled="@_isLoading"
+                    @onclick="RefreshAsync">
+                <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    @if (_isLoading && _entries.Count == 0)
+    {
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted">
+            <div>Loading event log…</div>
+        </div>
+    }
+    else if (_entries.Count == 0)
+    {
+        <div class="border rounded bg-white p-4 text-center text-muted">
+            No event log entries match the current filter.
+        </div>
+    }
+    else if (IsMobile && _mobileDetailOpen && SelectedEntry is not null)
+    {
+        <div class="d-flex flex-column flex-grow-1 border rounded bg-white" style="min-height:0; overflow:hidden;">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="ShowMobileList">
+                    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                </button>
+
+                <div class="small text-muted">@GetPagerSummary()</div>
+            </div>
+
+            @RenderDetailPane()
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+            @if (IsMobile)
+            {
+                <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+                    <div class="px-3 py-2 border-bottom bg-light small text-muted">
+                        @GetPagerSummary()
+                    </div>
+
+                    <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+                        @foreach (var item in _entries)
+                        {
+                            <button type="button"
+                                    class="@GetRowCssClass(item)"
+                                    @onclick="() => SelectEntryAsync(item.LogCode, true)">
+                                <div class="d-flex align-items-start gap-3">
+                                    <i class="bi @GetIconClass(item.EventTypeCode) @GetIconTone(item.EventTypeCode) mt-1" aria-hidden="true"></i>
+
+                                    <div class="flex-grow-1 text-start">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <div class="fw-semibold">@GetTypeLabel(item.EventTypeCode)</div>
+                                            <div class="small text-muted">@item.LoggedOn.ToString("g")</div>
+                                        </div>
+
+                                        <div class="small mb-1">@GetSummary(item.EventMessage)</div>
+                                        <div class="small text-muted">@item.InsertedBy</div>
+                                    </div>
+                                </div>
+                            </button>
+                        }
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top bg-light">
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                disabled="@(_pageNumber <= 1 || _isLoading)"
+                                @onclick="PreviousPageAsync">
+                            Previous
+                        </button>
+
+                        <div class="small text-muted">@GetPageText()</div>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                disabled="@(_pageNumber >= TotalPages || _isLoading || TotalPages == 0)"
+                                @onclick="NextPageAsync">
+                            Next
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+                    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 44%; min-width:20rem; min-height:0; overflow:hidden;">
+                        <div class="px-3 py-2 border-bottom bg-light small text-muted">
+                            @GetPagerSummary()
+                        </div>
+
+                        <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+                            @foreach (var item in _entries)
+                            {
+                                <button type="button"
+                                        class="@GetRowCssClass(item)"
+                                        @onclick="() => SelectEntryAsync(item.LogCode, false)">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <i class="bi @GetIconClass(item.EventTypeCode) @GetIconTone(item.EventTypeCode) mt-1" aria-hidden="true"></i>
+
+                                        <div class="flex-grow-1 text-start">
+                                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                                <div class="fw-semibold">@GetTypeLabel(item.EventTypeCode)</div>
+                                                <div class="small text-muted">@item.LoggedOn.ToString("g")</div>
+                                            </div>
+
+                                            <div class="small mb-1">@GetSummary(item.EventMessage)</div>
+                                            <div class="small text-muted">@item.InsertedBy</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top bg-light">
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    disabled="@(_pageNumber <= 1 || _isLoading)"
+                                    @onclick="PreviousPageAsync">
+                                Previous
+                            </button>
+
+                            <div class="small text-muted">@GetPageText()</div>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    disabled="@(_pageNumber >= TotalPages || _isLoading || TotalPages == 0)"
+                                    @onclick="NextPageAsync">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+
+                    @RenderDetailPane()
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public short? InitialEventType { get; set; }
+
+    private readonly List<App_vwEventLog> _entries = [];
+    private short? _selectedEventType;
+    private string? _selectedLogCode;
+    private int _pageNumber = 1;
+    private int _pageSize = 10;
+    private int _totalCount;
+    private bool _isLoading;
+    private bool _mobileDetailOpen;
+    private bool _showArchiveConfirm;
+    private bool _isAdministrator;
+    private bool _canSubmitRole;
+    private bool _hasSupportTarget;
+    private string _supportEmailAddress = string.Empty;
+    private string _supportNote = string.Empty;
+    private string? _actionMessage;
+    private string _actionMessageTone = "info";
+    private string? _loadError;
+
+    private App_vwEventLog? SelectedEntry => _entries.FirstOrDefault(item => item.LogCode == _selectedLogCode);
+
+    private int TotalPages => _totalCount == 0 ? 0 : (int)Math.Ceiling(_totalCount / (double)_pageSize);
+
+    private bool CanArchiveSelected => _isAdministrator && SelectedEntry is not null;
+
+    private bool CanSubmitSelected =>
+        _canSubmitRole
+        && _hasSupportTarget
+        && SelectedEntry?.EventTypeCode == (short)NodeEnum.EventType.IsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedEventType = InitialEventType;
+
+        await LoadAccessStateAsync();
+        await LoadEntriesAsync(preserveSelection: false);
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        _isAdministrator = user.IsInRole(Constants.AdministratorsRole);
+        _canSubmitRole = _isAdministrator || user.IsInRole(Constants.ManagersRole);
+
+        _supportEmailAddress = Configuration.GetSection("Settings")["SupportEmailAddress"] ?? string.Empty;
+
+        var nodeSettings = new NodeSettings(NodeContext);
+        _hasSupportTarget = await nodeSettings.MailHost() is not null
+            && !string.IsNullOrWhiteSpace(_supportEmailAddress);
+    }
+
+    private async Task LoadEntriesAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _loadError = null;
+
+        try
+        {
+            IQueryable<App_vwEventLog> query = NodeContext.App_EventLogs.AsNoTracking();
+
+            if (_selectedEventType.HasValue)
+                query = query.Where(item => item.EventTypeCode == _selectedEventType.Value);
+
+            _totalCount = await query.CountAsync();
+
+            if (TotalPages > 0 && _pageNumber > TotalPages)
+                _pageNumber = TotalPages;
+
+            if (_pageNumber < 1)
+                _pageNumber = 1;
+
+            var rows = await query
+                .OrderByDescending(item => item.LoggedOn)
+                .Skip((_pageNumber - 1) * _pageSize)
+                .Take(_pageSize)
+                .ToListAsync();
+
+            _entries.Clear();
+            _entries.AddRange(rows);
+
+            if (_entries.Count == 0)
+            {
+                _selectedLogCode = null;
+                _mobileDetailOpen = false;
+                _showArchiveConfirm = false;
+                return;
+            }
+
+            var keepSelection = preserveSelection
+                && !string.IsNullOrWhiteSpace(_selectedLogCode)
+                && _entries.Any(item => item.LogCode == _selectedLogCode);
+
+            _selectedLogCode = keepSelection ? _selectedLogCode : _entries[0].LogCode;
+
+            if (!keepSelection)
+                _showArchiveConfirm = false;
+        }
+        catch (Exception ex)
+        {
+            _loadError = "Unable to load the event log.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleFilterChangedAsync(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        _selectedEventType = short.TryParse(value, out var parsedValue)
+            ? parsedValue
+            : null;
+
+        _pageNumber = 1;
+        _mobileDetailOpen = false;
+        _showArchiveConfirm = false;
+
+        await LoadEntriesAsync(preserveSelection: false);
+    }
+
+    private async Task HandlePageSizeChangedAsync(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var pageSize) || pageSize <= 0)
+            return;
+
+        _pageSize = pageSize;
+        _pageNumber = 1;
+        _mobileDetailOpen = false;
+        _showArchiveConfirm = false;
+
+        await LoadEntriesAsync(preserveSelection: false);
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadEntriesAsync(preserveSelection: true);
+    }
+
+    private Task PreviousPageAsync() => GoToPageAsync(_pageNumber - 1);
+
+    private Task NextPageAsync() => GoToPageAsync(_pageNumber + 1);
+
+    private async Task GoToPageAsync(int pageNumber)
+    {
+        if (pageNumber < 1 || (TotalPages > 0 && pageNumber > TotalPages))
+            return;
+
+        _pageNumber = pageNumber;
+        _mobileDetailOpen = false;
+        _showArchiveConfirm = false;
+
+        await LoadEntriesAsync(preserveSelection: false);
+    }
+
+    private Task SelectEntryAsync(string logCode, bool openMobileDetail)
+    {
+        _selectedLogCode = logCode;
+        _showArchiveConfirm = false;
+
+        if (IsMobile)
+            _mobileDetailOpen = openMobileDetail;
+
+        return Task.CompletedTask;
+    }
+
+    private void ShowMobileList()
+    {
+        _mobileDetailOpen = false;
+        _showArchiveConfirm = false;
+    }
+
+    private void ToggleArchiveConfirm()
+    {
+        _showArchiveConfirm = !_showArchiveConfirm;
+    }
+
+    private async Task ArchiveOlderEntriesAsync()
+    {
+        if (!CanArchiveSelected || SelectedEntry is null)
+            return;
+
+        try
+        {
+            var nodeAdmin = new NodeAdmin(NodeContext);
+            var archived = await nodeAdmin.EventLogCleardown(SelectedEntry.LogCode);
+
+            if (!archived)
+            {
+                SetActionMessage("Archive older entries failed.", "danger");
+                return;
+            }
+
+            SetActionMessage($"Archived entries logged on or before {SelectedEntry.LoggedOn:g}.", "success");
+            _showArchiveConfirm = false;
+            _mobileDetailOpen = false;
+
+            await LoadEntriesAsync(preserveSelection: false);
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            SetActionMessage("Archive older entries failed.", "danger");
+        }
+    }
+
+    private async Task SubmitSelectedAsync()
+    {
+        if (!CanSubmitSelected || SelectedEntry is null)
+            return;
+
+        try
+        {
+            var templateManager = new TemplateManager(NodeContext, FileProvider);
+            var document = await templateManager.GetSupportRequest();
+            var support = new MailSupport(NodeContext, document, SelectedEntry.LogCode);
+
+            if (string.IsNullOrWhiteSpace(_supportNote))
+                await support.Send(_supportEmailAddress);
+            else
+                await support.Send(_supportEmailAddress, _supportNote.Trim());
+
+            _supportNote = string.Empty;
+            SetActionMessage("Support request submitted.", "success");
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            SetActionMessage("Support request submission failed.", "danger");
+        }
+    }
+
+    private void SetActionMessage(string message, string tone)
+    {
+        _actionMessage = message;
+        _actionMessageTone = tone;
+    }
+
+    private string GetSelectedFilterValue() => _selectedEventType?.ToString() ?? string.Empty;
+
+    private string GetPageText() => TotalPages == 0 ? "Page 0 of 0" : $"Page {_pageNumber} of {TotalPages}";
+
+    private string GetPagerSummary()
+    {
+        if (_totalCount == 0)
+            return "No entries";
+
+        var firstRow = ((_pageNumber - 1) * _pageSize) + 1;
+        var lastRow = Math.Min(_pageNumber * _pageSize, _totalCount);
+
+        return $"{firstRow}–{lastRow} of {_totalCount} entries";
+    }
+
+    private static string GetSummary(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return "(no message)";
+
+        const int maxLength = 120;
+        var flattened = message.Replace(Environment.NewLine, " ").Replace('\n', ' ').Replace('\r', ' ').Trim();
+
+        return flattened.Length <= maxLength
+            ? flattened
+            : $"{flattened[..maxLength].TrimEnd()}…";
+    }
+
+    private static string GetTypeLabel(short eventTypeCode) => eventTypeCode switch
+    {
+        (short)NodeEnum.EventType.IsError => "Error",
+        (short)NodeEnum.EventType.IsWarning => "Warning",
+        (short)NodeEnum.EventType.IsInformation => "Information",
+        _ => "Other"
+    };
+
+    private static string GetIconClass(short eventTypeCode) => eventTypeCode switch
+    {
+        (short)NodeEnum.EventType.IsError => "bi-x-circle-fill",
+        (short)NodeEnum.EventType.IsWarning => "bi-exclamation-triangle-fill",
+        (short)NodeEnum.EventType.IsInformation => "bi-info-circle-fill",
+        _ => "bi-question-circle-fill"
+    };
+
+    private static string GetIconTone(short eventTypeCode) => eventTypeCode switch
+    {
+        (short)NodeEnum.EventType.IsError => "text-danger",
+        (short)NodeEnum.EventType.IsWarning => "text-warning",
+        (short)NodeEnum.EventType.IsInformation => "text-info",
+        _ => "text-secondary"
+    };
+
+    private string GetRowCssClass(App_vwEventLog item)
+    {
+        var isSelected = string.Equals(item.LogCode, _selectedLogCode, StringComparison.OrdinalIgnoreCase);
+        var selectedClass = isSelected ? " active" : string.Empty;
+        return $"list-group-item list-group-item-action border-0 border-bottom text-start px-3 py-3{selectedClass}";
+    }
+
+    private RenderFragment RenderDetailPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (SelectedEntry is null)
+        {
+            <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted">
+                Select an entry to view its details.
+            </div>
+        }
+        else
+        {
+            <div class="px-3 py-3 border-bottom bg-light">
+                <div class="d-flex align-items-start justify-content-between gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="bi @GetIconClass(SelectedEntry.EventTypeCode) @GetIconTone(SelectedEntry.EventTypeCode) fs-4 mt-1" aria-hidden="true"></i>
+
+                        <div>
+                            <div class="fw-semibold">@GetTypeLabel(SelectedEntry.EventTypeCode)</div>
+                            <div class="small text-muted">@SelectedEntry.LoggedOn.ToString("g")</div>
+                        </div>
+                    </div>
+
+                    <code>@SelectedEntry.LogCode</code>
+                </div>
+            </div>
+
+            <div class="flex-grow-1 overflow-auto px-3 py-3">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="small text-muted mb-1">Logged</div>
+                        <div>@SelectedEntry.LoggedOn.ToString("g")</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="small text-muted mb-1">Inserted by</div>
+                        <div>@SelectedEntry.InsertedBy</div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="small text-muted mb-1">Type</div>
+                        <div>@GetTypeLabel(SelectedEntry.EventTypeCode)</div>
+                    </div>
+                </div>
+
+                <div class="small text-muted mb-1">Message</div>
+                <pre class="border rounded bg-light p-3 mb-0" style="white-space:pre-wrap; font-family:inherit;">@SelectedEntry.EventMessage</pre>
+
+                @if (CanSubmitSelected)
+                {
+                    <div class="mt-4">
+                        <div class="small text-muted mb-2">Additional info for support</div>
+                        <textarea class="form-control"
+                                  rows="4"
+                                  placeholder="Optional note"
+                                  value="@_supportNote"
+                                  @onchange="OnSupportNoteChanged"></textarea>
+                    </div>
+                }
+            </div>
+
+            <div class="px-3 py-3 border-top bg-white">
+                <div class="d-flex flex-wrap gap-2">
+                    @if (CanSubmitSelected)
+                    {
+                        <button type="button"
+                                class="btn btn-warning btn-sm"
+                                @onclick="SubmitSelectedAsync">
+                            <i class="bi bi-send me-1" aria-hidden="true"></i>Submit
+                        </button>
+                    }
+
+                    @if (CanArchiveSelected)
+                    {
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                @onclick="ToggleArchiveConfirm">
+                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive older entries
+                        </button>
+                    }
+                </div>
+
+                @if (_showArchiveConfirm && CanArchiveSelected)
+                {
+                    <div class="alert alert-warning mt-3 mb-0">
+                        Entries logged on or before <strong>@SelectedEntry.LoggedOn.ToString("g")</strong> will be archived.
+                        <div class="mt-2">
+                            <button type="button"
+                                    class="btn btn-danger btn-sm me-2"
+                                    @onclick="ArchiveOlderEntriesAsync">
+                                Confirm archive
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    @onclick="ToggleArchiveConfirm">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>;
+
+    private Task OnSupportNoteChanged(ChangeEventArgs e)
+    {
+        _supportNote = e.Value?.ToString() ?? string.Empty;
+        return Task.CompletedTask;
+    }
+}

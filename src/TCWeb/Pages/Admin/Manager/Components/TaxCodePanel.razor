@@ -1,0 +1,887 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <form class="d-flex flex-wrap align-items-center gap-2" autocomplete="off">
+            <div class="d-flex flex-column">
+                <label class="form-label small text-muted mb-1" for="taxTypeFilter">Tax Type</label>
+                <select id="taxTypeFilter"
+                        class="form-select"
+                        value="@_taxTypeFilter"
+                        @onchange="HandleTaxTypeChangedAsync">
+                    <option value="">All</option>
+                    @foreach (var item in _taxTypes)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </select>
+            </div>
+        </form>
+
+        @if (CanCreateTaxCode)
+        {
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    @onclick="BeginCreateAsync">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Tax Code
+            </button>
+        }
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum TaxCodeMode
+    {
+        List,
+        Details,
+        Create,
+        Edit,
+        Delete
+    }
+
+    private sealed record LookupOption(string Value, string Text);
+
+    private sealed class TaxCodeEditorModel
+    {
+        [Display(Name = "Tax Code")]
+        [StringLength(10)]
+        public string TaxCode { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "Description")]
+        public string TaxDescription { get; set; } = string.Empty;
+
+        [Required]
+        [Display(Name = "Tax Type")]
+        public string TaxType { get; set; } = string.Empty;
+
+        [Required]
+        [Display(Name = "Rounding")]
+        public string Rounding { get; set; } = string.Empty;
+
+        [Display(Name = "Tax Rate (%)")]
+        public decimal TaxRatePercent { get; set; }
+
+        [Display(Name = "Decimals")]
+        public short Decimals { get; set; } = 2;
+    }
+
+    private readonly List<App_vwTaxCode> _taxCodes = [];
+    private readonly List<LookupOption> _taxTypes = [];
+    private readonly List<LookupOption> _roundings = [];
+
+    private TaxCodeMode _mode = TaxCodeMode.List;
+    private App_vwTaxCode? _selectedTaxCode;
+    private TaxCodeEditorModel _editor = new();
+    private string _taxTypeFilter = string.Empty;
+    private bool _autoGenerateCode = true;
+    private bool _isAdministrator;
+    private bool _isLoading;
+    private string? _errorMessage;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+
+    private bool CanCreateTaxCode => _isAdministrator && _mode is TaxCodeMode.List or TaxCodeMode.Details;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadLookupOptionsAsync();
+        await LoadTaxCodesAsync(false);
+
+        if (!IsMobile && _selectedTaxCode is not null)
+            _mode = TaxCodeMode.Details;
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+    }
+
+    private async Task LoadLookupOptionsAsync()
+    {
+        _taxTypes.Clear();
+        _roundings.Clear();
+
+        var taxTypes = await NodeContext.App_TaxCodeTypes
+            .AsNoTracking()
+            .OrderBy(item => item.TaxTypeCode)
+            .Select(item => new LookupOption(item.TaxType, item.TaxType))
+            .ToListAsync();
+
+        var roundings = await NodeContext.App_tbRoundings
+            .AsNoTracking()
+            .OrderBy(item => item.RoundingCode)
+            .Select(item => new LookupOption(item.Rounding, item.Rounding))
+            .ToListAsync();
+
+        _taxTypes.AddRange(taxTypes);
+        _roundings.AddRange(roundings);
+    }
+
+    private async Task LoadTaxCodesAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedCode = preserveSelection ? _selectedTaxCode?.TaxCode : null;
+
+            IQueryable<App_vwTaxCode> query = NodeContext.App_TaxCodes.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(_taxTypeFilter))
+                query = query.Where(item => item.TaxType == _taxTypeFilter);
+
+            var rows = await query.ToListAsync();
+
+            _taxCodes.Clear();
+            _taxCodes.AddRange(rows);
+
+            if (_taxCodes.Count == 0)
+            {
+                _selectedTaxCode = null;
+                _mode = TaxCodeMode.List;
+                return;
+            }
+
+            _selectedTaxCode = !string.IsNullOrWhiteSpace(selectedCode)
+                ? _taxCodes.FirstOrDefault(item => item.TaxCode == selectedCode)
+                : _taxCodes[0];
+
+            _selectedTaxCode ??= _taxCodes[0];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load tax codes.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleTaxTypeChangedAsync(ChangeEventArgs e)
+    {
+        _taxTypeFilter = e.Value?.ToString() ?? string.Empty;
+        _mode = TaxCodeMode.List;
+        _selectedTaxCode = null;
+        await LoadTaxCodesAsync(false);
+
+        if (!IsMobile && _selectedTaxCode is not null)
+            _mode = TaxCodeMode.Details;
+    }
+
+    private Task SelectAsync(string taxCode)
+    {
+        _selectedTaxCode = _taxCodes.FirstOrDefault(item => item.TaxCode == taxCode) ?? _selectedTaxCode;
+        _mode = TaxCodeMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task BeginCreateAsync()
+    {
+        _editor = new TaxCodeEditorModel
+        {
+            TaxType = !string.IsNullOrWhiteSpace(_taxTypeFilter)
+                ? _taxTypeFilter
+                : _taxTypes.FirstOrDefault()?.Value ?? string.Empty,
+            Rounding = _roundings.FirstOrDefault()?.Value ?? string.Empty,
+            Decimals = 2,
+            TaxRatePercent = 0m
+        };
+
+        _autoGenerateCode = true;
+        _mode = TaxCodeMode.Create;
+        _errorMessage = null;
+
+        await Task.CompletedTask;
+    }
+
+    private async Task BeginEditAsync(string taxCode)
+    {
+        try
+        {
+            var current = await NodeContext.App_tbTaxCodes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.TaxCode == taxCode);
+
+            if (current is null)
+            {
+                _errorMessage = "Tax code not found.";
+                return;
+            }
+
+            var rounding = await NodeContext.App_tbRoundings
+                .Where(item => item.RoundingCode == current.RoundingCode)
+                .Select(item => item.Rounding)
+                .FirstAsync();
+
+            var taxType = await NodeContext.App_TaxCodeTypes
+                .Where(item => item.TaxTypeCode == current.TaxTypeCode)
+                .Select(item => item.TaxType)
+                .FirstAsync();
+
+            _editor = new TaxCodeEditorModel
+            {
+                TaxCode = current.TaxCode,
+                TaxDescription = current.TaxDescription,
+                TaxType = taxType,
+                Rounding = rounding,
+                TaxRatePercent = current.TaxRate * 100m,
+                Decimals = current.Decimals
+            };
+
+            _selectedTaxCode = _taxCodes.FirstOrDefault(item => item.TaxCode == taxCode) ?? _selectedTaxCode;
+            _autoGenerateCode = false;
+            _mode = TaxCodeMode.Edit;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the tax code.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task BeginDeleteAsync(string taxCode)
+    {
+        _selectedTaxCode = _taxCodes.FirstOrDefault(item => item.TaxCode == taxCode) ?? _selectedTaxCode;
+        _mode = TaxCodeMode.Delete;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BackToListAsync()
+    {
+        _mode = TaxCodeMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = IsMobile ? TaxCodeMode.List : TaxCodeMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+            _editor.TaxDescription = (_editor.TaxDescription ?? string.Empty).Trim();
+            _editor.TaxCode = (_editor.TaxCode ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(_editor.TaxDescription))
+            {
+                _errorMessage = "Description is required.";
+                return;
+            }
+
+            if (_mode == TaxCodeMode.Create && string.IsNullOrWhiteSpace(_editor.TaxCode))
+                _editor.TaxCode = await SuggestTaxCodeAsync();
+
+            if (string.IsNullOrWhiteSpace(_editor.TaxCode))
+            {
+                _errorMessage = "Tax code is required.";
+                return;
+            }
+
+            var roundingCode = await NodeContext.App_tbRoundings
+                .Where(item => item.Rounding == _editor.Rounding)
+                .Select(item => item.RoundingCode)
+                .FirstAsync();
+
+            var taxTypeCode = await NodeContext.App_TaxCodeTypes
+                .Where(item => item.TaxType == _editor.TaxType)
+                .Select(item => item.TaxTypeCode)
+                .FirstAsync();
+
+            if (_mode == TaxCodeMode.Create)
+            {
+                var entity = new App_tbTaxCode
+                {
+                    TaxCode = _editor.TaxCode,
+                    TaxDescription = _editor.TaxDescription,
+                    RoundingCode = roundingCode,
+                    TaxTypeCode = taxTypeCode,
+                    TaxRate = _editor.TaxRatePercent / 100m,
+                    Decimals = _editor.Decimals
+                };
+
+                NodeContext.App_tbTaxCodes.Add(entity);
+                await NodeContext.SaveChangesAsync();
+
+                _taxTypeFilter = _editor.TaxType;
+                SetActionMessage("Tax code created.", "success");
+            }
+            else if (_mode == TaxCodeMode.Edit)
+            {
+                var entity = await NodeContext.App_tbTaxCodes
+                    .SingleOrDefaultAsync(item => item.TaxCode == _editor.TaxCode);
+
+                if (entity is null)
+                {
+                    _errorMessage = "Tax code not found.";
+                    return;
+                }
+
+                entity.TaxDescription = _editor.TaxDescription;
+                entity.RoundingCode = roundingCode;
+                entity.TaxTypeCode = taxTypeCode;
+                entity.TaxRate = _editor.TaxRatePercent / 100m;
+                entity.Decimals = _editor.Decimals;
+
+                var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+                var profile = new Profile(NodeContext);
+
+                entity.UpdatedBy = await profile.UserName(UserManager.GetUserId(authState.User));
+                entity.UpdatedOn = DateTime.Now;
+
+                await NodeContext.SaveChangesAsync();
+
+                SetActionMessage("Tax code updated.", "success");
+            }
+
+            await LoadTaxCodesAsync(false);
+            _selectedTaxCode = _taxCodes.FirstOrDefault(item => item.TaxCode == _editor.TaxCode) ?? _selectedTaxCode;
+            _mode = TaxCodeMode.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the tax code.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_selectedTaxCode is null)
+            return;
+
+        try
+        {
+            var entity = await NodeContext.App_tbTaxCodes.FindAsync(_selectedTaxCode.TaxCode);
+
+            if (entity is not null)
+            {
+                NodeContext.App_tbTaxCodes.Remove(entity);
+                await NodeContext.SaveChangesAsync();
+            }
+
+            SetActionMessage("Tax code deleted.", "success");
+            _mode = TaxCodeMode.List;
+            _selectedTaxCode = null;
+
+            await LoadTaxCodesAsync(false);
+
+            if (!IsMobile && _selectedTaxCode is not null)
+                _mode = TaxCodeMode.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to delete the tax code.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task<string> SuggestTaxCodeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_editor.TaxDescription))
+            return string.Empty;
+
+        return await NodeContext.TaxCodeDefault(_editor.TaxDescription.Trim());
+    }
+
+    private async Task HandleDescriptionBlurAsync(FocusEventArgs _)
+    {
+        if (!_autoGenerateCode || !string.IsNullOrWhiteSpace(_editor.TaxCode))
+            return;
+
+        _editor.TaxCode = await SuggestTaxCodeAsync();
+    }
+
+    private async Task GenerateTaxCodeAsync()
+    {
+        _editor.TaxCode = await SuggestTaxCodeAsync();
+    }
+
+    private void SetActionMessage(string message, string tone)
+    {
+        _actionMessage = message;
+        _actionTone = tone;
+    }
+
+    private string GetRowClass(App_vwTaxCode item)
+    {
+        var isSelected = string.Equals(_selectedTaxCode?.TaxCode, item.TaxCode, StringComparison.OrdinalIgnoreCase);
+        return isSelected ? "table-active" : string.Empty;
+    }
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_mode == TaxCodeMode.List)
+    {
+@RenderMobileList()
+    }
+    else if (_mode == TaxCodeMode.Details)
+    {
+@RenderDetailPane(true)
+    }
+    else if (_mode == TaxCodeMode.Delete)
+    {
+@RenderDeletePane(true)
+    }
+    else
+    {
+@RenderEditorPane(true)
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 56%; min-width:28rem; min-height:0; overflow:hidden;">
+        <div class="px-3 py-2 border-bottom bg-light small text-muted">
+            @_taxCodes.Count tax code@(_taxCodes.Count == 1 ? string.Empty : "s")
+        </div>
+
+        @if (_isLoading && _taxCodes.Count == 0)
+                {
+        <div class="p-3 text-muted">Loading tax codes…</div>
+                }
+                else if (_taxCodes.Count == 0)
+                {
+        <div class="p-3 text-muted">No tax codes found.</div>
+                }
+                else
+                {
+        <div class="table-responsive flex-grow-1" style="min-height:0;">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Tax</th>
+                        <th>Tax Code</th>
+                        <th>Tax Type</th>
+                        <th>Rounding</th>
+                        <th>Tax Rate</th>
+                        @if (_isAdministrator)
+                                                {
+                        <th style="width:1%; white-space:nowrap;"></th>
+                                                }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _taxCodes)
+                    {
+                        <tr class="@GetRowClass(item)">
+                            <td>
+                                <button type="button"
+                                        class="btn btn-link p-0 text-start text-decoration-none fw-semibold"
+                                        @onclick="() => SelectAsync(item.TaxCode)">
+                                    @item.TaxDescription
+                                </button>
+                            </td>
+                            <td class="text-muted">@item.TaxCode</td>
+                            <td>@item.TaxType</td>
+                            <td>@item.Rounding</td>
+                            <td>@item.TaxRate.ToString("P")</td>
+
+                            @if (_isAdministrator)
+                            {
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-secondary"
+                                                title="Edit tax code"
+                                                @onclick="() => BeginEditAsync(item.TaxCode)">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-outline-danger"
+                                                title="Delete tax code"
+                                                @onclick="() => BeginDeleteAsync(item.TaxCode)">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+                }
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == TaxCodeMode.Delete)
+        {
+            @RenderDeletePane(false)
+        }
+        else if (_mode is TaxCodeMode.Create or TaxCodeMode.Edit)
+        {
+            @RenderEditorPane(false)
+        }
+        else
+        {
+            @RenderDetailPane(false)
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderMobileList() => @<div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_isLoading && _taxCodes.Count == 0)
+{
+        <div class="p-3 text-muted">Loading tax codes…</div>
+}
+else if (_taxCodes.Count == 0)
+{
+        <div class="p-3 text-muted">No tax codes found.</div>
+}
+else
+{
+        <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+            @foreach (var item in _taxCodes)
+            {
+                <button type="button"
+                        class="list-group-item list-group-item-action px-3 py-3 text-start"
+                        @onclick="() => SelectAsync(item.TaxCode)">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold">@item.TaxDescription</div>
+                            <div class="small text-muted">@item.TaxCode</div>
+                            <div class="small text-muted">@item.TaxType</div>
+                            <div class="small text-muted">@item.TaxRate.ToString("P")</div>
+                        </div>
+                    </div>
+                </button>
+            }
+        </div>
+}
+</div>;
+
+private RenderFragment RenderDetailPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedTaxCode is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select a tax code to view its details.
+        </div>
+}
+else
+{
+    @if (showBackToList)
+    {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+    }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">@_selectedTaxCode.TaxDescription</div>
+            <div class="small text-muted">@_selectedTaxCode.TaxCode</div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Tax Type</div>
+                    <div>@_selectedTaxCode.TaxType</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Tax Rate</div>
+                    <div>@_selectedTaxCode.TaxRate.ToString("P")</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Rounding</div>
+                    <div>@_selectedTaxCode.Rounding</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Decimal Places</div>
+                    <div>@_selectedTaxCode.Decimals</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Updated By</div>
+                    <div>@_selectedTaxCode.UpdatedBy</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Updated On</div>
+                    <div>@_selectedTaxCode.UpdatedOn.ToString("g")</div>
+                </div>
+            </div>
+        </div>
+
+    @if (_isAdministrator)
+    {
+            <div class="px-3 py-3 border-top bg-white">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @onclick="() => BeginEditAsync(_selectedTaxCode.TaxCode)">
+                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            @onclick="() => BeginDeleteAsync(_selectedTaxCode.TaxCode)">
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                    </button>
+                </div>
+            </div>
+    }
+}
+</div>;
+
+private RenderFragment RenderEditorPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">@(_mode == TaxCodeMode.Create ? "New Tax Code" : "Edit Tax Code")</div>
+
+        @if (_mode == TaxCodeMode.Edit)
+        {
+            <div class="small text-muted">@_editor.TaxCode</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        @if (_mode == TaxCodeMode.Edit)
+        {
+            <div class="alert alert-warning mb-3" role="alert">
+                <div class="fw-semibold">Warning</div>
+                <div>
+                    Changing a tax code or tax rate can change historical tax results.
+                    If a new VAT rate applies, create a new tax code instead of editing an existing one.
+                </div>
+            </div>
+        }
+
+        <EditForm Model="@_editor" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label" for="taxDescription">Description</label>
+                <InputText id="taxDescription"
+                           @bind-Value="_editor.TaxDescription"
+                           class="form-control"
+                           @onblur="HandleDescriptionBlurAsync" />
+            </div>
+
+            @if (_mode == TaxCodeMode.Create)
+            {
+                <div class="mb-2 form-check">
+                    <input id="autoTaxCode"
+                           type="checkbox"
+                           class="form-check-input"
+                           @bind="_autoGenerateCode" />
+                    <label class="form-check-label" for="autoTaxCode">Auto-generate Code from Description</label>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="taxCode">Tax Code</label>
+                    <div class="input-group">
+                        <InputText id="taxCode"
+                                   @bind-Value="_editor.TaxCode"
+                                   class="form-control" />
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="GenerateTaxCodeAsync">
+                            Generate
+                        </button>
+                    </div>
+                    <div class="form-text text-muted">
+                        If left blank, a default will be suggested from the Description and made unique.
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="taxCodeReadonly">Tax Code</label>
+                    <InputText id="taxCodeReadonly"
+                               @bind-Value="_editor.TaxCode"
+                               class="form-control fw-semibold"
+                               readonly />
+                </div>
+            }
+
+            <div class="row g-2">
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="taxType">Tax Type</label>
+                    <InputSelect id="taxType"
+                                 @bind-Value="_editor.TaxType"
+                                 class="form-select">
+                        @foreach (var item in _taxTypes)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="rounding">Rounding</label>
+                    <InputSelect id="rounding"
+                                 @bind-Value="_editor.Rounding"
+                                 class="form-select">
+                        @foreach (var item in _roundings)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="taxRatePercent">Tax Rate (%)</label>
+                    <div class="input-group">
+                        <InputNumber id="taxRatePercent"
+                                     @bind-Value="_editor.TaxRatePercent"
+                                     class="form-control" />
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="decimals">Decimals</label>
+                    <InputNumber id="decimals"
+                                 @bind-Value="_editor.Decimals"
+                                 class="form-control" />
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">
+                    @(_mode == TaxCodeMode.Create ? "Create" : "Update")
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>;
+
+private RenderFragment RenderDeletePane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Delete Tax Code</div>
+        @if (_selectedTaxCode is not null)
+        {
+            <div class="small text-muted">@_selectedTaxCode.TaxCode</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="alert alert-warning mb-3" role="alert">
+            This will permanently delete the selected tax code.
+        </div>
+
+        @if (_selectedTaxCode is not null)
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Tax Code</dt>
+                <dd class="col-sm-9">@_selectedTaxCode.TaxCode</dd>
+
+                <dt class="col-sm-3">Tax</dt>
+                <dd class="col-sm-9">@_selectedTaxCode.TaxDescription</dd>
+
+                <dt class="col-sm-3">Tax Type</dt>
+                <dd class="col-sm-9">@_selectedTaxCode.TaxType</dd>
+
+                <dt class="col-sm-3">Tax Rate</dt>
+                <dd class="col-sm-9">@_selectedTaxCode.TaxRate.ToString("P")</dd>
+            </dl>
+        }
+    </div>
+
+    <div class="px-3 py-3 border-top bg-white">
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                    class="btn btn-danger"
+                    @onclick="DeleteAsync">
+                Delete
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="CancelAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+}

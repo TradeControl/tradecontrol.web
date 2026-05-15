@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 #nullable disable
@@ -13,12 +10,25 @@ namespace TradeControl.Web.Models
     {
         [Display(Name = "Subject Type Code")]
         public short SubjectTypeCode { get; set; }
+
         [Required]
         [StringLength(50)]
-        [Display(Name ="Type")]
+        [Display(Name = "Type")]
         public string SubjectType { get; set; }
+
+        [Display(Name = "Polarity Code")]
+        public short CashPolarityCode { get; set; }
+
         [StringLength(10)]
         [Display(Name = "Polarity")]
         public string CashPolarity { get; set; }
+
+        [Display(Name = "Subject Class Code")]
+        public short SubjectClassCode { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "Class")]
+        public string SubjectClass { get; set; }
     }
 }

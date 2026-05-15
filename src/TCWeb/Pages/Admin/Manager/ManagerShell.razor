@@ -1,35 +1,294 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.JSInterop
 @using TradeControl.Web.AppServices
+@using TradeControl.Web.Pages.Admin.Manager.Components
+
 @inject Wangkanai.Detection.Services.IDetectionService Detection
-@inject IInvoiceTypeLookup InvoiceTypeLookup
 
 <div class="tc-tree-manager">
     <div class="tc-tree-manager-frame border rounded bg-white p-2">
         @if (_isMobile)
         {
-            <div class="d-flex flex-column" style="min-height:0; height:100%;">
-                <div class="flex-grow-1 border rounded bg-white p-2" style="min-height:0;">
-                    @* Mobile *@
-                    <ManagerTreeHost @ref="_treeHost"
-                                     RootLabel="@_companyName"
-                                     IsMobile="true"
-                                     InitialSelectedNode="@_selected"
-                                     InitialContentType="@_selectedContentType"
-                                     InitialTemplateKey="@_initialTemplateKey"
-                                     OnNodeSelected="HandleNodeSelectedAsync"
-                                     OnNodeSelectedEx="HandleNodeSelectedExAsync"
-                                     OnTreeAction="HandleTreeActionAsync"
-                                     OnTemplateSelection="HandleTemplateSelectionAsync" />
+            @if (_selected == ManagerTreeHost.ManagerNode.EventViewer)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <EventViewerPanel IsMobile="true"
+                                          InitialEventType="@_initialEventType" />
+                    </div>
                 </div>
-            </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.Setup)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <SetupPanel />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.Users)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <UsersPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.Periods)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <PeriodsPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.TaxSettings)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <TaxSettingsPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.TaxCode)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <TaxCodePanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.TaxRates)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <TaxRatesPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.Host)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <HostPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.SubjectType)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <SubjectTypePanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.InvoiceSettings)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <InvoiceSettingsPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.DemoData)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <DemoDataPanel />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.FileTransfer || _selected == ManagerTreeHost.ManagerNode.FileTransferContentType)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <FileTransferPanel IsMobile="true"
+                                           InitialContentType="@_selectedContentType" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.TemplateInvoices)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <TemplateInvoicesPanel IsMobile="true"
+                                               InitialTemplateKey="@_initialTemplateKey"
+                                               Selection="@_templateSelection"
+                                               OnTemplatesChanged="RefreshTemplateInvoicesTreeAsync" />
+                    </div>
+                </div>
+            }
+            else if (_selected == ManagerTreeHost.ManagerNode.TemplateSystem)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <TemplateSystemPanel IsMobile="true" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="flex-grow-1 border rounded bg-white p-2" style="min-height:0;">
+                        <ManagerTreeHost @ref="_treeHost"
+                                         RootLabel="@_companyName"
+                                         IsMobile="true"
+                                         InitialSelectedNode="@_selected"
+                                         InitialContentType="@_selectedContentType"
+                                         InitialTemplateKey="@_initialTemplateKey"
+                                         OnNodeSelected="HandleNodeSelectedAsync"
+                                         OnNodeSelectedEx="HandleNodeSelectedExAsync"
+                                         OnTreeAction="HandleTreeActionAsync"
+                                         OnTemplateSelection="HandleTemplateSelectionAsync" />
+                    </div>
+                </div>
+            }
         }
         else
         {
             <div class="tc-tree-split">
                 <div id="leftCol" class="tc-pane tc-initial-left">
                     <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
-                        @* Desktop *@
                         <ManagerTreeHost @ref="_treeHost"
                                          RootLabel="@_companyName"
                                          IsMobile="false"
@@ -51,110 +310,7 @@
                             </div>
                         </div>
 
-                        @if (_selected == ManagerTreeHost.ManagerNode.Root)
-                        {
-                            <div class="bg-white border rounded p-3">
-                                <h2 class="h6 mb-2">Configuration</h2>
-                                <p class="text-muted mb-3">Select a section to configure the business.</p>
-
-                                <div class="d-grid gap-2">
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Setup)">
-                                        <i class="bi bi-gear me-2" aria-hidden="true"></i>Setup
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.FileTransfer)">
-                                        <i class="bi bi-upload me-2" aria-hidden="true"></i>File Transfer
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Users)">
-                                        <i class="bi bi-people me-2" aria-hidden="true"></i>Users
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Templates)">
-                                        <i class="bi bi-filetype-html me-2" aria-hidden="true"></i>Templates
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Host)">
-                                        <i class="bi bi-envelope-at me-2" aria-hidden="true"></i>Mail Host
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.Periods)">
-                                        <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Financial Periods
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxSettings)">
-                                        <i class="bi bi-sliders me-2" aria-hidden="true"></i>Tax Settings
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxCode)">
-                                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>Tax Codes
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TaxCompany)">
-                                        <i class="bi bi-bank me-2" aria-hidden="true"></i>Tax Rates &amp; Adjustments
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.InvoiceSettings)">
-                                        <i class="bi bi-hash me-2" aria-hidden="true"></i>Invoice Settings
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.SubjectType)">
-                                        <i class="bi bi-tags me-2" aria-hidden="true"></i>Subject Types
-                                    </button>
-                                </div>
-
-                            </div>
-                        }
-                        else if (_selected == ManagerTreeHost.ManagerNode.Templates)
-                        {
-                            <div class="bg-white border rounded p-3">
-                                <h2 class="h6 mb-2">Templates</h2>
-                                <p class="text-muted mb-3">
-                                    Templates are HTML documents that include tags like <code>[CompanyName]</code> and <code>[InvoiceDetails]</code>.
-                                    When an email is sent, Trade Control replaces tags with data from the relevant document and embeds any referenced images.
-                                </p>
-
-                                <div class="d-grid gap-2">
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TemplateInvoices)">
-                                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>Invoices
-                                    </button>
-
-                                    <button type="button"
-                                            class="btn btn-outline-primary text-start"
-                                            @onclick="() => HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode.TemplateSystem)">
-                                        <i class="bi bi-gear me-2" aria-hidden="true"></i>System
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            @RenderRightPane()
-                        }
+                        @RenderRightPane()
                     </div>
                 </div>
             </div>
@@ -168,11 +324,14 @@
     private bool _isMobile;
     private string _companyName = "Business";
     private ManagerTreeHost.ManagerNode _selected = ManagerTreeHost.ManagerNode.Root;
+    private ManagerTreeHost.ManagerNode? _mobileReturnNode;
     private string? _selectedContentType;
     private string? _iframeSrc;
     private string? _initialTemplateKey;
-
+    private short? _initialEventType;
     private int _fileTransferPageSize = 25;
+
+    private ManagerTreeHost.TemplateSelection? _templateSelection;
 
     private string RightHeader => _selected switch
     {
@@ -189,23 +348,121 @@
         ManagerTreeHost.ManagerNode.Periods => $"{_companyName} / Financial Periods",
         ManagerTreeHost.ManagerNode.TaxSettings => $"{_companyName} / Tax Settings",
         ManagerTreeHost.ManagerNode.TaxCode => $"{_companyName} / Tax Codes",
-        ManagerTreeHost.ManagerNode.TaxCompany => $"{_companyName} / Tax Rates & Adjustments",
+        ManagerTreeHost.ManagerNode.TaxRates => $"{_companyName} / Tax Rates & Adjustments",
         ManagerTreeHost.ManagerNode.InvoiceSettings => $"{_companyName} / Invoice Settings",
         ManagerTreeHost.ManagerNode.SubjectType => $"{_companyName} / Subject Types",
+        ManagerTreeHost.ManagerNode.EventViewer => $"{_companyName} / Diagnostics / Event Viewer",
         _ => _companyName
     };
 
     private RenderFragment RenderRightPane() => _selected switch
     {
+        ManagerTreeHost.ManagerNode.Root => RenderRootSummaryPane(),
+        ManagerTreeHost.ManagerNode.Templates => RenderTemplatesSummaryPane(),
+
+        ManagerTreeHost.ManagerNode.EventViewer =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <EventViewerPanel IsMobile="false"
+                      InitialEventType="@_initialEventType" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.Setup =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <SetupPanel />
+</div>,
+
+        ManagerTreeHost.ManagerNode.DemoData =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <DemoDataPanel />
+</div>,
+
+        ManagerTreeHost.ManagerNode.FileTransfer =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <FileTransferPanel IsMobile="false"
+                       InitialContentType="@_selectedContentType" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.FileTransferContentType =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <FileTransferPanel IsMobile="false"
+                       InitialContentType="@_selectedContentType" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.TemplateInvoices =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <TemplateInvoicesPanel IsMobile="false"
+                           InitialTemplateKey="@_initialTemplateKey"
+                           Selection="@_templateSelection"
+                           OnTemplatesChanged="RefreshTemplateInvoicesTreeAsync" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.TemplateSystem =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <TemplateSystemPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.Users =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <UsersPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.Periods =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <PeriodsPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.TaxSettings =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <TaxSettingsPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.TaxCode =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <TaxCodePanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.TaxRates =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <TaxRatesPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.Host =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <HostPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.SubjectType =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <SubjectTypePanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.InvoiceSettings =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <InvoiceSettingsPanel IsMobile="false" />
+</div>,
+
         _ when !string.IsNullOrWhiteSpace(_iframeSrc) =>
             @<iframe class="w-100 border rounded bg-white tc-details-frame"
                      title="Details"
                      src="@_iframeSrc"></iframe>,
 
-        _ => @<div class="bg-white border rounded p-3">
-    <div class="text-muted">Not implemented in Admin Manager yet.</div>
-</div>
+        _ => RenderRootSummaryPane()
     };
+
+    private RenderFragment RenderRootSummaryPane() => @<div class="bg-white border rounded p-3">
+        <div class="small text-uppercase text-muted mb-2" style="letter-spacing:0.06em;">Admin Manager</div>
+        <p class="text-muted mb-0">
+            Select a section from the tree to configure company settings, documents, tax, classifications, and diagnostics.
+        </p>
+    </div>;
+
+    private RenderFragment RenderTemplatesSummaryPane() => @<div class="bg-white border rounded p-3">
+        <h2 class="h6 mb-2">Templates</h2>
+        <p class="text-muted mb-0">
+            Templates are HTML documents that include tags like <code>[CompanyName]</code> and <code>[InvoiceDetails]</code>.
+            When an email is sent, Trade Control replaces tags with data from the relevant document and embeds any referenced images.
+        </p>
+    </div>;
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
@@ -217,6 +474,8 @@
     {
         _companyName = CompanyName;
         _isMobile = Detection?.Device?.Type == Wangkanai.Detection.Models.Device.Mobile;
+        _mobileReturnNode = null;
+        _initialEventType = null;
 
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var qs = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
@@ -227,6 +486,18 @@
                 _selected = node;
         }
 
+        if (qs.TryGetValue("returnNode", out var returnNodeValue))
+        {
+            if (Enum.TryParse<ManagerTreeHost.ManagerNode>(returnNodeValue.ToString(), ignoreCase: true, out var returnNode))
+                _mobileReturnNode = returnNode;
+        }
+
+        if (qs.TryGetValue("eventType", out var eventTypeValue)
+            && short.TryParse(eventTypeValue.ToString(), out var eventTypeCode))
+        {
+            _initialEventType = eventTypeCode;
+        }
+
         if (qs.TryGetValue("pageSize", out var pageSizeValue))
         {
             if (int.TryParse(pageSizeValue.ToString(), out var ps) && ps > 0)
@@ -235,58 +506,15 @@
 
         if (qs.TryGetValue("contentType", out var ct))
             _selectedContentType = ct.ToString();
+        else if (_selected != ManagerTreeHost.ManagerNode.FileTransferContentType)
+            _selectedContentType = null;
 
         if (qs.TryGetValue("templateKey", out var tk))
             _initialTemplateKey = tk.ToString();
+        else
+            _initialTemplateKey = null;
 
-        if (!_isMobile)
-        {
-            _iframeSrc = _selected switch
-            {
-                ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
-
-                ManagerTreeHost.ManagerNode.DemoData =>
-                    "/Admin/DemoData/Index?embedded=1&returnNode=DemoData",
-
-                ManagerTreeHost.ManagerNode.FileTransfer =>
-                    $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
-
-                ManagerTreeHost.ManagerNode.FileTransferContentType when !string.IsNullOrWhiteSpace(_selectedContentType) =>
-                    $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}",
-
-                ManagerTreeHost.ManagerNode.Host =>
-                    "/Admin/Host/Index?embedded=1&returnNode=Host",
-
-                ManagerTreeHost.ManagerNode.Users =>
-                    "/Admin/Users/Index?embedded=1&returnNode=Users",
-
-                ManagerTreeHost.ManagerNode.TemplateInvoices =>
-                    "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
-
-                ManagerTreeHost.ManagerNode.TemplateSystem =>
-                    "/Admin/Template/System?embedded=1&returnNode=Templates",
-
-                ManagerTreeHost.ManagerNode.Periods =>
-                    "/Admin/Periods/Index?embedded=1&returnNode=Periods",
-
-                ManagerTreeHost.ManagerNode.TaxSettings =>
-                    "/Tax/Settings/Index?embedded=1&returnNode=TaxSettings",
-
-                ManagerTreeHost.ManagerNode.TaxCode =>
-                    "/Tax/TaxCode/Index?embedded=1&returnNode=TaxCode",
-
-                ManagerTreeHost.ManagerNode.TaxCompany =>
-                    "/Tax/Rates/Index?embedded=1&returnNode=TaxCompany",
-
-                ManagerTreeHost.ManagerNode.InvoiceSettings =>
-                    "/Invoice/Settings/Index?embedded=1&returnNode=InvoiceSettings",
-
-                ManagerTreeHost.ManagerNode.SubjectType =>
-                    "/Subject/Type/Index?embedded=1&returnNode=SubjectType",
-
-                _ => null
-            };
-        }
+        _iframeSrc = null;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -298,11 +526,6 @@
 
             await JSRuntime.InvokeVoidAsync("adminManager.initSplit");
             await RefreshFileTransferPageSizeAsync();
-
-            if (_selected == ManagerTreeHost.ManagerNode.FileTransfer)
-                _iframeSrc = $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}";
-            else if (_selected == ManagerTreeHost.ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType))
-                _iframeSrc = $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={Uri.EscapeDataString(_selectedContentType)}&pageSize={_fileTransferPageSize}";
 
             StateHasChanged();
         }
@@ -331,6 +554,12 @@
     [JSInvokable]
     public void RefreshTemplateImages(int templateId) => _treeHost?.RequestRefreshTemplatesForInvoiceType(0);
 
+    private async Task RefreshTemplateInvoicesTreeAsync(short invoiceTypeCode)
+    {
+        _treeHost?.RequestRefreshTemplatesForInvoiceType(invoiceTypeCode);
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task RefreshFileTransferPageSizeAsync()
     {
         try
@@ -345,80 +574,185 @@
 
     private Task HandleNodeSelectedAsync(ManagerTreeHost.ManagerNode node)
     {
+        var previousNode = _selected;
         _selected = node;
+        _iframeSrc = null;
+
+        if (node == ManagerTreeHost.ManagerNode.EventViewer)
+            _initialEventType = null;
 
         if (_isMobile)
         {
+            if (node == ManagerTreeHost.ManagerNode.EventViewer)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.EventViewer
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=EventViewer&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
             if (node == ManagerTreeHost.ManagerNode.Setup)
-                NavigationManager.NavigateTo($"/Admin/Setup/Index?returnNode={node}", forceLoad: true);
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.Setup
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Setup&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
 
             if (node == ManagerTreeHost.ManagerNode.DemoData)
-                NavigationManager.NavigateTo("/Admin/DemoData/Index?returnNode=DemoData", forceLoad: true);
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.DemoData
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=DemoData&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
 
             if (node == ManagerTreeHost.ManagerNode.FileTransfer)
-                NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&pageSize={_fileTransferPageSize}", forceLoad: true);
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.FileTransfer
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
 
-            if (node == ManagerTreeHost.ManagerNode.Host)
-                NavigationManager.NavigateTo("/Admin/Host/Index?returnNode=Host", forceLoad: true);
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=FileTransfer&returnNode={returnNode}&pageSize={_fileTransferPageSize}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.FileTransferContentType)
+                return Task.CompletedTask;
+
+            if (node == ManagerTreeHost.ManagerNode.TemplateInvoices)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.TemplateInvoices
+                    ? ManagerTreeHost.ManagerNode.Templates
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=TemplateInvoices&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.TemplateSystem)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.TemplateSystem
+                    ? ManagerTreeHost.ManagerNode.Templates
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=TemplateSystem&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
 
             if (node == ManagerTreeHost.ManagerNode.Users)
-                NavigationManager.NavigateTo("/Admin/Users/Index?returnNode=Users", forceLoad: true);
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.Users
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Users&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.Periods)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.Periods
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Periods&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.TaxSettings)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.TaxSettings
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=TaxSettings&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.TaxCode)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.TaxCode
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=TaxCode&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.TaxRates)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.TaxRates
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=TaxRates&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.Host)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.Host
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=Host&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.SubjectType)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.SubjectType
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=SubjectType&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
+            if (node == ManagerTreeHost.ManagerNode.InvoiceSettings)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.InvoiceSettings
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=InvoiceSettings&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
 
             if (node == ManagerTreeHost.ManagerNode.Templates)
                 NavigationManager.NavigateTo("/Admin/Manager/Index?node=Templates", forceLoad: true);
 
-            if (node == ManagerTreeHost.ManagerNode.TemplateInvoices)
-                NavigationManager.NavigateTo("/Admin/Template/Invoices?returnNode=Templates", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.TemplateSystem)
-                NavigationManager.NavigateTo("/Admin/Template/System?returnNode=Templates", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.Periods)
-                NavigationManager.NavigateTo("/Admin/Periods/Index?returnNode=Periods", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.TaxSettings)
-                NavigationManager.NavigateTo("/Tax/Settings/Index?returnNode=TaxSettings", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.TaxCode)
-                NavigationManager.NavigateTo("/Tax/TaxCode/Index?returnNode=TaxCode", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.TaxCompany)
-                NavigationManager.NavigateTo("/Tax/Rates/Index?returnNode=TaxCompany", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.InvoiceSettings)
-                NavigationManager.NavigateTo("/Invoice/Settings/Index?returnNode=InvoiceSettings", forceLoad: true);
-
-            if (node == ManagerTreeHost.ManagerNode.SubjectType)
-                NavigationManager.NavigateTo("/Subject/Type/Index?returnNode=SubjectType", forceLoad: true);
-
             return Task.CompletedTask;
         }
 
-        if (node == ManagerTreeHost.ManagerNode.Root)
+        if (node is ManagerTreeHost.ManagerNode.Root
+            or ManagerTreeHost.ManagerNode.Setup
+            or ManagerTreeHost.ManagerNode.DemoData
+            or ManagerTreeHost.ManagerNode.FileTransfer
+            or ManagerTreeHost.ManagerNode.FileTransferContentType
+            or ManagerTreeHost.ManagerNode.TemplateInvoices
+            or ManagerTreeHost.ManagerNode.TemplateSystem
+            or ManagerTreeHost.ManagerNode.EventViewer
+            or ManagerTreeHost.ManagerNode.Users
+            or ManagerTreeHost.ManagerNode.Periods
+            or ManagerTreeHost.ManagerNode.TaxSettings
+            or ManagerTreeHost.ManagerNode.TaxCode
+            or ManagerTreeHost.ManagerNode.TaxRates
+            or ManagerTreeHost.ManagerNode.Host
+            or ManagerTreeHost.ManagerNode.SubjectType
+            or ManagerTreeHost.ManagerNode.InvoiceSettings)
         {
-            _iframeSrc = null;
             return Task.CompletedTask;
         }
 
-        _iframeSrc = node switch
-        {
-            ManagerTreeHost.ManagerNode.Setup => "/Admin/Setup/Index?embedded=1",
-            ManagerTreeHost.ManagerNode.DemoData => "/Admin/DemoData/Index?embedded=1&returnNode=DemoData",
-            ManagerTreeHost.ManagerNode.FileTransfer => $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&pageSize={_fileTransferPageSize}",
-            ManagerTreeHost.ManagerNode.Host => "/Admin/Host/Index?embedded=1&returnNode=Host",
-            ManagerTreeHost.ManagerNode.Users => "/Admin/Users/Index?embedded=1&returnNode=Users",
-            ManagerTreeHost.ManagerNode.TemplateInvoices => "/Admin/Template/Invoices?embedded=1&returnNode=Templates",
-            ManagerTreeHost.ManagerNode.TemplateSystem => "/Admin/Template/System?embedded=1&returnNode=Templates",
-            ManagerTreeHost.ManagerNode.Periods => "/Admin/Periods/Index?embedded=1&returnNode=Periods",
-            ManagerTreeHost.ManagerNode.TaxSettings => "/Tax/Settings/Index?embedded=1&returnNode=TaxSettings",
-            ManagerTreeHost.ManagerNode.TaxCode => "/Tax/TaxCode/Index?embedded=1&returnNode=TaxCode",
-            ManagerTreeHost.ManagerNode.TaxCompany => "/Tax/Rates/Index?embedded=1&returnNode=TaxCompany",
-            ManagerTreeHost.ManagerNode.InvoiceSettings => "/Invoice/Settings/Index?embedded=1&returnNode=InvoiceSettings",
-            ManagerTreeHost.ManagerNode.SubjectType => "/Subject/Type/Index?embedded=1&returnNode=SubjectType",
-
-            _ => null
-        };
-
+        _iframeSrc = null;
         return Task.CompletedTask;
     }
 
@@ -429,18 +763,36 @@
 
         await RefreshFileTransferPageSizeAsync();
 
+        if (_selected == ManagerTreeHost.ManagerNode.FileTransfer)
+        {
+            _selectedContentType = null;
+            return;
+        }
+
         if (_selected == ManagerTreeHost.ManagerNode.FileTransferContentType && !string.IsNullOrWhiteSpace(_selectedContentType))
         {
-            var contentType = Uri.EscapeDataString(_selectedContentType);
-
             if (_isMobile)
             {
-                NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?returnNode=FileTransfer&contentType={contentType}&pageSize={_fileTransferPageSize}", forceLoad: true);
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=FileTransferContentType&contentType={Uri.EscapeDataString(_selectedContentType)}&returnNode=FileTransfer&pageSize={_fileTransferPageSize}", forceLoad: true);
                 return;
             }
 
-            _iframeSrc = $"/Admin/FileTransfer/Index?embedded=1&returnNode=FileTransfer&contentType={contentType}&pageSize={_fileTransferPageSize}";
+            StateHasChanged();
         }
+    }
+
+    private Task NavigateToMobileTreeAsync()
+    {
+        var returnNode = _mobileReturnNode ?? ManagerTreeHost.ManagerNode.Root;
+
+        if (returnNode == ManagerTreeHost.ManagerNode.Root)
+        {
+            NavigationManager.NavigateTo("/Admin/Manager/Index", forceLoad: true);
+            return Task.CompletedTask;
+        }
+
+        NavigationManager.NavigateTo($"/Admin/Manager/Index?node={returnNode}", forceLoad: true);
+        return Task.CompletedTask;
     }
 
     private async Task HandleTreeActionAsync(ManagerTreeHost.TreeAction action)
@@ -477,51 +829,20 @@
         }
     }
 
-    private async Task HandleTemplateSelectionAsync(ManagerTreeHost.TemplateSelection selection)
+    private Task HandleTemplateSelectionAsync(ManagerTreeHost.TemplateSelection selection)
     {
+        _templateSelection = selection;
         _selected = ManagerTreeHost.ManagerNode.TemplateInvoices;
-
-        var url = await GetTemplateUrlAsync(selection, embedded: !_isMobile);
+        _initialTemplateKey = selection.Key;
+        _iframeSrc = null;
 
         if (_isMobile)
         {
-            NavigationManager.NavigateTo(url, forceLoad: true);
-            return;
+            NavigationManager.NavigateTo($"/Admin/Manager/Index?node=TemplateInvoices&returnNode=Templates&templateKey={Uri.EscapeDataString(selection.Key)}", forceLoad: true);
+            return Task.CompletedTask;
         }
 
-        _iframeSrc = url;
-    }
-
-    private async Task<string> GetTemplateUrlAsync(ManagerTreeHost.TemplateSelection selection, bool embedded)
-    {
-        var embeddedQs = embedded ? "embedded=1&" : string.Empty;
-        var returnQs = "returnNode=Templates&";
-
-        if (selection.InvoiceTypeCode.HasValue)
-        {
-            var invoiceType = await InvoiceTypeLookup.GetInvoiceTypeNameAsync(selection.InvoiceTypeCode.Value);
-
-            if (!string.IsNullOrWhiteSpace(invoiceType))
-            {
-                var invoiceTypeQs = $"invoiceType={Uri.EscapeDataString(invoiceType)}&";
-
-                if (selection.Kind is "AttachmentsFolder" or "Attachment")
-                    return $"/Admin/Template/Attachments?{embeddedQs}{returnQs}{invoiceTypeQs}";
-
-                if (selection.Kind is "InvoiceType" or "TemplatesFolder")
-                    return $"/Admin/Template/Invoices?{embeddedQs}{returnQs}{invoiceTypeQs}";
-            }
-        }
-
-        return selection.Kind switch
-        {
-            "Template" or "ImagesFolder" when selection.TemplateId.HasValue
-                => $"/Admin/Template/Images?{embeddedQs}{returnQs}templateId={selection.TemplateId.Value}",
-
-            "Image" when selection.TemplateId.HasValue && !string.IsNullOrWhiteSpace(selection.ImageTag)
-                => $"/Admin/Template/ImageEdit?{embeddedQs}{returnQs}templateId={selection.TemplateId.Value}&imageTag={Uri.EscapeDataString(selection.ImageTag)}",
-
-            _ => $"/Admin/Template/Invoices?{embeddedQs}{returnQs}"
-        };
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 }

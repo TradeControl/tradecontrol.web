@@ -12,6 +12,8 @@ namespace TradeControl.Web.AppServices
         public static IServiceCollection AddAppServices(this IServiceCollection services)
         {
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
+            services.AddScoped<ITemplateInvoicesService, TemplateInvoicesService>();
+            services.AddScoped<ITemplateSystemService, TemplateSystemService>();
             services.AddScoped<IInvoiceTypeLookup, InvoiceTypeLookup>();
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();

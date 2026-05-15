@@ -1,0 +1,658 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <label class="form-label small text-muted mb-1" for="yearFilter">Financial Year</label>
+            <select id="yearFilter"
+                    class="form-select"
+                    value="@(_yearFilter?.ToString() ?? string.Empty)"
+                    @onchange="HandleYearFilterChangedAsync">
+                <option value="">All years</option>
+                @foreach (var item in _yearOptions)
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="text-muted small mb-3">
+        Financial years and monthly periods. Colors indicate @nameof(NodeEnum.CashStatus.Forecast) / @nameof(NodeEnum.CashStatus.Current) / @nameof(NodeEnum.CashStatus.Closed) / @nameof(NodeEnum.CashStatus.Archived).
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum MobileView
+    {
+        List,
+        Period
+    }
+
+    private sealed record YearOption(short Value, string Text);
+
+    private sealed class YearRow
+    {
+        public short YearNumber { get; init; }
+        public string Description { get; init; } = string.Empty;
+        public short CashStatusCode { get; init; }
+        public short StartMonth { get; init; }
+        public IList<PeriodRow> Periods { get; set; } = [];
+    }
+
+    private sealed class PeriodRow
+    {
+        public short YearNumber { get; init; }
+        public short MonthNumber { get; init; }
+        public DateTime StartOn { get; init; }
+        public short CashStatusCode { get; init; }
+        public decimal BusinessTaxRate { get; init; }
+        public decimal BusinessTaxAdjustment { get; init; }
+        public decimal VatAdjustment { get; init; }
+        public bool IsPast { get; init; }
+        public bool IsCurrent { get; init; }
+        public bool IsFuture { get; init; }
+    }
+
+    private sealed class PeriodEditorModel
+    {
+        public DateTime StartOn { get; set; }
+        public short? YearNumber { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "VAT Adjustment")]
+        public decimal VatAdjustment { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "Business Tax Adjustment")]
+        public decimal BusinessTaxAdjustment { get; set; }
+
+        [Display(Name = "Business Tax Rate (%)")]
+        public decimal MonthlyBusinessTaxRatePercent { get; set; }
+
+        [DataType(DataType.Date)]
+        [Display(Name = "From Date")]
+        public DateTime RangeStartOn { get; set; }
+
+        [DataType(DataType.Date)]
+        [Display(Name = "To Date")]
+        public DateTime RangeEndOn { get; set; }
+
+        [Display(Name = "Business Tax Rate (%)")]
+        public decimal RangeBusinessTaxRatePercent { get; set; }
+    }
+
+    private readonly List<YearOption> _yearOptions = [];
+    private readonly List<YearRow> _years = [];
+    private readonly HashSet<short> _openYears = [];
+    private PeriodRow? _selectedPeriod;
+    private PeriodEditorModel _editor = new();
+    private short? _yearFilter;
+    private bool _isAdministrator;
+    private bool _isManager;
+    private bool _isLoading;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+    private string? _errorMessage;
+    private MobileView _mobileView = MobileView.List;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadYearsAsync(false);
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+        _isManager = authState.User.IsInRole(Constants.ManagersRole);
+    }
+
+    private async Task LoadYearsAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedStartOn = preserveSelection ? _selectedPeriod?.StartOn : null;
+            var today = DateTime.Today;
+
+            var years = await NodeContext.App_tbYears
+                .AsNoTracking()
+                .OrderByDescending(item => item.YearNumber)
+                .Select(item => new YearRow
+                {
+                    YearNumber = item.YearNumber,
+                    Description = item.Description,
+                    CashStatusCode = item.CashStatusCode,
+                    StartMonth = item.StartMonth
+                })
+                .ToListAsync();
+
+            _yearOptions.Clear();
+            _yearOptions.AddRange(years.Select(item => new YearOption(item.YearNumber, item.Description)));
+
+            if (_yearFilter.HasValue)
+                years = years.Where(item => item.YearNumber == _yearFilter.Value).ToList();
+
+            IQueryable<App_tbYearPeriod> periodsQuery = NodeContext.App_tbYearPeriods.AsNoTracking();
+
+            if (_yearFilter.HasValue)
+                periodsQuery = periodsQuery.Where(item => item.YearNumber == _yearFilter.Value);
+
+            var periods = await periodsQuery
+                .OrderByDescending(item => item.YearNumber)
+                .ThenBy(item => item.StartOn)
+                .Select(item => new PeriodRow
+                {
+                    YearNumber = item.YearNumber,
+                    MonthNumber = item.MonthNumber,
+                    StartOn = item.StartOn,
+                    CashStatusCode = item.CashStatusCode,
+                    BusinessTaxRate = item.BusinessTaxRate,
+                    BusinessTaxAdjustment = item.BusinessTaxAdjustment,
+                    VatAdjustment = item.VatAdjustment,
+                    IsPast = item.StartOn.Date < today,
+                    IsCurrent = item.StartOn.Month == today.Month && item.StartOn.Year == today.Year,
+                    IsFuture = item.StartOn.Date > today
+                })
+                .ToListAsync();
+
+            var byYear = periods
+                .GroupBy(item => item.YearNumber)
+                .ToDictionary(group => group.Key, group => (IList<PeriodRow>)group.ToList());
+
+            foreach (var year in years)
+            {
+                if (byYear.TryGetValue(year.YearNumber, out var yearPeriods))
+                    year.Periods = yearPeriods;
+            }
+
+            _years.Clear();
+            _years.AddRange(years);
+
+            ResetOpenYears();
+
+            if (selectedStartOn.HasValue)
+            {
+                var match = _years
+                    .SelectMany(year => year.Periods)
+                    .FirstOrDefault(item => item.StartOn == selectedStartOn.Value);
+
+                if (match is not null)
+                {
+                    _selectedPeriod = match;
+                    _openYears.Add(match.YearNumber);
+                    await LoadPeriodEditorAsync(match.StartOn, match.YearNumber);
+                }
+            }
+            else
+            {
+                _selectedPeriod = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load tax rates and adjustments.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ResetOpenYears()
+    {
+        _openYears.Clear();
+
+        if (_yearFilter.HasValue)
+        {
+            _openYears.Add(_yearFilter.Value);
+            return;
+        }
+
+        if (_years.Count > 0)
+            _openYears.Add(_years[0].YearNumber);
+    }
+
+    private async Task HandleYearFilterChangedAsync(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString();
+
+        if (short.TryParse(raw, out var yearNumber))
+            _yearFilter = yearNumber;
+        else
+            _yearFilter = null;
+
+        _selectedPeriod = null;
+        _mobileView = MobileView.List;
+        await LoadYearsAsync(false);
+    }
+
+    private void ToggleYear(short yearNumber)
+    {
+        if (_openYears.Contains(yearNumber))
+            _openYears.Remove(yearNumber);
+        else
+            _openYears.Add(yearNumber);
+    }
+
+    private async Task SelectPeriodAsync(DateTime startOn, short yearNumber)
+    {
+        _openYears.Add(yearNumber);
+
+        var period = _years
+            .SelectMany(year => year.Periods)
+            .FirstOrDefault(item => item.StartOn == startOn);
+
+        if (period is null)
+        {
+            _errorMessage = "Tax period not found.";
+            return;
+        }
+
+        _selectedPeriod = period;
+        await LoadPeriodEditorAsync(startOn, yearNumber);
+
+        if (IsMobile)
+            _mobileView = MobileView.Period;
+    }
+
+    private async Task LoadPeriodEditorAsync(DateTime startOn, short yearNumber)
+    {
+        var yearPeriod = await NodeContext.App_tbYearPeriods
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.StartOn == startOn);
+
+        if (yearPeriod is null)
+        {
+            _errorMessage = "Tax period details not found.";
+            return;
+        }
+
+        var monthEnd = new DateTime(startOn.Year, startOn.Month, 1).AddMonths(1).AddDays(-1);
+
+        _editor = new PeriodEditorModel
+        {
+            StartOn = startOn,
+            YearNumber = yearNumber,
+            VatAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.VAT),
+            BusinessTaxAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.BusinessTax),
+            MonthlyBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m,
+            RangeStartOn = startOn,
+            RangeEndOn = monthEnd,
+            RangeBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m
+        };
+    }
+
+    private Task BackToListAsync()
+    {
+        _mobileView = MobileView.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAdjustmentsAsync()
+    {
+        try
+        {
+            var periods = new FinancialPeriods(NodeContext);
+
+            await periods.AdjustTax(_editor.StartOn, NodeEnum.TaxType.VAT, (double)_editor.VatAdjustment);
+            await periods.AdjustTax(_editor.StartOn, NodeEnum.TaxType.BusinessTax, (double)_editor.BusinessTaxAdjustment);
+
+            _actionTone = "success";
+            _actionMessage = "Adjustments saved.";
+
+            await LoadYearsAsync(true);
+
+            if (IsMobile)
+                _mobileView = MobileView.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save tax adjustments.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SaveMonthlyRateAsync()
+    {
+        try
+        {
+            var period = await NodeContext.App_tbYearPeriods
+                .SingleOrDefaultAsync(item => item.StartOn == _editor.StartOn);
+
+            if (period is null)
+            {
+                _errorMessage = "Tax period not found.";
+                return;
+            }
+
+            period.BusinessTaxRate = _editor.MonthlyBusinessTaxRatePercent / 100m;
+            await NodeContext.SaveChangesAsync();
+
+            _actionTone = "success";
+            _actionMessage = "Monthly corporation tax rate saved.";
+
+            await LoadYearsAsync(true);
+
+            if (IsMobile)
+                _mobileView = MobileView.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the monthly corporation tax rate.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SaveRangeRateAsync()
+    {
+        try
+        {
+            var periods = new FinancialPeriods(NodeContext);
+            await periods.TaxRate(_editor.RangeStartOn, _editor.RangeEndOn, (float)(_editor.RangeBusinessTaxRatePercent / 100m));
+
+            _actionTone = "success";
+            _actionMessage = "Corporation tax rate range saved.";
+
+            await LoadYearsAsync(true);
+
+            if (IsMobile)
+                _mobileView = MobileView.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the corporation tax rate range.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private string GetBadgeClass(PeriodRow period) =>
+        period.IsCurrent ? "text-bg-primary" :
+        period.IsFuture ? "text-bg-secondary" :
+        "text-bg-light";
+
+    private string GetBorderClass(short cashStatusCode) => cashStatusCode switch
+    {
+        (short)NodeEnum.CashStatus.Archived => "border border-2 border-secondary",
+        (short)NodeEnum.CashStatus.Closed => "border border-2 border-warning",
+        (short)NodeEnum.CashStatus.Current => "border border-2 border-success",
+        (short)NodeEnum.CashStatus.Forecast => "border border-2 border-info",
+        _ => "border"
+    };
+
+    private string GetStatusText(short cashStatusCode) => ((NodeEnum.CashStatus)cashStatusCode).ToString();
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mobileView == MobileView.List)
+        {
+            @RenderYearsPane()
+        }
+        else
+        {
+            @RenderPeriodPane(true)
+        }
+    </div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+        <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 56%; min-width:28rem; min-height:0; overflow:hidden;">
+            @RenderYearsPane()
+        </div>
+
+        <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+            @RenderPeriodPane(false)
+        </div>
+    </div>;
+
+    private RenderFragment RenderYearsPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_isLoading && _years.Count == 0)
+        {
+            <div class="p-3 text-muted">Loading tax rates and adjustments…</div>
+        }
+        else if (_years.Count == 0)
+        {
+            <div class="p-3 text-muted">No financial years found.</div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-2 overflow-auto p-3" style="min-height:0;">
+                @foreach (var year in _years)
+                {
+                    var isOpen = _openYears.Contains(year.YearNumber);
+
+                    <div class="border rounded bg-light">
+                        <button type="button"
+                                class="btn w-100 text-start px-3 py-2"
+                                @onclick="() => ToggleYear(year.YearNumber)">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold">@year.Description</span>
+                                    <span class="text-muted">(@year.YearNumber)</span>
+                                </div>
+                                <span class="text-muted small">@(isOpen ? "Hide" : "Show")</span>
+                            </div>
+                        </button>
+
+                        @if (isOpen)
+                        {
+                            <div class="p-3 bg-white border-top">
+                                @if (year.Periods is null || year.Periods.Count == 0)
+                                {
+                                    <div class="text-muted">No periods found for this year.</div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach (var period in year.Periods)
+                                        {
+                                            <button type="button"
+                                                    class="btn p-0 text-start text-decoration-none"
+                                                    @onclick="() => SelectPeriodAsync(period.StartOn, period.YearNumber)">
+                                                <div class="px-2 py-1 rounded @GetBorderClass(period.CashStatusCode)" style="min-width: 11.5rem;">
+                                                    <div class="d-flex align-items-center justify-content-between">
+                                                        <span class="fw-semibold">@period.StartOn.ToString("MMM yyyy")</span>
+                                                        <span class="badge @GetBadgeClass(period)">@period.MonthNumber</span>
+                                                    </div>
+                                                    <div class="small text-muted">
+                                                        CT rate: @period.BusinessTaxRate.ToString("P")
+                                                    </div>
+                                                    <div class="small text-muted">
+                                                        VAT adj: @period.VatAdjustment
+                                                        &nbsp;|&nbsp; CT adj: @period.BusinessTaxAdjustment
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>;
+
+    private RenderFragment RenderPeriodPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_selectedPeriod is null)
+        {
+            <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+                Select a tax period to edit its adjustments and corporation tax rate.
+            </div>
+        }
+        else
+        {
+            @if (showBackToList)
+            {
+                <div class="px-3 pt-3">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @onclick="BackToListAsync">
+                        Back to periods
+                    </button>
+                </div>
+            }
+
+            <div class="px-3 py-3 border-bottom bg-light">
+                <div class="fw-semibold">@_editor.StartOn.ToString("MMMM yyyy")</div>
+                <div class="small text-muted">Status @GetStatusText(_selectedPeriod.CashStatusCode)</div>
+            </div>
+
+            <div class="flex-grow-1 overflow-auto px-3 py-3 d-flex flex-column gap-3">
+                @if (_isAdministrator || _isManager)
+                {
+                    <div class="border rounded bg-light">
+                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Adjustments</div>
+                        <div class="p-3 bg-white">
+                            <EditForm Model="@_editor" OnValidSubmit="SaveAdjustmentsAsync">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <label class="form-label" for="vatAdjustment">VAT Adjustment</label>
+                                        <InputNumber id="vatAdjustment"
+                                                     @bind-Value="_editor.VatAdjustment"
+                                                     class="form-control" />
+                                    </div>
+
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <label class="form-label" for="businessTaxAdjustment">Business Tax Adjustment</label>
+                                        <InputNumber id="businessTaxAdjustment"
+                                                     @bind-Value="_editor.BusinessTaxAdjustment"
+                                                     class="form-control" />
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                </div>
+
+                                <div class="form-text text-muted mt-2">
+                                    Adjustments are applied per tax period window. Setting an adjustment here replaces any existing adjustment in the same due-date window.
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+
+                    <div class="border rounded bg-light">
+                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Corporation Tax Rate (Monthly)</div>
+                        <div class="p-3 bg-white">
+                            <EditForm Model="@_editor" OnValidSubmit="SaveMonthlyRateAsync">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <label class="form-label" for="monthlyBusinessTaxRate">Business Tax Rate (%)</label>
+                                        <div class="input-group">
+                                            <InputNumber id="monthlyBusinessTaxRate"
+                                                         @bind-Value="_editor.MonthlyBusinessTaxRatePercent"
+                                                         class="form-control" />
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <button type="submit" class="btn btn-primary">Save</button>
+                                    </div>
+                                </div>
+
+                                <div class="form-text text-muted mt-2">
+                                    This sets the rate for this month only.
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+
+                @if (_isAdministrator)
+                {
+                    <div class="border rounded bg-light">
+                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Corporation Tax Rate (Date Range)</div>
+                        <div class="p-3 bg-white">
+                            <EditForm Model="@_editor" OnValidSubmit="SaveRangeRateAsync">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-4 mb-3">
+                                        <label class="form-label" for="rangeStartOn">From Date</label>
+                                        <InputDate id="rangeStartOn"
+                                                   @bind-Value="_editor.RangeStartOn"
+                                                   class="form-control" />
+                                    </div>
+
+                                    <div class="col-12 col-md-4 mb-3">
+                                        <label class="form-label" for="rangeEndOn">To Date</label>
+                                        <InputDate id="rangeEndOn"
+                                                   @bind-Value="_editor.RangeEndOn"
+                                                   class="form-control" />
+                                    </div>
+
+                                    <div class="col-12 col-md-4 mb-3">
+                                        <label class="form-label" for="rangeBusinessTaxRate">Business Tax Rate (%)</label>
+                                        <div class="input-group">
+                                            <InputNumber id="rangeBusinessTaxRate"
+                                                         @bind-Value="_editor.RangeBusinessTaxRatePercent"
+                                                         class="form-control" />
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                </div>
+
+                                <div class="form-text text-muted mt-2">
+                                    Use this to apply a corporation tax rate across multiple months.
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>;
+}
+

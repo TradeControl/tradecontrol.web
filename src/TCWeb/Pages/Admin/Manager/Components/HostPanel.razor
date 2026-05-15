@@ -1,0 +1,904 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Mail
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+        <div class="border rounded bg-white px-3 py-2">
+            <div class="small text-muted">Active Host</div>
+            <div class="fw-semibold">@(_activeHost?.HostDescription ?? "None configured")</div>
+            @if (_activeHost is not null)
+            {
+                <div class="small text-muted">@_activeHost.EmailAddress · @_activeHost.HostName:@_activeHost.HostPort</div>
+            }
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    @onclick="BeginCreateAsync">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Host
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-success btn-sm"
+                    @onclick="SendTestEmailAsync">
+                Test Email
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    @onclick="BeginRotateKeys">
+                Rotate Keys
+            </button>
+        </div>
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum HostPanelMode
+    {
+        List,
+        Details,
+        Create,
+        Edit,
+        Delete,
+        RotateKeys
+    }
+
+    private sealed class HostEditorModel
+    {
+        public int HostId { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "Host Description")]
+        public string HostDescription { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(256)]
+        [DataType(DataType.EmailAddress)]
+        [Display(Name = "Email Address")]
+        public string EmailAddress { get; set; } = string.Empty;
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string EmailPassword { get; set; } = string.Empty;
+
+        [Display(Name = "Use SMTP Auth")]
+        public bool IsSmtpAuth { get; set; } = true;
+
+        [Required]
+        [StringLength(256)]
+        [Display(Name = "Host Name")]
+        public string HostName { get; set; } = string.Empty;
+
+        [Display(Name = "Port")]
+        public int HostPort { get; set; } = 587;
+    }
+
+    private readonly List<App_tbHost> _hosts = [];
+    private App_tbHost? _selectedHost;
+    private App_tbHost? _activeHost;
+    private HostEditorModel _editor = new();
+    private HostPanelMode _mode = HostPanelMode.List;
+    private bool _confirmBackup;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+    private string? _errorMessage;
+    private bool _isLoading;
+    private int? _activeHostId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHostsAsync(false);
+
+        if (!IsMobile && _selectedHost is not null)
+            _mode = HostPanelMode.Details;
+    }
+
+    private async Task LoadHostsAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedHostId = preserveSelection ? _selectedHost?.HostId : null;
+
+            var hosts = await NodeContext.App_tbHosts
+                .AsNoTracking()
+                .OrderBy(item => item.HostDescription)
+                .ToListAsync();
+
+            _hosts.Clear();
+            _hosts.AddRange(hosts);
+
+            _activeHostId = await NodeContext.App_tbOptions
+                .Select(item => item.HostId)
+                .FirstOrDefaultAsync();
+
+            _activeHost = _activeHostId.HasValue
+                ? _hosts.FirstOrDefault(item => item.HostId == _activeHostId.Value)
+                : null;
+
+            if (_hosts.Count == 0)
+            {
+                _selectedHost = null;
+                _mode = HostPanelMode.List;
+                return;
+            }
+
+            _selectedHost = selectedHostId.HasValue
+                ? _hosts.FirstOrDefault(item => item.HostId == selectedHostId.Value)
+                : _activeHost ?? _hosts[0];
+
+            _selectedHost ??= _hosts[0];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load host settings.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Task SelectHostAsync(int hostId)
+    {
+        _selectedHost = _hosts.FirstOrDefault(item => item.HostId == hostId) ?? _selectedHost;
+        _mode = HostPanelMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BackToListAsync()
+    {
+        _mode = HostPanelMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BeginCreateAsync()
+    {
+        _editor = new HostEditorModel
+        {
+            IsSmtpAuth = true,
+            HostPort = 587
+        };
+
+        _mode = HostPanelMode.Create;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BeginEditAsync(int hostId)
+    {
+        var current = _hosts.FirstOrDefault(item => item.HostId == hostId);
+
+        if (current is null)
+        {
+            _errorMessage = "Host not found.";
+            return Task.CompletedTask;
+        }
+
+        _selectedHost = current;
+        _editor = new HostEditorModel
+        {
+            HostId = current.HostId,
+            HostDescription = current.HostDescription,
+            EmailAddress = current.EmailAddress,
+            EmailPassword = string.Empty,
+            IsSmtpAuth = current.IsSmtpAuth,
+            HostName = current.HostName,
+            HostPort = current.HostPort
+        };
+
+        _mode = HostPanelMode.Edit;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BeginDeleteAsync(int hostId)
+    {
+        _selectedHost = _hosts.FirstOrDefault(item => item.HostId == hostId) ?? _selectedHost;
+        _mode = HostPanelMode.Delete;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BeginRotateKeys()
+    {
+        _confirmBackup = false;
+        _mode = HostPanelMode.RotateKeys;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = IsMobile ? HostPanelMode.List : HostPanelMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SetActiveHostAsync(int hostId)
+    {
+        try
+        {
+            var settings = new NodeSettings(NodeContext);
+
+            if (!await settings.SetHost(hostId))
+            {
+                _actionTone = "danger";
+                _actionMessage = "Active host was not changed. Check Event Viewer for details.";
+                return;
+            }
+
+            _actionTone = "success";
+            _actionMessage = "Active host updated.";
+
+            await LoadHostsAsync(true);
+
+            if (IsMobile)
+                _mode = HostPanelMode.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to change the active host.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SaveHostAsync()
+    {
+        try
+        {
+            var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync()
+                ?? throw new InvalidOperationException("App.tbOptions is not initialized.");
+
+            var optionsChanged = false;
+
+            if (options.SymmetricKey == null || options.SymmetricKey.Length == 0)
+            {
+                options.SymmetricKey = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+                optionsChanged = true;
+            }
+
+            if (options.SymmetricIV == null || options.SymmetricIV.Length == 0)
+            {
+                options.SymmetricIV = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
+                optionsChanged = true;
+            }
+
+            if (optionsChanged)
+                await NodeContext.SaveChangesAsync();
+
+            var encrypt = new Encrypt(options.SymmetricKey, options.SymmetricIV);
+            var nodeSettings = new NodeSettings(NodeContext);
+
+            if (_mode == HostPanelMode.Create)
+            {
+                var entity = new App_tbHost
+                {
+                    HostDescription = _editor.HostDescription.Trim(),
+                    EmailAddress = _editor.EmailAddress.Trim(),
+                    EmailPassword = _editor.IsSmtpAuth && !string.IsNullOrWhiteSpace(_editor.EmailPassword)
+                        ? encrypt.EncryptString(_editor.EmailPassword)
+                        : string.Empty,
+                    IsSmtpAuth = _editor.IsSmtpAuth,
+                    HostName = _editor.HostName.Trim(),
+                    HostPort = _editor.HostPort
+                };
+
+                NodeContext.App_tbHosts.Add(entity);
+                await NodeContext.SaveChangesAsync();
+
+                if (!_activeHostId.HasValue)
+                    await nodeSettings.SetHost(entity.HostId);
+
+                _actionTone = "success";
+                _actionMessage = "Host created.";
+            }
+            else if (_mode == HostPanelMode.Edit)
+            {
+                var entity = await NodeContext.App_tbHosts
+                    .SingleOrDefaultAsync(item => item.HostId == _editor.HostId);
+
+                if (entity is null)
+                {
+                    _errorMessage = "Host not found.";
+                    return;
+                }
+
+                entity.HostDescription = _editor.HostDescription.Trim();
+                entity.EmailAddress = _editor.EmailAddress.Trim();
+                entity.IsSmtpAuth = _editor.IsSmtpAuth;
+                entity.HostName = _editor.HostName.Trim();
+                entity.HostPort = _editor.HostPort;
+
+                if (!_editor.IsSmtpAuth)
+                {
+                    entity.EmailPassword = string.Empty;
+                }
+                else if (!string.IsNullOrWhiteSpace(_editor.EmailPassword))
+                {
+                    entity.EmailPassword = encrypt.EncryptString(_editor.EmailPassword);
+                }
+
+                await NodeContext.SaveChangesAsync();
+
+                _actionTone = "success";
+                _actionMessage = "Host updated.";
+            }
+
+            await LoadHostsAsync(false);
+
+            if (_mode == HostPanelMode.Create)
+                _selectedHost = _hosts.OrderByDescending(item => item.HostId).FirstOrDefault();
+            else
+                _selectedHost = _hosts.FirstOrDefault(item => item.HostId == _editor.HostId) ?? _selectedHost;
+
+            _mode = IsMobile ? HostPanelMode.List : HostPanelMode.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the host.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+    private async Task DeleteHostAsync()
+    {
+        if (_selectedHost is null)
+            return;
+
+        try
+        {
+            var deletingHostId = _selectedHost.HostId;
+
+            if (_activeHostId == deletingHostId)
+            {
+                var replacementId = await NodeContext.App_tbHosts
+                    .Where(item => item.HostId != deletingHostId)
+                    .OrderByDescending(item => item.HostId)
+                    .Select(item => (int?)item.HostId)
+                    .FirstOrDefaultAsync();
+
+                var settings = new NodeSettings(NodeContext);
+                await settings.SetHost(replacementId);
+            }
+
+            var entity = await NodeContext.App_tbHosts.FindAsync(deletingHostId);
+
+            if (entity is null)
+            {
+                _errorMessage = "Host not found.";
+                return;
+            }
+
+            NodeContext.App_tbHosts.Remove(entity);
+            await NodeContext.SaveChangesAsync();
+
+            _actionTone = "success";
+            _actionMessage = "Host deleted.";
+
+            _selectedHost = null;
+            await LoadHostsAsync(false);
+            _mode = HostPanelMode.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to delete the host.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task RotateKeysAsync()
+    {
+        try
+        {
+            if (!_confirmBackup)
+            {
+                _errorMessage = "You must confirm that the database has been backed up before rotating keys.";
+                return;
+            }
+
+            var settings = new NodeSettings(NodeContext);
+            var ok = await settings.RegenerateSymmetricAsync();
+
+            _actionTone = ok ? "success" : "danger";
+            _actionMessage = ok
+                ? "Rotation completed successfully. Host passwords re-encrypted where possible."
+                : "Rotation failed. Check server logs for details and do not change further settings.";
+
+            if (ok && IsMobile)
+                _mode = HostPanelMode.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to rotate keys.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SendTestEmailAsync()
+    {
+        const string handlerError = "Test email failed";
+
+        try
+        {
+            var user = await UserManager.GetUserAsync((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User);
+            var to = user?.Email;
+
+            if (string.IsNullOrWhiteSpace(to))
+            {
+                await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
+                    "Test email NOT sent: current user has no email address configured.");
+
+                _actionTone = "danger";
+                _actionMessage = "Test email not sent. Check Event Viewer for details.";
+                return;
+            }
+
+            var settings = new NodeSettings(NodeContext);
+            var mailSettings = await settings.MailHost();
+
+            if (mailSettings is null)
+            {
+                await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
+                    "Test email NOT sent: no active mail host is configured.");
+
+                _actionTone = "danger";
+                _actionMessage = "Test email not sent. Check Event Viewer for details.";
+                return;
+            }
+
+            var from = mailSettings.UserName;
+            var subject = "Trade Control - Test Email";
+            var body = $"Test email sent at {DateTime.Now:G}.";
+
+            await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
+                $"Test email requested. From='{from}', To='{to}', Subject='{subject}', Body='{body}'.");
+
+            var mail = new MailText
+            {
+                Settings = mailSettings,
+                Name = user?.UserName ?? "Administrator",
+                EmailTo = to,
+                Subject = subject,
+                Body = body,
+                IsHtml = false
+            };
+
+            var sender = new TestMailSender();
+            await sender.SendAsync(mail);
+
+            await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
+                $"Test email sent successfully. From='{from}', To='{to}', Subject='{subject}'.");
+
+            _actionTone = "success";
+            _actionMessage = "Email sent. Check Event Viewer for details.";
+
+            if (IsMobile)
+                _mode = HostPanelMode.List;
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+
+            try
+            {
+                await NodeContext.EventLog(NodeEnum.EventType.IsError,
+                    $"{handlerError}: {ex.GetType().Name}: {ex.Message}");
+            }
+            catch
+            {
+            }
+
+            _actionTone = "danger";
+            _actionMessage = "Test email failed. Check Event Viewer for details.";
+        }
+    }
+
+    private bool IsActiveHost(int hostId) => _activeHostId == hostId;
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_mode == HostPanelMode.List)
+    {
+@RenderHostListPane()
+    }
+    else if (_mode == HostPanelMode.Details)
+    {
+@RenderDetailPane(true)
+    }
+    else if (_mode == HostPanelMode.Delete)
+    {
+@RenderDeletePane(true)
+    }
+    else if (_mode == HostPanelMode.RotateKeys)
+    {
+@RenderRotateKeysPane(true)
+    }
+    else
+    {
+@RenderEditorPane(true)
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 42%; min-width:24rem; min-height:0; overflow:hidden;">
+        @RenderHostListPane()
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == HostPanelMode.Delete)
+                {
+        @RenderDeletePane(false)
+                }
+                else if (_mode == HostPanelMode.RotateKeys)
+                {
+        @RenderRotateKeysPane(false)
+                }
+                else if (_mode is HostPanelMode.Create or HostPanelMode.Edit)
+                {
+        @RenderEditorPane(false)
+                }
+                else
+                {
+        @RenderDetailPane(false)
+                }
+    </div>
+</div>;
+
+    private RenderFragment RenderHostListPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+    <div class="px-3 py-2 border-bottom bg-light small text-muted">
+        @_hosts.Count host@(_hosts.Count == 1 ? string.Empty : "s")
+    </div>
+
+@if (_isLoading && _hosts.Count == 0)
+    {
+    <div class="p-3 text-muted">Loading hosts…</div>
+    }
+    else if (_hosts.Count == 0)
+    {
+    <div class="p-3 text-muted">No mail hosts configured.</div>
+    }
+    else
+    {
+    <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+        @foreach (var item in _hosts)
+                {
+        <button type="button"
+                class="list-group-item list-group-item-action px-3 py-3 text-start @(item.HostId == _selectedHost?.HostId ? "active" : "")"
+                @onclick="() => SelectHostAsync(item.HostId)">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+                <div>
+                    <div class="fw-semibold">@item.HostDescription</div>
+                    <div class="small">@item.EmailAddress</div>
+                    <div class="small">@item.HostName:@item.HostPort</div>
+                </div>
+
+                @if (IsActiveHost(item.HostId))
+                                {
+                <span class="badge text-bg-success">Active</span>
+                                }
+            </div>
+        </button>
+                }
+    </div>
+    }
+</div>;
+
+    private RenderFragment RenderDetailPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedHost is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select a host to view its details.
+        </div>
+}
+else
+{
+    @if (showBackToList)
+    {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+    }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                <div>
+                    <div class="fw-semibold">@_selectedHost.HostDescription</div>
+                    <div class="small text-muted">@_selectedHost.EmailAddress</div>
+                </div>
+
+                @if (IsActiveHost(_selectedHost.HostId))
+                {
+                    <span class="badge text-bg-success">Active</span>
+                }
+            </div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">SMTP Auth</dt>
+                <dd class="col-sm-8">@(_selectedHost.IsSmtpAuth ? "Enabled" : "Disabled")</dd>
+
+                <dt class="col-sm-4">Host</dt>
+                <dd class="col-sm-8">@_selectedHost.HostName</dd>
+
+                <dt class="col-sm-4">Port</dt>
+                <dd class="col-sm-8">@_selectedHost.HostPort</dd>
+
+                <dt class="col-sm-4">Inserted</dt>
+                <dd class="col-sm-8">@_selectedHost.InsertedOn:g</dd>
+            </dl>
+        </div>
+
+        <div class="px-3 py-3 border-top bg-white">
+            <div class="d-flex flex-wrap gap-2">
+                @if (!IsActiveHost(_selectedHost.HostId))
+                {
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            @onclick="() => SetActiveHostAsync(_selectedHost.HostId)">
+                        Set Active
+                    </button>
+                }
+
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="() => BeginEditAsync(_selectedHost.HostId)">
+                    <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        @onclick="() => BeginDeleteAsync(_selectedHost.HostId)">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                </button>
+            </div>
+        </div>
+}
+</div>;
+
+private RenderFragment RenderEditorPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">@(_mode == HostPanelMode.Create ? "New Host" : "Edit Host")</div>
+        @if (_mode == HostPanelMode.Edit)
+        {
+            <div class="small text-muted">@_editor.HostDescription</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <EditForm Model="@_editor" OnValidSubmit="SaveHostAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label" for="hostDescription">Host Description</label>
+                <InputText id="hostDescription"
+                           @bind-Value="_editor.HostDescription"
+                           class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="emailAddress">Email Address</label>
+                <InputText id="emailAddress"
+                           @bind-Value="_editor.EmailAddress"
+                           class="form-control" />
+            </div>
+
+            <div class="mb-3 border rounded p-2 bg-light">
+                <div class="form-check">
+                    <InputCheckbox id="isSmtpAuth"
+                                   @bind-Value="_editor.IsSmtpAuth"
+                                   class="form-check-input" />
+                    <label class="form-check-label" for="isSmtpAuth">Use SMTP Auth</label>
+                </div>
+                <div class="form-text mb-0">Clear this for internal relay where SMTP auth is not required.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="emailPassword">
+                    @(_mode == HostPanelMode.Edit ? "Password (leave blank to keep current)" : "Password")
+                </label>
+                <InputText id="emailPassword"
+                           @bind-Value="_editor.EmailPassword"
+                           type="password"
+                           class="form-control"
+                           disabled="@(!_editor.IsSmtpAuth)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="hostName">Host Name</label>
+                <InputText id="hostName"
+                           @bind-Value="_editor.HostName"
+                           class="form-control" />
+            </div>
+
+            <div class="mb-3" style="max-width:12rem;">
+                <label class="form-label" for="hostPort">Port</label>
+                <InputNumber id="hostPort"
+                             @bind-Value="_editor.HostPort"
+                             class="form-control" />
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">
+                    @(_mode == HostPanelMode.Create ? "Create" : "Update")
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>;
+
+private RenderFragment RenderDeletePane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Delete Host</div>
+        @if (_selectedHost is not null)
+        {
+            <div class="small text-muted">@_selectedHost.HostDescription</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="alert alert-warning py-2">
+            This will permanently remove the selected mail host.
+        </div>
+
+        @if (_selectedHost is not null)
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Email Address</dt>
+                <dd class="col-sm-8">@_selectedHost.EmailAddress</dd>
+
+                <dt class="col-sm-4">Host Name</dt>
+                <dd class="col-sm-8">@_selectedHost.HostName</dd>
+
+                <dt class="col-sm-4">Port</dt>
+                <dd class="col-sm-8">@_selectedHost.HostPort</dd>
+            </dl>
+        }
+    </div>
+
+    <div class="px-3 py-3 border-top bg-white">
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                    class="btn btn-danger"
+                    @onclick="DeleteHostAsync">
+                Delete
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="CancelAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+
+private RenderFragment RenderRotateKeysPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Rotate Symmetric Keys</div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="alert alert-warning">
+            <h5>Important — Backup first</h5>
+            <ul class="mb-0">
+                <li>This operation rotates the AES key and IV used to encrypt secrets (mail host passwords).</li>
+                <li>It will attempt to decrypt each host password with the current key and re-encrypt with the new key.</li>
+                <li>If anything fails the affected passwords will be left unchanged and an error will be logged.</li>
+                <li>Make a full database backup before proceeding.</li>
+            </ul>
+        </div>
+
+        <div class="form-check mb-3">
+            <InputCheckbox id="confirmBackup"
+                           @bind-Value="_confirmBackup"
+                           class="form-check-input" />
+            <label class="form-check-label" for="confirmBackup">
+                I have backed up the database and understand the consequences
+            </label>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                    class="btn btn-danger"
+                    @onclick="RotateKeysAsync">
+                Rotate Keys and Re-encrypt Host Passwords
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="CancelAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+}

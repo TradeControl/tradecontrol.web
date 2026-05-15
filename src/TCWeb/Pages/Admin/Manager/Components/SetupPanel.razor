@@ -1,0 +1,682 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Data
+
+@inject NodeContext NodeContext
+@inject UserManager<TradeControlWebUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    @if (!_showConfig)
+    {
+        <div class="border rounded bg-white p-4">
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="text-danger fs-4">
+                    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold fs-5">Re-initialize business data</div>
+                    <div class="text-muted">
+                        This process wipes out all existing organisations and transactions and replaces them with a fresh business setup.
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-warning mb-3">
+                Use this only when you are certain you want to rebuild the business from scratch.
+            </div>
+
+            <div class="form-check mb-4">
+                <InputCheckbox id="confirmWipe"
+                               @bind-Value="_confirmWipe"
+                               class="form-check-input" />
+                <label class="form-check-label" for="confirmWipe">
+                    I understand this will permanently delete the existing business data.
+                </label>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-danger"
+                        disabled="@(!_confirmWipe)"
+                        @onclick="ProceedToConfig">
+                    Proceed to setup
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="overflow-auto" style="min-height:0;">
+            <div class="container-fluid px-0">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                        <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">Business Setup</div>
+                        <div class="text-muted">Configure the business template, contacts, registration details, and banking defaults.</div>
+                    </div>
+
+                    <div class="border rounded bg-white px-3 py-2">
+                        <div class="small text-muted">Selected Template</div>
+                        <div class="fw-semibold">@_editor.TemplateName</div>
+                    </div>
+                </div>
+
+                <EditForm Model="@_editor" OnValidSubmit="SaveAsync" class="tc-setup-form">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-6 d-flex">
+                            <div class="card shadow-sm h-100 w-100">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Template</div>
+                                    <div class="text-muted small">Select a template to pre-configure defaults.</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="templateName">Configuration Template</label>
+                                        <select id="templateName"
+                                                class="form-select"
+                                                @bind="_editor.TemplateName"
+                                                @bind:after="ApplyTemplateDefaultsAsync">
+                                            @foreach (var item in _templateNames)
+                                            {
+                                                <option value="@item">@item</option>
+                                            }
+                                        </select>
+
+                                        @if (!string.IsNullOrWhiteSpace(SelectedTemplateDescription))
+                                        {
+                                            <div class="alert alert-info mt-2 mb-0" role="note">@SelectedTemplateDescription</div>
+                                        }
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="uocName">Unit of Account</label>
+                                            <InputSelect id="uocName"
+                                                         @bind-Value="_editor.UocName"
+                                                         class="form-select">
+                                                @foreach (var item in _uocNames)
+                                                {
+                                                    <option value="@item">@item</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="monthName">Financial Year</label>
+                                            <InputSelect id="monthName"
+                                                         @bind-Value="_editor.MonthName"
+                                                         class="form-select">
+                                                @foreach (var item in _monthNames)
+                                                {
+                                                    <option value="@item">@item</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-3" />
+
+                                    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                                        <div>
+                                            <div class="fw-semibold">VAT registration</div>
+                                            <div class="text-muted small">Affects template setup and tax behavior.</div>
+                                        </div>
+
+                                        <button type="button"
+                                                class="btn @(_editor.IsVatRegistered ? "btn-success" : "btn-danger")"
+                                                aria-pressed="@_editor.IsVatRegistered"
+                                                @onclick="ToggleVatAsync">
+                                            VAT: @(_editor.IsVatRegistered ? "On" : "Off")
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6 d-flex">
+                            <div class="card shadow-sm h-100 w-100">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Business</div>
+                                    <div class="text-muted small">Core identity and contact information.</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-4">
+                                            <label class="form-label" for="subjectCode">Account Code</label>
+                                            <InputText id="subjectCode"
+                                                       @bind-Value="_editor.SubjectCode"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-8">
+                                            <label class="form-label" for="subjectName">Business Name</label>
+                                            <InputText id="subjectName"
+                                                       @bind-Value="_editor.SubjectName"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label" for="businessAddress">Business Address</label>
+                                            <InputTextArea id="businessAddress"
+                                                           @bind-Value="_editor.BusinessAddress"
+                                                           class="form-control"
+                                                           rows="4" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="userName">Your Name</label>
+                                            <InputText id="userName"
+                                                       @bind-Value="_editor.UserName"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="phoneNumber">Phone Number</label>
+                                            <InputText id="phoneNumber"
+                                                       @bind-Value="_editor.PhoneNumber"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="emailAddress">Email Address</label>
+                                            <InputText id="emailAddress"
+                                                       @bind-Value="_editor.EmailAddress"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="webSite">Web Site</label>
+                                            <InputText id="webSite"
+                                                       @bind-Value="_editor.WebSite"
+                                                       class="form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6 d-flex">
+                            <div class="card shadow-sm h-100 w-100">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Registration & Tax</div>
+                                    <div class="text-muted small">Optional registration identifiers and government entity.</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="companyNumber">Company Number</label>
+                                            <InputText id="companyNumber"
+                                                       @bind-Value="_editor.CompanyNumber"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="vatNumber">Vat Number</label>
+                                            <InputText id="vatNumber"
+                                                       @bind-Value="_editor.VatNumber"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label" for="government">Government</label>
+                                            <InputText id="government"
+                                                       @bind-Value="_editor.Government"
+                                                       class="form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6 d-flex">
+                            <div class="card shadow-sm h-100 w-100">
+                                <div class="card-header bg-white">
+                                    <div class="fw-semibold">Banking</div>
+                                    <div class="text-muted small">Current and reserve accounts used by the system.</div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label" for="bankName">Bank Name</label>
+                                            <InputText id="bankName"
+                                                       @bind-Value="_editor.BankName"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label" for="bankAddress">Bank Address</label>
+                                            <InputTextArea id="bankAddress"
+                                                           @bind-Value="_editor.BankAddress"
+                                                           class="form-control"
+                                                           rows="3" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="currentSubjectName">Current Account Name</label>
+                                            <InputText id="currentSubjectName"
+                                                       @bind-Value="_editor.CurrentSubjectName"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label" for="caSortCode">Sort Code</label>
+                                            <InputText id="caSortCode"
+                                                       @bind-Value="_editor.CASortCode"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label" for="caAccountNumber">Account No</label>
+                                            <InputText id="caAccountNumber"
+                                                       @bind-Value="_editor.CAAccountNumber"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="reserveSubjectName">Reserve Account Name</label>
+                                            <InputText id="reserveSubjectName"
+                                                       @bind-Value="_editor.ReserveSubjectName"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label" for="raSortCode">Sort Code</label>
+                                            <InputText id="raSortCode"
+                                                       @bind-Value="_editor.RASortCode"
+                                                       class="form-control" />
+                                        </div>
+
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label" for="raAccountNumber">Account No</label>
+                                            <InputText id="raAccountNumber"
+                                                       @bind-Value="_editor.RAAccountNumber"
+                                                       class="form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">Initialise</button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private sealed class SetupEditorModel
+    {
+        [Required]
+        [Display(Name = "Configuration Template")]
+        public string TemplateName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Unit of Account")]
+        public string UocName { get; set; } = string.Empty;
+
+        [Required]
+        [Display(Name = "Financial Year")]
+        public string MonthName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(255)]
+        [Display(Name = "Government")]
+        public string Government { get; set; } = "HM REVENUE AND CUSTOMS";
+
+        [Required]
+        [StringLength(10)]
+        [Display(Name = "Account Code")]
+        public string SubjectCode { get; set; } = "HOME";
+
+        [Required]
+        [StringLength(255)]
+        [Display(Name = "Business Name")]
+        public string SubjectName { get; set; } = string.Empty;
+
+        [Required]
+        [Display(Name = "Business Address")]
+        public string BusinessAddress { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Your Name")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "Phone Number")]
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(255)]
+        [Display(Name = "Email Address")]
+        [DataType(DataType.EmailAddress)]
+        public string EmailAddress { get; set; } = string.Empty;
+
+        [StringLength(255)]
+        [Display(Name = "Web Site")]
+        [DataType(DataType.Url)]
+        public string? WebSite { get; set; }
+
+        [StringLength(20)]
+        [Display(Name = "Company Number")]
+        public string? CompanyNumber { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Vat Number")]
+        public string? VatNumber { get; set; }
+
+        [Required]
+        [StringLength(255)]
+        [Display(Name = "Bank Name")]
+        public string BankName { get; set; } = string.Empty;
+
+        [Display(Name = "Bank Address")]
+        public string? BankAddress { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "Current Account Name")]
+        public string CurrentSubjectName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(10)]
+        [Display(Name = "Sort Code")]
+        public string CASortCode { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(20)]
+        [Display(Name = "Account No")]
+        public string CAAccountNumber { get; set; } = string.Empty;
+
+        [StringLength(50)]
+        [Display(Name = "Reserve Account Name")]
+        public string? ReserveSubjectName { get; set; }
+
+        [StringLength(10)]
+        [Display(Name = "Sort Code")]
+        public string? RASortCode { get; set; }
+
+        [StringLength(20)]
+        [Display(Name = "Account No")]
+        public string? RAAccountNumber { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Dummy Account")]
+        public string DummySubjectName { get; set; } = "ADJUSTMENTS";
+
+        [Required]
+        [StringLength(10)]
+        [Display(Name = "Calendar Code")]
+        public string CalendarCode { get; set; } = "OFFICE";
+
+        [Display(Name = "VAT Registered")]
+        public bool IsVatRegistered { get; set; }
+    }
+
+    private readonly List<string> _templateNames = [];
+    private readonly List<string> _uocNames = [];
+    private readonly List<string> _monthNames = [];
+    private readonly Dictionary<string, string> _templateDescriptions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, bool> _templateVatDefaults = new(StringComparer.OrdinalIgnoreCase);
+
+    private SetupEditorModel _editor = new();
+    private bool _confirmWipe;
+    private bool _showConfig;
+    private string? _errorMessage;
+
+    private string SelectedTemplateDescription =>
+        !string.IsNullOrWhiteSpace(_editor.TemplateName)
+            && _templateDescriptions.TryGetValue(_editor.TemplateName, out var text)
+                ? text
+                : string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookupDataAsync();
+        await LoadDefaultsAsync();
+    }
+
+    private async Task LoadLookupDataAsync()
+    {
+        var templates = await NodeContext.App_tbTemplates
+            .AsNoTracking()
+            .OrderBy(item => item.TemplateName)
+            .Select(item => new { item.TemplateName, item.TemplateDescription, item.IsVatRegistered })
+            .ToListAsync();
+
+        _templateNames.Clear();
+        _templateNames.AddRange(templates.Select(item => item.TemplateName));
+
+        _templateDescriptions.Clear();
+        foreach (var item in templates)
+            _templateDescriptions[item.TemplateName] = item.TemplateDescription ?? string.Empty;
+
+        _templateVatDefaults.Clear();
+        foreach (var item in templates)
+            _templateVatDefaults[item.TemplateName] = item.IsVatRegistered;
+
+        _monthNames.Clear();
+        _monthNames.AddRange(await NodeContext.App_tbMonths
+            .AsNoTracking()
+            .OrderBy(item => item.MonthNumber)
+            .Select(item => item.MonthName)
+            .ToListAsync());
+
+        _uocNames.Clear();
+        _uocNames.AddRange(await NodeContext.App_tbUocs
+            .AsNoTracking()
+            .OrderBy(item => item.UocName)
+            .Select(item => item.UocName)
+            .ToListAsync());
+    }
+
+    private async Task LoadDefaultsAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var currentUserId = UserManager.GetUserId(authState.User);
+        var profile = new Profile(NodeContext);
+        var currentUserName = await profile.UserName(currentUserId);
+
+        if (await NodeContext.Usr_Doc.AnyAsync() && await NodeContext.App_tbOptions.AnyAsync())
+        {
+            var company = await NodeContext.Usr_Doc.Take(1).SingleOrDefaultAsync();
+            var options = await NodeContext.App_tbOptions.Take(1).SingleOrDefaultAsync();
+            var monthName = await (from year in NodeContext.App_tbYears
+                                   join month in NodeContext.App_tbMonths
+                                       on year.StartMonth equals month.MonthNumber
+                                   orderby month.MonthNumber
+                                   select month.MonthName)
+                .FirstOrDefaultAsync();
+
+            _editor = new SetupEditorModel
+            {
+                TemplateName = _templateNames.FirstOrDefault() ?? string.Empty,
+                SubjectName = company?.CompanyName ?? string.Empty,
+                BusinessAddress = company?.CompanyAddress ?? string.Empty,
+                UserName = currentUserName,
+                PhoneNumber = company?.CompanyPhoneNumber ?? string.Empty,
+                EmailAddress = company?.CompanyEmailAddress ?? string.Empty,
+                WebSite = company?.CompanyWebsite,
+                CompanyNumber = company?.CompanyNumber,
+                VatNumber = company?.VatNumber,
+                BankName = company?.BankName ?? string.Empty,
+                BankAddress = company?.BankAddress,
+                CurrentSubjectName = company?.CurrentAccountName ?? string.Empty,
+                CAAccountNumber = company?.BankAccountNumber ?? string.Empty,
+                CASortCode = company?.BankSortCode ?? string.Empty,
+                CalendarCode = await NodeContext.App_tbCalendars
+                    .OrderBy(item => item.CalendarCode)
+                    .Select(item => item.CalendarCode)
+                    .FirstOrDefaultAsync() ?? "OFFICE",
+                MonthName = monthName ?? _monthNames.FirstOrDefault() ?? string.Empty,
+                UocName = options is null
+                    ? _uocNames.FirstOrDefault() ?? string.Empty
+                    : await NodeContext.App_tbUocs
+                        .Where(item => item.UnitOfCharge == options.UnitOfCharge)
+                        .Select(item => item.UocName)
+                        .FirstOrDefaultAsync() ?? _uocNames.FirstOrDefault() ?? string.Empty,
+                IsVatRegistered = false
+            };
+
+            await ApplyTemplateDefaultsAsync();
+
+            var reserveAccount = await NodeContext.Subject_ReserveAccounts
+                .OrderBy(item => item.AccountCode)
+                .FirstOrDefaultAsync();
+
+            if (reserveAccount is not null)
+            {
+                _editor.ReserveSubjectName = reserveAccount.AccountName;
+                _editor.RAAccountNumber = reserveAccount.AccountNumber;
+                _editor.RASortCode = reserveAccount.SortCode;
+            }
+
+            var government = await (from taxType in NodeContext.Cash_tbTaxTypes
+                                    join subject in NodeContext.Subject_tbSubjects
+                                        on taxType.SubjectCode equals subject.SubjectCode
+                                    orderby taxType.SubjectCode
+                                    select subject.SubjectName)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrWhiteSpace(government))
+                _editor.Government = government;
+        }
+        else
+        {
+            var defaultTemplate = _templateNames.FirstOrDefault() ?? string.Empty;
+
+            _editor = new SetupEditorModel
+            {
+                TemplateName = defaultTemplate,
+                MonthName = await NodeContext.App_tbMonths
+                    .Where(item => item.MonthNumber == 4)
+                    .Select(item => item.MonthName)
+                    .SingleAsync(),
+                UocName = await NodeContext.App_tbUocs
+                    .Where(item => item.UnitOfCharge == "GBP")
+                    .Select(item => item.UocName)
+                    .SingleAsync(),
+                IsVatRegistered = false
+            };
+
+            await ApplyTemplateDefaultsAsync();
+        }
+    }
+
+    private Task ProceedToConfig()
+    {
+        _showConfig = true;
+        return Task.CompletedTask;
+    }
+
+    private Task ToggleVatAsync()
+    {
+        _editor.IsVatRegistered = !_editor.IsVatRegistered;
+        return Task.CompletedTask;
+    }
+
+    private Task ApplyTemplateDefaultsAsync()
+    {
+        if (_templateVatDefaults.TryGetValue(_editor.TemplateName, out var isVat))
+            _editor.IsVatRegistered = isVat;
+        else
+            _editor.IsVatRegistered = false;
+
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        if (_showConfig)
+        {
+            _showConfig = false;
+            return Task.CompletedTask;
+        }
+
+        NavigationManager.NavigateTo("/Admin/Manager/Index?node=Setup", forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+
+            await NodeContext.InitializeNode();
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var identityUser = await UserManager.GetUserAsync(authState.User);
+
+            await NodeContext.ConfigureNode(
+                accountCode: _editor.SubjectCode,
+                businessName: _editor.SubjectName,
+                fullName: _editor.UserName,
+                businessAddress: _editor.BusinessAddress,
+                businessEmailAddress: _editor.EmailAddress,
+                userEmailAddress: identityUser?.Email ?? _editor.EmailAddress,
+                phoneNumber: _editor.PhoneNumber,
+                companyNumber: _editor.CompanyNumber,
+                vatNumber: _editor.VatNumber,
+                calendarCode: _editor.CalendarCode,
+                uocName: _editor.UocName);
+
+            var monthNumber = await NodeContext.App_tbMonths
+                .Where(item => item.MonthName == _editor.MonthName)
+                .Select(item => item.MonthNumber)
+                .SingleAsync();
+
+            await NodeContext.InstallBasicSetup(
+                templateName: _editor.TemplateName,
+                financialMonth: monthNumber,
+                govSubjectName: _editor.Government,
+                bankName: _editor.BankName,
+                bankAddress: _editor.BankAddress,
+                dummyAccount: _editor.DummySubjectName,
+                currentAccount: _editor.CurrentSubjectName,
+                ca_SortCode: _editor.CASortCode,
+                ca_AccountNumber: _editor.CAAccountNumber,
+                reserveAccount: _editor.ReserveSubjectName,
+                ra_SortCode: _editor.RASortCode,
+                ra_AccountNumber: _editor.RAAccountNumber,
+                isVatRegistered: _editor.IsVatRegistered);
+
+            NavigationManager.NavigateTo("/Identity/Account/SignOutAndRegister", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to initialise the business.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+}

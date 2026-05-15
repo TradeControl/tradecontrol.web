@@ -1,0 +1,756 @@
+@using System
+@using System.Collections.Generic
+@using System.IO
+@using System.Linq
+@using System.Threading.Tasks
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.ModelBinding
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.FileProviders
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Data
+@using TradeControl.Web.Mail
+
+@inject NodeContext NodeContext
+@inject IFileProvider FileProvider
+@inject IConfiguration Configuration
+@inject NavigationManager NavigationManager
+@inject UserManager<TradeControlWebUser> UserManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+        <div>
+            <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">File Manager</div>
+            <div class="text-muted">Manage documents, templates, and images used by the business.</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                    class="btn btn-outline-success btn-sm"
+                    @onclick="SyncFilesAsync">
+                Sync
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    disabled="@(!CanUpload)"
+                    @onclick="BeginUploadAsync">
+                Upload
+            </button>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        @foreach (var item in _contentTypes)
+        {
+            <button type="button"
+                    class="btn btn-sm @(string.Equals(_contentType, item, StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline-secondary")"
+                    @onclick="() => ChangeContentTypeAsync(item)">
+                @item
+            </button>
+        }
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="small text-muted">@_totalItems.ToString("N0") item(s)</div>
+
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small text-muted" for="pageSize">Page Size</label>
+            <select id="pageSize"
+                    class="form-select form-select-sm"
+                    style="width:6rem;"
+                    @bind="_pageSize"
+                    @bind:after="ChangePageSizeAsync">
+                @foreach (var item in _pageSizes)
+                {
+                    <option value="@item">@item</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public string? InitialContentType { get; set; }
+
+    private enum FileTransferView
+    {
+        List,
+        Details,
+        Upload,
+        Delete
+    }
+
+    private sealed class FileTransferItem
+    {
+        public string Name { get; init; } = string.Empty;
+        public string ContentType { get; init; } = string.Empty;
+    }
+
+    private sealed class FileTransferDetailsModel
+    {
+        public string ContentType { get; init; } = string.Empty;
+        public string Name { get; init; } = string.Empty;
+        public string PhysicalPath { get; init; } = string.Empty;
+        public long Length { get; init; }
+        public DateTimeOffset LastModified { get; init; }
+    }
+
+    private readonly List<string> _contentTypes = ["All", "Documents", "Templates", "Images"];
+    private readonly List<int> _pageSizes = [10, 25, 50, 100];
+    private readonly List<FileTransferItem> _items = [];
+    private readonly List<IBrowserFile> _selectedFiles = [];
+
+    private FileTransferItem? _selectedItem;
+    private FileTransferDetailsModel? _details;
+    private FileTransferView _view = FileTransferView.List;
+    private string _contentType = "All";
+    private int _pageNumber = 1;
+    private int _pageSize = 25;
+    private int _totalItems;
+    private int _totalPages = 1;
+    private long _maxFileSize;
+    private bool _isInitialized;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+    private string? _errorMessage;
+
+    private bool CanUpload => !string.Equals(_contentType, "All", StringComparison.OrdinalIgnoreCase);
+
+    private string MaxFileSizeMb => $"{_maxFileSize / 1048576d:N1} MB";
+
+    private string FileExtensions => string.Join(", ", PermittedExtensions(GetContentTypeCode(_contentType)));
+
+    private IEnumerable<FileTransferItem> PagedItems =>
+        _items.Skip((_pageNumber - 1) * _pageSize).Take(_pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _maxFileSize = int.Parse(Configuration.GetSection("Settings")["MaxFileSize"] ?? "10485760");
+        _contentType = NormalizeContentType(InitialContentType);
+        await LoadFilesAsync(false);
+        _isInitialized = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_isInitialized)
+            return;
+
+        var requested = NormalizeContentType(InitialContentType);
+
+        if (!string.Equals(requested, _contentType, StringComparison.OrdinalIgnoreCase))
+        {
+            _contentType = requested;
+            _pageNumber = 1;
+            await LoadFilesAsync(false);
+        }
+    }
+
+    private async Task LoadFilesAsync(bool preserveSelection)
+    {
+        _errorMessage = null;
+
+        try
+        {
+            var selectedName = preserveSelection ? _selectedItem?.Name : null;
+            var selectedType = preserveSelection ? _selectedItem?.ContentType : null;
+
+            _items.Clear();
+            _items.AddRange(await QueryItemsAsync(_contentType));
+
+            _totalItems = _items.Count;
+            _totalPages = _totalItems == 0 ? 1 : (int)Math.Ceiling(_totalItems / (double)_pageSize);
+
+            if (_pageNumber < 1)
+                _pageNumber = 1;
+
+            if (_pageNumber > _totalPages)
+                _pageNumber = _totalPages;
+
+            if (_items.Count == 0)
+            {
+                _selectedItem = null;
+                _details = null;
+                _view = FileTransferView.List;
+                return;
+            }
+
+            _selectedItem = preserveSelection
+                ? _items.FirstOrDefault(item =>
+                    string.Equals(item.Name, selectedName, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(item.ContentType, selectedType, StringComparison.OrdinalIgnoreCase))
+                : PagedItems.FirstOrDefault();
+
+            _selectedItem ??= PagedItems.FirstOrDefault();
+
+            if (_selectedItem is not null && _view == FileTransferView.Details)
+                await LoadDetailsAsync(_selectedItem);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load files.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task<List<FileTransferItem>> QueryItemsAsync(string contentType)
+    {
+        var documents = await NodeContext.Web_tbAttachments
+            .AsNoTracking()
+            .Select(item => new FileTransferItem { Name = item.AttachmentFileName, ContentType = "Documents" })
+            .ToListAsync();
+
+        var templates = await NodeContext.Web_tbTemplates
+            .AsNoTracking()
+            .Select(item => new FileTransferItem { Name = item.TemplateFileName, ContentType = "Templates" })
+            .ToListAsync();
+
+        var images = await NodeContext.Web_tbImages
+            .AsNoTracking()
+            .Select(item => new FileTransferItem { Name = item.ImageFileName, ContentType = "Images" })
+            .ToListAsync();
+
+        var all = documents
+            .Concat(templates)
+            .Concat(images)
+            .Where(item => !string.IsNullOrWhiteSpace(item.Name));
+
+        if (!string.Equals(contentType, "All", StringComparison.OrdinalIgnoreCase))
+            all = all.Where(item => string.Equals(item.ContentType, contentType, StringComparison.OrdinalIgnoreCase));
+
+        return all
+            .OrderBy(item => item.ContentType, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task ChangeContentTypeAsync(string contentType)
+    {
+        _contentType = NormalizeContentType(contentType);
+        _pageNumber = 1;
+        _view = FileTransferView.List;
+        await LoadFilesAsync(false);
+    }
+
+    private async Task ChangePageSizeAsync()
+    {
+        if (!_pageSizes.Contains(_pageSize))
+            _pageSize = 25;
+
+        _pageNumber = 1;
+        await LoadFilesAsync(false);
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (_pageNumber <= 1)
+            return;
+
+        _pageNumber--;
+        await LoadFilesAsync(false);
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_pageNumber >= _totalPages)
+            return;
+
+        _pageNumber++;
+        await LoadFilesAsync(false);
+    }
+
+    private async Task SelectItemAsync(FileTransferItem item)
+    {
+        _selectedItem = item;
+        await LoadDetailsAsync(item);
+        _view = FileTransferView.Details;
+    }
+
+    private async Task LoadDetailsAsync(FileTransferItem item)
+    {
+        var manager = new TemplateManager(NodeContext, FileProvider);
+        var fileInfo = manager.GetFileInfo(GetContentTypeCode(item.ContentType), item.Name);
+
+        if (fileInfo is null || !fileInfo.Exists)
+        {
+            _details = null;
+            return;
+        }
+
+        _details = new FileTransferDetailsModel
+        {
+            ContentType = item.ContentType,
+            Name = fileInfo.Name,
+            PhysicalPath = fileInfo.PhysicalPath ?? string.Empty,
+            Length = fileInfo.Length,
+            LastModified = fileInfo.LastModified
+        };
+
+        await Task.CompletedTask;
+    }
+
+    private Task BeginUploadAsync()
+    {
+        if (!CanUpload)
+            return Task.CompletedTask;
+
+        _selectedFiles.Clear();
+        _errorMessage = null;
+        _view = FileTransferView.Upload;
+        return Task.CompletedTask;
+    }
+
+    private Task BeginDeleteAsync()
+    {
+        if (_selectedItem is null)
+            return Task.CompletedTask;
+
+        _view = FileTransferView.Delete;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BackToListAsync()
+    {
+        _view = FileTransferView.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SyncFilesAsync()
+    {
+        try
+        {
+            var manager = new TemplateManager(NodeContext, FileProvider);
+            await manager.Initialise();
+
+            _actionTone = "success";
+            _actionMessage = "File system synchronised.";
+
+            await LoadFilesAsync(true);
+
+            if (IsMobile)
+                _view = FileTransferView.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to synchronise the file system.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task HandleFilesSelectedAsync(InputFileChangeEventArgs args)
+    {
+        _selectedFiles.Clear();
+        _selectedFiles.AddRange(args.GetMultipleFiles());
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task UploadFilesAsync()
+    {
+        if (!CanUpload)
+        {
+            _errorMessage = "Select a specific content type to upload files.";
+            return;
+        }
+
+        if (_selectedFiles.Count == 0)
+        {
+            _errorMessage = "Select one or more files to upload.";
+            return;
+        }
+
+        try
+        {
+            var contentTypeCode = GetContentTypeCode(_contentType);
+            var permittedExtensions = PermittedExtensions(contentTypeCode);
+            var manager = new TemplateManager(NodeContext, FileProvider);
+            var modelState = new ModelStateDictionary();
+
+            foreach (var browserFile in _selectedFiles)
+            {
+                await using var readStream = browserFile.OpenReadStream(_maxFileSize);
+                using var memoryStream = new MemoryStream();
+                await readStream.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                var formFile = new FormFile(memoryStream, 0, memoryStream.Length, browserFile.Name, browserFile.Name)
+                {
+                    Headers = new HeaderDictionary(),
+                    ContentType = browserFile.ContentType
+                };
+
+                var bytes = await FileHelper.ProcessFormFile(formFile, modelState, permittedExtensions, _maxFileSize);
+
+                if (!modelState.IsValid)
+                {
+                    _errorMessage = string.Join(" ", modelState.Values.SelectMany(item => item.Errors).Select(item => item.ErrorMessage));
+                    return;
+                }
+
+                var filePath = manager.GetFilePath(contentTypeCode, browserFile.Name);
+
+                await using var output = File.Create(filePath);
+                await output.WriteAsync(bytes);
+
+                await manager.AddFile(contentTypeCode, browserFile.Name);
+            }
+
+            _selectedFiles.Clear();
+            _actionTone = "success";
+            _actionMessage = "Files uploaded.";
+
+            await LoadFilesAsync(false);
+
+            if (IsMobile)
+                _view = FileTransferView.List;
+            else
+                _view = FileTransferView.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to upload the selected files.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task DeleteFileAsync()
+    {
+        if (_selectedItem is null)
+            return;
+
+        try
+        {
+            var contentTypeCode = GetContentTypeCode(_selectedItem.ContentType);
+            var manager = new TemplateManager(NodeContext, FileProvider);
+            var fileInfo = manager.GetFileInfo(contentTypeCode, _selectedItem.Name);
+
+            if (fileInfo is not null && fileInfo.Exists)
+            {
+                File.Delete(fileInfo.PhysicalPath);
+                await manager.RemoveFile(contentTypeCode, _selectedItem.Name);
+            }
+
+            _actionTone = "success";
+            _actionMessage = "File deleted.";
+
+            _selectedItem = null;
+            _details = null;
+            _view = FileTransferView.List;
+
+            await LoadFilesAsync(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to delete the file.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private void DownloadSelected()
+    {
+        if (_selectedItem is null)
+            return;
+
+        var fileName = Uri.EscapeDataString(_selectedItem.Name);
+        var contentType = Uri.EscapeDataString(_selectedItem.ContentType);
+        NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?handler=Download&contentType={contentType}&fileName={fileName}", forceLoad: true);
+    }
+
+    private static string NormalizeContentType(string? contentType)
+    {
+        return contentType switch
+        {
+            "Documents" => "Documents",
+            "Templates" => "Templates",
+            "Images" => "Images",
+            _ => "All"
+        };
+    }
+
+    private static NodeEnum.ContentType GetContentTypeCode(string contentType) =>
+        TemplateManager.GetContentTypeFromString(contentType);
+
+    private static string[] PermittedExtensions(NodeEnum.ContentType contentType)
+    {
+        return contentType switch
+        {
+            NodeEnum.ContentType.Images => [".jpg", ".png", ".gif"],
+            NodeEnum.ContentType.Documents => [".pdf"],
+            NodeEnum.ContentType.Templates => [".html"],
+            _ => []
+        };
+    }
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_view == FileTransferView.List)
+    {
+@RenderListPane()
+    }
+    else if (_view == FileTransferView.Upload)
+    {
+@RenderUploadPane(true)
+    }
+    else if (_view == FileTransferView.Delete)
+    {
+@RenderDeletePane(true)
+    }
+    else
+    {
+@RenderDetailPane(true)
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 42%; min-width:24rem; min-height:0; overflow:hidden;">
+        @RenderListPane()
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_view == FileTransferView.Upload)
+                {
+        @RenderUploadPane(false)
+                }
+                else if (_view == FileTransferView.Delete)
+                {
+        @RenderDeletePane(false)
+                }
+                else
+                {
+        @RenderDetailPane(false)
+                }
+    </div>
+</div>;
+
+    private RenderFragment RenderListPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+    <div class="px-3 py-2 border-bottom bg-light d-flex justify-content-between align-items-center small text-muted">
+        <span>Page @_pageNumber of @_totalPages</span>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@(_pageNumber <= 1)" @onclick="PreviousPageAsync">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@(_pageNumber >= _totalPages)" @onclick="NextPageAsync">
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+
+@if (_items.Count == 0)
+    {
+    <div class="p-3 text-muted">No files found for the selected content type.</div>
+    }
+    else
+    {
+    <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+        @foreach (var item in PagedItems)
+                {
+        <button type="button"
+                class="list-group-item list-group-item-action px-3 py-3 text-start @(_selectedItem?.Name == item.Name && _selectedItem?.ContentType == item.ContentType ? "active" : "")"
+                @onclick="() => SelectItemAsync(item)">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+                <div>
+                    <div class="fw-semibold text-break">@item.Name</div>
+                    <div class="small">@item.ContentType</div>
+                </div>
+            </div>
+        </button>
+                }
+    </div>
+    }
+</div>;
+
+private RenderFragment RenderDetailPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedItem is null || _details is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select a file to view its details.
+        </div>
+}
+else
+{
+    @if (showBackToList)
+    {
+            <div class="px-3 pt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+    }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold text-break">@_details.Name</div>
+            <div class="small text-muted">@_details.ContentType</div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Physical Path</dt>
+                <dd class="col-sm-8 text-break">@_details.PhysicalPath</dd>
+
+                <dt class="col-sm-4">Size (bytes)</dt>
+                <dd class="col-sm-8">@_details.Length.ToString("N0")</dd>
+
+                <dt class="col-sm-4">Last Modified</dt>
+                <dd class="col-sm-8">@_details.LastModified.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+            </dl>
+        </div>
+
+        <div class="px-3 py-3 border-top bg-white">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="DownloadSelected">
+                    <i class="bi bi-download me-1" aria-hidden="true"></i>Download
+                </button>
+
+                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="BeginDeleteAsync">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                </button>
+            </div>
+        </div>
+}
+</div>;
+
+private RenderFragment RenderUploadPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Upload to @_contentType</div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white">
+                <div class="fw-semibold">Upload Rules</div>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Maximum Bytes</dt>
+                    <dd class="col-sm-8">@MaxFileSizeMb</dd>
+                    <dt class="col-sm-4">Permitted Extensions</dt>
+                    <dd class="col-sm-8">@FileExtensions</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="uploadFiles">Files</label>
+            <InputFile id="uploadFiles"
+                       OnChange="HandleFilesSelectedAsync"
+                       multiple
+                       class="form-control" />
+        </div>
+
+        @if (_selectedFiles.Count > 0)
+        {
+            <div class="border rounded p-3 bg-light">
+                <div class="fw-semibold mb-2">Selected Files</div>
+                <ul class="mb-0">
+                    @foreach (var file in _selectedFiles)
+                    {
+                        <li>@file.Name</li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <div class="px-3 py-3 border-top bg-white">
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-primary" @onclick="UploadFilesAsync">
+                Upload Files
+            </button>
+
+            <button type="button" class="btn btn-outline-secondary" @onclick="BackToListAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+
+private RenderFragment RenderDeletePane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Delete File</div>
+        @if (_selectedItem is not null)
+        {
+            <div class="small text-muted text-break">@_selectedItem.Name</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="alert alert-warning py-2 mb-3">
+            This permanently removes the selected file from the business file store.
+        </div>
+
+        @if (_details is not null)
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Content Type</dt>
+                <dd class="col-sm-8">@_details.ContentType</dd>
+
+                <dt class="col-sm-4">Name</dt>
+                <dd class="col-sm-8 text-break">@_details.Name</dd>
+
+                <dt class="col-sm-4">Physical Path</dt>
+                <dd class="col-sm-8 text-break">@_details.PhysicalPath</dd>
+            </dl>
+        }
+    </div>
+
+    <div class="px-3 py-3 border-top bg-white">
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-danger" @onclick="DeleteFileAsync">
+                Delete
+            </button>
+
+            <button type="button" class="btn btn-outline-secondary" @onclick="BackToListAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+}

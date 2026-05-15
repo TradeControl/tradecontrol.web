@@ -1,0 +1,1046 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+        <div>
+            <div class="small text-muted">Active Period</div>
+            <div class="fw-semibold">@_activePeriod</div>
+        </div>
+
+        @if (_isAdministrator)
+        {
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-outline-warning btn-sm"
+                        @onclick="() => PromptOperation(GlobalOperation.PeriodEnd)">
+                    Period End
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-success btn-sm"
+                        @onclick="() => PromptOperation(GlobalOperation.RebuildPeriods)">
+                    Rebuild Periods
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-success btn-sm"
+                        @onclick="() => PromptOperation(GlobalOperation.RebuildSystem)">
+                    Rebuild System
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (_pendingOperation != GlobalOperation.None)
+    {
+        <div class="alert alert-warning py-2 mb-3" role="alert">
+            @GetOperationPrompt()
+            <div class="mt-2 d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-warning btn-sm"
+                        @onclick="ExecutePendingOperationAsync">
+                    Confirm
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="CancelOperation">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum PeriodsMode
+    {
+        List,
+        Board,
+        CreateYear,
+        EditYear,
+        EditPeriod,
+        DeleteYear
+    }
+
+    private enum GlobalOperation
+    {
+        None,
+        PeriodEnd,
+        RebuildPeriods,
+        RebuildSystem
+    }
+
+    private sealed record ShortOption(short Value, string Text);
+
+    private sealed class YearEditorModel
+    {
+        [Display(Name = "Start Year")]
+        public short YearNumber { get; set; }
+
+        [Required]
+        [StringLength(10)]
+        [Display(Name = "Financial Year")]
+        public string Description { get; set; } = string.Empty;
+
+        [Display(Name = "Start Month")]
+        public short StartMonth { get; set; }
+
+        [Display(Name = "Status")]
+        public short CashStatusCode { get; set; }
+
+        public string InsertedBy { get; set; } = string.Empty;
+        public DateTime InsertedOn { get; set; }
+    }
+
+    private sealed class PeriodEditorModel
+    {
+        public short YearNumber { get; set; }
+        public short MonthNumber { get; set; }
+        public string PeriodDescription { get; set; } = string.Empty;
+
+        [Display(Name = "Start On")]
+        public DateTime StartOn { get; set; }
+
+        [Display(Name = "Status")]
+        public short CashStatusCode { get; set; }
+    }
+
+    private readonly List<App_vwYear> _years = [];
+    private readonly List<App_vwYearPeriod> _yearPeriods = [];
+    private readonly List<ShortOption> _months = [];
+    private readonly List<ShortOption> _statuses = [];
+
+    private App_vwYear? _selectedYear;
+    private YearEditorModel _yearEditor = new();
+    private PeriodEditorModel _periodEditor = new();
+    private PeriodsMode _mode = PeriodsMode.List;
+    private GlobalOperation _pendingOperation = GlobalOperation.None;
+    private bool _isAdministrator;
+    private bool _isLoading;
+    private string _activePeriod = "None";
+    private string? _actionMessage;
+    private string _actionTone = "info";
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadLookupOptionsAsync();
+        await LoadActivePeriodAsync();
+        await LoadYearsAsync(false);
+
+        if (!IsMobile && _selectedYear is not null)
+            _mode = PeriodsMode.Board;
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+    }
+
+    private async Task LoadLookupOptionsAsync()
+    {
+        _months.Clear();
+        _statuses.Clear();
+
+        var months = await NodeContext.App_tbMonths
+            .AsNoTracking()
+            .OrderBy(item => item.MonthNumber)
+            .Select(item => new ShortOption(item.MonthNumber, item.MonthName))
+            .ToListAsync();
+
+        var statuses = await NodeContext.Cash_tbStatuses
+            .AsNoTracking()
+            .OrderBy(item => item.CashStatusCode)
+            .Select(item => new ShortOption(item.CashStatusCode, item.CashStatus))
+            .ToListAsync();
+
+        _months.AddRange(months);
+        _statuses.AddRange(statuses);
+    }
+
+    private async Task LoadActivePeriodAsync()
+    {
+        _activePeriod = await NodeContext.App_ActivePeriods
+            .Select(item => $"{item.Description}-{item.MonthName}")
+            .FirstOrDefaultAsync()
+            ?? "None";
+    }
+
+    private async Task LoadYearsAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedYearNumber = preserveSelection ? _selectedYear?.YearNumber : null;
+
+            var rows = await NodeContext.App_Years
+                .AsNoTracking()
+                .OrderBy(item => item.YearNumber)
+                .ToListAsync();
+
+            _years.Clear();
+            _years.AddRange(rows);
+
+            if (_years.Count == 0)
+            {
+                _selectedYear = null;
+                _yearPeriods.Clear();
+                _mode = PeriodsMode.List;
+                return;
+            }
+
+            _selectedYear = selectedYearNumber.HasValue
+                ? _years.FirstOrDefault(item => item.YearNumber == selectedYearNumber.Value)
+                : _years[0];
+
+            _selectedYear ??= _years[0];
+
+            await LoadSelectedYearPeriodsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load financial periods.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadSelectedYearPeriodsAsync()
+    {
+        _yearPeriods.Clear();
+
+        if (_selectedYear is null)
+            return;
+
+        var periods = await NodeContext.App_YearPeriods
+            .AsNoTracking()
+            .Where(item => item.YearNumber == _selectedYear.YearNumber)
+            .OrderBy(item => item.StartOn)
+            .ToListAsync();
+
+        _yearPeriods.AddRange(periods);
+    }
+
+    private async Task SelectYearAsync(short yearNumber)
+    {
+        _selectedYear = _years.FirstOrDefault(item => item.YearNumber == yearNumber) ?? _selectedYear;
+        await LoadSelectedYearPeriodsAsync();
+        _mode = PeriodsMode.Board;
+        _errorMessage = null;
+    }
+
+    private void PromptOperation(GlobalOperation operation) => _pendingOperation = operation;
+
+    private void CancelOperation() => _pendingOperation = GlobalOperation.None;
+
+    private async Task ExecutePendingOperationAsync()
+    {
+        try
+        {
+            var periods = new FinancialPeriods(NodeContext);
+            bool ok = _pendingOperation switch
+            {
+                GlobalOperation.PeriodEnd => await periods.ClosePeriod(),
+                GlobalOperation.RebuildPeriods => await periods.Generate(),
+                GlobalOperation.RebuildSystem => await periods.Rebuild(),
+                _ => false
+            };
+
+            if (!ok)
+            {
+                _actionTone = "danger";
+                _actionMessage = _pendingOperation switch
+                {
+                    GlobalOperation.PeriodEnd => "Period End failed. Check Event Viewer for details.",
+                    GlobalOperation.RebuildPeriods => "Rebuild Periods failed. Check Event Viewer for details.",
+                    GlobalOperation.RebuildSystem => "Rebuild System failed. Check Event Viewer for details.",
+                    _ => "Operation failed."
+                };
+
+                _pendingOperation = GlobalOperation.None;
+                return;
+            }
+
+            await LoadActivePeriodAsync();
+            await LoadYearsAsync(true);
+
+            _actionTone = "success";
+            _actionMessage = _pendingOperation switch
+            {
+                GlobalOperation.PeriodEnd => $"Active Period set to {_activePeriod}.",
+                GlobalOperation.RebuildPeriods => "Periods rebuilt successfully.",
+                GlobalOperation.RebuildSystem => "System rebuilt successfully.",
+                _ => "Operation completed successfully."
+            };
+
+            _pendingOperation = GlobalOperation.None;
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            _actionTone = "danger";
+            _actionMessage = "Operation failed due to an unexpected error. Check Event Viewer for details.";
+            _pendingOperation = GlobalOperation.None;
+        }
+    }
+
+    private string GetOperationPrompt() => _pendingOperation switch
+    {
+        GlobalOperation.PeriodEnd => "Close the current active period and advance to the next one?",
+        GlobalOperation.RebuildPeriods => "Rebuild all generated financial periods?",
+        GlobalOperation.RebuildSystem => "Rebuild the financial system data?",
+        _ => string.Empty
+    };
+
+    private async Task BeginCreateYearAsync()
+    {
+        try
+        {
+            var profile = new Profile(NodeContext);
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+            short startMonth = 1;
+            short yearNumber = (short)DateTime.Now.Year;
+            var yearDesc = string.Empty;
+
+            if (await NodeContext.App_tbYears.AnyAsync())
+            {
+                startMonth = await NodeContext.App_tbYears.MaxAsync(item => item.StartMonth);
+                yearNumber = (short)(await NodeContext.App_tbYears.MaxAsync(item => item.YearNumber) + 1);
+                yearDesc = startMonth == 1
+                    ? $"{yearNumber}"
+                    : $"{yearNumber}-{(yearNumber + 1).ToString()[2..]}";
+            }
+
+            _yearEditor = new YearEditorModel
+            {
+                YearNumber = yearNumber,
+                Description = yearDesc,
+                StartMonth = startMonth,
+                CashStatusCode = (short)NodeEnum.CashStatus.Forecast,
+                InsertedBy = await profile.UserName(UserManager.GetUserId(authState.User)),
+                InsertedOn = DateTime.Now
+            };
+
+            _mode = PeriodsMode.CreateYear;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to start a new financial year.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task BeginEditYearAsync(short yearNumber)
+    {
+        try
+        {
+            var current = await NodeContext.App_tbYears
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.YearNumber == yearNumber);
+
+            if (current is null)
+            {
+                _errorMessage = "Financial year not found.";
+                return;
+            }
+
+            _yearEditor = new YearEditorModel
+            {
+                YearNumber = current.YearNumber,
+                Description = current.Description,
+                StartMonth = current.StartMonth,
+                CashStatusCode = current.CashStatusCode,
+                InsertedBy = current.InsertedBy,
+                InsertedOn = current.InsertedOn
+            };
+
+            _mode = PeriodsMode.EditYear;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the financial year.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task BeginDeleteYearAsync(short yearNumber)
+    {
+        _selectedYear = _years.FirstOrDefault(item => item.YearNumber == yearNumber) ?? _selectedYear;
+        await LoadSelectedYearPeriodsAsync();
+        _mode = PeriodsMode.DeleteYear;
+        _errorMessage = null;
+    }
+
+    private async Task BeginEditPeriodAsync(short yearNumber, short monthNumber)
+    {
+        try
+        {
+            var current = await NodeContext.App_tbYearPeriods
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.YearNumber == yearNumber && item.MonthNumber == monthNumber);
+
+            if (current is null)
+            {
+                _errorMessage = "Period not found.";
+                return;
+            }
+
+            var periodInfo = await NodeContext.App_YearPeriods
+                .AsNoTracking()
+                .Where(item => item.YearNumber == yearNumber && item.MonthNumber == monthNumber)
+                .Select(item => new { item.Description, item.MonthName })
+                .FirstAsync();
+
+            _periodEditor = new PeriodEditorModel
+            {
+                YearNumber = current.YearNumber,
+                MonthNumber = current.MonthNumber,
+                PeriodDescription = $"{periodInfo.Description}-{periodInfo.MonthName}",
+                StartOn = current.StartOn,
+                CashStatusCode = current.CashStatusCode
+            };
+
+            _mode = PeriodsMode.EditPeriod;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the period.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task BackToListAsync()
+    {
+        _mode = PeriodsMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = IsMobile ? PeriodsMode.Board : PeriodsMode.Board;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveYearAsync()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_yearEditor.Description))
+            {
+                _errorMessage = "Financial Year is required.";
+                return;
+            }
+
+            if (_mode == PeriodsMode.CreateYear)
+            {
+                var entity = new App_tbYear
+                {
+                    YearNumber = _yearEditor.YearNumber,
+                    Description = _yearEditor.Description.Trim(),
+                    StartMonth = _yearEditor.StartMonth,
+                    CashStatusCode = _yearEditor.CashStatusCode,
+                    InsertedBy = _yearEditor.InsertedBy,
+                    InsertedOn = _yearEditor.InsertedOn
+                };
+
+                NodeContext.App_tbYears.Add(entity);
+                await NodeContext.SaveChangesAsync();
+
+                var periods = new FinancialPeriods(NodeContext);
+
+                if (!await periods.Generate())
+                {
+                    _actionTone = "danger";
+                    _actionMessage = "Financial year created, but period generation failed. Check Event Viewer for details.";
+                }
+                else
+                {
+                    _actionTone = "success";
+                    _actionMessage = "Financial year created.";
+                }
+            }
+            else if (_mode == PeriodsMode.EditYear)
+            {
+                var entity = await NodeContext.App_tbYears
+                    .SingleOrDefaultAsync(item => item.YearNumber == _yearEditor.YearNumber);
+
+                if (entity is null)
+                {
+                    _errorMessage = "Financial year not found.";
+                    return;
+                }
+
+                entity.Description = _yearEditor.Description.Trim();
+                entity.StartMonth = _yearEditor.StartMonth;
+                entity.CashStatusCode = _yearEditor.CashStatusCode;
+
+                await NodeContext.SaveChangesAsync();
+
+                _actionTone = "success";
+                _actionMessage = "Financial year updated.";
+            }
+
+            await LoadActivePeriodAsync();
+            await LoadYearsAsync(false);
+            _selectedYear = _years.FirstOrDefault(item => item.YearNumber == _yearEditor.YearNumber) ?? _selectedYear;
+            _mode = PeriodsMode.Board;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the financial year.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SavePeriodAsync()
+    {
+        try
+        {
+            var entity = await NodeContext.App_tbYearPeriods
+                .SingleOrDefaultAsync(item => item.YearNumber == _periodEditor.YearNumber && item.MonthNumber == _periodEditor.MonthNumber);
+
+            if (entity is null)
+            {
+                _errorMessage = "Period not found.";
+                return;
+            }
+
+            entity.StartOn = _periodEditor.StartOn;
+            entity.CashStatusCode = _periodEditor.CashStatusCode;
+
+            await NodeContext.SaveChangesAsync();
+
+            _actionTone = "success";
+            _actionMessage = "Period updated.";
+
+            await LoadActivePeriodAsync();
+            await LoadYearsAsync(true);
+            _mode = PeriodsMode.Board;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to update the period.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task DeleteYearAsync()
+    {
+        if (_selectedYear is null)
+            return;
+
+        try
+        {
+            var entity = await NodeContext.App_tbYears.FindAsync(_selectedYear.YearNumber);
+
+            if (entity is null)
+            {
+                _errorMessage = "Financial year not found.";
+                return;
+            }
+
+            NodeContext.App_tbYears.Remove(entity);
+            await NodeContext.SaveChangesAsync();
+
+            _actionTone = "success";
+            _actionMessage = "Financial year deleted.";
+
+            await LoadActivePeriodAsync();
+            await LoadYearsAsync(false);
+
+            if (!IsMobile && _selectedYear is not null)
+                _mode = PeriodsMode.Board;
+            else
+                _mode = PeriodsMode.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to delete the financial year.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private string GetStatusBadgeClass(short statusCode) => statusCode switch
+    {
+        (short)NodeEnum.CashStatus.Forecast => "text-bg-primary",
+        (short)NodeEnum.CashStatus.Current => "text-bg-success",
+        (short)NodeEnum.CashStatus.Closed => "text-bg-warning",
+        (short)NodeEnum.CashStatus.Archived => "text-bg-secondary",
+        _ => "text-bg-light"
+    };
+
+    private string GetPeriodCardClass(short statusCode) => statusCode switch
+    {
+        (short)NodeEnum.CashStatus.Forecast => "border-primary",
+        (short)NodeEnum.CashStatus.Current => "border-success",
+        (short)NodeEnum.CashStatus.Closed => "border-warning",
+        (short)NodeEnum.CashStatus.Archived => "border-secondary",
+        _ => "border-light"
+    };
+
+    private string GetStatusText(short statusCode) =>
+        _statuses.FirstOrDefault(item => item.Value == statusCode)?.Text ?? "Unknown";
+
+    private string GetMonthText(short monthNumber) =>
+        _months.FirstOrDefault(item => item.Value == monthNumber)?.Text ?? monthNumber.ToString();
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == PeriodsMode.List)
+        {
+            @RenderMobileList()
+        }
+        else if (_mode == PeriodsMode.CreateYear || _mode == PeriodsMode.EditYear)
+        {
+            @RenderYearEditor(true)
+        }
+        else if (_mode == PeriodsMode.EditPeriod)
+        {
+            @RenderPeriodEditor(true)
+        }
+        else if (_mode == PeriodsMode.DeleteYear)
+        {
+            @RenderDeleteYearPane(true)
+        }
+        else
+        {
+            @RenderYearBoard(true)
+        }
+    </div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+        <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 34%; min-width:22rem; min-height:0; overflow:hidden;">
+            <div class="px-3 py-2 border-bottom bg-light small text-muted">
+                @_years.Count financial year@(_years.Count == 1 ? string.Empty : "s")
+            </div>
+
+            @if (_isLoading && _years.Count == 0)
+            {
+                <div class="p-3 text-muted">Loading financial periods…</div>
+            }
+            else if (_years.Count == 0)
+            {
+                <div class="p-3 text-muted">No financial years found.</div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+                    @foreach (var item in _years)
+                    {
+                        <button type="button"
+                                class="list-group-item list-group-item-action px-3 py-3 text-start @(item.YearNumber == _selectedYear?.YearNumber ? "active" : "")"
+                                @onclick="() => SelectYearAsync(item.YearNumber)">
+                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                <div>
+                                    <div class="fw-semibold">@item.Description</div>
+                                    <div class="small">@item.StartMonth</div>
+                                </div>
+
+                                <span class="badge @GetStatusBadgeClass(item.CashStatusCode)">@item.CashStatus</span>
+                            </div>
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (_isAdministrator)
+            {
+                <div class="px-3 py-3 border-top bg-white">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            @onclick="BeginCreateYearAsync">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Year
+                    </button>
+                </div>
+            }
+        </div>
+
+        <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+            @if (_mode == PeriodsMode.CreateYear || _mode == PeriodsMode.EditYear)
+            {
+                @RenderYearEditor(false)
+            }
+            else if (_mode == PeriodsMode.EditPeriod)
+            {
+                @RenderPeriodEditor(false)
+            }
+            else if (_mode == PeriodsMode.DeleteYear)
+            {
+                @RenderDeleteYearPane(false)
+            }
+            else
+            {
+                @RenderYearBoard(false)
+            }
+        </div>
+    </div>;
+
+    private RenderFragment RenderMobileList() => @<div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_isLoading && _years.Count == 0)
+        {
+            <div class="p-3 text-muted">Loading financial periods…</div>
+        }
+        else if (_years.Count == 0)
+        {
+            <div class="p-3 text-muted">No financial years found.</div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+                @foreach (var item in _years)
+                {
+                    <button type="button"
+                            class="list-group-item list-group-item-action px-3 py-3 text-start"
+                            @onclick="() => SelectYearAsync(item.YearNumber)">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div>
+                                <div class="fw-semibold">@item.Description</div>
+                                <div class="small text-muted">@item.StartMonth</div>
+                            </div>
+
+                            <span class="badge @GetStatusBadgeClass(item.CashStatusCode)">@item.CashStatus</span>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+
+        @if (_isAdministrator)
+        {
+            <div class="px-3 py-3 border-top bg-white">
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        @onclick="BeginCreateYearAsync">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Year
+                </button>
+            </div>
+        }
+    </div>;
+
+    private RenderFragment RenderYearBoard(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_selectedYear is null)
+        {
+            <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+                Select a financial year to view its periods.
+            </div>
+        }
+        else
+        {
+            @if (showBackToList)
+            {
+                <div class="px-3 pt-3">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @onclick="BackToListAsync">
+                        Back to list
+                    </button>
+                </div>
+            }
+
+            <div class="px-3 py-3 border-bottom bg-light">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="fw-semibold">@_selectedYear.Description</div>
+                        <div class="small text-muted">Start month @_selectedYear.StartMonth</div>
+                    </div>
+
+                    <span class="badge @GetStatusBadgeClass(_selectedYear.CashStatusCode)">@_selectedYear.CashStatus</span>
+                </div>
+
+                <div class="small text-muted mt-2">
+                    Inserted by @_selectedYear.InsertedBy on @_selectedYear.InsertedOn:g
+                </div>
+            </div>
+
+            <div class="px-3 py-3 border-bottom bg-white">
+                <div class="d-flex flex-wrap gap-2">
+                    @if (_isAdministrator)
+                    {
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                @onclick="() => BeginEditYearAsync(_selectedYear.YearNumber)">
+                            <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit Year
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                @onclick="() => BeginDeleteYearAsync(_selectedYear.YearNumber)">
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete Year
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="flex-grow-1 overflow-auto px-3 py-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+                    @foreach (var item in _yearPeriods)
+                    {
+                        <div class="col">
+                            <div class="card h-100 border-2 @GetPeriodCardClass(item.CashStatusCode)">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                        <div class="fw-semibold">@item.MonthName</div>
+                                        <span class="badge @GetStatusBadgeClass(item.CashStatusCode)">@item.CashStatus</span>
+                                    </div>
+
+                                    <div class="small text-muted mb-3">@item.StartOn.ToString("d")</div>
+
+                                    @if (_isAdministrator)
+                                    {
+                                        <div class="mt-auto">
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                    @onclick="() => BeginEditPeriodAsync(item.YearNumber, item.MonthNumber)">
+                                                <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit Period
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>;
+
+    private RenderFragment RenderYearEditor(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (showBackToList)
+        {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+        }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">@(_mode == PeriodsMode.CreateYear ? "New Financial Year" : "Edit Financial Year")</div>
+            <div class="small text-muted">Year @_yearEditor.YearNumber</div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <EditForm Model="@_yearEditor" OnValidSubmit="SaveYearAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label" for="yearNumber">Start Year</label>
+                    <InputNumber id="yearNumber"
+                                 @bind-Value="_yearEditor.YearNumber"
+                                 class="form-control"
+                                 readonly="@(_mode == PeriodsMode.EditYear)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="yearDescription">Financial Year</label>
+                    <InputText id="yearDescription"
+                               @bind-Value="_yearEditor.Description"
+                               class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="startMonth">Start Month</label>
+                    <InputSelect id="startMonth"
+                                 @bind-Value="_yearEditor.StartMonth"
+                                 class="form-select">
+                        @foreach (var item in _months)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="yearStatus">Status</label>
+                    <InputSelect id="yearStatus"
+                                 @bind-Value="_yearEditor.CashStatusCode"
+                                 class="form-select">
+                        @foreach (var item in _statuses)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        @(_mode == PeriodsMode.CreateYear ? "Create" : "Update")
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="CancelAsync">
+                        Cancel
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>;
+
+    private RenderFragment RenderPeriodEditor(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (showBackToList)
+        {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+        }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">Edit Period</div>
+            <div class="small text-muted">@_periodEditor.PeriodDescription</div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <EditForm Model="@_periodEditor" OnValidSubmit="SavePeriodAsync">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label" for="periodStartOn">Start On</label>
+                    <InputDate id="periodStartOn"
+                               @bind-Value="_periodEditor.StartOn"
+                               class="form-control" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="periodStatus">Status</label>
+                    <InputSelect id="periodStatus"
+                                 @bind-Value="_periodEditor.CashStatusCode"
+                                 class="form-select">
+                        @foreach (var item in _statuses)
+                        {
+                            <option value="@item.Value">@item.Text</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">Update</button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="CancelAsync">
+                        Cancel
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>;
+
+    private RenderFragment RenderDeleteYearPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (showBackToList)
+        {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+        }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">Delete Financial Year</div>
+            @if (_selectedYear is not null)
+            {
+                <div class="small text-muted">@_selectedYear.Description</div>
+            }
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <div class="alert alert-warning mb-3" role="alert">
+                This will permanently delete the selected financial year and its related periods.
+            </div>
+
+            @if (_selectedYear is not null)
+            {
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Year Number</dt>
+                    <dd class="col-sm-8">@_selectedYear.YearNumber</dd>
+
+                    <dt class="col-sm-4">Financial Year</dt>
+                    <dd class="col-sm-8">@_selectedYear.Description</dd>
+
+                    <dt class="col-sm-4">Start Month</dt>
+                    <dd class="col-sm-8">@_selectedYear.StartMonth</dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">@_selectedYear.CashStatus</dd>
+                </dl>
+            }
+        </div>
+
+        <div class="px-3 py-3 border-top bg-white">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-danger"
+                        @onclick="DeleteYearAsync">
+                    Delete
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>;
+}

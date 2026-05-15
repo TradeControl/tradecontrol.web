@@ -1,0 +1,1066 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-xl-7">
+            <div class="border rounded bg-white p-3 h-100">
+                <div class="small text-uppercase text-muted mb-2" style="letter-spacing:0.06em;">Registration Workflow</div>
+                <div class="row g-2 small">
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 h-100">
+                            <div class="fw-semibold">1. Register</div>
+                            <div class="text-muted">User creates an Identity account with email and password.</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 h-100">
+                            <div class="fw-semibold">2. Confirm Email</div>
+                            <div class="text-muted">User confirms their email from the registration message.</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 h-100">
+                            <div class="fw-semibold">3. Create Profile</div>
+                            <div class="text-muted">Administrator creates the internal user profile.</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="border rounded p-2 h-100">
+                            <div class="fw-semibold">4. Assign Roles</div>
+                            <div class="text-muted">Administrator or manager grants operational access.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-5">
+            <div class="border rounded bg-white p-3 h-100">
+                <div class="small text-uppercase text-muted mb-2" style="letter-spacing:0.06em;">Registration Readiness</div>
+                <div class="d-flex flex-column gap-2 small">
+                    <div class="d-flex justify-content-between gap-2">
+                        <span>Active mail host configured</span>
+                        <span class="badge @(GetReadinessBadge(_hasMailHost))">@GetReadinessText(_hasMailHost)</span>
+                    </div>
+                    <div class="d-flex justify-content-between gap-2">
+                        <span>Registration confirm template configured</span>
+                        <span class="badge @(GetReadinessBadge(_hasRegistrationConfirmTemplate))">@GetReadinessText(_hasRegistrationConfirmTemplate)</span>
+                    </div>
+                    <div class="d-flex justify-content-between gap-2">
+                        <span>Admin notify template configured</span>
+                        <span class="badge @(GetReadinessBadge(_hasRegistrationAdminNotifyTemplate))">@GetReadinessText(_hasRegistrationAdminNotifyTemplate)</span>
+                    </div>
+                </div>
+
+                @if (!_registrationReady)
+                {
+                    <div class="alert alert-warning py-2 mt-3 mb-0">
+                        Self-service registration is not fully configured. New users may be unable to complete the process.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <label class="form-label small text-muted mb-1" for="stageFilter">Registration Stage</label>
+            <select id="stageFilter"
+                    class="form-select"
+                    value="@_stageFilter"
+                    @onchange="HandleStageFilterChangedAsync">
+                @foreach (var item in _stageFilters)
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum UsersPanelMode
+    {
+        List,
+        Details,
+        EditProfile,
+        Delete
+    }
+
+    private enum RegistrationStage
+    {
+        AwaitingEmailConfirmation,
+        ReadyForProfile,
+        Registered,
+        NeedsAttention
+    }
+
+    private sealed record FilterOption(string Value, string Text);
+    private sealed record CalendarOption(string Value, string Text);
+
+    private sealed class RegistrationRow
+    {
+        public string Id { get; init; } = string.Empty;
+        public string EmailAddress { get; init; } = string.Empty;
+        public string UserName { get; init; } = string.Empty;
+        public bool IsConfirmed { get; init; }
+        public bool IsRegistered { get; init; }
+        public bool IsAdministrator { get; init; }
+        public bool IsManager { get; init; }
+        public RegistrationStage Stage { get; init; }
+    }
+
+    private sealed class UserProfileEditorModel
+    {
+        public string RegistrationId { get; set; } = string.Empty;
+        public string EmailAddress { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(10)]
+        [Display(Name = "User Id")]
+        public string UserId { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "User Name")]
+        public string UserName { get; set; } = string.Empty;
+
+        [StringLength(50)]
+        [Display(Name = "Landline")]
+        public string? PhoneNumber { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Mobile")]
+        public string? MobileNumber { get; set; }
+
+        [Display(Name = "Home Address")]
+        public string? Address { get; set; }
+
+        [Display(Name = "Administrator?")]
+        public bool IsAdministrator { get; set; }
+
+        [Display(Name = "Manager?")]
+        public bool IsManager { get; set; }
+
+        [Display(Name = "Calendar")]
+        public string? CalendarCode { get; set; }
+
+        public short IsEnabled { get; set; } = -1;
+        public string LogonName { get; set; } = string.Empty;
+        public string InsertedBy { get; set; } = string.Empty;
+        public DateTime InsertedOn { get; set; }
+        public string UpdatedBy { get; set; } = string.Empty;
+        public DateTime UpdatedOn { get; set; }
+        public bool IsExistingProfile { get; set; }
+    }
+
+    private readonly List<FilterOption> _stageFilters =
+    [
+        new("", "All"),
+        new("AwaitingEmailConfirmation", "Awaiting Email Confirmation"),
+        new("ReadyForProfile", "Ready for Profile Creation"),
+        new("Registered", "Registered Users"),
+        new("NeedsAttention", "Needs Attention")
+    ];
+
+    private readonly List<CalendarOption> _calendarOptions = [];
+    private readonly List<RegistrationRow> _registrations = [];
+
+    private RegistrationRow? _selectedRegistration;
+    private UserProfileEditorModel _editor = new();
+    private UsersPanelMode _mode = UsersPanelMode.List;
+    private string _stageFilter = string.Empty;
+    private bool _hasMailHost;
+    private bool _hasRegistrationConfirmTemplate;
+    private bool _hasRegistrationAdminNotifyTemplate;
+    private bool _registrationReady;
+    private bool _isAdministrator;
+    private bool _isManager;
+    private bool _isLoading;
+    private string? _currentIdentityUserId;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadCalendarOptionsAsync();
+        await LoadReadinessAsync();
+        await LoadRegistrationsAsync(false);
+
+        if (!IsMobile && _selectedRegistration is not null)
+            _mode = UsersPanelMode.Details;
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+        _isManager = authState.User.IsInRole(Constants.ManagersRole);
+        _currentIdentityUserId = UserManager.GetUserId(authState.User);
+    }
+
+    private async Task LoadCalendarOptionsAsync()
+    {
+        _calendarOptions.Clear();
+
+        var items = await NodeContext.App_tbCalendars
+            .AsNoTracking()
+            .OrderBy(item => item.CalendarCode)
+            .Select(item => new CalendarOption(item.CalendarCode, item.CalendarCode))
+            .ToListAsync();
+
+        _calendarOptions.AddRange(items);
+    }
+
+    private async Task LoadReadinessAsync()
+    {
+        var settings = new NodeSettings(NodeContext);
+        _hasMailHost = settings.HasMailHost;
+
+        var options = await NodeContext.App_tbOptions.AsNoTracking().FirstOrDefaultAsync();
+        _hasRegistrationConfirmTemplate = options?.UserRegistrationConfirmTemplateId != null;
+        _hasRegistrationAdminNotifyTemplate = options?.UserRegistrationAdminNotifyTemplateId != null;
+        _registrationReady = _hasMailHost && _hasRegistrationConfirmTemplate && _hasRegistrationAdminNotifyTemplate;
+    }
+
+    private async Task LoadRegistrationsAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedId = preserveSelection ? _selectedRegistration?.Id : null;
+
+            var rows = await NodeContext.AspNet_UserRegistrations
+                .AsNoTracking()
+                .ToListAsync();
+
+            var mapped = rows
+                .Select(item => new RegistrationRow
+                {
+                    Id = item.Id,
+                    EmailAddress = item.EmailAddress ?? string.Empty,
+                    UserName = item.UserName ?? string.Empty,
+                    IsConfirmed = item.IsConfirmed,
+                    IsRegistered = item.IsRegistered,
+                    IsAdministrator = item.IsAdministrator,
+                    IsManager = item.IsManager,
+                    Stage = GetStage(item.IsConfirmed, item.IsRegistered)
+                })
+                .OrderBy(item => item.Stage)
+                .ThenBy(item => item.EmailAddress)
+                .ToList();
+
+            if (!string.IsNullOrWhiteSpace(_stageFilter)
+                && Enum.TryParse<RegistrationStage>(_stageFilter, out var stage))
+            {
+                mapped = mapped.Where(item => item.Stage == stage).ToList();
+            }
+
+            _registrations.Clear();
+            _registrations.AddRange(mapped);
+
+            if (_registrations.Count == 0)
+            {
+                _selectedRegistration = null;
+                _mode = UsersPanelMode.List;
+                return;
+            }
+
+            _selectedRegistration = !string.IsNullOrWhiteSpace(selectedId)
+                ? _registrations.FirstOrDefault(item => item.Id == selectedId)
+                : _registrations[0];
+
+            _selectedRegistration ??= _registrations[0];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load user registrations.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static RegistrationStage GetStage(bool isConfirmed, bool isRegistered) => (isConfirmed, isRegistered) switch
+    {
+        (false, false) => RegistrationStage.AwaitingEmailConfirmation,
+        (true, false) => RegistrationStage.ReadyForProfile,
+        (true, true) => RegistrationStage.Registered,
+        _ => RegistrationStage.NeedsAttention
+    };
+
+    private async Task HandleStageFilterChangedAsync(ChangeEventArgs args)
+    {
+        _stageFilter = args.Value?.ToString() ?? string.Empty;
+        await LoadRegistrationsAsync(false);
+    }
+
+    private Task SelectRegistrationAsync(string id)
+    {
+        _selectedRegistration = _registrations.FirstOrDefault(item => item.Id == id) ?? _selectedRegistration;
+        _mode = UsersPanelMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task BackToListAsync()
+    {
+        _mode = UsersPanelMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task BeginProfileEditAsync(string id)
+    {
+        try
+        {
+            var registration = await NodeContext.AspNet_UserRegistrations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == id);
+
+            if (registration is null)
+            {
+                _errorMessage = "Registration not found.";
+                return;
+            }
+
+            var profile = await NodeContext.Usr_tbUsers
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.EmailAddress == registration.EmailAddress);
+
+            if (profile is null)
+            {
+                var currentUserName = await new Profile(NodeContext).UserName(_currentIdentityUserId);
+
+                _editor = new UserProfileEditorModel
+                {
+                    RegistrationId = registration.Id,
+                    EmailAddress = registration.EmailAddress ?? string.Empty,
+                    UserName = registration.UserName ?? string.Empty,
+                    UserId = string.IsNullOrWhiteSpace(registration.UserName)
+                        ? string.Empty
+                        : await NodeContext.UserIdDefault(registration.UserName),
+                    LogonName = registration.EmailAddress ?? string.Empty,
+                    CalendarCode = _calendarOptions.FirstOrDefault().Value,
+                    IsEnabled = -1,
+                    InsertedBy = currentUserName,
+                    UpdatedBy = currentUserName,
+                    InsertedOn = DateTime.Now,
+                    UpdatedOn = DateTime.Now,
+                    IsAdministrator = registration.IsAdministrator,
+                    IsManager = registration.IsManager,
+                    IsExistingProfile = false
+                };
+            }
+            else
+            {
+                _editor = new UserProfileEditorModel
+                {
+                    RegistrationId = registration.Id,
+                    EmailAddress = profile.EmailAddress ?? string.Empty,
+                    UserId = profile.UserId,
+                    UserName = profile.UserName,
+                    PhoneNumber = profile.PhoneNumber,
+                    MobileNumber = profile.MobileNumber,
+                    Address = profile.Address,
+                    CalendarCode = profile.CalendarCode,
+                    IsEnabled = profile.IsEnabled,
+                    LogonName = profile.LogonName,
+                    InsertedBy = profile.InsertedBy,
+                    InsertedOn = profile.InsertedOn,
+                    UpdatedBy = profile.UpdatedBy,
+                    UpdatedOn = profile.UpdatedOn,
+                    IsAdministrator = registration.IsAdministrator,
+                    IsManager = registration.IsManager,
+                    IsExistingProfile = true
+                };
+            }
+
+            _selectedRegistration = _registrations.FirstOrDefault(item => item.Id == id) ?? _selectedRegistration;
+            _mode = UsersPanelMode.EditProfile;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the user profile.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task BeginDeleteAsync(string id)
+    {
+        _selectedRegistration = _registrations.FirstOrDefault(item => item.Id == id) ?? _selectedRegistration;
+        _mode = UsersPanelMode.Delete;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = IsMobile ? UsersPanelMode.List : UsersPanelMode.Details;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task GenerateUserIdAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_editor.UserName))
+            _editor.UserId = await NodeContext.UserIdDefault(_editor.UserName.Trim());
+    }
+
+    private async Task ConfirmRegistrationAsync()
+    {
+        if (_selectedRegistration is null)
+            return;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(_selectedRegistration.Id);
+
+            if (user is null)
+            {
+                _errorMessage = "Identity user not found.";
+                return;
+            }
+
+            if (!await UserManager.IsEmailConfirmedAsync(user))
+            {
+                var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+                var result = await UserManager.ConfirmEmailAsync(user, code);
+
+                if (!result.Succeeded)
+                {
+                    _errorMessage = "Unable to confirm the registration.";
+                    return;
+                }
+            }
+
+            _actionTone = "success";
+            _actionMessage = "Registration confirmed.";
+
+            await LoadRegistrationsAsync(true);
+
+            if (IsMobile)
+                _mode = UsersPanelMode.List;
+            else
+                _mode = UsersPanelMode.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to confirm the registration.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        try
+        {
+            _editor.UserId = (_editor.UserId ?? string.Empty).Trim();
+            _editor.UserName = (_editor.UserName ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(_editor.UserId) && !string.IsNullOrWhiteSpace(_editor.UserName))
+                _editor.UserId = await NodeContext.UserIdDefault(_editor.UserName);
+
+            if (string.IsNullOrWhiteSpace(_editor.UserId) || string.IsNullOrWhiteSpace(_editor.UserName))
+            {
+                _errorMessage = "User Id and User Name are required.";
+                return;
+            }
+
+            var registration = await NodeContext.AspNet_UserRegistrations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == _editor.RegistrationId);
+
+            if (registration is null)
+            {
+                _errorMessage = "Registration not found.";
+                return;
+            }
+
+            if (_editor.IsExistingProfile)
+            {
+                var entity = await NodeContext.Usr_tbUsers
+                    .SingleOrDefaultAsync(item => item.EmailAddress == _editor.EmailAddress);
+
+                if (entity is null)
+                {
+                    _errorMessage = "User profile not found.";
+                    return;
+                }
+
+                entity.UserId = _editor.UserId;
+                entity.UserName = _editor.UserName;
+                entity.PhoneNumber = _editor.PhoneNumber;
+                entity.MobileNumber = _editor.MobileNumber;
+                entity.Address = _editor.Address;
+                entity.CalendarCode = _editor.CalendarCode;
+                entity.UpdatedBy = await new Profile(NodeContext).UserName(_currentIdentityUserId);
+                entity.UpdatedOn = DateTime.Now;
+
+                await NodeContext.SaveChangesAsync();
+            }
+            else
+            {
+                var currentUserName = await new Profile(NodeContext).UserName(_currentIdentityUserId);
+
+                var entity = new Usr_tbUser
+                {
+                    UserId = _editor.UserId,
+                    UserName = _editor.UserName,
+                    LogonName = registration.EmailAddress ?? string.Empty,
+                    CalendarCode = _editor.CalendarCode,
+                    PhoneNumber = _editor.PhoneNumber,
+                    MobileNumber = _editor.MobileNumber,
+                    EmailAddress = registration.EmailAddress,
+                    Address = _editor.Address,
+                    IsAdministrator = _editor.IsAdministrator,
+                    IsEnabled = -1,
+                    InsertedBy = currentUserName,
+                    InsertedOn = DateTime.Now,
+                    UpdatedBy = currentUserName,
+                    UpdatedOn = DateTime.Now
+                };
+
+                NodeContext.Usr_tbUsers.Add(entity);
+                await NodeContext.SaveChangesAsync();
+            }
+
+            var user = await UserManager.FindByIdAsync(_editor.RegistrationId);
+
+            if (user is not null)
+            {
+                if (!await UserManager.IsEmailConfirmedAsync(user))
+                {
+                    var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+                    await UserManager.ConfirmEmailAsync(user, code);
+                }
+
+                if (_editor.IsAdministrator)
+                {
+                    if (!await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole))
+                        await UserManager.AddToRoleAsync(user, Constants.AdministratorsRole);
+                }
+                else if (await UserManager.IsInRoleAsync(user, Constants.AdministratorsRole)
+                         && _currentIdentityUserId != user.Id)
+                {
+                    await UserManager.RemoveFromRoleAsync(user, Constants.AdministratorsRole);
+                }
+
+                if (_editor.IsManager)
+                {
+                    if (!await UserManager.IsInRoleAsync(user, Constants.ManagersRole))
+                        await UserManager.AddToRoleAsync(user, Constants.ManagersRole);
+                }
+                else if (await UserManager.IsInRoleAsync(user, Constants.ManagersRole))
+                {
+                    await UserManager.RemoveFromRoleAsync(user, Constants.ManagersRole);
+                }
+            }
+
+            _actionTone = "success";
+            _actionMessage = _editor.IsExistingProfile ? "User profile updated." : "User profile created.";
+
+            await LoadRegistrationsAsync(false);
+            _selectedRegistration = _registrations.FirstOrDefault(item => item.Id == _editor.RegistrationId) ?? _selectedRegistration;
+            _mode = IsMobile ? UsersPanelMode.List : UsersPanelMode.Details;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the user profile.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task DeleteRegistrationAsync()
+    {
+        if (_selectedRegistration is null)
+            return;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(_selectedRegistration.Id);
+            var email = user?.Email?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var tbUser = await NodeContext.Usr_tbUsers
+                    .Where(item => item.EmailAddress == email)
+                    .SingleOrDefaultAsync();
+
+                if (tbUser is not null)
+                {
+                    try
+                    {
+                        NodeContext.Usr_tbUsers.Remove(tbUser);
+                        await NodeContext.SaveChangesAsync();
+
+                        await NodeContext.EventLog(
+                            NodeEnum.EventType.IsInformation,
+                            $"User account '{tbUser.UserId}' deleted from Usr.tbUser as part of Identity user deletion. Email='{email}'.");
+                    }
+                    catch (Exception ex)
+                    {
+                        await NodeContext.ErrorLog(ex);
+
+                        await NodeContext.EventLog(
+                            NodeEnum.EventType.IsWarning,
+                            $"Identity user deletion blocked: cannot delete Usr.tbUser for Email='{email}' due to references. Remove dependent records first, then retry the deletion.");
+
+                        _errorMessage = "Deletion blocked because the internal user profile still has dependent records. Check Event Viewer for details.";
+                        return;
+                    }
+                }
+            }
+
+            if (user is not null)
+                await UserManager.DeleteAsync(user);
+
+            _actionTone = "success";
+            _actionMessage = "Registration deleted.";
+
+            _selectedRegistration = null;
+            await LoadRegistrationsAsync(false);
+            _mode = UsersPanelMode.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to delete the registration.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private bool CanApprove(RegistrationRow row) =>
+        (_isAdministrator || _isManager) && row.Stage == RegistrationStage.AwaitingEmailConfirmation;
+
+    private bool CanEditProfile(RegistrationRow row) =>
+        _isAdministrator && row.Stage is RegistrationStage.ReadyForProfile or RegistrationStage.Registered;
+
+    private bool CanDelete(RegistrationRow row) =>
+        _isAdministrator || row.Id == _currentIdentityUserId;
+
+    private static string GetReadinessBadge(bool value) => value ? "text-bg-success" : "text-bg-warning";
+    private static string GetReadinessText(bool value) => value ? "Ready" : "Missing";
+
+    private static string GetStageText(RegistrationStage stage) => stage switch
+    {
+        RegistrationStage.AwaitingEmailConfirmation => "Awaiting Email Confirmation",
+        RegistrationStage.ReadyForProfile => "Ready for Profile Creation",
+        RegistrationStage.Registered => "Registered",
+        _ => "Needs Attention"
+    };
+
+    private static string GetStageBadge(RegistrationStage stage) => stage switch
+    {
+        RegistrationStage.AwaitingEmailConfirmation => "text-bg-warning",
+        RegistrationStage.ReadyForProfile => "text-bg-info",
+        RegistrationStage.Registered => "text-bg-success",
+        _ => "text-bg-danger"
+    };
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_mode == UsersPanelMode.List)
+    {
+@RenderListPane()
+    }
+    else if (_mode == UsersPanelMode.Delete)
+    {
+@RenderDeletePane(true)
+    }
+    else if (_mode == UsersPanelMode.EditProfile)
+    {
+@RenderEditorPane(true)
+    }
+    else
+    {
+@RenderDetailPane(true)
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 42%; min-width:24rem; min-height:0; overflow:hidden;">
+        @RenderListPane()
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == UsersPanelMode.Delete)
+                {
+        @RenderDeletePane(false)
+                }
+                else if (_mode == UsersPanelMode.EditProfile)
+                {
+        @RenderEditorPane(false)
+                }
+                else
+                {
+        @RenderDetailPane(false)
+                }
+    </div>
+</div>;
+
+    private RenderFragment RenderListPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+    <div class="px-3 py-2 border-bottom bg-light small text-muted">
+        @_registrations.Count registration@(_registrations.Count == 1 ? string.Empty : "s")
+    </div>
+
+@if (_isLoading && _registrations.Count == 0)
+    {
+    <div class="p-3 text-muted">Loading users…</div>
+    }
+    else if (_registrations.Count == 0)
+    {
+    <div class="p-3 text-muted">No registrations found.</div>
+    }
+    else
+    {
+    <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+        @foreach (var item in _registrations)
+                {
+        <button type="button"
+                class="list-group-item list-group-item-action px-3 py-3 text-start @(item.Id == _selectedRegistration?.Id ? "active" : "")"
+                @onclick="() => SelectRegistrationAsync(item.Id)">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+                <div>
+                    <div class="fw-semibold">@item.EmailAddress</div>
+                    <div class="small">@(!string.IsNullOrWhiteSpace(item.UserName) ? item.UserName : "No internal user profile yet")</div>
+                </div>
+
+                <span class="badge @GetStageBadge(item.Stage)">@GetStageText(item.Stage)</span>
+            </div>
+        </button>
+                }
+    </div>
+    }
+</div>;
+
+private RenderFragment RenderDetailPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedRegistration is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select a registration to review its status and next action.
+        </div>
+}
+else
+{
+    @if (showBackToList)
+    {
+            <div class="px-3 pt-3">
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="BackToListAsync">
+                    Back to list
+                </button>
+            </div>
+    }
+
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                <div>
+                    <div class="fw-semibold">@_selectedRegistration.EmailAddress</div>
+                    <div class="small text-muted">@(!string.IsNullOrWhiteSpace(_selectedRegistration.UserName) ? _selectedRegistration.UserName : "No internal user profile yet")</div>
+                </div>
+
+                <span class="badge @GetStageBadge(_selectedRegistration.Stage)">@GetStageText(_selectedRegistration.Stage)</span>
+            </div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <div class="row g-3">
+                <div class="col-12 col-xl-7">
+                    <div class="border rounded bg-white p-3">
+                        <div class="small text-uppercase text-muted mb-2" style="letter-spacing:0.06em;">Registration Status</div>
+
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Identity account</dt>
+                            <dd class="col-sm-7">Created</dd>
+
+                            <dt class="col-sm-5">Email confirmed</dt>
+                            <dd class="col-sm-7">@(_selectedRegistration.IsConfirmed ? "Yes" : "No")</dd>
+
+                            <dt class="col-sm-5">Internal profile created</dt>
+                            <dd class="col-sm-7">@(_selectedRegistration.IsRegistered ? "Yes" : "No")</dd>
+
+                            <dt class="col-sm-5">Administrator</dt>
+                            <dd class="col-sm-7">@(_selectedRegistration.IsAdministrator ? "Yes" : "No")</dd>
+
+                            <dt class="col-sm-5">Manager</dt>
+                            <dd class="col-sm-7">@(_selectedRegistration.IsManager ? "Yes" : "No")</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-5">
+                    <div class="border rounded bg-white p-3">
+                        <div class="small text-uppercase text-muted mb-2" style="letter-spacing:0.06em;">Next Recommended Action</div>
+
+                        <div class="fw-semibold mb-2">@GetStageText(_selectedRegistration.Stage)</div>
+                        <div class="text-muted small">
+                            @switch (_selectedRegistration.Stage)
+                            {
+                                case RegistrationStage.AwaitingEmailConfirmation:
+                                    <text>The user has registered but their email has not been confirmed yet.</text>
+                                    break;
+                                case RegistrationStage.ReadyForProfile:
+                                    <text>Email is confirmed. Create the internal profile and assign access.</text>
+                                    break;
+                                case RegistrationStage.Registered:
+                                    <text>The user is active. You can update their profile or role access.</text>
+                                    break;
+                                default:
+                                    <text>This registration has an inconsistent state and needs review.</text>
+                                    break;
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-3 py-3 border-top bg-white">
+            <div class="d-flex flex-wrap gap-2">
+                @if (CanApprove(_selectedRegistration))
+                {
+                    <button type="button"
+                            class="btn btn-warning btn-sm"
+                            @onclick="ConfirmRegistrationAsync">
+                        <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Confirm Registration
+                    </button>
+                }
+
+                @if (CanEditProfile(_selectedRegistration))
+                {
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            @onclick="() => BeginProfileEditAsync(_selectedRegistration.Id)">
+                        <i class="bi bi-person-badge me-1" aria-hidden="true"></i>
+                        @(_selectedRegistration.Stage == RegistrationStage.ReadyForProfile ? "Create Profile" : "Edit Profile & Roles")
+                    </button>
+                }
+
+                @if (CanDelete(_selectedRegistration))
+                {
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            @onclick="() => BeginDeleteAsync(_selectedRegistration.Id)">
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                    </button>
+                }
+            </div>
+        </div>
+}
+</div>;
+
+private RenderFragment RenderEditorPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">@(_editor.IsExistingProfile ? "Edit User Profile" : "Create User Profile")</div>
+        <div class="small text-muted">@_editor.EmailAddress</div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <EditForm Model="@_editor" OnValidSubmit="SaveProfileAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="row g-2">
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="userName">User Name</label>
+                    <InputText id="userName"
+                               @bind-Value="_editor.UserName"
+                               class="form-control" />
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="userId">User Id</label>
+                    <div class="input-group">
+                        <InputText id="userId"
+                                   @bind-Value="_editor.UserId"
+                                   class="form-control" />
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="GenerateUserIdAsync">
+                            Generate
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="phoneNumber">Landline</label>
+                    <InputText id="phoneNumber"
+                               @bind-Value="_editor.PhoneNumber"
+                               class="form-control" />
+                </div>
+
+                <div class="col-12 col-md-6 mb-3">
+                    <label class="form-label" for="mobileNumber">Mobile</label>
+                    <InputText id="mobileNumber"
+                               @bind-Value="_editor.MobileNumber"
+                               class="form-control" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="address">Home Address</label>
+                <InputText id="address"
+                           @bind-Value="_editor.Address"
+                           class="form-control" />
+            </div>
+
+            <div class="mb-3" style="max-width:16rem;">
+                <label class="form-label" for="calendarCode">Calendar</label>
+                <InputSelect id="calendarCode"
+                             @bind-Value="_editor.CalendarCode"
+                             class="form-select">
+                    @foreach (var item in _calendarOptions)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            @if (_isAdministrator)
+            {
+                <div class="d-flex flex-column gap-2 mb-3">
+                    <div class="form-check">
+                        <InputCheckbox id="isManager"
+                                       @bind-Value="_editor.IsManager"
+                                       class="form-check-input" />
+                        <label class="form-check-label" for="isManager">Manager</label>
+                    </div>
+
+                    <div class="form-check">
+                        <InputCheckbox id="isAdministrator"
+                                       @bind-Value="_editor.IsAdministrator"
+                                       class="form-check-input" />
+                        <label class="form-check-label" for="isAdministrator">Administrator</label>
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">
+                    @(_editor.IsExistingProfile ? "Save" : "Create")
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>;
+
+private RenderFragment RenderDeletePane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (showBackToList)
+{
+        <div class="px-3 pt-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="BackToListAsync">
+                Back to list
+            </button>
+        </div>
+}
+
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Delete Registration</div>
+        @if (_selectedRegistration is not null)
+        {
+            <div class="small text-muted">@_selectedRegistration.EmailAddress</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="alert alert-warning py-2 mb-3" role="alert">
+            Are you sure you want to delete this registration?
+        </div>
+
+        @if (_selectedRegistration is not null)
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">@_selectedRegistration.EmailAddress</dd>
+
+                <dt class="col-sm-4">User Name</dt>
+                <dd class="col-sm-8">@_selectedRegistration.UserName</dd>
+
+                <dt class="col-sm-4">Stage</dt>
+                <dd class="col-sm-8">@GetStageText(_selectedRegistration.Stage)</dd>
+            </dl>
+        }
+    </div>
+
+    <div class="px-3 py-3 border-top bg-white">
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button"
+                    class="btn btn-danger"
+                    @onclick="DeleteRegistrationAsync">
+                Delete
+            </button>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="CancelAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+}

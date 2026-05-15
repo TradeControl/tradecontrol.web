@@ -400,7 +400,7 @@ body {
             line-height: 1;
         }
 
-    .tc-subject-browser-back-btn {
+    .tc-back-btn {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
@@ -415,19 +415,19 @@ body {
         transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
     }
 
-    .tc-subject-browser-back-btn:hover,
-    .tc-subject-browser-back-btn:focus-visible {
+    .tc-back-btn:hover,
+    .tc-back-btn:focus-visible {
         color: #fff;
         filter: brightness(1.03);
         box-shadow: 0 8px 18px rgba(255, 122, 0, 0.34);
     }
 
-    .tc-subject-browser-back-btn:active {
+    .tc-back-btn:active {
         transform: translateY(1px) scale(0.97);
         box-shadow: 0 3px 8px rgba(255, 122, 0, 0.24);
     }
 
-    .tc-subject-browser-back-btn i {
+    .tc-back-btn i {
         font-size: 1rem;
         line-height: 1;
     }

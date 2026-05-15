@@ -16,6 +16,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.Generator", "TCExports\src\TCExports.Generator\TCExports.Generator.csproj", "{B297B9DD-5233-F613-6EC0-216F4F6A22A4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tmp", "tmp", "{9CBE2E18-8652-40DB-B4BA-34CACF90365A}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\tmp\admin-manager-html-templates.md = ..\docs\tmp\admin-manager-html-templates.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0-872A-4AA1-86B2-72F808E282F7}"
 	ProjectSection(SolutionItems) = preProject

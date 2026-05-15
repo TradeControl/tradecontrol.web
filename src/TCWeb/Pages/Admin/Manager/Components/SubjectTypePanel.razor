@@ -1,0 +1,666 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+    @if (!string.IsNullOrWhiteSpace(_actionMessage))
+    {
+        <div class="alert @($"alert-{_actionTone}") py-2 mb-3" role="alert">
+            @_actionMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2 mb-3" role="alert">
+            @_errorMessage
+        </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="text-muted small">
+            Classify subjects by polarity and class. These types are used when creating and maintaining subjects.
+        </div>
+
+        @if (_isAdministrator && _mode == SubjectTypeMode.List)
+        {
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    @onclick="BeginCreateAsync">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Type
+            </button>
+        }
+    </div>
+
+    @if (IsMobile)
+    {
+        @RenderMobile()
+    }
+    else
+    {
+        @RenderDesktop()
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+
+    private enum SubjectTypeMode
+    {
+        List,
+        Create,
+        Edit,
+        Delete
+    }
+
+    private sealed record LookupOption(short Value, string Text);
+
+    private readonly List<Subject_vwTypeLookup> _types = [];
+    private readonly List<LookupOption> _cashPolarities = [];
+    private readonly List<LookupOption> _subjectClasses = [];
+
+    private SubjectTypeMode _mode = SubjectTypeMode.List;
+    private Subject_vwTypeLookup? _selectedType;
+    private Subject_tbType _editor = new();
+    private int _numberOfAccounts;
+    private bool _isAdministrator;
+    private bool _isLoading;
+    private string? _errorMessage;
+    private string? _actionMessage;
+    private string _actionTone = "info";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        await LoadLookupOptionsAsync();
+        await LoadTypesAsync(false);
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+    }
+
+    private async Task LoadLookupOptionsAsync()
+    {
+        _cashPolarities.Clear();
+        _subjectClasses.Clear();
+
+        var cashPolarities = await NodeContext.Cash_tbPolaritys
+            .AsNoTracking()
+            .OrderBy(item => item.CashPolarityCode)
+            .Select(item => new LookupOption(item.CashPolarityCode, item.CashPolarity))
+            .ToListAsync();
+
+        var subjectClasses = await NodeContext.Subject_tbClasses
+            .AsNoTracking()
+            .OrderBy(item => item.SubjectClassCode)
+            .Select(item => new LookupOption(item.SubjectClassCode, item.SubjectClass))
+            .ToListAsync();
+
+        _cashPolarities.AddRange(cashPolarities);
+        _subjectClasses.AddRange(subjectClasses);
+    }
+
+    private async Task LoadTypesAsync(bool preserveSelection)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var selectedCode = preserveSelection ? _selectedType?.SubjectTypeCode : null;
+
+            var rows = await NodeContext.Subject_TypeLookup
+                .AsNoTracking()
+                .OrderBy(item => item.SubjectType)
+                .ToListAsync();
+
+            _types.Clear();
+            _types.AddRange(rows);
+
+            if (_types.Count == 0)
+            {
+                _selectedType = null;
+                _mode = SubjectTypeMode.List;
+                return;
+            }
+
+            _selectedType = selectedCode.HasValue
+                ? _types.FirstOrDefault(item => item.SubjectTypeCode == selectedCode.Value)
+                : _types[0];
+
+            _selectedType ??= _types[0];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load subject types.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task BeginCreateAsync()
+    {
+        try
+        {
+            var nextCode = ((await NodeContext.Subject_tbTypes
+                .AsNoTracking()
+                .Select(item => (short?)item.SubjectTypeCode)
+                .MaxAsync()) ?? 0) + 1;
+
+            _editor = new Subject_tbType
+            {
+                SubjectTypeCode = (short)nextCode,
+                CashPolarityCode = (short)NodeEnum.CashPolarity.Income,
+                SubjectClassCode = (short)NodeEnum.SubjectClass.Virtual
+            };
+
+            _mode = SubjectTypeMode.Create;
+            _numberOfAccounts = 0;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to start a new subject type.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task BeginEditAsync(short subjectTypeCode)
+    {
+        try
+        {
+            var current = await NodeContext.Subject_tbTypes
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.SubjectTypeCode == subjectTypeCode);
+
+            if (current is null)
+            {
+                _errorMessage = "Subject type not found.";
+                return;
+            }
+
+            _editor = new Subject_tbType
+            {
+                SubjectTypeCode = current.SubjectTypeCode,
+                SubjectType = current.SubjectType,
+                CashPolarityCode = current.CashPolarityCode,
+                SubjectClassCode = current.SubjectClassCode
+            };
+
+            _selectedType = _types.FirstOrDefault(item => item.SubjectTypeCode == subjectTypeCode) ?? _selectedType;
+            _mode = SubjectTypeMode.Edit;
+            _numberOfAccounts = await NodeContext.Subject_tbSubjects.CountAsync(item => item.SubjectTypeCode == subjectTypeCode);
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the subject type.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task BeginDeleteAsync(short subjectTypeCode)
+    {
+        try
+        {
+            _selectedType = _types.FirstOrDefault(item => item.SubjectTypeCode == subjectTypeCode);
+
+            if (_selectedType is null)
+            {
+                _errorMessage = "Subject type not found.";
+                return;
+            }
+
+            _numberOfAccounts = await NodeContext.Subject_tbSubjects.CountAsync(item => item.SubjectTypeCode == subjectTypeCode);
+            _mode = SubjectTypeMode.Delete;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the delete confirmation.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private Task SelectTypeAsync(short subjectTypeCode)
+    {
+        _selectedType = _types.FirstOrDefault(item => item.SubjectTypeCode == subjectTypeCode) ?? _selectedType;
+        _mode = SubjectTypeMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task CancelAsync()
+    {
+        _mode = SubjectTypeMode.List;
+        _errorMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+            _editor.SubjectType = _editor.SubjectType?.Trim();
+
+            if (string.IsNullOrWhiteSpace(_editor.SubjectType))
+            {
+                _errorMessage = "Type is required.";
+                return;
+            }
+
+            if (_mode == SubjectTypeMode.Create)
+            {
+                var entity = new Subject_tbType
+                {
+                    SubjectTypeCode = _editor.SubjectTypeCode,
+                    SubjectType = _editor.SubjectType,
+                    CashPolarityCode = _editor.CashPolarityCode,
+                    SubjectClassCode = _editor.SubjectClassCode
+                };
+
+                NodeContext.Subject_tbTypes.Add(entity);
+                await NodeContext.SaveChangesAsync();
+
+                SetActionMessage("Subject type created.", "success");
+            }
+            else if (_mode == SubjectTypeMode.Edit)
+            {
+                var entity = await NodeContext.Subject_tbTypes
+                    .SingleOrDefaultAsync(item => item.SubjectTypeCode == _editor.SubjectTypeCode);
+
+                if (entity is null)
+                {
+                    _errorMessage = "Subject type not found.";
+                    return;
+                }
+
+                entity.SubjectType = _editor.SubjectType;
+                entity.CashPolarityCode = _editor.CashPolarityCode;
+                entity.SubjectClassCode = _editor.SubjectClassCode;
+
+                await NodeContext.SaveChangesAsync();
+
+                SetActionMessage("Subject type updated.", "success");
+            }
+
+            await LoadTypesAsync(false);
+            _selectedType = _types.FirstOrDefault(item => item.SubjectTypeCode == _editor.SubjectTypeCode) ?? _selectedType;
+            _mode = SubjectTypeMode.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the subject type.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_selectedType is null)
+            return;
+
+        if (_numberOfAccounts > 0)
+        {
+            _errorMessage = "This subject type cannot be deleted because it is referenced by existing accounts.";
+            return;
+        }
+
+        try
+        {
+            var entity = await NodeContext.Subject_tbTypes.FindAsync(_selectedType.SubjectTypeCode);
+
+            if (entity is null)
+            {
+                _errorMessage = "Subject type not found.";
+                return;
+            }
+
+            NodeContext.Subject_tbTypes.Remove(entity);
+            await NodeContext.SaveChangesAsync();
+
+            SetActionMessage("Subject type deleted.", "success");
+            _mode = SubjectTypeMode.List;
+            _selectedType = null;
+
+            await LoadTypesAsync(false);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to delete the subject type.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private void SetActionMessage(string message, string tone)
+    {
+        _actionMessage = message;
+        _actionTone = tone;
+    }
+
+    private string GetRowClass(Subject_vwTypeLookup item)
+    {
+        var isSelected = _selectedType?.SubjectTypeCode == item.SubjectTypeCode;
+        return isSelected ? "table-active" : string.Empty;
+    }
+
+    private RenderFragment RenderMobile() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_mode == SubjectTypeMode.List)
+    {
+@RenderMobileList()
+    }
+    else if (_mode == SubjectTypeMode.Delete)
+    {
+@RenderDeletePane()
+    }
+    else
+    {
+@RenderEditorPane()
+    }
+</div>;
+
+    private RenderFragment RenderDesktop() => @<div class="d-flex flex-grow-1 gap-3" style="min-height:0; overflow:hidden;">
+    <div class="border rounded bg-white d-flex flex-column" style="flex:0 0 50%; min-width:24rem; min-height:0; overflow:hidden;">
+        <div class="px-3 py-2 border-bottom bg-light small text-muted">
+            @_types.Count subject type@(_types.Count == 1 ? string.Empty : "s")
+        </div>
+
+        @if (_isLoading && _types.Count == 0)
+                {
+        <div class="p-3 text-muted">Loading subject types…</div>
+                }
+                else if (_types.Count == 0)
+                {
+        <div class="p-3 text-muted">No subject types found.</div>
+                }
+                else
+                {
+        <div class="table-responsive flex-grow-1" style="min-height:0;">
+            <table class="table table-sm table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Class</th>
+                        <th>Polarity</th>
+                        @if (_isAdministrator)
+                                                {
+                        <th style="width:1%; white-space:nowrap;"></th>
+                                                }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _types)
+                    {
+                        <tr class="@GetRowClass(item)">
+                            <td>
+                                <button type="button"
+                                        class="btn btn-link p-0 text-start text-decoration-none fw-semibold"
+                                        @onclick="() => SelectTypeAsync(item.SubjectTypeCode)">
+                                    @item.SubjectType
+                                </button>
+                            </td>
+                            <td>@item.SubjectClass</td>
+                            <td class="text-muted">@item.CashPolarity</td>
+
+                            @if (_isAdministrator)
+                            {
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-secondary"
+                                                title="Edit"
+                                                @onclick="() => BeginEditAsync(item.SubjectTypeCode)">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-outline-danger"
+                                                title="Delete"
+                                                @onclick="() => BeginDeleteAsync(item.SubjectTypeCode)">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+                }
+    </div>
+
+    <div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+        @if (_mode == SubjectTypeMode.Delete)
+        {
+            @RenderDeletePane()
+        }
+        else if (_mode is SubjectTypeMode.Create or SubjectTypeMode.Edit)
+        {
+            @RenderEditorPane()
+        }
+        else
+        {
+            @RenderDetailPane()
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderMobileList() => @<div class="border rounded bg-white d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_isLoading && _types.Count == 0)
+{
+        <div class="p-3 text-muted">Loading subject types…</div>
+}
+else if (_types.Count == 0)
+{
+        <div class="p-3 text-muted">No subject types found.</div>
+}
+else
+{
+        <div class="list-group list-group-flush overflow-auto" style="min-height:0;">
+            @foreach (var item in _types)
+            {
+                <div class="list-group-item px-3 py-3">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold">@item.SubjectType</div>
+                            <div class="small text-muted">@item.SubjectClass</div>
+                            <div class="small text-muted">@item.CashPolarity</div>
+                        </div>
+
+                        @if (_isAdministrator)
+                        {
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        title="Edit"
+                                        @onclick="() => BeginEditAsync(item.SubjectTypeCode)">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-danger"
+                                        title="Delete"
+                                        @onclick="() => BeginDeleteAsync(item.SubjectTypeCode)">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+}
+</div>;
+
+private RenderFragment RenderDetailPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+@if (_selectedType is null)
+{
+        <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
+            Select a subject type to view its details.
+        </div>
+}
+else
+{
+        <div class="px-3 py-3 border-bottom bg-light">
+            <div class="fw-semibold">@_selectedType.SubjectType</div>
+            <div class="small text-muted">Code @_selectedType.SubjectTypeCode</div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto px-3 py-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Class</div>
+                    <div>@_selectedType.SubjectClass</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="small text-muted mb-1">Polarity</div>
+                    <div>@_selectedType.CashPolarity</div>
+                </div>
+            </div>
+        </div>
+
+    @if (_isAdministrator)
+    {
+            <div class="px-3 py-3 border-top bg-white">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            @onclick="() => BeginEditAsync(_selectedType.SubjectTypeCode)">
+                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            @onclick="() => BeginDeleteAsync(_selectedType.SubjectTypeCode)">
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                    </button>
+                </div>
+            </div>
+    }
+}
+</div>;
+
+private RenderFragment RenderEditorPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">@(_mode == SubjectTypeMode.Create ? "New Subject Type" : "Edit Subject Type")</div>
+        <div class="small text-muted">Code @_editor.SubjectTypeCode</div>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <EditForm Model="@_editor" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label" for="subjectTypeName">Type</label>
+                <InputText id="subjectTypeName"
+                           @bind-Value="_editor.SubjectType"
+                           class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="subjectClassCode">Class</label>
+                <InputSelect id="subjectClassCode"
+                             @bind-Value="_editor.SubjectClassCode"
+                             class="form-select">
+                    @foreach (var item in _subjectClasses)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="cashPolarityCode">Polarity</label>
+                <InputSelect id="cashPolarityCode"
+                             @bind-Value="_editor.CashPolarityCode"
+                             class="form-select">
+                    @foreach (var item in _cashPolarities)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">
+                    @(_mode == SubjectTypeMode.Create ? "Create" : "Update")
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>;
+
+private RenderFragment RenderDeletePane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+    <div class="px-3 py-3 border-bottom bg-light">
+        <div class="fw-semibold">Delete Subject Type</div>
+        @if (_selectedType is not null)
+        {
+            <div class="small text-muted">@_selectedType.SubjectType</div>
+        }
+    </div>
+
+    <div class="flex-grow-1 overflow-auto px-3 py-3">
+        <div class="alert alert-warning border" role="alert">
+            This will delete the subject type if it is not referenced by any accounts.
+        </div>
+
+        @if (_selectedType is not null)
+        {
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Type</dt>
+                <dd class="col-sm-8">@_selectedType.SubjectType</dd>
+
+                <dt class="col-sm-4">Class</dt>
+                <dd class="col-sm-8">@_selectedType.SubjectClass</dd>
+
+                <dt class="col-sm-4">Polarity</dt>
+                <dd class="col-sm-8">@_selectedType.CashPolarity</dd>
+
+                <dt class="col-sm-4">Accounts</dt>
+                <dd class="col-sm-8">@_numberOfAccounts</dd>
+            </dl>
+        }
+    </div>
+
+    <div class="px-3 py-3 border-top bg-white">
+        <div class="d-flex flex-wrap gap-2">
+            @if (_numberOfAccounts == 0)
+            {
+                <button type="button"
+                        class="btn btn-danger"
+                        @onclick="DeleteAsync">
+                    Delete
+                </button>
+            }
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="CancelAsync">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>;
+}

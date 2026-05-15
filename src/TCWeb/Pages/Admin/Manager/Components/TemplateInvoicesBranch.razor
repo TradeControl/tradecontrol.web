@@ -1,7 +1,7 @@
 @using Microsoft.AspNetCore.Components
 @using TradeControl.Web.AppServices
 
-@inject ITemplateTreeProvider TemplateTreeProvider
+@inject ITemplateInvoicesService TemplateInvoicesService
 
 @if (IsExpanded)
 {
@@ -73,30 +73,6 @@
             return short.TryParse(parts[1], out invoiceTypeCode);
         }
 
-        public static bool TryGetTemplateId(string key, out int templateId)
-        {
-            templateId = default;
-
-            if (string.IsNullOrWhiteSpace(key))
-                return false;
-
-            if (!key.Contains(":template:", StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            var parts = key.Split(':');
-            for (var i = 0; i < parts.Length - 1; i++)
-            {
-                if (string.Equals(parts[i], "template", StringComparison.OrdinalIgnoreCase)
-                    && int.TryParse(parts[i + 1], out templateId))
-                {
-                    return true;
-                }
-            }
-
-            templateId = default;
-            return false;
-        }
-
         public static bool TryGetInvoiceTypeRootKey(string key, out string invoiceTypeRootKey)
         {
             invoiceTypeRootKey = string.Empty;
@@ -108,43 +84,10 @@
             return true;
         }
 
-        private static bool TryGetTemplateNodeKey(string key, out string templateNodeKey)
-        {
-            templateNodeKey = string.Empty;
-
-            if (!TryGetInvoiceTypeCode(key, out var code))
-                return false;
-
-            if (!TryGetTemplateId(key, out var templateId))
-                return false;
-
-            templateNodeKey = $"invoiceType:{code}:template:{templateId}";
-            return true;
-        }
-
         public static string NormalizeSelectableKey(string key)
         {
             if (string.IsNullOrWhiteSpace(key))
                 return key;
-
-            // If restoring an Images node, select the template HTML node instead.
-            if (key.Contains(":images", StringComparison.OrdinalIgnoreCase)
-                && TryGetTemplateNodeKey(key, out var templateNodeKey))
-            {
-                return templateNodeKey;
-            }
-
-            if (key.Contains(":attachments", StringComparison.OrdinalIgnoreCase))
-            {
-                var idx = key.IndexOf(":attachments", StringComparison.OrdinalIgnoreCase);
-                return key[..(idx + ":attachments".Length)];
-            }
-
-            if (key.Contains(":templates", StringComparison.OrdinalIgnoreCase))
-            {
-                var idx = key.IndexOf(":templates", StringComparison.OrdinalIgnoreCase);
-                return key[..(idx + ":templates".Length)];
-            }
 
             if (TryGetInvoiceTypeRootKey(key, out var root))
                 return root;
@@ -156,11 +99,6 @@
         {
             if (string.IsNullOrWhiteSpace(key))
                 return null;
-
-            // For a deep template key, ensure we expand at least to the Templates folder
-            // so the template node is loaded and can be highlighted.
-            if (TryGetInvoiceTypeCode(key, out var code) && key.Contains(":template:", StringComparison.OrdinalIgnoreCase))
-                return $"invoiceType:{code}:templates";
 
             return NormalizeSelectableKey(key);
         }
@@ -182,8 +120,13 @@
             _loadingRoot = true;
             _rootError = null;
 
-            var nodes = await TemplateTreeProvider.GetInvoiceTypeNodesAsync();
-            _rootNodes = nodes.ToList();
+            var state = await TemplateInvoicesService.GetStateAsync();
+            _rootNodes = state.InvoiceTypes
+                .Select(item => new TemplateTreeNode(
+                    $"invoiceType:{item.InvoiceTypeCode}",
+                    item.InvoiceType,
+                    TemplateTreeNodeKind.InvoiceType))
+                .ToList();
 
             _loadedRoot = true;
         }
@@ -197,53 +140,9 @@
         }
     }
 
-    private async Task<IReadOnlyList<TemplateTreeNode>> GetInvoiceTreeChildrenAsync(TemplateTreeNode parent)
+    private Task<IReadOnlyList<TemplateTreeNode>> GetInvoiceTreeChildrenAsync(TemplateTreeNode parent)
     {
-        if (parent.Kind == TemplateTreeNodeKind.InvoiceType)
-        {
-            if (!TemplateKey.TryGetInvoiceTypeCode(parent.Key, out var code))
-                return [];
-
-            return
-            [
-                new TemplateTreeNode($"invoiceType:{code}:templates", "Templates", TemplateTreeNodeKind.TemplatesFolder),
-                new TemplateTreeNode($"invoiceType:{code}:attachments", "Attachments", TemplateTreeNodeKind.AttachmentsFolder),
-            ];
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.TemplatesFolder)
-        {
-            if (!TemplateKey.TryGetInvoiceTypeCode(parent.Key, out var code))
-                return [];
-
-            return await TemplateTreeProvider.GetInvoiceTemplateNodesAsync(code);
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.Template)
-        {
-            return
-            [
-                new TemplateTreeNode($"{parent.Key}:images", "Images", TemplateTreeNodeKind.ImagesFolder),
-            ];
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.ImagesFolder)
-        {
-            if (!TemplateKey.TryGetTemplateId(parent.Key, out var templateId))
-                return [];
-
-            return await TemplateTreeProvider.GetTemplateImageNodesAsync(templateId);
-        }
-
-        if (parent.Kind == TemplateTreeNodeKind.AttachmentsFolder)
-        {
-            if (!TemplateKey.TryGetInvoiceTypeCode(parent.Key, out var code))
-                return [];
-
-            return await TemplateTreeProvider.GetInvoiceAttachmentNodesAsync(code);
-        }
-
-        return [];
+        return Task.FromResult<IReadOnlyList<TemplateTreeNode>>([]);
     }
 
     private async Task OnTemplateNodeSelectedAsync(TemplateTreeNode node)
@@ -254,42 +153,17 @@
             return;
 
         short? invoiceTypeCode = null;
-        int? templateId = null;
-        string? imageTag = null;
-        int? attachmentId = null;
 
         if (TemplateKey.TryGetInvoiceTypeCode(node.Key, out var invCode))
             invoiceTypeCode = invCode;
-
-        if (TemplateKey.TryGetTemplateId(node.Key, out var tid))
-            templateId = tid;
-
-        if (node.Kind == TemplateTreeNodeKind.Image)
-        {
-            var parts = node.Key.Split(':');
-            if (parts.Length >= 4)
-            {
-                if (int.TryParse(parts[1], out var parsedTemplateId))
-                    templateId = parsedTemplateId;
-
-                imageTag = parts[3];
-            }
-        }
-
-        if (node.Kind == TemplateTreeNodeKind.Attachment)
-        {
-            var parts = node.Key.Split(':');
-            if (parts.Length >= 4 && int.TryParse(parts[^1], out var aid))
-                attachmentId = aid;
-        }
 
         await OnTemplateSelection.InvokeAsync(new ManagerTreeHost.TemplateSelection(
             Kind: node.Kind.ToString(),
             Key: node.Key,
             InvoiceTypeCode: invoiceTypeCode,
-            TemplateId: templateId,
-            ImageTag: imageTag,
-            AttachmentId: attachmentId));
+            TemplateId: null,
+            ImageTag: null,
+            AttachmentId: null));
     }
 
     private Task OnTemplateLeafSelectedAsync(TemplateTreeNode leaf) => Task.CompletedTask;
