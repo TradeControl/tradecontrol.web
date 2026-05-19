@@ -1,0 +1,558 @@
+@using System.Linq
+@using Microsoft.JSInterop
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Pages.Cash.Manager.Components
+@using TradeControl.Web.Pages.Shared.Tree
+@using TradeControl.Web.Pages.Subject.Controls
+@using Wangkanai.Detection.Models
+
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+@inject ICashManagerService CashManagerService
+@inject ICashStatementQueryService CashStatementQueryService
+@inject ISubjectBrowserService SubjectBrowserService
+@inject IJSRuntime JSRuntime
+
+@if (_isMobile)
+{
+    @if (_mobileView == CashManagerMobileView.Detail)
+    {
+        <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <button type="button"
+                        class="btn tc-back-btn"
+                        @onclick="NavigateToMobileTreeAsync">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    <span>Back</span>
+                </button>
+
+                <div class="fw-semibold text-truncate ms-2">@GetMobileDetailHeader()</div>
+            </div>
+
+            <div class="small text-muted mb-3">@GetMobileDetailSubtitle()</div>
+
+            <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0; overflow:hidden;">
+                <CashManagerDetailHost IsMobile="@_isMobile"
+                                       SelectedAccount="@_selectedAccount"
+                                       SelectedSection="@_selectedSection"
+                                       Years="@_years"
+                                       Periods="@_periods"
+                                       SelectedYearNumber="@_selectedYearNumber"
+                                       SelectedPeriodStartOn="@_selectedPeriodStartOn"
+                                       NamespaceFilter="@_namespaceFilter"
+                                       NamespaceSuggestions="@_namespaceSuggestions"
+                                       IsLoadingNamespaceSuggestions="@_isLoadingNamespaceSuggestions"
+                                       IsLoadingStatement="@_isLoadingStatement"
+                                       ErrorMessage="@_errorMessage"
+                                       Statement="@_statement"
+                                       OnYearSelected="HandleYearSelectedAsync"
+                                       OnPeriodSelected="HandlePeriodSelectedAsync"
+                                       OnNamespaceFilterChanged="HandleNamespaceFilterChangedAsync"
+                                       OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
+                                       OnAccountSaved="HandleAccountSavedAsync"
+                                       OnAccountDeleted="HandleAccountDeletedAsync" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <h1 class="h4 mb-1">Cash Manager</h1>
+                    <div class="text-muted small">@GetSubtitle()</div>
+                </div>
+
+                <div class="small text-muted">
+                    @(_accounts.Count) account@(_accounts.Count == 1 ? string.Empty : "s")
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <div class="alert alert-danger py-2 mb-0" role="alert">@_errorMessage</div>
+            }
+
+            <div class="flex-grow-1 border rounded bg-white p-3 tc-tree-host"
+                 style="min-height:0; overflow:auto; padding-bottom:calc(96px + env(safe-area-inset-bottom));">
+                <CashManagerTree Accounts="@_accounts"
+                                 Years="@_years"
+                                 Periods="@_periods"
+                                 SelectedAccount="@_selectedAccount"
+                                 SelectedAccountCode="@_selectedAccount?.AccountCode"
+                                 SelectedSection="@_selectedSection"
+                                 SelectedYearNumber="@_selectedYearNumber"
+                                 SelectedPeriodStartOn="@_selectedPeriodStartOn"
+                                 ShowWorkspaces="false"
+                                 OnAccountSelected="HandleAccountSelectedAsync"
+                                 OnSectionSelected="HandleSectionSelectedAsync"
+                                 OnYearSelected="HandleYearSelectedAsync"
+                                 OnPeriodSelected="HandlePeriodSelectedAsync" />
+            </div>
+
+            <div class="tc-mobile-actionbar tc-visible" role="toolbar" aria-label="Cash manager actions">
+                <div class="tc-mobile-action-summary me-2">
+                    <div class="tc-mobile-action-title">@GetMobileActionTitle()</div>
+                    <div class="tc-mobile-action-subtitle">@GetMobileActionSubtitle()</div>
+                </div>
+
+                <button type="button"
+                        class="btn-action"
+                        disabled="@(!CanOpenMobileStatement())"
+                        @onclick="OpenMobileStatementAsync">
+                    <i class="bi bi-journal-text" aria-hidden="true"></i>
+                    <span>Statement</span>
+                </button>
+
+                <button type="button"
+                        class="btn-action"
+                        disabled="@(!CanOpenMobileCashAccounts())"
+                        @onclick="OpenMobileCashAccountsAsync">
+                    <i class="bi bi-wallet2" aria-hidden="true"></i>
+                    <span>Cash Accounts</span>
+                </button>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h1 class="h4 mb-1">Cash Manager</h1>
+                <div class="text-muted small">@GetSubtitle()</div>
+            </div>
+
+            <div class="small text-muted">
+                @(_accounts.Count) account@(_accounts.Count == 1 ? string.Empty : "s")
+            </div>
+        </div>
+
+        <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
+            <TreeShell IsMobile="@_isMobile">
+                <LeftPane>
+                    <CashManagerTree Accounts="@_accounts"
+                                     Years="@_years"
+                                     Periods="@_periods"
+                                     SelectedAccount="@_selectedAccount"
+                                     SelectedAccountCode="@_selectedAccount?.AccountCode"
+                                     SelectedSection="@_selectedSection"
+                                     SelectedYearNumber="@_selectedYearNumber"
+                                     SelectedPeriodStartOn="@_selectedPeriodStartOn"
+                                     ShowWorkspaces="true"
+                                     OnAccountSelected="HandleAccountSelectedAsync"
+                                     OnSectionSelected="HandleSectionSelectedAsync"
+                                     OnYearSelected="HandleYearSelectedAsync"
+                                     OnPeriodSelected="HandlePeriodSelectedAsync" />
+                </LeftPane>
+
+                <RightPane>
+                    <CashManagerDetailHost IsMobile="@_isMobile"
+                                           SelectedAccount="@_selectedAccount"
+                                           SelectedSection="@_selectedSection"
+                                           Years="@_years"
+                                           Periods="@_periods"
+                                           SelectedYearNumber="@_selectedYearNumber"
+                                           SelectedPeriodStartOn="@_selectedPeriodStartOn"
+                                           NamespaceFilter="@_namespaceFilter"
+                                           NamespaceSuggestions="@_namespaceSuggestions"
+                                           IsLoadingNamespaceSuggestions="@_isLoadingNamespaceSuggestions"
+                                           IsLoadingStatement="@_isLoadingStatement"
+                                           ErrorMessage="@_errorMessage"
+                                           Statement="@_statement"
+                                           OnYearSelected="HandleYearSelectedAsync"
+                                           OnPeriodSelected="HandlePeriodSelectedAsync"
+                                           OnNamespaceFilterChanged="HandleNamespaceFilterChangedAsync"
+                                           OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
+                                           OnAccountSaved="HandleAccountSavedAsync"
+                                           OnAccountDeleted="HandleAccountDeletedAsync" />
+                </RightPane>
+            </TreeShell>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? InitialAccountCode { get; set; }
+
+    private const int NamespaceSuggestionPageSize = 12;
+
+    private enum CashManagerMobileView
+    {
+        Tree,
+        Detail
+    }
+
+    private bool _isMobile;
+    private bool _isLoadingStatement;
+    private bool _isLoadingNamespaceSuggestions;
+    private string? _errorMessage;
+    private string _namespaceFilter = string.Empty;
+    private IReadOnlyList<CashManagerAccountSummary> _accounts = Array.Empty<CashManagerAccountSummary>();
+    private IReadOnlyList<CashManagerYearOption> _years = Array.Empty<CashManagerYearOption>();
+    private IReadOnlyList<CashManagerPeriodOption> _periods = Array.Empty<CashManagerPeriodOption>();
+    private IReadOnlyList<NamespaceSelectorSuggestion> _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private CashManagerAccountSummary? _selectedAccount;
+    private CashManagerSection _selectedSection = CashManagerSection.Statement;
+    private CashManagerStatementResult _statement = CashManagerStatementResult.Empty;
+    private short? _selectedYearNumber;
+    private DateTime? _selectedPeriodStartOn;
+    private CashManagerMobileView _mobileView = CashManagerMobileView.Tree;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isMobile = Detection.Device.Type == Device.Mobile;
+        await InitializeShellAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_isMobile)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("cashManager.updateViewportHeight");
+            await JSRuntime.InvokeVoidAsync("cashManager.updateHeaderOffset");
+            await JSRuntime.InvokeVoidAsync("cashManager.initSplit");
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task InitializeShellAsync()
+    {
+        await RefreshAccountsAsync(InitialAccountCode);
+        _years = await CashManagerService.GetYearsAsync();
+
+        var defaultPeriod = await CashManagerService.GetDefaultPeriodAsync();
+        _selectedYearNumber = defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
+        _selectedPeriodStartOn = defaultPeriod?.StartOn;
+
+        await LoadPeriodsAsync(_selectedYearNumber);
+        await ReloadStatementAsync();
+    }
+
+    private async Task RefreshAccountsAsync(string? preferredAccountCode = null)
+    {
+        var includeClosed = _selectedSection == CashManagerSection.CashAccounts;
+
+        _accounts = await CashManagerService.GetAccountsAsync(includeClosed);
+
+        var selectedCode = !string.IsNullOrWhiteSpace(preferredAccountCode)
+            ? preferredAccountCode
+            : _selectedAccount?.AccountCode;
+
+        _selectedAccount = !string.IsNullOrWhiteSpace(selectedCode)
+            ? _accounts.FirstOrDefault(account => string.Equals(account.AccountCode, selectedCode, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        _selectedAccount ??= ResolveInitialAccount();
+    }
+
+    private CashManagerAccountSummary? ResolveInitialAccount()
+    {
+        if (_accounts.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(InitialAccountCode))
+        {
+            var initial = _accounts.FirstOrDefault(account => string.Equals(account.AccountCode, InitialAccountCode, StringComparison.OrdinalIgnoreCase));
+
+            if (initial is not null)
+            {
+                return initial;
+            }
+        }
+
+        return _accounts.First();
+    }
+
+    private async Task HandleAccountSelectedAsync(string accountCode)
+    {
+        _selectedAccount = _accounts.FirstOrDefault(account => string.Equals(account.AccountCode, accountCode, StringComparison.OrdinalIgnoreCase));
+        NormalizeSection();
+
+        if (_selectedSection == CashManagerSection.Statement)
+        {
+            await ReloadStatementAsync();
+        }
+    }
+
+    private async Task HandleSectionSelectedAsync(CashManagerSection section)
+    {
+        _selectedSection = section;
+        await RefreshAccountsAsync();
+        NormalizeSection();
+
+        if (_selectedSection == CashManagerSection.Statement)
+        {
+            await ReloadStatementAsync();
+        }
+    }
+
+    private async Task OpenMobileStatementAsync()
+    {
+        await OpenMobileSectionAsync(CashManagerSection.Statement);
+    }
+
+    private async Task OpenMobileCashAccountsAsync()
+    {
+        await OpenMobileSectionAsync(CashManagerSection.CashAccounts);
+    }
+
+    private async Task OpenMobileSectionAsync(CashManagerSection section)
+    {
+        _selectedSection = section;
+        await RefreshAccountsAsync();
+        NormalizeSection();
+
+        if (_selectedSection == CashManagerSection.Statement)
+        {
+            await ReloadStatementAsync();
+        }
+
+        _mobileView = CashManagerMobileView.Detail;
+    }
+
+    private Task NavigateToMobileTreeAsync()
+    {
+        _mobileView = CashManagerMobileView.Tree;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleYearSelectedAsync(short yearNumber)
+    {
+        _selectedYearNumber = yearNumber;
+        await LoadPeriodsAsync(_selectedYearNumber);
+
+        if (_selectedSection == CashManagerSection.Statement)
+        {
+            await ReloadStatementAsync();
+        }
+    }
+
+    private async Task HandlePeriodSelectedAsync(DateTime? startOn)
+    {
+        _selectedPeriodStartOn = startOn;
+
+        if (_selectedSection == CashManagerSection.Statement)
+        {
+            await ReloadStatementAsync();
+        }
+    }
+
+    private async Task HandleAccountSavedAsync(string accountCode)
+    {
+        _selectedSection = CashManagerSection.CashAccounts;
+        await RefreshAccountsAsync(accountCode);
+        NormalizeSection();
+
+        if (_isMobile)
+        {
+            _mobileView = CashManagerMobileView.Detail;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleAccountDeletedAsync(string accountCode)
+    {
+        _selectedSection = CashManagerSection.CashAccounts;
+        await RefreshAccountsAsync(accountCode);
+        NormalizeSection();
+
+        if (_isMobile)
+        {
+            _mobileView = CashManagerMobileView.Detail;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleNamespaceFilterChangedAsync(string filterText)
+    {
+        var updatedFilter = filterText ?? string.Empty;
+        var wasCleared = !string.IsNullOrWhiteSpace(_namespaceFilter)
+            && string.IsNullOrWhiteSpace(updatedFilter);
+
+        _namespaceFilter = updatedFilter;
+
+        if (string.IsNullOrWhiteSpace(_namespaceFilter))
+        {
+            _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+            _isLoadingNamespaceSuggestions = false;
+            await ReloadStatementAsync();
+            return;
+        }
+
+        _isLoadingNamespaceSuggestions = true;
+        StateHasChanged();
+
+        try
+        {
+            _namespaceSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+                _namespaceFilter,
+                NamespaceSuggestionPageSize);
+        }
+        finally
+        {
+            _isLoadingNamespaceSuggestions = false;
+        }
+
+        if (wasCleared)
+        {
+            await ReloadStatementAsync();
+        }
+    }
+
+    private async Task HandleNamespaceFilterCommittedAsync(string filterText)
+    {
+        _namespaceFilter = filterText ?? string.Empty;
+        await ReloadStatementAsync();
+    }
+
+    private async Task LoadPeriodsAsync(short? yearNumber)
+    {
+        if (!yearNumber.HasValue)
+        {
+            _periods = Array.Empty<CashManagerPeriodOption>();
+            _selectedPeriodStartOn = null;
+            return;
+        }
+
+        _periods = await CashManagerService.GetPeriodsAsync(yearNumber.Value);
+
+        if (_periods.Count == 0)
+        {
+            _selectedPeriodStartOn = null;
+            return;
+        }
+
+        if (_selectedPeriodStartOn.HasValue
+            && _periods.Any(period => period.StartOn == _selectedPeriodStartOn.Value))
+        {
+            return;
+        }
+
+        _selectedPeriodStartOn = _periods[0].StartOn;
+    }
+
+    private async Task ReloadStatementAsync()
+    {
+        if (_selectedAccount is null || !_selectedYearNumber.HasValue)
+        {
+            _statement = CashManagerStatementResult.Empty;
+            return;
+        }
+
+        _isLoadingStatement = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            _statement = await CashStatementQueryService.GetStatementAsync(
+                _selectedAccount.AccountCode,
+                _selectedYearNumber.Value,
+                _selectedPeriodStartOn,
+                _namespaceFilter);
+        }
+        catch (Exception exception)
+        {
+            _statement = CashManagerStatementResult.Empty;
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoadingStatement = false;
+        }
+    }
+
+    private void NormalizeSection()
+    {
+        if (_selectedAccount is null)
+        {
+            if (_selectedSection != CashManagerSection.CashAccounts)
+            {
+                _selectedSection = CashManagerSection.Statement;
+            }
+
+            return;
+        }
+
+        var availableSections = CashManagerSectionCatalog.GetSections(_selectedAccount.AccountType);
+
+        if (!availableSections.Contains(_selectedSection))
+        {
+            _selectedSection = availableSections[0];
+        }
+    }
+
+    private bool CanOpenMobileStatement()
+    {
+        return _selectedAccount is not null;
+    }
+
+    private bool CanOpenMobileCashAccounts()
+    {
+        return _selectedAccount is not null || _accounts.Count == 0;
+    }
+
+    private string GetMobileActionTitle()
+    {
+        return _selectedAccount?.AccountName ?? "Cash Manager";
+    }
+
+    private string GetMobileActionSubtitle()
+    {
+        if (_selectedAccount is null)
+        {
+            return _accounts.Count == 0
+                ? "No cash accounts available"
+                : "Select an account, then choose an action";
+        }
+
+        return $"{_selectedAccount.AccountCode} • {CashManagerSectionCatalog.GetLabel(_selectedSection)}";
+    }
+
+    private string GetMobileDetailHeader()
+    {
+        return CashManagerSectionCatalog.GetLabel(_selectedSection);
+    }
+
+    private string GetMobileDetailSubtitle()
+    {
+        if (_selectedAccount is null)
+        {
+            return "Create and maintain cash accounts within Cash Manager.";
+        }
+
+        return $"{_selectedAccount.AccountName} • {_selectedAccount.AccountCode}";
+    }
+
+    private string GetSubtitle()
+    {
+        if (_selectedAccount is null)
+        {
+            return _selectedSection == CashManagerSection.CashAccounts
+                ? "Create and maintain cash accounts within Cash Manager."
+                : "Select an account to begin the namespace-aware cash workflow.";
+        }
+
+        var yearLabel = CashManagerSectionCatalog.GetYearLabel(_years, _selectedYearNumber);
+        var periodLabel = CashManagerSectionCatalog.GetPeriodScopeLabel(_periods, _selectedPeriodStartOn);
+        return $"{_selectedAccount.AccountName} • {yearLabel} • {periodLabel}";
+    }
+}

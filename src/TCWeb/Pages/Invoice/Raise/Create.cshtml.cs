@@ -157,7 +157,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 SubjectName = await NodeContext.Subject_tbSubjects.Where(o => o.SubjectCode == SubjectCode).Select(o => o.SubjectName).FirstOrDefaultAsync();
 
                 var cashDescriptions = from t in NodeContext.Cash_CodeLookup
-                                       where t.CashTypeCode < (short)NodeEnum.CashType.Bank
+                                       where t.CashTypeCode < (short)NodeEnum.CashType.Money
                                        orderby t.CashDescription
                                        select t.CashDescription;
 
@@ -171,7 +171,7 @@ namespace TradeControl.Web.Pages.Invoice.Raise
                 }
                 else if (string.IsNullOrEmpty(CashCode))
                     CashCode = await NodeContext.Cash_CodeLookup
-                                            .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Bank)
+                                            .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Money)
                                             .OrderBy(c => c.CashCode)
                                             .Select(c => c.CashCode)
                                             .FirstAsync();

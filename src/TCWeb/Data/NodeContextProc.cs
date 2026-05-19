@@ -935,7 +935,7 @@ namespace TradeControl.Web.Data
                     ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
-                    Size = 10,
+                    Size = 50,
                     Value = accountCode
                 };
 

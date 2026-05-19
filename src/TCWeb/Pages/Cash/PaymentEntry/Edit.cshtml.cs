@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -129,7 +129,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (Cash_PaymentsUnposted.CashCode != null)
                 {
                     var cashDescriptions = from t in NodeContext.Cash_CodeLookup
-                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank
+                                           where t.CashTypeCode < (short)NodeEnum.CashType.Money
                                            orderby t.CashDescription
                                            select t.CashDescription;
 

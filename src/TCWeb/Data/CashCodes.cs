@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -88,7 +88,7 @@ namespace TradeControl.Web.Data
 
         public async Task<bool> IsVatCashCode() => CashCode == await GetTaxCashCode(NodeEnum.TaxType.VAT);        
 
-        public bool IsTransfer => CashTypeCode == NodeEnum.CashType.Bank;
+        public bool IsTransfer => CashTypeCode == NodeEnum.CashType.Money;
 
         public async Task<decimal> GetVatBalance() => await _context.VatBalance();
 

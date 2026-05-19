@@ -1,0 +1,689 @@
+@using System.Threading
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Models
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+@inject ICashAccountMaintenanceService CashAccountMaintenanceService
+
+@if (!_isAuthorized)
+{
+    <div class="alert alert-warning mb-0">
+        Cash account maintenance is limited to Managers and Administrators.
+    </div>
+}
+else if (_isLoading)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Loading cash account maintenance…
+    </div>
+}
+else if (_editor is null || _editContext is null)
+{
+    <div class="d-flex flex-column gap-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div>
+                <h1 class="h4 mb-1">Cash Accounts</h1>
+                <div class="text-muted small">Create and maintain cash accounts within Cash Manager.</div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-success py-2 mb-0">@_message</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_errorMessage</div>
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted">Select an account, or create a new one.</div>
+                <button type="button" class="btn btn-primary mt-3" @onclick="HandleNewAsync">New account</button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div>
+                <h1 class="h4 mb-1">Cash Accounts</h1>
+                <div class="text-muted small">
+                    @if (_editor.IsNew)
+                    {
+                        <span>Create a new cash account.</span>
+                    }
+                    else
+                    {
+                        <span>Maintain the selected cash account.</span>
+                    }
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="HandleToggleDetailsAsync"
+                        disabled="@(_selectedAccount is null || _editor.IsNew)">
+                    @(_showDetails ? "Hide details" : "Details")
+                </button>
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        @onclick="HandleEditSelectedAsync"
+                        disabled="@(_selectedAccount is null)">
+                    Edit selected
+                </button>
+                @if (_canDelete && !_editor.IsNew)
+                {
+                    <button type="button"
+                            class="btn btn-outline-danger"
+                            @onclick="HandleDeleteRequested">
+                        Delete
+                    </button>
+                }
+                <button type="button" class="btn btn-primary" @onclick="HandleNewAsync">
+                    New account
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-success py-2 mb-0">@_message</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_errorMessage</div>
+        }
+
+        <div class="row g-3 flex-grow-1" style="min-height:0;">
+            <div class="col-12 col-xl-4 d-flex flex-column gap-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="small text-muted mb-1">Selected Account</div>
+                        <div class="fw-semibold">@(_selectedAccount?.AccountName ?? "None")</div>
+                        <div class="small text-muted"><code>@(_selectedAccount?.AccountCode ?? "—")</code></div>
+
+                        @if (_selectedAccount is not null)
+                        {
+                            <div class="row g-3 mt-1">
+                                <div class="col-6">
+                                    <div class="small text-muted">Type</div>
+                                    <div class="fw-semibold">@_selectedAccount.AccountType</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="small text-muted">Balance</div>
+                                    <div class="fw-semibold">@_selectedAccount.CurrentBalance.ToString("C")</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (_showDetails && _details is not null)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                <div>
+                                    <h2 class="h5 mb-1">Account Details</h2>
+                                    <div class="text-muted small">Read-only account metadata.</div>
+                                </div>
+                                <span class="badge @( _details.AccountClosed ? "text-bg-secondary" : "text-bg-success")">
+                                    @(_details.AccountClosed ? "Closed" : "Open")
+                                </span>
+                            </div>
+
+                            <dl class="row mb-0 small">
+                                <dt class="col-5 text-muted">Account Code</dt>
+                                <dd class="col-7"><code>@_details.AccountCode</code></dd>
+
+                                <dt class="col-5 text-muted">Subject Code</dt>
+                                <dd class="col-7"><code>@_details.SubjectCode</code></dd>
+
+                                <dt class="col-5 text-muted">Subject</dt>
+                                <dd class="col-7">@_details.SubjectName</dd>
+
+                                <dt class="col-5 text-muted">Cash Code</dt>
+                                <dd class="col-7">@(_details.CashCode ?? "—")</dd>
+
+                                <dt class="col-5 text-muted">Cash Description</dt>
+                                <dd class="col-7">@(_details.CashDescription ?? "—")</dd>
+
+                                <dt class="col-5 text-muted">Constraint</dt>
+                                <dd class="col-7">@(_details.BalanceConstraint ?? "—")</dd>
+
+                                <dt class="col-5 text-muted">Opening Balance</dt>
+                                <dd class="col-7">@_details.OpeningBalance.ToString("C")</dd>
+
+                                <dt class="col-5 text-muted">Current Balance</dt>
+                                <dd class="col-7">@_details.CurrentBalance.ToString("C")</dd>
+
+                                <dt class="col-5 text-muted">Liquidity</dt>
+                                <dd class="col-7">@_details.LiquidityLevel</dd>
+
+                                @if (_details.AccountTypeCode == 0)
+                                {
+                                    <dt class="col-5 text-muted">Account Number</dt>
+                                    <dd class="col-7">@(_details.AccountNumber ?? "—")</dd>
+
+                                    <dt class="col-5 text-muted">Sort Code</dt>
+                                    <dd class="col-7">@(_details.SortCode ?? "—")</dd>
+                                }
+
+                                <dt class="col-5 text-muted">Inserted By</dt>
+                                <dd class="col-7">@_details.InsertedBy</dd>
+
+                                <dt class="col-5 text-muted">Inserted On</dt>
+                                <dd class="col-7">@_details.InsertedOn.ToString("g")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                }
+
+                @if (_confirmDelete && _selectedAccount is not null && !_editor.IsNew)
+                {
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <h2 class="h5 text-danger mb-2">Delete Cash Account</h2>
+                            <p class="mb-3">
+                                Delete <strong>@_selectedAccount.AccountName</strong>
+                                <code>@_selectedAccount.AccountCode</code>?
+                            </p>
+                            <div class="small text-muted mb-3">
+                                This follows the existing administrator-only delete path.
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button"
+                                        class="btn btn-danger"
+                                        @onclick="HandleDeleteAsync"
+                                        disabled="@_isDeleting">
+                                    @(_isDeleting ? "Deleting…" : "Confirm delete")
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        @onclick="HandleDeleteCancelled"
+                                        disabled="@_isDeleting">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-12 col-xl-8">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <EditForm EditContext="_editContext" OnSubmit="HandleSubmitAsync">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountOrganisation">Organisation</label>
+                                    @if (_editor.IsNew)
+                                    {
+                                        <InputSelect id="cashAccountOrganisation" class="form-select" @bind-Value="_editor.OrganisationName">
+                                            @foreach (var option in _options.Organisations)
+                                            {
+                                                <option value="@option.Value">@option.Label</option>
+                                            }
+                                        </InputSelect>
+                                    }
+                                    else
+                                    {
+                                        <InputText id="cashAccountOrganisation" class="form-control" @bind-Value="_editor.OrganisationName" readonly />
+                                    }
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountType">Account Type</label>
+                                    @if (_editor.IsNew)
+                                    {
+                                        <InputSelect id="cashAccountType" class="form-select" @bind-Value="_editor.AccountType">
+                                            @foreach (var option in _options.AccountTypes)
+                                            {
+                                                <option value="@option.Value">@option.Label</option>
+                                            }
+                                        </InputSelect>
+                                    }
+                                    else
+                                    {
+                                        <InputText id="cashAccountType" class="form-control" @bind-Value="_editor.AccountType" readonly />
+                                    }
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountCode">Account Code</label>
+                                    <div class="input-group">
+                                        <InputText id="cashAccountCode"
+                                                   class="form-control"
+                                                   @bind-Value="_editor.AccountCode"
+                                                   readonly="@(!_editor.IsNew && !_allowAccountCodeEdit)" />
+                                        @if (!_editor.IsNew)
+                                        {
+                                            <div class="input-group-text">
+                                                <div class="form-check mb-0">
+                                                    <InputCheckbox id="cashAccountCodeEditToggle" class="form-check-input me-2" @bind-Value="_allowAccountCodeEdit" />
+                                                    <label class="form-check-label" for="cashAccountCodeEditToggle">Enable edit</label>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <ValidationMessage For="@(() => _editor.AccountCode)" />
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountName">Account Name</label>
+                                    <InputText id="cashAccountName" class="form-control" @bind-Value="_editor.AccountName" />
+                                    <ValidationMessage For="@(() => _editor.AccountName)" />
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountCashCode">Cash Code</label>
+                                    <InputSelect id="cashAccountCashCode" class="form-select" @bind-Value="_editor.CashDescription">
+                                        @foreach (var option in _options.CashCodes)
+                                        {
+                                            <option value="@option.Value">@option.Label</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountConstraint">Balance Constraint</label>
+                                    <InputSelect id="cashAccountConstraint" class="form-select" @bind-Value="_editor.BalanceConstraintCode">
+                                        @foreach (var option in _options.BalanceConstraints)
+                                        {
+                                            <option value="@option.Value">@option.Label</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountLiquidity">Liquidity Level</label>
+                                    <InputNumber id="cashAccountLiquidity" class="form-control" @bind-Value="_editor.LiquidityLevel" />
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small text-muted mb-1" for="cashAccountOpeningBalance">Opening Balance</label>
+                                    <InputNumber id="cashAccountOpeningBalance" class="form-control" @bind-Value="_editor.OpeningBalance" />
+                                </div>
+
+                                @if (_editor.ShowBankFields)
+                                {
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small text-muted mb-1" for="cashAccountNumber">Account Number</label>
+                                        <InputText id="cashAccountNumber" class="form-control" @bind-Value="_editor.AccountNumber" />
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small text-muted mb-1" for="cashSortCode">Sort Code</label>
+                                        <InputText id="cashSortCode" class="form-control" @bind-Value="_editor.SortCode" />
+                                    </div>
+                                }
+
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <InputCheckbox id="cashAccountClosed" class="form-check-input" @bind-Value="_editor.AccountClosed" />
+                                        <label class="form-check-label" for="cashAccountClosed">Account closed</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                    @(_editor.IsNew ? "Add account" : "Save changes")
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="HandleResetAsync" disabled="@_isSaving">
+                                    Reset
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public CashManagerAccountSummary? SelectedAccount { get; set; }
+    [Parameter] public EventCallback<string> OnAccountSaved { get; set; }
+    [Parameter] public EventCallback<string> OnAccountDeleted { get; set; }
+
+    private readonly SemaphoreSlim _loadGate = new(1, 1);
+
+    private CashAccountEditorOptions _options = new(
+        Array.Empty<CashAccountLookupOption>(),
+        Array.Empty<CashAccountLookupOption>(),
+        Array.Empty<CashAccountLookupOption>(),
+        Array.Empty<CashAccountBalanceConstraintOption>());
+
+    private EditContext? _editContext;
+    private CashAccountEditorModel? _editor;
+    private Subject_vwCashAccount? _details;
+    private CashManagerAccountSummary? _selectedAccount;
+    private string? _pendingReloadAccountCode;
+    private bool _allowAccountCodeEdit;
+    private bool _isAuthorized;
+    private bool _canDelete;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _isDeleting;
+    private bool _optionsLoaded;
+    private bool _showDetails;
+    private bool _confirmDelete;
+    private string? _userId;
+    private string? _message;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        _isLoading = false;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_isAuthorized)
+        {
+            _isLoading = false;
+            return;
+        }
+
+        var selectedAccountChanged = !string.Equals(
+            _selectedAccount?.AccountCode,
+            SelectedAccount?.AccountCode,
+            StringComparison.OrdinalIgnoreCase);
+
+        var requiresRefresh = !_optionsLoaded
+            || selectedAccountChanged
+            || !string.IsNullOrWhiteSpace(_pendingReloadAccountCode);
+
+        if (!requiresRefresh)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        await _loadGate.WaitAsync();
+
+        try
+        {
+            if (!_optionsLoaded)
+            {
+                _options = await CashAccountMaintenanceService.GetEditorOptionsAsync();
+                _optionsLoaded = true;
+            }
+
+            if (SelectedAccount is null)
+            {
+                _selectedAccount = null;
+                _pendingReloadAccountCode = null;
+                _allowAccountCodeEdit = false;
+                _confirmDelete = false;
+                _showDetails = false;
+                _details = null;
+
+                if (_editor is null || !_editor.IsNew)
+                {
+                    SetEditor(null);
+                }
+
+                return;
+            }
+
+            _selectedAccount = SelectedAccount;
+
+            var accountCodeToLoad = string.IsNullOrWhiteSpace(_pendingReloadAccountCode)
+                ? SelectedAccount.AccountCode
+                : _pendingReloadAccountCode;
+
+            _pendingReloadAccountCode = null;
+
+            await LoadEditorCoreAsync(accountCodeToLoad, preserveNotifications: true);
+        }
+        finally
+        {
+            _isLoading = false;
+            _loadGate.Release();
+        }
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAuthorized = authState.User.IsInRole(Constants.AdministratorsRole)
+            || authState.User.IsInRole(Constants.ManagersRole);
+        _canDelete = authState.User.IsInRole(Constants.AdministratorsRole);
+        _userId = UserManager.GetUserId(authState.User);
+    }
+
+    private async Task HandleNewAsync()
+    {
+        _message = null;
+        _errorMessage = null;
+        _allowAccountCodeEdit = true;
+        _confirmDelete = false;
+        _showDetails = false;
+        _details = null;
+
+        await _loadGate.WaitAsync();
+
+        try
+        {
+            if (!_optionsLoaded)
+            {
+                _options = await CashAccountMaintenanceService.GetEditorOptionsAsync();
+                _optionsLoaded = true;
+            }
+
+            SetEditor(await CashAccountMaintenanceService.CreateEditorAsync(_selectedAccount?.AccountType.ToString()));
+        }
+        finally
+        {
+            _loadGate.Release();
+        }
+    }
+
+    private async Task HandleEditSelectedAsync()
+    {
+        if (_selectedAccount is null)
+        {
+            return;
+        }
+
+        await _loadGate.WaitAsync();
+
+        try
+        {
+            await LoadEditorCoreAsync(_selectedAccount.AccountCode);
+        }
+        finally
+        {
+            _loadGate.Release();
+        }
+    }
+
+    private async Task HandleToggleDetailsAsync()
+    {
+        if (_selectedAccount is null || _editor is null || _editor.IsNew)
+        {
+            return;
+        }
+
+        if (_showDetails)
+        {
+            _showDetails = false;
+            _details = null;
+            return;
+        }
+
+        _details = await CashAccountMaintenanceService.GetDetailsAsync(_selectedAccount.AccountCode);
+        _showDetails = _details is not null;
+        _confirmDelete = false;
+    }
+
+    private void HandleDeleteRequested()
+    {
+        _message = null;
+        _errorMessage = null;
+        _confirmDelete = true;
+    }
+
+    private void HandleDeleteCancelled()
+    {
+        _confirmDelete = false;
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (!_canDelete || _selectedAccount is null || _editor is null || _editor.IsNew)
+        {
+            return;
+        }
+
+        _isDeleting = true;
+        _message = null;
+        _errorMessage = null;
+
+        try
+        {
+            var deletedAccountCode = _selectedAccount.AccountCode;
+
+            await CashAccountMaintenanceService.DeleteAsync(deletedAccountCode);
+
+            _confirmDelete = false;
+            _showDetails = false;
+            _details = null;
+            _selectedAccount = null;
+            SetEditor(null);
+
+            await OnAccountDeleted.InvokeAsync(deletedAccountCode);
+
+            _message = "Cash account deleted.";
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+
+    private async Task LoadEditorCoreAsync(string accountCode, bool preserveNotifications = false)
+    {
+        if (!preserveNotifications)
+        {
+            _message = null;
+            _errorMessage = null;
+        }
+
+        _allowAccountCodeEdit = false;
+        _confirmDelete = false;
+        _showDetails = false;
+        _details = null;
+        SetEditor(await CashAccountMaintenanceService.GetEditorAsync(accountCode));
+    }
+
+    private void SetEditor(CashAccountEditorModel? editor)
+    {
+        _editor = editor;
+        _editContext = editor is null ? null : new EditContext(editor);
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        if (_editContext is null)
+        {
+            return;
+        }
+
+        _message = null;
+        _errorMessage = null;
+
+        if (!_editContext.Validate())
+        {
+            _errorMessage = "Please correct the validation errors before saving.";
+            return;
+        }
+
+        await HandleSaveAsync();
+    }
+
+    private async Task HandleSaveAsync()
+    {
+        if (_editor is null || string.IsNullOrWhiteSpace(_userId))
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _message = null;
+        _errorMessage = null;
+
+        try
+        {
+            if (!_editor.IsNew && !_allowAccountCodeEdit)
+            {
+                _editor.AccountCode = _editor.OriginalAccountCode;
+            }
+
+            var isNew = _editor.IsNew;
+            var accountCode = await CashAccountMaintenanceService.SaveAsync(_editor, _userId);
+            _pendingReloadAccountCode = accountCode;
+
+            await OnAccountSaved.InvokeAsync(accountCode);
+
+            _message = isNew
+                ? "Cash account created."
+                : "Cash account updated.";
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task HandleResetAsync()
+    {
+        if (_editor is null)
+        {
+            return;
+        }
+
+        if (_editor.IsNew)
+        {
+            await HandleNewAsync();
+            return;
+        }
+
+        await _loadGate.WaitAsync();
+
+        try
+        {
+            await LoadEditorCoreAsync(_editor.OriginalAccountCode);
+        }
+        finally
+        {
+            _loadGate.Release();
+        }
+    }
+}

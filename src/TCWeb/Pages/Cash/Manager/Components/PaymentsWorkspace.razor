@@ -1,0 +1,718 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Pages.Subject.Controls
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+@inject ICashPaymentsWorkspaceService CashPaymentsWorkspaceService
+@inject ISubjectBrowserService SubjectBrowserService
+
+@if (!_isLoaded)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Loading payments…
+    </div>
+}
+else if (SelectedAccount is null)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Select a cash account to begin.
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        @RenderHeader()
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-success py-2 mb-0">@_message</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_errorMessage</div>
+        }
+
+        @if (_showAddOrganisationPanel)
+        {
+            @RenderAddOrganisationPanel()
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Paid On</th>
+                                <th>Organisation</th>
+                                <th>Reference</th>
+                                <th class="text-end">Paid Out</th>
+                                <th class="text-end">Paid In</th>
+                                <th>Cash Code</th>
+                                <th>Tax Code</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @RenderLine(_workspace.Draft, true)
+                            @foreach (var row in _workspace.Rows)
+                            {
+                                @RenderLine(row, false)
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (_workspace.Rows.Count == 0)
+                {
+                    <div class="small text-muted mt-3">No unposted transactions.</div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public CashManagerAccountSummary? SelectedAccount { get; set; }
+
+    private const int NamespaceSuggestionPageSize = 12;
+    private const string DraftLineKey = "__draft";
+
+    private bool _isLoaded;
+    private bool _isBusy;
+    private bool _isPrivileged;
+    private bool _showAddOrganisationPanel;
+    private bool _isLoadingWorkspace;
+    private string? _currentAspNetUserId;
+    private string? _message;
+    private string? _errorMessage;
+    private string? _loadedAccountCode;
+    private int _workspaceLoadVersion;
+    private CashManagerPaymentsWorkspaceState _workspace = CashManagerPaymentsWorkspaceState.Empty;
+    private CashManagerOrganisationDraftModel _organisationDraft = new();
+    private IReadOnlyList<NamespaceSelectorSuggestion> _organisationNamespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private bool _isLoadingOrganisationNamespaceSuggestions;
+    private readonly Dictionary<string, IReadOnlyList<NamespaceSelectorSuggestion>> _lineNamespaceSuggestions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _loadingNamespaceLines = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+        _isLoaded = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedAccount is null)
+        {
+            _workspace = CashManagerPaymentsWorkspaceState.Empty;
+            _loadedAccountCode = null;
+            return;
+        }
+
+        if (_isLoadingWorkspace || string.Equals(_loadedAccountCode, SelectedAccount.AccountCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentAspNetUserId = UserManager.GetUserId(authState.User);
+        _isPrivileged = authState.User.IsInRole(Constants.ManagersRole)
+            || authState.User.IsInRole(Constants.AdministratorsRole);
+    }
+
+    private async Task LoadWorkspaceAsync(string accountCode)
+    {
+        if (string.IsNullOrWhiteSpace(_currentAspNetUserId))
+        {
+            return;
+        }
+
+        var loadVersion = ++_workspaceLoadVersion;
+        _isLoadingWorkspace = true;
+
+        try
+        {
+            var workspace = await CashPaymentsWorkspaceService.GetWorkspaceAsync(
+                accountCode,
+                _currentAspNetUserId,
+                _isPrivileged);
+
+            if (loadVersion != _workspaceLoadVersion)
+            {
+                return;
+            }
+
+            _workspace = workspace;
+            _loadedAccountCode = accountCode;
+            _lineNamespaceSuggestions.Clear();
+            _message = null;
+            _errorMessage = null;
+        }
+        finally
+        {
+            if (loadVersion == _workspaceLoadVersion)
+            {
+                _isLoadingWorkspace = false;
+            }
+        }
+    }
+
+    private RenderFragment RenderHeader() => @<div class="card">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="fw-semibold">Payments: @SelectedAccount!.AccountName</div>
+                    <div class="small text-muted"><code>@SelectedAccount.AccountCode</code></div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-4">
+                    <div>
+                        <div class="small text-muted">Unposted Balance</div>
+                        <div class="fw-semibold">@_workspace.Summary.UnpostedBalance.ToString("C")</div>
+                    </div>
+
+                    <div>
+                        <div class="small text-muted">Entry Count</div>
+                        <div class="fw-semibold">@_workspace.Summary.EntryCount</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="ToggleAddOrganisationPanelAsync"
+                                disabled="@_isBusy">
+                            Add organisation
+                        </button>
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="HandlePostAsync"
+                                disabled="@(_isBusy || _workspace.Summary.EntryCount == 0)">
+                            Post
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>;
+
+    private RenderFragment RenderAddOrganisationPanel() => @<div class="card border-secondary">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Add Organisation</h2>
+                <div class="small text-muted">Create a Subject and load it into the draft payment line.</div>
+            </div>
+
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="ToggleAddOrganisationPanelAsync"
+                    disabled="@_isBusy">
+                Close
+            </button>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-xl-5">
+                <label class="form-label small text-muted mb-1">Namespace</label>
+                <NamespaceSelector FilterText="@_organisationDraft.NamespaceFilter"
+                                   Suggestions="@_organisationNamespaceSuggestions"
+                                   IsLoadingSuggestions="@_isLoadingOrganisationNamespaceSuggestions"
+                                   ShowApplyButton="true"
+                                   ApplyButtonTitle="Apply namespace"
+                                   OnFilterChanged="HandleOrganisationNamespaceFilterChangedAsync"
+                                   OnFilterCommitted="HandleOrganisationNamespaceCommittedAsync" />
+            </div>
+
+            <div class="col-12 col-xl-4">
+                <label class="form-label small text-muted mb-1" for="paymentsOrganisationName">Organisation Name</label>
+                <InputText id="paymentsOrganisationName"
+                           class="form-control"
+                           @bind-Value="_organisationDraft.SubjectName" />
+            </div>
+
+            <div class="col-12 col-xl-3">
+                <label class="form-label small text-muted mb-1" for="paymentsOrganisationType">Type</label>
+                <InputSelect id="paymentsOrganisationType"
+                             class="form-select"
+                             @bind-Value="_organisationDraft.SubjectTypeCode">
+                    <option value="">Select type</option>
+                    @foreach (var option in _workspace.SubjectTypes)
+                                        {
+                    <option value="@option.Value">@option.Label</option>
+                                        }
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-3">
+            <button type="button"
+                    class="btn btn-primary"
+                    @onclick="HandleCreateOrganisationAsync"
+                    disabled="@_isBusy">
+                Create organisation
+            </button>
+        </div>
+    </div>
+</div>;
+
+    private RenderFragment RenderLine(CashManagerPaymentLineModel line, bool isDraft) => @<text>
+    <tr class="@(isDraft ? "table-active" : null)">
+        <td style="min-width:12rem;">
+            <InputSelect class="form-select form-select-sm"
+                         @bind-Value="line.UserId">
+                @foreach (var option in _workspace.Users)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
+        </td>
+        <td style="min-width:10rem;">
+            <InputDate class="form-control form-control-sm"
+                       @bind-Value="line.PaidOn"
+                       @bind-Value:after="() => HandlePaidOnChangedAsync(line)" />
+        </td>
+        <td style="min-width:18rem;">
+            <NamespaceSelector FilterText="@line.NamespaceFilter"
+                               Suggestions="@GetLineNamespaceSuggestions(line)"
+                               IsLoadingSuggestions="@IsLoadingLineNamespaceSuggestions(line)"
+                               ShowApplyButton="true"
+                               ApplyButtonTitle="Select organisation"
+                               CommitOnBlur="true"
+                               SuggestUpwards="true"
+                               OnFilterChanged="filterText => HandleLineNamespaceFilterChangedAsync(line, filterText)"
+                               OnFilterCommitted="filterText => HandleLineNamespaceCommittedAsync(line, filterText)" />
+
+            @if (!string.IsNullOrWhiteSpace(line.SubjectName))
+            {
+                <div class="small text-muted mt-1">@line.SubjectName</div>
+            }
+        </td>
+        <td style="min-width:14rem;">
+            <InputText class="form-control form-control-sm"
+                       @bind-Value="line.PaymentReference" />
+        </td>
+        <td class="text-end" style="min-width:10rem;">
+            <InputNumber class="form-control form-control-sm text-danger text-end"
+                         @bind-Value="line.PaidOutValue" />
+        </td>
+        <td class="text-end" style="min-width:10rem;">
+            <InputNumber class="form-control form-control-sm text-end"
+                         @bind-Value="line.PaidInValue" />
+        </td>
+        <td style="min-width:14rem;">
+            <InputSelect class="form-select form-select-sm"
+                         @bind-Value="line.CashCode"
+                         @bind-Value:after="() => HandleCashCodeChangedAsync(line)">
+                @foreach (var option in _workspace.CashCodes)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
+        </td>
+        <td style="min-width:14rem;">
+            <InputSelect class="form-select form-select-sm"
+                         @bind-Value="line.TaxCode"
+                         disabled="@string.IsNullOrWhiteSpace(line.CashCode)">
+                @foreach (var option in _workspace.TaxCodes)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
+        </td>
+        <td class="text-end" style="min-width:10rem;">
+            <div class="d-flex justify-content-end gap-2">
+                @if (isDraft)
+                {
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            @onclick="HandleAddPaymentAsync"
+                            disabled="@_isBusy">
+                        Add
+                    </button>
+                }
+                else
+                {
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            @onclick="() => HandleSaveExistingAsync(line)"
+                            disabled="@_isBusy">
+                        Save
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            @onclick="() => HandleDeleteAsync(line.PaymentCode)"
+                            disabled="@_isBusy">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                }
+            </div>
+        </td>
+    </tr>
+
+    @{
+        var warnings = GetWarningMessages(line);
+    }
+
+    @if (warnings.Count > 0)
+    {
+        <tr>
+            <td colspan="9" class="pt-0 border-0">
+                <div class="d-flex flex-column gap-2">
+                    @foreach (var warning in warnings)
+                    {
+                        <div class="alert alert-warning py-2 mb-0">@warning</div>
+                    }
+                </div>
+            </td>
+        </tr>
+    }
+</text>;
+
+private async Task ToggleAddOrganisationPanelAsync()
+{
+    _showAddOrganisationPanel = !_showAddOrganisationPanel;
+    _errorMessage = null;
+    _message = null;
+    await Task.CompletedTask;
+}
+
+private async Task HandleOrganisationNamespaceFilterChangedAsync(string filterText)
+{
+    _organisationDraft.NamespaceFilter = filterText ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(_organisationDraft.NamespaceFilter))
+    {
+        _organisationNamespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        _isLoadingOrganisationNamespaceSuggestions = false;
+        return;
+    }
+
+    _isLoadingOrganisationNamespaceSuggestions = true;
+
+    try
+    {
+        _organisationNamespaceSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+            _organisationDraft.NamespaceFilter,
+            NamespaceSuggestionPageSize);
+    }
+    finally
+    {
+        _isLoadingOrganisationNamespaceSuggestions = false;
+    }
+}
+
+private Task HandleOrganisationNamespaceCommittedAsync(string filterText)
+{
+    _organisationDraft.NamespaceFilter = filterText ?? string.Empty;
+    return Task.CompletedTask;
+}
+
+private async Task HandleCreateOrganisationAsync()
+{
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        var result = await CashPaymentsWorkspaceService.CreateOrganisationAsync(_organisationDraft);
+        ApplyOrganisationToLine(_workspace.Draft, result);
+
+        _organisationDraft = new CashManagerOrganisationDraftModel();
+        _organisationNamespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        _showAddOrganisationPanel = false;
+        _message = "Organisation created and loaded into the draft payment line.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandleLineNamespaceFilterChangedAsync(CashManagerPaymentLineModel line, string filterText)
+{
+    var lineKey = GetLineKey(line);
+    line.NamespaceFilter = filterText ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(line.NamespaceFilter))
+    {
+        _lineNamespaceSuggestions[lineKey] = Array.Empty<NamespaceSelectorSuggestion>();
+        line.SubjectCode = string.Empty;
+        line.SubjectName = string.Empty;
+        line.OutstandingBalance = 0m;
+        return;
+    }
+
+    _loadingNamespaceLines.Add(lineKey);
+
+    try
+    {
+        _lineNamespaceSuggestions[lineKey] = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+            line.NamespaceFilter,
+            NamespaceSuggestionPageSize);
+    }
+    finally
+    {
+        _loadingNamespaceLines.Remove(lineKey);
+    }
+}
+
+private async Task HandleLineNamespaceCommittedAsync(CashManagerPaymentLineModel line, string filterText)
+{
+    line.NamespaceFilter = filterText ?? string.Empty;
+    await ResolveLineOrganisationAsync(line);
+}
+
+private async Task HandleCashCodeChangedAsync(CashManagerPaymentLineModel line)
+{
+    if (string.IsNullOrWhiteSpace(line.SubjectCode)
+        && !string.IsNullOrWhiteSpace(line.NamespaceFilter))
+    {
+        await ResolveLineOrganisationAsync(line);
+
+        if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            return;
+        }
+    }
+
+    if (string.IsNullOrWhiteSpace(line.CashCode))
+    {
+        line.TaxCode = string.Empty;
+        await InvokeAsync(StateHasChanged);
+        return;
+    }
+
+    if (line.OutstandingBalance == 0m)
+    {
+        line.TaxCode = await CashPaymentsWorkspaceService.GetDefaultTaxCodeForCashCodeAsync(line.CashCode);
+    }
+
+    await InvokeAsync(StateHasChanged);
+}
+
+private async Task ResolveLineOrganisationAsync(CashManagerPaymentLineModel line)
+{
+    if (string.IsNullOrWhiteSpace(line.NamespaceFilter))
+    {
+        line.SubjectCode = string.Empty;
+        line.SubjectName = string.Empty;
+        line.OutstandingBalance = 0m;
+        return;
+    }
+
+    try
+    {
+        var result = await CashPaymentsWorkspaceService.ResolveOrganisationAsync(line.NamespaceFilter);
+        ApplyOrganisationToLine(line, result);
+        _errorMessage = null;
+        await InvokeAsync(StateHasChanged);
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+}
+
+private static void ApplyOrganisationToLine(
+    CashManagerPaymentLineModel line,
+    CashManagerOrganisationCreationResult result)
+{
+    line.SubjectCode = result.SubjectCode;
+    line.SubjectName = result.SubjectName;
+    line.NamespaceFilter = result.NamespaceFilter;
+    line.OutstandingBalance = result.OutstandingBalance;
+    line.PaidInValue = result.OutstandingBalance > 0 ? result.OutstandingBalance : 0m;
+    line.PaidOutValue = result.OutstandingBalance < 0 ? Math.Abs(result.OutstandingBalance) : 0m;
+    line.TaxCode = result.OutstandingBalance == 0 ? result.DefaultTaxCode : string.Empty;
+}
+
+private async Task HandlePaidOnChangedAsync(CashManagerPaymentLineModel line)
+{
+    line.PeriodStatus = await CashPaymentsWorkspaceService.GetPeriodStatusAsync(line.PaidOn);
+}
+
+private IReadOnlyList<string> GetWarningMessages(CashManagerPaymentLineModel line)
+{
+    var warnings = new List<string>();
+
+    if (line.PeriodStatus is NodeEnum.CashStatus.Closed or NodeEnum.CashStatus.Archived)
+    {
+        warnings.Add("The selected Paid On date falls in a closed period.");
+    }
+
+    if (line.OutstandingBalance != 0m && !string.IsNullOrWhiteSpace(line.CashCode))
+    {
+        warnings.Add("Outstanding invoices exist for this organisation. Selecting a Cash Code will treat this as a miscellaneous payment.");
+    }
+
+    return warnings;
+}
+
+private IReadOnlyList<NamespaceSelectorSuggestion> GetLineNamespaceSuggestions(CashManagerPaymentLineModel line)
+{
+    return _lineNamespaceSuggestions.TryGetValue(GetLineKey(line), out var suggestions)
+        ? suggestions
+        : Array.Empty<NamespaceSelectorSuggestion>();
+}
+
+private bool IsLoadingLineNamespaceSuggestions(CashManagerPaymentLineModel line)
+{
+    return _loadingNamespaceLines.Contains(GetLineKey(line));
+}
+
+private static string GetLineKey(CashManagerPaymentLineModel line)
+{
+    return line.IsExisting && !string.IsNullOrWhiteSpace(line.PaymentCode)
+        ? line.PaymentCode
+        : DraftLineKey;
+}
+
+private async Task HandleAddPaymentAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashPaymentsWorkspaceService.AddPaymentAsync(
+            SelectedAccount.AccountCode,
+            _workspace.Draft,
+            _currentAspNetUserId);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Payment added.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandleSaveExistingAsync(CashManagerPaymentLineModel line)
+{
+    if (string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashPaymentsWorkspaceService.UpdatePaymentAsync(
+            line,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        if (SelectedAccount is not null)
+        {
+            await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        }
+
+        _message = "Payment updated.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandleDeleteAsync(string paymentCode)
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashPaymentsWorkspaceService.DeletePaymentAsync(
+            paymentCode,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Payment deleted.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandlePostAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashPaymentsWorkspaceService.PostAsync(_currentAspNetUserId);
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Payments posted.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+}

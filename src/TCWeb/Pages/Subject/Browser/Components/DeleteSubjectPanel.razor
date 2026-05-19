@@ -1,0 +1,205 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+
+<div class="container-fluid py-2">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 mb-1 text-danger">Delete Subject</h1>
+                    <div class="text-muted small">Review the selected Subject before confirming deletion.</div>
+                </div>
+
+                @if (_subject is not null)
+                {
+                    <div class="text-muted small text-end">
+                        <div>Subject Code</div>
+                        <div><code>@_subject.SubjectCode</code></div>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_actionMessage))
+            {
+                <div class="alert alert-warning py-2 mb-4" role="alert">@_actionMessage</div>
+            }
+
+            @if (_subject is not null)
+            {
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-danger fw-semibold">Summary</div>
+                    <div class="bg-white p-3">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3 text-muted">Name</dt>
+                            <dd class="col-sm-9">@_subject.SubjectName</dd>
+
+                            <dt class="col-sm-3 text-muted">Type</dt>
+                            <dd class="col-sm-9">@_subjectType</dd>
+
+                            <dt class="col-sm-3 text-muted">Class</dt>
+                            <dd class="col-sm-9">@_subjectClass</dd>
+                        </dl>
+                    </div>
+                </div>
+            }
+
+            @if (_removalPlan is not null)
+            {
+                <div class="alert @(_removalPlan.CanProceed ? "alert-warning" : "alert-danger") py-2 mb-4" role="alert">
+                    @_removalPlan.Message
+                </div>
+
+                <div class="bg-white border rounded p-3 mb-4">
+                    <div class="fw-semibold mb-3">Impact</div>
+
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 text-muted">Affected Subjects</dt>
+                        <dd class="col-sm-8">@_removalPlan.AffectedSubjectCount</dd>
+
+                        <dt class="col-sm-4 text-muted">Invoices</dt>
+                        <dd class="col-sm-8">@_removalPlan.InvoiceCount</dd>
+
+                        <dt class="col-sm-4 text-muted">Payments</dt>
+                        <dd class="col-sm-8">@_removalPlan.PaymentCount</dd>
+
+                        <dt class="col-sm-4 text-muted">Projects</dt>
+                        <dd class="col-sm-8">@_removalPlan.ProjectCount</dd>
+                    </dl>
+                </div>
+            }
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-danger"
+                        disabled="@(_isBusy || (_removalPlan is not null && !_removalPlan.CanProceed))"
+                        @onclick="DeleteAsync">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
+                </button>
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        disabled="@_isBusy"
+                        @onclick="CancelAsync">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter] public string SubjectCode { get; set; } = string.Empty;
+    [Parameter] public string ReturnNode { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<string> OnDeleted { get; set; }
+
+    private string? _loadedSubjectCode;
+    private Subject_tbSubject? _subject;
+    private string _subjectType = string.Empty;
+    private string _subjectClass = string.Empty;
+    private string? _actionMessage;
+    private SubjectRemovalPlan? _removalPlan;
+    private bool _isBusy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(_loadedSubjectCode, SubjectCode, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _loadedSubjectCode = SubjectCode;
+        _actionMessage = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SubjectCode))
+        {
+            _subject = null;
+            _removalPlan = null;
+            return;
+        }
+
+        _subject = await NodeContext.Subject_tbSubjects
+            .Include(item => item.SubjectTypeCodeNavigation)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.SubjectCode == SubjectCode);
+
+        if (_subject is null)
+        {
+            _removalPlan = null;
+            return;
+        }
+
+        _subjectType = _subject.SubjectTypeCodeNavigation?.SubjectType ?? string.Empty;
+        _subjectClass = _subject.SubjectTypeCodeNavigation?.SubjectClassCode switch
+        {
+            1 => NodeEnum.SubjectClass.Real.ToString(),
+            0 => NodeEnum.SubjectClass.Virtual.ToString(),
+            2 => NodeEnum.SubjectClass.Structural.ToString(),
+            _ => string.Empty
+        };
+
+        var parentSubjectCode = ExtractSubjectCode(ReturnNode);
+        var subjects = new Subjects(NodeContext, SubjectCode);
+        _removalPlan = await subjects.PreviewRemoveFromNamespaceAsync(parentSubjectCode);
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_subject is null || _removalPlan is null || !_removalPlan.CanProceed)
+            return;
+
+        _isBusy = true;
+        _actionMessage = null;
+
+        try
+        {
+            var parentSubjectCode = ExtractSubjectCode(ReturnNode);
+            var subjects = new Subjects(NodeContext, SubjectCode);
+            var result = await subjects.DeleteAsync(parentSubjectCode);
+
+            if (result.Succeeded)
+            {
+                if (OnDeleted.HasDelegate)
+                    await OnDeleted.InvokeAsync(result.Message);
+
+                return;
+            }
+
+            _actionMessage = result.Message;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            _actionMessage = "Unable to delete the selected Subject.";
+            await LoadAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private Task CancelAsync()
+    {
+        return OnCancel.HasDelegate
+            ? OnCancel.InvokeAsync()
+            : Task.CompletedTask;
+    }
+
+    private static string ExtractSubjectCode(string? branchKey)
+    {
+        if (string.IsNullOrWhiteSpace(branchKey))
+            return string.Empty;
+
+        var segments = branchKey.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return segments.Length == 0 ? string.Empty : segments[^1];
+    }
+}

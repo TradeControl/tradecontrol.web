@@ -25,6 +25,7 @@ namespace TradeControl.Web.Models
             TbChildNamespaces = new HashSet<Subject_tbNamespace>();
             TbDocs = new HashSet<Subject_tbDoc>();
             TbEntries = new HashSet<Invoice_tbEntry>();
+            TbInvoiceParentSubjectCodeNavigations = new HashSet<Invoice_tbInvoice>();
             TbInvoices = new HashSet<Invoice_tbInvoice>();
             TbCashMirror = new HashSet<Cash_tbMirror>();
             TbInvoiceMirror = new HashSet<Invoice_tbMirror>();
@@ -32,7 +33,9 @@ namespace TradeControl.Web.Models
             TbOptionSubjectCodeNavigations = new HashSet<App_tbOption>();
             TbOptionMinerAccountCodeNavigations = new HashSet<App_tbOption>();
             TbParentNamespaces = new HashSet<Subject_tbNamespace>();
+            TbPaymentParentSubjectCodeNavigations = new HashSet<Cash_tbPayment>();
             TbPayments = new HashSet<Cash_tbPayment>();
+            TbProjectParentSubjectCodeNavigations = new HashSet<Project_tbProject>();
             TbProjects = new HashSet<Project_tbProject>();
             TbSectors = new HashSet<Subject_tbSector>();
             TbTaxTypes = new HashSet<Cash_tbTaxType>();
@@ -119,8 +122,6 @@ namespace TradeControl.Web.Models
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
 
-        //public byte[] RowVer { get; set; }
-
         [ForeignKey(nameof(AddressCode))]
         [InverseProperty(nameof(Subject_tbAddress.TbSubjects))]
         public virtual Subject_tbAddress AddressCodeNavigation { get; set; }
@@ -159,6 +160,9 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Invoice_tbEntry.SubjectCodeNavigation))]
         public virtual ICollection<Invoice_tbEntry> TbEntries { get; set; }
 
+        [InverseProperty(nameof(Invoice_tbInvoice.ParentSubjectCodeNavigation))]
+        public virtual ICollection<Invoice_tbInvoice> TbInvoiceParentSubjectCodeNavigations { get; set; }
+
         [InverseProperty(nameof(Invoice_tbInvoice.SubjectCodeNavigation))]
         public virtual ICollection<Invoice_tbInvoice> TbInvoices { get; set; }
 
@@ -180,8 +184,14 @@ namespace TradeControl.Web.Models
         [InverseProperty(nameof(Subject_tbNamespace.ChildSubjectCodeNavigation))]
         public virtual ICollection<Subject_tbNamespace> TbParentNamespaces { get; set; }
 
+        [InverseProperty(nameof(Cash_tbPayment.ParentSubjectCodeNavigation))]
+        public virtual ICollection<Cash_tbPayment> TbPaymentParentSubjectCodeNavigations { get; set; }
+
         [InverseProperty(nameof(Cash_tbPayment.SubjectCodeNavigation))]
         public virtual ICollection<Cash_tbPayment> TbPayments { get; set; }
+
+        [InverseProperty(nameof(Project_tbProject.ParentSubjectCodeNavigation))]
+        public virtual ICollection<Project_tbProject> TbProjectParentSubjectCodeNavigations { get; set; }
 
         [InverseProperty(nameof(Project_tbProject.SubjectCodeNavigation))]
         public virtual ICollection<Project_tbProject> TbProjects { get; set; }

@@ -123,7 +123,7 @@ namespace TradeControl.Web.Pages.Cash.Accounts
             }
 
             var tax_totals = await (from tb in NodeContext.Cash_ProfitAndLossByYear
-                                         where tb.CashTypeCode == (short)NodeEnum.CashType.Tax
+                                         where tb.CashTypeCode == (short)NodeEnum.CashType.External
                                          orderby tb.YearNumber descending, tb.DisplayOrder
                                          select tb
                                         ).ToListAsync();

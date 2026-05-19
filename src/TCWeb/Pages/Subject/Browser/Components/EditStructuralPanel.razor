@@ -1,0 +1,241 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Data
+
+@inject NodeContext NodeContext
+
+<div class="container-fluid py-2">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 mb-1">Edit Structural Subject</h1>
+                    <div class="text-muted small">Update the structural subject name and notes.</div>
+                </div>
+
+                <div class="text-muted small text-end">
+                    <div>Subject Code</div>
+                    <div><code>@SubjectCode</code></div>
+                </div>
+            </div>
+
+            <EditForm EditContext="@_editContext" OnSubmit="HandleSubmitAsync">
+                @if (_hasValidationErrors)
+                {
+                    <div class="alert alert-danger py-2 mb-4">
+                        <ValidationSummary />
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_actionMessage))
+                {
+                    <div class="alert alert-danger py-2 mb-4" role="alert">@_actionMessage</div>
+                }
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-primary fw-semibold">Identity</div>
+                    <div class="bg-white p-3">
+                        <div class="row g-3">
+                            <div class="col-lg-3">
+                                <label class="form-label">Subject Code</label>
+                                <input class="form-control" value="@SubjectCode" readonly />
+                            </div>
+                            <div class="col-lg-5">
+                                <label class="form-label" for="SubjectName">Account Name</label>
+                                <InputText id="SubjectName"
+                                           @bind-Value="_editor.SubjectName"
+                                           class="form-control" />
+                                <ValidationMessage For="@(() => _editor.SubjectName)" class="text-danger small" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="SubjectTypeCode">Type</label>
+                                <InputSelect id="SubjectTypeCode"
+                                             @bind-Value="_editor.SubjectTypeCode"
+                                             class="form-select">
+                                    @foreach (var item in _subjectTypeOptions)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => _editor.SubjectTypeCode)" class="text-danger small" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-secondary fw-semibold">Notes</div>
+                    <div class="bg-white p-3">
+                        <label class="form-label" for="Notes">Notes</label>
+                        <InputTextArea id="Notes"
+                                       @bind-Value="_editor.Notes"
+                                       class="form-control"
+                                       rows="10" />
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@_isBusy">
+                        <i class="bi bi-floppy me-1" aria-hidden="true"></i>Save
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@_isBusy"
+                            @onclick="CancelAsync">
+                        Cancel
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter] public string SubjectCode { get; set; } = string.Empty;
+    [Parameter] public string ReturnNode { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private const short CurrentSubjectClassCode = (short)NodeEnum.SubjectClass.Structural;
+
+    private sealed record ShortOption(short Value, string Text);
+
+    private sealed class EditorModel
+    {
+        public string SubjectName { get; set; } = string.Empty;
+        public short SubjectTypeCode { get; set; }
+        public string Notes { get; set; } = string.Empty;
+    }
+
+    private readonly EditorModel _editor = new();
+    private readonly ValidationMessageStore _validationMessages;
+    private readonly EditContext _editContext;
+    private readonly List<ShortOption> _subjectTypeOptions = [];
+    private string? _loadedKey;
+    private string? _actionMessage;
+    private bool _hasValidationErrors;
+    private bool _isBusy;
+
+    public EditStructuralPanel()
+    {
+        _editContext = new EditContext(_editor);
+        _validationMessages = new ValidationMessageStore(_editContext);
+        _editContext.OnValidationStateChanged += (_, __) =>
+        {
+            _hasValidationErrors = _editContext.GetValidationMessages().Any();
+            InvokeAsync(StateHasChanged);
+        };
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = SubjectCode;
+
+        if (string.Equals(_loadedKey, key, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _loadedKey = key;
+        _actionMessage = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _subjectTypeOptions.Clear();
+
+        var subjectTypes = await NodeContext.Subject_tbTypes
+            .AsNoTracking()
+            .Where(item => item.SubjectClassCode == CurrentSubjectClassCode)
+            .OrderBy(item => item.SubjectType)
+            .Select(item => new ShortOption(item.SubjectTypeCode, item.SubjectType))
+            .ToListAsync();
+
+        _subjectTypeOptions.AddRange(subjectTypes);
+
+        var subject = await NodeContext.Subject_tbSubjects
+            .Include(item => item.TbStructural)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.SubjectCode == SubjectCode);
+
+        if (subject is null || subject.TbStructural is null)
+            return;
+
+        _editor.SubjectName = subject.SubjectName ?? string.Empty;
+        _editor.SubjectTypeCode = subject.SubjectTypeCode;
+        _editor.Notes = subject.TbStructural.Notes ?? string.Empty;
+
+        ClearValidation();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _actionMessage = null;
+        ClearValidation();
+
+        if (string.IsNullOrWhiteSpace(_editor.SubjectName))
+        {
+            _validationMessages.Add(() => _editor.SubjectName, "Name is required.");
+        }
+
+        if (!await NodeContext.Subject_tbTypes
+            .AsNoTracking()
+            .AnyAsync(item => item.SubjectTypeCode == _editor.SubjectTypeCode && item.SubjectClassCode == CurrentSubjectClassCode))
+        {
+            _validationMessages.Add(() => _editor.SubjectTypeCode, "Select a valid type for this Subject class.");
+        }
+
+        _editContext.NotifyValidationStateChanged();
+
+        if (_editContext.GetValidationMessages().Any())
+            return;
+
+        _isBusy = true;
+
+        try
+        {
+            var subject = await NodeContext.Subject_tbSubjects
+                .Include(item => item.TbStructural)
+                .FirstOrDefaultAsync(item => item.SubjectCode == SubjectCode);
+
+            if (subject is null || subject.TbStructural is null)
+            {
+                _actionMessage = "Unable to load the selected Subject.";
+                return;
+            }
+
+            subject.SubjectName = _editor.SubjectName.Trim();
+            subject.SubjectTypeCode = _editor.SubjectTypeCode;
+            subject.TbStructural.Notes = _editor.Notes?.Trim();
+
+            await NodeContext.SaveChangesAsync();
+
+            if (OnSaved.HasDelegate)
+                await OnSaved.InvokeAsync("Changes saved.");
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            _actionMessage = "Unable to save changes.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private Task CancelAsync()
+    {
+        return OnCancel.HasDelegate
+            ? OnCancel.InvokeAsync()
+            : Task.CompletedTask;
+    }
+
+    private void ClearValidation()
+    {
+        _validationMessages.Clear();
+        _editContext.NotifyValidationStateChanged();
+    }
+}

@@ -1,0 +1,171 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.Components
+@using TradeControl.Web.Data
+
+@if (Accounts.Count == 0)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        No cash accounts are available.
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
+        <div class="mb-3">
+            <div class="fw-semibold">Accounts</div>
+            <div class="small text-muted">Select year, period, then account</div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-12">
+                <label class="form-label small text-muted mb-1" for="cashManagerYearSelect">Financial Year</label>
+                <select id="cashManagerYearSelect"
+                        class="form-select form-select-sm"
+                        value="@SelectedYearNumber"
+                        @onchange="HandleYearChangedAsync">
+                    @foreach (var year in Years)
+                    {
+                        <option value="@year.YearNumber">@year.Description</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small text-muted mb-1" for="cashManagerPeriodSelect">Period</label>
+                <select id="cashManagerPeriodSelect"
+                        class="form-select form-select-sm"
+                        value="@GetSelectedPeriodValue()"
+                        @onchange="HandlePeriodChangedAsync">
+                    <option value="">All months in year</option>
+                    @foreach (var period in Periods)
+                    {
+                        <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="flex-grow-1 overflow-auto" style="min-height:0;">
+            @foreach (var group in Accounts.GroupBy(account => account.AccountType))
+            {
+                <div class="mb-3">
+                    <div class="text-uppercase small text-muted mb-2" style="letter-spacing:0.06em;">@GetGroupTitle(group.Key)</div>
+
+                    @foreach (var account in group)
+                    {
+                        <button type="button"
+                                class="btn btn-link text-start w-100 tc-tree-row"
+                                @onclick="() => OnAccountSelected.InvokeAsync(account.AccountCode)">
+                            <div class="d-flex justify-content-between align-items-start gap-2 w-100">
+                                <div class="min-w-0">
+                                    <div class="fw-semibold text-truncate @(IsSelectedAccount(account.AccountCode) ? "text-primary" : null)">
+                                        @account.AccountName
+                                    </div>
+                                    <div class="small text-muted">
+                                        <code>@account.AccountCode</code>
+                                    </div>
+                                </div>
+
+                                <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-1">
+                                    <span class="badge text-bg-light">@account.AccountType</span>
+                                    @if (account.AccountClosed)
+                                    {
+                                        <span class="badge text-bg-secondary">Closed</span>
+                                    }
+                                </div>
+                            </div>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (ShowWorkspaces && SelectedAccount is not null)
+        {
+            <div class="border-top pt-3 mt-2">
+                <div class="fw-semibold mb-2">Workspaces</div>
+
+                <div class="d-grid gap-2">
+                    @foreach (var section in CashManagerSectionCatalog.GetSections(SelectedAccount.AccountType))
+                    {
+                        <button type="button"
+                                class="btn @GetSectionButtonClass(section)"
+                                @onclick="() => OnSectionSelected.InvokeAsync(section)">
+                            @CashManagerSectionCatalog.GetLabel(section)
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<CashManagerAccountSummary> Accounts { get; set; } = Array.Empty<CashManagerAccountSummary>();
+    [Parameter] public IReadOnlyList<CashManagerYearOption> Years { get; set; } = Array.Empty<CashManagerYearOption>();
+    [Parameter] public IReadOnlyList<CashManagerPeriodOption> Periods { get; set; } = Array.Empty<CashManagerPeriodOption>();
+    [Parameter] public CashManagerAccountSummary? SelectedAccount { get; set; }
+    [Parameter] public string? SelectedAccountCode { get; set; }
+    [Parameter] public CashManagerSection SelectedSection { get; set; }
+    [Parameter] public short? SelectedYearNumber { get; set; }
+    [Parameter] public DateTime? SelectedPeriodStartOn { get; set; }
+    [Parameter] public bool ShowWorkspaces { get; set; } = true;
+    [Parameter] public EventCallback<string> OnAccountSelected { get; set; }
+    [Parameter] public EventCallback<CashManagerSection> OnSectionSelected { get; set; }
+    [Parameter] public EventCallback<short> OnYearSelected { get; set; }
+    [Parameter] public EventCallback<DateTime?> OnPeriodSelected { get; set; }
+
+    private bool IsSelectedAccount(string accountCode)
+    {
+        return string.Equals(SelectedAccountCode, accountCode, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetSectionButtonClass(CashManagerSection section)
+    {
+        return section == SelectedSection ? "btn-primary" : "btn-outline-secondary";
+    }
+
+    private string GetSelectedPeriodValue()
+    {
+        return SelectedPeriodStartOn?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private async Task HandleYearChangedAsync(ChangeEventArgs args)
+    {
+        if (short.TryParse(args.Value?.ToString(), out var yearNumber))
+        {
+            await OnYearSelected.InvokeAsync(yearNumber);
+        }
+    }
+
+    private async Task HandlePeriodChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await OnPeriodSelected.InvokeAsync(null);
+            return;
+        }
+
+        if (DateTime.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out var startOn))
+        {
+            await OnPeriodSelected.InvokeAsync(startOn);
+        }
+    }
+
+    private static string GetGroupTitle(NodeEnum.CashAccountType accountType)
+    {
+        return accountType switch
+        {
+            NodeEnum.CashAccountType.Cash => "Cash",
+            NodeEnum.CashAccountType.Asset => "Assets",
+            NodeEnum.CashAccountType.Dummy => "Dummy",
+            _ => "Accounts"
+        };
+    }
+}

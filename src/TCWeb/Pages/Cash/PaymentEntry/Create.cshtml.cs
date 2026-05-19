@@ -221,7 +221,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                 if (InputMode == 1)
                 {
                     var cashDescriptions = from t in NodeContext.Cash_CodeLookup
-                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank
+                                           where t.CashTypeCode < (short)NodeEnum.CashType.Money
                                            orderby t.CashDescription
                                            select t.CashDescription;
 
@@ -231,7 +231,7 @@ namespace TradeControl.Web.Pages.Cash.PaymentEntry
                         CashCode = cashCode;
                     else if (string.IsNullOrEmpty(CashCode))
                         CashCode = await NodeContext.Cash_CodeLookup
-                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Bank)
+                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Money)
                                                 .OrderBy(c => c.CashCode)
                                                 .Select(c => c.CashCode)
                                                 .FirstAsync();

@@ -636,5 +636,66 @@ namespace TradeControl.Web.Data
             => DeleteAsync(string.Empty);
         #endregion
 
+        #region Payment Related Methods
+
+        public Task<SubjectActionResult> AddChildByTypeAsync(string parentSubjectCode)
+            => SubjectNameRequiredAsync();
+
+        public async Task<SubjectActionResult> AddChildByTypeAsync(
+            string parentSubjectCode,
+            string subjectName,
+            short subjectTypeCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(parentSubjectCode))
+                    return SubjectActionResult.Failure("A parent Subject is required.");
+
+                var normalizedName = subjectName?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(normalizedName))
+                    return SubjectActionResult.Failure("A name is required.");
+
+                var subjectType = await _context.Subject_tbTypes
+                    .AsNoTracking()
+                    .Where(o => o.SubjectTypeCode == subjectTypeCode)
+                    .Select(o => new
+                    {
+                        o.SubjectTypeCode,
+                        o.SubjectType,
+                        o.SubjectClassCode
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (subjectType is null)
+                    return SubjectActionResult.Failure("The selected Subject type was not found.");
+
+                if (subjectType.SubjectClassCode == (short)NodeEnum.SubjectClass.Structural)
+                    return SubjectActionResult.Failure("Structural Subject types are not available from Payments.");
+
+                var outputParameter = new SqlParameter("@SubjectCode", SqlDbType.NVarChar, 50) {
+                    Direction = ParameterDirection.Output
+                };
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "EXEC Subject.proc_AddNamespace @RootSubjectCode, @SubjectName, @SubjectTypeCode, @SubjectCode OUTPUT",
+                    new SqlParameter("@RootSubjectCode", parentSubjectCode),
+                    new SqlParameter("@SubjectName", normalizedName),
+                    new SqlParameter("@SubjectTypeCode", subjectType.SubjectTypeCode),
+                    outputParameter);
+
+                var createdSubjectCode = outputParameter.Value?.ToString();
+                if (string.IsNullOrWhiteSpace(createdSubjectCode))
+                    return SubjectActionResult.Failure("Unable to create the selected Subject.");
+
+                return SubjectActionResult.Success($"{subjectType.SubjectType} created.", createdSubjectCode);
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return SubjectActionResult.Failure("Unable to create the selected Subject.");
+            }
+        }
+        #endregion
+
     }
 }

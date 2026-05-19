@@ -282,7 +282,7 @@ else
     private string? _pendingCreateErrorMessage;
     private bool _isCreatingSubject;
     private SubjectRemovalPlan? _pendingRemovalPlan;
-    private bool _isLoadingRemovalPreview;
+    //private bool _isLoadingRemovalPreview;
     private bool _isRemovingNamespace;
     private bool _loadRemovalPreview;
     private string _pendingMoveTargetPath = string.Empty;
@@ -304,6 +304,11 @@ else
     private string? _detailPageSrc;
     private bool _loadMovePanel;
     private bool _loadAddExistingPanel;
+
+    private bool _isDeleteSubjectPanelOpen;
+    private bool _isAddressPanelOpen;
+    private string? _addressEditorAddressCode;
+    private bool _isEditSubjectPanelOpen;
 
     private DotNetObjectReference<SubjectBrowserShell>? _dotNetRef;
 
@@ -379,6 +384,10 @@ else
         _loadRemovalPreview = query.TryGetValue("removePreview", out var removeValue) && removeValue == "1";
         _loadMovePanel = query.TryGetValue("move", out var moveValue) && moveValue == "1";
         _loadAddExistingPanel = query.TryGetValue("addExisting", out var addExistingValue) && addExistingValue == "1";
+        _isDeleteSubjectPanelOpen = query.TryGetValue("deleteSubject", out var deleteValue) && deleteValue == "1";
+        _isAddressPanelOpen = query.TryGetValue("editAddress", out var editAddressValue) && editAddressValue == "1";
+        _isEditSubjectPanelOpen = query.TryGetValue("editSubject", out var editSubjectValue) && editSubjectValue == "1";
+        _addressEditorAddressCode = query.TryGetValue("addressCode", out var addressCodeValue) ? addressCodeValue.ToString() : null;
 
         if (query.TryGetValue("mode", out var modeValue)
             && TryParseMode(modeValue.ToString(), out var mode))
@@ -416,6 +425,7 @@ else
             ClearActionMessage();
             ClearMoveState();
             ClearAddExistingState();
+            ClearMaintenancePanels();
             return;
         }
 
@@ -424,19 +434,37 @@ else
         if (_loadAddExistingPanel)
         {
             ClearMoveState();
+            ClearMaintenancePanels();
             _isAddExistingPanelOpen = true;
             await RefreshAddSubjectSuggestionsAsync();
+            return;
         }
-        else if (_loadMovePanel)
+
+        if (_loadMovePanel)
         {
             ClearAddExistingState();
+            ClearMaintenancePanels();
             _isMovePanelOpen = true;
             await RefreshMoveTargetSuggestionsAsync();
+            return;
         }
 
         if (_loadRemovalPreview)
         {
+            ClearMaintenancePanels();
             await LoadRemoveNamespacePreviewAsync();
+            return;
+        }
+
+        if (_isDeleteSubjectPanelOpen)
+        {
+            _isAddressPanelOpen = false;
+            return;
+        }
+
+        if (_isAddressPanelOpen)
+        {
+            _isDeleteSubjectPanelOpen = false;
         }
     }
 
@@ -451,6 +479,7 @@ else
         _rootPageNumber = 1;
         _childPageNumbers.Clear();
         ClearActionMessage();
+        ClearMaintenancePanels();
 
         SubjectBrowserService.InvalidateSnapshot();
 
@@ -513,6 +542,7 @@ else
             ?? _namespaceSuggestions[0];
     }
 
+
     private async Task ApplyCommittedNamespaceSelectionAsync(
         string branchKey,
         string? filterText = null,
@@ -528,6 +558,7 @@ else
 
         _selectedBranchKey = branchKey;
         _expandToKey = BuildExpandPath(branchKey);
+        ClearMaintenancePanels();
 
         await LoadDetailFromKeyAsync(branchKey);
         await RefreshNamespaceSuggestionsAsync();
@@ -562,6 +593,7 @@ else
         _mode = mode;
         ClearActionMessage();
         ClearHostedDetailPage();
+        ClearMaintenancePanels();
 
         if (mode != SubjectBrowserMode.Enquiry)
         {
@@ -730,20 +762,30 @@ else
         if (_selectedDetail is null || string.IsNullOrWhiteSpace(addressCode))
             return;
 
-        var returnNode = !string.IsNullOrWhiteSpace(_selectedBranchKey)
-            ? _selectedBranchKey
-            : _selectedDetail.SubjectCode;
+        ClearActionMessage();
+        ClearHostedDetailPage();
+        ClearCreateState();
+        ClearRemovalPreview();
+        ClearMoveState();
+        ClearAddExistingState();
 
-        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
-        var url = BuildAddressMaintenanceUrl("EditAddress", addressCode, returnNode, embedded);
-
-        if (_isMobile || _isEmbedded)
+        if (_isMobile && !_isEmbedded)
         {
-            NavigationManager.NavigateTo(url, forceLoad: true);
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    editAddress: true,
+                    addressCode: addressCode),
+                forceLoad: true);
+
             return;
         }
 
-        _detailPageSrc = url;
+        _isDeleteSubjectPanelOpen = false;
+        _isAddressPanelOpen = true;
+        _addressEditorAddressCode = addressCode;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1088,12 +1130,108 @@ else
         await RefreshAddSubjectSuggestionsAsync();
     }
 
+    private async Task HandleDeleteSubjectCompletedAsync(string message)
+    {
+        var nextSelectionKey = BuildParentBranchKey(_selectedBranchKey);
+
+        if (_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: false,
+                    selectKey: nextSelectionKey,
+                    returnNodeKey: nextSelectionKey),
+                forceLoad: true);
+
+            return;
+        }
+
+        SubjectBrowserService.InvalidateSnapshot();
+        ClearMaintenancePanels();
+        _refreshToken++;
+
+        await LoadRootsAsync();
+
+        if (!string.IsNullOrWhiteSpace(nextSelectionKey))
+        {
+            await LoadDetailFromKeyAsync(nextSelectionKey);
+        }
+        else
+        {
+            _selectedBranchKey = null;
+            _selectedDetail = null;
+            _expandToKey = null;
+        }
+
+        await SetActionMessageAsync(message, "alert-success");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleAddressPanelSavedAsync(string message)
+    {
+        var selectionKey = _selectedBranchKey;
+
+        if (_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: false,
+                    selectKey: selectionKey,
+                    returnNodeKey: selectionKey),
+                forceLoad: true);
+
+            return;
+        }
+
+        SubjectBrowserService.InvalidateSnapshot();
+        ClearMaintenancePanels();
+
+        if (!string.IsNullOrWhiteSpace(selectionKey))
+        {
+            await LoadDetailFromKeyAsync(selectionKey);
+        }
+
+        await SetActionMessageAsync(message, "alert-success");
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task HandleAddSubjectCommittedAsync(string filterText)
     {
         _pendingAddSubjectPath = filterText?.Trim() ?? string.Empty;
         _resolvedAddSubjectPath = ResolveAddSubjectPath(_pendingAddSubjectPath);
         _pendingAddParentPlan = null;
         await RefreshAddSubjectSuggestionsAsync();
+    }
+
+    private async Task HandleEditSubjectSavedAsync(string message)
+    {
+        var selectionKey = _selectedBranchKey;
+
+        if (_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: false,
+                    selectKey: selectionKey,
+                    returnNodeKey: selectionKey),
+                forceLoad: true);
+
+            return;
+        }
+
+        SubjectBrowserService.InvalidateSnapshot();
+        ClearMaintenancePanels();
+        _refreshToken++;
+
+        await LoadRootsAsync();
+
+        if (!string.IsNullOrWhiteSpace(selectionKey))
+        {
+            await LoadDetailFromKeyAsync(selectionKey);
+        }
+
+        await SetActionMessageAsync(message, "alert-success");
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RefreshAddSubjectSuggestionsAsync()
@@ -1397,34 +1535,30 @@ else
         if (_selectedDetail is null)
             return;
 
-        var pageName = _selectedDetail.SubjectClass switch
-        {
-            NodeEnum.SubjectClass.Real => "EditReal",
-            NodeEnum.SubjectClass.Virtual => "EditVirtual",
-            NodeEnum.SubjectClass.Structural => "EditStructural",
-            _ => string.Empty
-        };
+        ClearActionMessage();
+        ClearHostedDetailPage();
+        ClearCreateState();
+        ClearRemovalPreview();
+        ClearMoveState();
+        ClearAddExistingState();
 
-        if (string.IsNullOrWhiteSpace(pageName))
+        if (_isMobile && !_isEmbedded)
         {
-            await SetActionMessageAsync("Editing is not available for this Subject class yet.", "alert-warning");
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    editSubject: true),
+                forceLoad: true);
+
             return;
         }
 
-        var returnNode = !string.IsNullOrWhiteSpace(_selectedBranchKey)
-            ? _selectedBranchKey
-            : _selectedDetail.SubjectCode;
-
-        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
-        var url = BuildSubjectMaintenanceUrl(pageName, returnNode, embedded);
-
-        if (_isMobile || _isEmbedded)
-        {
-            NavigationManager.NavigateTo(url, forceLoad: true);
-            return;
-        }
-
-        _detailPageSrc = url;
+        _isDeleteSubjectPanelOpen = false;
+        _isAddressPanelOpen = false;
+        _addressEditorAddressCode = null;
+        _isEditSubjectPanelOpen = true;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1439,19 +1573,31 @@ else
             return;
         }
 
-        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
-        var url = BuildSubjectMaintenanceUrl("DeleteSubject", BuildParentBranchKey(_selectedBranchKey), embedded);
+        ClearActionMessage();
+        ClearHostedDetailPage();
+        ClearCreateState();
+        ClearRemovalPreview();
+        ClearMoveState();
+        ClearAddExistingState();
 
-        if (_isMobile || _isEmbedded)
+        if (_isMobile && !_isEmbedded)
         {
-            NavigationManager.NavigateTo(url, forceLoad: true);
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    deleteSubject: true),
+                forceLoad: true);
+
             return;
         }
 
-        _detailPageSrc = url;
+        _isAddressPanelOpen = false;
+        _addressEditorAddressCode = null;
+        _isDeleteSubjectPanelOpen = true;
         await InvokeAsync(StateHasChanged);
     }
-
 
     private async Task BeginAddAddressAsync()
     {
@@ -1464,20 +1610,29 @@ else
             return;
         }
 
-        var returnNode = !string.IsNullOrWhiteSpace(_selectedBranchKey)
-            ? _selectedBranchKey
-            : _selectedDetail.SubjectCode;
+        ClearActionMessage();
+        ClearHostedDetailPage();
+        ClearCreateState();
+        ClearRemovalPreview();
+        ClearMoveState();
+        ClearAddExistingState();
 
-        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
-        var url = BuildAddressMaintenanceUrl("EditAddress", null, returnNode, embedded);
-
-        if (_isMobile || _isEmbedded)
+        if (_isMobile && !_isEmbedded)
         {
-            NavigationManager.NavigateTo(url, forceLoad: true);
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: _selectedBranchKey,
+                    returnNodeKey: _selectedBranchKey,
+                    editAddress: true),
+                forceLoad: true);
+
             return;
         }
 
-        _detailPageSrc = url;
+        _isDeleteSubjectPanelOpen = false;
+        _isAddressPanelOpen = true;
+        _addressEditorAddressCode = null;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1513,7 +1668,7 @@ else
 
         try
         {
-            _isLoadingRemovalPreview = true;
+            //_isLoadingRemovalPreview = true;
             var subjects = new Subjects(NodeContext, _selectedDetail.SubjectCode);
             _pendingRemovalPlan = await subjects.PreviewRemoveFromNamespaceAsync(parentSubjectCode);
             UpdateBrowserUrl();
@@ -1521,7 +1676,7 @@ else
         }
         finally
         {
-            _isLoadingRemovalPreview = false;
+            //_isLoadingRemovalPreview = false;
         }
     }
 
@@ -1585,7 +1740,7 @@ else
     private void ClearRemovalPreview()
     {
         _pendingRemovalPlan = null;
-        _isLoadingRemovalPreview = false;
+        //_isLoadingRemovalPreview = false;
         _isRemovingNamespace = false;
         _loadRemovalPreview = false;
     }
@@ -1593,6 +1748,42 @@ else
     private void ClearHostedDetailPage()
     {
         _detailPageSrc = null;
+    }
+
+    private void ClearMaintenancePanels()
+    {
+        _isDeleteSubjectPanelOpen = false;
+        _isAddressPanelOpen = false;
+        _isEditSubjectPanelOpen = false;
+        _addressEditorAddressCode = null;
+    }
+
+    private Task CancelDeleteSubjectAsync() => CancelMaintenancePanelAsync();
+
+    private Task CancelAddressPanelAsync() => CancelMaintenancePanelAsync();
+
+    private Task CancelEditSubjectPanelAsync() => CancelMaintenancePanelAsync();
+
+    private async Task CancelMaintenancePanelAsync()
+    {
+        if (_isEmbedded)
+        {
+            var selectionKey = !string.IsNullOrWhiteSpace(_returnNodeKey)
+                ? _returnNodeKey
+                : _selectedBranchKey;
+
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: false,
+                    selectKey: selectionKey,
+                    returnNodeKey: selectionKey),
+                forceLoad: true);
+
+            return;
+        }
+
+        ClearMaintenancePanels();
+        await InvokeAsync(StateHasChanged);
     }
 
     private bool ShouldRenderHostedDetailPage()
@@ -1605,6 +1796,17 @@ else
     private RenderFragment RenderHostedDetailPage() => @<iframe class="w-100 h-100 border rounded bg-white tc-details-frame"
                                                                     title="Subject maintenance"
                                                                     src="@_detailPageSrc"></iframe>;
+
+    private RenderFragment RenderDeleteSubjectPanel() => @<DeleteSubjectPanel SubjectCode="@_selectedDetail!.SubjectCode"
+                                                                               ReturnNode="@BuildParentBranchKey(_selectedBranchKey)"
+                                                                               OnCancel="CancelDeleteSubjectAsync"
+                                                                               OnDeleted="HandleDeleteSubjectCompletedAsync" />;
+
+    private RenderFragment RenderAddressPanel() => @<EditAddressPanel SubjectCode="@_selectedDetail!.SubjectCode"
+                                                                      AddressCode="@(_addressEditorAddressCode ?? string.Empty)"
+                                                                      ReturnNode="@(_selectedBranchKey ?? _selectedDetail.SubjectCode)"
+                                                                      OnCancel="CancelAddressPanelAsync"
+                                                                      OnSaved="HandleAddressPanelSavedAsync" />;
 
     private string GetRemovalActionTitle()
     {
@@ -1716,30 +1918,30 @@ else
 
     private async Task OpenCreatedSubjectEditorAsync(NodeEnum.SubjectClass subjectClass, string? createdBranchKey, string? subjectCode)
     {
-        if (subjectClass is not (NodeEnum.SubjectClass.Real or NodeEnum.SubjectClass.Virtual))
+        if (subjectClass is not (NodeEnum.SubjectClass.Real or NodeEnum.SubjectClass.Virtual or NodeEnum.SubjectClass.Structural))
             return;
-
-        if (string.IsNullOrWhiteSpace(subjectCode))
-            return;
-
-        var pageName = subjectClass == NodeEnum.SubjectClass.Real
-            ? "EditReal"
-            : "EditVirtual";
 
         var returnNode = !string.IsNullOrWhiteSpace(createdBranchKey)
             ? createdBranchKey
             : subjectCode;
 
-        var embedded = ShouldUseEmbeddedMaintenancePage(_isMobile);
-        var url = BuildSubjectMaintenanceUrl(pageName, returnNode, embedded, subjectCode);
-
-        if (_isMobile || _isEmbedded)
+        if (_isMobile && !_isEmbedded)
         {
-            NavigationManager.NavigateTo(url, forceLoad: true);
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: returnNode,
+                    returnNodeKey: returnNode,
+                    editSubject: true),
+                forceLoad: true);
+
             return;
         }
 
-        _detailPageSrc = url;
+        _isDeleteSubjectPanelOpen = false;
+        _isAddressPanelOpen = false;
+        _addressEditorAddressCode = null;
+        _isEditSubjectPanelOpen = true;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -2032,14 +2234,18 @@ else
 
     private string BuildUrl(
         bool embedded,
-        string? selectKey = null,
+        string? selectKey,
         string? returnNodeKey = null,
         NodeEnum.SubjectClass? createClass = null,
-        bool includeCreateState = false,
         bool removePreview = false,
+        bool includeCreateState = false,
         bool includeRemovePreviewState = false,
         bool movePanel = false,
-        bool addExistingPanel = false)
+        bool addExistingPanel = false,
+        bool deleteSubject = false,
+        bool editAddress = false,
+        bool editSubject = false,
+        string? addressCode = null)
     {
         var baseUrl = $"{NavigationManager.BaseUri.TrimEnd('/')}/Subject/Browser/Index";
         var query = new List<string>();
@@ -2082,6 +2288,26 @@ else
             query.Add("addExisting=1");
         }
 
+        if (deleteSubject)
+        {
+            query.Add("deleteSubject=1");
+        }
+
+        if (editAddress)
+        {
+            query.Add("editAddress=1");
+        }
+
+        if (editSubject)
+        {
+            query.Add("editSubject=1");
+        }
+
+        if (!string.IsNullOrWhiteSpace(addressCode))
+        {
+            query.Add($"addressCode={Uri.EscapeDataString(addressCode)}");
+        }
+
         if (!string.IsNullOrWhiteSpace(selectKey))
             query.Add($"select={Uri.EscapeDataString(selectKey)}");
 
@@ -2095,6 +2321,7 @@ else
             ? baseUrl
             : $"{baseUrl}?{string.Join("&", query)}";
     }
+
 
     private static bool TryParseEnquiryView(string? value, out SubjectEnquiryView enquiryView)
     {
@@ -2535,6 +2762,15 @@ else
 
     private RenderFragment RenderDetailPaneContent()
     {
+        if (ShouldRenderEditSubjectPanel())
+            return RenderEditSubjectPanel();
+
+        if (ShouldRenderDeleteSubjectPanel())
+            return RenderDeleteSubjectPanel();
+
+        if (ShouldRenderAddressPanel())
+            return RenderAddressPanel();
+
         if (ShouldRenderHostedDetailPage())
             return RenderHostedDetailPage();
 
@@ -2557,6 +2793,25 @@ else
             return RenderEmptyDetailPane();
 
         return RenderSelectedDetailPane();
+    }
+
+        private bool ShouldRenderDeleteSubjectPanel()
+    {
+        return _isDeleteSubjectPanelOpen
+            && _selectedDetail is not null
+            && _selectedDetail.SubjectClass is NodeEnum.SubjectClass.Real or NodeEnum.SubjectClass.Virtual;
+    }
+
+    private bool ShouldRenderAddressPanel()
+    {
+        return _isAddressPanelOpen
+            && _selectedDetail is not null
+            && !_selectedDetail.IsStructural;
+    }
+
+    private bool ShouldRenderEditSubjectPanel()
+    {
+        return _isEditSubjectPanelOpen && _selectedDetail is not null;
     }
 
     private bool ShouldRenderActiveEnquiry()
@@ -2599,6 +2854,23 @@ else
     {
         return !isMobile;
     }
+
+    private RenderFragment RenderEditSubjectPanel() => _selectedDetail!.SubjectClass switch
+    {
+        NodeEnum.SubjectClass.Real => @<EditRealPanel SubjectCode="@_selectedDetail.SubjectCode"
+                                                      ReturnNode="@(_selectedBranchKey ?? _selectedDetail.SubjectCode)"
+                                                      OnCancel="CancelEditSubjectPanelAsync"
+                                                      OnSaved="HandleEditSubjectSavedAsync" />,
+        NodeEnum.SubjectClass.Virtual => @<EditVirtualPanel SubjectCode="@_selectedDetail.SubjectCode"
+                                                            ReturnNode="@(_selectedBranchKey ?? _selectedDetail.SubjectCode)"
+                                                            OnCancel="CancelEditSubjectPanelAsync"
+                                                            OnSaved="HandleEditSubjectSavedAsync" />,
+        NodeEnum.SubjectClass.Structural => @<EditStructuralPanel SubjectCode="@_selectedDetail.SubjectCode"
+                                                                  ReturnNode="@(_selectedBranchKey ?? _selectedDetail.SubjectCode)"
+                                                                  OnCancel="CancelEditSubjectPanelAsync"
+                                                                  OnSaved="HandleEditSubjectSavedAsync" />,
+        _ => RenderEmptyDetailPane()
+    };
 
     private RenderFragment RenderEnquiryPane() => @<SubjectEnquiryShell SubjectCode="@_selectedDetail!.SubjectCode"
                          DisplayLabel="@_selectedDetail.DisplayLabel"

@@ -1,0 +1,572 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using TradeControl.Web.Data
+
+@inject NodeContext NodeContext
+
+<div class="container-fluid py-2">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 mb-1">Edit Person</h1>
+                    <div class="text-muted small">Update shared subject fields and person-specific details.</div>
+                </div>
+
+                <div class="text-muted small text-end">
+                    <div>Subject Code</div>
+                    <div><code>@SubjectCode</code></div>
+                </div>
+            </div>
+
+            <EditForm EditContext="@_editContext" OnSubmit="HandleSubmitAsync">
+                @if (_hasValidationErrors)
+                {
+                    <div class="alert alert-danger py-2 mb-4">
+                        <ValidationSummary />
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_actionMessage))
+                {
+                    <div class="alert alert-danger py-2 mb-4" role="alert">@_actionMessage</div>
+                }
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-primary fw-semibold">Identity</div>
+                    <div class="bg-white p-3">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label" for="SubjectName">Account Name</label>
+                                <InputText id="SubjectName"
+                                           @bind-Value="_editor.SubjectName"
+                                           class="form-control" />
+                                <ValidationMessage For="@(() => _editor.SubjectName)" class="text-danger small" />
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label" for="SubjectTypeCode">Type</label>
+                                <InputSelect id="SubjectTypeCode"
+                                             @bind-Value="_editor.SubjectTypeCode"
+                                             class="form-select">
+                                    @foreach (var item in _subjectTypeOptions)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => _editor.SubjectTypeCode)" class="text-danger small" />
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label" for="SubjectStatusCode">Status</label>
+                                <InputSelect id="SubjectStatusCode"
+                                             @bind-Value="_editor.SubjectStatusCode"
+                                             class="form-select">
+                                    @foreach (var item in _subjectStatusOptions)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="FileAs">File As</label>
+                                <InputText id="FileAs"
+                                           @bind-Value="_editor.FileAs"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label" for="NameTitle">Title</label>
+                                <InputText id="NameTitle"
+                                           @bind-Value="_editor.NameTitle"
+                                           class="form-control"
+                                           list="real-title-options" />
+                                <datalist id="real-title-options">
+                                    @foreach (var option in _nameTitleOptions)
+                                    {
+                                        <option value="@option"></option>
+                                    }
+                                </datalist>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label" for="NickName">Nick Name</label>
+                                <InputText id="NickName"
+                                           @bind-Value="_editor.NickName"
+                                           class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-info fw-semibold">Contact</div>
+                    <div class="bg-white p-3">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label" for="SubjectPhoneNumber">Main Phone</label>
+                                <InputText id="SubjectPhoneNumber"
+                                           @bind-Value="_editor.SubjectPhoneNumber"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="SubjectEmailAddress">Main Email</label>
+                                <InputText id="SubjectEmailAddress"
+                                           @bind-Value="_editor.SubjectEmailAddress"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="RealPhoneNumber">Direct Line</label>
+                                <InputText id="RealPhoneNumber"
+                                           @bind-Value="_editor.RealPhoneNumber"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="MobileNumber">Mobile</label>
+                                <InputText id="MobileNumber"
+                                           @bind-Value="_editor.MobileNumber"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="HomeNumber">Home Phone No.</label>
+                                <InputText id="HomeNumber"
+                                           @bind-Value="_editor.HomeNumber"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="RealEmailAddress">Personal Email</label>
+                                <InputText id="RealEmailAddress"
+                                           @bind-Value="_editor.RealEmailAddress"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="AreaCode">Area</label>
+                                <InputText id="AreaCode"
+                                           @bind-Value="_editor.AreaCode"
+                                           class="form-control"
+                                           list="real-area-options" />
+                                <datalist id="real-area-options">
+                                    @foreach (var option in _areaCodeOptions)
+                                    {
+                                        <option value="@option"></option>
+                                    }
+                                </datalist>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-success fw-semibold">Billing and Terms</div>
+                    <div class="bg-white p-3">
+                        <div class="row g-3">
+                            <div class="col-lg-3">
+                                <label class="form-label" for="TaxCode">Tax Code</label>
+                                <InputSelect id="TaxCode"
+                                             @bind-Value="_editor.TaxCode"
+                                             class="form-select">
+                                    <option value="">Select tax code</option>
+                                    @foreach (var item in _taxCodeOptions)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-lg-5">
+                                <label class="form-label" for="PaymentTerms">Payment Terms</label>
+                                <InputText id="PaymentTerms"
+                                           @bind-Value="_editor.PaymentTerms"
+                                           class="form-control"
+                                           list="real-payment-options" />
+                                <datalist id="real-payment-options">
+                                    @foreach (var option in _paymentTermOptions)
+                                    {
+                                        <option value="@option"></option>
+                                    }
+                                </datalist>
+                            </div>
+                            <div class="col-lg-2">
+                                <label class="form-label" for="ExpectedDays">Expected Days</label>
+                                <InputNumber id="ExpectedDays"
+                                             @bind-Value="_editor.ExpectedDays"
+                                             class="form-control" />
+                            </div>
+                            <div class="col-lg-2">
+                                <label class="form-label" for="PaymentDays">Payment Days</label>
+                                <InputNumber id="PaymentDays"
+                                             @bind-Value="_editor.PaymentDays"
+                                             class="form-control" />
+                            </div>
+                            <div class="col-lg-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    <InputCheckbox id="PayDaysFromMonthEnd"
+                                                   @bind-Value="_editor.PayDaysFromMonthEnd"
+                                                   class="form-check-input" />
+                                    <label class="form-check-label" for="PayDaysFromMonthEnd">Days From M/E</label>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    <InputCheckbox id="PayBalance"
+                                                   @bind-Value="_editor.PayBalance"
+                                                   class="form-check-input" />
+                                    <label class="form-check-label" for="PayBalance">Pay Balance?</label>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    <InputCheckbox id="OnMailingList"
+                                                   @bind-Value="_editor.OnMailingList"
+                                                   class="form-check-input" />
+                                    <label class="form-check-label" for="OnMailingList">On Mail List?</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-secondary fw-semibold">Personal</div>
+                    <div class="bg-white p-3">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <label class="form-label" for="JobTitle">Role</label>
+                                <InputText id="JobTitle"
+                                           @bind-Value="_editor.JobTitle"
+                                           class="form-control"
+                                           list="real-role-options" />
+                                <datalist id="real-role-options">
+                                    @foreach (var option in _jobTitleOptions)
+                                    {
+                                        <option value="@option"></option>
+                                    }
+                                </datalist>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label" for="Department">Department</label>
+                                <InputText id="Department"
+                                           @bind-Value="_editor.Department"
+                                           class="form-control"
+                                           list="real-department-options" />
+                                <datalist id="real-department-options">
+                                    @foreach (var option in _departmentOptions)
+                                    {
+                                        <option value="@option"></option>
+                                    }
+                                </datalist>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="DateOfBirth">Date Of Birth</label>
+                                <InputDate id="DateOfBirth"
+                                           @bind-Value="_editor.DateOfBirth"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="Hobby">Hobby</label>
+                                <InputText id="Hobby"
+                                           @bind-Value="_editor.Hobby"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label" for="SpouseName">Spouse</label>
+                                <InputText id="SpouseName"
+                                           @bind-Value="_editor.SpouseName"
+                                           class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="Information">Info</label>
+                                <InputTextArea id="Information"
+                                               @bind-Value="_editor.Information"
+                                               class="form-control"
+                                               rows="6" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@_isBusy">
+                        <i class="bi bi-floppy me-1" aria-hidden="true"></i>Save
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@_isBusy"
+                            @onclick="CancelAsync">
+                        Cancel
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter] public string SubjectCode { get; set; } = string.Empty;
+    [Parameter] public string ReturnNode { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private const short CurrentSubjectClassCode = (short)NodeEnum.SubjectClass.Real;
+
+    private sealed record ShortOption(short Value, string Text);
+    private sealed record StringOption(string Value, string Text);
+
+    private sealed class EditorModel
+    {
+        public string SubjectName { get; set; } = string.Empty;
+        public short SubjectTypeCode { get; set; }
+        public short SubjectStatusCode { get; set; }
+        public string TaxCode { get; set; } = string.Empty;
+        public string PaymentTerms { get; set; } = string.Empty;
+        public short ExpectedDays { get; set; }
+        public short PaymentDays { get; set; }
+        public bool PayDaysFromMonthEnd { get; set; }
+        public bool PayBalance { get; set; }
+        public string AreaCode { get; set; } = string.Empty;
+        public string SubjectPhoneNumber { get; set; } = string.Empty;
+        public string SubjectEmailAddress { get; set; } = string.Empty;
+        public string FileAs { get; set; } = string.Empty;
+        public bool OnMailingList { get; set; }
+        public string NameTitle { get; set; } = string.Empty;
+        public string NickName { get; set; } = string.Empty;
+        public string JobTitle { get; set; } = string.Empty;
+        public string RealPhoneNumber { get; set; } = string.Empty;
+        public string MobileNumber { get; set; } = string.Empty;
+        public string RealEmailAddress { get; set; } = string.Empty;
+        public string Hobby { get; set; } = string.Empty;
+        public DateTime? DateOfBirth { get; set; }
+        public string Department { get; set; } = string.Empty;
+        public string SpouseName { get; set; } = string.Empty;
+        public string HomeNumber { get; set; } = string.Empty;
+        public string Information { get; set; } = string.Empty;
+    }
+
+    private readonly EditorModel _editor = new();
+    private readonly ValidationMessageStore _validationMessages;
+    private readonly EditContext _editContext;
+    private readonly List<ShortOption> _subjectTypeOptions = [];
+    private readonly List<ShortOption> _subjectStatusOptions = [];
+    private readonly List<StringOption> _taxCodeOptions = [];
+    private readonly List<string> _paymentTermOptions = [];
+    private readonly List<string> _areaCodeOptions = [];
+    private readonly List<string> _nameTitleOptions = [];
+    private readonly List<string> _jobTitleOptions = [];
+    private readonly List<string> _departmentOptions = [];
+    private string? _loadedKey;
+    private string? _actionMessage;
+    private bool _hasValidationErrors;
+    private bool _isBusy;
+
+    public EditRealPanel()
+    {
+        _editContext = new EditContext(_editor);
+        _validationMessages = new ValidationMessageStore(_editContext);
+        _editContext.OnValidationStateChanged += (_, __) =>
+        {
+            _hasValidationErrors = _editContext.GetValidationMessages().Any();
+            InvokeAsync(StateHasChanged);
+        };
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(_loadedKey, SubjectCode, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _loadedKey = SubjectCode;
+        _actionMessage = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _subjectTypeOptions.Clear();
+        _subjectStatusOptions.Clear();
+        _taxCodeOptions.Clear();
+        _paymentTermOptions.Clear();
+        _areaCodeOptions.Clear();
+        _nameTitleOptions.Clear();
+        _jobTitleOptions.Clear();
+        _departmentOptions.Clear();
+
+        _subjectTypeOptions.AddRange(await NodeContext.Subject_tbTypes
+            .AsNoTracking()
+            .Where(item => item.SubjectClassCode == CurrentSubjectClassCode)
+            .OrderBy(item => item.SubjectType)
+            .Select(item => new ShortOption(item.SubjectTypeCode, item.SubjectType))
+            .ToListAsync());
+
+        _subjectStatusOptions.AddRange(await NodeContext.Subject_tbStatuses
+            .AsNoTracking()
+            .OrderBy(item => item.SubjectStatus)
+            .Select(item => new ShortOption(item.SubjectStatusCode, item.SubjectStatus))
+            .ToListAsync());
+
+        _taxCodeOptions.AddRange(await NodeContext.App_tbTaxCodes
+            .AsNoTracking()
+            .OrderBy(item => item.TaxCode)
+            .Select(item => new StringOption(item.TaxCode, $"{item.TaxCode} — {item.TaxDescription}"))
+            .ToListAsync());
+
+        _paymentTermOptions.AddRange(await NodeContext.Subject_PaymentTerms
+            .AsNoTracking()
+            .OrderBy(item => item.PaymentTerms)
+            .Select(item => item.PaymentTerms)
+            .ToListAsync());
+
+        _areaCodeOptions.AddRange(await NodeContext.Subject_AreaCodes
+            .AsNoTracking()
+            .OrderBy(item => item.AreaCode)
+            .Select(item => item.AreaCode)
+            .ToListAsync());
+
+        _nameTitleOptions.AddRange(await NodeContext.Subject_NameTitles
+            .AsNoTracking()
+            .OrderBy(item => item.NameTitle)
+            .Select(item => item.NameTitle)
+            .ToListAsync());
+
+        _jobTitleOptions.AddRange(await NodeContext.Subject_JobTitles
+            .AsNoTracking()
+            .OrderBy(item => item.JobTitle)
+            .Select(item => item.JobTitle)
+            .ToListAsync());
+
+        _departmentOptions.AddRange(await NodeContext.Subject_tbReals
+            .AsNoTracking()
+            .Select(item => item.Department)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct()
+            .OrderBy(item => item)
+            .ToListAsync());
+
+        var subject = await NodeContext.Subject_tbSubjects
+            .Include(item => item.TbReal)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.SubjectCode == SubjectCode);
+
+        if (subject is null || subject.TbReal is null)
+            return;
+
+        _editor.SubjectName = subject.SubjectName ?? string.Empty;
+        _editor.SubjectTypeCode = subject.SubjectTypeCode;
+        _editor.SubjectStatusCode = subject.SubjectStatusCode;
+        _editor.TaxCode = subject.TaxCode ?? string.Empty;
+        _editor.PaymentTerms = subject.PaymentTerms ?? string.Empty;
+        _editor.ExpectedDays = subject.ExpectedDays;
+        _editor.PaymentDays = subject.PaymentDays;
+        _editor.PayDaysFromMonthEnd = subject.PayDaysFromMonthEnd;
+        _editor.PayBalance = subject.PayBalance;
+        _editor.AreaCode = subject.AreaCode ?? string.Empty;
+        _editor.SubjectPhoneNumber = subject.PhoneNumber ?? string.Empty;
+        _editor.SubjectEmailAddress = subject.EmailAddress ?? string.Empty;
+        _editor.FileAs = subject.TbReal.FileAs ?? string.Empty;
+        _editor.OnMailingList = subject.TbReal.OnMailingList;
+        _editor.NameTitle = subject.TbReal.NameTitle ?? string.Empty;
+        _editor.NickName = subject.TbReal.NickName ?? string.Empty;
+        _editor.JobTitle = subject.TbReal.JobTitle ?? string.Empty;
+        _editor.RealPhoneNumber = subject.TbReal.PhoneNumber ?? string.Empty;
+        _editor.MobileNumber = subject.TbReal.MobileNumber ?? string.Empty;
+        _editor.RealEmailAddress = subject.TbReal.EmailAddress ?? string.Empty;
+        _editor.Hobby = subject.TbReal.Hobby ?? string.Empty;
+        _editor.DateOfBirth = subject.TbReal.DateOfBirth;
+        _editor.Department = subject.TbReal.Department ?? string.Empty;
+        _editor.SpouseName = subject.TbReal.SpouseName ?? string.Empty;
+        _editor.HomeNumber = subject.TbReal.HomeNumber ?? string.Empty;
+        _editor.Information = subject.TbReal.Information ?? string.Empty;
+
+        ClearValidation();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _actionMessage = null;
+        ClearValidation();
+
+        if (string.IsNullOrWhiteSpace(_editor.SubjectName))
+        {
+            _validationMessages.Add(() => _editor.SubjectName, "Name is required.");
+        }
+
+        if (!await NodeContext.Subject_tbTypes
+            .AsNoTracking()
+            .AnyAsync(item => item.SubjectTypeCode == _editor.SubjectTypeCode && item.SubjectClassCode == CurrentSubjectClassCode))
+        {
+            _validationMessages.Add(() => _editor.SubjectTypeCode, "Select a valid type for this Subject class.");
+        }
+
+        _editContext.NotifyValidationStateChanged();
+
+        if (_editContext.GetValidationMessages().Any())
+            return;
+
+        _isBusy = true;
+
+        try
+        {
+            var subject = await NodeContext.Subject_tbSubjects
+                .Include(item => item.TbReal)
+                .FirstOrDefaultAsync(item => item.SubjectCode == SubjectCode);
+
+            if (subject is null || subject.TbReal is null)
+            {
+                _actionMessage = "Unable to load the selected Subject.";
+                return;
+            }
+
+            subject.SubjectName = _editor.SubjectName.Trim();
+            subject.SubjectTypeCode = _editor.SubjectTypeCode;
+            subject.SubjectStatusCode = _editor.SubjectStatusCode;
+            subject.TaxCode = _editor.TaxCode?.Trim();
+            subject.PaymentTerms = _editor.PaymentTerms?.Trim();
+            subject.ExpectedDays = _editor.ExpectedDays;
+            subject.PaymentDays = _editor.PaymentDays;
+            subject.PayDaysFromMonthEnd = _editor.PayDaysFromMonthEnd;
+            subject.PayBalance = _editor.PayBalance;
+            subject.AreaCode = _editor.AreaCode?.Trim();
+            subject.PhoneNumber = _editor.SubjectPhoneNumber?.Trim();
+            subject.EmailAddress = _editor.SubjectEmailAddress?.Trim();
+
+            subject.TbReal.FileAs = _editor.FileAs?.Trim();
+            subject.TbReal.OnMailingList = _editor.OnMailingList;
+            subject.TbReal.NameTitle = _editor.NameTitle?.Trim();
+            subject.TbReal.NickName = _editor.NickName?.Trim();
+            subject.TbReal.JobTitle = _editor.JobTitle?.Trim();
+            subject.TbReal.PhoneNumber = _editor.RealPhoneNumber?.Trim();
+            subject.TbReal.MobileNumber = _editor.MobileNumber?.Trim();
+            subject.TbReal.EmailAddress = _editor.RealEmailAddress?.Trim();
+            subject.TbReal.Hobby = _editor.Hobby?.Trim();
+            subject.TbReal.DateOfBirth = _editor.DateOfBirth;
+            subject.TbReal.Department = _editor.Department?.Trim();
+            subject.TbReal.SpouseName = _editor.SpouseName?.Trim();
+            subject.TbReal.HomeNumber = _editor.HomeNumber?.Trim();
+            subject.TbReal.Information = _editor.Information?.Trim();
+
+            await NodeContext.SaveChangesAsync();
+
+            if (OnSaved.HasDelegate)
+                await OnSaved.InvokeAsync("Changes saved.");
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            _actionMessage = "Unable to save changes.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private Task CancelAsync()
+    {
+        return OnCancel.HasDelegate
+            ? OnCancel.InvokeAsync()
+            : Task.CompletedTask;
+    }
+
+    private void ClearValidation()
+    {
+        _validationMessages.Clear();
+        _editContext.NotifyValidationStateChanged();
+    }
+}

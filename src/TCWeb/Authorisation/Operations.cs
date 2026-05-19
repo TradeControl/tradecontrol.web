@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace TradeControl.Web.Authorization
 {
@@ -18,7 +18,7 @@ namespace TradeControl.Web.Authorization
           new OperationAuthorizationRequirement {Name=Constants.RejectOperationName};
     }
 
-    public class Constants
+    public static class Constants
     {
         public static readonly string CreateOperationName = "Create";
         public static readonly string ReadOperationName = "Read";

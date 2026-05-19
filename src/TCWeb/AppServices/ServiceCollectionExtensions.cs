@@ -18,6 +18,13 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();
+            services.AddScoped<ICashManagerService, CashManagerService>();
+            services.AddScoped<ICashNamespaceResolver, CashNamespaceResolver>();
+            services.AddScoped<ICashStatementQueryService, CashStatementQueryService>();
+            services.AddScoped<ICashStatementPaymentMaintenanceService, CashStatementPaymentMaintenanceService>();
+            services.AddScoped<ICashPaymentsWorkspaceService, CashPaymentsWorkspaceService>();
+            services.AddScoped<ICashAssetsWorkspaceService, CashAssetsWorkspaceService>();
+            services.AddScoped<ICashAccountMaintenanceService, CashAccountMaintenanceService>();
 
             services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();
             services.AddScoped<IExecutionQueue, ExecutionQueue>();

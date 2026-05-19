@@ -1,0 +1,1125 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Identity
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+@using TradeControl.Web.Pages.Subject.Controls
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+@inject ICashAssetsWorkspaceService CashAssetsWorkspaceService
+@inject ISubjectBrowserService SubjectBrowserService
+
+@if (!_isLoaded)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Loading assets…
+    </div>
+}
+else if (SelectedAccount is null)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Select an account to begin.
+    </div>
+}
+else if (SelectedAccount.AccountType != NodeEnum.CashAccountType.Asset)
+{
+    <div class="card">
+        <div class="card-body">
+            <h2 class="h5 mb-2">Assets</h2>
+            <div class="text-muted">
+                This workspace is currently enabled for <strong>Asset</strong> accounts only.
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100"
+         style="min-height:0; overflow:hidden; @(GetRootUserSelectStyle())"
+         @onpointermove="HandleSplitterPointerMoveAsync"
+         @onpointerup="HandleSplitterPointerUpAsync"
+         @onpointercancel="HandleSplitterPointerUpAsync"
+         @onpointerleave="HandleSplitterPointerUpAsync">
+        @RenderHeader()
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-success py-2 mb-0">@_message</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_errorMessage</div>
+        }
+
+        <div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
+            <div style="@GetEntryWorkspaceHostStyle()">
+                @RenderEntryPanels()
+            </div>
+
+            @if (!_isModePanelCollapsed)
+            {
+                <div class="rounded border bg-body-secondary"
+                     style="height:0.75rem; cursor:row-resize; flex:0 0 auto; touch-action:none;"
+                     title="Drag to resize entry workspace"
+                     @onpointerdown="HandleSplitterPointerDownAsync"
+                     @onpointerdown:preventDefault="true"></div>
+            }
+
+            <div class="flex-grow-1" style="min-height:0; overflow:hidden;">
+                <div class="card h-100" style="min-height:0;">
+                    <div class="card-body d-flex flex-column" style="min-height:0;">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h2 class="h5 mb-1">Draft Asset Transactions</h2>
+                                <div class="small text-muted">Unposted capital-side entries for this asset account.</div>
+                            </div>
+                            <span class="badge text-bg-light">@_workspace.Summary.UnpostedCount</span>
+                        </div>
+
+                        <div class="table-responsive flex-grow-1" style="min-height:0;">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Paid On</th>
+                                        <th>Subject</th>
+                                        <th>Reference</th>
+                                        <th>Cash Code</th>
+                                        <th class="text-end">Paid Out</th>
+                                        <th class="text-end">Paid In</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (_workspace.Rows.Count == 0)
+                                    {
+                                        <tr>
+                                            <td colspan="8" class="text-muted">No unposted asset-side transactions.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var row in _workspace.Rows)
+                                        {
+                                            <tr>
+                                                <td>@row.UserName</td>
+                                                <td>@row.PaidOn.ToString("d")</td>
+                                                <td>
+                                                    <div>@row.SubjectName</div>
+                                                    <div class="small text-muted"><code>@row.SubjectCode</code></div>
+                                                </td>
+                                                <td>@row.PaymentReference</td>
+                                                <td>
+                                                    <div>@row.CashDescription</div>
+                                                    <div class="small text-muted"><code>@row.CashCode</code></div>
+                                                </td>
+                                                <td class="text-end text-danger">@row.PaidOutValue.ToString("C")</td>
+                                                <td class="text-end">@row.PaidInValue.ToString("C")</td>
+                                                <td class="text-end">
+                                                    <div class="d-flex justify-content-end gap-2">
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary btn-sm"
+                                                                @onclick="() => HandlePostAsync(row.PaymentCode)"
+                                                                disabled="@_isBusy">
+                                                            Post
+                                                        </button>
+                                                        <button type="button"
+                                                                class="btn btn-outline-danger btn-sm"
+                                                                @onclick="() => HandleDeleteAsync(row.PaymentCode)"
+                                                                disabled="@_isBusy">
+                                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public CashManagerAccountSummary? SelectedAccount { get; set; }
+
+    private const int NamespaceSuggestionPageSize = 12;
+    private const double DefaultEntryWorkspaceHeightPx = 420d;
+    private const double MinimumEntryWorkspaceHeightPx = 180d;
+    private const double MaximumEntryWorkspaceHeightPx = 900d;
+
+    private enum AssetEntryMode
+    {
+        Freehand,
+        FromPayment,
+        ReversalSeries
+    }
+
+    private bool _isLoaded;
+    private bool _isBusy;
+    private bool _isPrivileged;
+    private bool _isLoadingWorkspace;
+    private bool _isModePanelCollapsed;
+    private bool _isLoadingNamespaceSuggestions;
+    private bool _isSearchingPostedPayments;
+    private bool _isSearchingReversalPayments;
+    private bool _isResizingEntryWorkspace;
+    private string? _currentAspNetUserId;
+    private string? _message;
+    private string? _errorMessage;
+    private string? _loadedAccountCode;
+    private string _postedPaymentSearchText = string.Empty;
+    private string _reversalPaymentSearchText = string.Empty;
+    private int _workspaceLoadVersion;
+    private double _entryWorkspaceHeightPx = DefaultEntryWorkspaceHeightPx;
+    private double _lastPointerClientY;
+    private AssetEntryMode _mode = AssetEntryMode.Freehand;
+    private CashManagerAssetsWorkspaceState _workspace = CashManagerAssetsWorkspaceState.Empty;
+    private IReadOnlyList<NamespaceSelectorSuggestion> _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+    private IReadOnlyList<CashManagerPostedPaymentSearchResult> _postedPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+    private IReadOnlyList<CashManagerPostedPaymentSearchResult> _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+    private CashManagerPostedPaymentSearchResult? _selectedPostedPayment;
+    private CashManagerPostedPaymentSearchResult? _selectedReversalPayment;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentAspNetUserId = UserManager.GetUserId(authState.User);
+        _isPrivileged = authState.User.IsInRole(Constants.ManagersRole)
+            || authState.User.IsInRole(Constants.AdministratorsRole);
+        _isLoaded = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedAccount is null)
+        {
+            _workspace = CashManagerAssetsWorkspaceState.Empty;
+            _loadedAccountCode = null;
+            _postedPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+            _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+            _selectedPostedPayment = null;
+            _selectedReversalPayment = null;
+            return;
+        }
+
+        if (_isLoadingWorkspace || string.Equals(_loadedAccountCode, SelectedAccount.AccountCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+    }
+
+    private async Task LoadWorkspaceAsync(string accountCode)
+    {
+        if (string.IsNullOrWhiteSpace(_currentAspNetUserId))
+        {
+            return;
+        }
+
+        var loadVersion = ++_workspaceLoadVersion;
+        _isLoadingWorkspace = true;
+
+        try
+        {
+            var workspace = await CashAssetsWorkspaceService.GetWorkspaceAsync(
+                accountCode,
+                _currentAspNetUserId,
+                _isPrivileged);
+
+            if (loadVersion != _workspaceLoadVersion)
+            {
+                return;
+            }
+
+            _workspace = workspace;
+            _loadedAccountCode = accountCode;
+            _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+            _postedPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+            _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+            _selectedPostedPayment = null;
+            _selectedReversalPayment = null;
+            _postedPaymentSearchText = string.Empty;
+            _reversalPaymentSearchText = string.Empty;
+            _message = null;
+            _errorMessage = null;
+        }
+        finally
+        {
+            if (loadVersion == _workspaceLoadVersion)
+            {
+                _isLoadingWorkspace = false;
+            }
+        }
+    }
+
+    private RenderFragment RenderHeader() => @<div class="card">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="fw-semibold">Assets: @SelectedAccount!.AccountName</div>
+                    <div class="small text-muted"><code>@SelectedAccount.AccountCode</code></div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-4">
+                    <div>
+                        <div class="small text-muted">Current Balance</div>
+                        <div class="fw-semibold">@_workspace.Summary.CurrentBalance.ToString("C")</div>
+                    </div>
+
+                    <div>
+                        <div class="small text-muted">Unposted Net</div>
+                        <div class="fw-semibold">@_workspace.Summary.UnpostedNet.ToString("C")</div>
+                    </div>
+
+                    <div>
+                        <div class="small text-muted">Unposted Count</div>
+                        <div class="fw-semibold">@_workspace.Summary.UnpostedCount</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>;
+
+    private RenderFragment RenderEntryPanels() => @<div class="card h-100" style="min-height:0; overflow:hidden;">
+    <div class="card-body d-flex flex-column h-100" style="min-height:0;">
+        <div class="d-flex align-items-start justify-content-between gap-3">
+            <div>
+                <h2 class="h5 mb-1">Entry Workspace</h2>
+                <div class="small text-muted">Free-hand, source-payment, and reversal-series entry surfaces.</div>
+            </div>
+
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @onclick="ToggleModePanel">
+                @(_isModePanelCollapsed ? "Show entry workspace" : "Hide entry workspace")
+            </button>
+        </div>
+
+        @if (_isModePanelCollapsed)
+                {
+        <div class="small text-muted mt-3">
+            Expand the entry workspace to create or configure asset-side transactions.
+        </div>
+                }
+                else
+        {
+            <div class="flex-grow-1 overflow-auto mt-3" style="min-height:0;">
+                <div class="row g-3">
+                    <div class="col-12 col-xl-5">
+                        @RenderModeCard()
+                    </div>
+                    <div class="col-12 col-xl-7">
+                        @RenderEntryCard()
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderModeCard() => @<div class="card w-100">
+    <div class="card-body">
+        <h3 class="h6 mb-3">Entry Modes</h3>
+
+        <div class="d-grid gap-2">
+            <button type="button"
+                    class="btn @GetModeButtonClass(AssetEntryMode.Freehand)"
+                    @onclick="() => SetMode(AssetEntryMode.Freehand)">
+                Free-hand
+            </button>
+            <button type="button"
+                    class="btn @GetModeButtonClass(AssetEntryMode.FromPayment)"
+                    @onclick="() => SetMode(AssetEntryMode.FromPayment)">
+                From payment
+            </button>
+            <button type="button"
+                    class="btn @GetModeButtonClass(AssetEntryMode.ReversalSeries)"
+                    @onclick="() => SetMode(AssetEntryMode.ReversalSeries)">
+                Reversal series
+            </button>
+        </div>
+
+        <div class="small text-muted mt-3">
+            Neutral capital-side transactions are modeled using the same cash transaction architecture as trading entries.
+        </div>
+    </div>
+</div>;
+
+private RenderFragment RenderEntryCard() => @<div class="card w-100">
+    <div class="card-body">
+        @switch (_mode)
+        {
+            case AssetEntryMode.Freehand:
+                @RenderFreehandMode()
+                break;
+            case AssetEntryMode.FromPayment:
+                @RenderFromPaymentMode()
+                break;
+            case AssetEntryMode.ReversalSeries:
+                @RenderReversalSeriesMode()
+                break;
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderFreehandMode() => @<div class="d-flex flex-column gap-3">
+    <div>
+        <h2 class="h5 mb-1">Free-hand Asset Transaction</h2>
+        <div class="small text-muted">Create a capital-side transaction directly in the selected asset account.</div>
+    </div>
+
+    <div>
+        <label class="form-label small text-muted mb-1">Subject / Namespace</label>
+        <NamespaceSelector FilterText="@_workspace.Draft.NamespaceFilter"
+                           Suggestions="@_namespaceSuggestions"
+                           IsLoadingSuggestions="@_isLoadingNamespaceSuggestions"
+                           ShowApplyButton="true"
+                           ApplyButtonTitle="Apply subject selection"
+                           OnFilterChanged="HandleNamespaceFilterChangedAsync"
+                           OnFilterCommitted="HandleNamespaceCommittedAsync" />
+
+        @if (!string.IsNullOrWhiteSpace(_workspace.Draft.SubjectName))
+        {
+            <div class="small text-muted mt-1">@_workspace.Draft.SubjectName</div>
+        }
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetPaidOn">Paid On</label>
+            <InputDate id="assetPaidOn"
+                       class="form-control"
+                       @bind-Value="_workspace.Draft.PaidOn" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetCashCode">Cash Code</label>
+            <InputSelect id="assetCashCode"
+                         class="form-select"
+                         @bind-Value="_workspace.Draft.CashCode">
+                <option value="">Select code</option>
+                @foreach (var option in _workspace.CashCodes)
+                {
+                    <option value="@option.CashCode">@option.CashDescription (@option.CashCode)</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="assetReference">Reference</label>
+            <InputText id="assetReference"
+                       class="form-control"
+                       @bind-Value="_workspace.Draft.PaymentReference" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetPaidOut">Paid Out</label>
+            <InputNumber id="assetPaidOut"
+                         class="form-control text-end text-danger"
+                         @bind-Value="_workspace.Draft.PaidOutValue" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetPaidIn">Paid In</label>
+            <InputNumber id="assetPaidIn"
+                         class="form-control text-end"
+                         @bind-Value="_workspace.Draft.PaidInValue" />
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <button type="button"
+                class="btn btn-primary"
+                @onclick="HandleAddFreehandAsync"
+                disabled="@_isBusy">
+            Add asset transaction
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderFromPaymentMode() => @<div class="d-flex flex-column gap-3">
+    <div>
+        <h2 class="h5 mb-1">From Payment</h2>
+        <div class="small text-muted">
+            Search posted trade payments, select a source transaction, then mirror it into this asset account.
+        </div>
+    </div>
+
+    <div>
+        <label class="form-label small text-muted mb-1">Namespace</label>
+        <NamespaceSelector FilterText="@_workspace.Draft.NamespaceFilter"
+                           Suggestions="@_namespaceSuggestions"
+                           IsLoadingSuggestions="@_isLoadingNamespaceSuggestions"
+                           ShowApplyButton="true"
+                           ApplyButtonTitle="Apply namespace"
+                           OnFilterChanged="HandleNamespaceFilterChangedAsync"
+                           OnFilterCommitted="HandleNamespaceCommittedAsync" />
+
+        @if (!string.IsNullOrWhiteSpace(_workspace.Draft.SubjectName))
+        {
+            <div class="small text-muted mt-1">@_workspace.Draft.SubjectName</div>
+        }
+    </div>
+
+    <div class="row g-3 align-items-end">
+        <div class="col-12 col-lg-8">
+            <label class="form-label small text-muted mb-1" for="assetSourceSearch">Posted Payment Search</label>
+            <InputText id="assetSourceSearch"
+                       class="form-control"
+                       @bind-Value="_postedPaymentSearchText" />
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <button type="button"
+                    class="btn btn-outline-primary w-100"
+                    @onclick="HandlePostedPaymentSearchAsync"
+                    disabled="@_isBusy">
+                @(_isSearchingPostedPayments ? "Searching…" : "Search posted payments")
+            </button>
+        </div>
+    </div>
+
+@RenderSourcePaymentsTable(_postedPaymentResults, _selectedPostedPayment, HandleSelectPostedPaymentAsync)
+
+@if (_selectedPostedPayment is not null)
+{
+    @RenderSelectedSourcePayment(_selectedPostedPayment, GetCashCodesForSourcePayment(_selectedPostedPayment), false, HandleAddFromPaymentAsync, "Create asset entry from payment")
+}
+</div>;
+
+private RenderFragment RenderReversalSeriesMode() => @<div class="d-flex flex-column gap-3">
+    <div>
+        <h2 class="h5 mb-1">Reversal Series</h2>
+        <div class="small text-muted">
+            Search posted asset payments already recorded on this account, then create the unposted reversal entry.
+        </div>
+    </div>
+
+    <div>
+        <label class="form-label small text-muted mb-1">Namespace</label>
+        <NamespaceSelector FilterText="@_workspace.Draft.NamespaceFilter"
+                           Suggestions="@_namespaceSuggestions"
+                           IsLoadingSuggestions="@_isLoadingNamespaceSuggestions"
+                           ShowApplyButton="true"
+                           ApplyButtonTitle="Apply namespace"
+                           OnFilterChanged="HandleNamespaceFilterChangedAsync"
+                           OnFilterCommitted="HandleNamespaceCommittedAsync" />
+
+        @if (!string.IsNullOrWhiteSpace(_workspace.Draft.SubjectName))
+        {
+            <div class="small text-muted mt-1">@_workspace.Draft.SubjectName</div>
+        }
+    </div>
+
+    <div class="row g-3 align-items-end">
+        <div class="col-12 col-lg-8">
+            <label class="form-label small text-muted mb-1" for="assetReversalSearch">Posted Asset Search</label>
+            <InputText id="assetReversalSearch"
+                       class="form-control"
+                       @bind-Value="_reversalPaymentSearchText" />
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <button type="button"
+                    class="btn btn-outline-primary w-100"
+                    @onclick="HandleReversalPaymentSearchAsync"
+                    disabled="@_isBusy">
+                @(_isSearchingReversalPayments ? "Searching…" : "Search posted asset payments")
+            </button>
+        </div>
+    </div>
+
+@RenderSourcePaymentsTable(_reversalPaymentResults, _selectedReversalPayment, HandleSelectReversalPaymentAsync)
+
+@if (_selectedReversalPayment is not null)
+{
+    @RenderSelectedSourcePayment(_selectedReversalPayment, GetCashCodesForSourcePayment(_selectedReversalPayment), true, HandleAddReversalAsync, "Create asset reversal entry")
+}
+</div>;
+
+private RenderFragment RenderSourcePaymentsTable(
+    IReadOnlyList<CashManagerPostedPaymentSearchResult> rows,
+    CashManagerPostedPaymentSearchResult? selectedPayment,
+    Func<CashManagerPostedPaymentSearchResult, Task> onSelect) => @<div class="border rounded">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Paid On</th>
+                    <th>Account</th>
+                    <th>Subject</th>
+                    <th>Reference</th>
+                    <th>Cash Code</th>
+                    <th class="text-end">Net</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="7" class="text-muted">No posted payments loaded.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var payment in rows)
+                    {
+                        <tr class="@(string.Equals(selectedPayment?.PaymentCode, payment.PaymentCode, StringComparison.OrdinalIgnoreCase) ? "table-active" : null)">
+                            <td>@payment.PaidOn.ToString("d")</td>
+                            <td>
+                                <div>@payment.AccountName</div>
+                                <div class="small text-muted"><code>@payment.AccountCode</code></div>
+                            </td>
+                            <td>
+                                <div>@payment.SubjectName</div>
+                                <div class="small text-muted"><code>@payment.SubjectCode</code></div>
+                            </td>
+                            <td>@payment.PaymentReference</td>
+                            <td>
+                                <div>@payment.CashDescription</div>
+                                <div class="small text-muted"><code>@payment.CashCode</code></div>
+                            </td>
+                            <td class="text-end @(payment.DeltaValue < 0 ? "text-danger" : null)">@payment.DeltaValue.ToString("C")</td>
+                            <td class="text-end">
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm"
+                                        @onclick="() => onSelect(payment)">
+                                    Select
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>;
+
+private RenderFragment RenderSelectedSourcePayment(
+    CashManagerPostedPaymentSearchResult sourcePayment,
+    IReadOnlyList<CashManagerAssetCodeOption> cashCodes,
+    bool showReversalSettings,
+    Func<Task> onAdd,
+    string buttonText) => @<div class="d-flex flex-column gap-3">
+    <div class="border rounded p-3">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div>
+                <div class="fw-semibold">Selected Source Payment</div>
+                <div class="small text-muted"><code>@sourcePayment.PaymentCode</code></div>
+            </div>
+
+            <div class="text-end">
+                <div class="small text-muted">Source Net</div>
+                <div class="fw-semibold @(sourcePayment.DeltaValue < 0 ? "text-danger" : null)">
+                    @sourcePayment.DeltaValue.ToString("C")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetFromSourcePaidOn">Paid On</label>
+            <InputDate id="assetFromSourcePaidOn"
+                       class="form-control"
+                       @bind-Value="_workspace.Draft.PaidOn" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetFromSourceCashCode">Cash Code</label>
+            <InputSelect id="assetFromSourceCashCode"
+                         class="form-select"
+                         @bind-Value="_workspace.Draft.CashCode">
+                <option value="">Select code</option>
+                @foreach (var option in cashCodes)
+                {
+                    <option value="@option.CashCode">@option.CashDescription (@option.CashCode)</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="assetFromSourceReference">Reference</label>
+            <InputText id="assetFromSourceReference"
+                       class="form-control"
+                       @bind-Value="_workspace.Draft.PaymentReference" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetFromSourcePaidOut">Paid Out</label>
+            <InputNumber id="assetFromSourcePaidOut"
+                         class="form-control text-end text-danger"
+                         @bind-Value="_workspace.Draft.PaidOutValue" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1" for="assetFromSourcePaidIn">Paid In</label>
+            <InputNumber id="assetFromSourcePaidIn"
+                         class="form-control text-end"
+                         @bind-Value="_workspace.Draft.PaidInValue" />
+        </div>
+    </div>
+
+@if (showReversalSettings)
+{
+        <div class="row g-3">
+            <div class="col-12 col-md-4">
+                <label class="form-label small text-muted mb-1" for="assetSourceReversalPeriods">Periods</label>
+                <InputNumber id="assetSourceReversalPeriods"
+                             class="form-control"
+                             @bind-Value="_workspace.Draft.ReversalPeriods" />
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label small text-muted mb-1" for="assetSourceReversalInterval">Interval (months)</label>
+                <InputNumber id="assetSourceReversalInterval"
+                             class="form-control"
+                             @bind-Value="_workspace.Draft.ReversalIntervalMonths" />
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label small text-muted mb-1" for="assetSourceReversalStartOn">Start On</label>
+                <InputDate id="assetSourceReversalStartOn"
+                           class="form-control"
+                           @bind-Value="_workspace.Draft.ReversalStartOn" />
+            </div>
+        </div>
+}
+
+    <div class="d-flex justify-content-end">
+        <button type="button"
+                class="btn btn-primary"
+                @onclick="onAdd"
+                disabled="@_isBusy">
+            @buttonText
+        </button>
+    </div>
+</div>;
+
+private IReadOnlyList<CashManagerAssetCodeOption> GetCashCodesForSourcePayment(CashManagerPostedPaymentSearchResult? payment)
+{
+    if (payment is null)
+    {
+        return _workspace.CashCodes;
+    }
+
+    var requiredPolarityCode = payment.DeltaValue < 0m
+        ? (short)NodeEnum.CashPolarity.Income
+        : (short)NodeEnum.CashPolarity.Expense;
+
+    return _workspace.CashCodes
+        .Where(item =>
+            item.CashPolarityCode == (short)NodeEnum.CashPolarity.Neutral
+            || item.CashPolarityCode == requiredPolarityCode)
+        .ToList();
+}
+
+private string GetModeButtonClass(AssetEntryMode mode)
+{
+    return _mode == mode ? "btn-primary" : "btn-outline-primary";
+}
+
+private string GetEntryWorkspaceHostStyle()
+{
+    if (_isModePanelCollapsed)
+    {
+        return "flex:0 0 auto; overflow:hidden;";
+    }
+
+    return $"height:{_entryWorkspaceHeightPx:0}px; min-height:{MinimumEntryWorkspaceHeightPx:0}px; max-height:{MaximumEntryWorkspaceHeightPx:0}px; flex:0 0 auto; overflow:hidden;";
+}
+
+private string GetRootUserSelectStyle()
+{
+    return _isResizingEntryWorkspace ? "user-select:none;" : string.Empty;
+}
+
+private void SetMode(AssetEntryMode mode)
+{
+    _mode = mode;
+    _message = null;
+    _errorMessage = null;
+}
+
+private void ToggleModePanel()
+{
+    _isModePanelCollapsed = !_isModePanelCollapsed;
+    _isResizingEntryWorkspace = false;
+}
+
+private Task HandleSplitterPointerDownAsync(PointerEventArgs args)
+{
+    if (_isModePanelCollapsed)
+    {
+        return Task.CompletedTask;
+    }
+
+    _isResizingEntryWorkspace = true;
+    _lastPointerClientY = args.ClientY;
+    return Task.CompletedTask;
+}
+
+private Task HandleSplitterPointerMoveAsync(PointerEventArgs args)
+{
+    if (!_isResizingEntryWorkspace)
+    {
+        return Task.CompletedTask;
+    }
+
+    var delta = args.ClientY - _lastPointerClientY;
+
+    if (Math.Abs(delta) < double.Epsilon)
+    {
+        return Task.CompletedTask;
+    }
+
+    _entryWorkspaceHeightPx = Math.Clamp(
+        _entryWorkspaceHeightPx + delta,
+        MinimumEntryWorkspaceHeightPx,
+        MaximumEntryWorkspaceHeightPx);
+
+    _lastPointerClientY = args.ClientY;
+    return InvokeAsync(StateHasChanged);
+}
+
+private Task HandleSplitterPointerUpAsync(PointerEventArgs args)
+{
+    _isResizingEntryWorkspace = false;
+    return Task.CompletedTask;
+}
+
+private async Task HandleNamespaceFilterChangedAsync(string filterText)
+{
+    _workspace.Draft.NamespaceFilter = filterText ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(_workspace.Draft.NamespaceFilter))
+    {
+        _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        _workspace.Draft.SubjectCode = string.Empty;
+        _workspace.Draft.SubjectName = string.Empty;
+        _isLoadingNamespaceSuggestions = false;
+        return;
+    }
+
+    _isLoadingNamespaceSuggestions = true;
+
+    try
+    {
+        _namespaceSuggestions = await SubjectBrowserService.GetNamespaceSuggestionsAsync(
+            _workspace.Draft.NamespaceFilter,
+            NamespaceSuggestionPageSize);
+    }
+    finally
+    {
+        _isLoadingNamespaceSuggestions = false;
+    }
+}
+
+private async Task HandleNamespaceCommittedAsync(string filterText)
+{
+    _workspace.Draft.NamespaceFilter = filterText ?? string.Empty;
+
+    if (string.IsNullOrWhiteSpace(_workspace.Draft.NamespaceFilter))
+    {
+        _workspace.Draft.SubjectCode = string.Empty;
+        _workspace.Draft.SubjectName = string.Empty;
+        return;
+    }
+
+    try
+    {
+        var subject = await CashAssetsWorkspaceService.ResolveSubjectAsync(_workspace.Draft.NamespaceFilter);
+        _workspace.Draft.SubjectCode = subject.SubjectCode;
+        _workspace.Draft.SubjectName = subject.SubjectName;
+        _workspace.Draft.NamespaceFilter = subject.NamespaceFilter;
+        _errorMessage = null;
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+}
+
+private async Task HandlePostedPaymentSearchAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _errorMessage = null;
+
+    try
+    {
+        _isSearchingPostedPayments = true;
+
+        _postedPaymentResults = await CashAssetsWorkspaceService.SearchPostedPaymentsAsync(
+            SelectedAccount.AccountCode,
+            _workspace.Draft.NamespaceFilter,
+            _postedPaymentSearchText,
+            _currentAspNetUserId,
+            _isPrivileged);
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isSearchingPostedPayments = false;
+    }
+}
+
+private async Task HandleReversalPaymentSearchAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _errorMessage = null;
+
+    try
+    {
+        _isSearchingReversalPayments = true;
+
+        _reversalPaymentResults = await CashAssetsWorkspaceService.SearchPostedCashPaymentsAsync(
+            SelectedAccount.AccountCode,
+            _workspace.Draft.NamespaceFilter,
+            _reversalPaymentSearchText,
+            _currentAspNetUserId,
+            _isPrivileged);
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isSearchingReversalPayments = false;
+    }
+}
+
+private Task HandleSelectPostedPaymentAsync(CashManagerPostedPaymentSearchResult payment)
+{
+    _selectedPostedPayment = payment;
+    _selectedReversalPayment = null;
+    ApplySourcePaymentSelection(payment, false);
+    return Task.CompletedTask;
+}
+
+private Task HandleSelectReversalPaymentAsync(CashManagerPostedPaymentSearchResult payment)
+{
+    _selectedReversalPayment = payment;
+    _selectedPostedPayment = null;
+    ApplySourcePaymentSelection(payment, true);
+    return Task.CompletedTask;
+}
+
+private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult payment, bool forceReversalSeries)
+{
+    _workspace.Draft.PaymentReference = payment.PaymentReference;
+    _workspace.Draft.PaidOn = payment.PaidOn;
+    _workspace.Draft.GenerateReversalSeries = forceReversalSeries || payment.DeltaValue < 0m;
+
+    if (payment.DeltaValue < 0m)
+    {
+        _workspace.Draft.PaidInValue = Math.Abs(payment.DeltaValue);
+        _workspace.Draft.PaidOutValue = 0m;
+    }
+    else
+    {
+        _workspace.Draft.PaidOutValue = Math.Abs(payment.DeltaValue);
+        _workspace.Draft.PaidInValue = 0m;
+    }
+
+    var candidateCashCodes = GetCashCodesForSourcePayment(payment);
+
+    if (!candidateCashCodes.Any(item => string.Equals(item.CashCode, _workspace.Draft.CashCode, StringComparison.OrdinalIgnoreCase)))
+    {
+        _workspace.Draft.CashCode = string.Empty;
+        _workspace.Draft.TaxCode = string.Empty;
+    }
+}
+
+private async Task HandleAddFreehandAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashAssetsWorkspaceService.AddFreehandAsync(
+            SelectedAccount.AccountCode,
+            _workspace.Draft,
+            _currentAspNetUserId);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Asset transaction added.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandleAddFromPaymentAsync()
+{
+    if (SelectedAccount is null
+        || string.IsNullOrWhiteSpace(_currentAspNetUserId)
+        || _selectedPostedPayment is null)
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashAssetsWorkspaceService.AddFromPaymentAsync(
+            SelectedAccount.AccountCode,
+            _selectedPostedPayment.PaymentCode,
+            _workspace.Draft,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Asset transaction created from posted payment.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandleAddReversalAsync()
+{
+    if (SelectedAccount is null
+        || string.IsNullOrWhiteSpace(_currentAspNetUserId)
+        || _selectedReversalPayment is null)
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+    _workspace.Draft.GenerateReversalSeries = true;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashAssetsWorkspaceService.AddFromPaymentAsync(
+            SelectedAccount.AccountCode,
+            _selectedReversalPayment.PaymentCode,
+            _workspace.Draft,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Asset reversal entry created from posted cash payment.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandlePostAsync(string paymentCode)
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashAssetsWorkspaceService.PostAsync(
+            paymentCode,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Asset transaction posted.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandleDeleteAsync(string paymentCode)
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashAssetsWorkspaceService.DeleteAsync(
+            paymentCode,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+        _message = "Asset transaction deleted.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+}

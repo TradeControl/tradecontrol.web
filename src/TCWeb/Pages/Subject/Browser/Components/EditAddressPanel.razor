@@ -1,0 +1,194 @@
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using TradeControl.Web.Data
+@using TradeControl.Web.Models
+
+@inject NodeContext NodeContext
+
+<div class="container-fluid py-2">
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+                <div>
+                    <h1 class="h4 mb-1">@(_isEditMode ? "Edit Address" : "Add Address")</h1>
+                    <div class="text-muted small">Maintain free-form address text for the selected Subject.</div>
+                </div>
+
+                <div class="text-muted small text-end">
+                    <div>Subject Code</div>
+                    <div><code>@SubjectCode</code></div>
+                </div>
+            </div>
+
+            <EditForm EditContext="@_editContext" OnSubmit="HandleSubmitAsync">
+                <DataAnnotationsValidator />
+
+                @if (_hasValidationErrors)
+                {
+                    <div class="alert alert-danger py-2 mb-4">
+                        <ValidationSummary />
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_actionMessage))
+                {
+                    <div class="alert alert-danger py-2 mb-4" role="alert">@_actionMessage</div>
+                }
+
+                <div class="rounded border overflow-hidden mb-4">
+                    <div class="px-3 py-2 text-bg-primary fw-semibold">Address</div>
+                    <div class="bg-white p-3">
+                        <label class="form-label" for="Address">Address</label>
+                        <InputTextArea id="Address"
+                                       @bind-Value="_editor.Address"
+                                       class="form-control"
+                                       rows="8" />
+                        <ValidationMessage For="@(() => _editor.Address)" class="text-danger small" />
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit"
+                            class="btn btn-primary"
+                            disabled="@_isBusy">
+                        <i class="bi bi-floppy me-1" aria-hidden="true"></i>Save
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@_isBusy"
+                            @onclick="CancelAsync">
+                        Cancel
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter] public string SubjectCode { get; set; } = string.Empty;
+    [Parameter] public string AddressCode { get; set; } = string.Empty;
+    [Parameter] public string ReturnNode { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private sealed class AddressEditorModel
+    {
+        [Required(ErrorMessage = "Address is required.")]
+        public string Address { get; set; } = string.Empty;
+    }
+
+    private readonly AddressEditorModel _editor = new();
+    private EditContext _editContext = default!;
+    private string? _loadedKey;
+    private string? _actionMessage;
+    private bool _isBusy;
+    private bool _hasValidationErrors;
+
+    private bool _isEditMode => !string.IsNullOrWhiteSpace(AddressCode);
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetEditContext();
+        await Task.CompletedTask;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = $"{SubjectCode}|{AddressCode}";
+
+        if (string.Equals(_loadedKey, key, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _loadedKey = key;
+        _actionMessage = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _editor.Address = string.Empty;
+
+        if (_isEditMode)
+        {
+            var subjects = new Subjects(NodeContext, SubjectCode);
+            var currentAddress = await subjects.GetAddressAsync(AddressCode);
+
+            if (currentAddress is not null)
+                _editor.Address = currentAddress.Address ?? string.Empty;
+        }
+
+        ResetEditContext();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _actionMessage = null;
+
+        if (!_editContext.Validate())
+            return;
+
+        _isBusy = true;
+
+        try
+        {
+            var subjects = new Subjects(NodeContext, SubjectCode);
+            SubjectActionResult result;
+
+            if (_isEditMode)
+            {
+                result = await subjects.UpdateAddressAsync(AddressCode, _editor.Address.Trim());
+            }
+            else
+            {
+                await subjects.AddAddressAsync(_editor.Address.Trim());
+                result = SubjectActionResult.Success("Address added.");
+            }
+
+            if (result.Succeeded)
+            {
+                if (OnSaved.HasDelegate)
+                    await OnSaved.InvokeAsync(result.Message);
+
+                return;
+            }
+
+            _actionMessage = result.Message;
+        }
+        catch (Exception ex)
+        {
+            await NodeContext.ErrorLog(ex);
+            _actionMessage = "Unable to save the address.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private Task CancelAsync()
+    {
+        return OnCancel.HasDelegate
+            ? OnCancel.InvokeAsync()
+            : Task.CompletedTask;
+    }
+
+    private void ResetEditContext()
+    {
+        if (_editContext is not null)
+            _editContext.OnValidationStateChanged -= HandleValidationStateChanged;
+
+        _editContext = new EditContext(_editor);
+        _editContext.OnValidationStateChanged += HandleValidationStateChanged;
+        _hasValidationErrors = false;
+    }
+
+    private void HandleValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        _hasValidationErrors = _editContext.GetValidationMessages().Any();
+        InvokeAsync(StateHasChanged);
+    }
+}

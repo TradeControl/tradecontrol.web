@@ -1,0 +1,990 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Pages.Subject.Controls
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+@inject ICashStatementQueryService CashStatementQueryService
+@inject ICashStatementPaymentMaintenanceService CashStatementPaymentMaintenanceService
+
+@if (Account is null)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Select an account to begin.
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        @RenderHeaderBar()
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="alert alert-danger py-2 mb-0">@ErrorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_paymentEditorMessage))
+        {
+            <div class="alert alert-success py-2 mb-0">@_paymentEditorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_paymentEditorError))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_paymentEditorError</div>
+        }
+
+        @if (_paymentEditor is not null)
+        {
+            @RenderPaymentEditor()
+        }
+
+        <div class="flex-grow-1 overflow-auto" style="min-height:0;">
+            @RenderStatementBody()
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public CashManagerAccountSummary? Account { get; set; }
+    [Parameter] public IReadOnlyList<CashManagerYearOption> Years { get; set; } = Array.Empty<CashManagerYearOption>();
+    [Parameter] public IReadOnlyList<CashManagerPeriodOption> Periods { get; set; } = Array.Empty<CashManagerPeriodOption>();
+    [Parameter] public short? SelectedYearNumber { get; set; }
+    [Parameter] public DateTime? SelectedPeriodStartOn { get; set; }
+    [Parameter] public string NamespaceFilter { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<NamespaceSelectorSuggestion> NamespaceSuggestions { get; set; } = Array.Empty<NamespaceSelectorSuggestion>();
+    [Parameter] public bool IsLoadingNamespaceSuggestions { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public CashManagerStatementResult Statement { get; set; } = CashManagerStatementResult.Empty;
+    [Parameter] public EventCallback<short> OnYearSelected { get; set; }
+    [Parameter] public EventCallback<DateTime?> OnPeriodSelected { get; set; }
+    [Parameter] public EventCallback<string> OnNamespaceFilterChanged { get; set; }
+    [Parameter] public EventCallback<string> OnNamespaceFilterCommitted { get; set; }
+
+    private bool _isHeaderExpanded;
+    private bool _canCorrectPostedPayments;
+    private bool _isAdministrator;
+    private bool _isSavingEditor;
+    private bool _confirmDelete;
+    private string? _userId;
+    private string? _paymentEditorMessage;
+    private string? _paymentEditorError;
+    private CashManagerStatementResult _currentStatement = CashManagerStatementResult.Empty;
+    private CashManagerStatementSortColumn _sortColumn = CashManagerStatementSortColumn.EntryNumber;
+    private bool _sortDescending = true;
+    private CashManagerStatementPaymentEditMode _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
+    private CashManagerStatementPaymentEditorState? _paymentEditor;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccessStateAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        _currentStatement = Statement;
+    }
+
+    private async Task LoadAccessStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAdministrator = authState.User.IsInRole(Authorization.Constants.AdministratorsRole);
+        _canCorrectPostedPayments = _isAdministrator
+            || authState.User.IsInRole(Authorization.Constants.ManagersRole);
+        _userId = UserManager.GetUserId(authState.User);
+    }
+
+    private bool UseNamespaceGrouping()
+    {
+        return !string.IsNullOrWhiteSpace(NamespaceFilter);
+    }
+
+    private RenderFragment RenderHeaderBar() => @<div class="card">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <div class="fw-semibold">Statement</div>
+                <div class="small text-muted">
+                    @Account.AccountName
+                    <span class="mx-1">•</span>
+                    @CashManagerSectionCatalog.GetYearLabel(Years, SelectedYearNumber)
+                    <span class="mx-1">•</span>
+                    @CashManagerSectionCatalog.GetPeriodScopeLabel(Periods, SelectedPeriodStartOn)
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                @if (!string.IsNullOrWhiteSpace(NamespaceFilter))
+                                {
+                <span class="badge text-bg-light"><code>@NamespaceFilter</code></span>
+                                }
+
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        @onclick="ToggleHeaderAsync">
+                    <i class="bi @(_isHeaderExpanded ? "bi-chevron-up" : "bi-chevron-down") me-1" aria-hidden="true"></i>
+                    @(_isHeaderExpanded ? "Hide header" : "Show header")
+                </button>
+            </div>
+        </div>
+
+        @if (_isHeaderExpanded)
+                {
+        <div class="border-top mt-3 pt-3">
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-12 col-lg-3">
+                    <label class="form-label small text-muted mb-1" for="statementYearSelect">Financial Year</label>
+                    <select id="statementYearSelect"
+                            class="form-select form-select-sm"
+                            value="@SelectedYearNumber"
+                            @onchange="HandleYearChangedAsync">
+                        @foreach (var year in Years)
+                                                {
+                        <option value="@year.YearNumber">@year.Description</option>
+                                                }
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <label class="form-label small text-muted mb-1" for="statementPeriodSelect">Period</label>
+                    <select id="statementPeriodSelect"
+                            class="form-select form-select-sm"
+                            value="@GetSelectedPeriodValue()"
+                            @onchange="HandlePeriodChangedAsync">
+                        <option value="">All months in year</option>
+                        @foreach (var period in Periods)
+                                                {
+                        <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
+                                                }
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-5">
+                    <label class="form-label small text-muted mb-1">Namespace Filter</label>
+                    <NamespaceSelector FilterText="@NamespaceFilter"
+                                       Suggestions="@NamespaceSuggestions"
+                                       IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
+                                       ShowApplyButton="true"
+                                       ApplyButtonTitle="Apply namespace filter"
+                                       OnFilterChanged="OnFilterChangedAsync"
+                                       OnFilterCommitted="OnFilterCommittedAsync" />
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Opening Posted Balance</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.OpeningPostedBalance.ToString("C")</div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Visible Posted</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.PostedNet.ToString("C")</div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Visible Unposted</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.UnpostedNet.ToString("C")</div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Provisional Balance</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.ProvisionalBalance.ToString("C")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                }
+    </div>
+</div>;
+
+private RenderFragment RenderPaymentEditor() => @<div class="card border-primary">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Payment Correction</h2>
+                <div class="small text-muted">
+                    Payment <code>@_paymentEditor!.Model.PaymentCode</code>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ClosePaymentEditorAsync">
+                Close
+            </button>
+        </div>
+
+        @if (_paymentEditor.Model.IsClosedPeriod)
+        {
+            <div class="alert alert-warning py-2 mb-3">
+                <div class="fw-semibold">Closed period</div>
+                <div class="small">
+                    This payment is in a <strong>@_paymentEditor.Model.PeriodStatus</strong> period.
+                    Only Administrators may overwrite it.
+                </div>
+
+                @if (_isAdministrator)
+                {
+                    <div class="form-check mt-2">
+                        <InputCheckbox id="statementPaymentClosedPeriodOverride"
+                                       class="form-check-input"
+                                       @bind-Value="_paymentEditor.Model.AllowClosedPeriodOverride" />
+                        <label class="form-check-label" for="statementPaymentClosedPeriodOverride">
+                            Confirm closed-period overwrite and account rebuild
+                        </label>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Edit)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Edit)">
+                Edit
+            </button>
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Move)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Move)">
+                Move
+            </button>
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Payment)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Payment)">
+                Payment
+            </button>
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Delete)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Delete)">
+                Delete
+            </button>
+        </div>
+
+        @switch (_paymentEditorMode)
+        {
+            case CashManagerStatementPaymentEditMode.Edit:
+                @RenderEditMode()
+                break;
+            case CashManagerStatementPaymentEditMode.Move:
+                @RenderMoveMode()
+                break;
+            case CashManagerStatementPaymentEditMode.Payment:
+                @RenderPaymentMode()
+                break;
+            case CashManagerStatementPaymentEditMode.Delete:
+                @RenderDeleteMode()
+                break;
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderEditMode() => @<div class="row g-3">
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorUserId">User</label>
+        <InputSelect id="statementPaymentEditorUserId"
+                     class="form-select"
+                     @bind-Value="_paymentEditor!.Model.UserId">
+            @foreach (var option in _paymentEditor.Users)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorPaidOn">Paid On</label>
+        <InputDate id="statementPaymentEditorPaidOn"
+                   class="form-control"
+                   @bind-Value="_paymentEditor!.Model.PaidOn" />
+    </div>
+
+    <div class="col-12">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorReference">Reference</label>
+        <InputText id="statementPaymentEditorReference"
+                   class="form-control"
+                   @bind-Value="_paymentEditor!.Model.PaymentReference" />
+    </div>
+
+    <div class="col-12">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorCashCode">Cash Code</label>
+        @if (_paymentEditor!.CanEditCashCode)
+        {
+            <InputSelect id="statementPaymentEditorCashCode"
+                         class="form-select"
+                         @bind-Value="_paymentEditor.Model.CashCode">
+                @foreach (var option in _paymentEditor.CashCodes)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
+        }
+        else
+        {
+            <InputText id="statementPaymentEditorCashCode"
+                       class="form-control"
+                       value="@(_paymentEditor.Model.CashCode)"
+                       readonly />
+        }
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-primary"
+                disabled="@(!CanExecuteEditorAction())"
+                @onclick="HandleSaveEditAsync">
+            @(_isSavingEditor ? "Saving…" : "Save edit")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderMoveMode() => @<div class="row g-3">
+    <div class="col-12">
+        <div class="small text-muted mb-1">Current Account</div>
+        <div class="fw-semibold"><code>@_paymentEditor!.Model.CurrentAccountCode</code></div>
+    </div>
+
+    <div class="col-12">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorMoveAccount">Target Cash Account</label>
+        <InputSelect id="statementPaymentEditorMoveAccount"
+                     class="form-select"
+                     @bind-Value="_paymentEditor!.Model.AccountCode">
+            @foreach (var option in _paymentEditor.Accounts)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-primary"
+                disabled="@(!CanExecuteEditorAction())"
+                @onclick="HandleMoveAsync">
+            @(_isSavingEditor ? "Moving…" : "Move payment")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderPaymentMode() => @<div class="row g-3">
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorPaidOut">Paid Out</label>
+        <InputNumber id="statementPaymentEditorPaidOut"
+                     class="form-control"
+                     @bind-Value="_paymentEditor!.Model.PaidOutValue" />
+    </div>
+
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorPaidIn">Paid In</label>
+        <InputNumber id="statementPaymentEditorPaidIn"
+                     class="form-control"
+                     @bind-Value="_paymentEditor!.Model.PaidInValue" />
+    </div>
+
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1" for="statementPaymentEditorTaxCode">Tax Code</label>
+        <InputSelect id="statementPaymentEditorTaxCode"
+                     class="form-select"
+                     @bind-Value="_paymentEditor!.Model.TaxCode">
+            @foreach (var option in _paymentEditor.TaxCodes)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-primary"
+                disabled="@(!CanExecuteEditorAction())"
+                @onclick="HandleSavePaymentAsync">
+            @(_isSavingEditor ? "Saving…" : "Save payment")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderDeleteMode() => @<div class="row g-3">
+    <div class="col-12">
+        <div class="alert alert-danger py-2 mb-0">
+            Delete posted payment <code>@_paymentEditor!.Model.PaymentCode</code>.
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <InputCheckbox id="statementPaymentDeleteConfirm"
+                           class="form-check-input"
+                           @bind-Value="_confirmDelete" />
+            <label class="form-check-label" for="statementPaymentDeleteConfirm">
+                Confirm payment delete
+            </label>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-danger"
+                disabled="@(!_confirmDelete || !CanExecuteEditorAction())"
+                @onclick="HandleDeleteAsync">
+            @(_isSavingEditor ? "Deleting…" : "Delete payment")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderStatementBody()
+{
+    if (IsLoading)
+    {
+        return @<div class="d-flex align-items-center justify-content-center h-100 text-muted">
+            Loading statement…
+        </div>;
+    }
+
+    if (_currentStatement.Rows.Count == 0)
+    {
+        return @<div class="d-flex align-items-center justify-content-center h-100 text-muted">
+            No statement activity found for the selected scope.
+        </div>;
+    }
+
+    return UseNamespaceGrouping()
+        ? RenderGroupedStatement()
+        : RenderFlatStatement();
+}
+
+private RenderFragment RenderFlatStatement() => @<div class="d-flex flex-column gap-3 position-relative">
+@if (!IsMobile)
+{
+    @RenderDesktopColumnLegend()
+}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <div class="fw-semibold">Transactions</div>
+                    <div class="small text-muted">Statement order for the selected account and period scope.</div>
+                </div>
+
+                <div class="text-end small">
+                    <div class="text-muted">Posted: @_currentStatement.Summary.PostedNet.ToString("C")</div>
+                    <div class="text-muted">Unposted: @_currentStatement.Summary.UnpostedNet.ToString("C")</div>
+                    <div class="fw-semibold">Provisional: @_currentStatement.Summary.ProvisionalBalance.ToString("C")</div>
+                </div>
+            </div>
+
+            @if (IsMobile)
+            {
+                @RenderMobileRows(_currentStatement.Rows)
+            }
+            else
+            {
+                @RenderDesktopRows(_currentStatement.Rows)
+            }
+        </div>
+    </div>
+</div>;
+
+private RenderFragment RenderGroupedStatement() => @<div class="d-flex flex-column gap-3 position-relative">
+@if (!IsMobile)
+{
+    @RenderDesktopColumnLegend()
+}
+
+@foreach (var group in _currentStatement.Groups)
+{
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                        <div class="fw-semibold">@group.Title</div>
+                        <div class="small text-muted"><code>@group.NamespacePath</code></div>
+                    </div>
+
+                    <div class="text-end small">
+                        <div class="text-muted">Posted: @group.PostedNet.ToString("C")</div>
+                        <div class="text-muted">Unposted: @group.UnpostedNet.ToString("C")</div>
+                        <div class="fw-semibold">Provisional: @group.ProvisionalNet.ToString("C")</div>
+                    </div>
+                </div>
+
+                @if (IsMobile)
+                {
+                    @RenderMobileRows(group.Rows)
+                }
+                else
+                {
+                    @RenderDesktopRows(group.Rows)
+                }
+            </div>
+        </div>
+}
+</div>;
+
+private RenderFragment RenderDesktopColumnLegend() => @<div class="card sticky-top" style="z-index:3;">
+    <div class="card-body py-2">
+        <div class="row gx-2 small text-muted fw-semibold">
+            <div class="col-1">Entry</div>
+            <div class="col-1">Status</div>
+            <div class="col-1">Paid On</div>
+            <div class="col-2">Subject</div>
+            <div class="col-2">Reference</div>
+            <div class="col-2">Cash</div>
+            <div class="col-1 text-end">Paid Out</div>
+            <div class="col-1 text-end">Paid In</div>
+            <div class="col-1 text-end">Balance</div>
+        </div>
+    </div>
+</div>;
+
+private RenderFragment RenderDesktopRows(IReadOnlyList<CashManagerStatementRow> rows) => @<div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>@RenderSortButton(CashManagerStatementSortColumn.EntryNumber)</th>
+                <th>@RenderSortButton(CashManagerStatementSortColumn.Status)</th>
+                <th>@RenderSortButton(CashManagerStatementSortColumn.PaidOn)</th>
+                <th>@RenderSortButton(CashManagerStatementSortColumn.Subject)</th>
+                <th>@RenderSortButton(CashManagerStatementSortColumn.Reference)</th>
+                <th>@RenderSortButton(CashManagerStatementSortColumn.Cash)</th>
+                <th class="text-end">@RenderSortButton(CashManagerStatementSortColumn.PaidOut, true)</th>
+                <th class="text-end">@RenderSortButton(CashManagerStatementSortColumn.PaidIn, true)</th>
+                <th class="text-end">@RenderSortButton(CashManagerStatementSortColumn.RunningBalance, true)</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in GetSortedRows(rows))
+            {
+                <tr>
+                    <td>@(row.RowNumber?.ToString() ?? "—")</td>
+                    <td>
+                        <span class="badge @CashManagerSectionCatalog.GetRowStatusBadgeClass(row.Status)">
+                            @CashManagerSectionCatalog.GetRowStatusLabel(row.Status)
+                        </span>
+                    </td>
+                    <td>@row.PaidOn.ToString("d")</td>
+                    <td>
+                        <div>@row.SubjectName</div>
+                        <div class="small text-muted"><code>@row.SubjectCode</code></div>
+                    </td>
+                    <td>@row.PaymentReference</td>
+                    <td>
+                        <div>@row.CashDescription</div>
+                        @if (!string.IsNullOrWhiteSpace(row.CashCode))
+                        {
+                            <div class="small text-muted"><code>@row.CashCode</code></div>
+                        }
+                    </td>
+                    <td class="text-end">@row.PaidOutValue.ToString("C")</td>
+                    <td class="text-end">@row.PaidInValue.ToString("C")</td>
+                    <td class="text-end fw-semibold">@row.RunningBalance.ToString("C")</td>
+                    <td class="text-end">
+                        @if (CanOpenPaymentEditor(row))
+                        {
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    @onclick="() => OpenPaymentEditorAsync(row.PaymentCode)">
+                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>;
+
+private RenderFragment RenderMobileRows(IReadOnlyList<CashManagerStatementRow> rows) => @<div class="d-flex flex-column gap-2">
+@foreach (var row in GetSortedRows(rows))
+{
+        <div class="border rounded p-3">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                <div>
+                    <div class="fw-semibold">@row.SubjectName</div>
+                    <div class="small text-muted">
+                        @(row.RowNumber?.ToString() ?? "—")
+                        <span class="mx-1">•</span>
+                        @row.PaidOn.ToString("d")
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-start gap-2">
+                    <span class="badge @CashManagerSectionCatalog.GetRowStatusBadgeClass(row.Status)">
+                        @CashManagerSectionCatalog.GetRowStatusLabel(row.Status)
+                    </span>
+
+                    @if (CanOpenPaymentEditor(row))
+                    {
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                @onclick="() => OpenPaymentEditorAsync(row.PaymentCode)">
+                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(row.PaymentReference))
+            {
+                <div class="small mb-2">@row.PaymentReference</div>
+            }
+
+            <div class="small text-muted">@row.CashDescription</div>
+
+            <div class="row g-2 mt-2">
+                <div class="col-4">
+                    <div class="small text-muted">Out</div>
+                    <div class="fw-semibold">@row.PaidOutValue.ToString("C")</div>
+                </div>
+
+                <div class="col-4">
+                    <div class="small text-muted">In</div>
+                    <div class="fw-semibold">@row.PaidInValue.ToString("C")</div>
+                </div>
+
+                <div class="col-4">
+                    <div class="small text-muted">Balance</div>
+                    <div class="fw-semibold">@row.RunningBalance.ToString("C")</div>
+                </div>
+            </div>
+        </div>
+}
+</div>;
+
+private RenderFragment RenderSortButton(CashManagerStatementSortColumn column, bool alignEnd = false) => @<button type="button"
+                                                                                                                      class="btn btn-link btn-sm p-0 text-decoration-none @(alignEnd ? "float-end" : string.Empty)"
+@onclick="() => ToggleSortAsync(column)">
+@CashManagerSectionCatalog.GetSortLabel(column)
+    <i class="bi @GetSortIconClass(column) ms-1" aria-hidden="true"></i>
+</button>;
+
+private IReadOnlyList<CashManagerStatementRow> GetSortedRows(IReadOnlyList<CashManagerStatementRow> rows)
+{
+    IOrderedEnumerable<CashManagerStatementRow> orderedRows = _sortColumn switch
+    {
+        CashManagerStatementSortColumn.EntryNumber => _sortDescending
+            ? rows.OrderByDescending(row => row.RowNumber ?? long.MinValue)
+            : rows.OrderBy(row => row.RowNumber ?? long.MaxValue),
+        CashManagerStatementSortColumn.PaidOn => _sortDescending
+            ? rows.OrderByDescending(row => row.PaidOn)
+            : rows.OrderBy(row => row.PaidOn),
+        CashManagerStatementSortColumn.Subject => _sortDescending
+            ? rows.OrderByDescending(row => row.SubjectName, StringComparer.OrdinalIgnoreCase)
+            : rows.OrderBy(row => row.SubjectName, StringComparer.OrdinalIgnoreCase),
+        CashManagerStatementSortColumn.Reference => _sortDescending
+            ? rows.OrderByDescending(row => row.PaymentReference, StringComparer.OrdinalIgnoreCase)
+            : rows.OrderBy(row => row.PaymentReference, StringComparer.OrdinalIgnoreCase),
+        CashManagerStatementSortColumn.Cash => _sortDescending
+            ? rows.OrderByDescending(row => row.CashDescription, StringComparer.OrdinalIgnoreCase)
+            : rows.OrderBy(row => row.CashDescription, StringComparer.OrdinalIgnoreCase),
+        CashManagerStatementSortColumn.PaidOut => _sortDescending
+            ? rows.OrderByDescending(row => row.PaidOutValue)
+            : rows.OrderBy(row => row.PaidOutValue),
+        CashManagerStatementSortColumn.PaidIn => _sortDescending
+            ? rows.OrderByDescending(row => row.PaidInValue)
+            : rows.OrderBy(row => row.PaidInValue),
+        CashManagerStatementSortColumn.RunningBalance => _sortDescending
+            ? rows.OrderByDescending(row => row.RunningBalance)
+            : rows.OrderBy(row => row.RunningBalance),
+        CashManagerStatementSortColumn.Status => _sortDescending
+            ? rows.OrderByDescending(row => CashManagerSectionCatalog.GetRowStatusLabel(row.Status), StringComparer.OrdinalIgnoreCase)
+            : rows.OrderBy(row => CashManagerSectionCatalog.GetRowStatusLabel(row.Status), StringComparer.OrdinalIgnoreCase),
+        _ => rows.OrderByDescending(row => row.RowNumber ?? long.MinValue)
+    };
+
+    return orderedRows
+        .ThenBy(row => row.PaymentCode, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+}
+
+private bool CanOpenPaymentEditor(CashManagerStatementRow row)
+{
+    return _canCorrectPostedPayments
+        && row.Status == CashManagerRowStatus.Posted
+        && !string.IsNullOrWhiteSpace(row.PaymentCode);
+}
+
+private bool CanExecuteEditorAction()
+{
+    if (_isSavingEditor || _paymentEditor is null || string.IsNullOrWhiteSpace(_userId))
+    {
+        return false;
+    }
+
+    if (!_paymentEditor.Model.IsClosedPeriod)
+    {
+        return true;
+    }
+
+    return _isAdministrator && _paymentEditor.Model.AllowClosedPeriodOverride;
+}
+
+private string GetEditorTabButtonClass(CashManagerStatementPaymentEditMode mode)
+{
+    return _paymentEditorMode == mode
+        ? "btn-primary"
+        : "btn-outline-secondary";
+}
+
+private async Task OpenPaymentEditorAsync(string paymentCode)
+{
+    _paymentEditorMessage = null;
+    _paymentEditorError = null;
+    _confirmDelete = false;
+    _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
+    _paymentEditor = await CashStatementPaymentMaintenanceService.GetEditorAsync(paymentCode);
+
+    if (_paymentEditor is null)
+    {
+        _paymentEditorError = $"Payment '{paymentCode}' was not found.";
+    }
+}
+
+private Task ClosePaymentEditorAsync()
+{
+    _paymentEditor = null;
+    _paymentEditorError = null;
+    _confirmDelete = false;
+    return Task.CompletedTask;
+}
+
+private void SetPaymentEditorMode(CashManagerStatementPaymentEditMode mode)
+{
+    _paymentEditorMode = mode;
+    _paymentEditorError = null;
+    _confirmDelete = false;
+}
+
+private async Task HandleSaveEditAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_userId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.SaveEditAsync(
+            _paymentEditor.Model,
+            _userId,
+            _isAdministrator);
+
+        await ReloadStatementAsync();
+        _paymentEditor = null;
+        _paymentEditorMessage = "Payment updated.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task HandleMoveAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_userId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.MoveAsync(
+            _paymentEditor.Model,
+            _userId,
+            _isAdministrator);
+
+        await ReloadStatementAsync();
+        _paymentEditor = null;
+        _paymentEditorMessage = "Payment moved.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task HandleSavePaymentAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_userId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.SavePaymentAsync(
+            _paymentEditor.Model,
+            _userId,
+            _isAdministrator);
+
+        await ReloadStatementAsync();
+        _paymentEditor = null;
+        _paymentEditorMessage = "Payment values updated.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task HandleDeleteAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_userId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.DeleteAsync(
+            _paymentEditor.Model,
+            _userId,
+            _isAdministrator);
+
+        await ReloadStatementAsync();
+        _paymentEditor = null;
+        _confirmDelete = false;
+        _paymentEditorMessage = "Payment deleted.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task ReloadStatementAsync()
+{
+    if (Account is null || !SelectedYearNumber.HasValue)
+    {
+        _currentStatement = CashManagerStatementResult.Empty;
+        return;
+    }
+
+    _currentStatement = await CashStatementQueryService.GetStatementAsync(
+        Account.AccountCode,
+        SelectedYearNumber.Value,
+        SelectedPeriodStartOn,
+        NamespaceFilter);
+}
+
+private string GetSortIconClass(CashManagerStatementSortColumn column)
+{
+    if (_sortColumn != column)
+    {
+        return "bi-arrow-down-up";
+    }
+
+    return _sortDescending
+        ? "bi-sort-down"
+        : "bi-sort-up";
+}
+
+private string GetSelectedPeriodValue()
+{
+    return SelectedPeriodStartOn?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
+}
+
+private Task ToggleHeaderAsync()
+{
+    _isHeaderExpanded = !_isHeaderExpanded;
+    return Task.CompletedTask;
+}
+
+private Task ToggleSortAsync(CashManagerStatementSortColumn column)
+{
+    if (_sortColumn == column)
+    {
+        _sortDescending = !_sortDescending;
+    }
+    else
+    {
+        _sortColumn = column;
+        _sortDescending = column == CashManagerStatementSortColumn.EntryNumber
+            || column == CashManagerStatementSortColumn.PaidOn
+            || column == CashManagerStatementSortColumn.RunningBalance;
+    }
+
+    return Task.CompletedTask;
+}
+
+private async Task HandleYearChangedAsync(ChangeEventArgs args)
+{
+    if (short.TryParse(args.Value?.ToString(), out var yearNumber))
+    {
+        await OnYearSelected.InvokeAsync(yearNumber);
+    }
+}
+
+private async Task HandlePeriodChangedAsync(ChangeEventArgs args)
+{
+    var value = args.Value?.ToString();
+
+    if (string.IsNullOrWhiteSpace(value))
+    {
+        await OnPeriodSelected.InvokeAsync(null);
+        return;
+    }
+
+    if (DateTime.TryParse(
+        value,
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.RoundtripKind,
+        out var startOn))
+    {
+        await OnPeriodSelected.InvokeAsync(startOn);
+    }
+}
+
+private Task OnFilterChangedAsync(string filterText)
+{
+    return OnNamespaceFilterChanged.InvokeAsync(filterText);
+}
+
+private Task OnFilterCommittedAsync(string filterText)
+{
+    return OnNamespaceFilterCommitted.InvokeAsync(filterText);
+}
+}

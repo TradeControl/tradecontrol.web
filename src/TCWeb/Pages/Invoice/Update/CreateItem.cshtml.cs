@@ -90,14 +90,14 @@ namespace TradeControl.Web.Pages.Invoice.Update
                     };
 
                     var cashDescriptions = from t in NodeContext.Cash_CodeLookup
-                                           where t.CashTypeCode < (short)NodeEnum.CashType.Bank && t.CashPolarityCode == (short)cashMode
+                                           where t.CashTypeCode < (short)NodeEnum.CashType.Money && t.CashPolarityCode == (short)cashMode
                                            orderby t.CashDescription
                                            select t.CashDescription;
 
                     CashDescriptions = new SelectList(await cashDescriptions.ToListAsync());
 
                     string cashCode = await NodeContext.Cash_CodeLookup
-                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Bank && c.CashPolarityCode == (short)cashMode)
+                                                .Where(c => c.CashTypeCode < (short)NodeEnum.CashType.Money && c.CashPolarityCode == (short)cashMode)
                                                 .OrderBy(c => c.CashCode)
                                                 .Select(c => c.CashCode)
                                                 .FirstAsync();

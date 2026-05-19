@@ -13,7 +13,7 @@ namespace TradeControl.Web.Data
         public enum SubjectClass { Virtual, Real, Structural }
         public enum CategoryType { Nominal, CashTotal, Expression };
         public enum CashPolarity { Expense, Income, Neutral };
-        public enum CashType { Trade, Tax, Bank };
+        public enum CashType { Trade, External, Money };
         public enum CashStatus { Forecast, Current, Closed, Archived };
         public enum ProjectStatus { Pending, Opened, Closed, Charged, Cancelled, Archived };
         public enum DocType { Quotation, SalesOrder, Enquiry, PurchaseOrder, SalesInvoice, CreditNote, DebitNote };
