@@ -64,9 +64,9 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
 
         public bool GenerateReversalSeries { get; set; }
 
-        public int ReversalPeriods { get; set; } = 12;
+        public int ReversalPeriods { get; set; } = 5;
 
-        public int ReversalIntervalMonths { get; set; } = 1;
+        public int ReversalIntervalMonths { get; set; } = 12;
 
         [DataType(DataType.Date)]
         public DateTime ReversalStartOn { get; set; } = DateTime.Today;

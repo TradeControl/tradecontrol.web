@@ -20,16 +20,11 @@
             <div class="collapse navbar-collapse" id="mainNavbar">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownCash" role="button" data-bs-toggle="dropdown" aria-expanded="false">Financial</a>
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownCash" role="button" data-bs-toggle="dropdown" aria-expanded="false">Finance</a>
                         <ul class="dropdown-menu" aria-labelledby="navDropdownCash">
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Cash/Manager/Index">Cash Management</a>
                             </li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownInvoicing" role="button" data-bs-toggle="dropdown" aria-expanded="false">Invoicing</a>
-                        <ul class="dropdown-menu" aria-labelledby="navDropdownInvoicing">
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Invoice/Raise/Index">Raise</a>
                             </li>
@@ -45,25 +40,6 @@
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Invoice/Update/Index" asp-route-printed="false">Unsent</a>
                             </li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownInfra" role="button" data-bs-toggle="dropdown" aria-expanded="false">Infrastructure</a>
-                        <ul class="dropdown-menu" aria-labelledby="navDropdownInfra">
-                            <li>
-                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Index">Subject Search...</a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Browser/Index">Subject Browser</a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownAccounts" role="button" data-bs-toggle="dropdown" aria-expanded="false">Accounts</a>
-                        <ul class="dropdown-menu" aria-labelledby="navDropdownAccounts">
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Cash/Accounts/BalanceSheet">Balance Sheet</a>
                             </li>
@@ -75,6 +51,20 @@
                             </li>
                             <li>
                                 <a class="dropdown-item" asp-area="" asp-page="/Tax/Vat/Index">VAT</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Reports/DebtorsAndCreditors">Debtors and Creditors</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="navDropdownInfra" role="button" data-bs-toggle="dropdown" aria-expanded="false">Infrastructure</a>
+                        <ul class="dropdown-menu" aria-labelledby="navDropdownInfra">
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Index">Subject Search...</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" asp-area="" asp-page="/Subject/Browser/Index">Subject Browser</a>
                             </li>
                         </ul>
                     </li>

@@ -32,11 +32,16 @@ namespace TradeControl.Web.AppServices
                 return CashManagerStatementResult.Empty;
             }
 
-            var yearPeriods = await _nodeContext.App_Periods
+            var periodsQuery = _nodeContext.App_Periods
                 .AsNoTracking()
-                .Where(period =>
-                    period.YearNumber == yearNumber
-                    && period.CashStatusCode != (short)NodeEnum.CashStatus.Archived)
+                .Where(period => period.CashStatusCode != (short)NodeEnum.CashStatus.Archived);
+
+            if (yearNumber > 0)
+            {
+                periodsQuery = periodsQuery.Where(period => period.YearNumber == yearNumber);
+            }
+
+            var yearPeriods = await periodsQuery
                 .OrderBy(period => period.StartOn)
                 .Select(period => period.StartOn)
                 .ToListAsync(cancellationToken);
@@ -46,9 +51,12 @@ namespace TradeControl.Web.AppServices
                 return CashManagerStatementResult.Empty;
             }
 
-            var effectivePeriodStartOn = periodStartOn ?? yearPeriods[0];
-            var visiblePeriods = periodStartOn.HasValue
-                ? yearPeriods.Where(startOn => startOn == periodStartOn.Value).ToList()
+            var effectivePeriodStartOn = periodStartOn.HasValue && yearPeriods.Contains(periodStartOn.Value)
+                ? periodStartOn.Value
+                : yearPeriods[0];
+
+            var visiblePeriods = periodStartOn.HasValue && yearPeriods.Contains(effectivePeriodStartOn)
+                ? yearPeriods.Where(startOn => startOn == effectivePeriodStartOn).ToList()
                 : yearPeriods;
 
             var openingBalance = await GetOpeningBalanceAsync(accountCode, effectivePeriodStartOn, cancellationToken);

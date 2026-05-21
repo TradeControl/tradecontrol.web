@@ -120,9 +120,9 @@ else
 
             <div class="d-flex flex-wrap align-items-center gap-2">
                 @if (!string.IsNullOrWhiteSpace(NamespaceFilter))
-                                {
-                <span class="badge text-bg-light"><code>@NamespaceFilter</code></span>
-                                }
+                {
+                    <span class="badge text-bg-light"><code>@NamespaceFilter</code></span>
+                }
 
                 <button type="button"
                         class="btn btn-outline-secondary btn-sm"
@@ -134,79 +134,80 @@ else
         </div>
 
         @if (_isHeaderExpanded)
-                {
-        <div class="border-top mt-3 pt-3">
-            <div class="row g-3 align-items-end mb-3">
-                <div class="col-12 col-lg-3">
-                    <label class="form-label small text-muted mb-1" for="statementYearSelect">Financial Year</label>
-                    <select id="statementYearSelect"
-                            class="form-select form-select-sm"
-                            value="@SelectedYearNumber"
-                            @onchange="HandleYearChangedAsync">
-                        @foreach (var year in Years)
-                                                {
-                        <option value="@year.YearNumber">@year.Description</option>
-                                                }
-                    </select>
+        {
+            <div class="border-top mt-3 pt-3">
+                <div class="row g-3 align-items-end mb-3">
+                    <div class="col-12 col-lg-3">
+                        <label class="form-label small text-muted mb-1" for="statementYearSelect">Financial Year</label>
+                        <select id="statementYearSelect"
+                                class="form-select form-select-sm"
+                                value="@(SelectedYearNumber.GetValueOrDefault())"
+                                @onchange="HandleYearChangedAsync">
+                            <option value="0">All years</option>
+                            @foreach (var year in Years)
+                            {
+                                <option value="@year.YearNumber">@year.Description</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-4">
+                        <label class="form-label small text-muted mb-1" for="statementPeriodSelect">Period</label>
+                        <select id="statementPeriodSelect"
+                                class="form-select form-select-sm"
+                                value="@GetSelectedPeriodValue()"
+                                @onchange="HandlePeriodChangedAsync">
+                            <option value="">All months in year</option>
+                            @foreach (var period in Periods)
+                            {
+                                <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-5">
+                        <label class="form-label small text-muted mb-1">Namespace Filter</label>
+                        <NamespaceSelector FilterText="@NamespaceFilter"
+                                           Suggestions="@NamespaceSuggestions"
+                                           IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
+                                           ShowApplyButton="true"
+                                           ApplyButtonTitle="Apply namespace filter"
+                                           OnFilterChanged="OnFilterChangedAsync"
+                                           OnFilterCommitted="OnFilterCommittedAsync" />
+                    </div>
                 </div>
 
-                <div class="col-12 col-lg-4">
-                    <label class="form-label small text-muted mb-1" for="statementPeriodSelect">Period</label>
-                    <select id="statementPeriodSelect"
-                            class="form-select form-select-sm"
-                            value="@GetSelectedPeriodValue()"
-                            @onchange="HandlePeriodChangedAsync">
-                        <option value="">All months in year</option>
-                        @foreach (var period in Periods)
-                                                {
-                        <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
-                                                }
-                    </select>
-                </div>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="small text-muted mb-1">Opening Posted Balance</div>
+                            <div class="fw-semibold">@_currentStatement.Summary.OpeningPostedBalance.ToString("C")</div>
+                        </div>
+                    </div>
 
-                <div class="col-12 col-lg-5">
-                    <label class="form-label small text-muted mb-1">Namespace Filter</label>
-                    <NamespaceSelector FilterText="@NamespaceFilter"
-                                       Suggestions="@NamespaceSuggestions"
-                                       IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
-                                       ShowApplyButton="true"
-                                       ApplyButtonTitle="Apply namespace filter"
-                                       OnFilterChanged="OnFilterChangedAsync"
-                                       OnFilterCommitted="OnFilterCommittedAsync" />
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="small text-muted mb-1">Visible Posted</div>
+                            <div class="fw-semibold">@_currentStatement.Summary.PostedNet.ToString("C")</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="small text-muted mb-1">Visible Unposted</div>
+                            <div class="fw-semibold">@_currentStatement.Summary.UnpostedNet.ToString("C")</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="small text-muted mb-1">Provisional Balance</div>
+                            <div class="fw-semibold">@_currentStatement.Summary.ProvisionalBalance.ToString("C")</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="row g-3">
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted mb-1">Opening Posted Balance</div>
-                        <div class="fw-semibold">@_currentStatement.Summary.OpeningPostedBalance.ToString("C")</div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted mb-1">Visible Posted</div>
-                        <div class="fw-semibold">@_currentStatement.Summary.PostedNet.ToString("C")</div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted mb-1">Visible Unposted</div>
-                        <div class="fw-semibold">@_currentStatement.Summary.UnpostedNet.ToString("C")</div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted mb-1">Provisional Balance</div>
-                        <div class="fw-semibold">@_currentStatement.Summary.ProvisionalBalance.ToString("C")</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-                }
+        }
     </div>
 </div>;
 
@@ -331,10 +332,10 @@ private RenderFragment RenderEditMode() => @<div class="row g-3">
         }
         else
         {
-            <InputText id="statementPaymentEditorCashCode"
-                       class="form-control"
-                       value="@(_paymentEditor.Model.CashCode)"
-                       readonly />
+            <input id="statementPaymentEditorCashCode"
+                   class="form-control"
+                   value="@_paymentEditor.Model.CashCode"
+                   readonly />
         }
     </div>
 
@@ -897,7 +898,7 @@ private async Task HandleDeleteAsync()
 
 private async Task ReloadStatementAsync()
 {
-    if (Account is null || !SelectedYearNumber.HasValue)
+    if (Account is null)
     {
         _currentStatement = CashManagerStatementResult.Empty;
         return;
@@ -905,7 +906,7 @@ private async Task ReloadStatementAsync()
 
     _currentStatement = await CashStatementQueryService.GetStatementAsync(
         Account.AccountCode,
-        SelectedYearNumber.Value,
+        SelectedYearNumber.GetValueOrDefault(),
         SelectedPeriodStartOn,
         NamespaceFilter);
 }
@@ -955,7 +956,10 @@ private async Task HandleYearChangedAsync(ChangeEventArgs args)
     if (short.TryParse(args.Value?.ToString(), out var yearNumber))
     {
         await OnYearSelected.InvokeAsync(yearNumber);
+        return;
     }
+
+    await OnYearSelected.InvokeAsync(0);
 }
 
 private async Task HandlePeriodChangedAsync(ChangeEventArgs args)

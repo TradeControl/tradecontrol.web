@@ -305,11 +305,6 @@ namespace TradeControl.Web.AppServices
                 throw new InvalidOperationException("A source payment must be selected.");
             }
 
-            if (string.IsNullOrWhiteSpace(draft.CashCode))
-            {
-                throw new InvalidOperationException("An asset cash code is required.");
-            }
-
             var sourcePayment = await nodeContext.Cash_Payments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item =>
@@ -332,6 +327,43 @@ namespace TradeControl.Web.AppServices
                 }
             }
 
+            var deltaValue = sourcePayment.PaidInValue - sourcePayment.PaidOutValue;
+            var absoluteValue = Math.Abs(deltaValue);
+
+            if (absoluteValue == 0m)
+            {
+                throw new InvalidOperationException("The selected source payment has no value to process.");
+            }
+
+            draft.PaymentReference = string.IsNullOrWhiteSpace(draft.PaymentReference)
+                ? sourcePayment.PaymentReference ?? sourcePayment.PaymentCode
+                : draft.PaymentReference;
+
+            var cashAccounts = new CashAccounts(nodeContext);
+
+            if (draft.GenerateReversalSeries)
+            {
+                var reversalPeriods = (short)Math.Clamp(draft.ReversalPeriods, 1, short.MaxValue);
+                var reversalIntervalMonths = (short)Math.Clamp(draft.ReversalIntervalMonths, 1, short.MaxValue);
+
+                if (!await cashAccounts.AssetReversal(
+                    sourcePayment.PaymentCode,
+                    reversalPeriods,
+                    reversalIntervalMonths,
+                    draft.ReversalStartOn,
+                    draft.PaymentReference))
+                {
+                    throw new InvalidOperationException($"Asset reversal failed for payment '{sourcePayment.PaymentCode}'.");
+                }
+
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(draft.CashCode))
+            {
+                throw new InvalidOperationException("An asset cash code is required.");
+            }
+
             var subject = await TryResolveSubjectAsync(nodeContext, draft.NamespaceFilter, cancellationToken);
 
             if (subject is null)
@@ -348,48 +380,61 @@ namespace TradeControl.Web.AppServices
                     .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }
 
-            var deltaValue = sourcePayment.PaidInValue - sourcePayment.PaidOutValue;
-
-            if (deltaValue < 0m)
-            {
-                draft.PaidInValue = Math.Abs(deltaValue);
-                draft.PaidOutValue = 0m;
-            }
-            else
-            {
-                draft.PaidOutValue = Math.Abs(deltaValue);
-                draft.PaidInValue = 0m;
-            }
-
-            draft.PaymentReference = string.IsNullOrWhiteSpace(draft.PaymentReference)
-                ? sourcePayment.PaymentReference ?? sourcePayment.PaymentCode
-                : draft.PaymentReference;
-
             var profile = new Profile(nodeContext);
             var userIdForInsert = await profile.UserId(aspNetUserId);
             var userName = await profile.UserName(aspNetUserId);
-            var paymentCode = await new CashAccounts(nodeContext).NextPaymentCode();
+            var paymentCode = await cashAccounts.NextPaymentCode();
 
-            var entity = new Cash_vwPaymentsUnposted {
+            var paidInValue = deltaValue < 0m ? absoluteValue : 0m;
+            var paidOutValue = deltaValue < 0m ? 0m : absoluteValue;
+
+            var entity = CreateUnpostedAssetEntity(
+                paymentCode,
+                userIdForInsert,
+                userName,
+                subject.SubjectCode,
+                accountCode,
+                draft.CashCode,
+                draft.TaxCode,
+                draft.PaidOn,
+                paidInValue,
+                paidOutValue,
+                draft.PaymentReference);
+
+            nodeContext.Cash_PaymentsUnposted.Add(entity);
+            await nodeContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private static Cash_vwPaymentsUnposted CreateUnpostedAssetEntity(
+            string paymentCode,
+            string userId,
+            string userName,
+            string subjectCode,
+            string accountCode,
+            string cashCode,
+            string taxCode,
+            DateTime paidOn,
+            decimal paidInValue,
+            decimal paidOutValue,
+            string paymentReference)
+        {
+            return new Cash_vwPaymentsUnposted {
                 PaymentCode = paymentCode,
-                UserId = userIdForInsert,
+                UserId = userId,
                 PaymentStatusCode = (short)NodeEnum.PaymentStatus.Unposted,
-                SubjectCode = subject.SubjectCode,
+                SubjectCode = subjectCode,
                 AccountCode = accountCode,
-                CashCode = NormalizeNullableCode(draft.CashCode),
-                TaxCode = NormalizeNullableCode(draft.TaxCode),
-                PaidOn = draft.PaidOn,
-                PaidInValue = draft.PaidInValue,
-                PaidOutValue = draft.PaidOutValue,
-                PaymentReference = NormalizeNullableText(draft.PaymentReference),
+                CashCode = NormalizeNullableCode(cashCode),
+                TaxCode = NormalizeNullableCode(taxCode),
+                PaidOn = paidOn,
+                PaidInValue = paidInValue,
+                PaidOutValue = paidOutValue,
+                PaymentReference = NormalizeNullableText(paymentReference),
                 InsertedBy = userName,
                 UpdatedBy = userName,
                 InsertedOn = DateTime.Now,
                 UpdatedOn = DateTime.Now
             };
-
-            nodeContext.Cash_PaymentsUnposted.Add(entity);
-            await nodeContext.SaveChangesAsync(cancellationToken);
         }
 
         public async Task PostAsync(
@@ -525,20 +570,6 @@ namespace TradeControl.Web.AppServices
         private static async Task<string> GetUserIdAsync(NodeContext nodeContext, string aspNetUserId)
         {
             return await new Profile(nodeContext).UserId(aspNetUserId);
-        }
-
-        private static async Task<IReadOnlyList<CashManagerPostedPaymentSearchResult>> SearchPostedPaymentsByCashTypeAsync(
-            string assetAccountCode,
-            string namespaceFilter,
-            string searchText,
-            string aspNetUserId,
-            bool isPrivileged,
-            short cashTypeCode,
-            int take,
-            CancellationToken cancellationToken,
-            IServiceScopeFactory? scopeFactory = null)
-        {
-            throw new InvalidOperationException("This overload is not used.");
         }
 
         private async Task<IReadOnlyList<CashManagerPostedPaymentSearchResult>> SearchPostedPaymentsByCashTypeAsync(

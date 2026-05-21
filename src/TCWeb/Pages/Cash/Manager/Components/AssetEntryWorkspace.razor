@@ -307,19 +307,19 @@ else
         </div>
 
         @if (_isModePanelCollapsed)
-                {
-        <div class="small text-muted mt-3">
-            Expand the entry workspace to create or configure asset-side transactions.
-        </div>
-                }
-                else
+        {
+            <div class="small text-muted mt-3">
+                Expand the entry workspace to create or configure asset-side transactions.
+            </div>
+        }
+        else
         {
             <div class="flex-grow-1 overflow-auto mt-3" style="min-height:0;">
                 <div class="row g-3">
-                    <div class="col-12 col-xl-5">
+                    <div class="col-12 col-xl-3">
                         @RenderModeCard()
                     </div>
-                    <div class="col-12 col-xl-7">
+                    <div class="col-12 col-xl-9">
                         @RenderEntryCard()
                     </div>
                 </div>
@@ -616,7 +616,7 @@ private RenderFragment RenderSelectedSourcePayment(
     <div class="border rounded p-3">
         <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
             <div>
-                <div class="fw-semibold">Selected Source Payment</div>
+                <div class="fw-semibold">@(showReversalSettings ? "Selected Source Asset" : "Selected Source Payment")</div>
                 <div class="small text-muted"><code>@sourcePayment.PaymentCode</code></div>
             </div>
 
@@ -672,8 +672,8 @@ private RenderFragment RenderSelectedSourcePayment(
         </div>
     </div>
 
-@if (showReversalSettings)
-{
+    @if (showReversalSettings)
+    {
         <div class="row g-3">
             <div class="col-12 col-md-4">
                 <label class="form-label small text-muted mb-1" for="assetSourceReversalPeriods">Periods</label>
@@ -696,7 +696,7 @@ private RenderFragment RenderSelectedSourcePayment(
                            @bind-Value="_workspace.Draft.ReversalStartOn" />
             </div>
         </div>
-}
+    }
 
     <div class="d-flex justify-content-end">
         <button type="button"
@@ -719,11 +719,24 @@ private IReadOnlyList<CashManagerAssetCodeOption> GetCashCodesForSourcePayment(C
         ? (short)NodeEnum.CashPolarity.Income
         : (short)NodeEnum.CashPolarity.Expense;
 
-    return _workspace.CashCodes
+    var cashCodes = _workspace.CashCodes
         .Where(item =>
             item.CashPolarityCode == (short)NodeEnum.CashPolarity.Neutral
             || item.CashPolarityCode == requiredPolarityCode)
         .ToList();
+
+    if (!string.IsNullOrWhiteSpace(payment.CashCode)
+        && !cashCodes.Any(item => string.Equals(item.CashCode, payment.CashCode, StringComparison.OrdinalIgnoreCase)))
+    {
+        cashCodes.Insert(0, new CashManagerAssetCodeOption(
+            payment.CashCode,
+            payment.CashDescription,
+            string.Empty,
+            string.Empty,
+            requiredPolarityCode));
+    }
+
+    return cashCodes;
 }
 
 private string GetModeButtonClass(AssetEntryMode mode)
@@ -930,9 +943,28 @@ private Task HandleSelectReversalPaymentAsync(CashManagerPostedPaymentSearchResu
 
 private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult payment, bool forceReversalSeries)
 {
-    _workspace.Draft.PaymentReference = payment.PaymentReference;
+    var sourceReference = string.IsNullOrWhiteSpace(payment.PaymentReference)
+        ? payment.PaymentCode
+        : payment.PaymentReference;
+
     _workspace.Draft.PaidOn = payment.PaidOn;
     _workspace.Draft.GenerateReversalSeries = forceReversalSeries || payment.DeltaValue < 0m;
+
+    if (forceReversalSeries)
+    {
+        _workspace.Draft.NamespaceFilter = payment.SubjectCode ?? string.Empty;
+        _workspace.Draft.SubjectCode = payment.SubjectCode ?? string.Empty;
+        _workspace.Draft.SubjectName = payment.SubjectName ?? string.Empty;
+        _workspace.Draft.CashCode = payment.CashCode ?? string.Empty;
+        _workspace.Draft.TaxCode = string.Empty;
+        _workspace.Draft.PaymentReference = $"Write off - {sourceReference}";
+        _workspace.Draft.ReversalPeriods = 5;
+        _workspace.Draft.ReversalIntervalMonths = 12;
+    }
+    else
+    {
+        _workspace.Draft.PaymentReference = sourceReference;
+    }
 
     if (payment.DeltaValue < 0m)
     {
@@ -947,9 +979,10 @@ private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult pa
 
     var candidateCashCodes = GetCashCodesForSourcePayment(payment);
 
-    if (!candidateCashCodes.Any(item => string.Equals(item.CashCode, _workspace.Draft.CashCode, StringComparison.OrdinalIgnoreCase)))
+    if (string.IsNullOrWhiteSpace(_workspace.Draft.CashCode)
+        || !candidateCashCodes.Any(item => string.Equals(item.CashCode, _workspace.Draft.CashCode, StringComparison.OrdinalIgnoreCase)))
     {
-        _workspace.Draft.CashCode = string.Empty;
+        _workspace.Draft.CashCode = payment.CashCode ?? string.Empty;
         _workspace.Draft.TaxCode = string.Empty;
     }
 }
@@ -1047,7 +1080,7 @@ private async Task HandleAddReversalAsync()
             _isPrivileged);
 
         await LoadWorkspaceAsync(SelectedAccount.AccountCode);
-        _message = "Asset reversal entry created from posted cash payment.";
+        _message = "Asset reversal series created from selected source asset.";
     }
     catch (Exception exception)
     {

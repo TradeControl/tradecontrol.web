@@ -92,6 +92,78 @@ namespace TradeControl.Web.Data
                 }
         }
 
+        public async Task<bool> AssetReversal(
+    string paymentCode,
+    short periods = 5,
+    short months = 12,
+    DateTime? startOn = null,
+    string? paymentReference = null)
+        {
+            try
+            {
+                var _paymentCode = new SqlParameter() {
+                    ParameterName = "@PaymentCode",
+                    SqlDbType = SqlDbType.NVarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 20,
+                    Value = paymentCode
+                };
+
+                var _periods = new SqlParameter() {
+                    ParameterName = "@Periods",
+                    SqlDbType = SqlDbType.SmallInt,
+                    Direction = ParameterDirection.Input,
+                    Value = periods
+                };
+
+                var _months = new SqlParameter() {
+                    ParameterName = "@Months",
+                    SqlDbType = SqlDbType.SmallInt,
+                    Direction = ParameterDirection.Input,
+                    Value = months
+                };
+
+                var _startOn = new SqlParameter() {
+                    ParameterName = "@StartOn",
+                    SqlDbType = SqlDbType.DateTime,
+                    Direction = ParameterDirection.Input,
+                    Value = startOn.HasValue ? startOn.Value : DBNull.Value
+                };
+
+                var _paymentReference = new SqlParameter() {
+                    ParameterName = "@PaymentReference",
+                    SqlDbType = SqlDbType.NVarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 50,
+                    Value = string.IsNullOrWhiteSpace(paymentReference) ? DBNull.Value : paymentReference
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
+                {
+                    _connection.Open();
+
+                    using (SqlCommand _command = _connection.CreateCommand())
+                    {
+                        _command.CommandText = "Cash.proc_AssetReversal";
+                        _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_paymentCode);
+                        _command.Parameters.Add(_periods);
+                        _command.Parameters.Add(_months);
+                        _command.Parameters.Add(_startOn);
+                        _command.Parameters.Add(_paymentReference);
+
+                        var result = await _command.ExecuteNonQueryAsync();
+                        return result != 0;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
+
         public async Task<NodeEnum.CoinType> CoinType()
         {
             try

@@ -317,9 +317,9 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
             IReadOnlyList<CashManagerYearOption> years,
             short? selectedYearNumber)
         {
-            if (!selectedYearNumber.HasValue)
+            if (!selectedYearNumber.HasValue || selectedYearNumber.Value <= 0)
             {
-                return "No year selected";
+                return "All years";
             }
 
             return years

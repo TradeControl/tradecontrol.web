@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using Microsoft.Data.SqlClient;
 
@@ -124,6 +124,18 @@ namespace TradeControl.Web.Data
 
         public async Task<bool> PostAsset(string paymentCode) => await _context.PostAsset(paymentCode);
 
+        public async Task<bool> AssetReversal(
+            string paymentCode,
+            short periods = 5,
+            short months = 12,
+            DateTime? startOn = null,
+            string? paymentReference = null) => await _context.AssetReversal(
+                paymentCode,
+                periods,
+                months,
+                startOn,
+                paymentReference);
+
         public async Task<string> NextPaymentCode() => await _context.NextPaymentCode();
 
         public async Task<string> AddPayment(string accountCode, string cashCode, DateTime paidOn, decimal toPay) => await _context.AddPayment(AccountCode, accountCode, cashCode, paidOn, toPay);
@@ -134,6 +146,8 @@ namespace TradeControl.Web.Data
         public async Task<string> ReserveAccount() => await _context.ReserveAccount();
 
         public async Task<NodeEnum.CoinType> CoinType() => await _context.CoinType();
+
+
 
     }
 }
