@@ -258,77 +258,96 @@ namespace TradeControl.Web.Data
         }
 
 
-        public async Task<string> AddPayment(string cashSubjectCode, string accountCode, string cashCode, DateTime paidOn, decimal toPay)
+        public async Task<string> AddPayment(
+            string subjectCode,
+            string accountCode,
+            string cashCode,
+            DateTime paidOn,
+            decimal toPay,
+            string? parentSubjectCode = null)
         {
             try
             {
-                var _cashSubjectCode = new SqlParameter()
-                {
-                    ParameterName = "@AccountCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Size = 10,
-                    Value = cashSubjectCode
+                var _subjectCode = new SqlParameter() {
+                    ParameterName = "@SubjectCode",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 50,
+                    Value = subjectCode
                 };
 
-                var _accountCode = new SqlParameter()
-                {
-                    ParameterName = "@SubjectCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                var _accountCode = new SqlParameter() {
+                    ParameterName = "@AccountCode",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 10,
                     Value = accountCode
                 };
 
-                var _cashCode = new SqlParameter()
-                {
+                var _cashCode = new SqlParameter() {
                     ParameterName = "@CashCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 50,
                     Value = cashCode
                 };
 
-                var _paidOn = new SqlParameter()
-                {
+                var _paidOn = new SqlParameter() {
                     ParameterName = "@PaidOn",
-                    SqlDbType = System.Data.SqlDbType.DateTime,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.DateTime,
+                    Direction = ParameterDirection.Input,
                     Value = paidOn.Date
                 };
 
-                var _toPay = new SqlParameter()
-                {
+                var _toPay = new SqlParameter() {
                     ParameterName = "@ToPay",
-                    SqlDbType = System.Data.SqlDbType.Decimal,
+                    SqlDbType = SqlDbType.Decimal,
                     Size = 18,
                     Precision = 5,
-                    Direction = System.Data.ParameterDirection.Input,
+                    Direction = ParameterDirection.Input,
                     Value = toPay
                 };
 
-                var _paymentCode = new SqlParameter()
-                {
+                var _paymentReference = new SqlParameter() {
+                    ParameterName = "@PaymentReference",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 50,
+                    Value = DBNull.Value
+                };
+
+                var _paymentCode = new SqlParameter() {
                     ParameterName = "@PaymentCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Output,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Output,
                     Size = 20
                 };
 
-                using (SqlConnection _connection = new (Database.GetConnectionString()))
+                var _parentSubjectCode = new SqlParameter() {
+                    ParameterName = "@ParentSubjectCode",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 50,
+                    Value = string.IsNullOrWhiteSpace(parentSubjectCode)
+                        ? DBNull.Value
+                        : parentSubjectCode.Trim()
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
                 {
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
                         _command.CommandText = "Cash.proc_PaymentAdd";
                         _command.CommandType = CommandType.StoredProcedure;
+                        _command.Parameters.Add(_subjectCode);
                         _command.Parameters.Add(_accountCode);
-                        _command.Parameters.Add(_cashSubjectCode);
                         _command.Parameters.Add(_cashCode);
                         _command.Parameters.Add(_paidOn);
                         _command.Parameters.Add(_toPay);
-
+                        _command.Parameters.Add(_paymentReference);
                         _command.Parameters.Add(_paymentCode);
+                        _command.Parameters.Add(_parentSubjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
@@ -336,9 +355,6 @@ namespace TradeControl.Web.Data
                 }
 
                 return (string)_paymentCode.Value;
-
-
-
             }
             catch (Exception e)
             {
@@ -346,7 +362,6 @@ namespace TradeControl.Web.Data
                 return string.Empty;
             }
         }
-
         #endregion
 
         #region Cash Codes
@@ -998,21 +1013,19 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<decimal> BalanceOutstanding(string accountCode)
+        public async Task<decimal> Subject_BalanceOutstanding(string subjectCode, string? parentSubjectCode = null)
         {
             try
             {
-                var _accountCode = new SqlParameter()
-                {
+                var _accountCode = new SqlParameter() {
                     ParameterName = "@SubjectCode",
                     SqlDbType = System.Data.SqlDbType.VarChar,
                     Direction = System.Data.ParameterDirection.Input,
                     Size = 50,
-                    Value = accountCode
+                    Value = subjectCode
                 };
 
-                var _balance = new SqlParameter()
-                {
+                var _balance = new SqlParameter() {
                     ParameterName = "@Balance",
                     SqlDbType = System.Data.SqlDbType.Decimal,
                     Size = 18,
@@ -1020,7 +1033,17 @@ namespace TradeControl.Web.Data
                     Direction = System.Data.ParameterDirection.Output
                 };
 
-                using (SqlConnection _connection = new (Database.GetConnectionString()))
+                var _parentSubjectCode = new SqlParameter() {
+                    ParameterName = "@ParentSubjectCode",
+                    SqlDbType = System.Data.SqlDbType.VarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = 50,
+                    Value = string.IsNullOrWhiteSpace(parentSubjectCode)
+                        ? DBNull.Value
+                        : parentSubjectCode.Trim()
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
                 {
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
@@ -1029,6 +1052,7 @@ namespace TradeControl.Web.Data
                         _command.CommandType = CommandType.StoredProcedure;
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_balance);
+                        _command.Parameters.Add(_parentSubjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }
@@ -1338,45 +1362,53 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> InvoiceRaiseBlank(string accountCode, NodeEnum.InvoiceType invoiceType)
+        public async Task<string> InvoiceRaiseBlank(string subjectCode, NodeEnum.InvoiceType invoiceType, string? parentSubjectCode = null)
         {
             try
             {
-                var _accountCode = new SqlParameter()
-                {
+                var _subjectCode = new SqlParameter() {
                     ParameterName = "@SubjectCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
-                    Size = 10,
-                    Value = accountCode
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 50,
+                    Value = subjectCode
                 };
 
-                var _invoiceType = new SqlParameter()
-                {
+                var _invoiceType = new SqlParameter() {
                     ParameterName = "@InvoiceTypeCode",
-                    SqlDbType = System.Data.SqlDbType.SmallInt,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.SmallInt,
+                    Direction = ParameterDirection.Input,
                     Value = (short)invoiceType
                 };
 
-                var _invoiceNumber = new SqlParameter()
-                {
+                var _invoiceNumber = new SqlParameter() {
                     ParameterName = "@InvoiceNumber",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Output,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Output,
                     Size = 20
                 };
 
-                using (SqlConnection _connection = new (Database.GetConnectionString()))
+                var _parentSubjectCode = new SqlParameter() {
+                    ParameterName = "@ParentSubjectCode",
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
+                    Size = 50,
+                    Value = string.IsNullOrWhiteSpace(parentSubjectCode)
+                        ? DBNull.Value
+                        : parentSubjectCode.Trim()
+                };
+
+                using (SqlConnection _connection = new(Database.GetConnectionString()))
                 {
                     _connection.Open();
                     using (SqlCommand _command = _connection.CreateCommand())
                     {
                         _command.CommandText = "Invoice.proc_RaiseBlank";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_accountCode);
+                        _command.Parameters.Add(_subjectCode);
                         _command.Parameters.Add(_invoiceType);
                         _command.Parameters.Add(_invoiceNumber);
+                        _command.Parameters.Add(_parentSubjectCode);
 
                         await _command.ExecuteNonQueryAsync();
                     }

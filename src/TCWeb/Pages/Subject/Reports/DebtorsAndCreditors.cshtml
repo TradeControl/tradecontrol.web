@@ -5,7 +5,7 @@
 
 @{
     ViewData["Title"] = "Debtors and Creditors";
-    var btnWidthClass = (Detection?.Device?.Type == Device.Mobile) ? "w-100" : "w-25";
+    var isMobile = Detection?.Device?.Type == Device.Mobile;
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -15,6 +15,7 @@
         <div class="col-auto">
             <select asp-for="PeriodName" asp-items="Model.PeriodNames" class="form-control"></select>
         </div>
+
         <div class="col-auto">
             <select asp-for="AssetType" asp-items="Model.AssetTypes" class="form-control">
                 <option value="">All</option>
@@ -22,9 +23,12 @@
         </div>
 
         <div class="col-auto">
-            <!-- reset to first page when page size changes -->
             <input type="hidden" name="PageNumber" value="1" />
-            <select asp-for="PageSize" asp-items="Model.PageSizeOptions" class="form-control" aria-label="Rows per page" onchange="this.form.submit()"></select>
+            <select asp-for="PageSize"
+                    asp-items="Model.PageSizeOptions"
+                    class="form-control"
+                    aria-label="Rows per page"
+                    onchange="this.form.submit()"></select>
             <noscript>
                 <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Apply</button>
             </noscript>
@@ -36,71 +40,138 @@
     </div>
 </form>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            @if (Detection?.Device?.Type != Device.Mobile)
-            {
-                <th>@Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].Description)</th>
-                <th>@Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].MonthName)</th>
-                <th>@Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].AssetType)</th>
-            }
-            <th>@Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].SubjectName)</th>
-            @if (Detection?.Device?.Type != Device.Mobile)
-            {
-                <th>@Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].SubjectType)</th>
-            }
-            <th>@Html.DisplayNameFor(model => model.Subject_BalanceSheetAudit[0].Balance)</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Subject_BalanceSheetAudit)
-        {
+@if (Model.Subject_BalanceSheetAudit.Count == 0)
+{
+    <div class="alert alert-info mb-0">
+        No debtors or creditors were found for the selected scope.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
             <tr>
-                @if (Detection?.Device?.Type != Device.Mobile)
+                @if (!isMobile)
                 {
-                    <td>@Html.DisplayFor(modelItem => item.Description)</td>
-                    <td>@Html.DisplayFor(modelItem => item.MonthName)</td>
-                    <td>@Html.DisplayFor(modelItem => item.AssetType)</td>
+                    <th>Financial Year</th>
+                    <th>Month</th>
+                    <th>Asset Type</th>
                 }
-                <td>@Html.DisplayFor(modelItem => item.SubjectName)</td>
-                @if (Detection?.Device?.Type != Device.Mobile)
+                <th>Subject</th>
+                @if (!isMobile)
                 {
-                    <td>@Html.DisplayFor(modelItem => item.SubjectType)</td>
+                    <th>Namespace</th>
+                    <th>Subject Type</th>
                 }
-                <td>@Html.DisplayFor(modelItem => item.Balance)</td>
-                <td>
-                    <div class="action-buttons">
-                        <a class="btn btn-info" asp-page="../Enquiry/Details" asp-route-accountCode="@item.SubjectCode" title="Details">
-                            <i class="bi bi-info-circle" aria-hidden="true"></i>
-                            <span class="visually-hidden">Details</span>
-                        </a>
-                        <a class="btn btn-warning" asp-page="../Enquiry/Invoices" asp-route-accountCode="@item.SubjectCode" title="View invoices">
-                            <i class="bi bi-list" aria-hidden="true"></i>
-                            <span class="visually-hidden">Invoices</span>
-                        </a>
-                        <a class="btn btn-success" asp-page="../Enquiry/Payments" asp-route-accountCode="@item.SubjectCode" title="View payments">
-                            <i class="bi bi-currency-dollar" aria-hidden="true"></i>
-                            <span class="visually-hidden">Payments</span>
-                        </a>
-                        <a class="btn btn-dark" asp-page="../Enquiry/Statement" asp-route-accountCode="@item.SubjectCode" title="View statement">
-                            <i class="bi bi-list" aria-hidden="true"></i>
-                            <span class="visually-hidden">Statement</span>
-                        </a>
-                    </div>
-                </td>
+                <th>Balance</th>
+                <th></th>
             </tr>
-        }
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Subject_BalanceSheetAudit)
+            {
+                <tr>
+                    @if (!isMobile)
+                    {
+                        <td>@item.Description</td>
+                        <td>@item.MonthName</td>
+                        <td>@item.AssetType</td>
+                    }
+
+                    <td>
+                        <div>@item.SubjectName</div>
+                        @if (isMobile)
+                        {
+                            <div class="small text-muted">
+                                @if (!string.IsNullOrWhiteSpace(item.ParentSubjectName))
+                                {
+                                    <span>@item.ParentSubjectName</span>
+                                    @if (!string.IsNullOrWhiteSpace(item.ParentSubjectCode))
+                                    {
+                                        <span> (<code>@item.ParentSubjectCode</code>)</span>
+                                    }
+                                }
+                                else if (!string.IsNullOrWhiteSpace(item.ParentSubjectCode))
+                                {
+                                    <code>@item.ParentSubjectCode</code>
+                                }
+                                else
+                                {
+                                    <span>Root</span>
+                                }
+                            </div>
+                        }
+                    </td>
+
+                    @if (!isMobile)
+                    {
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(item.ParentSubjectName))
+                            {
+                                <div>@item.ParentSubjectName</div>
+                                @if (!string.IsNullOrWhiteSpace(item.ParentSubjectCode))
+                                {
+                                    <div class="small text-muted"><code>@item.ParentSubjectCode</code></div>
+                                }
+                            }
+                            else if (!string.IsNullOrWhiteSpace(item.ParentSubjectCode))
+                            {
+                                <code>@item.ParentSubjectCode</code>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Root</span>
+                            }
+                        </td>
+                        <td>@item.SubjectType</td>
+                    }
+
+                    <td>@Html.DisplayFor(modelItem => item.Balance)</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a class="btn btn-info"
+                               asp-page="../Enquiry/Details"
+                               asp-route-accountCode="@item.SubjectCode"
+                               title="Details">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span class="visually-hidden">Details</span>
+                            </a>
+                            <a class="btn btn-warning"
+                               asp-page="../Enquiry/Invoices"
+                               asp-route-accountCode="@item.SubjectCode"
+                               title="View invoices">
+                                <i class="bi bi-list" aria-hidden="true"></i>
+                                <span class="visually-hidden">Invoices</span>
+                            </a>
+                            <a class="btn btn-success"
+                               asp-page="../Enquiry/Payments"
+                               asp-route-accountCode="@item.SubjectCode"
+                               title="View payments">
+                                <i class="bi bi-currency-dollar" aria-hidden="true"></i>
+                                <span class="visually-hidden">Payments</span>
+                            </a>
+                            <a class="btn btn-dark"
+                               asp-page="../Enquiry/Statement"
+                               asp-route-accountCode="@item.SubjectCode"
+                               title="View statement">
+                                <i class="bi bi-list" aria-hidden="true"></i>
+                                <span class="visually-hidden">Statement</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @if (Model.TotalPages > 1)
 {
     <nav aria-label="Page navigation" class="mt-3">
         <ul class="pagination">
             <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
-                <a class="page-link" asp-page="./DebtorsAndCreditors"
+                <a class="page-link"
+                   asp-page="./DebtorsAndCreditors"
                    asp-route-PeriodName="@Model.PeriodName"
                    asp-route-AssetType="@Model.AssetType"
                    asp-route-PageSize="@Model.PageSize"
@@ -109,8 +180,10 @@
 
             @for (var i = 1; i <= Model.TotalPages; i++)
             {
-                <li class="page-item @(i == Model.PageNumber ? "active" : "")" aria-current="@(i == Model.PageNumber ? "page" : null)">
-                    <a class="page-link" asp-page="./DebtorsAndCreditors"
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")"
+                    aria-current="@(i == Model.PageNumber ? "page" : null)">
+                    <a class="page-link"
+                       asp-page="./DebtorsAndCreditors"
                        asp-route-PeriodName="@Model.PeriodName"
                        asp-route-AssetType="@Model.AssetType"
                        asp-route-PageSize="@Model.PageSize"
@@ -119,7 +192,8 @@
             }
 
             <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
-                <a class="page-link" asp-page="./DebtorsAndCreditors"
+                <a class="page-link"
+                   asp-page="./DebtorsAndCreditors"
                    asp-route-PeriodName="@Model.PeriodName"
                    asp-route-AssetType="@Model.AssetType"
                    asp-route-PageSize="@Model.PageSize"

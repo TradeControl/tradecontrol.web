@@ -29,6 +29,21 @@
         document.documentElement.style.setProperty('--tc-viewport-height', height + 'px');
     };
 
+    window.cashManager.scrollIntoView = function (element)
+    {
+        if (!element)
+            return;
+
+        requestAnimationFrame(function ()
+        {
+            element.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+                inline: "nearest"
+            });
+        });
+    };
+
     window.cashManager.initSplit = function ()
     {
         if (!window.matchMedia("(min-width: 992px)").matches)

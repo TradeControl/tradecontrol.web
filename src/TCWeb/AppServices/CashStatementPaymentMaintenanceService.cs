@@ -63,10 +63,14 @@ namespace TradeControl.Web.AppServices
                 PeriodStatus = periodStatus
             };
 
+            var isTransfer = payment.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Transfer;
+
             return new CashManagerStatementPaymentEditorState(
                 model,
                 await GetUsersAsync(cancellationToken),
-                await GetCashCodesAsync(cancellationToken),
+                isTransfer
+                    ? await GetTransferCashCodesAsync(model.CashCode, cancellationToken)
+                    : await GetCashCodesAsync(cancellationToken),
                 await GetTaxCodesAsync(model.TaxCode, cancellationToken),
                 await GetAccountsAsync(accountTypeCode, cancellationToken),
                 !string.IsNullOrWhiteSpace(payment.CashCode)
@@ -293,6 +297,31 @@ namespace TradeControl.Web.AppServices
                 .ToListAsync(cancellationToken);
 
             options.Insert(0, new CashManagerSelectOption(string.Empty, string.Empty));
+            return options;
+        }
+
+        private async Task<IReadOnlyList<CashManagerSelectOption>> GetTransferCashCodesAsync(
+            string selectedCashCode,
+            CancellationToken cancellationToken)
+        {
+            var options = await _nodeContext.Cash_TransferCodeLookup
+                .AsNoTracking()
+                .OrderBy(item => item.CashPolarityCode)
+                .ThenBy(item => item.CashDescription)
+                .Select(item => new CashManagerSelectOption(
+                    item.CashCode,
+                    item.CashDescription))
+                .ToListAsync(cancellationToken);
+
+            options.Insert(0, new CashManagerSelectOption(string.Empty, string.Empty));
+
+            if (string.IsNullOrWhiteSpace(selectedCashCode)
+                || options.Any(item => string.Equals(item.Value, selectedCashCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                return options;
+            }
+
+            options.Insert(1, new CashManagerSelectOption(selectedCashCode, selectedCashCode));
             return options;
         }
 

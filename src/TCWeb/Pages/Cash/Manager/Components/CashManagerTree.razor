@@ -21,8 +21,9 @@ else
                 <label class="form-label small text-muted mb-1" for="cashManagerYearSelect">Financial Year</label>
                 <select id="cashManagerYearSelect"
                         class="form-select form-select-sm"
-                        value="@SelectedYearNumber"
+                        value="@(SelectedYearNumber.GetValueOrDefault())"
                         @onchange="HandleYearChangedAsync">
+                    <option value="0">All years</option>
                     @foreach (var year in Years)
                     {
                         <option value="@year.YearNumber">@year.Description</option>
@@ -135,7 +136,10 @@ else
         if (short.TryParse(args.Value?.ToString(), out var yearNumber))
         {
             await OnYearSelected.InvokeAsync(yearNumber);
+            return;
         }
+
+        await OnYearSelected.InvokeAsync(0);
     }
 
     private async Task HandlePeriodChangedAsync(ChangeEventArgs args)

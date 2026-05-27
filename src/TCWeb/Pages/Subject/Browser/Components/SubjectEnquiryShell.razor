@@ -9,6 +9,11 @@
             <div class="fw-semibold">@GetHeading()</div>
             <div class="text-muted small"><code>@SubjectCode</code></div>
 
+            @if (!string.IsNullOrWhiteSpace(GetNamespaceLabel()))
+            {
+                <div class="text-muted small">@GetNamespaceLabel()</div>
+            }
+
             @if (_summary is not null)
             {
                 <div class="small mt-2">
@@ -115,11 +120,14 @@
 
 @code {
     [Parameter] public string SubjectCode { get; set; } = string.Empty;
+    [Parameter] public string? NamespacePath { get; set; }
     [Parameter] public string? DisplayLabel { get; set; }
     [Parameter] public SubjectEnquiryView View { get; set; } = SubjectEnquiryView.Statement;
     [Parameter] public bool IsEmbedded { get; set; } = true;
 
     private string _currentSubjectCode = string.Empty;
+    private string _currentNamespacePath = string.Empty;
+    private string? _currentParentSubjectCode;
     private SubjectEnquiryView _activeView = SubjectEnquiryView.Statement;
     private int _pageNumber = 1;
     private int _pageSize = 25;
@@ -135,12 +143,21 @@
     protected override async Task OnParametersSetAsync()
     {
         var normalizedSubjectCode = SubjectCode?.Trim() ?? string.Empty;
+        var normalizedNamespacePath = NormalizeNamespacePath(NamespacePath);
         var subjectChanged = !string.Equals(_currentSubjectCode, normalizedSubjectCode, StringComparison.OrdinalIgnoreCase);
+        var namespaceChanged = !string.Equals(_currentNamespacePath, normalizedNamespacePath, StringComparison.OrdinalIgnoreCase);
         var viewChanged = _activeView != View;
 
         if (subjectChanged)
         {
             _currentSubjectCode = normalizedSubjectCode;
+            _pageNumber = 1;
+        }
+
+        if (namespaceChanged)
+        {
+            _currentNamespacePath = normalizedNamespacePath;
+            _currentParentSubjectCode = ExtractParentSubjectCode(normalizedNamespacePath);
             _pageNumber = 1;
         }
 
@@ -150,7 +167,7 @@
             _pageNumber = 1;
         }
 
-        if (subjectChanged || viewChanged)
+        if (subjectChanged || namespaceChanged || viewChanged)
         {
             await LoadAsync();
         }
@@ -205,12 +222,12 @@
             _isLoading = true;
             _errorMessage = null;
 
-            _summary = await SubjectEnquiryService.GetSummaryAsync(_currentSubjectCode);
+            _summary = await SubjectEnquiryService.GetSummaryAsync(_currentSubjectCode, _currentParentSubjectCode);
 
             switch (_activeView)
             {
                 case SubjectEnquiryView.Invoices:
-                    var invoices = await SubjectEnquiryService.GetInvoicesAsync(_currentSubjectCode, _pageNumber, _pageSize);
+                    var invoices = await SubjectEnquiryService.GetInvoicesAsync(_currentSubjectCode, _pageNumber, _pageSize, _currentParentSubjectCode);
                     _invoices = invoices.Items;
                     _payments = Array.Empty<SubjectEnquiryPaymentItem>();
                     _statement = Array.Empty<SubjectEnquiryStatementItem>();
@@ -220,7 +237,7 @@
                     break;
 
                 case SubjectEnquiryView.Payments:
-                    var payments = await SubjectEnquiryService.GetPaymentsAsync(_currentSubjectCode, _pageNumber, _pageSize);
+                    var payments = await SubjectEnquiryService.GetPaymentsAsync(_currentSubjectCode, _pageNumber, _pageSize, _currentParentSubjectCode);
                     _payments = payments.Items;
                     _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
                     _statement = Array.Empty<SubjectEnquiryStatementItem>();
@@ -230,7 +247,7 @@
                     break;
 
                 default:
-                    var statement = await SubjectEnquiryService.GetStatementAsync(_currentSubjectCode, _pageNumber, _pageSize);
+                    var statement = await SubjectEnquiryService.GetStatementAsync(_currentSubjectCode, _pageNumber, _pageSize, _currentParentSubjectCode);
                     _statement = statement.Items;
                     _invoices = Array.Empty<SubjectEnquiryInvoiceItem>();
                     _payments = Array.Empty<SubjectEnquiryPaymentItem>();
@@ -264,6 +281,17 @@
             return _summary.SubjectName;
 
         return _currentSubjectCode;
+    }
+
+    private string GetNamespaceLabel()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentNamespacePath))
+            return _currentNamespacePath;
+
+        if (!string.IsNullOrWhiteSpace(_summary?.ParentSubjectCode))
+            return _summary.ParentSubjectCode!;
+
+        return string.Empty;
     }
 
     private string GetSummaryText()
@@ -350,6 +378,24 @@
     private static string FormatDecimal(decimal value)
     {
         return value.ToString("N2", CultureInfo.CurrentCulture);
+    }
+
+    private static string NormalizeNamespacePath(string? value)
+    {
+        return value?.Trim().Trim('.') ?? string.Empty;
+    }
+
+    private static string? ExtractParentSubjectCode(string namespacePath)
+    {
+        if (string.IsNullOrWhiteSpace(namespacePath))
+            return null;
+
+        var segments = namespacePath
+            .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return segments.Length < 2
+            ? null
+            : segments[^2];
     }
 
     private RenderFragment RenderInvoices() => @<div>

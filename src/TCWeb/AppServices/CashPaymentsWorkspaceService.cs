@@ -40,7 +40,7 @@ namespace TradeControl.Web.AppServices
                 users.Add(new CashManagerSelectOption(userId, userId));
             }
 
-            var paymentsQuery = _nodeContext.Cash_Payments
+            var paymentsQuery = _nodeContext.Cash_tbPayments
                 .AsNoTracking()
                 .Where(item =>
                     item.AccountCode == accountCode
@@ -54,6 +54,18 @@ namespace TradeControl.Web.AppServices
             var payments = await paymentsQuery
                 .OrderByDescending(item => item.PaidOn)
                 .ThenByDescending(item => item.PaymentCode)
+                .Select(item => new WorkspacePayment(
+                    item.PaymentCode,
+                    item.UserId,
+                    item.PaidOn,
+                    item.SubjectCode,
+                    item.ParentSubjectCode ?? string.Empty,
+                    item.SubjectCodeNavigation.SubjectName ?? string.Empty,
+                    item.PaymentReference ?? string.Empty,
+                    item.PaidOutValue,
+                    item.PaidInValue,
+                    item.CashCode ?? string.Empty,
+                    item.TaxCode ?? string.Empty))
                 .ToListAsync(cancellationToken);
 
             var balances = await BuildOutstandingBalancesAsync(payments, cancellationToken);
@@ -123,7 +135,19 @@ namespace TradeControl.Web.AppServices
             string namespaceFilter,
             CancellationToken cancellationToken = default)
         {
-            var subject = await TryResolveSubjectAsync(namespaceFilter, cancellationToken);
+            var context = await ResolveNamespaceContextAsync(
+                string.Empty,
+                namespaceFilter,
+                cancellationToken);
+
+            var subject = await _nodeContext.Subject_tbSubjects
+                .AsNoTracking()
+                .Where(item => item.SubjectCode == context.SubjectCode)
+                .Select(item => new {
+                    item.SubjectCode,
+                    item.SubjectName
+                })
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (subject is null)
             {
@@ -131,13 +155,16 @@ namespace TradeControl.Web.AppServices
             }
 
             var subjects = new Subjects(_nodeContext, subject.SubjectCode);
-            var outstandingBalance = await subjects.BalanceOutstandingAsync();
+            var outstandingBalance = await GetOutstandingBalanceAsync(
+                context.SubjectCode,
+                context.ParentSubjectCode,
+                cancellationToken);
             var defaultTaxCode = await subjects.DefaultTaxCodeAsync();
 
             return new CashManagerOrganisationCreationResult(
                 subject.SubjectCode,
                 subject.SubjectName,
-                namespaceFilter.Trim(),
+                context.NamespaceFilter,
                 outstandingBalance,
                 defaultTaxCode ?? string.Empty);
         }
@@ -150,7 +177,7 @@ namespace TradeControl.Web.AppServices
         {
             ArgumentNullException.ThrowIfNull(draft);
 
-            var subjectCode = await ValidatePaymentAsync(
+            var context = await ValidatePaymentAsync(
                 accountCode,
                 draft,
                 aspNetUserId,
@@ -170,7 +197,8 @@ namespace TradeControl.Web.AppServices
                 PaymentCode = paymentCode,
                 UserId = userId,
                 PaymentStatusCode = (short)NodeEnum.PaymentStatus.Unposted,
-                SubjectCode = subjectCode,
+                SubjectCode = context.SubjectCode,
+                ParentSubjectCode = NormalizeNullableCode(context.ParentSubjectCode),
                 AccountCode = accountCode.Trim(),
                 CashCode = NormalizeNullableCode(draft.CashCode),
                 TaxCode = NormalizeNullableCode(draft.TaxCode),
@@ -214,7 +242,7 @@ namespace TradeControl.Web.AppServices
                 }
             }
 
-            var subjectCode = await ValidatePaymentAsync(
+            var context = await ValidatePaymentAsync(
                 entity.AccountCode,
                 payment,
                 aspNetUserId,
@@ -225,7 +253,8 @@ namespace TradeControl.Web.AppServices
             var userName = await new Profile(_nodeContext).UserName(aspNetUserId);
 
             entity.UserId = NormalizeCode(payment.UserId);
-            entity.SubjectCode = subjectCode;
+            entity.SubjectCode = context.SubjectCode;
+            entity.ParentSubjectCode = NormalizeNullableCode(context.ParentSubjectCode);
             entity.CashCode = NormalizeNullableCode(payment.CashCode);
             entity.TaxCode = NormalizeNullableCode(payment.TaxCode);
             entity.PaidOn = payment.PaidOn;
@@ -326,7 +355,7 @@ namespace TradeControl.Web.AppServices
                 .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
         }
 
-        private async Task<string> ValidatePaymentAsync(
+        private async Task<NamespaceResolution> ValidatePaymentAsync(
             string accountCode,
             CashManagerPaymentLineModel payment,
             string aspNetUserId,
@@ -364,17 +393,10 @@ namespace TradeControl.Web.AppServices
                 payment.TaxCode = await GetDefaultTaxCodeForCashCodeAsync(payment.CashCode, cancellationToken);
             }
 
-            var subjectCode = await ResolveSubjectCodeAsync(
+            var context = await ResolveNamespaceContextAsync(
                 payment.SubjectCode,
                 payment.NamespaceFilter,
                 cancellationToken);
-
-            if (string.IsNullOrWhiteSpace(subjectCode))
-            {
-                throw new InvalidOperationException(isUpdate
-                    ? "The selected organisation could not be resolved."
-                    : "Select or create an organisation before adding the payment.");
-            }
 
             if (!isPrivileged && isUpdate)
             {
@@ -386,29 +408,70 @@ namespace TradeControl.Web.AppServices
                 }
             }
 
-            return subjectCode;
+            payment.SubjectCode = context.SubjectCode;
+            payment.NamespaceFilter = context.NamespaceFilter;
+            payment.OutstandingBalance = await GetOutstandingBalanceAsync(
+                context.SubjectCode,
+                context.ParentSubjectCode,
+                cancellationToken);
+
+            return context;
         }
 
         private async Task<Dictionary<string, decimal>> BuildOutstandingBalancesAsync(
-            IReadOnlyList<Cash_vwPayment> payments,
+            IReadOnlyList<WorkspacePayment> payments,
             CancellationToken cancellationToken)
         {
             var balances = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var subjectCode in payments
-                         .Select(item => item.SubjectCode)
-                         .Where(subjectCode => !string.IsNullOrWhiteSpace(subjectCode))
-                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var payment in payments
+                         .Where(item => !string.IsNullOrWhiteSpace(item.SubjectCode))
+                         .GroupBy(item => BuildBalanceKey(item.SubjectCode, item.ParentSubjectCode))
+                         .Select(group => group.First()))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                balances[subjectCode] = await new Subjects(_nodeContext, subjectCode).BalanceOutstandingAsync();
+
+                balances[BuildBalanceKey(payment.SubjectCode, payment.ParentSubjectCode)] =
+                    await GetOutstandingBalanceAsync(
+                        payment.SubjectCode,
+                        payment.ParentSubjectCode,
+                        cancellationToken);
             }
 
             return balances;
         }
 
+        private async Task<decimal> GetOutstandingBalanceAsync(
+            string subjectCode,
+            string parentSubjectCode,
+            CancellationToken cancellationToken)
+        {
+            subjectCode = NormalizeCode(subjectCode);
+            parentSubjectCode = NormalizeCode(parentSubjectCode);
+
+            if (string.IsNullOrWhiteSpace(subjectCode))
+            {
+                return 0m;
+            }
+
+            return await (
+                from invoice in _nodeContext.Invoice_tbInvoices.AsNoTracking()
+                join type in _nodeContext.Invoice_tbTypes.AsNoTracking()
+                    on invoice.InvoiceTypeCode equals type.InvoiceTypeCode
+                where invoice.SubjectCode == subjectCode
+                   && invoice.InvoiceStatusCode >= 1
+                   && invoice.InvoiceStatusCode <= 2
+                   && (
+                       invoice.ParentSubjectCode == parentSubjectCode
+                       || (invoice.ParentSubjectCode == null && parentSubjectCode == string.Empty))
+                select (decimal?)(
+                    (type.CashPolarityCode == (short)NodeEnum.CashPolarity.Expense ? 1m : -1m)
+                    * ((invoice.InvoiceValue + invoice.TaxValue) - (invoice.PaidValue + invoice.PaidTaxValue)))
+            ).SumAsync(cancellationToken) ?? 0m;
+        }
+
         private async Task<Dictionary<DateTime, NodeEnum.CashStatus>> BuildPeriodStatusesAsync(
-            IReadOnlyList<Cash_vwPayment> payments,
+            IReadOnlyList<WorkspacePayment> payments,
             CancellationToken cancellationToken)
         {
             var startOnValues = payments
@@ -426,11 +489,12 @@ namespace TradeControl.Web.AppServices
         }
 
         private static CashManagerPaymentLineModel CreateLine(
-            Cash_vwPayment item,
+            WorkspacePayment item,
             IReadOnlyDictionary<string, decimal> balances,
             IReadOnlyDictionary<DateTime, NodeEnum.CashStatus> periodStatuses)
         {
             var startOn = new DateTime(item.PaidOn.Year, item.PaidOn.Month, 1);
+            var balanceKey = BuildBalanceKey(item.SubjectCode, item.ParentSubjectCode);
 
             return new CashManagerPaymentLineModel {
                 IsExisting = true,
@@ -439,38 +503,139 @@ namespace TradeControl.Web.AppServices
                 PaidOn = item.PaidOn,
                 SubjectCode = item.SubjectCode,
                 SubjectName = item.SubjectName,
-                NamespaceFilter = item.SubjectCode,
-                PaymentReference = item.PaymentReference ?? string.Empty,
+                NamespaceFilter = BuildNamespaceFilter(item.ParentSubjectCode, item.SubjectCode),
+                PaymentReference = item.PaymentReference,
                 PaidOutValue = item.PaidOutValue,
                 PaidInValue = item.PaidInValue,
-                CashCode = item.CashCode ?? string.Empty,
-                TaxCode = item.TaxCode ?? string.Empty,
-                OutstandingBalance = balances.TryGetValue(item.SubjectCode, out var balance) ? balance : 0m,
+                CashCode = item.CashCode,
+                TaxCode = item.TaxCode,
+                OutstandingBalance = balances.TryGetValue(balanceKey, out var balance) ? balance : 0m,
                 PeriodStatus = periodStatuses.TryGetValue(startOn, out var status) ? status : NodeEnum.CashStatus.Current
             };
         }
 
-        private async Task<string> ResolveSubjectCodeAsync(
+        private async Task<NamespaceResolution> ResolveNamespaceContextAsync(
             string subjectCode,
             string namespaceFilter,
             CancellationToken cancellationToken)
         {
-            subjectCode = NormalizeCode(subjectCode);
+            var normalizedFilter = NormalizeNamespaceFilter(namespaceFilter);
 
-            if (!string.IsNullOrWhiteSpace(subjectCode))
+            if (!string.IsNullOrWhiteSpace(normalizedFilter))
             {
-                return subjectCode;
+                return await ResolveNamespaceFilterAsync(normalizedFilter, cancellationToken)
+                    ?? throw new InvalidOperationException("The selected organisation could not be resolved.");
             }
 
-            var subject = await TryResolveSubjectAsync(namespaceFilter, cancellationToken);
-            return subject?.SubjectCode ?? string.Empty;
+            subjectCode = NormalizeCode(subjectCode);
+
+            if (string.IsNullOrWhiteSpace(subjectCode))
+            {
+                throw new InvalidOperationException("Select or create an organisation before adding the payment.");
+            }
+
+            var subject = await TryResolveSubjectSegmentAsync(subjectCode, cancellationToken);
+
+            if (subject is null)
+            {
+                throw new InvalidOperationException("The selected organisation could not be resolved.");
+            }
+
+            var parentResolution = await ResolveParentSubjectCodeAsync(subject.SubjectCode, cancellationToken);
+
+            if (parentResolution.IsAmbiguous)
+            {
+                throw new InvalidOperationException("More than one namespace is available for the selected organisation. Select the required namespace path.");
+            }
+
+            return new NamespaceResolution(
+                subject.SubjectCode,
+                parentResolution.ParentSubjectCode,
+                BuildNamespaceFilter(parentResolution.ParentSubjectCode, subject.SubjectCode));
         }
 
-        private async Task<Subject_tbSubject?> TryResolveSubjectAsync(
+        private async Task<NamespaceResolution?> ResolveNamespaceFilterAsync(
             string namespaceFilter,
             CancellationToken cancellationToken)
         {
-            var key = ExtractSubjectCode(namespaceFilter);
+            var segments = GetNamespaceSegments(namespaceFilter);
+
+            if (segments.Length == 0)
+            {
+                return null;
+            }
+
+            var subject = await TryResolveSubjectSegmentAsync(segments[^1], cancellationToken);
+
+            if (subject is null)
+            {
+                return null;
+            }
+
+            if (segments.Length == 1)
+            {
+                var parentResolution = await ResolveParentSubjectCodeAsync(subject.SubjectCode, cancellationToken);
+
+                if (parentResolution.IsAmbiguous)
+                {
+                    throw new InvalidOperationException("More than one namespace is available for the selected organisation. Select the required namespace path.");
+                }
+
+                return new NamespaceResolution(
+                    subject.SubjectCode,
+                    parentResolution.ParentSubjectCode,
+                    BuildNamespaceFilter(parentResolution.ParentSubjectCode, subject.SubjectCode));
+            }
+
+            var parent = await TryResolveSubjectSegmentAsync(segments[^2], cancellationToken);
+
+            if (parent is null)
+            {
+                return null;
+            }
+
+            var relationExists = await _nodeContext.Subject_tbNamespaces
+                .AsNoTracking()
+                .AnyAsync(
+                    item => item.ParentSubjectCode == parent.SubjectCode
+                        && item.ChildSubjectCode == subject.SubjectCode,
+                    cancellationToken);
+
+            if (!relationExists)
+            {
+                throw new InvalidOperationException("The selected namespace path could not be resolved.");
+            }
+
+            return new NamespaceResolution(
+                subject.SubjectCode,
+                parent.SubjectCode,
+                BuildNamespaceFilter(parent.SubjectCode, subject.SubjectCode));
+        }
+
+        private async Task<ParentResolution> ResolveParentSubjectCodeAsync(
+            string subjectCode,
+            CancellationToken cancellationToken)
+        {
+            var parents = await _nodeContext.Subject_tbNamespaces
+                .AsNoTracking()
+                .Where(item => item.ChildSubjectCode == subjectCode)
+                .Select(item => item.ParentSubjectCode)
+                .Distinct()
+                .Take(2)
+                .ToListAsync(cancellationToken);
+
+            return parents.Count switch {
+                0 => new ParentResolution(string.Empty, false),
+                1 => new ParentResolution(parents[0] ?? string.Empty, false),
+                _ => new ParentResolution(string.Empty, true)
+            };
+        }
+
+        private async Task<Subject_tbSubject?> TryResolveSubjectSegmentAsync(
+            string key,
+            CancellationToken cancellationToken)
+        {
+            key = NormalizeCode(key);
 
             if (string.IsNullOrWhiteSpace(key))
             {
@@ -562,21 +727,47 @@ namespace TradeControl.Web.AppServices
                 : $"{normalizedFilter}.{subjectCode}";
         }
 
-        private static string ExtractSubjectCode(string namespaceFilter)
+        private static string BuildNamespaceFilter(string parentSubjectCode, string subjectCode)
         {
-            var normalizedFilter = namespaceFilter?.Trim().Trim('.') ?? string.Empty;
+            parentSubjectCode = NormalizeCode(parentSubjectCode);
+            subjectCode = NormalizeCode(subjectCode);
 
-            if (string.IsNullOrWhiteSpace(normalizedFilter))
+            if (string.IsNullOrWhiteSpace(subjectCode))
             {
                 return string.Empty;
             }
 
-            var segments = normalizedFilter
-                .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return string.IsNullOrWhiteSpace(parentSubjectCode)
+                ? subjectCode
+                : $"{parentSubjectCode}.{subjectCode}";
+        }
+
+        private static string BuildBalanceKey(string subjectCode, string parentSubjectCode)
+        {
+            return $"{NormalizeCode(subjectCode)}|{NormalizeCode(parentSubjectCode)}";
+        }
+
+        private static string ExtractSubjectCode(string namespaceFilter)
+        {
+            var segments = GetNamespaceSegments(namespaceFilter);
 
             return segments.Length == 0
                 ? string.Empty
                 : segments[^1];
+        }
+
+        private static string[] GetNamespaceSegments(string namespaceFilter)
+        {
+            var normalizedFilter = NormalizeNamespaceFilter(namespaceFilter);
+
+            return string.IsNullOrWhiteSpace(normalizedFilter)
+                ? Array.Empty<string>()
+                : normalizedFilter.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        private static string NormalizeNamespaceFilter(string? value)
+        {
+            return value?.Trim().Trim('.') ?? string.Empty;
         }
 
         private static string NormalizeCode(string? value)
@@ -597,5 +788,27 @@ namespace TradeControl.Web.AppServices
                 ? null
                 : value.Trim();
         }
+
+        private sealed record WorkspacePayment(
+            string PaymentCode,
+            string UserId,
+            DateTime PaidOn,
+            string SubjectCode,
+            string ParentSubjectCode,
+            string SubjectName,
+            string PaymentReference,
+            decimal PaidOutValue,
+            decimal PaidInValue,
+            string CashCode,
+            string TaxCode);
+
+        private sealed record NamespaceResolution(
+            string SubjectCode,
+            string ParentSubjectCode,
+            string NamespaceFilter);
+
+        private sealed record ParentResolution(
+            string ParentSubjectCode,
+            bool IsAmbiguous);
     }
 }

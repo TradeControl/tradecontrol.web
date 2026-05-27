@@ -1,0 +1,919 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.JSInterop
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.Data
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+@inject ICashTransfersWorkspaceService CashTransfersWorkspaceService
+@inject ICashStatementPaymentMaintenanceService CashStatementPaymentMaintenanceService
+@inject IJSRuntime JSRuntime
+
+@if (!_isLoaded)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Loading transfers…
+    </div>
+}
+else if (SelectedAccount is null)
+{
+    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+        Select a cash account to begin.
+    </div>
+}
+else if (SelectedAccount.AccountType != NodeEnum.CashAccountType.Cash)
+{
+    <div class="card">
+        <div class="card-body">
+            <h2 class="h5 mb-2">Planned Transfers</h2>
+            <div class="text-muted">
+                Transfer entry is available for <strong>Cash</strong> accounts only.
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                        <div class="fw-semibold">Planned Transfers: @SelectedAccount.AccountName</div>
+                        <div class="small text-muted">
+                            <code>@SelectedAccount.AccountCode</code>
+                            <span class="mx-1">•</span>
+                            @CashManagerSectionCatalog.GetYearLabel(Years, SelectedYearNumber)
+                            <span class="mx-1">•</span>
+                            @CashManagerSectionCatalog.GetPeriodScopeLabel(Periods, SelectedPeriodStartOn)
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-4">
+                        <div>
+                            <div class="small text-muted">Current Balance</div>
+                            <div class="fw-semibold">@_workspace.Summary.CurrentBalance.ToString("C")</div>
+                        </div>
+
+                        <div>
+                            <div class="small text-muted">Visible Transfers</div>
+                            <div class="fw-semibold">@_workspace.Rows.Count</div>
+                        </div>
+
+                        <div>
+                            <div class="small text-muted">Planned Net</div>
+                            <div class="fw-semibold">@_workspace.Summary.UnpostedNet.ToString("C")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-success py-2 mb-0">@_message</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_errorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_paymentEditorMessage))
+        {
+            <div class="alert alert-success py-2 mb-0">@_paymentEditorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_paymentEditorError))
+        {
+            <div class="alert alert-danger py-2 mb-0">@_paymentEditorError</div>
+        }
+
+        @if (_paymentEditor is not null)
+        {
+            @RenderPaymentEditor()
+        }
+
+    <div class="card border-primary">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                <div>
+                    <h2 class="h6 mb-1">New Transfer</h2>
+                    <div class="small text-muted">
+                        @(_isNewTransferPanelCollapsed
+                                                ? GetNewTransferSummary()
+                                                : "Create the paired planned transfer entries from this source account.")
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                @onclick="HandlePostVisibleTransfersAsync"
+                                disabled="@(_isBusy || _workspace.Rows.Count == 0)">
+                            Post visible transfers
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                @onclick="ToggleNewTransferPanelAsync"
+                                disabled="@_isBusy">
+                            @(_isNewTransferPanelCollapsed ? "Expand" : "Collapse")
+                        </button>
+                    </div>
+                </div>
+
+                @if (!_isNewTransferPanelCollapsed)
+                {
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 col-xl-4">
+                            <label class="form-label small text-muted mb-1" for="transferDestination">Destination Account</label>
+                            <InputSelect id="transferDestination"
+                                         class="form-select"
+                                         @bind-Value="_workspace.Draft.DestinationAccountCode">
+                                <option value="">Select destination account</option>
+                                @foreach (var option in _workspace.DestinationAccounts)
+                                {
+                                    <option value="@option.AccountCode">@option.AccountName (@option.AccountCode)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-2">
+                            <label class="form-label small text-muted mb-1" for="transferPaidOn">Paid On</label>
+                            <InputDate id="transferPaidOn"
+                                       class="form-control"
+                                       @bind-Value="_workspace.Draft.PaidOn" />
+                        </div>
+
+                        <div class="col-12 col-md-6 col-xl-2">
+                            <label class="form-label small text-muted mb-1" for="transferAmount">Amount</label>
+                            <InputNumber id="transferAmount"
+                                         class="form-control text-end"
+                                         @bind-Value="_workspace.Draft.Amount" />
+                        </div>
+
+                        <div class="col-12 col-xl-4">
+                            <label class="form-label small text-muted mb-1" for="transferReference">Reference</label>
+                            <InputText id="transferReference"
+                                       class="form-control"
+                                       @bind-Value="_workspace.Draft.PaymentReference" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small text-muted mb-1" for="transferPaidOutCode">Transfer Pay Out Code</label>
+                            <InputSelect id="transferPaidOutCode"
+                                         class="form-select"
+                                         @bind-Value="_workspace.Draft.PaidOutCashCode">
+                                <option value="">Use default pay out code</option>
+                                @foreach (var option in _workspace.PaidOutTransferCodes)
+                                {
+                                    <option value="@option.CashCode">@option.CashDescription (@option.CashCode)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small text-muted mb-1" for="transferPaidInCode">Transfer Pay In Code</label>
+                            <InputSelect id="transferPaidInCode"
+                                         class="form-select"
+                                         @bind-Value="_workspace.Draft.PaidInCashCode">
+                                <option value="">Use default pay in code</option>
+                                @foreach (var option in _workspace.PaidInTransferCodes)
+                                {
+                                    <option value="@option.CashCode">@option.CashDescription (@option.CashCode)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="small text-muted mt-3">
+                        Both transfer cash codes default from the first configured entry matching the required polarity, but each side can be overridden before save.
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="HandleAddTransferAsync"
+                                disabled="@_isBusy">
+                            Add transfer
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card flex-grow-1" style="min-height:0; overflow:hidden;">
+            <div class="card-body d-flex flex-column" style="min-height:0;">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">Planned Transfers</h2>
+                        <div class="small text-muted">Transfer accruals for the active year and period scope.</div>
+                    </div>
+
+                    <span class="badge text-bg-light">@_workspace.Rows.Count</span>
+                </div>
+
+                <div class="table-responsive flex-grow-1" style="min-height:0;">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Payment</th>
+                                <th>User</th>
+                                <th>Paid On</th>
+                                <th>Reference</th>
+                                <th>Cash Code</th>
+                                <th class="text-end">Paid Out</th>
+                                <th class="text-end">Paid In</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_workspace.Rows.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-muted">No planned transfers found for the selected scope.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var row in _workspace.Rows)
+                                {
+                                    <tr>
+                                        <td><code>@row.PaymentCode</code></td>
+                                        <td>@row.UserName</td>
+                                        <td>@row.PaidOn.ToString("d")</td>
+                                        <td>@row.PaymentReference</td>
+                                        <td>
+                                            <div>@row.CashDescription</div>
+                                            @if (!string.IsNullOrWhiteSpace(row.CashCode))
+                                            {
+                                                <div class="small text-muted"><code>@row.CashCode</code></div>
+                                            }
+                                        </td>
+                                        <td class="text-end text-danger">@row.PaidOutValue.ToString("C")</td>
+                                        <td class="text-end">@row.PaidInValue.ToString("C")</td>
+                                        <td class="text-end">
+                                            @if (CanOpenPaymentEditor(row))
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm"
+                                                        @onclick="() => OpenPaymentEditorAsync(row.PaymentCode)">
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public CashManagerAccountSummary? SelectedAccount { get; set; }
+    [Parameter] public IReadOnlyList<CashManagerYearOption> Years { get; set; } = Array.Empty<CashManagerYearOption>();
+    [Parameter] public IReadOnlyList<CashManagerPeriodOption> Periods { get; set; } = Array.Empty<CashManagerPeriodOption>();
+    [Parameter] public short? SelectedYearNumber { get; set; }
+    [Parameter] public DateTime? SelectedPeriodStartOn { get; set; }
+
+    private bool _isLoaded;
+    private bool _isBusy;
+    private bool _isPrivileged;
+    private bool _isAdministrator;
+    private bool _canCorrectTransfers;
+    private bool _isLoadingWorkspace;
+    private bool _isSavingEditor;
+    private bool _confirmDelete;
+    private bool _scrollEditorIntoView;
+    private bool _isNewTransferPanelCollapsed;
+    private string? _currentAspNetUserId;
+    private string? _message;
+    private string? _errorMessage;
+    private string? _paymentEditorMessage;
+    private string? _paymentEditorError;
+    private string? _loadedAccountCode;
+    private short? _loadedYearNumber;
+    private DateTime? _loadedPeriodStartOn;
+    private int _workspaceLoadVersion;
+    private CashManagerTransfersWorkspaceState _workspace = CashManagerTransfersWorkspaceState.Empty;
+    private CashManagerStatementPaymentEditMode _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
+    private CashManagerStatementPaymentEditorState? _paymentEditor;
+    private ElementReference _paymentEditorHost;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentAspNetUserId = UserManager.GetUserId(authState.User);
+        _isAdministrator = authState.User.IsInRole(Constants.AdministratorsRole);
+        _isPrivileged = _isAdministrator || authState.User.IsInRole(Constants.ManagersRole);
+        _canCorrectTransfers = _isPrivileged;
+        _isLoaded = true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (SelectedAccount is null)
+        {
+            _workspace = CashManagerTransfersWorkspaceState.Empty;
+            _loadedAccountCode = null;
+            _loadedYearNumber = null;
+            _loadedPeriodStartOn = null;
+            return;
+        }
+
+        if (_isLoadingWorkspace)
+        {
+            return;
+        }
+
+        var accountChanged = !string.Equals(_loadedAccountCode, SelectedAccount.AccountCode, StringComparison.OrdinalIgnoreCase);
+        var yearChanged = _loadedYearNumber != SelectedYearNumber;
+        var periodChanged = _loadedPeriodStartOn != SelectedPeriodStartOn;
+
+        if (!accountChanged && !yearChanged && !periodChanged)
+        {
+            return;
+        }
+
+        await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_scrollEditorIntoView || !IsMobile || _paymentEditor is null)
+        {
+            return;
+        }
+
+        _scrollEditorIntoView = false;
+        await JSRuntime.InvokeVoidAsync("cashManager.scrollIntoView", _paymentEditorHost);
+    }
+
+    private RenderFragment RenderPaymentEditor() => @<div @ref="_paymentEditorHost" class="card border-primary">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 mb-1">Transfer Correction</h2>
+                <div class="small text-muted">
+                    Payment <code>@_paymentEditor!.Model.PaymentCode</code>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ClosePaymentEditorAsync">
+                Close
+            </button>
+        </div>
+
+        @if (_paymentEditor.Model.IsClosedPeriod)
+                {
+        <div class="alert alert-warning py-2 mb-3">
+            <div class="fw-semibold">Closed period</div>
+            <div class="small">
+                This payment is in a <strong>@_paymentEditor.Model.PeriodStatus</strong> period.
+                Only Administrators may overwrite it.
+            </div>
+
+            @if (_isAdministrator)
+                        {
+            <div class="form-check mt-2">
+                <InputCheckbox id="transferPaymentClosedPeriodOverride"
+                               class="form-check-input"
+                               @bind-Value="_paymentEditor.Model.AllowClosedPeriodOverride" />
+                <label class="form-check-label" for="transferPaymentClosedPeriodOverride">
+                    Confirm closed-period overwrite and account rebuild
+                </label>
+            </div>
+                        }
+        </div>
+                }
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Edit)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Edit)">
+                Edit
+            </button>
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Move)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Move)">
+                Move
+            </button>
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Payment)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Payment)">
+                Payment
+            </button>
+            <button type="button"
+                    class="btn @GetEditorTabButtonClass(CashManagerStatementPaymentEditMode.Delete)"
+                    @onclick="() => SetPaymentEditorMode(CashManagerStatementPaymentEditMode.Delete)">
+                Delete
+            </button>
+        </div>
+
+        @switch (_paymentEditorMode)
+        {
+            case CashManagerStatementPaymentEditMode.Edit:
+                @RenderEditMode()
+                break;
+            case CashManagerStatementPaymentEditMode.Move:
+                @RenderMoveMode()
+                break;
+            case CashManagerStatementPaymentEditMode.Payment:
+                @RenderPaymentMode()
+                break;
+            case CashManagerStatementPaymentEditMode.Delete:
+                @RenderDeleteMode()
+                break;
+        }
+    </div>
+</div>;
+
+private RenderFragment RenderEditMode() => @<div class="row g-3">
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorUserId">User</label>
+        <InputSelect id="transferPaymentEditorUserId"
+                     class="form-select"
+                     @bind-Value="_paymentEditor!.Model.UserId">
+            @foreach (var option in _paymentEditor.Users)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="col-12 col-md-6">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorPaidOn">Paid On</label>
+        <InputDate id="transferPaymentEditorPaidOn"
+                   class="form-control"
+                   @bind-Value="_paymentEditor!.Model.PaidOn" />
+    </div>
+
+    <div class="col-12">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorReference">Reference</label>
+        <InputText id="transferPaymentEditorReference"
+                   class="form-control"
+                   @bind-Value="_paymentEditor!.Model.PaymentReference" />
+    </div>
+
+    <div class="col-12">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorCashCode">Cash Code</label>
+        @if (_paymentEditor!.CanEditCashCode)
+        {
+            <InputSelect id="transferPaymentEditorCashCode"
+                         class="form-select"
+                         @bind-Value="_paymentEditor.Model.CashCode">
+                @foreach (var option in _paymentEditor.CashCodes)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </InputSelect>
+        }
+        else
+        {
+            <input id="transferPaymentEditorCashCode"
+                   class="form-control"
+                   value="@_paymentEditor.Model.CashCode"
+                   readonly />
+        }
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-primary"
+                disabled="@(!CanExecuteEditorAction())"
+                @onclick="HandleSaveEditAsync">
+            @(_isSavingEditor ? "Saving…" : "Save edit")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderMoveMode() => @<div class="row g-3">
+    <div class="col-12">
+        <div class="small text-muted mb-1">Current Account</div>
+        <div class="fw-semibold"><code>@_paymentEditor!.Model.CurrentAccountCode</code></div>
+    </div>
+
+    <div class="col-12">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorMoveAccount">Target Cash Account</label>
+        <InputSelect id="transferPaymentEditorMoveAccount"
+                     class="form-select"
+                     @bind-Value="_paymentEditor!.Model.AccountCode">
+            @foreach (var option in _paymentEditor.Accounts)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-primary"
+                disabled="@(!CanExecuteEditorAction())"
+                @onclick="HandleMoveAsync">
+            @(_isSavingEditor ? "Moving…" : "Move payment")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderPaymentMode() => @<div class="row g-3">
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorPaidOut">Paid Out</label>
+        <InputNumber id="transferPaymentEditorPaidOut"
+                     class="form-control"
+                     @bind-Value="_paymentEditor!.Model.PaidOutValue" />
+    </div>
+
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorPaidIn">Paid In</label>
+        <InputNumber id="transferPaymentEditorPaidIn"
+                     class="form-control"
+                     @bind-Value="_paymentEditor!.Model.PaidInValue" />
+    </div>
+
+    <div class="col-12 col-md-4">
+        <label class="form-label small text-muted mb-1" for="transferPaymentEditorTaxCode">Tax Code</label>
+        <InputSelect id="transferPaymentEditorTaxCode"
+                     class="form-select"
+                     @bind-Value="_paymentEditor!.Model.TaxCode">
+            @foreach (var option in _paymentEditor.TaxCodes)
+            {
+                <option value="@option.Value">@option.Label</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-primary"
+                disabled="@(!CanExecuteEditorAction())"
+                @onclick="HandleSavePaymentAsync">
+            @(_isSavingEditor ? "Saving…" : "Save payment")
+        </button>
+    </div>
+</div>;
+
+private RenderFragment RenderDeleteMode() => @<div class="row g-3">
+    <div class="col-12">
+        <div class="alert alert-danger py-2 mb-0">
+            Delete planned transfer <code>@_paymentEditor!.Model.PaymentCode</code>.
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <InputCheckbox id="transferPaymentDeleteConfirm"
+                           class="form-check-input"
+                           @bind-Value="_confirmDelete" />
+            <label class="form-check-label" for="transferPaymentDeleteConfirm">
+                Confirm payment delete
+            </label>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <button type="button"
+                class="btn btn-danger"
+                disabled="@(!_confirmDelete || !CanExecuteEditorAction())"
+                @onclick="HandleDeleteAsync">
+            @(_isSavingEditor ? "Deleting…" : "Delete payment")
+        </button>
+    </div>
+</div>;
+
+private async Task LoadWorkspaceAsync(string accountCode)
+{
+    if (string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    var loadVersion = ++_workspaceLoadVersion;
+    _isLoadingWorkspace = true;
+
+    try
+    {
+        var workspace = await CashTransfersWorkspaceService.GetWorkspaceAsync(
+            accountCode,
+            SelectedYearNumber.GetValueOrDefault(),
+            SelectedPeriodStartOn,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        if (loadVersion != _workspaceLoadVersion)
+        {
+            return;
+        }
+
+        _workspace = workspace;
+        _loadedAccountCode = accountCode;
+        _loadedYearNumber = SelectedYearNumber;
+        _loadedPeriodStartOn = SelectedPeriodStartOn;
+        _message = null;
+        _errorMessage = null;
+    }
+    finally
+    {
+        if (loadVersion == _workspaceLoadVersion)
+        {
+            _isLoadingWorkspace = false;
+        }
+    }
+}
+
+private bool CanOpenPaymentEditor(CashManagerTransferRow row)
+{
+    return _canCorrectTransfers && !string.IsNullOrWhiteSpace(row.PaymentCode);
+}
+
+private bool CanExecuteEditorAction()
+{
+    if (_isSavingEditor || _paymentEditor is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return false;
+    }
+
+    if (!_paymentEditor.Model.IsClosedPeriod)
+    {
+        return true;
+    }
+
+    return _isAdministrator && _paymentEditor.Model.AllowClosedPeriodOverride;
+}
+
+private string GetEditorTabButtonClass(CashManagerStatementPaymentEditMode mode)
+{
+    return _paymentEditorMode == mode
+        ? "btn-primary"
+        : "btn-outline-secondary";
+}
+
+private async Task OpenPaymentEditorAsync(string paymentCode)
+{
+    _paymentEditorMessage = null;
+    _paymentEditorError = null;
+    _confirmDelete = false;
+    _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
+    _paymentEditor = await CashStatementPaymentMaintenanceService.GetEditorAsync(paymentCode);
+    _scrollEditorIntoView = IsMobile && _paymentEditor is not null;
+
+    if (_paymentEditor is null)
+    {
+        _paymentEditorError = $"Payment '{paymentCode}' was not found.";
+    }
+}
+
+private Task ClosePaymentEditorAsync()
+{
+    _paymentEditor = null;
+    _paymentEditorError = null;
+    _confirmDelete = false;
+    _scrollEditorIntoView = false;
+    return Task.CompletedTask;
+}
+
+private void SetPaymentEditorMode(CashManagerStatementPaymentEditMode mode)
+{
+    _paymentEditorMode = mode;
+    _paymentEditorError = null;
+    _confirmDelete = false;
+}
+
+private async Task HandleSaveEditAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.SaveEditAsync(
+            _paymentEditor.Model,
+            _currentAspNetUserId,
+            _isAdministrator);
+
+        await ReloadWorkspaceAsync();
+        _paymentEditor = null;
+        _paymentEditorMessage = "Transfer updated.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task HandleMoveAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.MoveAsync(
+            _paymentEditor.Model,
+            _currentAspNetUserId,
+            _isAdministrator);
+
+        await ReloadWorkspaceAsync();
+        _paymentEditor = null;
+        _paymentEditorMessage = "Transfer moved.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task HandleSavePaymentAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.SavePaymentAsync(
+            _paymentEditor.Model,
+            _currentAspNetUserId,
+            _isAdministrator);
+
+        await ReloadWorkspaceAsync();
+        _paymentEditor = null;
+        _paymentEditorMessage = "Transfer values updated.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task HandleDeleteAsync()
+{
+    if (_paymentEditor is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _isSavingEditor = true;
+    _paymentEditorError = null;
+    _paymentEditorMessage = null;
+
+    try
+    {
+        await CashStatementPaymentMaintenanceService.DeleteAsync(
+            _paymentEditor.Model,
+            _currentAspNetUserId,
+            _isAdministrator);
+
+        await ReloadWorkspaceAsync();
+        _paymentEditor = null;
+        _confirmDelete = false;
+        _paymentEditorMessage = "Transfer deleted.";
+    }
+    catch (Exception exception)
+    {
+        _paymentEditorError = exception.Message;
+    }
+    finally
+    {
+        _isSavingEditor = false;
+    }
+}
+
+private async Task ReloadWorkspaceAsync()
+{
+    if (SelectedAccount is null)
+    {
+        _workspace = CashManagerTransfersWorkspaceState.Empty;
+        return;
+    }
+
+    await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+}
+
+private async Task HandleAddTransferAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        await CashTransfersWorkspaceService.AddAsync(
+            SelectedAccount.AccountCode,
+            _workspace.Draft,
+            _currentAspNetUserId);
+
+        await ReloadWorkspaceAsync();
+        _message = "Planned transfer entries added.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private async Task HandlePostVisibleTransfersAsync()
+{
+    if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
+    {
+        return;
+    }
+
+    _message = null;
+    _errorMessage = null;
+
+    try
+    {
+        _isBusy = true;
+
+        var postedCount = await CashTransfersWorkspaceService.PostVisibleAsync(
+            SelectedAccount.AccountCode,
+            SelectedYearNumber.GetValueOrDefault(),
+            SelectedPeriodStartOn,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        await ReloadWorkspaceAsync();
+        _message = $"{postedCount} visible transfer(s) posted.";
+    }
+    catch (Exception exception)
+    {
+        _errorMessage = exception.Message;
+    }
+    finally
+    {
+        _isBusy = false;
+    }
+}
+
+private Task ToggleNewTransferPanelAsync()
+{
+    _isNewTransferPanelCollapsed = !_isNewTransferPanelCollapsed;
+    return Task.CompletedTask;
+}
+
+private string GetNewTransferSummary()
+{
+    var destination = string.IsNullOrWhiteSpace(_workspace.Draft.DestinationAccountCode)
+        ? "No destination"
+        : _workspace.Draft.DestinationAccountCode;
+
+    var amount = _workspace.Draft.Amount == 0m
+        ? "No amount"
+        : _workspace.Draft.Amount.ToString("C");
+
+    var reference = string.IsNullOrWhiteSpace(_workspace.Draft.PaymentReference)
+        ? "No reference"
+        : _workspace.Draft.PaymentReference;
+
+    return $"{destination} • {_workspace.Draft.PaidOn:d} • {amount} • {reference}";
+}
+}

@@ -27,7 +27,8 @@ namespace TradeControl.Web.AppServices
         string SubjectName,
         string SubjectType,
         NodeEnum.CashPolarity CashPolarity,
-        double CurrentBalance);
+        double CurrentBalance,
+        string? ParentSubjectCode);
 
     public sealed record SubjectEnquiryInvoiceItem(
         string InvoiceNumber,
@@ -61,24 +62,28 @@ namespace TradeControl.Web.AppServices
     {
         Task<SubjectEnquirySummary?> GetSummaryAsync(
             string subjectCode,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default);
 
         Task<SubjectEnquiryPageResult<SubjectEnquiryInvoiceItem>> GetInvoicesAsync(
             string subjectCode,
             int pageNumber,
             int pageSize,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default);
 
         Task<SubjectEnquiryPageResult<SubjectEnquiryPaymentItem>> GetPaymentsAsync(
             string subjectCode,
             int pageNumber,
             int pageSize,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default);
 
         Task<SubjectEnquiryPageResult<SubjectEnquiryStatementItem>> GetStatementAsync(
             string subjectCode,
             int pageNumber,
             int pageSize,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default);
     }
 }

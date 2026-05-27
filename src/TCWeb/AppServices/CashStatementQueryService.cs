@@ -61,7 +61,7 @@ namespace TradeControl.Web.AppServices
 
             var openingBalance = await GetOpeningBalanceAsync(accountCode, effectivePeriodStartOn, cancellationToken);
             var postedRows = await BuildPostedRowsAsync(accountCode, visiblePeriods, cancellationToken);
-            var unpostedRows = await BuildUnpostedRowsAsync(accountCode, cancellationToken);
+            var unpostedRows = await BuildUnpostedRowsAsync(accountCode, visiblePeriods, cancellationToken);
 
             var rows = postedRows
                 .Concat(unpostedRows)
@@ -150,14 +150,17 @@ namespace TradeControl.Web.AppServices
 
         private async Task<IReadOnlyList<CashManagerStatementRow>> BuildUnpostedRowsAsync(
             string accountCode,
+            IReadOnlyList<DateTime> visiblePeriods,
             CancellationToken cancellationToken)
         {
+            var visiblePeriodSet = visiblePeriods.ToHashSet();
+
             var paymentRows = await (
                 from payment in _nodeContext.Cash_tbPayments.AsNoTracking()
                 join paymentView in _nodeContext.Cash_Payments.AsNoTracking()
                     on payment.PaymentCode equals paymentView.PaymentCode
                 where payment.AccountCode == accountCode
-                   && payment.PaymentStatusCode != (short)NodeEnum.PaymentStatus.Posted
+                   && payment.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted
                 orderby payment.PaidOn, payment.PaymentCode
                 select new UnpostedPaymentRow(
                     payment.PaymentCode,
@@ -172,23 +175,18 @@ namespace TradeControl.Web.AppServices
                     paymentView.TaxDescription,
                     paymentView.UserName,
                     payment.PaidInValue,
-                    payment.PaidOutValue,
-                    payment.PaymentStatusCode))
+                    payment.PaidOutValue))
                 .ToListAsync(cancellationToken);
 
             var rows = new List<CashManagerStatementRow>(paymentRows.Count);
 
-            foreach (var payment in paymentRows)
+            foreach (var payment in paymentRows.Where(payment => visiblePeriodSet.Contains(new DateTime(payment.PaidOn.Year, payment.PaidOn.Month, 1))))
             {
                 var subjectCode = payment.SubjectCode ?? string.Empty;
                 var namespacePath = await _namespaceResolver.ResolveNamespacePathAsync(
                     subjectCode,
                     payment.ParentSubjectCode,
                     cancellationToken);
-
-                var status = payment.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Transfer
-                    ? CashManagerRowStatus.Transfer
-                    : CashManagerRowStatus.Unposted;
 
                 rows.Add(new CashManagerStatementRow(
                     null,
@@ -208,7 +206,7 @@ namespace TradeControl.Web.AppServices
                     payment.PaidOutValue,
                     payment.PaidInValue - payment.PaidOutValue,
                     0m,
-                    status,
+                    CashManagerRowStatus.Unposted,
                     true));
             }
 
@@ -346,7 +344,6 @@ namespace TradeControl.Web.AppServices
             string? TaxDescription,
             string? UserName,
             decimal PaidInValue,
-            decimal PaidOutValue,
-            short PaymentStatusCode);
+            decimal PaidOutValue);
     }
 }

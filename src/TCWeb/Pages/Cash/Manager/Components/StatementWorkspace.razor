@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.JSInterop
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.AppServices
 @using TradeControl.Web.Pages.Subject.Controls
@@ -10,6 +11,7 @@
 @inject UserManager<TradeControlWebUser> UserManager
 @inject ICashStatementQueryService CashStatementQueryService
 @inject ICashStatementPaymentMaintenanceService CashStatementPaymentMaintenanceService
+@inject IJSRuntime JSRuntime
 
 @if (Account is null)
 {
@@ -71,6 +73,7 @@ else
     private bool _isAdministrator;
     private bool _isSavingEditor;
     private bool _confirmDelete;
+    private bool _scrollEditorIntoView;
     private string? _userId;
     private string? _paymentEditorMessage;
     private string? _paymentEditorError;
@@ -79,6 +82,7 @@ else
     private bool _sortDescending = true;
     private CashManagerStatementPaymentEditMode _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
     private CashManagerStatementPaymentEditorState? _paymentEditor;
+    private ElementReference _paymentEditorHost;
 
     protected override async Task OnInitializedAsync()
     {
@@ -88,6 +92,17 @@ else
     protected override void OnParametersSet()
     {
         _currentStatement = Statement;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_scrollEditorIntoView || !IsMobile || _paymentEditor is null)
+        {
+            return;
+        }
+
+        _scrollEditorIntoView = false;
+        await JSRuntime.InvokeVoidAsync("cashManager.scrollIntoView", _paymentEditorHost);
     }
 
     private async Task LoadAccessStateAsync()
@@ -120,9 +135,9 @@ else
 
             <div class="d-flex flex-wrap align-items-center gap-2">
                 @if (!string.IsNullOrWhiteSpace(NamespaceFilter))
-                {
-                    <span class="badge text-bg-light"><code>@NamespaceFilter</code></span>
-                }
+                                {
+                <span class="badge text-bg-light"><code>@NamespaceFilter</code></span>
+                                }
 
                 <button type="button"
                         class="btn btn-outline-secondary btn-sm"
@@ -134,84 +149,84 @@ else
         </div>
 
         @if (_isHeaderExpanded)
-        {
-            <div class="border-top mt-3 pt-3">
-                <div class="row g-3 align-items-end mb-3">
-                    <div class="col-12 col-lg-3">
-                        <label class="form-label small text-muted mb-1" for="statementYearSelect">Financial Year</label>
-                        <select id="statementYearSelect"
-                                class="form-select form-select-sm"
-                                value="@(SelectedYearNumber.GetValueOrDefault())"
-                                @onchange="HandleYearChangedAsync">
-                            <option value="0">All years</option>
-                            @foreach (var year in Years)
-                            {
-                                <option value="@year.YearNumber">@year.Description</option>
-                            }
-                        </select>
-                    </div>
+                {
+        <div class="border-top mt-3 pt-3">
+            <div class="row g-3 align-items-end mb-3">
+                <div class="col-12 col-lg-3">
+                    <label class="form-label small text-muted mb-1" for="statementYearSelect">Financial Year</label>
+                    <select id="statementYearSelect"
+                            class="form-select form-select-sm"
+                            value="@(SelectedYearNumber.GetValueOrDefault())"
+                            @onchange="HandleYearChangedAsync">
+                        <option value="0">All years</option>
+                        @foreach (var year in Years)
+                                                {
+                        <option value="@year.YearNumber">@year.Description</option>
+                                                }
+                    </select>
+                </div>
 
-                    <div class="col-12 col-lg-4">
-                        <label class="form-label small text-muted mb-1" for="statementPeriodSelect">Period</label>
-                        <select id="statementPeriodSelect"
-                                class="form-select form-select-sm"
-                                value="@GetSelectedPeriodValue()"
-                                @onchange="HandlePeriodChangedAsync">
-                            <option value="">All months in year</option>
-                            @foreach (var period in Periods)
-                            {
-                                <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
-                            }
-                        </select>
-                    </div>
+                <div class="col-12 col-lg-4">
+                    <label class="form-label small text-muted mb-1" for="statementPeriodSelect">Period</label>
+                    <select id="statementPeriodSelect"
+                            class="form-select form-select-sm"
+                            value="@GetSelectedPeriodValue()"
+                            @onchange="HandlePeriodChangedAsync">
+                        <option value="">All months in year</option>
+                        @foreach (var period in Periods)
+                                                {
+                        <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
+                                                }
+                    </select>
+                </div>
 
-                    <div class="col-12 col-lg-5">
-                        <label class="form-label small text-muted mb-1">Namespace Filter</label>
-                        <NamespaceSelector FilterText="@NamespaceFilter"
-                                           Suggestions="@NamespaceSuggestions"
-                                           IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
-                                           ShowApplyButton="true"
-                                           ApplyButtonTitle="Apply namespace filter"
-                                           OnFilterChanged="OnFilterChangedAsync"
-                                           OnFilterCommitted="OnFilterCommittedAsync" />
+                <div class="col-12 col-lg-5">
+                    <label class="form-label small text-muted mb-1">Namespace Filter</label>
+                    <NamespaceSelector FilterText="@NamespaceFilter"
+                                       Suggestions="@NamespaceSuggestions"
+                                       IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
+                                       ShowApplyButton="true"
+                                       ApplyButtonTitle="Apply namespace filter"
+                                       OnFilterChanged="OnFilterChangedAsync"
+                                       OnFilterCommitted="OnFilterCommittedAsync" />
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Opening Posted Balance</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.OpeningPostedBalance.ToString("C")</div>
                     </div>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="border rounded p-3 h-100">
-                            <div class="small text-muted mb-1">Opening Posted Balance</div>
-                            <div class="fw-semibold">@_currentStatement.Summary.OpeningPostedBalance.ToString("C")</div>
-                        </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Visible Posted</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.PostedNet.ToString("C")</div>
                     </div>
+                </div>
 
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="border rounded p-3 h-100">
-                            <div class="small text-muted mb-1">Visible Posted</div>
-                            <div class="fw-semibold">@_currentStatement.Summary.PostedNet.ToString("C")</div>
-                        </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Visible Unposted</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.UnpostedNet.ToString("C")</div>
                     </div>
+                </div>
 
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="border rounded p-3 h-100">
-                            <div class="small text-muted mb-1">Visible Unposted</div>
-                            <div class="fw-semibold">@_currentStatement.Summary.UnpostedNet.ToString("C")</div>
-                        </div>
-                    </div>
-
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="border rounded p-3 h-100">
-                            <div class="small text-muted mb-1">Provisional Balance</div>
-                            <div class="fw-semibold">@_currentStatement.Summary.ProvisionalBalance.ToString("C")</div>
-                        </div>
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="border rounded p-3 h-100">
+                        <div class="small text-muted mb-1">Provisional Balance</div>
+                        <div class="fw-semibold">@_currentStatement.Summary.ProvisionalBalance.ToString("C")</div>
                     </div>
                 </div>
             </div>
-        }
+        </div>
+                }
     </div>
 </div>;
 
-private RenderFragment RenderPaymentEditor() => @<div class="card border-primary">
+private RenderFragment RenderPaymentEditor() => @<div @ref="_paymentEditorHost" class="card border-primary">
     <div class="card-body">
         <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
             <div>
@@ -745,6 +760,7 @@ private async Task OpenPaymentEditorAsync(string paymentCode)
     _confirmDelete = false;
     _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
     _paymentEditor = await CashStatementPaymentMaintenanceService.GetEditorAsync(paymentCode);
+    _scrollEditorIntoView = IsMobile && _paymentEditor is not null;
 
     if (_paymentEditor is null)
     {
@@ -757,6 +773,7 @@ private Task ClosePaymentEditorAsync()
     _paymentEditor = null;
     _paymentEditorError = null;
     _confirmDelete = false;
+    _scrollEditorIntoView = false;
     return Task.CompletedTask;
 }
 

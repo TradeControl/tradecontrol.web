@@ -24,6 +24,7 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ICashStatementPaymentMaintenanceService, CashStatementPaymentMaintenanceService>();
             services.AddScoped<ICashPaymentsWorkspaceService, CashPaymentsWorkspaceService>();
             services.AddScoped<ICashAssetsWorkspaceService, CashAssetsWorkspaceService>();
+            services.AddScoped<ICashTransfersWorkspaceService, CashTransfersWorkspaceService>();
             services.AddScoped<ICashAccountMaintenanceService, CashAccountMaintenanceService>();
 
             services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();

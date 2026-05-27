@@ -13,25 +13,35 @@ namespace TradeControl.Web.Models
     {
         [Required]
         [StringLength(50)]
-        [Display (Name = "Account Code")]
+        [Display(Name = "Account Code")]
         public string SubjectCode { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Namespace")]
+        public string ParentSubjectCode { get; set; }
+
         [Display(Name = "Id")]
         public int RowNumber { get; set; }
+
         [Column(TypeName = "datetime")]
-        [DataType (DataType.Date)]
+        [DataType(DataType.Date)]
         [Display(Name = "Transacted")]
         public DateTime TransactedOn { get; set; }
+
         [StringLength(50)]
         [Display(Name = "Ref.")]
         public string Reference { get; set; }
+
         [StringLength(30)]
         [Display(Name = "Type")]
         public string StatementType { get; set; }
+
         [Display(Name = "Charge")]
-        [DataType (DataType.Currency)]
+        [DataType(DataType.Currency)]
         public double Charge { get; set; }
+
         [Display(Name = "Balance")]
-        [DataType (DataType.Currency)]
+        [DataType(DataType.Currency)]
         public double Balance { get; set; }
     }
 }

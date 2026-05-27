@@ -13,8 +13,7 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         CashAccounts,
         Payments,
         Assets,
-        Transfers,
-        Posting
+        Transfers
     }
 
     public enum CashManagerRowStatus
@@ -249,15 +248,19 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
                     CashManagerSection.Statement,
                     CashManagerSection.CashAccounts,
                     CashManagerSection.Payments,
-                    CashManagerSection.Transfers,
-                    CashManagerSection.Posting
+                    CashManagerSection.Transfers
                 },
                 NodeEnum.CashAccountType.Asset => new[]
                 {
                     CashManagerSection.Statement,
                     CashManagerSection.CashAccounts,
-                    CashManagerSection.Assets,
-                    CashManagerSection.Posting
+                    CashManagerSection.Assets
+                },
+                NodeEnum.CashAccountType.Dummy => new[]
+                {
+                    CashManagerSection.Statement,
+                    CashManagerSection.CashAccounts,
+                    CashManagerSection.Payments
                 },
                 _ => new[]
                 {
@@ -275,7 +278,6 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
                 CashManagerSection.Payments => "Payments",
                 CashManagerSection.Assets => "Assets",
                 CashManagerSection.Transfers => "Transfers",
-                CashManagerSection.Posting => "Posting",
                 _ => section.ToString()
             };
         }
@@ -288,7 +290,6 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
                 CashManagerSection.Payments => "Payment entry architecture for invoice settlement and miscellaneous payments.",
                 CashManagerSection.Assets => "Asset entry architecture for capitalisation and follow-on depreciation workflows.",
                 CashManagerSection.Transfers => "Cash-only transfer architecture between eligible account endpoints.",
-                CashManagerSection.Posting => "Session-based posting surface for flushing the unposted spool.",
                 _ => string.Empty
             };
         }
@@ -322,9 +323,7 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
                 return "All years";
             }
 
-            return years
-                .FirstOrDefault(year => year.YearNumber == selectedYearNumber.Value)
-                ?.Description
+            return years.FirstOrDefault(year => year.YearNumber == selectedYearNumber.Value)?.Description
                 ?? selectedYearNumber.Value.ToString();
         }
 
@@ -337,25 +336,23 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
                 return "All months in year";
             }
 
-            return periods
-                .FirstOrDefault(period => period.StartOn == selectedPeriodStartOn.Value)
-                ?.Description
+            return periods.FirstOrDefault(period => period.StartOn == selectedPeriodStartOn.Value)?.Description
                 ?? selectedPeriodStartOn.Value.ToString("d");
         }
 
-        public static string GetSortLabel(CashManagerStatementSortColumn sortColumn)
+        public static string GetSortLabel(CashManagerStatementSortColumn column)
         {
-            return sortColumn switch {
-                CashManagerStatementSortColumn.EntryNumber => "Entry No.",
+            return column switch {
+                CashManagerStatementSortColumn.EntryNumber => "Entry",
                 CashManagerStatementSortColumn.PaidOn => "Paid On",
                 CashManagerStatementSortColumn.Subject => "Subject",
                 CashManagerStatementSortColumn.Reference => "Reference",
                 CashManagerStatementSortColumn.Cash => "Cash",
                 CashManagerStatementSortColumn.PaidOut => "Paid Out",
                 CashManagerStatementSortColumn.PaidIn => "Paid In",
-                CashManagerStatementSortColumn.RunningBalance => "Running Balance",
+                CashManagerStatementSortColumn.RunningBalance => "Balance",
                 CashManagerStatementSortColumn.Status => "Status",
-                _ => sortColumn.ToString()
+                _ => column.ToString()
             };
         }
 

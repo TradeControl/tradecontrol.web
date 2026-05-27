@@ -41,6 +41,14 @@ namespace TradeControl.Web.AppServices
             string aspNetUserId,
             CancellationToken cancellationToken = default);
 
+        Task UpdateAsync(
+            string paymentCode,
+            string accountCode,
+            CashManagerAssetDraftModel draft,
+            string aspNetUserId,
+            bool isPrivileged,
+            CancellationToken cancellationToken = default);
+
         Task AddFromPaymentAsync(
             string accountCode,
             string sourcePaymentCode,

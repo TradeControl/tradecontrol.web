@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.Data;
 using TradeControl.Web.Pages.Cash.Manager.Components;
 
@@ -10,18 +11,21 @@ namespace TradeControl.Web.AppServices
 {
     public sealed class CashManagerService : ICashManagerService
     {
-        private readonly NodeContext _nodeContext;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public CashManagerService(NodeContext nodeContext)
+        public CashManagerService(IServiceScopeFactory scopeFactory)
         {
-            _nodeContext = nodeContext;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<IReadOnlyList<CashManagerAccountSummary>> GetAccountsAsync(
             bool includeClosed = false,
             CancellationToken cancellationToken = default)
         {
-            var query = _nodeContext.Subject_CashAccounts
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            var query = nodeContext.Subject_CashAccounts
                 .AsNoTracking();
 
             if (!includeClosed)
@@ -48,14 +52,17 @@ namespace TradeControl.Web.AppServices
 
         public async Task<IReadOnlyList<CashManagerYearOption>> GetYearsAsync(CancellationToken cancellationToken = default)
         {
-            var activeYearNumbers = await _nodeContext.App_Periods
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            var activeYearNumbers = await nodeContext.App_Periods
                 .AsNoTracking()
                 .Where(period => period.CashStatusCode != (short)NodeEnum.CashStatus.Archived)
                 .Select(period => period.YearNumber)
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
-            return await _nodeContext.App_tbYears
+            return await nodeContext.App_tbYears
                 .AsNoTracking()
                 .Where(year => activeYearNumbers.Contains(year.YearNumber))
                 .OrderByDescending(year => year.YearNumber)
@@ -69,11 +76,19 @@ namespace TradeControl.Web.AppServices
             short yearNumber,
             CancellationToken cancellationToken = default)
         {
-            return await _nodeContext.App_Periods
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            var query = nodeContext.App_Periods
                 .AsNoTracking()
-                .Where(period =>
-                    period.YearNumber == yearNumber
-                    && period.CashStatusCode != (short)NodeEnum.CashStatus.Archived)
+                .Where(period => period.CashStatusCode != (short)NodeEnum.CashStatus.Archived);
+
+            if (yearNumber > 0)
+            {
+                query = query.Where(period => period.YearNumber == yearNumber);
+            }
+
+            return await query
                 .OrderByDescending(period => period.StartOn)
                 .Select(period => new CashManagerPeriodOption(
                     period.YearNumber,
@@ -86,7 +101,10 @@ namespace TradeControl.Web.AppServices
 
         public async Task<CashManagerPeriodOption?> GetDefaultPeriodAsync(CancellationToken cancellationToken = default)
         {
-            var currentPeriod = await _nodeContext.App_Periods
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            var currentPeriod = await nodeContext.App_Periods
                 .AsNoTracking()
                 .Where(period => period.CashStatusCode == (short)NodeEnum.CashStatus.Current)
                 .OrderByDescending(period => period.StartOn)
@@ -103,7 +121,7 @@ namespace TradeControl.Web.AppServices
                 return currentPeriod;
             }
 
-            return await _nodeContext.App_Periods
+            return await nodeContext.App_Periods
                 .AsNoTracking()
                 .Where(period => period.CashStatusCode != (short)NodeEnum.CashStatus.Archived)
                 .OrderByDescending(period => period.StartOn)

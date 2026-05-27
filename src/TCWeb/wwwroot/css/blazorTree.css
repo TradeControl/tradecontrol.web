@@ -451,6 +451,58 @@ body {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Mobile Card view                                                           */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 767.98px) {
+    .tc-mobile-card-list-host .table-responsive {
+        overflow: visible;
+    }
+
+        .tc-mobile-card-list-host .table-responsive > .table,
+        .tc-mobile-card-list-host .table {
+            margin-bottom: 0;
+        }
+
+            .tc-mobile-card-list-host .table thead {
+                display: none;
+            }
+
+            .tc-mobile-card-list-host .table tbody {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+                .tc-mobile-card-list-host .table tbody tr {
+                    display: block;
+                    border: 1px solid var(--bs-border-color);
+                    border-radius: 0.75rem;
+                    background: var(--bs-body-bg);
+                    padding: 0.75rem;
+                }
+
+                .tc-mobile-card-list-host .table tbody td {
+                    display: block;
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    padding: 0.25rem 0;
+                    border: 0;
+                    text-align: left !important;
+                }
+
+                    .tc-mobile-card-list-host .table tbody td .d-flex.justify-content-end {
+                        justify-content: flex-start !important;
+                    }
+
+                    .tc-mobile-card-list-host .table tbody td .form-control,
+                    .tc-mobile-card-list-host .table tbody td .form-select,
+                    .tc-mobile-card-list-host .table tbody td .input-group {
+                        width: 100%;
+                    }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Admin Manager                                                              */
 /* -------------------------------------------------------------------------- */
 

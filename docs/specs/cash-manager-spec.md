@@ -624,31 +624,6 @@ Rules:
 - transfer rows are shown in both source and destination statements with transfer styling
 - `Asset` and `Dummy` accounts do not expose transfer entry in `Cash\Manager`
 
-### 7.5 Posting Workspace
-
-Posting is presented both as:
-
-- a standalone workspace
-- an inline panel from the Statement toolbar
-
-Contents:
-
-- summary of unposted transactions in scope
-- grouped totals by namespace
-- warning list for rows that still lack resolvable namespace or have invalid balancing state
-- confirmation surface
-
-Primary action:
-
-- `Post unposted transactions`
-
-Confirmation copy must make clear:
-
-- posting flushes the current unposted spool
-- posting is independent of the selected viewing period
-- invoice settlement and auto-invoice creation will be executed server-side
-- balances will refresh after completion
-
 ## 8. Interaction Model
 
 ### 8.1 Standard Flow

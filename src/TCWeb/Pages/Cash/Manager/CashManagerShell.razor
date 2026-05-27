@@ -4,6 +4,7 @@
 @using TradeControl.Web.Pages.Cash.Manager.Components
 @using TradeControl.Web.Pages.Shared.Tree
 @using TradeControl.Web.Pages.Subject.Controls
+@using TradeControl.Web.Data
 @using Wangkanai.Detection.Models
 
 @inject Wangkanai.Detection.Services.IDetectionService Detection
@@ -30,7 +31,7 @@
 
             <div class="small text-muted mb-3">@GetMobileDetailSubtitle()</div>
 
-            <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0; overflow:hidden;">
+            <div class="tc-mobile-card-list-host flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0; overflow:hidden;">
                 <CashManagerDetailHost IsMobile="@_isMobile"
                                        SelectedAccount="@_selectedAccount"
                                        SelectedSection="@_selectedSection"
@@ -55,7 +56,7 @@
     }
     else
     {
-        <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
+        <div class="d-flex flex-column gap-3 h-100 position-relative" style="min-height:0; overflow:hidden;">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <div>
                     <h1 class="h4 mb-1">Cash Manager</h1>
@@ -89,6 +90,28 @@
                                  OnPeriodSelected="HandlePeriodSelectedAsync" />
             </div>
 
+            @if (_showMobileActionMenu && CanOpenMobileMoreActions())
+            {
+                <div class="position-fixed start-0 end-0 px-3" style="bottom:calc(92px + env(safe-area-inset-bottom)); z-index:1055;">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-2">
+                            <div class="small text-muted px-2 pt-1 pb-2">More</div>
+
+                            <div class="d-grid gap-2">
+                                @foreach (var section in GetMobileMenuSections())
+                                {
+                                    <button type="button"
+                                            class="btn @(section == _selectedSection ? "btn-primary" : "btn-outline-secondary") btn-sm text-start"
+                                            @onclick="() => OpenMobileSectionAsync(section)">
+                                        @CashManagerSectionCatalog.GetLabel(section)
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
             <div class="tc-mobile-actionbar tc-visible" role="toolbar" aria-label="Cash manager actions">
                 <div class="tc-mobile-action-summary me-2">
                     <div class="tc-mobile-action-title">@GetMobileActionTitle()</div>
@@ -97,6 +120,7 @@
 
                 <button type="button"
                         class="btn-action"
+                        style="flex:0 0 64px; width:64px; min-height:68px;"
                         disabled="@(!CanOpenMobileStatement())"
                         @onclick="OpenMobileStatementAsync">
                     <i class="bi bi-journal-text" aria-hidden="true"></i>
@@ -105,10 +129,20 @@
 
                 <button type="button"
                         class="btn-action"
-                        disabled="@(!CanOpenMobileCashAccounts())"
-                        @onclick="OpenMobileCashAccountsAsync">
-                    <i class="bi bi-wallet2" aria-hidden="true"></i>
-                    <span>Cash Accounts</span>
+                        style="flex:0 0 64px; width:64px; min-height:68px;"
+                        disabled="@(!CanOpenPrimaryMobileAction())"
+                        @onclick="OpenPrimaryMobileActionAsync">
+                    <i class="bi @GetPrimaryMobileActionIconClass()" aria-hidden="true"></i>
+                    <span>@GetPrimaryMobileActionLabel()</span>
+                </button>
+
+                <button type="button"
+                        class="btn-action"
+                        style="flex:0 0 64px; width:64px; min-height:68px;"
+                        disabled="@(!CanOpenMobileMoreActions())"
+                        @onclick="ToggleMobileActionMenuAsync">
+                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
+                    <span>More</span>
                 </button>
             </div>
         </div>
@@ -186,6 +220,7 @@ else
     private bool _isMobile;
     private bool _isLoadingStatement;
     private bool _isLoadingNamespaceSuggestions;
+    private bool _showMobileActionMenu;
     private string? _errorMessage;
     private string _namespaceFilter = string.Empty;
     private IReadOnlyList<CashManagerAccountSummary> _accounts = Array.Empty<CashManagerAccountSummary>();
@@ -282,6 +317,7 @@ else
     private async Task HandleAccountSelectedAsync(string accountCode)
     {
         _selectedAccount = _accounts.FirstOrDefault(account => string.Equals(account.AccountCode, accountCode, StringComparison.OrdinalIgnoreCase));
+        _showMobileActionMenu = false;
         NormalizeSection();
 
         if (_selectedSection == CashManagerSection.Statement)
@@ -293,6 +329,7 @@ else
     private async Task HandleSectionSelectedAsync(CashManagerSection section)
     {
         _selectedSection = section;
+        _showMobileActionMenu = false;
         await RefreshAccountsAsync();
         NormalizeSection();
 
@@ -307,14 +344,22 @@ else
         await OpenMobileSectionAsync(CashManagerSection.Statement);
     }
 
-    private async Task OpenMobileCashAccountsAsync()
+    private async Task OpenPrimaryMobileActionAsync()
     {
-        await OpenMobileSectionAsync(CashManagerSection.CashAccounts);
+        var primarySection = GetPrimaryMobileActionSection();
+
+        if (!primarySection.HasValue)
+        {
+            return;
+        }
+
+        await OpenMobileSectionAsync(primarySection.Value);
     }
 
     private async Task OpenMobileSectionAsync(CashManagerSection section)
     {
         _selectedSection = section;
+        _showMobileActionMenu = false;
         await RefreshAccountsAsync();
         NormalizeSection();
 
@@ -326,8 +371,15 @@ else
         _mobileView = CashManagerMobileView.Detail;
     }
 
+    private Task ToggleMobileActionMenuAsync()
+    {
+        _showMobileActionMenu = !_showMobileActionMenu;
+        return Task.CompletedTask;
+    }
+
     private Task NavigateToMobileTreeAsync()
     {
+        _showMobileActionMenu = false;
         _mobileView = CashManagerMobileView.Tree;
         return Task.CompletedTask;
     }
@@ -356,6 +408,7 @@ else
     private async Task HandleAccountSavedAsync(string accountCode)
     {
         _selectedSection = CashManagerSection.CashAccounts;
+        _showMobileActionMenu = false;
         await RefreshAccountsAsync(accountCode);
         NormalizeSection();
 
@@ -370,6 +423,7 @@ else
     private async Task HandleAccountDeletedAsync(string accountCode)
     {
         _selectedSection = CashManagerSection.CashAccounts;
+        _showMobileActionMenu = false;
         await RefreshAccountsAsync(accountCode);
         NormalizeSection();
 
@@ -505,9 +559,68 @@ else
         return _selectedAccount is not null;
     }
 
-    private bool CanOpenMobileCashAccounts()
+    private bool CanOpenPrimaryMobileAction()
     {
-        return _selectedAccount is not null || _accounts.Count == 0;
+        return GetPrimaryMobileActionSection().HasValue;
+    }
+
+    private bool CanOpenMobileMoreActions()
+    {
+        return GetMobileMenuSections().Count > 0;
+    }
+
+    private CashManagerSection? GetPrimaryMobileActionSection()
+    {
+        if (_selectedAccount is null)
+        {
+            return null;
+        }
+
+        return _selectedAccount.AccountType switch
+        {
+            NodeEnum.CashAccountType.Cash => CashManagerSection.Payments,
+            NodeEnum.CashAccountType.Asset => CashManagerSection.Assets,
+            NodeEnum.CashAccountType.Dummy => CashManagerSection.Payments,
+            _ => null
+        };
+    }
+
+    private IReadOnlyList<CashManagerSection> GetMobileMenuSections()
+    {
+        if (_selectedAccount is null)
+        {
+            return new[] { CashManagerSection.CashAccounts };
+        }
+
+        var primarySection = GetPrimaryMobileActionSection();
+
+        return CashManagerSectionCatalog.GetSections(_selectedAccount.AccountType)
+            .Where(section =>
+                section != CashManagerSection.Statement
+                && (!primarySection.HasValue || section != primarySection.Value))
+            .ToArray();
+    }
+
+    private string GetPrimaryMobileActionLabel()
+    {
+        var primarySection = GetPrimaryMobileActionSection();
+
+        return primarySection.HasValue
+            ? CashManagerSectionCatalog.GetLabel(primarySection.Value)
+            : "Action";
+    }
+
+    private string GetPrimaryMobileActionIconClass()
+    {
+        var primarySection = GetPrimaryMobileActionSection();
+
+        return primarySection switch
+        {
+            CashManagerSection.Payments => "bi-cash-stack",
+            CashManagerSection.Assets => "bi-box-seam",
+            CashManagerSection.Transfers => "bi-arrow-left-right",
+            _ => "bi-grid"
+        };
     }
 
     private string GetMobileActionTitle()

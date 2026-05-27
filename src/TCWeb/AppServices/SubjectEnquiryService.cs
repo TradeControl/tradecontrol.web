@@ -18,13 +18,26 @@ namespace TradeControl.Web.AppServices
 
         public async Task<SubjectEnquirySummary?> GetSummaryAsync(
             string subjectCode,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default)
         {
+            var normalizedSubjectCode = NormalizeCode(subjectCode);
+
+            if (string.IsNullOrWhiteSpace(normalizedSubjectCode))
+            {
+                return null;
+            }
+
+            var resolvedParentSubjectCode = await ResolveParentSubjectCodeAsync(
+                normalizedSubjectCode,
+                parentSubjectCode,
+                cancellationToken);
+
             var summary = await (
                 from subject in _nodeContext.Subject_tbSubjects.AsNoTracking()
                 join subjectType in _nodeContext.Subject_tbTypes.AsNoTracking()
                     on subject.SubjectTypeCode equals subjectType.SubjectTypeCode
-                where subject.SubjectCode == subjectCode
+                where subject.SubjectCode == normalizedSubjectCode
                 select new {
                     subject.SubjectCode,
                     subject.SubjectName,
@@ -34,11 +47,16 @@ namespace TradeControl.Web.AppServices
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (summary is null)
+            {
                 return null;
+            }
 
             var currentBalance = await _nodeContext.Subject_Statement
                 .AsNoTracking()
-                .Where(o => o.SubjectCode == subjectCode)
+                .Where(o => o.SubjectCode == normalizedSubjectCode)
+                .Where(o => resolvedParentSubjectCode == null
+                    ? o.ParentSubjectCode == null
+                    : o.ParentSubjectCode == resolvedParentSubjectCode)
                 .OrderByDescending(o => o.RowNumber)
                 .Select(o => (double?)o.Balance)
                 .FirstOrDefaultAsync(cancellationToken) ?? 0d;
@@ -48,37 +66,51 @@ namespace TradeControl.Web.AppServices
                 summary.SubjectName,
                 summary.SubjectType,
                 (NodeEnum.CashPolarity)summary.CashPolarityCode,
-                currentBalance);
+                currentBalance,
+                resolvedParentSubjectCode);
         }
 
         public async Task<SubjectEnquiryPageResult<SubjectEnquiryInvoiceItem>> GetInvoicesAsync(
             string subjectCode,
             int pageNumber,
             int pageSize,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default)
         {
+            var normalizedSubjectCode = NormalizeCode(subjectCode);
+            var resolvedParentSubjectCode = await ResolveParentSubjectCodeAsync(
+                normalizedSubjectCode,
+                parentSubjectCode,
+                cancellationToken);
             var (normalizedPageNumber, normalizedPageSize) = NormalizePaging(pageNumber, pageSize);
 
-            var query = _nodeContext.Invoice_Register
-                .AsNoTracking()
-                .Where(o => o.SubjectCode == subjectCode)
-                .OrderByDescending(o => o.InvoicedOn)
-                .ThenByDescending(o => o.InvoiceNumber);
+            var query =
+                from invoice in _nodeContext.Invoice_tbInvoices.AsNoTracking()
+                join invoiceType in _nodeContext.Invoice_tbTypes.AsNoTracking()
+                    on invoice.InvoiceTypeCode equals invoiceType.InvoiceTypeCode
+                join invoiceStatus in _nodeContext.Invoice_tbStatuses.AsNoTracking()
+                    on invoice.InvoiceStatusCode equals invoiceStatus.InvoiceStatusCode
+                where invoice.SubjectCode == normalizedSubjectCode
+                   && (resolvedParentSubjectCode == null
+                        ? invoice.ParentSubjectCode == null
+                        : invoice.ParentSubjectCode == resolvedParentSubjectCode)
+                orderby invoice.InvoicedOn descending, invoice.InvoiceNumber descending
+                select new
+                {
+                    invoice.InvoiceNumber,
+                    InvoiceType = invoiceType.InvoiceType,
+                    invoice.InvoicedOn,
+                    invoice.InvoiceValue,
+                    invoice.TaxValue,
+                    TotalPaidValue = invoice.PaidValue + invoice.PaidTaxValue,
+                    InvoiceStatus = invoiceStatus.InvoiceStatus
+                };
 
             var totalCount = await query.CountAsync(cancellationToken);
 
             var rows = await query
                 .Skip((normalizedPageNumber - 1) * normalizedPageSize)
                 .Take(normalizedPageSize)
-                .Select(o => new {
-                    o.InvoiceNumber,
-                    o.InvoiceType,
-                    o.InvoicedOn,
-                    o.InvoiceValue,
-                    o.TaxValue,
-                    o.TotalPaidValue,
-                    o.InvoiceStatus
-                })
                 .ToListAsync(cancellationToken);
 
             var items = rows
@@ -86,14 +118,15 @@ namespace TradeControl.Web.AppServices
                     o.InvoiceNumber,
                     o.InvoiceType,
                     o.InvoicedOn,
-                    o.InvoiceValue,
-                    o.TaxValue,
-                    o.TotalPaidValue,
+                    Convert.ToDouble(o.InvoiceValue),
+                    Convert.ToDouble(o.TaxValue),
+                    Convert.ToDouble(o.TotalPaidValue),
                     o.InvoiceStatus,
                     $"/Invoice/Register/Index?InvoiceNumber={Uri.EscapeDataString(o.InvoiceNumber)}"))
                 .ToList();
 
-            return new SubjectEnquiryPageResult<SubjectEnquiryInvoiceItem> {
+            return new SubjectEnquiryPageResult<SubjectEnquiryInvoiceItem>
+            {
                 Items = items,
                 TotalCount = totalCount,
                 PageNumber = normalizedPageNumber,
@@ -105,30 +138,42 @@ namespace TradeControl.Web.AppServices
             string subjectCode,
             int pageNumber,
             int pageSize,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default)
         {
+            var normalizedSubjectCode = NormalizeCode(subjectCode);
+            var resolvedParentSubjectCode = await ResolveParentSubjectCodeAsync(
+                normalizedSubjectCode,
+                parentSubjectCode,
+                cancellationToken);
             var (normalizedPageNumber, normalizedPageSize) = NormalizePaging(pageNumber, pageSize);
 
-            var query = _nodeContext.Cash_Payments
-                .AsNoTracking()
-                .Where(o => o.SubjectCode == subjectCode)
-                .OrderByDescending(o => o.PaidOn)
-                .ThenByDescending(o => o.PaymentCode);
+            var query =
+                from payment in _nodeContext.Cash_tbPayments.AsNoTracking()
+                join account in _nodeContext.Subject_tbAccounts.AsNoTracking()
+                    on payment.AccountCode equals account.AccountCode
+                join user in _nodeContext.Usr_tbUsers.AsNoTracking()
+                    on payment.UserId equals user.UserId
+                where payment.SubjectCode == normalizedSubjectCode
+                   && (resolvedParentSubjectCode == null
+                        ? payment.ParentSubjectCode == null
+                        : payment.ParentSubjectCode == resolvedParentSubjectCode)
+                orderby payment.PaidOn descending, payment.PaymentCode descending
+                select new {
+                    payment.PaymentCode,
+                    payment.PaidOn,
+                    payment.PaymentReference,
+                    payment.PaidOutValue,
+                    payment.PaidInValue,
+                    account.AccountName,
+                    user.UserName
+                };
 
             var totalCount = await query.CountAsync(cancellationToken);
 
             var rows = await query
                 .Skip((normalizedPageNumber - 1) * normalizedPageSize)
                 .Take(normalizedPageSize)
-                .Select(o => new {
-                    o.PaymentCode,
-                    o.PaidOn,
-                    o.PaymentReference,
-                    o.PaidOutValue,
-                    o.PaidInValue,
-                    o.AccountName,
-                    o.UserName
-                })
                 .ToListAsync(cancellationToken);
 
             var items = rows
@@ -155,13 +200,22 @@ namespace TradeControl.Web.AppServices
             string subjectCode,
             int pageNumber,
             int pageSize,
+            string? parentSubjectCode = null,
             CancellationToken cancellationToken = default)
         {
+            var normalizedSubjectCode = NormalizeCode(subjectCode);
+            var resolvedParentSubjectCode = await ResolveParentSubjectCodeAsync(
+                normalizedSubjectCode,
+                parentSubjectCode,
+                cancellationToken);
             var (normalizedPageNumber, normalizedPageSize) = NormalizePaging(pageNumber, pageSize);
 
             var query = _nodeContext.Subject_Statement
                 .AsNoTracking()
-                .Where(o => o.SubjectCode == subjectCode)
+                .Where(o => o.SubjectCode == normalizedSubjectCode)
+                .Where(o => resolvedParentSubjectCode == null
+                    ? o.ParentSubjectCode == null
+                    : o.ParentSubjectCode == resolvedParentSubjectCode)
                 .OrderByDescending(o => o.RowNumber);
 
             var totalCount = await query.CountAsync(cancellationToken);
@@ -186,6 +240,51 @@ namespace TradeControl.Web.AppServices
             };
         }
 
+        private async Task<string?> ResolveParentSubjectCodeAsync(
+            string subjectCode,
+            string? parentSubjectCode,
+            CancellationToken cancellationToken)
+        {
+            subjectCode = NormalizeCode(subjectCode);
+            parentSubjectCode = NormalizeNullableCode(parentSubjectCode);
+
+            if (string.IsNullOrWhiteSpace(subjectCode))
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(parentSubjectCode))
+            {
+                var exists = await _nodeContext.Subject_tbNamespaces
+                    .AsNoTracking()
+                    .AnyAsync(
+                        o => o.ChildSubjectCode == subjectCode
+                          && o.ParentSubjectCode == parentSubjectCode,
+                        cancellationToken);
+
+                if (!exists)
+                {
+                    throw new InvalidOperationException("The selected namespace could not be resolved for this subject enquiry.");
+                }
+
+                return parentSubjectCode;
+            }
+
+            var parents = await _nodeContext.Subject_tbNamespaces
+                .AsNoTracking()
+                .Where(o => o.ChildSubjectCode == subjectCode)
+                .Select(o => o.ParentSubjectCode)
+                .Distinct()
+                .Take(2)
+                .ToListAsync(cancellationToken);
+
+            return parents.Count switch {
+                0 => null,
+                1 => parents[0],
+                _ => throw new InvalidOperationException("A namespace must be selected for this subject enquiry.")
+            };
+        }
+
         private static (int PageNumber, int PageSize) NormalizePaging(int pageNumber, int pageSize)
         {
             var normalizedPageNumber = Math.Max(pageNumber, 1);
@@ -196,6 +295,18 @@ namespace TradeControl.Web.AppServices
             };
 
             return (normalizedPageNumber, normalizedPageSize);
+        }
+
+        private static string NormalizeCode(string? value)
+        {
+            return value?.Trim() ?? string.Empty;
+        }
+
+        private static string? NormalizeNullableCode(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim();
         }
     }
 }

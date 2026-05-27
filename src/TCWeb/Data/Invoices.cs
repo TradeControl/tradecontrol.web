@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -32,9 +32,9 @@ namespace TradeControl.Web.Data
             return InvoiceNumber.Length > 0;
         }
 
-        public async Task<bool> RaiseBlank(string accountCode, NodeEnum.InvoiceType invoiceType)
+        public async Task<bool> RaiseBlank(string subjectCode, NodeEnum.InvoiceType invoiceType, string? parentSubjectCode = null)
         {
-            InvoiceNumber = await _context.InvoiceRaiseBlank(accountCode, invoiceType);
+            InvoiceNumber = await _context.InvoiceRaiseBlank(subjectCode, invoiceType, parentSubjectCode);
             return InvoiceNumber.Length > 0;
         }
 
@@ -140,8 +140,8 @@ namespace TradeControl.Web.Data
                 var _userId = new SqlParameter()
                 {
                     ParameterName = "@UserId",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 10,
                     Value = userId
                 };
@@ -149,8 +149,8 @@ namespace TradeControl.Web.Data
                 var _accountCode = new SqlParameter()
                 {
                     ParameterName = "@SubjectCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 10,
                     Value = accountCode
                 };
@@ -158,8 +158,8 @@ namespace TradeControl.Web.Data
                 var _cashCode = new SqlParameter()
                 {
                     ParameterName = "@CashCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 50,
                     Value = cashCode
                 };
@@ -171,7 +171,7 @@ namespace TradeControl.Web.Data
                     {
                         _command.CommandText = "Invoice.proc_PostEntryById";
                         _command.CommandType = CommandType.StoredProcedure;
-                        _command.Parameters.Add(_userId); 
+                        _command.Parameters.Add(_userId);
                         _command.Parameters.Add(_accountCode);
                         _command.Parameters.Add(_cashCode);
 
@@ -196,8 +196,8 @@ namespace TradeControl.Web.Data
                 var _userId = new SqlParameter()
                 {
                     ParameterName = "@UserId",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 10,
                     Value = userId
                 };
@@ -205,8 +205,8 @@ namespace TradeControl.Web.Data
                 var _accountCode = new SqlParameter()
                 {
                     ParameterName = "@SubjectCode",
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                    Direction = System.Data.ParameterDirection.Input,
+                    SqlDbType = SqlDbType.VarChar,
+                    Direction = ParameterDirection.Input,
                     Size = 10,
                     Value = accountCode
                 };
@@ -239,7 +239,10 @@ namespace TradeControl.Web.Data
         {
             try
             {
-                var invoice = await _context.Invoice_tbInvoices.Where(i => i.InvoiceNumber == InvoiceNumber).SingleOrDefaultAsync();
+                var invoice = await _context.Invoice_tbInvoices
+                    .Where(i => i.InvoiceNumber == InvoiceNumber)
+                    .SingleOrDefaultAsync();
+
                 if (invoice != null)
                 {
                     invoice.Spooled = false;

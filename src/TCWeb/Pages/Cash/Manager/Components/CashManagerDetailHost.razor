@@ -39,54 +39,14 @@ else if (SelectedSection == CashManagerSection.Assets)
 {
     <AssetEntryWorkspace SelectedAccount="@SelectedAccount" />
 }
-else
+else if (SelectedSection == CashManagerSection.Transfers)
 {
-    <div class="d-flex flex-column gap-3 h-100" style="min-height:0; overflow:hidden;">
-        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-            <div>
-                <h1 class="h4 mb-1">@CashManagerSectionCatalog.GetLabel(SelectedSection)</h1>
-                <div class="text-muted small">@CashManagerSectionCatalog.GetDescription(SelectedSection)</div>
-            </div>
-
-            <div class="text-end small text-muted">
-                <div>@SelectedAccount.AccountName</div>
-                <div><code>@SelectedAccount.AccountCode</code></div>
-            </div>
-        </div>
-
-        <div class="row g-3">
-            <div class="col-12 col-md-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="small text-muted mb-1">Account Type</div>
-                        <div class="fw-semibold">@SelectedAccount.AccountType</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="small text-muted mb-1">Selected Year</div>
-                        <div class="fw-semibold">@CashManagerSectionCatalog.GetYearLabel(Years, SelectedYearNumber)</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="small text-muted mb-1">Period Scope</div>
-                        <div class="fw-semibold">@CashManagerSectionCatalog.GetPeriodScopeLabel(Periods, SelectedPeriodStartOn)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex-grow-1 overflow-auto" style="min-height:0;">
-            @RenderSectionSurface()
-        </div>
-    </div>
+    <TransferWorkspace IsMobile="@IsMobile"
+                       SelectedAccount="@SelectedAccount"
+                       Years="@Years"
+                       Periods="@Periods"
+                       SelectedYearNumber="@SelectedYearNumber"
+                       SelectedPeriodStartOn="@SelectedPeriodStartOn" />
 }
 
 @code {
@@ -109,36 +69,4 @@ else
     [Parameter] public EventCallback<string> OnNamespaceFilterCommitted { get; set; }
     [Parameter] public EventCallback<string> OnAccountSaved { get; set; }
     [Parameter] public EventCallback<string> OnAccountDeleted { get; set; }
-
-    private RenderFragment RenderSectionSurface()
-    {
-        return SelectedSection switch
-        {
-            CashManagerSection.Transfers => RenderTransfersSurface(),
-            CashManagerSection.Posting => RenderPostingSurface(),
-            _ => RenderTransfersSurface()
-        };
-    }
-
-    private RenderFragment RenderTransfersSurface() => @<div class="card">
-        <div class="card-body">
-            <h2 class="h5 mb-3">Transfer Workspace</h2>
-            <ul class="mb-0">
-                <li>Transfer entry remains restricted to `Cash` accounts.</li>
-                <li>The statement surface already renders transfer status when rows exist in the spool.</li>
-                <li>Dedicated transfer entry follows in the next slice.</li>
-            </ul>
-        </div>
-    </div>;
-
-    private RenderFragment RenderPostingSurface() => @<div class="card">
-        <div class="card-body">
-            <h2 class="h5 mb-3">Posting Workspace</h2>
-            <ul class="mb-0">
-                <li>Visible posted and unposted totals are now computed in the shell.</li>
-                <li>Posting remains session-based and independent of the viewing period.</li>
-                <li>The next slice will add the confirmation surface and spool flush command path.</li>
-            </ul>
-        </div>
-    </div>;
 }

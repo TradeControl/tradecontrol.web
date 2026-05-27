@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.JSInterop
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.AppServices
 @using TradeControl.Web.Authorization
@@ -12,6 +13,7 @@
 @inject UserManager<TradeControlWebUser> UserManager
 @inject ICashAssetsWorkspaceService CashAssetsWorkspaceService
 @inject ISubjectBrowserService SubjectBrowserService
+@inject IJSRuntime JSRuntime
 
 @if (!_isLoaded)
 {
@@ -57,7 +59,7 @@ else
         }
 
         <div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
-            <div style="@GetEntryWorkspaceHostStyle()">
+            <div @ref="_entryWorkspaceHost" style="@GetEntryWorkspaceHostStyle()">
                 @RenderEntryPanels()
             </div>
 
@@ -123,6 +125,12 @@ else
                                                 <td class="text-end">
                                                     <div class="d-flex justify-content-end gap-2">
                                                         <button type="button"
+                                                                class="btn btn-outline-secondary btn-sm"
+                                                                @onclick="() => HandleEditAsync(row)"
+                                                                disabled="@_isBusy">
+                                                            Edit
+                                                        </button>
+                                                        <button type="button"
                                                                 class="btn btn-outline-primary btn-sm"
                                                                 @onclick="() => HandlePostAsync(row.PaymentCode)"
                                                                 disabled="@_isBusy">
@@ -173,10 +181,12 @@ else
     private bool _isSearchingPostedPayments;
     private bool _isSearchingReversalPayments;
     private bool _isResizingEntryWorkspace;
+    private bool _scrollEntryWorkspaceIntoView;
     private string? _currentAspNetUserId;
     private string? _message;
     private string? _errorMessage;
     private string? _loadedAccountCode;
+    private string? _editingPaymentCode;
     private string _postedPaymentSearchText = string.Empty;
     private string _reversalPaymentSearchText = string.Empty;
     private int _workspaceLoadVersion;
@@ -189,6 +199,7 @@ else
     private IReadOnlyList<CashManagerPostedPaymentSearchResult> _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
     private CashManagerPostedPaymentSearchResult? _selectedPostedPayment;
     private CashManagerPostedPaymentSearchResult? _selectedReversalPayment;
+    private ElementReference _entryWorkspaceHost;
 
     protected override async Task OnInitializedAsync()
     {
@@ -209,6 +220,7 @@ else
             _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
             _selectedPostedPayment = null;
             _selectedReversalPayment = null;
+            _editingPaymentCode = null;
             return;
         }
 
@@ -218,6 +230,17 @@ else
         }
 
         await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_scrollEntryWorkspaceIntoView)
+        {
+            return;
+        }
+
+        _scrollEntryWorkspaceIntoView = false;
+        await JSRuntime.InvokeVoidAsync("cashManager.scrollIntoView", _entryWorkspaceHost);
     }
 
     private async Task LoadWorkspaceAsync(string accountCode)
@@ -249,6 +272,7 @@ else
             _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
             _selectedPostedPayment = null;
             _selectedReversalPayment = null;
+            _editingPaymentCode = null;
             _postedPaymentSearchText = string.Empty;
             _reversalPaymentSearchText = string.Empty;
             _message = null;
@@ -307,12 +331,12 @@ else
         </div>
 
         @if (_isModePanelCollapsed)
-        {
-            <div class="small text-muted mt-3">
-                Expand the entry workspace to create or configure asset-side transactions.
-            </div>
-        }
-        else
+                {
+        <div class="small text-muted mt-3">
+            Expand the entry workspace to create or configure asset-side transactions.
+        </div>
+                }
+                else
         {
             <div class="flex-grow-1 overflow-auto mt-3" style="min-height:0;">
                 <div class="row g-3">
@@ -375,8 +399,12 @@ private RenderFragment RenderEntryCard() => @<div class="card w-100">
 
 private RenderFragment RenderFreehandMode() => @<div class="d-flex flex-column gap-3">
     <div>
-        <h2 class="h5 mb-1">Free-hand Asset Transaction</h2>
-        <div class="small text-muted">Create a capital-side transaction directly in the selected asset account.</div>
+        <h2 class="h5 mb-1">@(_editingPaymentCode is null ? "Free-hand Asset Transaction" : "Edit Asset Transaction")</h2>
+        <div class="small text-muted">
+            @(_editingPaymentCode is null
+                        ? "Create a capital-side transaction directly in the selected asset account."
+                        : "Update the selected unposted capital-side transaction.")
+        </div>
     </div>
 
     <div>
@@ -438,12 +466,22 @@ private RenderFragment RenderFreehandMode() => @<div class="d-flex flex-column g
         </div>
     </div>
 
-    <div class="d-flex justify-content-end">
+    <div class="d-flex justify-content-end gap-2">
+        @if (_editingPaymentCode is not null)
+        {
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    @onclick="HandleCancelEditAsync"
+                    disabled="@_isBusy">
+                Cancel
+            </button>
+        }
+
         <button type="button"
                 class="btn btn-primary"
                 @onclick="HandleAddFreehandAsync"
                 disabled="@_isBusy">
-            Add asset transaction
+            @(_editingPaymentCode is null ? "Add asset transaction" : "Save asset transaction")
         </button>
     </div>
 </div>;
@@ -672,8 +710,8 @@ private RenderFragment RenderSelectedSourcePayment(
         </div>
     </div>
 
-    @if (showReversalSettings)
-    {
+@if (showReversalSettings)
+{
         <div class="row g-3">
             <div class="col-12 col-md-4">
                 <label class="form-label small text-muted mb-1" for="assetSourceReversalPeriods">Periods</label>
@@ -696,7 +734,7 @@ private RenderFragment RenderSelectedSourcePayment(
                            @bind-Value="_workspace.Draft.ReversalStartOn" />
             </div>
         </div>
-    }
+}
 
     <div class="d-flex justify-content-end">
         <button type="button"
@@ -987,6 +1025,41 @@ private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult pa
     }
 }
 
+private Task HandleEditAsync(CashManagerAssetRow row)
+{
+    _editingPaymentCode = row.PaymentCode;
+    _mode = AssetEntryMode.Freehand;
+    _isModePanelCollapsed = false;
+    _scrollEntryWorkspaceIntoView = true;
+    _message = null;
+    _errorMessage = null;
+    _selectedPostedPayment = null;
+    _selectedReversalPayment = null;
+
+    _workspace.Draft.NamespaceFilter = row.SubjectCode;
+    _workspace.Draft.SubjectCode = row.SubjectCode;
+    _workspace.Draft.SubjectName = row.SubjectName;
+    _workspace.Draft.PaidOn = row.PaidOn;
+    _workspace.Draft.CashCode = row.CashCode;
+    _workspace.Draft.TaxCode = string.Empty;
+    _workspace.Draft.PaymentReference = row.PaymentReference;
+    _workspace.Draft.PaidOutValue = row.PaidOutValue;
+    _workspace.Draft.PaidInValue = row.PaidInValue;
+    _workspace.Draft.GenerateReversalSeries = false;
+
+    return Task.CompletedTask;
+}
+
+private async Task HandleCancelEditAsync()
+{
+    if (SelectedAccount is null)
+    {
+        return;
+    }
+
+    await LoadWorkspaceAsync(SelectedAccount.AccountCode);
+}
+
 private async Task HandleAddFreehandAsync()
 {
     if (SelectedAccount is null || string.IsNullOrWhiteSpace(_currentAspNetUserId))
@@ -1001,13 +1074,28 @@ private async Task HandleAddFreehandAsync()
     {
         _isBusy = true;
 
-        await CashAssetsWorkspaceService.AddFreehandAsync(
-            SelectedAccount.AccountCode,
-            _workspace.Draft,
-            _currentAspNetUserId);
+        if (string.IsNullOrWhiteSpace(_editingPaymentCode))
+        {
+            await CashAssetsWorkspaceService.AddFreehandAsync(
+                SelectedAccount.AccountCode,
+                _workspace.Draft,
+                _currentAspNetUserId);
+
+            _message = "Asset transaction added.";
+        }
+        else
+        {
+            await CashAssetsWorkspaceService.UpdateAsync(
+                _editingPaymentCode,
+                SelectedAccount.AccountCode,
+                _workspace.Draft,
+                _currentAspNetUserId,
+                _isPrivileged);
+
+            _message = "Asset transaction updated.";
+        }
 
         await LoadWorkspaceAsync(SelectedAccount.AccountCode);
-        _message = "Asset transaction added.";
     }
     catch (Exception exception)
     {

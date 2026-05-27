@@ -11,41 +11,59 @@ namespace TradeControl.Web.Models
     [Keyless]
     public partial class Subject_vwBalanceSheetAudit
     {
-        [Display (Name = "Year")]
+        [Display(Name = "Year")]
         public short YearNumber { get; set; }
+
         [Required]
         [StringLength(10)]
         [Display(Name = "Financial Year")]
         public string Description { get; set; }
+
         [Required]
         [StringLength(10)]
         [Display(Name = "Month")]
         public string MonthName { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "A/c")]
         public string SubjectCode { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Namespace")]
+        public string ParentSubjectCode { get; set; }
+
+        [StringLength(255)]
+        [Display(Name = "Namespace Subject")]
+        public string ParentSubjectName { get; set; }
+
         [Required]
         [StringLength(255)]
         [Display(Name = "Subject")]
         public string SubjectName { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Subject Type")]
         public string SubjectType { get; set; }
+
         [StringLength(10)]
         [Display(Name = "Polarity")]
         public string CashPolarity { get; set; }
+
         [Display(Name = "Asset Type Code")]
         public short AssetTypeCode { get; set; }
+
         [Required]
         [StringLength(20)]
         [Display(Name = "Asset Type")]
         public string AssetType { get; set; }
+
         [Column(TypeName = "datetime")]
         [DataType(DataType.Date)]
         [Display(Name = "Start On")]
         public DateTime StartOn { get; set; }
+
         [Display(Name = "Balance")]
         [DataType(DataType.Currency)]
         public double Balance { get; set; }

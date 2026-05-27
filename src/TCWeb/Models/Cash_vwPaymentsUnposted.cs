@@ -29,6 +29,10 @@ namespace TradeControl.Web.Models
         [Display(Name = "Account Code")]
         public string SubjectCode { get; set; }
 
+        [StringLength(50)]
+        [Display(Name = "Namespace")]
+        public string ParentSubjectCode { get; set; }
+
         [Required]
         [StringLength(10)]
         [Display(Name = "Cash Account")]

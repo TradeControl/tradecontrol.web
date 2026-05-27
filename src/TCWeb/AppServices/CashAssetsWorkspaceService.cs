@@ -525,6 +525,103 @@ namespace TradeControl.Web.AppServices
             }
         }
 
+        public async Task UpdateAsync(
+            string paymentCode,
+            string accountCode,
+            CashManagerAssetDraftModel draft,
+            string aspNetUserId,
+            bool isPrivileged,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(draft);
+
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            paymentCode = NormalizeCode(paymentCode);
+            accountCode = NormalizeCode(accountCode);
+
+            if (string.IsNullOrWhiteSpace(paymentCode))
+            {
+                throw new InvalidOperationException("A payment code is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(accountCode))
+            {
+                throw new InvalidOperationException("An asset account is required.");
+            }
+
+            if ((draft.PaidInValue + draft.PaidOutValue) == 0m
+                || (draft.PaidInValue != 0m && draft.PaidOutValue != 0m))
+            {
+                throw new InvalidOperationException("Enter either Paid In or Paid Out.");
+            }
+
+            if (string.IsNullOrWhiteSpace(draft.CashCode))
+            {
+                throw new InvalidOperationException("An asset cash code is required.");
+            }
+
+            var payment = await nodeContext.Cash_tbPayments
+                .FirstOrDefaultAsync(item => item.PaymentCode == paymentCode, cancellationToken);
+
+            if (payment is null)
+            {
+                throw new InvalidOperationException("The selected asset transaction was not found.");
+            }
+
+            if (payment.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Posted)
+            {
+                throw new InvalidOperationException("Posted asset transactions cannot be edited here.");
+            }
+
+            if (!string.Equals(payment.AccountCode, accountCode, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("The selected asset transaction does not belong to this account.");
+            }
+
+            if (!isPrivileged)
+            {
+                var userId = await GetUserIdAsync(nodeContext, aspNetUserId);
+
+                if (!string.Equals(payment.UserId, userId, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("You can only edit your own unposted asset entries.");
+                }
+            }
+
+            var subject = await TryResolveSubjectAsync(nodeContext, draft.NamespaceFilter, cancellationToken);
+
+            if (subject is null)
+            {
+                throw new InvalidOperationException("A subject or namespace selection is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(draft.TaxCode))
+            {
+                draft.TaxCode = await nodeContext.Cash_BankCashCodes
+                    .AsNoTracking()
+                    .Where(item => item.CashCode == draft.CashCode)
+                    .Select(item => item.TaxCode)
+                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+            }
+
+            var profile = new Profile(nodeContext);
+
+            payment.SubjectCode = subject.SubjectCode;
+            payment.AccountCode = accountCode;
+            payment.CashCode = NormalizeNullableCode(draft.CashCode);
+            payment.TaxCode = NormalizeNullableCode(draft.TaxCode);
+            payment.PaidOn = draft.PaidOn;
+            payment.PaidInValue = draft.PaidInValue;
+            payment.PaidOutValue = draft.PaidOutValue;
+            payment.PaymentReference = NormalizeNullableText(draft.PaymentReference);
+            payment.UpdatedBy = await profile.UserName(aspNetUserId);
+            payment.UpdatedOn = DateTime.Now;
+
+            await nodeContext.SaveChangesAsync(cancellationToken);
+        }
+
         private static async Task<IReadOnlyList<CashManagerAssetCodeOption>> GetCashCodesAsync(
             NodeContext nodeContext,
             CancellationToken cancellationToken)

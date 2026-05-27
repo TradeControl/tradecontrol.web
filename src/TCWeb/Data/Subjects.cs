@@ -110,13 +110,13 @@ namespace TradeControl.Web.Data
 
         public Task<string> AddressCode() => AddressCodeAsync();
 
-        public async Task<decimal> BalanceOutstandingAsync()
+        public async Task<decimal> BalanceOutstandingAsync(string? parentSubjectCode = null)
         {
             EnsureSubjectCode();
-            return await _context.BalanceOutstanding(SubjectCode);
+            return await _context.Subject_BalanceOutstanding(SubjectCode, parentSubjectCode);
         }
 
-        public Task<decimal> BalanceOutstanding() => BalanceOutstandingAsync();
+        public Task<decimal> BalanceOutstanding(string? parentSubjectCode = null) => BalanceOutstandingAsync(parentSubjectCode);
 
         public async Task<decimal> BalanceToPayAsync()
         {
