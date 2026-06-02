@@ -184,14 +184,12 @@ namespace TradeControl.Web.Data
         }
 
         public Task<string> DefaultEmailAddress() => DefaultEmailAddressAsync();
-
         public async Task<bool> Rebuild()
         {
             try
             {
                 EnsureSubjectCode();
-                int result = await _context.Database.ExecuteSqlRawAsync("Subject.proc_Rebuild @p0", parameters: [SubjectCode]);
-                return result != 0;
+                return await _context.SubjectRebuild(SubjectCode);
             }
             catch (Exception e)
             {
@@ -693,6 +691,46 @@ namespace TradeControl.Web.Data
             {
                 await _context.ErrorLog(e);
                 return SubjectActionResult.Failure("Unable to create the selected Subject.");
+            }
+        }
+        #endregion
+
+        #region Root Action Stubs
+
+        public Task<SubjectActionResult> AddStructuralRootAsync(string subjectName)
+            => AddRootAsync(subjectName, NodeEnum.SubjectClass.Structural, "Structural subject");
+
+        public Task<SubjectActionResult> AddRealRootAsync(string subjectName)
+            => AddRootAsync(subjectName, NodeEnum.SubjectClass.Real, "Person");
+
+        public Task<SubjectActionResult> AddVirtualRootAsync(string subjectName)
+            => AddRootAsync(subjectName, NodeEnum.SubjectClass.Virtual, "Organisation");
+
+        private async Task<SubjectActionResult> AddRootAsync(
+            string subjectName,
+            NodeEnum.SubjectClass subjectClass,
+            string entityLabel)
+        {
+            try
+            {
+                var normalizedName = subjectName?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(normalizedName))
+                    return SubjectActionResult.Failure("A name is required.");
+
+                var subjectTypeCode = await ResolveDefaultSubjectTypeCodeAsync(subjectClass);
+                if (subjectTypeCode is null)
+                    return SubjectActionResult.Failure($"No default Subject type is configured for {entityLabel.ToLowerInvariant()} creation.");
+
+                var createdSubjectCode = await _context.SubjectAddRoot(normalizedName, subjectTypeCode.Value);
+                if (string.IsNullOrWhiteSpace(createdSubjectCode))
+                    return SubjectActionResult.Failure($"Unable to create {entityLabel.ToLowerInvariant()}.");
+
+                return SubjectActionResult.Success($"{entityLabel} created.", createdSubjectCode);
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return SubjectActionResult.Failure($"Unable to create the {entityLabel.ToLowerInvariant()}.");
             }
         }
         #endregion

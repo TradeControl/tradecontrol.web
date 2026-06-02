@@ -25,6 +25,7 @@ namespace TradeControl.Web.AppServices
             short yearNumber,
             DateTime? periodStartOn,
             string namespaceFilter,
+            string cashCodeFilter,
             CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(accountCode))
@@ -79,7 +80,10 @@ namespace TradeControl.Web.AppServices
                 })
                 .ToList();
 
-            var filteredRows = ApplyNamespaceFilter(rowsWithBalance, namespaceFilter);
+            var filteredRows = ApplyCashCodeFilter(
+                ApplyNamespaceFilter(rowsWithBalance, namespaceFilter),
+                cashCodeFilter);
+
             var groups = BuildGroups(filteredRows);
             var summary = BuildSummary(openingBalance, filteredRows);
 
@@ -329,6 +333,36 @@ namespace TradeControl.Web.AppServices
         private static int GetStatusSortOrder(CashManagerRowStatus status)
         {
             return status == CashManagerRowStatus.Posted ? 1 : 0;
+        }
+
+        private static IReadOnlyList<CashManagerStatementRow> ApplyCashCodeFilter(
+            IReadOnlyList<CashManagerStatementRow> rows,
+            string cashCodeFilter)
+        {
+            var normalizedFilter = NormalizeCashCodeFilter(cashCodeFilter);
+
+            if (string.IsNullOrWhiteSpace(normalizedFilter))
+            {
+                return rows;
+            }
+
+            return rows
+                .Where(row => MatchesCashCodeFilter(row, normalizedFilter))
+                .ToList();
+        }
+
+        private static string NormalizeCashCodeFilter(string cashCodeFilter)
+        {
+            return (cashCodeFilter ?? string.Empty).Trim();
+        }
+
+        private static bool MatchesCashCodeFilter(
+            CashManagerStatementRow row,
+            string normalizedFilter)
+        {
+            var cashCode = row.CashCode ?? string.Empty;
+
+            return cashCode.StartsWith(normalizedFilter, StringComparison.OrdinalIgnoreCase);
         }
 
         private sealed record UnpostedPaymentRow(

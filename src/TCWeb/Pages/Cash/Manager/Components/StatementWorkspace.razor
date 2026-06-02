@@ -67,6 +67,10 @@ else
     [Parameter] public EventCallback<DateTime?> OnPeriodSelected { get; set; }
     [Parameter] public EventCallback<string> OnNamespaceFilterChanged { get; set; }
     [Parameter] public EventCallback<string> OnNamespaceFilterCommitted { get; set; }
+    [Parameter] public string CashCodeFilter { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnCashCodeFilterCommitted { get; set; }
+    [Parameter] public IReadOnlyList<CashManagerSelectOption> CashCodeOptions { get; set; } = Array.Empty<CashManagerSelectOption>();
+    [Parameter] public string? InitialPaymentCode { get; set; }
 
     private bool _isHeaderExpanded;
     private bool _canCorrectPostedPayments;
@@ -83,15 +87,30 @@ else
     private CashManagerStatementPaymentEditMode _paymentEditorMode = CashManagerStatementPaymentEditMode.Edit;
     private CashManagerStatementPaymentEditorState? _paymentEditor;
     private ElementReference _paymentEditorHost;
+    private string? _openedInitialPaymentCode;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadAccessStateAsync();
     }
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         _currentStatement = Statement;
+        await TryOpenInitialPaymentAsync();
+    }
+
+    private async Task TryOpenInitialPaymentAsync()
+    {
+        if (Account is null
+            || string.IsNullOrWhiteSpace(InitialPaymentCode)
+            || string.Equals(_openedInitialPaymentCode, InitialPaymentCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _openedInitialPaymentCode = InitialPaymentCode;
+        await OpenPaymentEditorAsync(InitialPaymentCode);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -139,6 +158,11 @@ else
                 <span class="badge text-bg-light"><code>@NamespaceFilter</code></span>
                                 }
 
+                @if (!string.IsNullOrWhiteSpace(CashCodeFilter))
+                                {
+                <span class="badge text-bg-light"><code>@CashCodeFilter</code></span>
+                                }
+
                 <button type="button"
                         class="btn btn-outline-secondary btn-sm"
                         @onclick="ToggleHeaderAsync">
@@ -166,7 +190,7 @@ else
                     </select>
                 </div>
 
-                <div class="col-12 col-lg-4">
+                <div class="col-12 col-lg-3">
                     <label class="form-label small text-muted mb-1" for="statementPeriodSelect">Period</label>
                     <select id="statementPeriodSelect"
                             class="form-select form-select-sm"
@@ -180,7 +204,7 @@ else
                     </select>
                 </div>
 
-                <div class="col-12 col-lg-5">
+                <div class="col-12 col-lg-4">
                     <label class="form-label small text-muted mb-1">Namespace Filter</label>
                     <NamespaceSelector FilterText="@NamespaceFilter"
                                        Suggestions="@NamespaceSuggestions"
@@ -189,6 +213,20 @@ else
                                        ApplyButtonTitle="Apply namespace filter"
                                        OnFilterChanged="OnFilterChangedAsync"
                                        OnFilterCommitted="OnFilterCommittedAsync" />
+                </div>
+
+                <div class="col-12 col-lg-2">
+                    <label class="form-label small text-muted mb-1" for="statementCashCodeFilter">Cash Code</label>
+                    <select id="statementCashCodeFilter"
+                            class="form-select form-select-sm"
+                            value="@CashCodeFilter"
+                            @onchange="HandleCashCodeFilterCommittedAsync">
+                        <option value="">All cash codes</option>
+                        @foreach (var option in CashCodeOptions)
+                        {
+                            <option value="@option.Value">@option.Value · @option.Label</option>
+                        }
+                    </select>
                 </div>
             </div>
 
@@ -241,13 +279,12 @@ private RenderFragment RenderPaymentEditor() => @<div @ref="_paymentEditorHost" 
             </button>
         </div>
 
-        @if (_paymentEditor.Model.IsClosedPeriod)
+        @if (ShouldShowClosedPeriodOverride())
         {
             <div class="alert alert-warning py-2 mb-3">
                 <div class="fw-semibold">Closed period</div>
                 <div class="small">
-                    This payment is in a <strong>@_paymentEditor.Model.PeriodStatus</strong> period.
-                    Only Administrators may overwrite it.
+                    @GetClosedPeriodOverrideMessage()
                 </div>
 
                 @if (_isAdministrator)
@@ -255,9 +292,9 @@ private RenderFragment RenderPaymentEditor() => @<div @ref="_paymentEditorHost" 
                     <div class="form-check mt-2">
                         <InputCheckbox id="statementPaymentClosedPeriodOverride"
                                        class="form-check-input"
-                                       @bind-Value="_paymentEditor.Model.AllowClosedPeriodOverride" />
+                                       @bind-Value="_paymentEditor!.Model.AllowClosedPeriodOverride" />
                         <label class="form-check-label" for="statementPaymentClosedPeriodOverride">
-                            Confirm closed-period overwrite and account rebuild
+                            Confirm closed-period overwrite and request account rebuild
                         </label>
                     </div>
                 }
@@ -592,7 +629,15 @@ private RenderFragment RenderDesktopRows(IReadOnlyList<CashManagerStatementRow> 
                     <td>@row.PaidOn.ToString("d")</td>
                     <td>
                         <div>@row.SubjectName</div>
-                        <div class="small text-muted"><code>@row.SubjectCode</code></div>
+                        <div class="small">
+                            <a href="@GetSubjectBrowserUrl(row)"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="link-primary text-decoration-none">
+                                <code>@row.SubjectCode</code>
+                                <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                            </a>
+                        </div>
                     </td>
                     <td>@row.PaymentReference</td>
                     <td>
@@ -632,6 +677,14 @@ private RenderFragment RenderMobileRows(IReadOnlyList<CashManagerStatementRow> r
                         @(row.RowNumber?.ToString() ?? "—")
                         <span class="mx-1">•</span>
                         @row.PaidOn.ToString("d")
+                    </div>
+                    <div class="small text-muted">
+                        <a href="@GetSubjectBrowserUrl(row)"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="text-decoration-none">
+                            <code>@row.SubjectCode</code>
+                        </a>
                     </div>
                 </div>
 
@@ -925,7 +978,8 @@ private async Task ReloadStatementAsync()
         Account.AccountCode,
         SelectedYearNumber.GetValueOrDefault(),
         SelectedPeriodStartOn,
-        NamespaceFilter);
+        NamespaceFilter,
+        CashCodeFilter);
 }
 
 private string GetSortIconClass(CashManagerStatementSortColumn column)
@@ -1008,4 +1062,49 @@ private Task OnFilterCommittedAsync(string filterText)
 {
     return OnNamespaceFilterCommitted.InvokeAsync(filterText);
 }
+
+private Task HandleCashCodeFilterCommittedAsync(ChangeEventArgs args)
+{
+    return OnCashCodeFilterCommitted.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+}
+
+private static string GetSubjectBrowserUrl(CashManagerStatementRow row)
+{
+    var namespacePath = !string.IsNullOrWhiteSpace(row.NamespacePath)
+        ? row.NamespacePath
+        : BuildSubjectBrowserNamespacePath(row.ParentSubjectCode, row.SubjectCode);
+
+    var selectedPath = string.IsNullOrWhiteSpace(namespacePath)
+        ? row.SubjectCode
+        : namespacePath;
+
+    return $"/Subject/Browser/Index?mode=Namespace&select={Uri.EscapeDataString(selectedPath)}&namespaceFilter={Uri.EscapeDataString(selectedPath)}";
+}
+
+private static string BuildSubjectBrowserNamespacePath(string? parentSubjectCode, string subjectCode)
+{
+    if (string.IsNullOrWhiteSpace(subjectCode))
+        return string.Empty;
+
+    return string.IsNullOrWhiteSpace(parentSubjectCode)
+        ? subjectCode
+        : $"{parentSubjectCode}.{subjectCode}";
+}
+
+private bool ShouldShowClosedPeriodOverride()
+{
+    return _paymentEditor is not null
+        && (_paymentEditor.Model.IsClosedPeriod || _isAdministrator);
+}
+
+private string GetClosedPeriodOverrideMessage()
+{
+    if (_paymentEditor?.Model.IsClosedPeriod == true)
+    {
+        return $"This payment is in a {_paymentEditor.Model.PeriodStatus} period. Only Administrators may overwrite it.";
+    }
+
+    return "If this correction touches a closed or archived period, confirmation and an account rebuild are required.";
+}
+
 }

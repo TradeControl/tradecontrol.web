@@ -3,7 +3,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+
 using TradeControl.Web.Data;
+using TradeControl.Web.Models;
 
 namespace TradeControl.Web.AppServices
 {
@@ -51,12 +53,9 @@ namespace TradeControl.Web.AppServices
                 return null;
             }
 
-            var currentBalance = await _nodeContext.Subject_Statement
-                .AsNoTracking()
-                .Where(o => o.SubjectCode == normalizedSubjectCode)
-                .Where(o => resolvedParentSubjectCode == null
-                    ? o.ParentSubjectCode == null
-                    : o.ParentSubjectCode == resolvedParentSubjectCode)
+            var currentBalance = await CreateStatementDagQuery(
+                    normalizedSubjectCode,
+                    resolvedParentSubjectCode)
                 .OrderByDescending(o => o.RowNumber)
                 .Select(o => (double?)o.Balance)
                 .FirstOrDefaultAsync(cancellationToken) ?? 0d;
@@ -84,27 +83,11 @@ namespace TradeControl.Web.AppServices
                 cancellationToken);
             var (normalizedPageNumber, normalizedPageSize) = NormalizePaging(pageNumber, pageSize);
 
-            var query =
-                from invoice in _nodeContext.Invoice_tbInvoices.AsNoTracking()
-                join invoiceType in _nodeContext.Invoice_tbTypes.AsNoTracking()
-                    on invoice.InvoiceTypeCode equals invoiceType.InvoiceTypeCode
-                join invoiceStatus in _nodeContext.Invoice_tbStatuses.AsNoTracking()
-                    on invoice.InvoiceStatusCode equals invoiceStatus.InvoiceStatusCode
-                where invoice.SubjectCode == normalizedSubjectCode
-                   && (resolvedParentSubjectCode == null
-                        ? invoice.ParentSubjectCode == null
-                        : invoice.ParentSubjectCode == resolvedParentSubjectCode)
-                orderby invoice.InvoicedOn descending, invoice.InvoiceNumber descending
-                select new
-                {
-                    invoice.InvoiceNumber,
-                    InvoiceType = invoiceType.InvoiceType,
-                    invoice.InvoicedOn,
-                    invoice.InvoiceValue,
-                    invoice.TaxValue,
-                    TotalPaidValue = invoice.PaidValue + invoice.PaidTaxValue,
-                    InvoiceStatus = invoiceStatus.InvoiceStatus
-                };
+            var query = CreateInvoiceDagQuery(
+                    normalizedSubjectCode,
+                    resolvedParentSubjectCode)
+                .OrderByDescending(o => o.InvoicedOn)
+                .ThenByDescending(o => o.InvoiceNumber);
 
             var totalCount = await query.CountAsync(cancellationToken);
 
@@ -148,26 +131,11 @@ namespace TradeControl.Web.AppServices
                 cancellationToken);
             var (normalizedPageNumber, normalizedPageSize) = NormalizePaging(pageNumber, pageSize);
 
-            var query =
-                from payment in _nodeContext.Cash_tbPayments.AsNoTracking()
-                join account in _nodeContext.Subject_tbAccounts.AsNoTracking()
-                    on payment.AccountCode equals account.AccountCode
-                join user in _nodeContext.Usr_tbUsers.AsNoTracking()
-                    on payment.UserId equals user.UserId
-                where payment.SubjectCode == normalizedSubjectCode
-                   && (resolvedParentSubjectCode == null
-                        ? payment.ParentSubjectCode == null
-                        : payment.ParentSubjectCode == resolvedParentSubjectCode)
-                orderby payment.PaidOn descending, payment.PaymentCode descending
-                select new {
-                    payment.PaymentCode,
-                    payment.PaidOn,
-                    payment.PaymentReference,
-                    payment.PaidOutValue,
-                    payment.PaidInValue,
-                    account.AccountName,
-                    user.UserName
-                };
+            var query = CreatePaymentDagQuery(
+                    normalizedSubjectCode,
+                    resolvedParentSubjectCode)
+                .OrderByDescending(o => o.PaidOn)
+                .ThenByDescending(o => o.PaymentCode);
 
             var totalCount = await query.CountAsync(cancellationToken);
 
@@ -185,10 +153,11 @@ namespace TradeControl.Web.AppServices
                     o.PaidInValue,
                     o.AccountName,
                     o.UserName,
-                    $"/Cash/Statement/Details?paymentCode={Uri.EscapeDataString(o.PaymentCode)}"))
+                    $"/Cash/Manager?paymentCode={Uri.EscapeDataString(o.PaymentCode)}"))
                 .ToList();
 
-            return new SubjectEnquiryPageResult<SubjectEnquiryPaymentItem> {
+            return new SubjectEnquiryPageResult<SubjectEnquiryPaymentItem>
+            {
                 Items = items,
                 TotalCount = totalCount,
                 PageNumber = normalizedPageNumber,
@@ -210,12 +179,9 @@ namespace TradeControl.Web.AppServices
                 cancellationToken);
             var (normalizedPageNumber, normalizedPageSize) = NormalizePaging(pageNumber, pageSize);
 
-            var query = _nodeContext.Subject_Statement
-                .AsNoTracking()
-                .Where(o => o.SubjectCode == normalizedSubjectCode)
-                .Where(o => resolvedParentSubjectCode == null
-                    ? o.ParentSubjectCode == null
-                    : o.ParentSubjectCode == resolvedParentSubjectCode)
+            var query = CreateStatementDagQuery(
+                normalizedSubjectCode,
+                resolvedParentSubjectCode)
                 .OrderByDescending(o => o.RowNumber);
 
             var totalCount = await query.CountAsync(cancellationToken);
@@ -307,6 +273,39 @@ namespace TradeControl.Web.AppServices
             return string.IsNullOrWhiteSpace(value)
                 ? null
                 : value.Trim();
+        }
+
+        private IQueryable<Subject_vwStatement> CreateStatementDagQuery(
+            string subjectCode,
+            string? parentSubjectCode)
+        {
+            return _nodeContext.Subject_Statement
+                .FromSqlInterpolated(
+                    $@"SELECT *
+                       FROM Subject.fnStatementDag({subjectCode}, {parentSubjectCode})")
+                .AsNoTracking();
+        }
+
+        private IQueryable<Subject_fnInvoiceDag> CreateInvoiceDagQuery(
+            string subjectCode,
+            string? parentSubjectCode)
+        {
+            return _nodeContext.Subject_InvoiceDag
+                .FromSqlInterpolated(
+                    $@"SELECT *
+                       FROM Subject.fnInvoiceDag({subjectCode}, {parentSubjectCode})")
+                .AsNoTracking();
+        }
+
+        private IQueryable<Subject_fnPaymentDag> CreatePaymentDagQuery(
+            string subjectCode,
+            string? parentSubjectCode)
+        {
+            return _nodeContext.Subject_PaymentDag
+                .FromSqlInterpolated(
+                    $@"SELECT *
+                       FROM Subject.fnPaymentDag({subjectCode}, {parentSubjectCode})")
+                .AsNoTracking();
         }
     }
 }

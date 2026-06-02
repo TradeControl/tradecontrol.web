@@ -133,5 +133,38 @@ namespace TradeControl.Web.AppServices
                     (NodeEnum.CashStatus)period.CashStatusCode))
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        public async Task<IReadOnlyList<CashManagerSelectOption>> GetCashCodeOptionsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            return await nodeContext.Cash_tbCodes
+                .AsNoTracking()
+                .Where(code => code.IsEnabled != 0)
+                .OrderBy(code => code.CashDescription)
+                .Select(code => new CashManagerSelectOption(
+                    code.CashCode,
+                    code.CashDescription))
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<string?> GetAccountCodeByPaymentCodeAsync(
+            string paymentCode,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(paymentCode))
+                return null;
+
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            return await nodeContext.Cash_tbPayments
+                .AsNoTracking()
+                .Where(payment => payment.PaymentCode == paymentCode)
+                .Select(payment => payment.AccountCode)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
     }
 }

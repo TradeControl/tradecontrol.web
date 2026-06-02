@@ -1,6 +1,7 @@
 @using System.Linq
 @using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.JSInterop
+@using System.Threading
 @using Wangkanai.Detection.Models
 
 @using TradeControl.Web.AppServices
@@ -83,8 +84,15 @@ else if (_isMobile)
             </button>
         </div>
 
-        <div class="small text-muted mb-2">
+        <div class="small text-muted mb-2"
+             @onpointerdown="HandleRootMenuPointerDown"
+             @onpointerup="HandleRootMenuPointerUp"
+             @onpointercancel="HandleRootMenuPointerCancel">
             @_rootCount subject@(_rootCount == 1 ? string.Empty : "s")
+            @if (_mode == SubjectBrowserMode.Namespace)
+            {
+                <span class="ms-2">· long press for root actions</span>
+            }
         </div>
 
         <div class="flex-grow-1 d-flex flex-column tc-subject-browser-tree tc-tree-host"
@@ -261,6 +269,7 @@ else
 
     private bool _isMobile;
     private bool _isEmbedded;
+    private bool _createAtRoot;
     private string _namespaceFilter = string.Empty;
     private string _appliedNamespaceFilter = string.Empty;
     private string? _selectedBranchKey;
@@ -282,7 +291,6 @@ else
     private string? _pendingCreateErrorMessage;
     private bool _isCreatingSubject;
     private SubjectRemovalPlan? _pendingRemovalPlan;
-    //private bool _isLoadingRemovalPreview;
     private bool _isRemovingNamespace;
     private bool _loadRemovalPreview;
     private string _pendingMoveTargetPath = string.Empty;
@@ -311,6 +319,7 @@ else
     private bool _isEditSubjectPanelOpen;
 
     private DotNetObjectReference<SubjectBrowserShell>? _dotNetRef;
+    private CancellationTokenSource? _rootMenuPressCts;
 
     private readonly List<TreeNode> _rootNodes = new();
     private readonly Dictionary<string, SubjectBrowserNode> _nodeIndex = new(StringComparer.OrdinalIgnoreCase);
@@ -370,6 +379,8 @@ else
         {
         }
 
+        _rootMenuPressCts?.Cancel();
+        _rootMenuPressCts?.Dispose();
         _dotNetRef?.Dispose();
     }
 
@@ -388,6 +399,7 @@ else
         _isAddressPanelOpen = query.TryGetValue("editAddress", out var editAddressValue) && editAddressValue == "1";
         _isEditSubjectPanelOpen = query.TryGetValue("editSubject", out var editSubjectValue) && editSubjectValue == "1";
         _addressEditorAddressCode = query.TryGetValue("addressCode", out var addressCodeValue) ? addressCodeValue.ToString() : null;
+        _createAtRoot = query.TryGetValue("createRoot", out var createRootValue) && createRootValue == "1";
 
         if (query.TryGetValue("mode", out var modeValue)
             && TryParseMode(modeValue.ToString(), out var mode))
@@ -405,6 +417,11 @@ else
             && TryParseSubjectClass(createValue.ToString(), out var createClass))
         {
             _pendingCreateSubjectClass = createClass;
+
+            if (string.IsNullOrWhiteSpace(_initialSelectKey))
+            {
+                _createAtRoot = true;
+            }
         }
 
         if (string.IsNullOrWhiteSpace(_namespaceFilter) && query.TryGetValue("namespaceFilter", out var filterValue))
@@ -541,7 +558,6 @@ else
                    suggestion.FullPath.Contains(filterText, StringComparison.OrdinalIgnoreCase))
             ?? _namespaceSuggestions[0];
     }
-
 
     private async Task ApplyCommittedNamespaceSelectionAsync(
         string branchKey,
@@ -916,6 +932,39 @@ else
         };
     }
 
+    private IReadOnlyList<SubjectBrowserAction> GetRootCreateActions()
+    {
+        if (_mode != SubjectBrowserMode.Namespace)
+            return Array.Empty<SubjectBrowserAction>();
+
+        return
+        [
+            new SubjectBrowserAction(
+                "root-add-structural",
+                "Add Root Structural",
+                "bi-plus-square",
+                "btn btn-outline-primary btn-sm",
+                true,
+                () => BeginCreateRootAsync(NodeEnum.SubjectClass.Structural)),
+
+            new SubjectBrowserAction(
+                "root-add-person",
+                "Add Root Person",
+                "bi-person-plus",
+                "btn btn-outline-primary btn-sm",
+                true,
+                () => BeginCreateRootAsync(NodeEnum.SubjectClass.Real)),
+
+            new SubjectBrowserAction(
+                "root-add-organisation",
+                "Add Root Organisation",
+                "bi-building",
+                "btn btn-outline-primary btn-sm",
+                true,
+                () => BeginCreateRootAsync(NodeEnum.SubjectClass.Virtual))
+        ];
+    }
+
     private IReadOnlyList<SubjectBrowserAction> GetMobileShortcutActions()
     {
         if (_selectedDetail is null)
@@ -933,10 +982,10 @@ else
     }
 
     private SubjectBrowserAction CreateEnquiryAction(
-    string id,
-    string text,
-    string iconClass,
-    SubjectEnquiryView enquiryView)
+        string id,
+        string text,
+        string iconClass,
+        SubjectEnquiryView enquiryView)
     {
         return new SubjectBrowserAction(
             id,
@@ -949,7 +998,7 @@ else
 
     private async Task OpenEnquiryAsync(SubjectEnquiryView enquiryView)
     {
-        if (_selectedDetail is null || _selectedDetail.IsStructural)
+        if (_selectedDetail is null)
             return;
 
         ClearActionMessage();
@@ -976,7 +1025,7 @@ else
 
     private IReadOnlyList<SubjectBrowserAction> CreateEnquiryActions()
     {
-        if (_selectedDetail is null || _selectedDetail.IsStructural)
+        if (_selectedDetail is null)
             return Array.Empty<SubjectBrowserAction>();
 
         return
@@ -1046,12 +1095,12 @@ else
     }
 
     private SubjectBrowserAction CreateShellAction(
-    string id,
-    string text,
-    string iconClass,
-    Func<Task> executeAsync,
-    string buttonCssClass = "btn btn-outline-primary btn-sm",
-    bool isEnabled = true)
+        string id,
+        string text,
+        string iconClass,
+        Func<Task> executeAsync,
+        string buttonCssClass = "btn btn-outline-primary btn-sm",
+        bool isEnabled = true)
     {
         return new SubjectBrowserAction(
             id,
@@ -1668,7 +1717,6 @@ else
 
         try
         {
-            //_isLoadingRemovalPreview = true;
             var subjects = new Subjects(NodeContext, _selectedDetail.SubjectCode);
             _pendingRemovalPlan = await subjects.PreviewRemoveFromNamespaceAsync(parentSubjectCode);
             UpdateBrowserUrl();
@@ -1676,7 +1724,6 @@ else
         }
         finally
         {
-            //_isLoadingRemovalPreview = false;
         }
     }
 
@@ -1740,7 +1787,6 @@ else
     private void ClearRemovalPreview()
     {
         _pendingRemovalPlan = null;
-        //_isLoadingRemovalPreview = false;
         _isRemovingNamespace = false;
         _loadRemovalPreview = false;
     }
@@ -1831,6 +1877,8 @@ else
         ClearRemovalPreview();
         ClearAddExistingState();
 
+        _createAtRoot = false;
+
         if (_isMobile && !_isEmbedded)
         {
             _pendingCreateSubjectClass = subjectClass;
@@ -1854,8 +1902,59 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task BeginCreateRootAsync(NodeEnum.SubjectClass subjectClass)
+    {
+        ClearActionMessage();
+        ClearMoveState();
+        ClearRemovalPreview();
+        ClearAddExistingState();
+        ClearMaintenancePanels();
+        CloseContextMenu();
+
+        _createAtRoot = true;
+
+        if (_isMobile && !_isEmbedded)
+        {
+            _pendingCreateSubjectClass = subjectClass;
+
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: null,
+                    returnNodeKey: _selectedBranchKey,
+                    createClass: subjectClass,
+                    createRoot: true),
+                forceLoad: true);
+
+            return;
+        }
+
+        _pendingCreateSubjectClass = subjectClass;
+        _pendingCreateName = string.Empty;
+        _pendingCreateErrorMessage = null;
+        _activeEnquiryView = SubjectEnquiryView.None;
+        UpdateBrowserUrl();
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task CancelCreateAsync()
     {
+        if (_isEmbedded)
+        {
+            var selectionKey = !string.IsNullOrWhiteSpace(_returnNodeKey)
+                ? _returnNodeKey
+                : _selectedBranchKey;
+
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: false,
+                    selectKey: selectionKey,
+                    returnNodeKey: selectionKey),
+                forceLoad: true);
+
+            return;
+        }
+
         ClearCreateState();
         UpdateBrowserUrl();
         await InvokeAsync(StateHasChanged);
@@ -1863,7 +1962,10 @@ else
 
     private async Task SubmitCreateAsync()
     {
-        if (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey) || !_pendingCreateSubjectClass.HasValue)
+        if (!_pendingCreateSubjectClass.HasValue)
+            return;
+
+        if (!_createAtRoot && (_selectedDetail is null || string.IsNullOrWhiteSpace(_selectedBranchKey)))
             return;
 
         var subjectClass = _pendingCreateSubjectClass.Value;
@@ -1882,13 +1984,22 @@ else
             _pendingCreateErrorMessage = null;
 
             var subjects = new Subjects(NodeContext);
-            SubjectActionResult result = subjectClass switch
-            {
-                NodeEnum.SubjectClass.Structural => await subjects.AddStructuralChildAsync(_selectedDetail.SubjectCode, subjectName),
-                NodeEnum.SubjectClass.Real => await subjects.AddRealChildAsync(_selectedDetail.SubjectCode, subjectName),
-                NodeEnum.SubjectClass.Virtual => await subjects.AddVirtualChildAsync(_selectedDetail.SubjectCode, subjectName),
-                _ => SubjectActionResult.Failure("Unsupported Subject class.")
-            };
+
+            SubjectActionResult result = _createAtRoot
+                ? subjectClass switch
+                {
+                    NodeEnum.SubjectClass.Structural => await subjects.AddStructuralRootAsync(subjectName),
+                    NodeEnum.SubjectClass.Real => await subjects.AddRealRootAsync(subjectName),
+                    NodeEnum.SubjectClass.Virtual => await subjects.AddVirtualRootAsync(subjectName),
+                    _ => SubjectActionResult.Failure("Unsupported Subject class.")
+                }
+                : subjectClass switch
+                {
+                    NodeEnum.SubjectClass.Structural => await subjects.AddStructuralChildAsync(_selectedDetail!.SubjectCode, subjectName),
+                    NodeEnum.SubjectClass.Real => await subjects.AddRealChildAsync(_selectedDetail!.SubjectCode, subjectName),
+                    NodeEnum.SubjectClass.Virtual => await subjects.AddVirtualChildAsync(_selectedDetail!.SubjectCode, subjectName),
+                    _ => SubjectActionResult.Failure("Unsupported Subject class.")
+                };
 
             if (!result.Succeeded)
             {
@@ -1899,11 +2010,22 @@ else
             SubjectBrowserService.InvalidateSnapshot();
 
             var parentBranchKey = _selectedBranchKey;
-            var createdBranchKey = BuildCreatedBranchKey(parentBranchKey, result.SelectedSubjectCode);
+            var createdBranchKey = _createAtRoot
+                ? result.SelectedSubjectCode
+                : BuildCreatedBranchKey(parentBranchKey, result.SelectedSubjectCode);
 
             ClearCreateState();
+
+            if (_createAtRoot)
+            {
+                await RefreshBrowserAfterActionAsync("create-root", parentBranchKey, createdBranchKey);
+            }
+            else
+            {
+                await RefreshCreatedChildAsync(parentBranchKey, createdBranchKey);
+            }
+
             await SetActionMessageAsync(result.Message, "alert-success");
-            await RefreshCreatedChildAsync(parentBranchKey, createdBranchKey);
             await OpenCreatedSubjectEditorAsync(subjectClass, createdBranchKey, result.SelectedSubjectCode);
         }
         catch (Exception ex)
@@ -1998,6 +2120,7 @@ else
         _pendingCreateName = string.Empty;
         _pendingCreateErrorMessage = null;
         _isCreatingSubject = false;
+        _createAtRoot = false;
     }
 
     private string GetPendingCreateHeading()
@@ -2013,6 +2136,17 @@ else
 
     private string GetPendingCreateHelpText()
     {
+        if (_createAtRoot)
+        {
+            return _pendingCreateSubjectClass switch
+            {
+                NodeEnum.SubjectClass.Structural => "Create a structural Subject at the root of the browser.",
+                NodeEnum.SubjectClass.Real => "Create a real Subject at the root of the browser.",
+                NodeEnum.SubjectClass.Virtual => "Create a virtual Subject at the root of the browser.",
+                _ => "Create a Subject at the root of the browser."
+            };
+        }
+
         return _pendingCreateSubjectClass switch
         {
             NodeEnum.SubjectClass.Structural => "Create a structural child under the selected parent.",
@@ -2237,6 +2371,7 @@ else
         string? selectKey,
         string? returnNodeKey = null,
         NodeEnum.SubjectClass? createClass = null,
+        bool createRoot = false,
         bool removePreview = false,
         bool includeCreateState = false,
         bool includeRemovePreviewState = false,
@@ -2264,9 +2399,18 @@ else
             ? _pendingCreateSubjectClass ?? createClass
             : createClass;
 
+        var effectiveCreateRoot = includeCreateState
+            ? _createAtRoot || createRoot
+            : createRoot;
+
         if (_mode == SubjectBrowserMode.Namespace && effectiveCreateClass.HasValue)
         {
             query.Add($"create={Uri.EscapeDataString(effectiveCreateClass.Value.ToString())}");
+
+            if (effectiveCreateRoot)
+            {
+                query.Add("createRoot=1");
+            }
         }
 
         var effectiveRemovePreview = includeRemovePreviewState
@@ -2322,7 +2466,6 @@ else
             : $"{baseUrl}?{string.Join("&", query)}";
     }
 
-
     private static bool TryParseEnquiryView(string? value, out SubjectEnquiryView enquiryView)
     {
         if (Enum.TryParse(value, ignoreCase: true, out enquiryView)
@@ -2344,6 +2487,7 @@ else
             embedded: false,
             selectKey: _selectedBranchKey,
             createClass: _pendingCreateSubjectClass,
+            createRoot: _createAtRoot,
             includeCreateState: true,
             includeRemovePreviewState: true);
 
@@ -2574,6 +2718,49 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    private void HandleRootMenuPointerDown(PointerEventArgs e)
+    {
+        if (!_isMobile || _mode != SubjectBrowserMode.Namespace)
+            return;
+
+        _rootMenuPressCts?.Cancel();
+        _rootMenuPressCts?.Dispose();
+        _rootMenuPressCts = new CancellationTokenSource();
+
+        _ = OpenRootMenuAsync((int)e.ClientX, (int)e.ClientY, _rootMenuPressCts.Token);
+    }
+
+    private void HandleRootMenuPointerUp(PointerEventArgs e)
+    {
+        _rootMenuPressCts?.Cancel();
+    }
+
+    private void HandleRootMenuPointerCancel(PointerEventArgs e)
+    {
+        _rootMenuPressCts?.Cancel();
+    }
+
+    private async Task OpenRootMenuAsync(int x, int y, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(550, token);
+
+            _contextMenu = new ContextMenuState
+            {
+                IsOpen = true,
+                IsRootMenu = true,
+                X = x,
+                Y = y
+            };
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
     private async Task HandleNodeContextMenuAsync(TreeContextMenuRequest request)
     {
         if (IsLoadMoreNodeKey(request.Node.Key))
@@ -2596,6 +2783,7 @@ else
         _contextMenu = new ContextMenuState
         {
             IsOpen = true,
+            IsRootMenu = false,
             NodeKey = request.Node.Key,
             X = request.X,
             Y = request.Y
@@ -2606,7 +2794,17 @@ else
 
     private IReadOnlyList<SubjectBrowserAction> GetContextMenuActions()
     {
-        if (_selectedDetail is null || !_contextMenu.IsOpen)
+        if (!_contextMenu.IsOpen)
+            return Array.Empty<SubjectBrowserAction>();
+
+        if (_contextMenu.IsRootMenu)
+        {
+            return GetRootCreateActions()
+                .Select(action => action with { ButtonCssClass = "dropdown-item" })
+                .ToArray();
+        }
+
+        if (_selectedDetail is null)
             return Array.Empty<SubjectBrowserAction>();
 
         var refreshAction = new SubjectBrowserAction(
@@ -2646,7 +2844,7 @@ else
     private void CloseContextMenu()
     {
         if (_contextMenu.IsOpen)
-            _contextMenu = _contextMenu with { IsOpen = false };
+            _contextMenu = _contextMenu with { IsOpen = false, IsRootMenu = false };
     }
 
     private RenderFragment RenderContextMenu() => @<text>
@@ -2675,6 +2873,7 @@ else
     private sealed record ContextMenuState
     {
         public bool IsOpen { get; init; }
+        public bool IsRootMenu { get; init; }
         public string? NodeKey { get; init; }
         public int X { get; init; }
         public int Y { get; init; }
@@ -2795,7 +2994,7 @@ else
         return RenderSelectedDetailPane();
     }
 
-        private bool ShouldRenderDeleteSubjectPanel()
+    private bool ShouldRenderDeleteSubjectPanel()
     {
         return _isDeleteSubjectPanelOpen
             && _selectedDetail is not null
@@ -2818,8 +3017,7 @@ else
     {
         return _mode == SubjectBrowserMode.Enquiry
             && _activeEnquiryView != SubjectEnquiryView.None
-            && _selectedDetail is not null
-            && !_selectedDetail.IsStructural;
+            && _selectedDetail is not null;
     }
 
     private bool ShouldRenderAddExistingPanel()
@@ -2847,7 +3045,7 @@ else
     {
         return _mode == SubjectBrowserMode.Namespace
             && _pendingCreateSubjectClass.HasValue
-            && _selectedDetail is not null;
+            && (_createAtRoot || _selectedDetail is not null);
     }
 
     private static bool ShouldUseEmbeddedMaintenancePage(bool isMobile)
@@ -2872,7 +3070,8 @@ else
         _ => RenderEmptyDetailPane()
     };
 
-    private RenderFragment RenderEnquiryPane() => @<SubjectEnquiryShell SubjectCode="@_selectedDetail!.SubjectCode"
+private RenderFragment RenderEnquiryPane() => @<SubjectEnquiryShell SubjectCode="@_selectedDetail!.SubjectCode"
+                         NamespacePath="@(_selectedBranchKey ?? _selectedDetail.SubjectCode)"
                          DisplayLabel="@_selectedDetail.DisplayLabel"
                          View="@_activeEnquiryView"
                          IsEmbedded="true" />;
@@ -2922,7 +3121,7 @@ else
     </div>
 </div>;
 
-private RenderFragment RenderMovePane() => @<div class="bg-white border rounded p-3">
+    private RenderFragment RenderMovePane() => @<div class="bg-white border rounded p-3">
     <div class="fw-semibold mb-1">Move Subject</div>
     <div class="text-muted small mb-3">
         Current parent: <code>@GetSelectedParentSubjectCode()</code><br />
@@ -2968,7 +3167,7 @@ private RenderFragment RenderMovePane() => @<div class="bg-white border rounded 
     </div>
 </div>;
 
-private RenderFragment RenderRemovalPane() => @<div class="bg-white border rounded p-3">
+    private RenderFragment RenderRemovalPane() => @<div class="bg-white border rounded p-3">
     <div class="fw-semibold mb-1">@GetRemovalActionTitle()</div>
     <div class="text-muted small mb-3">
         Parent: <code>@GetSelectedParentSubjectCode()</code><br />
@@ -3017,14 +3216,22 @@ private RenderFragment RenderRemovalPane() => @<div class="bg-white border round
     </div>
 </div>;
 
-private RenderFragment RenderCreatePane() => @<div class="bg-white border rounded p-3">
+    private RenderFragment RenderCreatePane() => @<div class="bg-white border rounded p-3">
     <div class="fw-semibold mb-1">@GetPendingCreateHeading()</div>
     <div class="text-muted small mb-3">@GetPendingCreateHelpText()</div>
 
     <div class="small mb-3">
         <div class="text-muted">Parent</div>
-        <div class="fw-semibold">@_selectedDetail!.DisplayLabel</div>
-        <div><code>@_selectedDetail.SubjectCode</code></div>
+        @if (_createAtRoot)
+        {
+            <div class="fw-semibold">Root</div>
+            <div><code>/</code></div>
+        }
+        else
+        {
+            <div class="fw-semibold">@_selectedDetail!.DisplayLabel</div>
+            <div><code>@_selectedDetail.SubjectCode</code></div>
+        }
     </div>
 
 @if (!string.IsNullOrWhiteSpace(_pendingCreateErrorMessage))
@@ -3064,11 +3271,35 @@ private RenderFragment RenderCreatePane() => @<div class="bg-white border rounde
     </div>
 </div>;
 
-private RenderFragment RenderEmptyDetailPane() => @<div class="text-muted">
-    Select a Subject to view its details.
+    private RenderFragment RenderEmptyDetailPane() => @<div class="bg-white border rounded p-3">
+    @if (_mode == SubjectBrowserMode.Namespace)
+    {
+        var rootActions = GetRootCreateActions();
+
+        <div class="fw-semibold mb-1">Create Root Subject</div>
+        <div class="text-muted small mb-3">
+            Create a top-level Subject when no parent node is selected.
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            @foreach (var action in rootActions)
+            {
+                <button type="button"
+                        class="@action.ButtonCssClass"
+                        disabled="@(!action.IsEnabled)"
+                        @onclick="action.ExecuteAsync">
+                    <i class="bi @action.IconClass me-1" aria-hidden="true"></i>@action.Text
+                </button>
+            }
+        </div>
+    }
+
+    <div class="text-muted">
+        Select a Subject to view its details.
+    </div>
 </div>;
 
-private RenderFragment RenderSelectedDetailPane() => @<div class="h-100 d-flex flex-column" style="min-height:0;">
+    private RenderFragment RenderSelectedDetailPane() => @<div class="h-100 d-flex flex-column" style="min-height:0;">
 @{
     var detailActions = GetDetailActions();
 }
@@ -3089,7 +3320,7 @@ else
 }
 </div>;
 
-private RenderFragment RenderSubjectSummaryCard() => @<div class="bg-white border rounded p-3 mb-3">
+    private RenderFragment RenderSubjectSummaryCard() => @<div class="bg-white border rounded p-3 mb-3">
     <div class="fw-semibold">@_selectedDetail!.DisplayLabel</div>
 
 @if (!string.Equals(_selectedDetail.DisplayLabel, _selectedDetail.Name, StringComparison.OrdinalIgnoreCase))
@@ -3110,7 +3341,7 @@ private RenderFragment RenderSubjectSummaryCard() => @<div class="bg-white borde
     </div>
 </div>;
 
-private RenderFragment RenderActionCard(IReadOnlyList<SubjectBrowserAction> detailActions) => @<text>
+    private RenderFragment RenderActionCard(IReadOnlyList<SubjectBrowserAction> detailActions) => @<text>
 @if (detailActions.Count > 0)
 {
         <div class="bg-white border rounded p-3 mb-3">
@@ -3131,14 +3362,14 @@ private RenderFragment RenderActionCard(IReadOnlyList<SubjectBrowserAction> deta
 }
 </text>;
 
-private RenderFragment RenderActionMessage() => @<text>
+    private RenderFragment RenderActionMessage() => @<text>
 @if (!string.IsNullOrWhiteSpace(_actionMessage))
 {
         <div class="alert @_actionMessageCssClass py-2 mb-3" role="alert">@_actionMessage</div>
 }
 </text>;
 
-private RenderFragment RenderIdentityFieldsCard() => @<text>
+    private RenderFragment RenderIdentityFieldsCard() => @<text>
 @if (_selectedDetail!.IdentityFields.Count > 0)
 {
         <div class="bg-white border rounded p-3 mb-3">
@@ -3155,7 +3386,7 @@ private RenderFragment RenderIdentityFieldsCard() => @<text>
 }
 </text>;
 
-private RenderFragment RenderNamespacePathsCard() => @<div class="bg-white border rounded p-3 mb-3">
+    private RenderFragment RenderNamespacePathsCard() => @<div class="bg-white border rounded p-3 mb-3">
     <div class="fw-semibold mb-2">Namespace</div>
 
 @if (_selectedDetail!.NamespacePaths.Count == 0)
@@ -3173,7 +3404,7 @@ else
 }
 </div>;
 
-private RenderFragment RenderAddressesCard() => @<text>
+    private RenderFragment RenderAddressesCard() => @<text>
 @if (_selectedDetail is not null && !_selectedDetail.IsStructural)
 {
         <div class="bg-white border rounded p-3 mb-3">
@@ -3252,7 +3483,7 @@ private RenderFragment RenderAddressesCard() => @<text>
 }
 </text>;
 
-private RenderFragment RenderNotesCard() => @<text>
+    private RenderFragment RenderNotesCard() => @<text>
 @if (_selectedDetail is not null
     && (_selectedDetail.IsStructural || !string.IsNullOrWhiteSpace(_selectedDetail.Notes)))
 {

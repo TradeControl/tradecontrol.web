@@ -59,15 +59,11 @@ namespace TradeControl.Web.Data
             }
         }
 
-
-
         public async Task<bool> RebuildAccount()
         {
             try
             {
-                int result = await _context.Database.ExecuteSqlRawAsync("Cash.proc_AccountRebuild");
-
-                return result != 0;
+                return await _context.CashAccountRebuild();
             }
             catch (Exception e)
             {

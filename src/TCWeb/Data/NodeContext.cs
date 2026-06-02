@@ -32,6 +32,8 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_tbTaxTagSource> Cash_tbTaxTagSources { get; set; }
         public virtual DbSet<Cash_tbTaxTag> Cash_tbTaxTags { get; set; }
         public virtual DbSet<Cash_tbTaxTagMap> Cash_tbTaxTagMaps { get; set; }
+        public virtual DbSet<App_tbHost> App_tbHosts { get; set; }
+
         public virtual DbSet<Subject_tbAccount> Subject_tbAccounts { get; set; }
         public virtual DbSet<Subject_tbBalanceConstraint> Subject_tbBalanceConstraints { get; set; }
         public virtual DbSet<Subject_tbAccountType> Subject_tbAccountTypes { get; set; }
@@ -168,7 +170,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwProfitAndLossByYear> Cash_ProfitAndLossByYear { get; set; }
         public virtual DbSet<Invoice_vwAccountsMode> Invoice_AccountsMode { get; set; }
         public virtual DbSet<App_vwHost> App_Host { get; set; }
-        public virtual DbSet<App_tbHost> App_tbHosts { get; set; }
         public virtual DbSet<Project_vwActiveDatum> Project_ActiveData { get; set; }
         public virtual DbSet<App_vwActivePeriod> App_ActivePeriods { get; set; }
         public virtual DbSet<Project_vwActiveStatusCode> Project_ActiveStatusCodes { get; set; }
@@ -336,6 +337,11 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Web_vwAttachmentInvoice> Web_AttachmentInvoices { get; set; }
         public virtual DbSet<Web_vwTemplateImage> Web_TemplateImages { get; set; }
         public virtual DbSet<Web_vwTemplateInvoice> Web_TemplateInvoices { get; set; }
+        #endregion
+
+        #region Functions
+        public virtual DbSet<Subject_fnInvoiceDag> Subject_InvoiceDag { get; set; }
+        public virtual DbSet<Subject_fnPaymentDag> Subject_PaymentDag { get; set; }
         #endregion
 
         #region Model Creation
@@ -3811,8 +3817,19 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwTemplateInvoices", "Web");
             });
 
+            modelBuilder.Entity<Subject_fnInvoiceDag>(entity =>
+            {
+                entity.HasNoKey();
+            });
+
+            modelBuilder.Entity<Subject_fnPaymentDag>(entity =>
+            {
+                entity.HasNoKey();
+            });
+
             OnModelCreatingPartial(modelBuilder);
         }
+
 
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
         #endregion

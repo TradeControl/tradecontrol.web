@@ -40,6 +40,9 @@
                                        SelectedYearNumber="@_selectedYearNumber"
                                        SelectedPeriodStartOn="@_selectedPeriodStartOn"
                                        NamespaceFilter="@_namespaceFilter"
+                                       CashCodeFilter="@_cashCodeFilter"
+                                       CashCodeOptions="@_cashCodeOptions"
+                                       InitialPaymentCode="@InitialPaymentCode"
                                        NamespaceSuggestions="@_namespaceSuggestions"
                                        IsLoadingNamespaceSuggestions="@_isLoadingNamespaceSuggestions"
                                        IsLoadingStatement="@_isLoadingStatement"
@@ -49,6 +52,7 @@
                                        OnPeriodSelected="HandlePeriodSelectedAsync"
                                        OnNamespaceFilterChanged="HandleNamespaceFilterChangedAsync"
                                        OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
+                                       OnCashCodeFilterCommitted="HandleCashCodeFilterCommittedAsync"
                                        OnAccountSaved="HandleAccountSavedAsync"
                                        OnAccountDeleted="HandleAccountDeletedAsync" />
             </div>
@@ -189,6 +193,9 @@ else
                                            SelectedYearNumber="@_selectedYearNumber"
                                            SelectedPeriodStartOn="@_selectedPeriodStartOn"
                                            NamespaceFilter="@_namespaceFilter"
+                                           CashCodeFilter="@_cashCodeFilter"
+                                           CashCodeOptions="@_cashCodeOptions"
+                                           InitialPaymentCode="@InitialPaymentCode"
                                            NamespaceSuggestions="@_namespaceSuggestions"
                                            IsLoadingNamespaceSuggestions="@_isLoadingNamespaceSuggestions"
                                            IsLoadingStatement="@_isLoadingStatement"
@@ -198,6 +205,7 @@ else
                                            OnPeriodSelected="HandlePeriodSelectedAsync"
                                            OnNamespaceFilterChanged="HandleNamespaceFilterChangedAsync"
                                            OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
+                                           OnCashCodeFilterCommitted="HandleCashCodeFilterCommittedAsync"
                                            OnAccountSaved="HandleAccountSavedAsync"
                                            OnAccountDeleted="HandleAccountDeletedAsync" />
                 </RightPane>
@@ -208,7 +216,9 @@ else
 
 @code {
     [Parameter] public string? InitialAccountCode { get; set; }
+    [Parameter] public string? InitialPaymentCode { get; set; }
 
+    private IReadOnlyList<CashManagerSelectOption> _cashCodeOptions = Array.Empty<CashManagerSelectOption>();
     private const int NamespaceSuggestionPageSize = 12;
 
     private enum CashManagerMobileView
@@ -223,6 +233,7 @@ else
     private bool _showMobileActionMenu;
     private string? _errorMessage;
     private string _namespaceFilter = string.Empty;
+    private string _cashCodeFilter = string.Empty;
     private IReadOnlyList<CashManagerAccountSummary> _accounts = Array.Empty<CashManagerAccountSummary>();
     private IReadOnlyList<CashManagerYearOption> _years = Array.Empty<CashManagerYearOption>();
     private IReadOnlyList<CashManagerPeriodOption> _periods = Array.Empty<CashManagerPeriodOption>();
@@ -266,7 +277,17 @@ else
 
     private async Task InitializeShellAsync()
     {
-        await RefreshAccountsAsync(InitialAccountCode);
+        _cashCodeOptions = await CashManagerService.GetCashCodeOptionsAsync();
+
+        var preferredAccountCode = InitialAccountCode;
+
+        if (string.IsNullOrWhiteSpace(preferredAccountCode)
+            && !string.IsNullOrWhiteSpace(InitialPaymentCode))
+        {
+            preferredAccountCode = await CashManagerService.GetAccountCodeByPaymentCodeAsync(InitialPaymentCode);
+        }
+
+        await RefreshAccountsAsync(preferredAccountCode);
         _years = await CashManagerService.GetYearsAsync();
 
         var defaultPeriod = await CashManagerService.GetDefaultPeriodAsync();
@@ -477,6 +498,12 @@ else
         await ReloadStatementAsync();
     }
 
+    private async Task HandleCashCodeFilterCommittedAsync(string filterText)
+    {
+        _cashCodeFilter = filterText ?? string.Empty;
+        await ReloadStatementAsync();
+    }
+
     private async Task LoadPeriodsAsync(short? yearNumber)
     {
         if (!yearNumber.HasValue)
@@ -521,7 +548,8 @@ else
                 _selectedAccount.AccountCode,
                 _selectedYearNumber.Value,
                 _selectedPeriodStartOn,
-                _namespaceFilter);
+                _namespaceFilter,
+                _cashCodeFilter);
         }
         catch (Exception exception)
         {

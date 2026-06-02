@@ -8,7 +8,9 @@
 
 <div class="tc-tree-workspace">
     <component type="typeof(TradeControl.Web.Pages.Cash.Manager.CashManagerShell)"
-               render-mode="ServerPrerendered" />
+               render-mode="ServerPrerendered"
+               param-InitialAccountCode="Model.AccountCode"
+               param-InitialPaymentCode="Model.PaymentCode" />
 </div>
 
 <script src="/_framework/blazor.server.js"></script>

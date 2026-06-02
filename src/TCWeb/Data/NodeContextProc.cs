@@ -93,11 +93,11 @@ namespace TradeControl.Web.Data
         }
 
         public async Task<bool> AssetReversal(
-    string paymentCode,
-    short periods = 5,
-    short months = 12,
-    DateTime? startOn = null,
-    string? paymentReference = null)
+            string paymentCode,
+            short periods = 5,
+            short months = 12,
+            DateTime? startOn = null,
+            string? paymentReference = null)
         {
             try
             {
@@ -362,6 +362,27 @@ namespace TradeControl.Web.Data
                 return string.Empty;
             }
         }
+
+        public async Task<bool> CashAccountRebuild()
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Cash.proc_AccountRebuild";
+                command.CommandType = CommandType.StoredProcedure;
+
+                var result = await command.ExecuteNonQueryAsync();
+                return result != 0;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
         #endregion
 
         #region Cash Codes
@@ -580,6 +601,58 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Subjects
+        public async Task<bool> SubjectRebuild(string subjectCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_Rebuild";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@SubjectCode", SqlDbType.NVarChar, 50) { Value = subjectCode });
+
+                var result = await command.ExecuteNonQueryAsync();
+                return result != 0;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<string> SubjectAddRoot(string subjectName, short subjectTypeCode)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "Subject.proc_AddRoot";
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@SubjectName", SqlDbType.NVarChar, 100) { Value = subjectName });
+                command.Parameters.Add(new SqlParameter("@SubjectTypeCode", SqlDbType.SmallInt) { Value = subjectTypeCode });
+
+                var subjectCode = new SqlParameter("@SubjectCode", SqlDbType.NVarChar, 50) {
+                    Direction = ParameterDirection.Output
+                };
+
+                command.Parameters.Add(subjectCode);
+
+                await command.ExecuteNonQueryAsync();
+
+                return Convert.ToString(subjectCode.Value) ?? string.Empty;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return string.Empty;
+            }
+        }
+
         public async Task<SubjectAddParentPlan> SubjectAddParentPreview(string parentSubjectCode, string childSubjectCode)
         {
             try
@@ -2980,7 +3053,6 @@ namespace TradeControl.Web.Data
             }
         }
         #endregion
-
 
         #region Users
         public async Task<string> UserIdDefault(string userName)

@@ -21,6 +21,9 @@ else if (SelectedSection == CashManagerSection.Statement)
                         SelectedYearNumber="@SelectedYearNumber"
                         SelectedPeriodStartOn="@SelectedPeriodStartOn"
                         NamespaceFilter="@NamespaceFilter"
+                        CashCodeFilter="@CashCodeFilter"
+                        CashCodeOptions="@CashCodeOptions"
+                        InitialPaymentCode="@InitialPaymentCode"
                         NamespaceSuggestions="@NamespaceSuggestions"
                         IsLoadingNamespaceSuggestions="@IsLoadingNamespaceSuggestions"
                         IsLoading="@IsLoadingStatement"
@@ -29,7 +32,8 @@ else if (SelectedSection == CashManagerSection.Statement)
                         OnYearSelected="OnYearSelected"
                         OnPeriodSelected="OnPeriodSelected"
                         OnNamespaceFilterChanged="OnNamespaceFilterChanged"
-                        OnNamespaceFilterCommitted="OnNamespaceFilterCommitted" />
+                        OnNamespaceFilterCommitted="OnNamespaceFilterCommitted"
+                        OnCashCodeFilterCommitted="OnCashCodeFilterCommitted" />
 }
 else if (SelectedSection == CashManagerSection.Payments)
 {
@@ -69,4 +73,8 @@ else if (SelectedSection == CashManagerSection.Transfers)
     [Parameter] public EventCallback<string> OnNamespaceFilterCommitted { get; set; }
     [Parameter] public EventCallback<string> OnAccountSaved { get; set; }
     [Parameter] public EventCallback<string> OnAccountDeleted { get; set; }
+    [Parameter] public string CashCodeFilter { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<CashManagerSelectOption> CashCodeOptions { get; set; } = Array.Empty<CashManagerSelectOption>();
+    [Parameter] public string? InitialPaymentCode { get; set; }
+    [Parameter] public EventCallback<string> OnCashCodeFilterCommitted { get; set; }
 }

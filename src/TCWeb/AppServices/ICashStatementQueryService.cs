@@ -12,6 +12,7 @@ namespace TradeControl.Web.AppServices
             short yearNumber,
             DateTime? periodStartOn,
             string namespaceFilter,
+            string cashCodeFilter,
             CancellationToken cancellationToken = default);
     }
 }
