@@ -4,7 +4,7 @@
     ViewData["Title"] = "Cash Manager";
 }
 
-<link href="~/css/blazorTree.css" rel="stylesheet" />
+<link href="~/css/components/blazorTree.css" rel="stylesheet" />
 
 <div class="tc-tree-workspace">
     <component type="typeof(TradeControl.Web.Pages.Cash.Manager.CashManagerShell)"
@@ -20,115 +20,115 @@
 
     window.cashManager.updateHeaderOffset = function ()
     {
-        const header = document.querySelector('header');
-        const bottom = header ? header.getBoundingClientRect().bottom : 0;
-        document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
+    const header = document.querySelector('header');
+    const bottom = header ? header.getBoundingClientRect().bottom : 0;
+    document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
     };
 
     window.cashManager.updateViewportHeight = function ()
     {
-        const height = window.innerHeight || document.documentElement.clientHeight || 0;
-        document.documentElement.style.setProperty('--tc-viewport-height', height + 'px');
+    const height = window.innerHeight || document.documentElement.clientHeight || 0;
+    document.documentElement.style.setProperty('--tc-viewport-height', height + 'px');
     };
 
     window.cashManager.scrollIntoView = function (element)
     {
-        if (!element)
-            return;
+    if (!element)
+    return;
 
-        requestAnimationFrame(function ()
-        {
-            element.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-                inline: "nearest"
-            });
-        });
+    requestAnimationFrame(function ()
+    {
+    element.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+    inline: "nearest"
+    });
+    });
     };
 
     window.cashManager.initSplit = function ()
     {
-        if (!window.matchMedia("(min-width: 992px)").matches)
-            return;
+    if (!window.matchMedia("(min-width: 992px)").matches)
+    return;
 
-        if (!window.Split)
-            return;
+    if (!window.Split)
+    return;
 
-        const left = document.getElementById('leftCol');
-        const right = document.getElementById('rightCol');
+    const left = document.getElementById('leftCol');
+    const right = document.getElementById('rightCol');
 
-        if (!left || !right)
-            return;
+    if (!left || !right)
+    return;
 
-        if (left.dataset.splitInitialized === "true")
-            return;
+    if (left.dataset.splitInitialized === "true")
+    return;
 
-        function dropInitialClasses()
-        {
-            left.classList.remove('tc-initial-left');
-            right.classList.remove('tc-initial-right');
-        }
+    function dropInitialClasses()
+    {
+    left.classList.remove('tc-initial-left');
+    right.classList.remove('tc-initial-right');
+    }
 
-        const saved = (function ()
-        {
-            try
-            {
-                const sizes = JSON.parse(localStorage.getItem("tcCashManagerSplitV2") || "[]");
+    const saved = (function ()
+    {
+    try
+    {
+    const sizes = JSON.parse(localStorage.getItem("tcCashManagerSplitV2") || "[]");
 
-                if (Array.isArray(sizes) && sizes.length === 2 && sizes[0] >= 15 && sizes[0] <= 40)
-                    return sizes;
-            }
-            catch
-            {
-            }
+    if (Array.isArray(sizes) && sizes.length === 2 && sizes[0] >= 15 && sizes[0] <= 40)
+    return sizes;
+    }
+    catch
+    {
+    }
 
-            return [22, 78];
-        })();
+    return [22, 78];
+    })();
 
-        Split(["#leftCol", "#rightCol"],
-        {
-            sizes: saved,
-            minSize: [180, 420],
-            gutterSize: 6,
-            snapOffset: 0,
-            elementStyle: function (dimension, size)
-            {
-                return { flexBasis: size + "%", maxWidth: size + "%" };
-            },
-            gutterStyle: function (dimension, gutterSize)
-            {
-                return { flexBasis: gutterSize + "px" };
-            },
-            onDragEnd: function (sizes)
-            {
-                localStorage.setItem("tcCashManagerSplitV2", JSON.stringify(sizes));
-            }
-        });
+    Split(["#leftCol", "#rightCol"],
+    {
+    sizes: saved,
+    minSize: [180, 420],
+    gutterSize: 6,
+    snapOffset: 0,
+    elementStyle: function (dimension, size)
+    {
+    return { flexBasis: size + "%", maxWidth: size + "%" };
+    },
+    gutterStyle: function (dimension, gutterSize)
+    {
+    return { flexBasis: gutterSize + "px" };
+    },
+    onDragEnd: function (sizes)
+    {
+    localStorage.setItem("tcCashManagerSplitV2", JSON.stringify(sizes));
+    }
+    });
 
-        left.dataset.splitInitialized = "true";
-        dropInitialClasses();
+    left.dataset.splitInitialized = "true";
+    dropInitialClasses();
     };
 
     (function ()
     {
-        function refreshSoon()
-        {
-            window.cashManager.updateViewportHeight();
-            window.cashManager.updateHeaderOffset();
-            window.cashManager.initSplit();
+    function refreshSoon()
+    {
+    window.cashManager.updateViewportHeight();
+    window.cashManager.updateHeaderOffset();
+    window.cashManager.initSplit();
 
-            setTimeout(window.cashManager.updateViewportHeight, 50);
-            setTimeout(window.cashManager.updateHeaderOffset, 50);
-            setTimeout(window.cashManager.initSplit, 50);
-            setTimeout(window.cashManager.updateViewportHeight, 250);
-            setTimeout(window.cashManager.updateHeaderOffset, 250);
-            setTimeout(window.cashManager.initSplit, 250);
-        }
+    setTimeout(window.cashManager.updateViewportHeight, 50);
+    setTimeout(window.cashManager.updateHeaderOffset, 50);
+    setTimeout(window.cashManager.initSplit, 50);
+    setTimeout(window.cashManager.updateViewportHeight, 250);
+    setTimeout(window.cashManager.updateHeaderOffset, 250);
+    setTimeout(window.cashManager.initSplit, 250);
+    }
 
-        refreshSoon();
+    refreshSoon();
 
-        window.addEventListener("load", refreshSoon);
-        window.addEventListener("resize", refreshSoon);
-        window.addEventListener("orientationchange", refreshSoon);
+    window.addEventListener("load", refreshSoon);
+    window.addEventListener("resize", refreshSoon);
+    window.addEventListener("orientationchange", refreshSoon);
     })();
 </script>

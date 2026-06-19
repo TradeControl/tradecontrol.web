@@ -1,0 +1,53 @@
+.tc-admin-manager-tree i.bi-filetype-html {
+    color: var(--tc-admin-html-icon);
+}
+
+.tc-admin-manager-tree i.bi-files {
+    color: var(--tc-admin-files-icon);
+}
+
+.tc-admin-manager-tree i.bi-images,
+.tc-admin-manager-tree i.bi-image {
+    color: var(--tc-admin-images-icon);
+}
+
+.tc-admin-manager-tree i.bi-paperclip {
+    color: var(--tc-admin-paperclip-icon);
+}
+
+.tc-admin-manager-tree i.bi-file-earmark,
+.tc-admin-manager-tree i.bi-file-earmark-text {
+    color: var(--tc-admin-file-icon);
+}
+
+.tc-admin-manager-tree i.bi-receipt {
+    color: var(--tc-admin-receipt-icon);
+}
+
+.tc-admin-manager-tree i.bi-gear {
+    color: var(--tc-admin-gear-icon);
+}
+
+.tc-admin-manager-tree i.bi-envelope-at {
+    color: var(--tc-admin-envelope-icon);
+}
+
+.tc-admin-manager-tree i.bi-calendar3 {
+    color: var(--tc-admin-calendar-icon);
+}
+
+.tc-admin-manager-tree i.bi-sliders {
+    color: var(--tc-admin-sliders-icon);
+}
+
+.tc-admin-manager-tree i.bi-bank {
+    color: var(--tc-admin-bank-icon);
+}
+
+.tc-admin-manager-tree i.bi-hash {
+    color: var(--tc-admin-hash-icon);
+}
+
+.tc-admin-manager-tree i.bi-tags {
+    color: var(--tc-admin-tags-icon);
+}

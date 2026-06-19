@@ -1,12 +1,12 @@
 using System;
 using System.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
-
+using TradeControl.Web.Model;
 using TradeControl.Web.Models;
 
 #nullable disable
@@ -83,6 +83,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Usr_tbInterface> Usr_tbInterfaces { get; set; }
         public virtual DbSet<Invoice_tbInvoice> Invoice_tbInvoices { get; set; }
         public virtual DbSet<Invoice_tbItem> Invoice_tbItems { get; set; }
+        public virtual DbSet<Usr_tbTheme> Usr_tbThemes { get; set; }
         public virtual DbSet<Usr_tbMenu> Usr_tbMenus { get; set; }
         public virtual DbSet<Usr_tbMenuCommand> Usr_tbMenuCommands { get; set; }
         public virtual DbSet<Usr_tbMenuEntry> Usr_tbMenuEntries { get; set; }
@@ -2684,6 +2685,27 @@ namespace TradeControl.Web.Data
                     .HasForeignKey(d => d.MenuViewCode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_Usr_tbMenu_Usr_tbUser");
+
+                entity.HasOne(d => d.ThemeCodeNavigation)
+                    .WithMany(p => p.Usr_tbUsers)
+                    .HasForeignKey(d => d.ThemeCode)
+                    .HasConstraintName("FK_Usr_tbUser_Usr_tbTheme");
+            });
+
+            modelBuilder.Entity<Usr_tbTheme>(entity =>
+            {
+                entity.HasKey(e => e.ThemeCode);
+
+                entity.ToTable("tbTheme", "Usr");
+
+                entity.Property(e => e.ThemeCode)
+                    .HasMaxLength(25);
+
+                entity.Property(e => e.ThemeName)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.CssFile)
+                    .HasMaxLength(100);
             });
 
             modelBuilder.Entity<App_tbYear>(entity =>

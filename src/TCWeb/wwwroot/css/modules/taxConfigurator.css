@@ -1,0 +1,83 @@
+.tc-tax-configurator-tree i.bi-geo-alt {
+    color: var(--tc-tax-geo-icon);
+}
+
+.tc-tax-configurator-tree i.bi-diagram-3 {
+    color: var(--tc-tax-diagram-icon);
+}
+
+.tc-tax-configurator-tree i.bi-bullseye {
+    color: var(--tc-tax-bullseye-icon);
+}
+
+.tc-tax-configurator-tree i.bi-calculator {
+    color: var(--tc-tax-calculator-icon);
+}
+
+.tc-tax-configurator-tree i.bi-collection {
+    color: var(--tc-tax-collection-icon);
+}
+
+.tc-tax-configurator-tree i.bi-tag {
+    color: var(--tc-tax-tag-icon);
+}
+
+.tc-tax-configurator-tree i.tc-tree-icon-disabled {
+    color: var(--tc-tree-icon-muted);
+}
+
+.tc-tax-configurator-tag-control-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.tc-tax-configurator-tag-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tc-tax-configurator-tag-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.tc-tax-configurator-mapping-actions-row {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: flex-end;
+}
+
+.tc-tax-configurator-mapping-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.tc-tax-tag-list {
+    min-height: 0;
+    overflow: auto;
+}
+
+@media (max-width: 767.98px) {
+    .tc-tax-configurator-tag-control-row {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .tc-tax-configurator-tag-select,
+    .tc-tax-configurator-tag-button {
+        width: 100%;
+        min-height: 38px;
+    }
+
+    .tc-tax-configurator-mapping-action {
+        width: 2.5rem;
+        min-width: 2.5rem;
+        height: 2.5rem;
+        padding: 0;
+    }
+}

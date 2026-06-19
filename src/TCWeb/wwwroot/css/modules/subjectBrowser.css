@@ -1,0 +1,44 @@
+.tc-subject-browser-tree .tc-subject-browser-icon-real {
+    color: var(--tc-subject-real-icon);
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-virtual,
+.tc-subject-browser-tree .tc-subject-browser-icon-virtual-neutral {
+    color: var(--tc-subject-virtual-icon);
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-virtual-income {
+    color: var(--tc-subject-income-icon);
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-virtual-expense {
+    color: var(--tc-subject-expense-icon);
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-structural {
+    color: var(--tc-subject-structural-icon);
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-default {
+    position: relative;
+}
+
+    .tc-subject-browser-tree .tc-subject-browser-icon-default::after {
+        content: "";
+        position: absolute;
+        right: -0.2rem;
+        bottom: -0.05rem;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        border: 1px solid var(--tc-subject-default-border);
+        box-shadow: 0 0 0 1px var(--tc-subject-default-shadow);
+    }
+
+.tc-subject-browser-tree .tc-subject-browser-icon-default-light::after {
+    background: var(--tc-subject-default-light);
+}
+
+.tc-subject-browser-tree .tc-subject-browser-icon-default-real::after {
+    background: var(--tc-subject-default-real);
+}

@@ -7,7 +7,8 @@
     var companyName = (ViewData["CompanyName"] as string) ?? "Business";
 }
 
-<link href="~/css/blazorTree.css" rel="stylesheet" />
+<link href="~/css/components/blazorTree.css" rel="stylesheet" />
+<link href="~/css/modules/adminManager.css" rel="stylesheet" />
 
 <div class="tc-tree-workspace">
     <div class="mb-3 d-flex align-items-center gap-2">
@@ -28,84 +29,84 @@
 
         window.adminManager.updateHeaderOffset = function ()
         {
-            const header = document.querySelector('header');
-            const bottom = header ? header.getBoundingClientRect().bottom : 0;
-            document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
+        const header = document.querySelector('header');
+        const bottom = header ? header.getBoundingClientRect().bottom : 0;
+        document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
         };
 
         window.adminManager.initSplit = function ()
         {
-            if (!window.matchMedia("(min-width: 992px)").matches) return;
-            if (!window.Split) return;
+        if (!window.matchMedia("(min-width: 992px)").matches) return;
+        if (!window.Split) return;
 
-            const left = document.getElementById('leftCol');
-            const right = document.getElementById('rightCol');
-            if (!left || !right) return;
+        const left = document.getElementById('leftCol');
+        const right = document.getElementById('rightCol');
+        if (!left || !right) return;
 
-            function dropInitialClasses()
-            {
-                left.classList.remove('tc-initial-left');
-                right.classList.remove('tc-initial-right');
-            }
+        function dropInitialClasses()
+        {
+        left.classList.remove('tc-initial-left');
+        right.classList.remove('tc-initial-right');
+        }
 
-            const saved = (function ()
-            {
-                try
-                {
-                    const arr = JSON.parse(localStorage.getItem("tcAdminManagerSplit") || "[]");
-                    if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50) return arr;
-                }
-                catch { }
-                return [33, 67];
-            })();
+        const saved = (function ()
+        {
+        try
+        {
+        const arr = JSON.parse(localStorage.getItem("tcAdminManagerSplit") || "[]");
+        if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50) return arr;
+        }
+        catch { }
+        return [33, 67];
+        })();
 
-            Split(["#leftCol", "#rightCol"],
-            {
-                sizes: saved,
-                minSize: [240, 320],
-                gutterSize: 6,
-                snapOffset: 0,
-                elementStyle: function (dimension, size)
-                {
-                    return { flexBasis: size + '%', maxWidth: size + '%' };
-                },
-                gutterStyle: function (dimension, gutterSize)
-                {
-                    return { flexBasis: gutterSize + 'px' };
-                },
-                onDragEnd: function (sizes)
-                {
-                    localStorage.setItem("tcAdminManagerSplit", JSON.stringify(sizes));
-                }
-            });
+        Split(["#leftCol", "#rightCol"],
+        {
+        sizes: saved,
+        minSize: [240, 320],
+        gutterSize: 6,
+        snapOffset: 0,
+        elementStyle: function (dimension, size)
+        {
+        return { flexBasis: size + '%', maxWidth: size + '%' };
+        },
+        gutterStyle: function (dimension, gutterSize)
+        {
+        return { flexBasis: gutterSize + 'px' };
+        },
+        onDragEnd: function (sizes)
+        {
+        localStorage.setItem("tcAdminManagerSplit", JSON.stringify(sizes));
+        }
+        });
 
-            dropInitialClasses();
+        dropInitialClasses();
         };
 
         window.adminManager.updateViewportHeight = function ()
         {
-            const h = window.innerHeight || document.documentElement.clientHeight || 0;
-            document.documentElement.style.setProperty('--tc-viewport-height', h + 'px');
+        const h = window.innerHeight || document.documentElement.clientHeight || 0;
+        document.documentElement.style.setProperty('--tc-viewport-height', h + 'px');
         };
 
         (function ()
         {
-            function refreshSoon()
-            {
-                window.adminManager.updateViewportHeight();
-                window.adminManager.updateHeaderOffset();
+        function refreshSoon()
+        {
+        window.adminManager.updateViewportHeight();
+        window.adminManager.updateHeaderOffset();
 
-                setTimeout(window.adminManager.updateViewportHeight, 50);
-                setTimeout(window.adminManager.updateHeaderOffset, 50);
-                setTimeout(window.adminManager.updateViewportHeight, 250);
-                setTimeout(window.adminManager.updateHeaderOffset, 250);
-            }
+        setTimeout(window.adminManager.updateViewportHeight, 50);
+        setTimeout(window.adminManager.updateHeaderOffset, 50);
+        setTimeout(window.adminManager.updateViewportHeight, 250);
+        setTimeout(window.adminManager.updateHeaderOffset, 250);
+        }
 
-            refreshSoon();
-            window.adminManager.initSplit();
+        refreshSoon();
+        window.adminManager.initSplit();
 
-            window.addEventListener('resize', refreshSoon);
-            window.addEventListener('orientationchange', refreshSoon);
+        window.addEventListener('resize', refreshSoon);
+        window.addEventListener('orientationchange', refreshSoon);
         })();
     </script>
 

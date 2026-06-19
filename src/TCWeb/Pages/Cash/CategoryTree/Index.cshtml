@@ -9,7 +9,7 @@
 }
 <link href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css" rel="stylesheet" />
 <link href="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/skin-win8/ui.fancytree.min.css" rel="stylesheet" />
-<link href="~/css/categoryTree.css" rel="stylesheet" />
+<link href="~/css/components/categoryTree.css" rel="stylesheet" />
 <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
 
 <div class="mb-3 d-flex align-items-center gap-2">
@@ -60,40 +60,40 @@
     <script src="~/js/categoryTree.shared.js" asp-append-version="true"></script>
     <script>
         (function initSplit() {
-            if (!window.matchMedia("(min-width: 992px)").matches) return;
-            if (!window.Split) return;
+        if (!window.matchMedia("(min-width: 992px)").matches) return;
+        if (!window.Split) return;
 
-            // Remove initial sizing classes once Split is applied
-            function dropInitialClasses() {
-                document.getElementById('leftCol')?.classList.remove('tc-initial-left');
-                document.getElementById('rightCol')?.classList.remove('tc-initial-right');
-            }
+        // Remove initial sizing classes once Split is applied
+        function dropInitialClasses() {
+        document.getElementById('leftCol')?.classList.remove('tc-initial-left');
+        document.getElementById('rightCol')?.classList.remove('tc-initial-right');
+        }
 
-            const saved = (function () {
-                try {
-                    const arr = JSON.parse(localStorage.getItem("tcTreeSplit") || "[]");
-                    if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50) return arr;
-                } catch { }
-                return [33, 67];
-            })();
+        const saved = (function () {
+        try {
+        const arr = JSON.parse(localStorage.getItem("tcTreeSplit") || "[]");
+        if (Array.isArray(arr) && arr.length === 2 && arr[0] >= 20 && arr[0] <= 50) return arr;
+        } catch { }
+        return [33, 67];
+        })();
 
-            Split(["#leftCol", "#rightCol"], {
-                sizes: saved,
-                minSize: [240, 320],
-                gutterSize: 6,
-                snapOffset: 0,
-                elementStyle: function (dimension, size) {
-                    // Use flex-basis so flexbox and Split cooperate
-                    return { flexBasis: size + '%', maxWidth: size + '%' };
-                },
-                gutterStyle: function (dimension, gutterSize) {
-                    return { flexBasis: gutterSize + 'px' };
-                },
-                onDragEnd: function (sizes) {
-                    localStorage.setItem("tcTreeSplit", JSON.stringify(sizes));
-                }
-            });
-            dropInitialClasses();
+        Split(["#leftCol", "#rightCol"], {
+        sizes: saved,
+        minSize: [240, 320],
+        gutterSize: 6,
+        snapOffset: 0,
+        elementStyle: function (dimension, size) {
+        // Use flex-basis so flexbox and Split cooperate
+        return { flexBasis: size + '%', maxWidth: size + '%' };
+        },
+        gutterStyle: function (dimension, gutterSize) {
+        return { flexBasis: gutterSize + 'px' };
+        },
+        onDragEnd: function (sizes) {
+        localStorage.setItem("tcTreeSplit", JSON.stringify(sizes));
+        }
+        });
+        dropInitialClasses();
         })();
     </script>
 }

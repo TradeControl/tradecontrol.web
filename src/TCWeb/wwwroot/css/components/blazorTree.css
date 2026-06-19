@@ -13,10 +13,6 @@
     --tc-tree-row-pad-y: 0.25rem;
     --tc-tree-row-pad-x: 0.5rem;
     --tc-tree-row-radius: 4px;
-    --tc-tree-selected-bg: #ffe0b2; /* aligns with site table header accent */
-    --tc-tree-selected-fg: #e65100;
-    --tc-tree-hover-bg: #fffde7;
-    --tc-tree-icon-muted: #6c757d;
     --tc-safe-bottom: env(safe-area-inset-bottom, 0px);
     --tc-safe-top: env(safe-area-inset-top, 0px);
     --tc-viewport-height: 100dvh; /* JS overwrites with px value on mobile */
@@ -77,8 +73,8 @@ body {
     }
 
 .tc-tree-drop-target-active {
-    background: rgba(25, 135, 84, 0.12);
-    outline: 1px dashed #198754;
+    background: var(--tc-tree-drop-target-bg);
+    outline: 1px dashed var(--tc-tree-drop-target-outline);
     border-radius: 4px;
 }
 
@@ -111,39 +107,39 @@ body {
 }
 
 .tc-tree-icon-root {
-    color: #f57c00;
+    color: var(--tc-tree-icon-root);
 }
 
 .tc-tree-icon-setup {
-    color: #1976d2;
+    color: var(--tc-tree-icon-setup);
 }
 
 .tc-tree-icon-filetransfer {
-    color: #198754;
+    color: var(--tc-tree-icon-filetransfer);
 }
 
 .tc-tree-icon-contenttype {
-    color: #fbc02d;
+    color: var(--tc-tree-icon-contenttype);
 }
 
 .tc-tree-icon-users {
-    color: #0d6efd;
+    color: var(--tc-tree-icon-users);
 }
 
 .tc-tree-icon-mapped {
-    color: #198754;
+    color: var(--tc-tree-icon-mapped);
 }
 
 .tc-tree-icon-enabled {
-    color: #198754;
+    color: var(--tc-tree-icon-enabled);
 }
 
 .tc-tree-icon-disabled {
-    color: #6c757d;
+    color: var(--tc-tree-icon-disabled);
 }
 
 .tc-tree-mapped-glyph {
-    color: #198754;
+    color: var(--tc-tree-glyph-mapped);
     font-size: 0.8rem;
     vertical-align: middle;
 }
@@ -154,11 +150,11 @@ body {
 }
 
 .tc-tree-state-glyph-mapped {
-    color: #198754;
+    color: var(--tc-tree-glyph-mapped);
 }
 
 .tc-tree-state-glyph-disabled {
-    color: #6c757d;
+    color: var(--tc-tree-glyph-disabled);
 }
 
 .tc-tree-label {
@@ -173,7 +169,7 @@ body {
 }
 
 .tc-tree-label-mapped {
-    color: #198754;
+    color: var(--tc-tree-glyph-mapped);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -230,13 +226,13 @@ body {
 
     .gutter {
         flex: 0 0 6px;
-        background: #e0e0e0;
+        background: var(--tc-split-gutter);
         cursor: col-resize;
         position: relative;
     }
 
         .gutter:hover {
-            background: #d0d0d0;
+            background: var(--tc-split-gutter-hover);
         }
 
     .tc-details-frame {
@@ -322,7 +318,7 @@ body {
         background: var(--tc-orange, #ff7a00);
         color: var(--tc-on-orange, #fff);
         z-index: 2050;
-        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 -4px 16px var(--tc-mobile-actionbar-shadow);
         padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     }
 
@@ -337,7 +333,7 @@ body {
             min-width: 0;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: centre;
             padding: 0 4px;
         }
 
@@ -376,29 +372,29 @@ body {
             padding: 10px 6px;
             line-height: 1.1;
             border-radius: 10px;
-            text-align: center;
+            text-align: centre;
             white-space: normal;
         }
 
-        .tc-mobile-actionbar .btn-action span {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 2.4em;
-            width: 100%;
-            text-align: center;
-        }
+            .tc-mobile-actionbar .btn-action span {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 2.4em;
+                width: 100%;
+                text-align: center;
+            }
 
-        .tc-mobile-actionbar .btn-action:active {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(1px) scale(0.98);
-        }
+            .tc-mobile-actionbar .btn-action:active {
+                background: rgba(255, 255, 255, 0.15);
+                transform: translateY(1px) scale(0.98);
+            }
 
-        .tc-mobile-actionbar .btn-action i {
-            margin-right: 0;
-            font-size: 1.1rem;
-            line-height: 1;
-        }
+            .tc-mobile-actionbar .btn-action i {
+                margin-right: 0;
+                font-size: 1.1rem;
+                line-height: 1;
+            }
 
     .tc-back-btn {
         display: inline-flex;
@@ -408,29 +404,29 @@ body {
         padding: 0.55rem 0.9rem;
         border-radius: 999px;
         border: 0;
-        background: linear-gradient(135deg, #ff9a3d 0%, #ff7a00 100%);
-        color: #fff;
+        background: linear-gradient(135deg, var(--tc-back-btn-gradient-start) 0%, var(--tc-back-btn-gradient-end) 100%);
+        color: var(--tc-back-btn-text);
         font-weight: 600;
-        box-shadow: 0 6px 14px rgba(255, 122, 0, 0.28);
+        box-shadow: 0 6px 14px var(--tc-back-btn-shadow);
         transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
     }
 
-    .tc-back-btn:hover,
-    .tc-back-btn:focus-visible {
-        color: #fff;
-        filter: brightness(1.03);
-        box-shadow: 0 8px 18px rgba(255, 122, 0, 0.34);
-    }
+        .tc-back-btn:hover,
+        .tc-back-btn:focus-visible {
+            color: var(--tc-back-btn-text);
+            filter: brightness(1.03);
+            box-shadow: 0 8px 18px var(--tc-back-btn-hover-shadow);
+        }
 
-    .tc-back-btn:active {
-        transform: translateY(1px) scale(0.97);
-        box-shadow: 0 3px 8px rgba(255, 122, 0, 0.24);
-    }
+        .tc-back-btn:active {
+            transform: translateY(1px) scale(0.97);
+            box-shadow: 0 3px 8px var(--tc-back-btn-active-shadow);
+        }
 
-    .tc-back-btn i {
-        font-size: 1rem;
-        line-height: 1;
-    }
+        .tc-back-btn i {
+            font-size: 1rem;
+            line-height: 1;
+        }
 
     .tc-tree-workspace {
         position: static;
@@ -500,204 +496,4 @@ body {
                     .tc-mobile-card-list-host .table tbody td .input-group {
                         width: 100%;
                     }
-}
-
-/* -------------------------------------------------------------------------- */
-/* Admin Manager                                                              */
-/* -------------------------------------------------------------------------- */
-
-.tc-admin-manager-tree {
-    font-size: var(--tc-tree-font-size);
-    line-height: 1.25;
-}
-
-    .tc-admin-manager-tree i.bi-filetype-html {
-        color: #6f42c1;
-    }
-
-    .tc-admin-manager-tree i.bi-files {
-        color: #0d6efd;
-    }
-
-    .tc-admin-manager-tree i.bi-images,
-    .tc-admin-manager-tree i.bi-image {
-        color: #d63384;
-    }
-
-    .tc-admin-manager-tree i.bi-paperclip {
-        color: #20c997;
-    }
-
-    .tc-admin-manager-tree i.bi-file-earmark,
-    .tc-admin-manager-tree i.bi-file-earmark-text {
-        color: #fd7e14;
-    }
-
-    .tc-admin-manager-tree i.bi-receipt {
-        color: #6f42c1;
-    }
-
-    .tc-admin-manager-tree i.bi-gear {
-        color: #495057;
-    }
-
-    .tc-admin-manager-tree i.bi-envelope-at {
-        color: #0dcaf0;
-    }
-
-    .tc-admin-manager-tree i.bi-calendar3 {
-        color: #0d6efd;
-    }
-
-    .tc-admin-manager-tree i.bi-sliders {
-        color: #20c997;
-    }
-
-    .tc-admin-manager-tree i.bi-bank {
-        color: #198754;
-    }
-
-    .tc-admin-manager-tree i.bi-hash {
-        color: #0dcaf0;
-    }
-
-    .tc-admin-manager-tree i.bi-tags {
-        color: #fd7e14;
-    }
-
-/* -------------------------------------------------------------------------- */
-/* Tax Configurator                                                           */
-/* -------------------------------------------------------------------------- */
-
-.tc-tax-configurator-tree i.bi-geo-alt {
-    color: #f57c00;
-}
-
-.tc-tax-configurator-tree i.bi-diagram-3 {
-    color: #1976d2;
-}
-
-.tc-tax-configurator-tree i.bi-bullseye {
-    color: #198754;
-}
-
-.tc-tax-configurator-tree i.bi-calculator {
-    color: #6f42c1;
-}
-
-.tc-tax-configurator-tree i.bi-collection {
-    color: #0dcaf0;
-}
-
-.tc-tax-configurator-tree i.bi-tag {
-    color: #0d6efd;
-}
-
-.tc-tax-configurator-tree i.tc-tree-icon-disabled {
-    color: var(--tc-tree-icon-muted);
-}
-
-.tc-tax-configurator-tag-control-row {
-    display: flex;
-    align-items: stretch;
-    gap: 0.5rem;
-}
-
-.tc-tax-configurator-tag-select {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.tc-tax-configurator-tag-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-}
-
-.tc-tax-configurator-mapping-actions-row {
-    display: flex;
-    gap: 0.35rem;
-    justify-content: flex-end;
-}
-
-.tc-tax-configurator-mapping-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-}
-
-.tc-tax-tag-list {
-    min-height: 0;
-    overflow: auto;
-}
-
-@media (max-width: 767.98px) {
-    .tc-tax-configurator-tag-control-row {
-        display: grid;
-        gap: 0.5rem;
-    }
-
-    .tc-tax-configurator-tag-select,
-    .tc-tax-configurator-tag-button {
-        width: 100%;
-        min-height: 38px;
-    }
-
-    .tc-tax-configurator-mapping-action {
-        width: 2.5rem;
-        min-width: 2.5rem;
-        height: 2.5rem;
-        padding: 0;
-    }
-}
-
-/* -------------------------------------------------------------------------- */
-/* Subject Browser                                                            */
-/* -------------------------------------------------------------------------- */
-
-.tc-subject-browser-tree .tc-subject-browser-icon-real {
-    color: coral;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-virtual,
-.tc-subject-browser-tree .tc-subject-browser-icon-virtual-neutral {
-    color: #6c757d;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-virtual-income {
-    color: #198754;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-virtual-expense {
-    color: #dc3545;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-structural {
-    color: gold;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-default {
-    position: relative;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-default::after {
-    content: "";
-    position: absolute;
-    right: -0.2rem;
-    bottom: -0.05rem;
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 50%;
-    border: 1px solid #fff;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-default-light::after {
-    background: #ced4da;
-}
-
-.tc-subject-browser-tree .tc-subject-browser-icon-default-real::after {
-    background: #198754;
 }

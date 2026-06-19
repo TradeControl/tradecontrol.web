@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TradeControl.Web.Pages.Admin.Manager
 {

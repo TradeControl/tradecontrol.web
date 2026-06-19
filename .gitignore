@@ -358,3 +358,4 @@ tests/ui/.cache/
 # src/TCWeb/wwwroot/content/
 
 docs/tmp/
+.aider*

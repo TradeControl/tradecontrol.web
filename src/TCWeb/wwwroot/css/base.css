@@ -1,10 +1,114 @@
+/* -------------------------------------------------------------------------- */
+/* Trade Control base theme variables                                         */
+/* -------------------------------------------------------------------------- */
+
+:root {
+    --tc-footer-height: 60px;
+    --tc-header-gradient-start: #ff9800;
+    --tc-header-gradient-end: #f57c00;
+    --tc-header-border: #e65100;
+    --tc-header-link-hover: #fffde7;
+    --tc-brand-text: #fffde7;
+    --tc-brand-hover: #ffd54f;
+    --tc-auth-link: #ffd54f;
+    --tc-auth-link-hover: #ffffff;
+    --tc-footer-bg: #ff9800;
+    --tc-footer-text: #ffffff;
+    --tc-footer-border: #e65100;
+    --tc-footer-shadow: rgba(255, 152, 0, 0.08);
+    --tc-heading-colour: #ff9800;
+    --tc-table-bg: #ffffff;
+    --tc-table-shadow: rgba(255, 152, 0, 0.04);
+    --tc-table-head-bg: #ffe0b2;
+    --tc-table-head-text: #f57c00;
+    --tc-table-striped-bg: #fffde7;
+    --tc-input-border: #ff9800;
+    --tc-input-focus-border: #e65100;
+    --tc-input-focus-shadow: rgba(245, 124, 0, 0.15);
+    --tc-button-bg: #ff9800;
+    --tc-button-border: #ff9800;
+    --tc-button-hover-bg: #f57c00;
+    --tc-button-hover-border: #f57c00;
+    --tc-button-text: #ffffff;
+    --tc-dropdown-bg: #ffffff;
+    --tc-dropdown-text: #f57c00;
+    --tc-dropdown-border: #e65100;
+    --tc-dropdown-hover-bg: #ffe0b2;
+    --tc-dropdown-hover-text: #ff9800;
+    --tc-section-bg: #ffe0b2;
+    --tc-section-text: #222222;
+    --tc-section-shadow: rgba(255, 152, 0, 0.08);
+    --tc-orange: #ff7a00;
+    --tc-orange-600: #e66e00;
+    --tc-on-orange: #ffffff;
+    --tc-muted: #6c757d;
+    --tc-split-gutter: #e0e0e0;
+    --tc-split-gutter-hover: #d0d0d0;
+    --tc-tree-selected-bg: #ffe0b2;
+    --tc-tree-selected-fg: #e65100;
+    --tc-tree-hover-bg: #fffde7;
+    --tc-tree-icon-muted: #6c757d;
+    --tc-tree-drop-target-bg: rgba(25, 135, 84, 0.12);
+    --tc-tree-drop-target-outline: #198754;
+    --tc-tree-icon-root: #f57c00;
+    --tc-tree-icon-setup: #1976d2;
+    --tc-tree-icon-filetransfer: #198754;
+    --tc-tree-icon-contenttype: #fbc02d;
+    --tc-tree-icon-users: #0d6efd;
+    --tc-tree-icon-mapped: #198754;
+    --tc-tree-icon-enabled: #198754;
+    --tc-tree-icon-disabled: #6c757d;
+    --tc-tree-glyph-mapped: #198754;
+    --tc-tree-glyph-disabled: #6c757d;
+    --tc-mobile-actionbar-shadow: rgba(0, 0, 0, 0.25);
+    --tc-back-btn-gradient-start: #ff9a3d;
+    --tc-back-btn-gradient-end: #ff7a00;
+    --tc-back-btn-text: #ffffff;
+    --tc-back-btn-shadow: rgba(255, 122, 0, 0.28);
+    --tc-back-btn-hover-shadow: rgba(255, 122, 0, 0.34);
+    --tc-back-btn-active-shadow: rgba(255, 122, 0, 0.24);
+    --tc-admin-html-icon: #6f42c1;
+    --tc-admin-files-icon: #0d6efd;
+    --tc-admin-images-icon: #d63384;
+    --tc-admin-paperclip-icon: #20c997;
+    --tc-admin-file-icon: #fd7e14;
+    --tc-admin-receipt-icon: #6f42c1;
+    --tc-admin-gear-icon: #495057;
+    --tc-admin-envelope-icon: #0dcaf0;
+    --tc-admin-calendar-icon: #0d6efd;
+    --tc-admin-sliders-icon: #20c997;
+    --tc-admin-bank-icon: #198754;
+    --tc-admin-hash-icon: #0dcaf0;
+    --tc-admin-tags-icon: #fd7e14;
+    --tc-tax-geo-icon: #f57c00;
+    --tc-tax-diagram-icon: #1976d2;
+    --tc-tax-bullseye-icon: #198754;
+    --tc-tax-calculator-icon: #6f42c1;
+    --tc-tax-collection-icon: #0dcaf0;
+    --tc-tax-tag-icon: #0d6efd;
+    --tc-subject-real-icon: coral;
+    --tc-subject-virtual-icon: #6c757d;
+    --tc-subject-income-icon: #198754;
+    --tc-subject-expense-icon: #dc3545;
+    --tc-subject-structural-icon: gold;
+    --tc-subject-default-light: #ced4da;
+    --tc-subject-default-real: #198754;
+    --tc-subject-default-border: #ffffff;
+    --tc-subject-default-shadow: rgba(0, 0, 0, 0.08);
+    --tc-cat-income: #000000;
+    --tc-cat-expense: #e53935;
+    --tc-cat-neutral: #1976d2;
+    --tc-cat-dot-shadow: rgba(0, 0, 0, 0.04);
+    --tc-mobile-sheet-shadow: rgba(0, 0, 0, 0.25);
+}
+
 /* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
 
 /* Header and Navbar */
 header, .navbar, .tc-header {
-    background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
-    color: #fff;
-    border-bottom: 2px solid #e65100;
+    background: linear-gradient(90deg, var(--tc-header-gradient-start) 0%, var(--tc-header-gradient-end) 100%);
+    color: var(--tc-footer-text);
+    border-bottom: 2px solid var(--tc-header-border);
 }
 
 nav.navbar {
@@ -15,7 +119,7 @@ nav.navbar {
 .navbar .nav-link.active,
 .navbar .nav-link:focus,
 .navbar .nav-link:hover {
-    color: #fffde7 !important;
+    color: var(--tc-header-link-hover) !important;
     background-color: transparent;
 }
 
@@ -32,7 +136,7 @@ header .navbar > .container-fluid {
     /* Styling for navbar links / brand */
     header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
     header .navbar .navbar-brand {
-        color: #fff !important;
+        color: var(--tc-footer-text) !important;
         transition: color 0.2s;
         padding-left: 0.25rem;
         padding-right: 0.25rem;
@@ -40,7 +144,7 @@ header .navbar > .container-fluid {
 
         header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
         header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
-            color: #ffe0b2 !important;
+            color: var(--tc-table-head-bg) !important;
         }
 
 /* Company name in navbar */
@@ -48,7 +152,7 @@ header .tc-brand,
 .navbar .tc-brand,
 .navbar .container .tc-brand,
 .nav-link.tc-brand {
-    color: #fffde7 !important;
+    color: var(--tc-brand-text) !important;
     font-weight: 700;
     font-size: 1.25rem !important;
     letter-spacing: 0.5px;
@@ -64,16 +168,16 @@ header .tc-brand,
     text-overflow: ellipsis;
 }
 
-header .tc-brand:hover,
-header .tc-brand:focus,
-.navbar .tc-brand:hover,
-.navbar .tc-brand:focus,
-.navbar .container .tc-brand:hover,
-.nav-link.tc-brand:hover,
-.nav-link.tc-brand:focus {
-    color: #ffd54f !important;
-    text-decoration: none;
-}
+    header .tc-brand:hover,
+    header .tc-brand:focus,
+    .navbar .tc-brand:hover,
+    .navbar .tc-brand:focus,
+    .navbar .container .tc-brand:hover,
+    .nav-link.tc-brand:hover,
+    .nav-link.tc-brand:focus {
+        color: var(--tc-brand-hover) !important;
+        text-decoration: none;
+    }
 
 /* Navbar Logo Styles (keeps absolute helper if used) */
 .navbar-logo-absolute {
@@ -104,7 +208,7 @@ header .tc-brand:focus,
 
 /* Auth links: Register, Login, Logout */
 .tc-auth-link {
-    color: #ffd54f !important;
+    color: var(--tc-auth-link) !important;
     font-weight: 500;
     vertical-align: middle;
     padding-top: 0.5rem;
@@ -115,26 +219,22 @@ header .tc-brand:focus,
 
     .tc-auth-link:hover,
     .tc-auth-link:focus {
-        color: #fff !important;
+        color: var(--tc-auth-link-hover) !important;
         text-decoration: none;
     }
 
 /* Body and Footer */
-:root {
-    --tc-footer-height: 60px;
-}
-
 body {
     margin-bottom: var(--tc-footer-height);
 }
 
 footer, .footer, .tc-footer {
-    background: #ff9800;
-    color: #fff;
-    border-top: 2px solid #e65100;
+    background: var(--tc-footer-bg);
+    color: var(--tc-footer-text);
+    border-top: 2px solid var(--tc-footer-border);
     font-size: 1.05rem;
     font-weight: 500;
-    box-shadow: 0 -2px 8px rgba(255, 152, 0, 0.08);
+    box-shadow: 0 -2px 8px var(--tc-footer-shadow);
     text-align: center;
     line-height: var(--tc-footer-height);
     position: fixed;
@@ -149,12 +249,12 @@ footer, .footer, .tc-footer {
     footer.text-muted,
     .footer.text-muted,
     .tc-footer.text-muted {
-        color: #fff !important;
+        color: var(--tc-footer-text) !important;
     }
 
 /* Headings */
 h1, h2, h3, h4, h5 {
-    color: #ff9800;
+    color: var(--tc-heading-colour);
     font-weight: 600;
 }
 
@@ -164,18 +264,18 @@ h1, h2, h3, h4, h5 {
     table-layout: auto;
     border-radius: 6px;
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(255, 152, 0, 0.04);
-    background: #fff;
+    box-shadow: 0 1px 4px var(--tc-table-shadow);
+    background: var(--tc-table-bg);
 }
 
     .table thead {
-        background: #ffe0b2;
-        color: #f57c00;
+        background: var(--tc-table-head-bg);
+        color: var(--tc-table-head-text);
         font-weight: 600;
     }
 
 .table-striped > tbody > tr:nth-of-type(odd) {
-    background-color: #fffde7;
+    background-color: var(--tc-table-striped-bg);
 }
 
 /* Prefer wrapping at word boundaries. Avoid breaking words in the middle.
@@ -198,18 +298,18 @@ h1, h2, h3, h4, h5 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: nowrap; /* keep buttons on one line */
-    white-space: nowrap; /* prevent buttons' text from wrapping */
-    overflow-x: auto; /* allow horizontal scroll instead of forcing line break */
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0;
     margin: 0;
 }
 
     .table .action-buttons .btn {
-        flex: 0 0 auto; /* don't grow or shrink; keep intrinsic size */
-        white-space: nowrap; /* keep icon+text together */
-        padding: 0.35rem 0.6rem; /* consistent tappable padding */
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 0.35rem 0.6rem;
     }
 
 /* If a previous rule forces the last table column to nowrap, ensure our container handles it */
@@ -221,12 +321,12 @@ h1, h2, h3, h4, h5 {
 /* Forms and Buttons */
 select,
 input[type="submit"] {
-    border: 1px solid #ff9800;
+    border: 1px solid var(--tc-input-border);
     border-radius: 4px;
 }
 
     select:focus {
-        border-color: #e65100;
+        border-color: var(--tc-input-focus-border);
         box-shadow: none;
     }
 
@@ -234,10 +334,10 @@ input[type="submit"] {
     input[type="submit"].tc-btn-orange,
     button.tc-btn-orange,
     a.tc-btn-orange {
-        background: #ff9800;
-        color: #fff;
+        background: var(--tc-button-bg);
+        color: var(--tc-button-text);
         font-weight: 500;
-        border: 1px solid #ff9800;
+        border: 1px solid var(--tc-button-border);
         border-radius: 4px;
         transition: background 0.2s;
     }
@@ -248,66 +348,66 @@ input[type="submit"] {
         button.tc-btn-orange:focus,
         a.tc-btn-orange:hover,
         a.tc-btn-orange:focus {
-            background: #f57c00;
-            border-color: #f57c00;
-            color: #fff;
+            background: var(--tc-button-hover-bg);
+            border-color: var(--tc-button-hover-border);
+            color: var(--tc-button-text);
         }
 
 /* Dropdown menus and select options */
 select,
 .dropdown-menu {
-    background: #fff;
-    color: #f57c00;
+    background: var(--tc-dropdown-bg);
+    color: var(--tc-dropdown-text);
 }
 
     select option {
-        color: #f57c00;
-        background: #fff;
+        color: var(--tc-dropdown-text);
+        background: var(--tc-dropdown-bg);
     }
 
 .dropdown-menu {
-    background: #fff;
-    color: #f57c00;
-    border: 1px solid #e65100;
+    background: var(--tc-dropdown-bg);
+    color: var(--tc-dropdown-text);
+    border: 1px solid var(--tc-dropdown-border);
 }
 
     .dropdown-menu .nav-link,
     .dropdown-menu a {
-        color: #f57c00 !important;
+        color: var(--tc-dropdown-text) !important;
         background: transparent;
     }
 
         .dropdown-menu .nav-link:hover,
         .dropdown-menu a:hover {
-            color: #ff9800 !important;
-            background: #ffe0b2;
+            color: var(--tc-dropdown-hover-text) !important;
+            background: var(--tc-dropdown-hover-bg);
         }
 
 /* Utility: Corporate orange text and border */
 .tc-text-orange {
-    color: #ff9800 !important;
+    color: var(--tc-heading-colour) !important;
 }
 
 .tc-border-orange {
-    border-color: #ff9800 !important;
+    border-color: var(--tc-heading-colour) !important;
 }
 
 /* Accent Section */
 .tc-section {
-    background: #ffe0b2;
+    background: var(--tc-section-bg);
     border-radius: 8px;
     padding: 2rem;
     margin-bottom: 2rem;
-    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.08);
+    box-shadow: 0 2px 8px var(--tc-section-shadow);
 }
 
     .tc-section dt {
-        color: #ff9800;
+        color: var(--tc-heading-colour);
         font-weight: 600;
     }
 
     .tc-section dd {
-        color: #222;
+        color: var(--tc-section-text);
         font-size: 1.1rem;
     }
 
@@ -324,7 +424,7 @@ select,
    (selector targets the pattern used in your pages: form.mb-3 > .row.g-2.align-items-center) */
 form.mb-3 > .row.g-2.align-items-center select.form-control,
 form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
-    border: 1px solid #ff9800;
+    border: 1px solid var(--tc-input-border);
     border-radius: 4px;
     box-shadow: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -333,9 +433,9 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
     /* Focus state: stronger orange outline */
     form.mb-3 > .row.g-2.align-items-center select.form-control:focus,
     form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"]:focus {
-        border-color: #e65100;
+        border-color: var(--tc-input-focus-border);
         outline: none;
-        box-shadow: 0 0 0 0.15rem rgba(245,124,0,0.15);
+        box-shadow: 0 0 0 0.15rem var(--tc-input-focus-shadow);
     }
 
 /* Mobile Devices */
@@ -408,7 +508,6 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
                 white-space: normal !important;
             }
 
-    /* truncate long company name on very small screens */
     .tc-brand {
         max-width: calc(100vw - 5.25rem);
         white-space: nowrap;
@@ -417,7 +516,6 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
         display: inline-block;
     }
 
-    /* tighten navbar left gutter on very small screens */
     .navbar > .container,
     .navbar > .container-fluid {
         padding-left: 6px !important;
@@ -445,13 +543,13 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
 
 /* Category tree polarity icons: small colored dots before the title */
 .tc-cat-icon {
-  display: inline-block;
-  width: 0.66rem;
-  height: 0.66rem;
-  border-radius: 50%;
-  margin-right: 0.45rem;
-  vertical-align: text-bottom;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+    display: inline-block;
+    width: 0.66rem;
+    height: 0.66rem;
+    border-radius: 50%;
+    margin-right: 0.45rem;
+    vertical-align: text-bottom;
+    box-shadow: 0 0 0 1px var(--tc-cat-dot-shadow) inset;
 }
 
 /* Cash-code icon (no polarity dot). Smaller margin and consistent alignment with category titles */
@@ -459,19 +557,28 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
     margin-right: 0.45rem;
     font-size: 0.95rem;
     vertical-align: text-bottom;
-    color: inherit; /* keep same color as surrounding text */
+    color: inherit;
 }
 
 /* Polarity colours:
    Income -> black
    Expense -> red
    Neutral -> blue */
-.tc-cat-income { background-color: #000000; }  /* Income = black */
-.tc-cat-expense { background-color: #e53935; } /* Expense = red */
-.tc-cat-neutral { background-color: #1976d2; } /* Neutral = blue */
+.tc-cat-income {
+    background-color: var(--tc-cat-income);
+}
+
+.tc-cat-expense {
+    background-color: var(--tc-cat-expense);
+}
+
+.tc-cat-neutral {
+    background-color: var(--tc-cat-neutral);
+}
 
 /* Ensure Fancytree will render HTML in titles for these pages */
-.fancytree-community .fancytree-title { /* leave default; included for specificity if needed */ }
+.fancytree-community .fancytree-title {
+}
 
 /* Cards with p-0 body + tables: remove any perceived gap between card-header and table header */
 .card > .card-body.p-0 {

@@ -6,13 +6,6 @@
     opacity: .6;
 }
 
-/* Color variables */
-:root {
-    --tc-orange: #ff7a00; /* adjust to your brand */
-    --tc-orange-600: #e66e00;
-    --tc-on-orange: #ffffff;
-}
-
 /* Disconnected root icon */
 .tc-disconnected-icon {
     margin-right: 6px;
@@ -34,7 +27,7 @@
         display: flex;
         width: 100%;
         align-items: stretch;
-        gap: 0; /* gutter handled by Split.js */
+        gap: 0;
         box-sizing: border-box;
         overflow: hidden;
     }
@@ -60,13 +53,13 @@
     /* Gutter styling (Split.js injects a div.gutter) */
     .gutter {
         flex: 0 0 6px;
-        background: #e0e0e0;
+        background: var(--tc-split-gutter);
         cursor: col-resize;
         position: relative;
     }
 
         .gutter:hover {
-            background: #d0d0d0;
+            background: var(--tc-split-gutter-hover);
         }
 }
 
@@ -83,7 +76,7 @@
         max-height: 60vh;
         overflow-y: auto;
         border-radius: 12px 12px 0 0;
-        box-shadow: 0 -6px 24px rgba(0,0,0,.25);
+        box-shadow: 0 -6px 24px var(--tc-mobile-sheet-shadow);
         transform: translateY(0);
         padding-bottom: env(safe-area-inset-bottom);
         z-index: 2000;
@@ -119,15 +112,15 @@
 
 /* Mobile action bar */
 .tc-mobile-actionbar {
-    display: none; /* JS toggles this on mobile */
+    display: none;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     background: var(--tc-orange, #ff7a00);
     color: var(--tc-on-orange, #fff);
-    z-index: 2050; /* above sheet (2000) and tree */
-    box-shadow: 0 -4px 16px rgba(0,0,0,.25);
+    z-index: 2050;
+    box-shadow: 0 -4px 16px var(--tc-mobile-actionbar-shadow);
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
 }
 
@@ -144,14 +137,11 @@
         border: 0;
         background: transparent;
         color: inherit;
-
-        /* stack icon above label */
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 4px;
-
         font-size: .9rem;
         padding: 10px 6px;
         line-height: 1.1;
@@ -161,15 +151,15 @@
         white-space: nowrap;
     }
 
-    .tc-mobile-actionbar .btn-action:active {
-        background: rgba(255,255,255,0.15);
-    }
+        .tc-mobile-actionbar .btn-action:active {
+            background: rgba(255,255,255,0.15);
+        }
 
-    .tc-mobile-actionbar .btn-action i {
-        margin-right: 0; /* was 6px */
-        font-size: 1.1rem;
-        line-height: 1;
-    }
+        .tc-mobile-actionbar .btn-action i {
+            margin-right: 0;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
 }
 
 /* Optional: slightly larger tap target for tree rows on mobile */

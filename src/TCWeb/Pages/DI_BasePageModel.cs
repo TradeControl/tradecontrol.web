@@ -1,10 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
-using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages
@@ -18,11 +13,6 @@ namespace TradeControl.Web.Pages
             NodeContext = nodeContext;
         }
 
-/*
-
-
-
-*/
         protected async Task SetViewData()
         {
             if (!ViewData.ContainsKey("CompanyName"))

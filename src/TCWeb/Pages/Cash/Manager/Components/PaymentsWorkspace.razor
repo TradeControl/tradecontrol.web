@@ -705,8 +705,8 @@ else
         line.SubjectName = result.SubjectName;
         line.NamespaceFilter = result.NamespaceFilter;
         line.OutstandingBalance = result.OutstandingBalance;
-        line.PaidInValue = result.OutstandingBalance > 0 ? result.OutstandingBalance : 0m;
-        line.PaidOutValue = result.OutstandingBalance < 0 ? Math.Abs(result.OutstandingBalance) : 0m;
+        line.PaidOutValue = result.OutstandingBalance > 0 ? result.OutstandingBalance : 0m;
+        line.PaidInValue = result.OutstandingBalance < 0 ? Math.Abs(result.OutstandingBalance) : 0m;
         line.TaxCode = result.OutstandingBalance == 0 ? result.DefaultTaxCode : string.Empty;
     }
 

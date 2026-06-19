@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using TradeControl.Web.Model;
 
 #nullable disable
 
@@ -64,6 +65,11 @@ namespace TradeControl.Web.Models
         [Display(Name = "Enabled?")]
         public short IsEnabled { get; set; }
         public int NextProjectNumber { get; set; }
+        public short MenuViewCode { get; set; }
+        public string? ThemeCode { get; set; }
+
+        public virtual Usr_tbTheme? ThemeCodeNavigation { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Inserted By")]
@@ -78,7 +84,6 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "datetime")]
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
-        public short MenuViewCode { get; set; }
 
         [ForeignKey(nameof(CalendarCode))]
         [InverseProperty(nameof(App_tbCalendar.TbUsers))]
