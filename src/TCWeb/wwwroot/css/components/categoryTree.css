@@ -117,8 +117,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--tc-orange, #ff7a00);
-    color: var(--tc-on-orange, #fff);
+    background: var(--tc-base, #ff7a00);
+    color: var(--tc-on-base, #fff);
     z-index: 2050;
     box-shadow: 0 -4px 16px var(--tc-mobile-actionbar-shadow);
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));

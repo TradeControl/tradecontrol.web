@@ -29,8 +29,8 @@
     --tc-dropdown-hover-text: #e53935;
     --tc-section-bg: #ffcdd2;
     --tc-section-shadow: rgba(229, 57, 53, 0.12);
-    --tc-orange: #e53935;
-    --tc-orange-600: #c62828;
+    --tc-base: #e53935;
+    --tc-base-600: #c62828;
     --tc-tree-selected-bg: #ffcdd2;
     --tc-tree-selected-fg: #8e0000;
     --tc-tree-hover-bg: #ffebee;

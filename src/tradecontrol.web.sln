@@ -20,6 +20,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0-872A-4AA1-86B2-72F808E282F7}"
 	ProjectSection(SolutionItems) = preProject
 		..\docs\specs\cash-manager-spec.md = ..\docs\specs\cash-manager-spec.md
+		..\docs\specs\invoice-register-spec.md = ..\docs\specs\invoice-register-spec.md
 		..\docs\specs\MTDSoleTraderMappingEnquiry.md = ..\docs\specs\MTDSoleTraderMappingEnquiry.md
 		..\docs\specs\MTDSoleTraderMappingPreEnquiry.md = ..\docs\specs\MTDSoleTraderMappingPreEnquiry.md
 		..\docs\specs\MTDSoleTraderMappingSlice1.md = ..\docs\specs\MTDSoleTraderMappingSlice1.md
@@ -27,6 +28,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0
 		..\docs\specs\MTD_ITSA_SoleTrader_Mapping_Slice2.md = ..\docs\specs\MTD_ITSA_SoleTrader_Mapping_Slice2.md
 		..\docs\specs\MTD_Tax_Configurator_Slice3.md = ..\docs\specs\MTD_Tax_Configurator_Slice3.md
 		..\docs\specs\sole-trader-capital.md = ..\docs\specs\sole-trader-capital.md
+		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
 		..\docs\specs\subject-namespace-spec.md = ..\docs\specs\subject-namespace-spec.md
 		..\docs\specs\synthetic-dataset-spec.md = ..\docs\specs\synthetic-dataset-spec.md
 		..\docs\specs\theme-system-spec.md = ..\docs\specs\theme-system-spec.md

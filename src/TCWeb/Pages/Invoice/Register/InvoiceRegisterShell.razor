@@ -1,0 +1,63 @@
+@using MudBlazor
+@using TradeControl.Web.Models
+@using TradeControl.Web.Data
+
+@inject NodeContext NodeContext
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div class="tc-tree-manager">
+    <div class="tc-tree-manager-frame border rounded bg-white p-2">
+        @if (Mode == RegisterMode.Register)
+        {
+            <InvoiceRegisterGrid Invoices="Invoices"
+                                 OnSelectInvoice="OpenDetailsGrid"
+                                 OnOpenPanel="OpenDetailPanel" />
+        }
+        else if (Mode == RegisterMode.DetailGrid)
+        {
+            <InvoiceRegisterDetailsGrid InvoiceNumber="@SelectedInvoice" OnBack="BackToRegister" />
+        }
+        else if (Mode == RegisterMode.DetailPanel)
+        {
+            <InvoiceDetailPanel InvoiceNumber="@SelectedInvoice" OnBack="BackToRegister" />
+        }
+    </div>
+</div>
+
+@code {
+    enum RegisterMode { Register, DetailGrid, DetailPanel }
+
+    RegisterMode Mode = RegisterMode.Register;
+    string SelectedInvoice = "";
+
+    List<Invoice_vwRegister> Invoices = [];
+
+    protected override void OnInitialized()
+    {
+        Invoices = NodeContext.Invoice_Register
+            .OrderByDescending(x => x.InvoicedOn)
+            .ToList();
+    }
+
+    void OpenDetailsGrid(string invoice)
+    {
+        SelectedInvoice = invoice;
+        Mode = RegisterMode.DetailGrid;
+    }
+
+    void OpenDetailPanel(string invoice)
+    {
+        SelectedInvoice = invoice;
+        Mode = RegisterMode.DetailPanel;
+    }
+
+    void BackToRegister()
+    {
+        Mode = RegisterMode.Register;
+    }
+
+}

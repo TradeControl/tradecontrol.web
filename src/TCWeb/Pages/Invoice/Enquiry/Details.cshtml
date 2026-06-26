@@ -1,6 +1,6 @@
 @page
-@model TradeControl.Web.Pages.Invoice.Register.UnpaidDetailModel
-@{ ViewData["Title"] = "Unpaid Invoice"; }
+@model TradeControl.Web.Pages.Invoice.Enquiry.DetailsModel
+@{ ViewData["Title"] = "Invoice Item"; }
 <h1>@ViewData["Title"]</h1>
 
 <div>
@@ -32,12 +32,6 @@
             @Html.DisplayFor(model => model.Invoice_Detail.ExpectedOn)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Invoice_Detail.UnpaidDays)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Invoice_Detail.UnpaidDays)
-        </dd>
-        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Invoice_Detail.InvoiceType)
         </dt>
         <dd class="col-sm-10">
@@ -48,6 +42,18 @@
         </dt>
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Invoice_Detail.InvoiceStatus)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.CashDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.CashDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.ItemReference)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.ItemReference)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Invoice_Detail.InvoiceValue)
@@ -62,10 +68,34 @@
             @Html.DisplayFor(model => model.Invoice_Detail.TaxValue)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Invoice_Detail.UnpaidValue)
+            @Html.DisplayNameFor(model => model.Invoice_Detail.TotalValue)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Invoice_Detail.UnpaidValue)
+            @Html.DisplayFor(model => model.Invoice_Detail.TotalValue)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.Quantity)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.Quantity)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.IsProject)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.IsProject)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.Printed)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.Printed)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Invoice_Detail.TaxDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Invoice_Detail.TaxDescription)
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.Invoice_Detail.PaymentTerms)
@@ -74,14 +104,14 @@
             @Html.DisplayFor(model => model.Invoice_Detail.PaymentTerms)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Invoice_Detail.Notes)
+            @Html.DisplayNameFor(model => model.Invoice_Detail.UserName)
         </dt>
         <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Invoice_Detail.Notes)
+            @Html.DisplayFor(model => model.Invoice_Detail.UserName)
         </dd>
     </dl>
 </div>
 
 <p>
-    <a asp-page="./Unpaid"  class="btn btn-info">To Listing</a>
+    <a asp-page="./Index" asp-route-periodName="@Model.PeriodName" class="btn btn-info">To Listing</a>
 </p>

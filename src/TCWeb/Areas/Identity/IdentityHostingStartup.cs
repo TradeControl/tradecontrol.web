@@ -1,3 +1,6 @@
+using System;
+using System.Globalization;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -7,8 +10,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Globalization;
+
+using MudBlazor;
+using MudBlazor.Services;
+
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
@@ -80,6 +85,11 @@ namespace TradeControl.Web.Areas.Identity
                 });
 
                 services.AddDistributedMemoryCache();
+                services.AddMudServices(config =>
+                {
+                    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+                });
+
 
                 string cultureName = context.Configuration.GetSection("Settings")["CultureName"];
                 var cultureInfo = new CultureInfo(cultureName);

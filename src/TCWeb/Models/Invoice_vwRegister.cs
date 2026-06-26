@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public partial class Invoice_vwRegister
+    public class Invoice_vwRegister
     {
         [Column(TypeName = "datetime")]
         public DateTime StartOn { get; set; }

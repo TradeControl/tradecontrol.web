@@ -11,16 +11,18 @@ namespace TradeControl.Web.Models
     [Keyless]
     public partial class Invoice_vwRegisterDetail
     {
+        [StringLength(20)]
+        [Display(Name = "Invoice No.")]
+        public string InvoiceNumber { get; set; }
         [Column(TypeName = "datetime")]
         [DataType(DataType.Date)]
         [Display(Name = "Period")]
         public DateTime StartOn { get; set; }
-        [StringLength(20)]
-        [Display(Name = "Invoice No.")]
-        public string InvoiceNumber { get; set; }
         [StringLength(50)]
         [Display(Name = "Item Code")]
         public string ProjectCode { get; set; }
+        [StringLength(50)]
+        public string ObjectCode { get; set; }
         [StringLength(50)]
         [Display(Name = "Cash Code")]
         public string CashCode { get; set; }

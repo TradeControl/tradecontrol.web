@@ -38,9 +38,9 @@
     --tc-section-bg: #ffe0b2;
     --tc-section-text: #222222;
     --tc-section-shadow: rgba(255, 152, 0, 0.08);
-    --tc-orange: #ff7a00;
-    --tc-orange-600: #e66e00;
-    --tc-on-orange: #ffffff;
+    --tc-base: #ff7a00;
+    --tc-base-600: #e66e00;
+    --tc-on-base: #ffffff;
     --tc-muted: #6c757d;
     --tc-split-gutter: #e0e0e0;
     --tc-split-gutter-hover: #d0d0d0;
@@ -330,10 +330,10 @@ input[type="submit"] {
         box-shadow: none;
     }
 
-    /* Orange button theme (custom, do not override Bootstrap's btn-warning) */
-    input[type="submit"].tc-btn-orange,
-    button.tc-btn-orange,
-    a.tc-btn-orange {
+    /* Base button theme (custom, do not override Bootstrap's btn-warning) */
+    input[type="submit"].tc-btn-base,
+    button.tc-btn-base,
+    a.tc-btn-base {
         background: var(--tc-button-bg);
         color: var(--tc-button-text);
         font-weight: 500;
@@ -342,12 +342,12 @@ input[type="submit"] {
         transition: background 0.2s;
     }
 
-        input[type="submit"].tc-btn-orange:hover,
-        input[type="submit"].tc-btn-orange:focus,
-        button.tc-btn-orange:hover,
-        button.tc-btn-orange:focus,
-        a.tc-btn-orange:hover,
-        a.tc-btn-orange:focus {
+        input[type="submit"].tc-btn-base:hover,
+        input[type="submit"].tc-btn-base:focus,
+        button.tc-btn-base:hover,
+        button.tc-btn-base:focus,
+        a.tc-btn-base:hover,
+        a.tc-btn-base:focus {
             background: var(--tc-button-hover-bg);
             border-color: var(--tc-button-hover-border);
             color: var(--tc-button-text);
@@ -383,13 +383,17 @@ select,
             background: var(--tc-dropdown-hover-bg);
         }
 
-/* Utility: Corporate orange text and border */
-.tc-text-orange {
+/* Utility: base text and border */
+.tc-text-base {
     color: var(--tc-heading-colour) !important;
 }
 
-.tc-border-orange {
+.tc-border-base {
     border-color: var(--tc-heading-colour) !important;
+}
+
+.tc-text-info {
+    color: var(--tc-heading-colour) !important;
 }
 
 /* Accent Section */

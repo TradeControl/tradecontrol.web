@@ -1,0 +1,107 @@
+@using TradeControl.Web.Models
+@using TradeControl.Web.Data
+@inject NodeContext NodeContext
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <button type="button"
+            class="btn tc-back-btn"
+            @onclick="OnBack">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <span>Back</span>
+    </button>
+</div>
+
+<MudPaper Class="pa-4">
+
+    <MudText Typo="Typo.h6">
+        Invoice @InvoiceNumber Details
+    </MudText>
+
+    @if (!string.IsNullOrEmpty(InvoiceNumber))
+    {
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   OnClick="ClearFilter">
+            Clear Filter
+        </MudButton>
+    }
+</MudPaper>
+
+<MudDataGrid T="Invoice_vwRegisterDetail"
+                Items="_items"
+                Height="calc(100vh - 200px)"
+                FixedHeader="true"
+                FixedFooter="true"
+                RowsPerPage="50"
+                Hover="true"
+                Dense="true"
+                Bordered="true"
+                Striped="true"
+                Filterable="true"
+                Sortable="true"
+                ShowPager="true">
+
+    <Columns>
+
+        <PropertyColumn Property="x => x.ProjectCode" Title="Project" />
+        <PropertyColumn Property="x => x.ObjectCode" Title="Object" />
+        <PropertyColumn Property="x => x.CashCode" Title="Cash Code" />
+        <PropertyColumn Property="x => x.CashDescription" Title="Description" />
+        <PropertyColumn Property="x => x.ItemReference" Title="Reference" />
+
+        <PropertyColumn Property="x => x.Quantity" Title="Qty">
+            <FooterTemplate>
+                <b>@_items.Sum(x => x.Quantity)</b>
+            </FooterTemplate>
+        </PropertyColumn>
+
+        <PropertyColumn Property="x => x.InvoiceValue" Title="Amount" Format="C">
+            <FooterTemplate>
+                <b>@_items.Sum(x => x.InvoiceValue).ToString("C")</b>
+            </FooterTemplate>
+        </PropertyColumn>
+
+        <PropertyColumn Property="x => x.TaxValue" Title="Tax" Format="C">
+            <FooterTemplate>
+                <b>@_items.Sum(x => x.TaxValue).ToString("C")</b>
+            </FooterTemplate>
+        </PropertyColumn>
+
+        <PropertyColumn Property="x => x.TotalValue" Title="Total" Format="C">
+            <FooterTemplate>
+                <b>@_items.Sum(x => x.TotalValue).ToString("C")</b>
+            </FooterTemplate>
+        </PropertyColumn>
+
+    </Columns>
+
+    <PagerContent>
+        <MudDataGridPager />
+    </PagerContent>
+
+</MudDataGrid>
+
+
+@code {
+    [Parameter] public string? InvoiceNumber { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private List<Invoice_vwRegisterDetail> _items = [];
+
+    protected override void OnInitialized()
+    {
+        var query = NodeContext.Invoice_RegisterDetails.AsQueryable();
+
+        if (!string.IsNullOrEmpty(InvoiceNumber))
+            query = query.Where(x => x.InvoiceNumber == InvoiceNumber);
+
+        _items = query.ToList();
+    }
+
+    void ClearFilter()
+    {
+        InvoiceNumber = null;
+        _items = NodeContext.Invoice_RegisterDetails.ToList();
+    }
+
+}

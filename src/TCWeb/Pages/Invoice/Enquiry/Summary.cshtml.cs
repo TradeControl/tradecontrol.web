@@ -16,7 +16,7 @@ using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Invoice.Register
+namespace TradeControl.Web.Pages.Invoice.Enquiry
 {
     public class SummaryModel : DI_BasePageModel
     {

@@ -7,7 +7,7 @@
 
 @{
     var requestVerificationToken = Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken;
-    var themeCssFile = "theme-orange.css";
+    var themeCssFile = "theme-blue.css";
 
     if (User?.Identity?.IsAuthenticated == true)
     {

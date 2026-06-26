@@ -105,7 +105,7 @@ namespace TradeControl.Web.AppServices
                     Convert.ToDouble(o.TaxValue),
                     Convert.ToDouble(o.TotalPaidValue),
                     o.InvoiceStatus,
-                    $"/Invoice/Register/Index?InvoiceNumber={Uri.EscapeDataString(o.InvoiceNumber)}"))
+                    $"/Invoice/Enquiry/Index?InvoiceNumber={Uri.EscapeDataString(o.InvoiceNumber)}"))
                 .ToList();
 
             return new SubjectEnquiryPageResult<SubjectEnquiryInvoiceItem>

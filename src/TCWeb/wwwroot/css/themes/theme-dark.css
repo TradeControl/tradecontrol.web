@@ -31,8 +31,8 @@
     --tc-section-bg: #cfd8dc;
     --tc-section-text: #102027;
     --tc-section-shadow: rgba(38, 50, 56, 0.14);
-    --tc-orange: #455a64;
-    --tc-orange-600: #37474f;
+    --tc-base: #455a64;
+    --tc-base-600: #37474f;
     --tc-tree-selected-bg: #cfd8dc;
     --tc-tree-selected-fg: #102027;
     --tc-tree-hover-bg: #eceff1;

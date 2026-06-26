@@ -515,10 +515,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.Property(e => e.ProjectStatusCode).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
