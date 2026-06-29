@@ -14,7 +14,7 @@ For ongoing development and updates, visit: [tradecontrol.github.io](https://tra
 
 ## Current Project
 
-[Subject Namespaces](./docs//specs/subject-namespace-spec.md)
+[Invoice Register](./docs/specs/invoice-register-spec.md)
 
 ## 🚧 Status
 

@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0
 		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
 		..\docs\specs\subject-namespace-spec.md = ..\docs\specs\subject-namespace-spec.md
 		..\docs\specs\synthetic-dataset-spec.md = ..\docs\specs\synthetic-dataset-spec.md
+		..\docs\specs\tc-design-principles.md = ..\docs\specs\tc-design-principles.md
+		..\docs\specs\tc-development-contract.md = ..\docs\specs\tc-development-contract.md
 		..\docs\specs\theme-system-spec.md = ..\docs\specs\theme-system-spec.md
 	EndProjectSection
 EndProject

@@ -1,0 +1,307 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using TradeControl.Web.Models
+@using TradeControl.Web.Data
+
+<div class="tc-register-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudTextField T="string"
+                      Value="FilterText"
+                      ValueChanged="OnFilterTextChanged"
+                      Label="Filter invoices"
+                      Placeholder="Invoice or subject"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Clearable="true" />
+
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleInvoices.Count
+        </MudChip>
+    </MudStack>
+
+    <MudPaper Class="pa-3 mb-2" Outlined="true">
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.subtitle2">Legend</MudText>
+
+            <MudTooltip Text="Sales invoice">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.ReceiptLong">
+                    Sales invoice
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Credit note">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Receipt">
+                    Credit note
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Purchase invoice">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Icon="@Icons.Material.Filled.ShoppingCart">
+                    Purchase invoice
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Debit note">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Receipt">
+                    Debit note
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Pending">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.HourglassEmpty">
+                    Pending
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Invoiced">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
+                    Invoiced
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Partially paid">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Payments">
+                    Partially paid
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Paid">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Check">
+                    Paid
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Open invoice details panel">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.OpenInNew">
+                    Open details
+                </MudChip>
+            </MudTooltip>
+
+            <MudTooltip Text="Open invoice details grid">
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.ViewList">
+                    Open grid
+                </MudChip>
+            </MudTooltip>
+        </MudStack>
+    </MudPaper>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="Invoice_vwRegister"
+                     Height="600px"
+                     @ref="_grid"
+                     Items="Invoices"
+                     RowClassFunc="GetRowClass"
+                     FixedHeader="true"
+                     FixedFooter="true"
+                     RowsPerPage="@RowsPerPage"
+                     CurrentPage="@CurrentPage"
+                     CurrentPageChanged="OnCurrentPageChanged"
+                     RowsPerPageChanged="OnRowsPerPageChanged"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+
+            <Columns>
+                <TemplateColumn Title="">
+                    <CellTemplate>
+                        <MudTooltip Text="@GetTypeText(context.Item.InvoiceTypeCode)">
+                            @GetTypeIcon(context.Item.InvoiceTypeCode)
+                        </MudTooltip>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="">
+                    <CellTemplate>
+                        <MudTooltip Text="@GetStatusText(context.Item.InvoiceStatusCode)">
+                            @GetStatusIcon(context.Item.InvoiceStatusCode)
+                        </MudTooltip>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="">
+                    <CellTemplate>
+                        <MudTooltip Text="Open details grid">
+                            <MudIconButton Icon="@Icons.Material.Filled.ViewList"
+                                           Size="Size.Small"
+                                           Color="Color.Primary"
+                                           AriaLabel="Open details grid"
+                                           OnClick="@(() => OnSelectInvoice.InvokeAsync(context.Item.InvoiceNumber))" />
+                        </MudTooltip>
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice">
+                    <CellTemplate>
+                        <MudTooltip Text="Open details panel">
+                            <MudLink OnClick="@(() => OnOpenPanel.InvokeAsync(context.Item.InvoiceNumber))">
+                                @context.Item.InvoiceNumber
+                            </MudLink>
+                        </MudTooltip>
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.InvoicedOn" Title="Date" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.SubjectName" Title="Subject" />
+
+                <PropertyColumn Property="x => x.InvoiceValue" Title="Amount" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalInvoiceValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.TaxValue" Title="Tax" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalTaxValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.TotalInvoiceValue" Title="Total" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalGrossValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+            </Columns>
+
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+<style>
+    .tc-register-grid {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+    }
+
+    .tc-grid-host {
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tc-selected-row {
+        background-color: rgba(25, 118, 210, 0.12);
+    }
+</style>
+
+@code {
+    private MudDataGrid<Invoice_vwRegister>? _grid;
+
+    [Parameter] public List<Invoice_vwRegister> Invoices { get; set; } = [];
+    [Parameter] public string? SelectedInvoice { get; set; }
+    [Parameter] public string? FilterText { get; set; }
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int RowsPerPage { get; set; } = 50;
+
+    [Parameter] public EventCallback<string> OnFilterTextChanged { get; set; }
+    [Parameter] public EventCallback<string> OnSelectInvoice { get; set; }
+    [Parameter] public EventCallback<string> OnOpenPanel { get; set; }
+    [Parameter] public EventCallback<int> OnCurrentPageChanged { get; set; }
+    [Parameter] public EventCallback<int> OnRowsPerPageChanged { get; set; }
+
+    private List<Invoice_vwRegister> VisibleInvoices { get; set; } = [];
+
+    private decimal TotalInvoiceValue { get; set; }
+    private decimal TotalTaxValue { get; set; }
+    private decimal TotalGrossValue { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleInvoices = Invoices.ToList();
+        RecalculateTotals();
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalInvoiceValue = (decimal)VisibleInvoices.Sum(x => x.InvoiceValue);
+        TotalTaxValue = (decimal)VisibleInvoices.Sum(x => x.TaxValue);
+        TotalGrossValue = (decimal)VisibleInvoices.Sum(x => x.TotalInvoiceValue);
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<Invoice_vwRegister> filteredItems)
+    {
+        VisibleInvoices = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private string GetRowClass(Invoice_vwRegister item, int rowNumber)
+        => item.InvoiceNumber == SelectedInvoice ? "tc-selected-row" : string.Empty;
+
+    private string GetTypeText(int typeCode)
+    {
+        var type = (NodeEnum.InvoiceType)typeCode;
+
+        return type switch
+        {
+            NodeEnum.InvoiceType.SalesInvoice => "Sales invoice",
+            NodeEnum.InvoiceType.CreditNote => "Credit note",
+            NodeEnum.InvoiceType.PurchaseInvoice => "Purchase invoice",
+            NodeEnum.InvoiceType.DebitNote => "Debit note",
+            _ => "Unknown invoice type"
+        };
+    }
+
+    RenderFragment GetTypeIcon(int typeCode) => builder =>
+    {
+        var type = (NodeEnum.InvoiceType)typeCode;
+        var (icon, color) = type switch
+        {
+            NodeEnum.InvoiceType.SalesInvoice => (Icons.Material.Filled.ReceiptLong, Color.Primary),
+            NodeEnum.InvoiceType.CreditNote => (Icons.Material.Filled.Receipt, Color.Info),
+            NodeEnum.InvoiceType.PurchaseInvoice => (Icons.Material.Filled.ShoppingCart, Color.Secondary),
+            NodeEnum.InvoiceType.DebitNote => (Icons.Material.Filled.Receipt, Color.Warning),
+            _ => (Icons.Material.Filled.Help, Color.Default)
+        };
+
+        builder.OpenComponent(0, typeof(MudIcon));
+        builder.AddAttribute(1, "Icon", icon);
+        builder.AddAttribute(2, "Color", color);
+        builder.CloseComponent();
+    };
+
+    private string GetStatusText(int statusCode)
+    {
+        var status = (NodeEnum.InvoiceStatus)statusCode;
+
+        return status switch
+        {
+            NodeEnum.InvoiceStatus.Pending => "Pending",
+            NodeEnum.InvoiceStatus.Invoiced => "Invoiced",
+            NodeEnum.InvoiceStatus.PartiallyPaid => "Partially paid",
+            NodeEnum.InvoiceStatus.Paid => "Paid",
+            _ => "Unknown invoice status"
+        };
+    }
+
+    RenderFragment GetStatusIcon(int statusCode) => builder =>
+    {
+        var status = (NodeEnum.InvoiceStatus)statusCode;
+        var (icon, color) = status switch
+        {
+            NodeEnum.InvoiceStatus.Pending => (Icons.Material.Filled.HourglassEmpty, Color.Warning),
+            NodeEnum.InvoiceStatus.Invoiced => (Icons.Material.Filled.CheckCircle, Color.Primary),
+            NodeEnum.InvoiceStatus.PartiallyPaid => (Icons.Material.Filled.Payments, Color.Info),
+            NodeEnum.InvoiceStatus.Paid => (Icons.Material.Filled.Check, Color.Success),
+            _ => (Icons.Material.Filled.Help, Color.Default)
+        };
+
+        builder.OpenComponent(0, typeof(MudIcon));
+        builder.AddAttribute(1, "Icon", icon);
+        builder.AddAttribute(2, "Color", color);
+        builder.CloseComponent();
+    };
+}
