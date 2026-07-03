@@ -1,542 +1,383 @@
-# Invoice Register Specification — Version 3
+# Invoice Register — Behavioural Refactor Specification (Version 5)
 
-**Draft — 26 June 2026**  
-**Trade Control Web**
+**Trade Control Web — June 2026**
 
-## 1. Purpose
+## Overview
 
-The Invoice Register is the unified module for viewing, creating, editing, inspecting, and submitting invoices within Trade Control.  
-It replaces the fragmented Razor Page implementation under `Pages/Invoice` with a modern, coherent Blazor architecture consistent with the Subject Browser and Admin Manager modules.
+### 1.1 Purpose
 
-The module provides a single, predictable surface for all invoice‑related tasks in Accounts Mode.
+The Invoice Register is the single Blazor workspace for all invoice activity.
 
-## 2. Scope
+It replaces the legacy Razor Pages under `Pages/Invoice/*` with a modern Blazor implementation while preserving every existing business rule.
 
-The Invoice Register delivers five core capabilities:
+This project is a behavioural refactor.
 
-### 2.1 Register
+It is **not** a redesign.
 
-A period‑based overview of invoices sent and received, with filters, totals, and navigation into detail.
+The completed module must behave exactly as the existing invoice subsystem while adopting the architecture demonstrated by the Reference Implementation.
 
-### 2.2 Raise
+### 1.2 Instructions
 
-A workflow for creating new invoices by Cash Code (Accounts Mode miscellaneous invoicing).
+The following documents communicate the design principles and development contract that underpin the project.
 
-### 2.3 Edit
+docs/specs/tc-design-principles.md  
+docs/specs/tc-development-contract.md
 
-A workflow for modifying existing invoices, including header fields, line items, and posting actions.
+## 2. Design Intent
 
-### 2.4 Enquiry
+The completed Invoice Register provides a single coherent workspace for:
 
-A full inspection surface showing every field of the selected invoice, including history and cash‑code breakdown.
+- Register
+- Raise
+- Edit
+- Enquiry
+- Submission
 
-### 2.5 Submission
+Desktop users work within a multi-pane workspace.
 
-A preview/send workflow using HTML templates and the configured mail host.
+Mobile users work within a single-pane navigation model.
 
-These capabilities correspond directly to the functional behaviour of the existing prototype.
+The Register is always the primary landing surface.
 
-## 3. Architecture Pattern
+## 3. Behavioural Sources of Truth
 
-The Invoice Register follows the established Trade Control Blazor pattern used by Subject Browser and Admin Manager:
+There are exactly two authoritative sources.
 
-### 3.1 Hybrid Entry Point  
+### 3.1 Business Behaviour
 
-    Pages/Invoices/Register/Index.cshtml
+The legacy Razor Pages define all functional behaviour.
 
-A Razor Page providing routing, authentication, and hybrid hosting of the Blazor shell.
+They are authoritative for:
 
-### 3.2 Shell Component  
+- business rules
+- lifecycle
+- posting
+- editing
+- creation
+- cash-code aggregation
+- email workflow
+- security
+- SQL interaction
 
-    Pages/Invoices/Register/RegisterShell.razor
+Their presentation is deprecated.
 
-The root of the Blazor component tree.  
-Responsible for:
+Their behaviour is not.
 
-- loading initial state  
-- orchestrating filters  
-- coordinating tab navigation  
-- invoking the service layer  
-- managing UI state and transitions  
+### 3.2 UI Architecture
 
-### 3.3 Component Set  
+The Reference Implementation defines the UI architecture.
 
-    Pages/Invoices/Register/Components/
+It is authoritative for:
 
-Localised UI surfaces:
+- Shell ownership
+- state management
+- navigation
+- rendering
+- workspace layout
+- DataGrid rendering
+- scrolling behaviour
+- desktop/mobile behaviour
+- CSS layout contract
 
-- HeaderList  
-- DetailList  
-- CashCodeList  
-- SummaryBar  
-- StatusBadge  
-- TypeBadge  
-- Edit panels  
-- Enquiry panels  
-- Submission panel  
+It is an executable specification.
 
-Each component is self‑contained, with no deep inheritance and no cross‑component coupling.
+Do not reinterpret it.
 
-### 3.4 Service Layer  
+Extend it.
 
-    AppServices\IInvoiceRegisterService.cs  
-    AppServices\InvoiceRegisterService.cs  
-    AppServices\InvoiceRegisterQueryBuilder.cs  
-    AppServices\InvoiceFormattingService.cs
+## 4. Cognitive Invariants
 
-Responsibilities:
+These invariants apply throughout the entire implementation.
 
-- query headers, details, and cash‑code aggregates  
-- apply filters, sorting, and paging  
-- perform invoice creation and editing  
-- execute posting and rebuild logic  
-- generate email documents and send via MailService  
-- provide formatting metadata (status/type colours, overdue flags)  
+### Invariant A — Behaviour First
 
-### 3.5 UI‑Binding Models  
+- Preserve business behaviour.
+- Replace presentation.
+- Never rewrite business rules.
 
-    Pages/Invoices/Register/Models/
+### Invariant B — Reference Implementation
 
-Models for:
+The Reference Implementation is a verified baseline.
 
-- filter state  
-- service results  
-- header editing  
-- item editing  
+Assume it is already correct.
 
-These models are not EF entities and contain no business logic.
+Do not redesign:
 
-### 3.6 Stylesheet  
+- DataGrid rendering
+- workspace layout
+- scrolling model
+- flex layout
+- CSS height contract
+- embedded/mobile navigation
 
-    wwwroot/css/modules/invoiceRegister.css
+If a requested feature appears to require changing these behaviours:
 
-Defines layout, spacing, and theme‑aware presentation.
+STOP.
 
-## 4. Data Surfaces
+Explain the conflict.
 
-### 4.1 Header View
+### Invariant C — Shell Ownership
 
-- Invoice number  
-- Date  
-- Subject  
-- Invoice type  
-- Status  
-- Outstanding amount  
-- Total value  
-- Overdue indicator  
-- Type/status badges  
+The Shell owns:
 
-### 4.2 Detail View
+- state
+- navigation
+- filters
+- selected invoice
+- workflow
 
-- Line items  
-- Cash code  
-- Tax code  
-- Item reference  
-- Line totals  
+Components remain stateless.
 
-### 4.3 Cash Code View
+### Invariant D — Business Layer
 
-- Aggregated totals by cash code  
-- Count of invoices  
-- Outstanding totals  
+- The existing `Invoices` class remains authoritative.
+- Business logic must not migrate into UI components.
 
-### 4.4 Enquiry View
+### Invariant E — Services
 
-- All header fields  
-- All line items  
-- Cash‑code breakdown  
-- Change log  
-- Printed/email flags  
-- Rebuild indicators  
+The Shell communicates only through the service layer.
 
-### 4.5 Edit View
+Components never communicate directly with:
 
-- Editable header fields  
-- Editable line items  
-- Recalculated totals  
-- Validation messages  
-- Posting actions  
+- NodeContext
+- Invoices
+- stored procedures
 
-### 4.6 Submission View
+### Invariant F — Behavioural Translation
 
-- Template selection  
-- Recipient selection  
-- HTML preview  
-- Send action  
-- Printed flag update  
+- Translate behaviour.
+- Do not reinterpret behaviour.
+- Do not optimise behaviour.
 
-## 5. Workflows
+### Invariant G — Stop Before Guessing
 
-### 5.1 Register Workflow
+If implementation requires assumptions that cannot be verified from:
 
-**Entry:** Module load  
-**Actions:**  
+- the specification,
+- the Reference Implementation,
+- or the legacy implementation,
 
-- adjust filters  
-- navigate tabs  
-- open invoice in Enquiry or Edit  
+STOP.
 
-**Completion:**  
+Request clarification.
 
-- filtered, sorted, paged view with totals  
+Never infer missing architecture.
 
-### 5.2 Raise Workflow
+### Invariant H — The Reference Implementation is executable specification
 
-**Entry:** “New Invoice”  
-**Actions:**  
+Any behaviour already demonstrated by the Reference Implementation (layout contract, DataGrid rendering, workspace sizing, scrolling, navigation, CSS relationships) is considered correct. Extend it; do not replace or reinterpret it. If a change appears necessary, treat it as a specification conflict and stop for guidance rather than modifying the underlying pattern.
 
-- select subject  
-- add line items  
-- assign cash/tax codes  
-- save draft or post  
+### Invariant I — Preserve proven behaviour
 
-**Completion:**  
+If a subsystem is already working and satisfies the specification, treat it as a trusted baseline. Do not rewrite or optimise it in order to support another feature. If the requested feature appears to require changing the trusted baseline, stop and explain why before making any edits.
 
-- invoice created and visible in Register  
+## 5. Architecture
 
-### 5.3 Edit Workflow
+(Existing architecture sections retained almost unchanged.)
 
-**Entry:** selecting an invoice from Register  
-**Actions:**  
+- Business Layer
+- EF Models
+- Service Layer
+- Shell
+- Components
+- UI Models
+- Stylesheet
 
-- modify header  
-- modify items  
-- recalc totals  
-- detect rebuilds  
-- post invoice  
+These define where responsibilities belong.
 
-**Completion:**  
+## 6. Expected User Experience
 
-- invoice updated and validated  
+The completed module should feel like one coherent application.
 
-### 5.4 Enquiry Workflow
+Users should never be aware that the module originated from multiple Razor Pages.
 
-**Entry:** selecting an invoice from Register  
-**Actions:**  
+Desktop:
 
-- inspect all fields  
-- view history  
-- view cash‑code breakdown  
+- embedded workspace
+- collapsible sidebar
+- embedded detail
+- summary always visible
 
-**Completion:**  
+Mobile:
 
-- user returns to Register  
+- single-pane workflow
+- back navigation
+- card layout
+- preserved Register state
 
-### 5.5 Submission Workflow
+## 7. Functional Scope
 
-**Entry:** selecting “Send”  
-**Actions:**  
+The completed module supports:
 
-- choose template  
-- choose recipient  
-- preview  
-- send email  
+- Register
+- Raise
+- Edit
+- Enquiry
+- Submission
 
-**Completion:**  
+Each workflow preserves existing behaviour.
 
-- email sent  
-- printed flag updated  
+## 8. Implementation Phases
 
-## 6. Navigation Model
+The following phases describe capability increments.
 
-### 6.1 High‑Level Flow  
+They do not prescribe implementation.
 
-    Filters → Register → (Enquiry | Edit | Submission)
+The implementation strategy is determined after repository inspection.
 
-### 6.2 Back Navigation
+### Phase 1
 
-Back always returns to the previous context:
+Register Query
 
-- Enquiry → Register  
-- Edit → Register  
-- Submission → Register  
+Expected outcome:
 
-### 6.3 Tabs
+- Register queries through the service layer.
+- Existing behaviour preserved.
+- No visual regressions.
 
-- Header  
-- Details  
-- Cash Code  
+### Phase 2
 
-Tabs reflect the same invoice set and filter state.
+UI Enhancements
 
-## 7. Service Contracts
+- Desktop Collapsible Sidebar
+    - Period Selector - App.tbYear, App.tbYearPeriod
+    - Filters by CashCode, Date, Namespace
+    - Legend
+- Mobile
+    - Single Pane Navigation
+    - Back buttons
 
-### 7.1 Query
+### Phase 3
 
-`InvoiceRegisterResult Query(InvoiceFilterModel filter)`
+Enquiry
 
-Returns:
+Evolve InvoiceDetailPanel.razor
 
-- headers  
-- details  
-- cash‑code aggregates  
-- paging metadata  
-- summary totals  
+Expected outcome:
 
-### 7.2 Editing
+- Enquiry workflow integrated into the Shell.
+- Navigation preserved.
+- Register context restored on return.
+- Change Log (Invoice_vwChangeLog)
 
-`InvoiceEditResult Edit(InvoiceEditModel model)`  
-`InvoiceItemEditResult EditItem(InvoiceItemEditModel model)`
+### Phase 4
 
-### 7.3 Posting
+Raise
 
-`PostResult Post(invoiceNumber)`
+Expected outcome:
 
-### 7.4 Email
+- Raise workflow migrated.
+- Existing creation behaviour preserved.
 
-`EmailPreviewResult GenerateDocument(invoiceNumber, template)`  
-`EmailSendResult Send(invoiceNumber, template, recipient)`
+### Phase 5
 
-### 7.5 Formatting
+Edit
 
-`FormattingMetadata GetFormatting(invoiceNumber)`
+Expected outcome:
 
-## 8. UI Contracts
+- Header editing migrated.
+- Item editing migrated.
+- Existing posting behaviour preserved.
 
-Each component receives:
+### Phase 6
 
-- input parameters (data, state, callbacks)  
-- emits events (selection, edit, submit)  
-- never accesses NodeContext directly  
-- never performs business logic  
+Submission
 
-The Shell coordinates all interactions.
+Expected outcome:
 
-## 9. Non‑Goals
+- HTML preview.
+- Email workflow.
+- Printed flag.
+- Existing Mail Host behaviour preserved.
 
-The Invoice Register does **not**:
+### Phase 7
 
-- redesign invoice lifecycle rules  
-- modify SQL schema  
-- change posting logic  
-- introduce new invoice types  
-- implement Projects Mode  
-- replace MailService  
-- replace Namespace Browser  
+Legacy Retirement
 
-## 10. Future Extensions
+Expected outcome:
 
-- Project‑driven invoicing  
-- Multi‑invoice submission  
-- Bulk posting  
-- Saved filter sets  
+Legacy Razor Pages removed.
 
-# 11. Prototype Behaviour (Authoritative Baseline)
+## 9. Mandatory Planning Cycle
 
-The existing prototype under `Pages/Invoice/*` is the **functional reference implementation**.  
-It demonstrates:
+Before every implementation phase:
 
-### 11.1 Full Feature Coverage
+The Model shall:
 
-The prototype implements all five capabilities:
+1. Inspect the repository.
+2. Identify required files.
+3. Identify dependencies.
+4. Identify implementation risks.
+5. Produce an implementation plan.
+6. Estimate the number of tasks.
+7. Identify missing information.
+8. Wait for approval.
 
-- Register  
-- Raise  
-- Edit  
-- Enquiry  
-- Submission  
+No code shall be modified before approval.
 
-### 11.2 Real Integrations
+## 10. During Implementation
 
-The prototype uses:
+The Model may refine its implementation plan after repository inspection.
 
-- real SQL views (`Invoice_vwRegister`, `Invoice_vwRegisterDetail`, etc.)  
-- real stored procedures  
-- real invoice lifecycle (`Invoices.cs`)  
-- real email templates (`wwwroot/content/templates`)  
-- real MailService  
-- real Subject DAG  
-- real Cash Code logic  
-- real period logic  
-- real authorisation rules  
+Changing the plan is encouraged when better information becomes available.
 
-### 11.3 Behaviour to Preserve
+However:
 
-- filter semantics  
-- paging and sorting  
-- invoice creation rules  
-- editing and posting rules  
-- rebuild detection  
-- email workflow  
-- printed flag behaviour  
-- outstanding/overdue logic  
+If additional architectural changes become necessary:
 
-### 11.4 Behaviour to Replace
+STOP.
 
-- UI layout  
-- navigation model  
-- component structure  
-- styling  
-- Razor Page fragmentation  
-- per‑page data loading  
-- ad‑hoc filtering logic  
+Explain why.
 
-### 11.5 Aider File Adds
+Wait for approval.
 
-The prototype file list corresponds to the new module’s functional baseline.  
-The new module will replace:
+## 11. Completion Criteria
 
-    Pages/Invoice/Enquiry/*
-    Pages/Invoice/Raise/*
-    Pages/Invoice/Update/*
+The implementation is complete when:
 
-with:
+- all workflows exist
+- business behaviour matches the legacy implementation
+- Reference Implementation architecture is preserved
+- desktop behaviour matches the executable baseline
+- mobile behaviour matches the executable baseline
+- state preservation works
+- paging works
+- sorting works
+- summary totals work
+- enquiry works
+- raise works
+- edit works
+- submission works
+- legacy Razor Pages have been retired
 
-    Pages/Invoices/Register/*
-    Pages/Invoices/Register/Components/*
-    AppServices/IInvoiceRegisterService.cs
-    AppServices/InvoiceRegisterService.cs
-    AppServices/InvoiceRegisterQueryBuilder.cs
-    AppServices/InvoiceFormattingService.cs
+The completed module should appear to users as though it had always been designed as a single Blazor application.
 
+## Appendix - Aider Files
 
-## Appendix A — Integration Context (Non‑Authoritative)
+aider --no-show-model-warnings --no-git
 
-### A.1 Repo Placement
+/add docs/specs/invoice-register-spec.md  
+/add docs/specs/tc-design-principles.md  
+/add docs/specs/tc-development-contract.md
 
-The module sits alongside:
+/add src/TCWeb/Pages/Invoice/Enquiry/*  
+/add src/TCWeb/Pages/Invoice/Update/*  
+/add src/TCWeb/Pages/Invoice/Raise/*  
 
-- Subject Browser  
-- Admin Manager  
-- Cash Manager  
-- Tax Configurator  
+/add src/TCWeb/Pages/DI_BasePageModel.cs  
+/add src/TCWeb/Data/Invoices.cs  
+/add src/TCWeb/Data/NodeContext.cs  
+/add src/TCWeb/Data/NodeContextProc.cs  
+/add src/TCWeb/Data/NodeEnum.cs  
+/add src/TCWeb/AppServices/ServiceCollectionExtensions.cs  
 
-### A.2 Dependencies
+/add src/TCWeb/Models/Invoice_vwChangeLog.cs  
+/add src/TCWeb/Models/Invoice_vwEntry.cs  
+/add src/TCWeb/Models/Invoice_vwRegister.cs  
+/add src/TCWeb/Models/Invoice_vwRegisterDetail.cs
 
-- AppServices  
-- Data (Invoices, FinancialPeriods, Subjects)  
-- Mail  
-- Models (Invoice_vwRegister*, Invoice_tbInvoice, etc.)  
+/add src/TCWeb/wwwroot/css/base.css
 
-### A.3 Legacy Pages Retired
-
-All Razor Pages under `Pages/Invoice` except MudRazorEval will be removed.
-
-## Appendix B - Aider Files
-
-### Razor Pages
-
-    /add src/TCWeb/Pages/Invoice/Enquiry/Details.cshtml  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Details.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Index.cshtml  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Index.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/Edit.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/Edit.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/EditItem.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/EditItem.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Summary.cshtml  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Summary.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Unpaid.cshtml  
-    /add src/TCWeb/Pages/Invoice/Enquiry/Unpaid.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Enquiry/UnpaidDetail.cshtml  
-    /add src/TCWeb/Pages/Invoice/Enquiry/UnpaidDetail.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Raise/Create.cshtml  
-    /add src/TCWeb/Pages/Invoice/Raise/Create.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Raise/Delete.cshtml  
-    /add src/TCWeb/Pages/Invoice/Raise/Delete.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Raise/Details.cshtml  
-    /add src/TCWeb/Pages/Invoice/Raise/Details.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Raise/Edit.cshtml  
-    /add src/TCWeb/Pages/Invoice/Raise/Edit.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Raise/Index.cshtml  
-    /add src/TCWeb/Pages/Invoice/Raise/Index.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Raise/Post.cshtml  
-    /add src/TCWeb/Pages/Invoice/Raise/Post.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/CreateItem.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/CreateItem.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/Delete.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/Delete.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/DeleteItem.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/DeleteItem.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/EmailConfirm.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/EmailConfirm.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/EmailPreview.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/EmailPreview.cshtml.cs  
-    /add src/TCWeb/Pages/Invoice/Update/Index.cshtml  
-    /add src/TCWeb/Pages/Invoice/Update/Index.cshtml.cs  
-
-### Page Base
-
-    /add Pages/DI_BasePageModel.cs  
-    /add Data/NodeSettings.cs  
-    /add Data/NodeAdmin.cs  
-    /add Data/Docs.cs  
-
-### Data Layer
-
-    /add Data/NodeContext.cs  
-    /add Data/NodeContext.Conventions.cs  
-    /add Data/NodeContext.Triggers.cs  
-    /add Data/NodeContextProc.cs  
-    /add Data/Invoices.cs
-    /add Data/FinancialPeriods.cs
-
-### Models
-
-    /add Models/Invoice_tbInvoice.cs  
-    /add Models/Invoice_tbItem.cs  
-    /add Models/Invoice_tbStatus.cs  
-    /add Models/Invoice_tbType.cs  
-    /add Models/Invoice_tbEntry.cs  
-    /add Models/Invoice_vwChangeLog.cs  
-    /add Models/Invoice_vwEntry.cs  
-    /add Models/Invoice_vwRegister.cs  
-    /add Models/Invoice_vwRegisterDetail.cs  
-    /add Models/Invoice_vwRegisterItem.cs  
-    /add Models/Invoice_vwRegisterCashCode.cs  
-    /add Models/Invoice_vwRegisterExpense.cs  
-    /add Models/Invoice_vwRegisterSale.cs  
-    /add Models/Invoice_vwRegisterPurchase.cs  
-    /add Models/Invoice_vwRegisterOverdue.cs  
-
-**Supporting Models**
-
-    /add Models/App_tbTaxCode.cs  
-    /add Models/App_tbTaxTag.cs  
-    /add Models/App_tbTaxTagMap.cs  
-    /add Models/App_tbTaxTagSource.cs  
-    /add Models/App_vwTaxCode.cs  
-    /add Models/Cash_tbCode.cs  
-    /add Models/Cash_vwCodeLookup.cs  
-    /add Models/Usr_tbUser.cs  
-    /add Models/App_tbPeriod.cs  
-    /add Models/App_vwActivePeriod.cs  
-
-### Subjects
-
-    /add Data/Subjects.cs  
-    /add Models/Subject_tbSubject.cs  
-    /add Models/Subject_vwSubjectLookup.cs
-    /add Models/Subject_vwInvoiceSummary.cs  
-    /add src/TCWeb/Pages/Subject/Controls/NamespaceSelector.razor  
-    /add src/TCWeb/Pages/Subject/Controls/NamespaceSelectorSuggestion.cs  
-
-### Enums
-
-### Identity
-
-    /add Data/Profile.cs  
-    /add Areas/Identity/Data/TradeControlWebUser.cs  
-    /add Authorization/AspNetAuthorizationHandler.cs  
-    /add Authorization/Operations.cs  
-
-### Mail
-
-    /add Mail/MailInvoice.cs  
-    /add Mail/MailService.cs  
-    /add Mail/TemplateManager.cs  
-    /add Models/Web_tbTemplate.cs  
-
-### Stylesheets
-
-    /add src/TCWeb/wwwroot/css/base.css  
-    /add src/TCWeb/wwwroot/css/modules/invoiceRegister.css
-    /add src/TCWeb/wwwroot/css/modules/subjectBrowser.css
-    /add src/TCWeb/wwwroot/css/themes/theme-blue.css
-    /add src/TCWeb/wwwroot/css/themes/theme-dark.css
-    /add src/TCWeb/wwwroot/css/themes/theme-green.css
-    /add src/TCWeb/wwwroot/css/themes/theme-orange.css
-    /add src/TCWeb/wwwroot/css/themes/theme-pink.css
-    /add src/TCWeb/wwwroot/css/themes/theme-red.css
-
-** END of v3 **
+/add src/TCWeb/Pages/Invoice/Register/*  
+/add src/TCWeb/wwwroot/css/modules/invoiceRegister.css
+/add src/TCWeb/AppServices/InvoiceRegister/*

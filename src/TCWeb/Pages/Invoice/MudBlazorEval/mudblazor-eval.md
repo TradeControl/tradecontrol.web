@@ -314,7 +314,7 @@ Users can determine the purpose of each icon without referring to external docum
 
 ### B11. Scope
 
-This implementation remains entirely within the existing `TradeControl.Web.Pages.Invoice.MudRazorEval` namespace.
+This implementation remains entirely within the existing `TradeControl.Web.Pages.Invoice.MudBlazorEval` namespace.
 
 No shared framework, generic workspace, or reusable helper infrastructure is introduced during this phase.
 

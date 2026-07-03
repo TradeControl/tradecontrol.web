@@ -1,9 +1,8 @@
 @using MudBlazor
 @using TradeControl.Web.Models
 @using TradeControl.Web.Data
-@inject NodeContext NodeContext
 
-<div class="tc-invoice-detail-panel">
+<div>
     <MudPaper Class="pa-4">
         <MudButton Variant="Variant.Filled"
                    Color="Color.Primary"
@@ -12,62 +11,45 @@
             Back
         </MudButton>
 
-        <MudStack Class="mt-4" Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudTooltip Text="@GetTypeText(Header.InvoiceTypeCode)">
-                @GetTypeIcon(Header.InvoiceTypeCode)
-            </MudTooltip>
+        @if (Header is not null)
+        {
+            <MudStack Class="mt-4" Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudTooltip Text="@GetTypeText(Header.InvoiceTypeCode)">
+                    @GetTypeIcon(Header.InvoiceTypeCode)
+                </MudTooltip>
 
-            <MudTooltip Text="@GetStatusText(Header.InvoiceStatusCode)">
-                @GetStatusIcon(Header.InvoiceStatusCode)
-            </MudTooltip>
+                <MudTooltip Text="@GetStatusText(Header.InvoiceStatusCode)">
+                    @GetStatusIcon(Header.InvoiceStatusCode)
+                </MudTooltip>
 
-            <MudText Typo="Typo.h5">
-                Invoice @Header.InvoiceNumber
-            </MudText>
-        </MudStack>
+                <MudText Typo="Typo.h5">
+                    Invoice @Header.InvoiceNumber
+                </MudText>
+            </MudStack>
 
-        <MudDivider Class="my-2" />
+            <MudDivider Class="my-2" />
 
-        <MudText><b>Subject:</b> @Header.SubjectName</MudText>
-        <MudText><b>Date:</b> @Header.InvoicedOn.ToShortDateString()</MudText>
-        <MudText><b>Total:</b> @Header.TotalInvoiceValue.ToString("C")</MudText>
+            <MudText><b>Subject:</b> @Header.SubjectName</MudText>
+            <MudText><b>Date:</b> @Header.InvoicedOn.ToShortDateString()</MudText>
+            <MudText><b>Total:</b> @Header.TotalInvoiceValue.ToString("C")</MudText>
 
-        <MudDivider Class="my-4" />
+            <MudDivider Class="my-4" />
 
-        <InvoiceRegisterDetailsGrid InvoiceNumber="@Header.InvoiceNumber"
-                                    Items="DetailItems"
-                                    ShowNavigation="false" />
+            <InvoiceRegisterDetailsGrid InvoiceNumber="@Header.InvoiceNumber"
+                                        Items="DetailItems"
+                                        ShowNavigation="false" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body1">Invoice not found.</MudText>
+        }
     </MudPaper>
 </div>
 
 @code {
-    [Parameter] public string InvoiceNumber { get; set; } = "";
+    [Parameter] public Invoice_vwRegister? Header { get; set; }
+    [Parameter] public List<Invoice_vwRegisterDetail> DetailItems { get; set; } = [];
     [Parameter] public EventCallback OnBack { get; set; }
-
-    private Invoice_vwRegister Header = new();
-    private List<Invoice_vwRegisterDetail> DetailItems = [];
-
-    protected override void OnParametersSet()
-    {
-        LoadData();
-    }
-
-    private void LoadData()
-    {
-        if (string.IsNullOrWhiteSpace(InvoiceNumber))
-        {
-            Header = new Invoice_vwRegister();
-            DetailItems = [];
-            return;
-        }
-
-        Header = NodeContext.Invoice_Register
-            .First(x => x.InvoiceNumber == InvoiceNumber);
-
-        DetailItems = NodeContext.Invoice_RegisterDetails
-            .Where(x => x.InvoiceNumber == InvoiceNumber)
-            .ToList();
-    }
 
     private string GetTypeText(int typeCode)
     {

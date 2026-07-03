@@ -1,4 +1,4 @@
-namespace TradeControl.Web.Pages.Invoice.MudRazorEval;
+namespace TradeControl.Web.Pages.Invoice.MudBlazorEval;
 
 public enum WorkspaceMode
 {

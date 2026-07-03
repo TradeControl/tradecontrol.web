@@ -1,0 +1,220 @@
+@using System.Globalization
+@using TradeControl.Web.Pages.Invoice.Register.Models
+@using TradeControl.Web.Pages.Subject.Controls
+
+<div class="tc-register-sidebar d-flex flex-column h-100">
+    <div class="mb-3">
+        <div class="fw-semibold">Invoice Register</div>
+        <div class="small text-muted">Financial period and filters</div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="invoiceRegisterYearSelect">Financial Year</label>
+            <select id="invoiceRegisterYearSelect"
+                    class="form-select form-select-sm"
+                    value="@(SelectedYearNumber.GetValueOrDefault())"
+                    @onchange="HandleYearChangedAsync">
+                <option value="0">All years</option>
+                @foreach (var year in Years)
+                {
+                    <option value="@year.YearNumber">@year.Description</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="invoiceRegisterPeriodSelect">Period</label>
+            <select id="invoiceRegisterPeriodSelect"
+                    class="form-select form-select-sm"
+                    value="@GetSelectedPeriodValue()"
+                    @onchange="HandlePeriodChangedAsync">
+                <option value="">All months in year</option>
+                @foreach (var period in Periods)
+                {
+                    <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="invoiceRegisterInvoiceTypeSelect">Invoice Type</label>
+            <select id="invoiceRegisterInvoiceTypeSelect"
+                    class="form-select form-select-sm"
+                    value="@GetSelectedInvoiceTypeValue()"
+                    @onchange="HandleInvoiceTypeChangedAsync">
+                <option value="">All invoice types</option>
+                @foreach (var option in InvoiceTypeOptions)
+                {
+                    <option value="@option.Value.ToString(CultureInfo.InvariantCulture)">@option.Label</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="invoiceRegisterSearchText">Filter invoices</label>
+            <input id="invoiceRegisterSearchText"
+                   class="form-control form-control-sm"
+                   type="text"
+                   value="@SearchText"
+                   @oninput="HandleSearchTextChangedAsync"
+                   placeholder="Invoice number or subject" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1">Subject Namespace</label>
+            <NamespaceSelector FilterText="@NamespaceFilter"
+                               Suggestions="@NamespaceSuggestions"
+                               IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
+                               ShowApplyButton="true"
+                               ApplyButtonTitle="Apply namespace filter"
+                               OnFilterChanged="HandleNamespaceFilterChangedAsync"
+                               OnFilterCommitted="HandleNamespaceFilterCommittedAsync" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label small text-muted mb-1" for="invoiceRegisterCashCodeSelect">Cash Code</label>
+            <select id="invoiceRegisterCashCodeSelect"
+                    class="form-select form-select-sm"
+                    value="@CashCodeFilter"
+                    @onchange="HandleCashCodeChangedAsync">
+                <option value="">All cash codes</option>
+                @foreach (var option in CashCodeOptions)
+                {
+                    <option value="@option.Value">@option.Label</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm w-100"
+                    @onclick="HandleClearFiltersAsync">
+                Clear filters
+            </button>
+        </div>
+    </div>
+
+    <div class="border-top mt-4 pt-3">
+        <div class="fw-semibold mb-2">Legend</div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge rounded-pill text-bg-primary">Sales invoice</span>
+            <span class="badge rounded-pill text-bg-info">Credit note</span>
+            <span class="badge rounded-pill text-bg-secondary">Purchase invoice</span>
+            <span class="badge rounded-pill text-bg-warning">Debit note</span>
+            <span class="badge rounded-pill text-bg-warning">Pending</span>
+            <span class="badge rounded-pill text-bg-primary">Invoiced</span>
+            <span class="badge rounded-pill text-bg-info">Partially paid</span>
+            <span class="badge rounded-pill text-bg-success">Paid</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<InvoiceRegisterYearOption> Years { get; set; } = Array.Empty<InvoiceRegisterYearOption>();
+    [Parameter] public IReadOnlyList<InvoiceRegisterPeriodOption> Periods { get; set; } = Array.Empty<InvoiceRegisterPeriodOption>();
+    [Parameter] public IReadOnlyList<InvoiceRegisterSelectOption> CashCodeOptions { get; set; } = Array.Empty<InvoiceRegisterSelectOption>();
+    [Parameter] public IReadOnlyList<InvoiceRegisterInvoiceTypeOption> InvoiceTypeOptions { get; set; } = Array.Empty<InvoiceRegisterInvoiceTypeOption>();
+    [Parameter] public IReadOnlyList<NamespaceSelectorSuggestion> NamespaceSuggestions { get; set; } = Array.Empty<NamespaceSelectorSuggestion>();
+    [Parameter] public bool IsLoadingNamespaceSuggestions { get; set; }
+    [Parameter] public short? SelectedYearNumber { get; set; }
+    [Parameter] public DateTime? SelectedPeriodStartOn { get; set; }
+    [Parameter] public short? SelectedInvoiceTypeCode { get; set; }
+    [Parameter] public string SearchText { get; set; } = string.Empty;
+    [Parameter] public string NamespaceFilter { get; set; } = string.Empty;
+    [Parameter] public string CashCodeFilter { get; set; } = string.Empty;
+    [Parameter] public EventCallback<short> OnYearSelected { get; set; }
+    [Parameter] public EventCallback<DateTime?> OnPeriodSelected { get; set; }
+    [Parameter] public EventCallback<short?> OnInvoiceTypeChanged { get; set; }
+    [Parameter] public EventCallback<string> OnSearchTextChanged { get; set; }
+    [Parameter] public EventCallback<string> OnNamespaceFilterChanged { get; set; }
+    [Parameter] public EventCallback<string> OnNamespaceFilterCommitted { get; set; }
+    [Parameter] public EventCallback<string> OnCashCodeChanged { get; set; }
+    [Parameter] public EventCallback OnClearFilters { get; set; }
+
+    private string GetSelectedPeriodValue()
+    {
+        return SelectedPeriodStartOn?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private string GetSelectedInvoiceTypeValue()
+    {
+        return SelectedInvoiceTypeCode?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private async Task HandleYearChangedAsync(ChangeEventArgs args)
+    {
+        if (short.TryParse(args.Value?.ToString(), out var yearNumber))
+        {
+            await OnYearSelected.InvokeAsync(yearNumber);
+            return;
+        }
+
+        await OnYearSelected.InvokeAsync(0);
+    }
+
+    private async Task HandlePeriodChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await OnPeriodSelected.InvokeAsync(null);
+            return;
+        }
+
+        if (DateTime.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out var startOn))
+        {
+            await OnPeriodSelected.InvokeAsync(startOn);
+        }
+    }
+
+    private async Task HandleInvoiceTypeChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await OnInvoiceTypeChanged.InvokeAsync(null);
+            return;
+        }
+
+        if (short.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var invoiceTypeCode))
+        {
+            await OnInvoiceTypeChanged.InvokeAsync(invoiceTypeCode);
+            return;
+        }
+
+        await OnInvoiceTypeChanged.InvokeAsync(null);
+    }
+
+    private Task HandleSearchTextChangedAsync(ChangeEventArgs args)
+    {
+        return OnSearchTextChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleNamespaceFilterChangedAsync(string filterText)
+    {
+        return OnNamespaceFilterChanged.InvokeAsync(filterText);
+    }
+
+    private Task HandleNamespaceFilterCommittedAsync(string filterText)
+    {
+        return OnNamespaceFilterCommitted.InvokeAsync(filterText);
+    }
+
+    private Task HandleCashCodeChangedAsync(ChangeEventArgs args)
+    {
+        return OnCashCodeChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task HandleClearFiltersAsync()
+    {
+        return OnClearFilters.InvokeAsync();
+    }
+}

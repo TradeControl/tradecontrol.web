@@ -1,2 +1,51 @@
-﻿body {
+.tc-register {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.tc-register-frame.tc-register-shell {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tc-grid-workspace {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tc-grid-host {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+    .tc-grid-host .tc-register-datagrid,
+    .tc-grid-host .tc-register-details-datagrid {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: 100%;
+    }
+
+.tc-grid-workspace {
+    min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tc-register-details-grid {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
 }

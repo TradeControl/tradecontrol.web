@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.AppServices.Execution;
+using TradeControl.Web.AppServices.InvoiceRegister;
 
 namespace TradeControl.Web.AppServices
 {
@@ -26,6 +27,10 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ICashAssetsWorkspaceService, CashAssetsWorkspaceService>();
             services.AddScoped<ICashTransfersWorkspaceService, CashTransfersWorkspaceService>();
             services.AddScoped<ICashAccountMaintenanceService, CashAccountMaintenanceService>();
+            services.AddScoped<IInvoiceRegisterQueryBuilder, InvoiceRegisterQueryBuilder>();
+            services.AddScoped<IInvoiceFormattingService, InvoiceFormattingService>();
+            services.AddScoped<IInvoiceRegisterLookupService, InvoiceRegisterLookupService>();
+            services.AddScoped<IInvoiceRegisterService, InvoiceRegisterService>();
 
             services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();
             services.AddScoped<IExecutionQueue, ExecutionQueue>();

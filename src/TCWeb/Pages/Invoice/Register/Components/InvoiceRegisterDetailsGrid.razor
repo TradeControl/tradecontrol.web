@@ -28,81 +28,63 @@
         </MudText>
     </MudPaper>
 
-    <div class="tc-grid-host">
-        <MudDataGrid T="Invoice_vwRegisterDetail"
-                     Height="600px"
-                     Items="Items"
-                     FixedHeader="true"
-                     FixedFooter="true"
-                     RowsPerPage="50"
-                     Hover="true"
-                     Dense="true"
-                     Bordered="true"
-                     Striped="true"
-                     Filterable="true"
-                     Sortable="true"
-                     ShowPager="true"
-                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
-                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                     FilteredItemsChanged="OnFilteredItemsChanged">
+    <div class="tc-grid-workspace">
+        <div class="tc-grid-host">
+            <MudDataGrid T="Invoice_vwRegisterDetail"
+                         Class="tc-register-details-datagrid"
+                         Items="Items"
+                         FixedHeader="true"
+                         FixedFooter="true"
+                         RowsPerPage="50"
+                         Hover="true"
+                         Dense="true"
+                         Bordered="true"
+                         Striped="true"
+                         Filterable="true"
+                         Sortable="true"
+                         ShowPager="true"
+                         FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                         FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                         FilteredItemsChanged="OnFilteredItemsChanged">
 
-            <Columns>
+                <Columns>
+                    <PropertyColumn Property="x => x.ProjectCode" Title="Project" />
+                    <PropertyColumn Property="x => x.ObjectCode" Title="Object" />
+                    <PropertyColumn Property="x => x.CashCode" Title="Cash Code" />
+                    <PropertyColumn Property="x => x.CashDescription" Title="Description" />
+                    <PropertyColumn Property="x => x.ItemReference" Title="Reference" />
+                    <PropertyColumn Property="x => x.Quantity" Title="Qty">
+                        <FooterTemplate>
+                            <b>@TotalQuantity</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
 
-                <PropertyColumn Property="x => x.ProjectCode" Title="Project" />
-                <PropertyColumn Property="x => x.ObjectCode" Title="Object" />
-                <PropertyColumn Property="x => x.CashCode" Title="Cash Code" />
-                <PropertyColumn Property="x => x.CashDescription" Title="Description" />
-                <PropertyColumn Property="x => x.ItemReference" Title="Reference" />
+                    <PropertyColumn Property="x => x.InvoiceValue" Title="Amount" Format="C">
+                        <FooterTemplate>
+                            <b>@TotalInvoiceValue.ToString("C")</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
 
-                <PropertyColumn Property="x => x.Quantity" Title="Qty">
-                    <FooterTemplate>
-                        <b>@TotalQuantity</b>
-                    </FooterTemplate>
-                </PropertyColumn>
+                    <PropertyColumn Property="x => x.TaxValue" Title="Tax" Format="C">
+                        <FooterTemplate>
+                            <b>@TotalTaxValue.ToString("C")</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
 
-                <PropertyColumn Property="x => x.InvoiceValue" Title="Amount" Format="C">
-                    <FooterTemplate>
-                        <b>@TotalInvoiceValue.ToString("C")</b>
-                    </FooterTemplate>
-                </PropertyColumn>
+                    <PropertyColumn Property="x => x.TotalValue" Title="Total" Format="C">
+                        <FooterTemplate>
+                            <b>@TotalValue.ToString("C")</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
+                </Columns>
 
-                <PropertyColumn Property="x => x.TaxValue" Title="Tax" Format="C">
-                    <FooterTemplate>
-                        <b>@TotalTaxValue.ToString("C")</b>
-                    </FooterTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.TotalValue" Title="Total" Format="C">
-                    <FooterTemplate>
-                        <b>@TotalValue.ToString("C")</b>
-                    </FooterTemplate>
-                </PropertyColumn>
-
-            </Columns>
-
-            <PagerContent>
-                <MudDataGridPager />
-            </PagerContent>
-        </MudDataGrid>
+                <PagerContent>
+                    <MudDataGridPager />
+                </PagerContent>
+            </MudDataGrid>
+        </div>
     </div>
 </div>
-
-<style>
-    .tc-register-details-grid {
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 auto;
-    }
-
-    .tc-grid-host {
-        min-height: 0;
-        flex: 1 1 auto;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-</style>
 
 @code {
     [Parameter] public string? InvoiceNumber { get; set; }

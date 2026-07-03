@@ -5,89 +5,14 @@
 
 <div class="tc-register-grid">
     <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-        <MudTextField T="string"
-                      Value="FilterText"
-                      ValueChanged="OnFilterTextChanged"
-                      Label="Filter invoices"
-                      Placeholder="Invoice or subject"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Clearable="true" />
-
         <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
             Rows: @VisibleInvoices.Count
         </MudChip>
     </MudStack>
 
-    <MudPaper Class="pa-3 mb-2" Outlined="true">
-        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.subtitle2">Legend</MudText>
-
-            <MudTooltip Text="Sales invoice">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.ReceiptLong">
-                    Sales invoice
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Credit note">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Receipt">
-                    Credit note
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Purchase invoice">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" Icon="@Icons.Material.Filled.ShoppingCart">
-                    Purchase invoice
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Debit note">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Receipt">
-                    Debit note
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Pending">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.HourglassEmpty">
-                    Pending
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Invoiced">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle">
-                    Invoiced
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Partially paid">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Payments">
-                    Partially paid
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Paid">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Check">
-                    Paid
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Open invoice details panel">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.OpenInNew">
-                    Open details
-                </MudChip>
-            </MudTooltip>
-
-            <MudTooltip Text="Open invoice details grid">
-                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.ViewList">
-                    Open grid
-                </MudChip>
-            </MudTooltip>
-        </MudStack>
-    </MudPaper>
-
     <div class="tc-grid-host">
         <MudDataGrid T="Invoice_vwRegister"
-                     Height="600px"
+                     Class="tc-register-datagrid"
                      @ref="_grid"
                      Items="Invoices"
                      RowClassFunc="GetRowClass"
@@ -167,6 +92,27 @@
                         <b>@TotalGrossValue.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
+
+                <PropertyColumn Property="x => x.PaidValue" Title="Paid" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalPaidValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.PaidTaxValue" Title="Paid Tax" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalPaidTaxValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => (x.InvoiceValue + x.TaxValue) - (x.PaidValue + x.PaidTaxValue)" Title="Unpaid" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalUnpaidValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.PaymentTerms" Title="Terms" />
+                <PropertyColumn Property="x => x.Notes" Title="Notes" />
             </Columns>
 
             <PagerContent>
@@ -176,37 +122,14 @@
     </div>
 </div>
 
-<style>
-    .tc-register-grid {
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 auto;
-    }
-
-    .tc-grid-host {
-        min-height: 0;
-        flex: 1 1 auto;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .tc-selected-row {
-        background-color: rgba(25, 118, 210, 0.12);
-    }
-</style>
-
 @code {
     private MudDataGrid<Invoice_vwRegister>? _grid;
 
     [Parameter] public List<Invoice_vwRegister> Invoices { get; set; } = [];
     [Parameter] public string? SelectedInvoice { get; set; }
-    [Parameter] public string? FilterText { get; set; }
     [Parameter] public int CurrentPage { get; set; }
-    [Parameter] public int RowsPerPage { get; set; } = 50;
+    [Parameter] public int RowsPerPage { get; set; } = 10;
 
-    [Parameter] public EventCallback<string> OnFilterTextChanged { get; set; }
     [Parameter] public EventCallback<string> OnSelectInvoice { get; set; }
     [Parameter] public EventCallback<string> OnOpenPanel { get; set; }
     [Parameter] public EventCallback<int> OnCurrentPageChanged { get; set; }
@@ -217,6 +140,9 @@
     private decimal TotalInvoiceValue { get; set; }
     private decimal TotalTaxValue { get; set; }
     private decimal TotalGrossValue { get; set; }
+    private decimal TotalPaidValue { get; set; }
+    private decimal TotalPaidTaxValue { get; set; }
+    private decimal TotalUnpaidValue { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -229,6 +155,9 @@
         TotalInvoiceValue = (decimal)VisibleInvoices.Sum(x => x.InvoiceValue);
         TotalTaxValue = (decimal)VisibleInvoices.Sum(x => x.TaxValue);
         TotalGrossValue = (decimal)VisibleInvoices.Sum(x => x.TotalInvoiceValue);
+        TotalPaidValue = (decimal)VisibleInvoices.Sum(x => x.PaidValue);
+        TotalPaidTaxValue = (decimal)VisibleInvoices.Sum(x => x.PaidTaxValue);
+        TotalUnpaidValue = (decimal)VisibleInvoices.Sum(x => (x.InvoiceValue + x.TaxValue) - (x.PaidValue + x.PaidTaxValue));
     }
 
     private void OnFilteredItemsChanged(IEnumerable<Invoice_vwRegister> filteredItems)

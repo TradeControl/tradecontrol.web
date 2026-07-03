@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
-namespace TradeControl.Web.Pages.Invoice.MudRazorEval
+namespace TradeControl.Web.Pages.Invoice.MudBlazorEval
 {
     public class IndexModel : DI_BasePageModel
     {

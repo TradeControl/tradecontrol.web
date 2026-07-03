@@ -18,7 +18,7 @@ public sealed class WorkspaceState<TKey>
 
     public int CurrentPage { get; set; }
 
-    public int RowsPerPage { get; set; } = 50;
+    public int RowsPerPage { get; set; } = 10;
 
     public bool HasSelection => SelectedKey is not null;
 }
