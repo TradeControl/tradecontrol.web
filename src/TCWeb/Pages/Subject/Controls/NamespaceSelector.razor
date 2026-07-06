@@ -113,9 +113,11 @@
 
     protected override void OnParametersSet()
     {
-        if (!string.Equals(_filterText, FilterText, StringComparison.Ordinal))
+        var incoming = FilterText ?? string.Empty;
+
+        if (!string.Equals(_filterText, incoming, StringComparison.Ordinal))
         {
-            _filterText = FilterText ?? string.Empty;
+            _filterText = incoming;
         }
 
         if (Suggestions.Count == 0)

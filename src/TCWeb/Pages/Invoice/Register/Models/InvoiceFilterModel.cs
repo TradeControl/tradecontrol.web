@@ -7,6 +7,7 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
         public bool ShowAll { get; set; }
 
         public string? InvoiceType { get; set; }
+        public string? InvoiceStatus { get; set; }
         public string? Namespace { get; set; }
         public string? CashCode { get; set; }
         public string? SearchText { get; set; }

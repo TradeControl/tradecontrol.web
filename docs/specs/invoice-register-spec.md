@@ -258,7 +258,9 @@ Expected outcome:
 - Enquiry workflow integrated into the Shell.
 - Navigation preserved.
 - Register context restored on return.
-- Change Log (Invoice_vwChangeLog)
+- Add all fields from Invoice.vwRegister
+- Change Log Grid (all fields in Models/Invoice_vwChangeLog) tab. Details becomes the default tab.
+- Add stub buttons for Edit, Cancel and Submit
 
 ### Phase 4
 
@@ -271,7 +273,7 @@ Expected outcome:
 
 ### Phase 5
 
-Edit
+Edit/Cancel
 
 Expected outcome:
 

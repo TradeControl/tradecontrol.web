@@ -8,6 +8,7 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
         public List<Invoice_vwRegister> Headers { get; set; } = [];
         public List<Invoice_vwRegisterDetail> Details { get; set; } = [];
         public List<Invoice_vwRegisterCashCode> CashCodes { get; set; } = [];
+        public List<Invoice_vwChangeLog> ChangeLog { get; set; } = [];
 
         public Invoice_vwRegister? SelectedHeader { get; set; }
 

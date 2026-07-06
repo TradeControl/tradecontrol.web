@@ -2,42 +2,266 @@
 @using TradeControl.Web.Models
 @using TradeControl.Web.Data
 
-<div>
+<div class="tc-invoice-detail-panel">
     <MudPaper Class="pa-4">
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.ArrowBack"
-                   OnClick="OnBack">
-            Back
-        </MudButton>
+        <MudStack Row="true"
+                  AlignItems="AlignItems.Center"
+                  Justify="Justify.SpaceBetween"
+                  Class="mb-4"
+                  Spacing="2">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       OnClick="OnBack">
+                Back
+            </MudButton>
+
+            @if (Header is not null)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudTooltip Text="@GetTypeText(Header.InvoiceTypeCode)">
+                        @GetTypeIcon(Header.InvoiceTypeCode)
+                    </MudTooltip>
+
+                    <MudTooltip Text="@GetStatusText(Header.InvoiceStatusCode)">
+                        @GetStatusIcon(Header.InvoiceStatusCode)
+                    </MudTooltip>
+                </MudStack>
+            }
+        </MudStack>
 
         @if (Header is not null)
         {
-            <MudStack Class="mt-4" Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudTooltip Text="@GetTypeText(Header.InvoiceTypeCode)">
-                    @GetTypeIcon(Header.InvoiceTypeCode)
-                </MudTooltip>
+            <MudStack Spacing="3">
+                <div>
+                    <MudText Typo="Typo.h5">Invoice @Header.InvoiceNumber</MudText>
+                    <MudText Typo="Typo.body2" Class="text-muted">
+                        @Header.SubjectName
+                    </MudText>
+                </div>
 
-                <MudTooltip Text="@GetStatusText(Header.InvoiceStatusCode)">
-                    @GetStatusIcon(Header.InvoiceStatusCode)
-                </MudTooltip>
+                <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="true">
+                        Edit
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="true">
+                        Cancel
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="true">
+                        Submit
+                    </MudButton>
+                </MudStack>
 
-                <MudText Typo="Typo.h5">
-                    Invoice @Header.InvoiceNumber
-                </MudText>
+                <MudDivider />
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-3 h-100" Outlined="true">
+                            <MudText Typo="Typo.subtitle1" Class="mb-3">Invoice</MudText>
+
+                            <div class="tc-detail-field-list">
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Invoice Number</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.InvoiceNumber)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Invoice Type</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.InvoiceType)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Invoice Status</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.InvoiceStatus)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Invoiced On</span>
+                                    <span class="tc-detail-value">@DisplayDate(Header.InvoicedOn)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Due On</span>
+                                    <span class="tc-detail-value">@DisplayDate(Header.DueOn)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Expected On</span>
+                                    <span class="tc-detail-value">@DisplayDate(Header.ExpectedOn)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Financial Period</span>
+                                    <span class="tc-detail-value">@DisplayDate(Header.StartOn)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Terms</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.PaymentTerms)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Sent</span>
+                                    <span class="tc-detail-value">@DisplayBoolean(Header.Printed)</span>
+                                </div>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-3 h-100" Outlined="true">
+                            <MudText Typo="Typo.subtitle1" Class="mb-3">Subject</MudText>
+
+                            <div class="tc-detail-field-list">
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Subject Name</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.SubjectName)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Subject Code</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.SubjectCode)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Parent Subject Code</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.ParentSubjectCode)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Namespace</span>
+                                    <span class="tc-detail-value">
+                                        <a href="@GetSubjectBrowserUrl(Header)"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           class="link-primary text-decoration-none">
+                                            <code>@GetNamespacePath(Header)</code>
+                                            <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                                        </a>
+                                    </span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Owner</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.UserName)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">User Id</span>
+                                    <span class="tc-detail-value">@DisplayText(Header.UserId)</span>
+                                </div>
+                                <div class="tc-detail-field">
+                                    <span class="tc-detail-label">Polarity Code</span>
+                                    <span class="tc-detail-value">@Header.CashPolarityCode</span>
+                                </div>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudPaper Class="pa-3" Outlined="true">
+                            <MudText Typo="Typo.subtitle1" Class="mb-3">Amounts</MudText>
+
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Invoice Value</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(Header.InvoiceValue)</div>
+                                    </div>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Tax Value</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(Header.TaxValue)</div>
+                                    </div>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Total Charged</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(Header.TotalInvoiceValue)</div>
+                                    </div>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Paid Charge</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(Header.PaidValue)</div>
+                                    </div>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Paid Tax</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(Header.PaidTaxValue)</div>
+                                    </div>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Total Paid</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(Header.TotalPaidValue)</div>
+                                    </div>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <div class="tc-amount-card">
+                                        <div class="tc-detail-label">Outstanding</div>
+                                        <div class="tc-amount-value">@DisplayCurrency(GetOutstandingValue(Header))</div>
+                                    </div>
+                                </MudItem>
+                            </MudGrid>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTabs Rounded="true" PanelClass="pa-4">
+                            <MudTabPanel Text="Details">
+                                <InvoiceRegisterDetailsGrid InvoiceNumber="@Header.InvoiceNumber"
+                                                            Items="DetailItems"
+                                                            ShowNavigation="false" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Change Log">
+                                <div class="tc-grid-workspace">
+                                    <div class="tc-grid-host">
+                                        <MudDataGrid T="Invoice_vwChangeLog"
+                                                     Class="tc-register-details-datagrid"
+                                                     Items="ChangeLogItems"
+                                                     FixedHeader="true"
+                                                     RowsPerPage="25"
+                                                     Hover="true"
+                                                     Dense="true"
+                                                     Bordered="true"
+                                                     Striped="true"
+                                                     Filterable="true"
+                                                     Sortable="true"
+                                                     ShowPager="true"
+                                                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                                                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive">
+                                            <Columns>
+                                                <PropertyColumn Property="x => x.LogId" Title="Log Id" />
+                                                <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice" />
+                                                <PropertyColumn Property="x => x.SubjectCode" Title="Subject Code" />
+                                                <PropertyColumn Property="x => x.SubjectName" Title="Subject Name" />
+                                                <PropertyColumn Property="x => x.ChangedOn" Title="Changed On" Format="dd/MM/yyyy HH:mm:ss" />
+                                                <PropertyColumn Property="x => x.TransmitStatusCode" Title="Transmit Status Code" />
+                                                <PropertyColumn Property="x => x.TransmitStatus" Title="Transmit Status" />
+                                                <PropertyColumn Property="x => x.InvoiceStatusCode" Title="Invoice Status Code" />
+                                                <PropertyColumn Property="x => x.InvoiceStatus" Title="Invoice Status" />
+                                                <PropertyColumn Property="x => x.DueOn" Title="Due On" Format="dd/MM/yyyy" />
+                                                <PropertyColumn Property="x => x.InvoiceValue" Title="Invoice Value" Format="#,##0.00000;(#,##0.00000);-" />
+                                                <PropertyColumn Property="x => x.TaxValue" Title="Tax Value" Format="#,##0.00000;(#,##0.00000);-" />
+                                                <PropertyColumn Property="x => x.PaidValue" Title="Paid Value" Format="#,##0.00000;(#,##0.00000);-" />
+                                                <PropertyColumn Property="x => x.PaidTaxValue" Title="Paid Tax Value" Format="#,##0.00000;(#,##0.00000);-" />
+                                                <PropertyColumn Property="x => x.UpdatedBy" Title="Updated By" />
+                                            </Columns>
+
+                                            <PagerContent>
+                                                <MudDataGridPager />
+                                            </PagerContent>
+                                        </MudDataGrid>
+                                    </div>
+                                </div>
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Notes">
+                                <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">
+                                    @DisplayMultilineText(Header.Notes)
+                                </MudText>
+                            </MudTabPanel>
+                        </MudTabs>
+                    </MudItem>
+                </MudGrid>
             </MudStack>
-
-            <MudDivider Class="my-2" />
-
-            <MudText><b>Subject:</b> @Header.SubjectName</MudText>
-            <MudText><b>Date:</b> @Header.InvoicedOn.ToShortDateString()</MudText>
-            <MudText><b>Total:</b> @Header.TotalInvoiceValue.ToString("C")</MudText>
-
-            <MudDivider Class="my-4" />
-
-            <InvoiceRegisterDetailsGrid InvoiceNumber="@Header.InvoiceNumber"
-                                        Items="DetailItems"
-                                        ShowNavigation="false" />
         }
         else
         {
@@ -46,10 +270,99 @@
     </MudPaper>
 </div>
 
+<style>
+    .tc-invoice-detail-panel .tc-detail-field-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .tc-invoice-detail-panel .tc-detail-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .tc-invoice-detail-panel .tc-detail-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--tc-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .tc-invoice-detail-panel .tc-detail-value {
+        font-size: 0.95rem;
+    }
+
+    .tc-invoice-detail-panel .tc-amount-card {
+        height: 100%;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .tc-invoice-detail-panel .tc-amount-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+</style>
+
 @code {
     [Parameter] public Invoice_vwRegister? Header { get; set; }
     [Parameter] public List<Invoice_vwRegisterDetail> DetailItems { get; set; } = [];
+    [Parameter] public List<Invoice_vwChangeLog> ChangeLogItems { get; set; } = [];
     [Parameter] public EventCallback OnBack { get; set; }
+
+    private static string DisplayText(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "—" : value;
+    }
+
+    private static string DisplayMultilineText(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "—" : value;
+    }
+
+    private static string DisplayDate(DateTime value)
+    {
+        return value.ToShortDateString();
+    }
+
+    private static string DisplayBoolean(bool value)
+    {
+        return value ? "Yes" : "No";
+    }
+
+    private static string DisplayCurrency(double value)
+    {
+        return value.ToString("C");
+    }
+
+    private static double GetOutstandingValue(Invoice_vwRegister header)
+    {
+        return header.TotalInvoiceValue - header.TotalPaidValue;
+    }
+
+    private static string GetNamespacePath(Invoice_vwRegister header)
+    {
+        if (string.IsNullOrWhiteSpace(header.SubjectCode))
+            return "—";
+
+        return string.IsNullOrWhiteSpace(header.ParentSubjectCode)
+            ? header.SubjectCode
+            : $"{header.ParentSubjectCode}.{header.SubjectCode}";
+    }
+
+    private static string GetSubjectBrowserUrl(Invoice_vwRegister header)
+    {
+        var selectedPath = GetNamespacePath(header);
+
+        if (selectedPath == "—")
+            return "/Subject/Browser/Index";
+
+        return $"/Subject/Browser/Index?mode=Namespace&select={Uri.EscapeDataString(selectedPath)}&namespaceFilter={Uri.EscapeDataString(selectedPath)}";
+    }
 
     private string GetTypeText(int typeCode)
     {

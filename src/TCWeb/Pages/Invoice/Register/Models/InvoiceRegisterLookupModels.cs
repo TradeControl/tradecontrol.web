@@ -5,6 +5,13 @@ using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages.Invoice.Register.Models
 {
+    public enum InvoiceRegisterViewMode
+    {
+        Headers,
+        Lines,
+        CashCodes
+    }
+
     public sealed record InvoiceRegisterYearOption(
         short YearNumber,
         string Description);
@@ -21,6 +28,10 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
         string Label);
 
     public sealed record InvoiceRegisterInvoiceTypeOption(
+        short Value,
+        string Label);
+
+    public sealed record InvoiceRegisterInvoiceStatusOption(
         short Value,
         string Label);
 
@@ -60,6 +71,28 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
                 new InvoiceRegisterInvoiceTypeOption((short)NodeEnum.InvoiceType.CreditNote, "Credit note"),
                 new InvoiceRegisterInvoiceTypeOption((short)NodeEnum.InvoiceType.PurchaseInvoice, "Purchase invoice"),
                 new InvoiceRegisterInvoiceTypeOption((short)NodeEnum.InvoiceType.DebitNote, "Debit note")
+            };
+        }
+
+        public static IReadOnlyList<InvoiceRegisterInvoiceStatusOption> GetInvoiceStatusOptions()
+        {
+            return new[]
+            {
+                new InvoiceRegisterInvoiceStatusOption((short)NodeEnum.InvoiceStatus.Pending, "Pending"),
+                new InvoiceRegisterInvoiceStatusOption((short)NodeEnum.InvoiceStatus.Invoiced, "Invoiced"),
+                new InvoiceRegisterInvoiceStatusOption((short)NodeEnum.InvoiceStatus.PartiallyPaid, "Partially paid"),
+                new InvoiceRegisterInvoiceStatusOption((short)NodeEnum.InvoiceStatus.Paid, "Paid")
+            };
+        }
+
+        public static string GetViewLabel(InvoiceRegisterViewMode viewMode)
+        {
+            return viewMode switch
+            {
+                InvoiceRegisterViewMode.Headers => "Headers",
+                InvoiceRegisterViewMode.Lines => "Lines",
+                InvoiceRegisterViewMode.CashCodes => "Cash Codes",
+                _ => viewMode.ToString()
             };
         }
     }

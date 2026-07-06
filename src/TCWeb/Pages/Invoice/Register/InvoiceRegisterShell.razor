@@ -31,7 +31,7 @@
                     </div>
 
                     <div class="small text-muted">
-                        @RegisterResult.Headers.Count invoice@(RegisterResult.Headers.Count == 1 ? string.Empty : "s")
+                        @GetResultCountText()
                     </div>
                 </div>
 
@@ -40,17 +40,22 @@
                                             Periods="_periods"
                                             CashCodeOptions="_cashCodeOptions"
                                             InvoiceTypeOptions="_invoiceTypeOptions"
+                                            InvoiceStatusOptions="_invoiceStatusOptions"
                                             NamespaceSuggestions="_namespaceSuggestions"
                                             IsLoadingNamespaceSuggestions="_isLoadingNamespaceSuggestions"
                                             SelectedYearNumber="_selectedYearNumber"
                                             SelectedPeriodStartOn="_selectedPeriodStartOn"
                                             SelectedInvoiceTypeCode="_selectedInvoiceTypeCode"
-                                            SearchText="_searchText"
-                                            NamespaceFilter="_namespaceFilter"
+                                            SelectedInvoiceStatusCode="_selectedInvoiceStatusCode"
+                                            SelectedViewMode="_selectedViewMode"
+                                            SearchText="@(_searchText ?? string.Empty)"
+                                            NamespaceFilter="@(_namespaceFilter ?? string.Empty)"
                                             CashCodeFilter="_cashCodeFilter"
                                             OnYearSelected="HandleYearSelectedAsync"
                                             OnPeriodSelected="HandlePeriodSelectedAsync"
                                             OnInvoiceTypeChanged="HandleInvoiceTypeChangedAsync"
+                                            OnInvoiceStatusChanged="HandleInvoiceStatusChangedAsync"
+                                            OnViewChanged="HandleViewChangedAsync"
                                             OnSearchTextChanged="HandleSearchTextChangedAsync"
                                             OnNamespaceFilterChanged="HandleNamespaceFilterChangedAsync"
                                             OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
@@ -84,14 +89,27 @@
                     <MudText Typo="Typo.body2">@GetSubtitle()</MudText>
                 </MudStack>
 
-                <InvoiceRegisterGrid Invoices="RegisterResult.Headers"
-                                     SelectedInvoice="Workspace.SelectedKey"
-                                     CurrentPage="Filter.PageNumber - 1"
-                                     RowsPerPage="Filter.PageSize"
-                                     OnSelectInvoice="ShowDetailsGridAsync"
-                                     OnOpenPanel="ShowDetailPanelAsync"
-                                     OnCurrentPageChanged="OnCurrentPageChangedAsync"
-                                     OnRowsPerPageChanged="OnRowsPerPageChangedAsync" />
+                @if (_selectedViewMode == InvoiceRegisterViewMode.Headers)
+                {
+                    <InvoiceRegisterGrid Invoices="RegisterResult.Headers"
+                                         SelectedInvoice="Workspace.SelectedKey"
+                                         CurrentPage="Filter.PageNumber - 1"
+                                         RowsPerPage="Filter.PageSize"
+                                         OnSelectInvoice="ShowDetailsGridAsync"
+                                         OnOpenPanel="ShowDetailPanelAsync"
+                                         OnCurrentPageChanged="OnCurrentPageChangedAsync"
+                                         OnRowsPerPageChanged="OnRowsPerPageChangedAsync" />
+                }
+                else if (_selectedViewMode == InvoiceRegisterViewMode.Lines)
+                {
+                    <InvoiceRegisterDetailsGrid InvoiceNumber="@null"
+                                                Items="RegisterResult.Details"
+                                                ShowNavigation="false" />
+                }
+                else if (_selectedViewMode == InvoiceRegisterViewMode.CashCodes)
+                {
+                    <InvoiceRegisterCashCodeGrid Items="RegisterResult.CashCodes" />
+                }
             </div>
         </div>
     }
@@ -120,6 +138,7 @@
             <div class="tc-register-frame border rounded bg-white p-2 tc-register-shell">
                 <InvoiceDetailPanel Header="RegisterResult.SelectedHeader"
                                     DetailItems="RegisterResult.Details"
+                                    ChangeLogItems="RegisterResult.ChangeLog"
                                     OnBack="BackToRegisterAsync" />
             </div>
         </div>
@@ -132,14 +151,18 @@ else
             <div class="tc-register-desktop-layout">
                 <aside class="tc-register-sidebar-host border-end @(_isSidebarCollapsed ? "tc-register-sidebar-collapsed" : null)">
                     <div class="tc-register-sidebar-header">
-                        <div class="min-w-0">
-                            <div class="fw-semibold">Invoice Register</div>
-                            <div class="small text-muted text-truncate">@GetSubtitle()</div>
-                        </div>
+                        @if (!_isSidebarCollapsed)
+                        {
+                            <div class="min-w-0 tc-register-sidebar-title">
+                                <div class="fw-semibold">Invoice Register</div>
+                                <div class="small text-muted text-truncate">@GetSubtitle()</div>
+                            </div>
+                        }
 
                         <MudIconButton Icon="@(_isSidebarCollapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ChevronLeft)"
                                        Size="Size.Small"
                                        Color="Color.Default"
+                                       Class="tc-register-sidebar-toggle"
                                        OnClick="ToggleSidebar" />
                     </div>
 
@@ -150,17 +173,22 @@ else
                                                     Periods="_periods"
                                                     CashCodeOptions="_cashCodeOptions"
                                                     InvoiceTypeOptions="_invoiceTypeOptions"
+                                                    InvoiceStatusOptions="_invoiceStatusOptions"
                                                     NamespaceSuggestions="_namespaceSuggestions"
                                                     IsLoadingNamespaceSuggestions="_isLoadingNamespaceSuggestions"
                                                     SelectedYearNumber="_selectedYearNumber"
                                                     SelectedPeriodStartOn="_selectedPeriodStartOn"
                                                     SelectedInvoiceTypeCode="_selectedInvoiceTypeCode"
-                                                    SearchText="_searchText"
-                                                    NamespaceFilter="_namespaceFilter"
+                                                    SelectedInvoiceStatusCode="_selectedInvoiceStatusCode"
+                                                    SelectedViewMode="_selectedViewMode"
+                                                    SearchText="@(_searchText ?? string.Empty)"
+                                                    NamespaceFilter="@(_namespaceFilter ?? string.Empty)"
                                                     CashCodeFilter="_cashCodeFilter"
                                                     OnYearSelected="HandleYearSelectedAsync"
                                                     OnPeriodSelected="HandlePeriodSelectedAsync"
                                                     OnInvoiceTypeChanged="HandleInvoiceTypeChangedAsync"
+                                                    OnInvoiceStatusChanged="HandleInvoiceStatusChangedAsync"
+                                                    OnViewChanged="HandleViewChangedAsync"
                                                     OnSearchTextChanged="HandleSearchTextChangedAsync"
                                                     OnNamespaceFilterChanged="HandleNamespaceFilterChangedAsync"
                                                     OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
@@ -180,19 +208,32 @@ else
                             </div>
 
                             <div class="small text-muted">
-                                @RegisterResult.Headers.Count invoice@(RegisterResult.Headers.Count == 1 ? string.Empty : "s")
+                                @GetResultCountText()
                             </div>
                         </div>
 
                         <div class="tc-register-main-body">
-                            <InvoiceRegisterGrid Invoices="RegisterResult.Headers"
-                                                 SelectedInvoice="Workspace.SelectedKey"
-                                                 CurrentPage="Filter.PageNumber - 1"
-                                                 RowsPerPage="Filter.PageSize"
-                                                 OnSelectInvoice="ShowDetailsGridAsync"
-                                                 OnOpenPanel="ShowDetailPanelAsync"
-                                                 OnCurrentPageChanged="OnCurrentPageChangedAsync"
-                                                 OnRowsPerPageChanged="OnRowsPerPageChangedAsync" />
+                            @if (_selectedViewMode == InvoiceRegisterViewMode.Headers)
+                            {
+                                <InvoiceRegisterGrid Invoices="RegisterResult.Headers"
+                                                     SelectedInvoice="Workspace.SelectedKey"
+                                                     CurrentPage="Filter.PageNumber - 1"
+                                                     RowsPerPage="Filter.PageSize"
+                                                     OnSelectInvoice="ShowDetailsGridAsync"
+                                                     OnOpenPanel="ShowDetailPanelAsync"
+                                                     OnCurrentPageChanged="OnCurrentPageChangedAsync"
+                                                     OnRowsPerPageChanged="OnRowsPerPageChangedAsync" />
+                            }
+                            else if (_selectedViewMode == InvoiceRegisterViewMode.Lines)
+                            {
+                                <InvoiceRegisterDetailsGrid InvoiceNumber="@null"
+                                                            Items="RegisterResult.Details"
+                                                            ShowNavigation="false" />
+                            }
+                            else if (_selectedViewMode == InvoiceRegisterViewMode.CashCodes)
+                            {
+                                <InvoiceRegisterCashCodeGrid Items="RegisterResult.CashCodes" />
+                            }
                         </div>
                     }
                     else if (Workspace.Mode == WorkspaceMode.DetailGrid)
@@ -217,6 +258,7 @@ else
                         <div class="tc-register-main-body">
                             <InvoiceDetailPanel Header="RegisterResult.SelectedHeader"
                                                 DetailItems="RegisterResult.Details"
+                                                ChangeLogItems="RegisterResult.ChangeLog"
                                                 OnBack="ShowRegisterModeAsync" />
                         </div>
                     }
@@ -256,7 +298,7 @@ else
         flex: 0 0 340px;
         display: flex;
         flex-direction: column;
-        background: #f8f9fa;
+        background: var(--tc-section-bg);
         overflow: hidden;
         transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, flex-basis 0.2s ease;
     }
@@ -275,6 +317,23 @@ else
         gap: 0.5rem;
         padding: 0.75rem;
         border-bottom: 1px solid #dee2e6;
+        min-width: 0;
+    }
+
+    .tc-register-sidebar-title {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .tc-register-sidebar-toggle {
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
+    .tc-register-sidebar-collapsed .tc-register-sidebar-header {
+        justify-content: center;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
     }
 
     .tc-register-sidebar-body {
@@ -340,14 +399,17 @@ else
     private string _searchText = string.Empty;
     private short? _selectedYearNumber;
     private short? _selectedInvoiceTypeCode;
+    private short? _selectedInvoiceStatusCode;
     private DateTime? _selectedPeriodStartOn;
     private DateTime? _defaultPeriodStartOn;
     private short? _defaultYearNumber;
+    private InvoiceRegisterViewMode _selectedViewMode = InvoiceRegisterViewMode.Headers;
     private InvoiceRegisterMobileView _mobileView = InvoiceRegisterMobileView.Navigation;
     private IReadOnlyList<InvoiceRegisterYearOption> _years = Array.Empty<InvoiceRegisterYearOption>();
     private IReadOnlyList<InvoiceRegisterPeriodOption> _periods = Array.Empty<InvoiceRegisterPeriodOption>();
     private IReadOnlyList<InvoiceRegisterSelectOption> _cashCodeOptions = Array.Empty<InvoiceRegisterSelectOption>();
     private IReadOnlyList<InvoiceRegisterInvoiceTypeOption> _invoiceTypeOptions = Array.Empty<InvoiceRegisterInvoiceTypeOption>();
+    private IReadOnlyList<InvoiceRegisterInvoiceStatusOption> _invoiceStatusOptions = Array.Empty<InvoiceRegisterInvoiceStatusOption>();
     private IReadOnlyList<NamespaceSelectorSuggestion> _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
 
     private InvoiceRegisterResult RegisterResult { get; set; } = new();
@@ -363,6 +425,7 @@ else
         _cashCodeOptions = await InvoiceRegisterLookupService.GetCashCodeOptionsAsync();
         _years = await InvoiceRegisterLookupService.GetYearsAsync();
         _invoiceTypeOptions = InvoiceRegisterOptionCatalog.GetInvoiceTypeOptions();
+        _invoiceStatusOptions = InvoiceRegisterOptionCatalog.GetInvoiceStatusOptions();
 
         var defaultPeriod = await InvoiceRegisterLookupService.GetDefaultPeriodAsync();
         _defaultYearNumber = defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
@@ -377,6 +440,8 @@ else
         _selectedYearNumber = _defaultYearNumber;
         _selectedPeriodStartOn = _defaultPeriodStartOn;
         _selectedInvoiceTypeCode = null;
+        _selectedInvoiceStatusCode = null;
+        _selectedViewMode = InvoiceRegisterViewMode.Headers;
         _searchText = string.Empty;
         _namespaceFilter = string.Empty;
         _cashCodeFilter = string.Empty;
@@ -392,6 +457,7 @@ else
 
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
     }
 
     private async Task LoadPeriodsAsync(short? yearNumber)
@@ -426,6 +492,7 @@ else
         Filter.Namespace = string.IsNullOrWhiteSpace(_namespaceFilter) ? null : _namespaceFilter;
         Filter.CashCode = string.IsNullOrWhiteSpace(_cashCodeFilter) ? null : _cashCodeFilter;
         Filter.InvoiceType = _selectedInvoiceTypeCode?.ToString();
+        Filter.InvoiceStatus = _selectedInvoiceStatusCode?.ToString();
         Filter.SelectedInvoiceNumber = Workspace.SelectedKey;
 
         if (_selectedYearNumber.HasValue && _selectedYearNumber.Value > 0)
@@ -494,6 +561,11 @@ else
 
     private async Task ShowDetailsGridAsync(string invoiceNumber)
     {
+        if (_selectedViewMode != InvoiceRegisterViewMode.Headers)
+        {
+            return;
+        }
+
         Workspace.SelectedKey = invoiceNumber;
         Workspace.Mode = WorkspaceMode.DetailGrid;
         Filter.SelectedInvoiceNumber = invoiceNumber;
@@ -507,6 +579,11 @@ else
 
     private async Task ShowDetailPanelAsync(string invoiceNumber)
     {
+        if (_selectedViewMode != InvoiceRegisterViewMode.Headers)
+        {
+            return;
+        }
+
         Workspace.SelectedKey = invoiceNumber;
         Workspace.Mode = WorkspaceMode.DetailPanel;
         Filter.SelectedInvoiceNumber = invoiceNumber;
@@ -524,6 +601,7 @@ else
         await LoadPeriodsAsync(_selectedYearNumber);
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
         await LoadRegisterAsync();
     }
 
@@ -532,6 +610,7 @@ else
         _selectedPeriodStartOn = startOn;
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
         await LoadRegisterAsync();
     }
 
@@ -540,6 +619,25 @@ else
         _selectedInvoiceTypeCode = invoiceTypeCode;
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
+        await LoadRegisterAsync();
+    }
+
+    private async Task HandleInvoiceStatusChangedAsync(short? invoiceStatusCode)
+    {
+        _selectedInvoiceStatusCode = invoiceStatusCode;
+        Filter.PageNumber = 1;
+        Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
+        await LoadRegisterAsync();
+    }
+
+    private async Task HandleViewChangedAsync(InvoiceRegisterViewMode viewMode)
+    {
+        _selectedViewMode = viewMode;
+        Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
+        Filter.PageNumber = 1;
         await LoadRegisterAsync();
     }
 
@@ -548,6 +646,7 @@ else
         _searchText = searchText?.Trim() ?? string.Empty;
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
         await LoadRegisterAsync();
     }
 
@@ -568,6 +667,7 @@ else
             {
                 Filter.PageNumber = 1;
                 Workspace.SelectedKey = null;
+                Workspace.Mode = WorkspaceMode.Register;
                 await LoadRegisterAsync();
             }
 
@@ -594,6 +694,7 @@ else
         _namespaceFilter = filterText?.Trim() ?? string.Empty;
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
         await LoadRegisterAsync();
     }
 
@@ -602,6 +703,7 @@ else
         _cashCodeFilter = cashCode ?? string.Empty;
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
         await LoadRegisterAsync();
     }
 
@@ -628,6 +730,7 @@ else
     {
         var yearLabel = InvoiceRegisterOptionCatalog.GetYearLabel(_years, _selectedYearNumber);
         var periodLabel = InvoiceRegisterOptionCatalog.GetPeriodScopeLabel(_periods, _selectedPeriodStartOn);
+        var viewLabel = InvoiceRegisterOptionCatalog.GetViewLabel(_selectedViewMode);
 
         if (_selectedInvoiceTypeCode.HasValue)
         {
@@ -637,10 +740,33 @@ else
 
             if (!string.IsNullOrWhiteSpace(invoiceTypeLabel))
             {
-                return $"{yearLabel} • {periodLabel} • {invoiceTypeLabel}";
+                return $"{yearLabel} • {periodLabel} • {invoiceTypeLabel} • {viewLabel}";
             }
         }
 
-        return $"{yearLabel} • {periodLabel}";
+        if (_selectedInvoiceStatusCode.HasValue)
+        {
+            var invoiceStatusLabel = _invoiceStatusOptions
+                .FirstOrDefault(option => option.Value == _selectedInvoiceStatusCode.Value)?
+                .Label;
+
+            if (!string.IsNullOrWhiteSpace(invoiceStatusLabel))
+            {
+                return $"{yearLabel} • {periodLabel} • {invoiceStatusLabel} • {viewLabel}";
+            }
+        }
+
+        return $"{yearLabel} • {periodLabel} • {viewLabel}";
+    }
+
+    private string GetResultCountText()
+    {
+        return _selectedViewMode switch
+        {
+            InvoiceRegisterViewMode.Headers => $"{RegisterResult.Headers.Count} invoice{(RegisterResult.Headers.Count == 1 ? string.Empty : "s")}",
+            InvoiceRegisterViewMode.Lines => $"{RegisterResult.Details.Count} line{(RegisterResult.Details.Count == 1 ? string.Empty : "s")}",
+            InvoiceRegisterViewMode.CashCodes => $"{RegisterResult.CashCodes.Count} cash code row{(RegisterResult.CashCodes.Count == 1 ? string.Empty : "s")}",
+            _ => string.Empty
+        };
     }
 }

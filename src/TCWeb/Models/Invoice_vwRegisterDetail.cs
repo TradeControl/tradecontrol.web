@@ -38,6 +38,9 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         [Display(Name = "A/c")]
         public string SubjectCode { get; set; }
+        [StringLength(50)]
+        [Display(Name = "Parent Code")]
+        public string ParentSubjectCode { get; set; }
         [Display(Name = "Type Code")]
         public short InvoiceTypeCode { get; set; }
         [Display(Name = "Status Code")]

@@ -34,6 +34,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
             var headerQuery = _queryBuilder.BuildHeaderQuery(nodeContext, filter);
             var detailQuery = _queryBuilder.BuildDetailQuery(nodeContext, filter);
             var cashCodeQuery = _queryBuilder.BuildCashCodeQuery(nodeContext, filter);
+            var changeLogQuery = _queryBuilder.BuildChangeLogQuery(nodeContext, filter);
 
             var totalItems = await headerQuery.CountAsync();
 
@@ -58,6 +59,11 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
             var cashCodes = await cashCodeQuery
                 .OrderBy(x => x.StartOn)
                 .ThenBy(x => x.CashCode)
+                .ToListAsync();
+
+            var changeLog = await changeLogQuery
+                .OrderByDescending(x => x.ChangedOn)
+                .ThenByDescending(x => x.LogId)
                 .ToListAsync();
 
             Invoice_vwRegister? selectedHeader = null;
@@ -87,6 +93,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
                 Headers = headers,
                 Details = details,
                 CashCodes = cashCodes,
+                ChangeLog = changeLog,
                 SelectedHeader = selectedHeader,
                 PageNumber = pageNumber,
                 PageSize = pageSize,

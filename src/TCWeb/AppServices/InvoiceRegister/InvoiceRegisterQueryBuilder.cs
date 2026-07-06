@@ -14,7 +14,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
         {
             var query = nodeContext.Invoice_Register.AsQueryable();
 
-            query = ApplyHeaderFilters(query, filter);
+            query = ApplyHeaderFilters(nodeContext, query, filter);
 
             return query;
         }
@@ -23,7 +23,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
         {
             var query = nodeContext.Invoice_RegisterDetails.AsQueryable();
 
-            query = ApplyDetailFilters(query, filter);
+            query = ApplyDetailFilters(nodeContext, query, filter);
 
             return query;
         }
@@ -33,6 +33,22 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
             var query = nodeContext.Invoice_RegisterCashCodes.AsQueryable();
 
             query = ApplyCashCodeFilters(query, filter);
+
+            return query;
+        }
+
+        public IQueryable<Invoice_vwChangeLog> BuildChangeLogQuery(NodeContext nodeContext, InvoiceFilterModel filter)
+        {
+            var query = nodeContext.Invoice_ChangeLog.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(filter.SelectedInvoiceNumber))
+            {
+                query = query.Where(x => x.InvoiceNumber == filter.SelectedInvoiceNumber);
+            }
+            else
+            {
+                query = query.Where(x => false);
+            }
 
             return query;
         }
@@ -91,7 +107,10 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
             return Task.FromResult(items);
         }
 
-        private static IQueryable<Invoice_vwRegister> ApplyHeaderFilters(IQueryable<Invoice_vwRegister> query, InvoiceFilterModel filter)
+        private static IQueryable<Invoice_vwRegister> ApplyHeaderFilters(
+            NodeContext nodeContext,
+            IQueryable<Invoice_vwRegister> query,
+            InvoiceFilterModel filter)
         {
             query = ApplyPeriodFilter(query, filter);
 
@@ -107,11 +126,26 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
                 query = query.Where(x => x.InvoiceTypeCode == invoiceTypeCode);
             }
 
+            if (!string.IsNullOrWhiteSpace(filter.InvoiceStatus)
+                && short.TryParse(filter.InvoiceStatus, out var invoiceStatusCode))
+            {
+                query = query.Where(x => x.InvoiceStatusCode == invoiceStatusCode);
+            }
+
             if (!string.IsNullOrWhiteSpace(filter.Namespace))
-                query = query.Where(x => x.SubjectCode == filter.Namespace || x.SubjectName.Contains(filter.Namespace));
+            {
+                query = ApplyNamespaceFilter(query, filter.Namespace);
+            }
 
             if (!string.IsNullOrWhiteSpace(filter.CashCode))
-                query = query.Where(x => x.InvoiceNumber != null && x.InvoiceNumber.Length > 0);
+            {
+                var invoiceNumbers = nodeContext.Invoice_RegisterDetails
+                    .Where(x => x.CashCode == filter.CashCode)
+                    .Select(x => x.InvoiceNumber)
+                    .Distinct();
+
+                query = query.Where(x => invoiceNumbers.Contains(x.InvoiceNumber));
+            }
 
             if (!string.IsNullOrWhiteSpace(filter.SearchText))
             {
@@ -137,7 +171,10 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
             return query;
         }
 
-        private static IQueryable<Invoice_vwRegisterDetail> ApplyDetailFilters(IQueryable<Invoice_vwRegisterDetail> query, InvoiceFilterModel filter)
+        private static IQueryable<Invoice_vwRegisterDetail> ApplyDetailFilters(
+            NodeContext nodeContext,
+            IQueryable<Invoice_vwRegisterDetail> query,
+            InvoiceFilterModel filter)
         {
             query = ApplyPeriodFilter(query, filter);
 
@@ -153,8 +190,16 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
                 query = query.Where(x => x.InvoiceTypeCode == invoiceTypeCode);
             }
 
+            if (!string.IsNullOrWhiteSpace(filter.InvoiceStatus)
+                && short.TryParse(filter.InvoiceStatus, out var invoiceStatusCode))
+            {
+                query = query.Where(x => x.InvoiceStatusCode == invoiceStatusCode);
+            }
+
             if (!string.IsNullOrWhiteSpace(filter.Namespace))
-                query = query.Where(x => x.SubjectCode == filter.Namespace || x.SubjectName.Contains(filter.Namespace));
+            {
+                query = ApplyNamespaceFilter(query, filter.Namespace);
+            }
 
             if (!string.IsNullOrWhiteSpace(filter.CashCode))
                 query = query.Where(x => x.CashCode == filter.CashCode);
@@ -188,14 +233,76 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
             return query;
         }
 
-        private static IQueryable<Invoice_vwRegisterCashCode> ApplyCashCodeFilters(IQueryable<Invoice_vwRegisterCashCode> query, InvoiceFilterModel filter)
+        private static IQueryable<Invoice_vwRegisterCashCode> ApplyCashCodeFilters(
+            IQueryable<Invoice_vwRegisterCashCode> query,
+            InvoiceFilterModel filter)
         {
             query = ApplyPeriodFilter(query, filter);
 
             if (!string.IsNullOrWhiteSpace(filter.CashCode))
                 query = query.Where(x => x.CashCode == filter.CashCode);
 
+            if (!string.IsNullOrWhiteSpace(filter.SearchText))
+            {
+                var search = filter.SearchText.Trim();
+                query = query.Where(x =>
+                    (x.PeriodName != null && x.PeriodName.Contains(search)) ||
+                    (x.CashCode != null && x.CashCode.Contains(search)) ||
+                    (x.CashDescription != null && x.CashDescription.Contains(search)) ||
+                    (x.CashPolarity != null && x.CashPolarity.Contains(search)));
+            }
+
             return query;
+        }
+
+        private static IQueryable<T> ApplyNamespaceFilter<T>(IQueryable<T> query, string namespaceFilter) where T : class
+        {
+            var segments = GetNamespaceSegments(namespaceFilter);
+
+            if (segments.Length == 0)
+                return query;
+
+            var subjectCode = segments[^1];
+            var parentSubjectCode = segments.Length > 1 ? segments[^2] : string.Empty;
+
+            if (typeof(T) == typeof(Invoice_vwRegister))
+            {
+                var typedQuery = (IQueryable<Invoice_vwRegister>)query;
+
+                typedQuery = typedQuery.Where(x => x.SubjectCode == subjectCode);
+
+                if (!string.IsNullOrWhiteSpace(parentSubjectCode))
+                {
+                    typedQuery = typedQuery.Where(x => x.ParentSubjectCode == parentSubjectCode);
+                }
+
+                return (IQueryable<T>)typedQuery;
+            }
+
+            if (typeof(T) == typeof(Invoice_vwRegisterDetail))
+            {
+                var typedQuery = (IQueryable<Invoice_vwRegisterDetail>)query;
+
+                typedQuery = typedQuery.Where(x => x.SubjectCode == subjectCode);
+
+                if (!string.IsNullOrWhiteSpace(parentSubjectCode))
+                {
+                    typedQuery = typedQuery.Where(x => x.ParentSubjectCode == parentSubjectCode);
+                }
+
+                return (IQueryable<T>)typedQuery;
+            }
+
+            return query;
+        }
+
+        private static string[] GetNamespaceSegments(string namespaceFilter)
+        {
+            var normalisedFilter = namespaceFilter?.Trim().Trim('.') ?? string.Empty;
+
+            return string.IsNullOrWhiteSpace(normalisedFilter)
+                ? Array.Empty<string>()
+                : normalisedFilter.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
         private static IQueryable<T> ApplyPeriodFilter<T>(IQueryable<T> query, InvoiceFilterModel filter) where T : class

@@ -17,8 +17,11 @@ namespace TradeControl.Web.Models
         [Display (Name = "Invoice No.")]
         public string InvoiceNumber { get; set; }
         [StringLength(50)]
-        [Display(Name = "Account Code")]
+        [Display(Name = "Subject Code")]
         public string SubjectCode { get; set; }
+        [StringLength(50)]
+        [Display(Name = "Parent Code")]
+        public string ParentSubjectCode { get; set; }
         public short InvoiceTypeCode { get; set; }
         public short InvoiceStatusCode { get; set; }
         [Column(TypeName = "datetime")]

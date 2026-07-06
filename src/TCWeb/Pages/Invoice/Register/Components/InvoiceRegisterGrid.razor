@@ -50,18 +50,6 @@
                     </CellTemplate>
                 </TemplateColumn>
 
-                <TemplateColumn Title="">
-                    <CellTemplate>
-                        <MudTooltip Text="Open details grid">
-                            <MudIconButton Icon="@Icons.Material.Filled.ViewList"
-                                           Size="Size.Small"
-                                           Color="Color.Primary"
-                                           AriaLabel="Open details grid"
-                                           OnClick="@(() => OnSelectInvoice.InvokeAsync(context.Item.InvoiceNumber))" />
-                        </MudTooltip>
-                    </CellTemplate>
-                </TemplateColumn>
-
                 <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice">
                     <CellTemplate>
                         <MudTooltip Text="Open details panel">

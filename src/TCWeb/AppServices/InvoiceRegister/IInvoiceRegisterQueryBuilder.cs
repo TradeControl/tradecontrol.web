@@ -12,6 +12,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
         IQueryable<Invoice_vwRegister> BuildHeaderQuery(NodeContext nodeContext, InvoiceFilterModel filter);
         IQueryable<Invoice_vwRegisterDetail> BuildDetailQuery(NodeContext nodeContext, InvoiceFilterModel filter);
         IQueryable<Invoice_vwRegisterCashCode> BuildCashCodeQuery(NodeContext nodeContext, InvoiceFilterModel filter);
+        IQueryable<Invoice_vwChangeLog> BuildChangeLogQuery(NodeContext nodeContext, InvoiceFilterModel filter);
         IQueryable<Invoice_vwRegister> ApplyHeaderSorting(IQueryable<Invoice_vwRegister> query, InvoiceFilterModel filter);
         Task<List<Invoice_vwRegister>> ApplyFormattingAsync(IEnumerable<Invoice_vwRegister> headers, IInvoiceFormattingService formattingService);
     }

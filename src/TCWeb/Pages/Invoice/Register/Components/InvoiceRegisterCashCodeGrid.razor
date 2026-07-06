@@ -1,0 +1,151 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using TradeControl.Web.Models
+@using TradeControl.Web.Data
+
+<div class="tc-register-cashcode-grid">
+    <MudPaper Class="pa-4 mb-2">
+        <MudText Typo="Typo.h6">Cash Code Summary</MudText>
+    </MudPaper>
+
+    <div class="tc-grid-workspace">
+        <div class="tc-grid-host">
+            <MudDataGrid T="Invoice_vwRegisterCashCode"
+                         Class="tc-register-cashcode-datagrid"
+                         Items="Items"
+                         FixedHeader="true"
+                         FixedFooter="true"
+                         RowsPerPage="50"
+                         Hover="true"
+                         Dense="true"
+                         Bordered="true"
+                         Striped="true"
+                         Filterable="true"
+                         Sortable="true"
+                         ShowPager="true"
+                         FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                         FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                         FilteredItemsChanged="OnFilteredItemsChanged">
+
+                <Columns>
+                    <PropertyColumn Property="x => x.StartOn" Title="Start On" Format="dd/MM/yyyy" />
+
+                    <TemplateColumn Title="Polarity">
+                        <CellTemplate>
+                            <span class="@GetPolarityBadgeClass(context.Item.CashPolarity)">
+                                @GetPolarityLabel(context.Item.CashPolarity)
+                            </span>
+                        </CellTemplate>
+                    </TemplateColumn>
+
+                    <PropertyColumn Property="x => x.PeriodName" Title="Period" />
+                    <PropertyColumn Property="x => x.CashCode" Title="Cash Code" />
+                    <PropertyColumn Property="x => x.CashDescription" Title="Cash Desc." />
+
+                    <PropertyColumn Property="x => x.TotalInvoiceValue" Title="Invoice Value" Format="#,##0.00;(#,##0.00);-">
+                        <FooterTemplate>
+                            <b>@TotalInvoiceValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
+
+                    <PropertyColumn Property="x => x.TotalTaxValue" Title="Tax Value" Format="#,##0.00;(#,##0.00);-">
+                        <FooterTemplate>
+                            <b>@TotalTaxValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
+
+                    <PropertyColumn Property="x => x.TotalValue" Title="Total Value" Format="#,##0.00;(#,##0.00);-">
+                        <FooterTemplate>
+                            <b>@TotalValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                        </FooterTemplate>
+                    </PropertyColumn>
+                </Columns>
+
+                <PagerContent>
+                    <MudDataGridPager />
+                </PagerContent>
+            </MudDataGrid>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tc-polarity-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 5.5rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .tc-polarity-expense {
+        background-color: rgba(220, 53, 69, 0.12);
+        color: #b02a37;
+    }
+
+    .tc-polarity-income {
+        background-color: rgba(25, 135, 84, 0.12);
+        color: #146c43;
+    }
+
+    .tc-polarity-neutral {
+        background-color: rgba(13, 110, 253, 0.12);
+        color: #0a58ca;
+    }
+</style>
+
+@code {
+    [Parameter] public List<Invoice_vwRegisterCashCode> Items { get; set; } = [];
+
+    private List<Invoice_vwRegisterCashCode> VisibleItems { get; set; } = [];
+
+    private decimal TotalInvoiceValue { get; set; }
+    private decimal TotalTaxValue { get; set; }
+    private decimal TotalValue { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        RecalculateTotals();
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalInvoiceValue = (decimal)VisibleItems.Sum(x => x.TotalInvoiceValue);
+        TotalTaxValue = (decimal)VisibleItems.Sum(x => x.TotalTaxValue);
+        TotalValue = (decimal)VisibleItems.Sum(x => x.TotalValue);
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<Invoice_vwRegisterCashCode> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private static string GetPolarityLabel(string? polarity)
+    {
+        if (string.Equals(polarity, nameof(NodeEnum.CashPolarity.Expense), StringComparison.OrdinalIgnoreCase))
+            return "Expense";
+
+        if (string.Equals(polarity, nameof(NodeEnum.CashPolarity.Income), StringComparison.OrdinalIgnoreCase))
+            return "Income";
+
+        return "Neutral";
+    }
+
+    private static string GetPolarityBadgeClass(string? polarity)
+    {
+        if (string.Equals(polarity, nameof(NodeEnum.CashPolarity.Expense), StringComparison.OrdinalIgnoreCase))
+            return "tc-polarity-badge tc-polarity-expense";
+
+        if (string.Equals(polarity, nameof(NodeEnum.CashPolarity.Income), StringComparison.OrdinalIgnoreCase))
+            return "tc-polarity-badge tc-polarity-income";
+
+        return "tc-polarity-badge tc-polarity-neutral";
+    }
+}
