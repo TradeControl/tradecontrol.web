@@ -281,20 +281,8 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Invoice_vwRegister> Invoice_Register { get; set; }
         public virtual DbSet<Invoice_vwRegisterCashCode> Invoice_RegisterCashCodes { get; set; }
         public virtual DbSet<Invoice_vwRegisterDetail> Invoice_RegisterDetails { get; set; }
-        public virtual DbSet<Invoice_vwRegisterExpense> Invoice_RegisterExpenses { get; set; }
-        public virtual DbSet<Invoice_vwRegisterItem> Invoice_RegisterItems { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchase> Invoice_RegisterPurchases { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchaseProject> Invoice_RegisterPurchaseProjects { get; set; }
-        public virtual DbSet<Invoice_vwRegisterPurchasesOverdue> Invoice_RegisterPurchasesOverdue { get; set; }
-        public virtual DbSet<Invoice_vwRegisterOverdue> Invoice_RegisterOverdue { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSale> Invoice_RegisterSales { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSaleProject> Invoice_RegisterSaleProjects { get; set; }
-        public virtual DbSet<Invoice_vwRegisterSalesOverdue> Invoice_RegisterSalesOverdues { get; set; }
         public virtual DbSet<Subject_vwReserveAccount> Subject_ReserveAccounts { get; set; }
         public virtual DbSet<Project_vwSale> Project_Sales { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpool> Invoice_SalesInvoiceSpool { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByObject> Invoice_SalesInvoiceSpoolByObject { get; set; }
-        public virtual DbSet<Invoice_vwSalesInvoiceSpoolByItem> Invoice_SalesInvoiceSpoolByItem { get; set; }
         public virtual DbSet<Project_vwSalesOrderSpool> Project_SalesOrderSpool { get; set; }
         public virtual DbSet<Cash_vwStatement> Cash_Statement { get; set; }
         public virtual DbSet<Subject_vwStatement> Subject_Statement { get; set; }
@@ -303,7 +291,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwStatementWhatIf> Cash_StatementWhatIf { get; set; }
         public virtual DbSet<Subject_vwStatusReport> Subject_StatusReport { get; set; }
         public virtual DbSet<Cash_vwSummary> Cash_Summary { get; set; }
-        public virtual DbSet<Invoice_vwSummary> Invoice_Summary { get; set; }
         public virtual DbSet<Subject_vwProject> Subject_Projects { get; set; }
         public virtual DbSet<Project_vwProject> Project_Projects { get; set; }
         public virtual DbSet<App_vwTaxCode> App_TaxCodes { get; set; }
@@ -3530,51 +3517,6 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwRegisterDetail", "Invoice");
             });
 
-            modelBuilder.Entity<Invoice_vwRegisterExpense>(entity =>
-            {
-                entity.ToView("vwRegisterExpenses", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterItem>(entity =>
-            {
-                entity.ToView("vwRegisterItems", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterPurchase>(entity =>
-            {
-                entity.ToView("vwRegisterPurchases", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterPurchaseProject>(entity =>
-            {
-                entity.ToView("vwRegisterPurchaseProjects", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterPurchasesOverdue>(entity =>
-            {
-                entity.ToView("vwRegisterPurchasesOverdue", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterOverdue>(entity =>
-            {
-                entity.ToView("vwRegisterOverdue", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterSale>(entity =>
-            {
-                entity.ToView("vwRegisterSales", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterSaleProject>(entity =>
-            {
-                entity.ToView("vwRegisterSaleProjects", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwRegisterSalesOverdue>(entity =>
-            {
-                entity.ToView("vwRegisterSalesOverdue", "Invoice");
-            });
-
             modelBuilder.Entity<Subject_vwReserveAccount>(entity =>
             {
                 entity.ToView("vwReserveAccount", "Cash");
@@ -3588,21 +3530,6 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Project_vwSale>(entity =>
             {
                 entity.ToView("vwSales", "Project");
-            });
-
-            modelBuilder.Entity<Invoice_vwSalesInvoiceSpool>(entity =>
-            {
-                entity.ToView("vwSalesInvoiceSpool", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwSalesInvoiceSpoolByObject>(entity =>
-            {
-                entity.ToView("vwSalesInvoiceSpoolByObject", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwSalesInvoiceSpoolByItem>(entity =>
-            {
-                entity.ToView("vwSalesInvoiceSpoolByItem", "Invoice");
             });
 
             modelBuilder.Entity<Project_vwSalesOrderSpool>(entity =>
@@ -3643,11 +3570,6 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwSummary>(entity =>
             {
                 entity.ToView("vwSummary", "Cash");
-            });
-
-            modelBuilder.Entity<Invoice_vwSummary>(entity =>
-            {
-                entity.ToView("vwSummary", "Invoice");
             });
 
             modelBuilder.Entity<Subject_vwProject>(entity =>

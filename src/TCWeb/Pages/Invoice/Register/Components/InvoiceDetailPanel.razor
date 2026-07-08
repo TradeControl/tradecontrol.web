@@ -53,10 +53,17 @@
                     </MudButton>
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
-                               Disabled="true">
+                               OnClick="HandleSubmitClickedAsync">
                         Submit
                     </MudButton>
                 </MudStack>
+
+                @if (Header.Printed)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                        This invoice is already marked as sent. You can still submit it again if needed.
+                    </MudAlert>
+                }
 
                 <MudDivider />
 
@@ -321,6 +328,7 @@
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback<string> OnEditInvoice { get; set; }
     [Parameter] public EventCallback<string> OnCancelInvoice { get; set; }
+    [Parameter] public EventCallback<string> OnSubmitInvoice { get; set; }
 
     private static string DisplayText(string? value)
     {
@@ -382,6 +390,12 @@
     {
         if (Header is not null && !string.IsNullOrWhiteSpace(Header.InvoiceNumber))
             await OnCancelInvoice.InvokeAsync(Header.InvoiceNumber);
+    }
+
+    private async Task HandleSubmitClickedAsync()
+    {
+        if (Header is not null && !string.IsNullOrWhiteSpace(Header.InvoiceNumber))
+            await OnSubmitInvoice.InvokeAsync(Header.InvoiceNumber);
     }
 
     private string GetTypeText(int typeCode)

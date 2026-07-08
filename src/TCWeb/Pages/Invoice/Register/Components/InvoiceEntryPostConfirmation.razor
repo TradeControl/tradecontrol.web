@@ -22,6 +22,13 @@
         <MudItem xs="12"><b>Reference:</b> @DisplayText(Model.ItemReference)</MudItem>
         <MudItem xs="12" md="6"><b>Total Value:</b> @Model.TotalValue.ToString("C")</MudItem>
         <MudItem xs="12" md="6"><b>Invoice Value:</b> @Model.InvoiceValue.ToString("C")</MudItem>
+        <MudItem xs="12">
+            <MudAlert Severity="@(Model.RequiresSubmission ? Severity.Info : Severity.Success)" Dense="true" Variant="Variant.Outlined">
+                @(Model.RequiresSubmission
+                    ? "This invoice type remains available for submission after posting."
+                    : "This invoice type is marked as sent by default after posting.")
+            </MudAlert>
+        </MudItem>
     </MudGrid>
 
     <MudStack Row="true" Spacing="2">

@@ -50,75 +50,88 @@
             </div>
 
             <div class="col-12">
-                <label class="form-label small text-muted mb-1" for="invoiceRegisterInvoiceTypeSelect">Invoice Type</label>
-                <select id="invoiceRegisterInvoiceTypeSelect"
-                        class="form-select form-select-sm"
-                        value="@GetSelectedInvoiceTypeValue()"
-                        @onchange="HandleInvoiceTypeChangedAsync">
-                    <option value="">All invoice types</option>
-                    @foreach (var option in InvoiceTypeOptions)
-                    {
-                        <option value="@option.Value.ToString(CultureInfo.InvariantCulture)">@option.Label</option>
-                    }
-                </select>
-            </div>
-
-            <div class="col-12">
-                <label class="form-label small text-muted mb-1" for="invoiceRegisterInvoiceStatusSelect">Invoice Status</label>
-                <select id="invoiceRegisterInvoiceStatusSelect"
-                        class="form-select form-select-sm"
-                        value="@GetSelectedInvoiceStatusValue()"
-                        @onchange="HandleInvoiceStatusChangedAsync">
-                    <option value="">All invoice statuses</option>
-                    @foreach (var option in InvoiceStatusOptions)
-                    {
-                        <option value="@option.Value.ToString(CultureInfo.InvariantCulture)">@option.Label</option>
-                    }
-                </select>
-            </div>
-
-            <div class="col-12">
-                <label class="form-label small text-muted mb-1" for="invoiceRegisterSearchText">Filter register</label>
-                <input id="invoiceRegisterSearchText"
-                       class="form-control form-control-sm"
-                       type="text"
-                       value="@(SearchText ?? string.Empty)"
-                       @oninput="HandleSearchTextChangedAsync"
-                       placeholder="Search visible dataset" />
-            </div>
-
-            <div class="col-12">
-                <label class="form-label small text-muted mb-1">Subject Namespace</label>
-                <NamespaceSelector FilterText="@(NamespaceFilter ?? string.Empty)"
-                                   Suggestions="@NamespaceSuggestions"
-                                   IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
-                                   ShowApplyButton="true"
-                                   ApplyButtonTitle="Apply namespace filter"
-                                   OnFilterChanged="HandleNamespaceFilterChangedAsync"
-                                   OnFilterCommitted="HandleNamespaceFilterCommittedAsync" />
-            </div>
-
-            <div class="col-12">
-                <label class="form-label small text-muted mb-1" for="invoiceRegisterCashCodeSelect">Cash Code</label>
-                <select id="invoiceRegisterCashCodeSelect"
-                        class="form-select form-select-sm"
-                        value="@CashCodeFilter"
-                        @onchange="HandleCashCodeChangedAsync">
-                    <option value="">All cash codes</option>
-                    @foreach (var option in CashCodeOptions)
-                    {
-                        <option value="@option.Value">@option.Label</option>
-                    }
-                </select>
-            </div>
-
-            <div class="col-12">
                 <button type="button"
-                        class="btn btn-outline-secondary btn-sm w-100"
-                        @onclick="HandleClearFiltersAsync">
-                    Clear filters
+                        class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-between"
+                        @onclick="ToggleFilters">
+                    <span>Filters</span>
+                    <span>@(_showFilters ? "Hide" : "Show")</span>
                 </button>
             </div>
+
+            @if (_showFilters)
+            {
+                <div class="col-12">
+                    <label class="form-label small text-muted mb-1" for="invoiceRegisterInvoiceTypeSelect">Invoice Type</label>
+                    <select id="invoiceRegisterInvoiceTypeSelect"
+                            class="form-select form-select-sm"
+                            value="@GetSelectedInvoiceTypeValue()"
+                            @onchange="HandleInvoiceTypeChangedAsync">
+                        <option value="">All invoice types</option>
+                        @foreach (var option in InvoiceTypeOptions)
+                        {
+                            <option value="@option.Value.ToString(CultureInfo.InvariantCulture)">@option.Label</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label small text-muted mb-1" for="invoiceRegisterInvoiceStatusSelect">Invoice Status</label>
+                    <select id="invoiceRegisterInvoiceStatusSelect"
+                            class="form-select form-select-sm"
+                            value="@GetSelectedInvoiceStatusValue()"
+                            @onchange="HandleInvoiceStatusChangedAsync">
+                        <option value="">All invoice statuses</option>
+                        <option value="-1">Unsent invoices</option>
+                        @foreach (var option in InvoiceStatusOptions)
+                        {
+                            <option value="@option.Value.ToString(CultureInfo.InvariantCulture)">@option.Label</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label small text-muted mb-1" for="invoiceRegisterSearchText">Filter register</label>
+                    <input id="invoiceRegisterSearchText"
+                           class="form-control form-control-sm"
+                           type="text"
+                           value="@(SearchText ?? string.Empty)"
+                           @oninput="HandleSearchTextChangedAsync"
+                           placeholder="Search visible dataset" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label small text-muted mb-1">Subject Namespace</label>
+                    <NamespaceSelector FilterText="@(NamespaceFilter ?? string.Empty)"
+                                       Suggestions="@NamespaceSuggestions"
+                                       IsLoadingSuggestions="@IsLoadingNamespaceSuggestions"
+                                       ShowApplyButton="true"
+                                       ApplyButtonTitle="Apply namespace filter"
+                                       OnFilterChanged="HandleNamespaceFilterChangedAsync"
+                                       OnFilterCommitted="HandleNamespaceFilterCommittedAsync" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label small text-muted mb-1" for="invoiceRegisterCashCodeSelect">Cash Code</label>
+                    <select id="invoiceRegisterCashCodeSelect"
+                            class="form-select form-select-sm"
+                            value="@CashCodeFilter"
+                            @onchange="HandleCashCodeChangedAsync">
+                        <option value="">All cash codes</option>
+                        @foreach (var option in CashCodeOptions)
+                        {
+                            <option value="@option.Value">@option.Label</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm w-100"
+                            @onclick="HandleClearFiltersAsync">
+                        Clear filters
+                    </button>
+                </div>
+            }
         </div>
     }
     else
@@ -161,6 +174,8 @@
                     <span class="badge rounded-pill text-bg-primary">Invoiced</span>
                     <span class="badge rounded-pill text-bg-info">Partially paid</span>
                     <span class="badge rounded-pill text-bg-success">Paid</span>
+                    <span class="badge rounded-pill text-bg-success">Sent</span>
+                    <span class="badge rounded-pill text-bg-warning">Unsent</span>
                 </div>
             </div>
         }
@@ -195,6 +210,7 @@
     [Parameter] public EventCallback OnClearFilters { get; set; }
 
     private bool _showLegend;
+    private bool _showFilters = true;
 
     private string GetSelectedPeriodValue()
     {
@@ -313,5 +329,10 @@
     private void ToggleLegend()
     {
         _showLegend = !_showLegend;
+    }
+
+    private void ToggleFilters()
+    {
+        _showFilters = !_showFilters;
     }
 }

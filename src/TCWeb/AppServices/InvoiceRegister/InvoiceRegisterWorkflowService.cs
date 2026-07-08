@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http;
 using TradeControl.Web.Data;
+using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Invoice.Register.Models;
 using TradeControl.Web.Pages.Subject.Controls;
@@ -14,10 +18,12 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
     public sealed class InvoiceRegisterWorkflowService : IInvoiceRegisterWorkflowService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public InvoiceRegisterWorkflowService(IServiceScopeFactory scopeFactory)
+        public InvoiceRegisterWorkflowService(IServiceScopeFactory scopeFactory, IHttpContextAccessor httpContextAccessor)
         {
             _scopeFactory = scopeFactory;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<InvoiceRaiseListResult> GetRaiseListAsync(short? invoiceTypeCode)
@@ -383,7 +389,7 @@ WHERE EntryId = {model.OriginalEntryId}");
             }
 
             return InvoiceWorkflowActionResult.Success(hasEmailWorkflow
-                ? "All pending entries posted. Submission/email workflow remains a later phase."
+                ? "All pending entries posted. Sales invoices and credit notes remain available for submission."
                 : "All pending entries posted.");
         }
 
@@ -716,6 +722,180 @@ WHERE EntryId = {model.OriginalEntryId}");
             return InvoiceWorkflowActionResult.Success("Invoice cancelled.");
         }
 
+        public async Task<InvoiceSubmitModel> GetSubmitAsync(string invoiceNumber, string? emailAddress = null)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var fileProvider = scope.ServiceProvider.GetRequiredService<IFileProvider>();
+            var nodeSettings = new NodeSettings(nodeContext);
+
+            var header = await nodeContext.Invoice_Register
+                .AsNoTracking()
+                .FirstAsync(invoice => invoice.InvoiceNumber == invoiceNumber);
+
+            await EnsureInvoiceSubmissionAuthorisedAsync(nodeContext, header.UserId);
+
+            var templateOptions = await (from i in nodeContext.Web_tbTemplateInvoices.AsNoTracking()
+                                         join t in nodeContext.Web_tbTemplates.AsNoTracking() on i.TemplateId equals t.TemplateId
+                                         where i.InvoiceTypeCode == header.InvoiceTypeCode
+                                         orderby i.LastUsedOn descending
+                                         select new InvoiceSubmitTemplateOption
+                                         {
+                                             TemplateId = t.TemplateId,
+                                             TemplateFileName = t.TemplateFileName,
+                                             LastUsedOn = i.LastUsedOn
+                                         })
+                .ToListAsync();
+
+            var recipients = await nodeContext.Subject_EmailAddresses
+                .AsNoTracking()
+                .Where(item => item.SubjectCode == header.SubjectCode)
+                .OrderBy(item => item.EmailAddress)
+                .Select(item => new InvoiceSubmitRecipientOption
+                {
+                    EmailAddress = item.EmailAddress,
+                    DisplayName = string.IsNullOrWhiteSpace(item.ContactName)
+                        ? item.EmailAddress
+                        : $"{item.ContactName} <{item.EmailAddress}>",
+                    IsAdmin = item.IsAdmin
+                })
+                .ToListAsync();
+
+            var selectedTemplate = templateOptions.FirstOrDefault()?.TemplateFileName ?? string.Empty;
+            var selectedEmail = ResolveDefaultEmailAddress(recipients, emailAddress);
+
+            var readiness = new InvoiceSubmitReadinessModel
+            {
+                HasMailHost = nodeSettings.HasMailHost,
+                HasTemplates = templateOptions.Count > 0,
+                HasRecipients = recipients.Count > 0
+            };
+
+            if (!readiness.HasMailHost)
+                readiness.Messages.Add("Mail host is not configured.");
+
+            if (!readiness.HasTemplates)
+                readiness.Messages.Add("No template is assigned to this invoice type.");
+
+            if (!readiness.HasRecipients)
+                readiness.Messages.Add("No email address is available for this subject.");
+
+            return new InvoiceSubmitModel
+            {
+                InvoiceNumber = header.InvoiceNumber,
+                SubjectCode = header.SubjectCode,
+                ParentSubjectCode = header.ParentSubjectCode ?? string.Empty,
+                NamespacePath = BuildNamespacePath(header.ParentSubjectCode, header.SubjectCode),
+                SubjectBrowserUrl = BuildSubjectBrowserUrl(header.ParentSubjectCode, header.SubjectCode),
+                SubjectName = header.SubjectName,
+                InvoiceType = header.InvoiceType,
+                InvoiceTypeCode = header.InvoiceTypeCode,
+                InvoicedOn = header.InvoicedOn,
+                DueOn = header.DueOn,
+                InvoiceValue = (decimal)header.InvoiceValue,
+                TaxValue = (decimal)header.TaxValue,
+                TotalValue = (decimal)header.TotalInvoiceValue,
+                Printed = header.Printed,
+                SelectedTemplateFileName = selectedTemplate,
+                SelectedEmailAddress = selectedEmail,
+                TemplateOptions = templateOptions,
+                RecipientOptions = recipients,
+                Readiness = readiness
+            };
+        }
+
+        public async Task<InvoiceSubmitPreviewModel> GetSubmitPreviewAsync(InvoiceSubmitModel model)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var fileProvider = scope.ServiceProvider.GetRequiredService<IFileProvider>();
+            var templateManager = new TemplateManager(nodeContext, fileProvider);
+
+            var invoice = await nodeContext.Invoice_tbInvoices
+                .AsNoTracking()
+                .SingleAsync(item => item.InvoiceNumber == model.InvoiceNumber);
+
+            await EnsureInvoiceSubmissionAuthorisedAsync(nodeContext, invoice.UserId);
+
+            var templateId = await nodeContext.Web_tbTemplates
+                .AsNoTracking()
+                .Where(item => item.TemplateFileName == model.SelectedTemplateFileName)
+                .Select(item => item.TemplateId)
+                .FirstAsync();
+
+            MailDocument doc = await templateManager.GetInvoice((NodeEnum.InvoiceType)invoice.InvoiceTypeCode, templateId);
+            MailInvoice mailInvoice = new(nodeContext, doc, model.InvoiceNumber);
+
+            var htmlBody = await mailInvoice.PreviewInvoice();
+            await templateManager.RegisterTemplateUsage(templateId, (NodeEnum.InvoiceType)invoice.InvoiceTypeCode);
+
+            return new InvoiceSubmitPreviewModel
+            {
+                InvoiceNumber = model.InvoiceNumber,
+                SubjectName = model.SubjectName,
+                InvoiceType = model.InvoiceType,
+                TemplateFileName = model.SelectedTemplateFileName,
+                EmailAddress = model.SelectedEmailAddress,
+                HtmlBody = htmlBody,
+                Printed = model.Printed
+            };
+        }
+
+        public async Task<InvoiceWorkflowActionResult> SendSubmitAsync(InvoiceSubmitModel model)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var fileProvider = scope.ServiceProvider.GetRequiredService<IFileProvider>();
+            var templateManager = new TemplateManager(nodeContext, fileProvider);
+
+            if (string.IsNullOrWhiteSpace(model.SelectedTemplateFileName))
+                return InvoiceWorkflowActionResult.Failure("Please select a template.");
+
+            if (string.IsNullOrWhiteSpace(model.SelectedEmailAddress))
+                return InvoiceWorkflowActionResult.Failure("Please select a recipient.");
+
+            var invoice = await nodeContext.Invoice_tbInvoices
+                .AsNoTracking()
+                .SingleAsync(item => item.InvoiceNumber == model.InvoiceNumber);
+
+            await EnsureInvoiceSubmissionAuthorisedAsync(nodeContext, invoice.UserId);
+
+            var templateId = await nodeContext.Web_tbTemplates
+                .AsNoTracking()
+                .Where(item => item.TemplateFileName == model.SelectedTemplateFileName)
+                .Select(item => item.TemplateId)
+                .FirstAsync();
+
+            MailDocument doc = await templateManager.GetInvoice((NodeEnum.InvoiceType)invoice.InvoiceTypeCode, templateId);
+            MailInvoice mailInvoice = new(nodeContext, doc, model.InvoiceNumber);
+
+            await mailInvoice.Send(model.SelectedEmailAddress);
+            await templateManager.RegisterTemplateUsage(templateId, (NodeEnum.InvoiceType)invoice.InvoiceTypeCode);
+
+            return InvoiceWorkflowActionResult.Success("Invoice submitted.");
+        }
+
+        public async Task<InvoiceWorkflowActionResult> MarkInvoiceAsSentAsync(string invoiceNumber)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            var invoice = await nodeContext.Invoice_tbInvoices
+                .FirstOrDefaultAsync(item => item.InvoiceNumber == invoiceNumber);
+
+            if (invoice is null)
+                return InvoiceWorkflowActionResult.Failure("Invoice not found.");
+
+            await EnsureInvoiceSubmissionAuthorisedAsync(nodeContext, invoice.UserId);
+
+            invoice.Spooled = false;
+            invoice.Printed = true;
+
+            await nodeContext.SaveChangesAsync();
+
+            return InvoiceWorkflowActionResult.Success("Invoice marked as sent.");
+        }
+
         private static void ApplyNamespaceSelection(InvoiceRaiseEditModel model)
         {
             var namespacePath = model.NamespacePath?.Trim().Trim('.') ?? string.Empty;
@@ -760,6 +940,16 @@ WHERE EntryId = {model.OriginalEntryId}");
                 : $"{parentSubjectCode}.{subjectCode}";
         }
 
+        private static string BuildSubjectBrowserUrl(string? parentSubjectCode, string? subjectCode)
+        {
+            var namespacePath = BuildNamespacePath(parentSubjectCode, subjectCode);
+
+            if (string.IsNullOrWhiteSpace(namespacePath))
+                return "/Subject/Browser/Index";
+
+            return $"/Subject/Browser/Index?mode=Namespace&select={Uri.EscapeDataString(namespacePath)}&namespaceFilter={Uri.EscapeDataString(namespacePath)}";
+        }
+
         private static NodeEnum.CashPolarity ResolveCashPolarity(NodeEnum.InvoiceType invoiceType)
         {
             return invoiceType switch
@@ -776,8 +966,30 @@ WHERE EntryId = {model.OriginalEntryId}");
         {
             return invoiceTypeCode == (short)NodeEnum.InvoiceType.SalesInvoice
                 || invoiceTypeCode == (short)NodeEnum.InvoiceType.CreditNote
-                ? "Entry posted. Submission/email workflow remains a later phase."
-                : "Entry posted.";
+                ? "Entry posted. The invoice remains available for submission."
+                : "Entry posted. The invoice is marked as sent by default.";
+        }
+
+        private async Task EnsureInvoiceSubmissionAuthorisedAsync(NodeContext nodeContext, string invoiceUserId)
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            var user = httpContext?.User;
+
+            if (user is null || !(user.Identity?.IsAuthenticated ?? false))
+                throw new UnauthorizedAccessException("User is not authenticated.");
+
+            if (user.IsInRole("Managers") || user.IsInRole("Administrators"))
+                return;
+
+            var profile = new Profile(nodeContext);
+            var externalUserId = user.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                ?? user.FindFirst("sub")?.Value
+                ?? string.Empty;
+
+            var internalUserId = await profile.UserId(externalUserId);
+
+            if (!string.Equals(internalUserId, invoiceUserId, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("User is not authorised to submit this invoice.");
         }
 
         private static async Task<InvoiceRaiseEntrySummaryModel> ToSummaryAsync(NodeContext nodeContext, Invoice_vwEntry header)
@@ -852,6 +1064,27 @@ WHERE EntryId = {model.OriginalEntryId}");
                 .OrderBy(status => status.InvoiceStatusCode)
                 .Select(status => new InvoiceRegisterInvoiceStatusOption(status.InvoiceStatusCode, status.InvoiceStatus))
                 .ToListAsync();
+        }
+
+        private static string ResolveDefaultEmailAddress(IReadOnlyList<InvoiceSubmitRecipientOption> recipients, string? requestedEmailAddress)
+        {
+            if (recipients.Count == 0)
+                return string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(requestedEmailAddress))
+            {
+                var requested = recipients.FirstOrDefault(item =>
+                    string.Equals(item.EmailAddress, requestedEmailAddress, StringComparison.OrdinalIgnoreCase));
+
+                if (requested is not null)
+                    return requested.EmailAddress;
+            }
+
+            var admin = recipients.FirstOrDefault(item => item.IsAdmin);
+            if (admin is not null)
+                return admin.EmailAddress;
+
+            return recipients[0].EmailAddress;
         }
     }
 }

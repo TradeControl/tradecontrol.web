@@ -15,7 +15,9 @@ public enum WorkspaceMode
     UpdateCreateItem,
     UpdateEditItem,
     UpdateDeleteItem,
-    UpdateDeleteInvoice
+    UpdateDeleteInvoice,
+    SubmitEdit,
+    SubmitPreview
 }
 
 public sealed class WorkspaceState<TKey>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Subject.Controls;
+using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages.Invoice.Register.Models
 {
@@ -104,6 +105,67 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
         public string TaxCode { get; set; } = string.Empty;
         public string TaxDescription { get; set; } = string.Empty;
         public string ItemReference { get; set; } = string.Empty;
+        public bool RequiresSubmission => InvoiceTypeCode == (short)NodeEnum.InvoiceType.SalesInvoice
+            || InvoiceTypeCode == (short)NodeEnum.InvoiceType.CreditNote;
+    }
+
+    public sealed class InvoiceSubmitRecipientOption
+    {
+        public string EmailAddress { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public bool IsAdmin { get; set; }
+    }
+
+    public sealed class InvoiceSubmitTemplateOption
+    {
+        public int TemplateId { get; set; }
+        public string TemplateFileName { get; set; } = string.Empty;
+        public DateTime? LastUsedOn { get; set; }
+    }
+
+    public sealed class InvoiceSubmitReadinessModel
+    {
+        public bool HasMailHost { get; set; }
+        public bool HasTemplates { get; set; }
+        public bool HasRecipients { get; set; }
+        public bool CanSubmit => HasMailHost && HasTemplates && HasRecipients;
+        public List<string> Messages { get; set; } = [];
+    }
+
+    public sealed class InvoiceSubmitModel
+    {
+        public string InvoiceNumber { get; set; } = string.Empty;
+        public string SubjectCode { get; set; } = string.Empty;
+        public string ParentSubjectCode { get; set; } = string.Empty;
+        public string NamespacePath { get; set; } = string.Empty;
+        public string SubjectBrowserUrl { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public string InvoiceType { get; set; } = string.Empty;
+        public short InvoiceTypeCode { get; set; }
+        public DateTime InvoicedOn { get; set; }
+        public DateTime DueOn { get; set; }
+        public decimal InvoiceValue { get; set; }
+        public decimal TaxValue { get; set; }
+        public decimal TotalValue { get; set; }
+        public bool Printed { get; set; }
+
+        public string SelectedTemplateFileName { get; set; } = string.Empty;
+        public string SelectedEmailAddress { get; set; } = string.Empty;
+
+        public IReadOnlyList<InvoiceSubmitTemplateOption> TemplateOptions { get; set; } = Array.Empty<InvoiceSubmitTemplateOption>();
+        public IReadOnlyList<InvoiceSubmitRecipientOption> RecipientOptions { get; set; } = Array.Empty<InvoiceSubmitRecipientOption>();
+        public InvoiceSubmitReadinessModel Readiness { get; set; } = new();
+    }
+
+    public sealed class InvoiceSubmitPreviewModel
+    {
+        public string InvoiceNumber { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public string InvoiceType { get; set; } = string.Empty;
+        public string TemplateFileName { get; set; } = string.Empty;
+        public string EmailAddress { get; set; } = string.Empty;
+        public string HtmlBody { get; set; } = string.Empty;
+        public bool Printed { get; set; }
     }
 
     public sealed class InvoiceUpdateEditModel

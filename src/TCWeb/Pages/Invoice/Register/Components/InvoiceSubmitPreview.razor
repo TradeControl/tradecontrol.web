@@ -1,0 +1,50 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">Preview Invoice</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="2" Class="mb-4">
+        <MudItem xs="12" md="6"><b>Invoice:</b> @Model.InvoiceNumber</MudItem>
+        <MudItem xs="12" md="6"><b>Subject:</b> @Model.SubjectName</MudItem>
+        <MudItem xs="12" md="6"><b>Type:</b> @Model.InvoiceType</MudItem>
+        <MudItem xs="12" md="6"><b>Recipient:</b> @Model.EmailAddress</MudItem>
+        <MudItem xs="12"><b>Template:</b> @Model.TemplateFileName</MudItem>
+    </MudGrid>
+
+    <MudPaper Class="pa-2 mb-4" Outlined="true">
+        <div class="tc-submit-preview-html">
+            @((MarkupString)Model.HtmlBody)
+        </div>
+    </MudPaper>
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="OnSubmit">
+            Submit
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+<style>
+    .tc-submit-preview-html {
+        background: white;
+        overflow: auto;
+    }
+</style>
+
+@code {
+    [Parameter] public InvoiceSubmitPreviewModel Model { get; set; } = new();
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+}

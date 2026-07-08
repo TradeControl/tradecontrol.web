@@ -30,5 +30,10 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
         Task<InvoiceWorkflowActionResult> SaveUpdateItemAsync(InvoiceUpdateItemEditModel model);
         Task<InvoiceWorkflowActionResult> DeleteUpdateItemAsync(string invoiceNumber, string cashCode);
         Task<InvoiceWorkflowActionResult> DeleteUpdateInvoiceAsync(string invoiceNumber);
+
+        Task<InvoiceSubmitModel> GetSubmitAsync(string invoiceNumber, string? emailAddress = null);
+        Task<InvoiceSubmitPreviewModel> GetSubmitPreviewAsync(InvoiceSubmitModel model);
+        Task<InvoiceWorkflowActionResult> SendSubmitAsync(InvoiceSubmitModel model);
+        Task<InvoiceWorkflowActionResult> MarkInvoiceAsSentAsync(string invoiceNumber);
     }
 }

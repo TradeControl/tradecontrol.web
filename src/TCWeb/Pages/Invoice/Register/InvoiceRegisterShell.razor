@@ -295,6 +295,8 @@ else
     private InvoiceEntryPostModel RaisePostModel { get; set; } = new();
     private InvoiceUpdateEditModel UpdateEditModel { get; set; } = new();
     private InvoiceUpdateItemEditModel UpdateItemEditModel { get; set; } = new();
+    private InvoiceSubmitModel SubmitModel { get; set; } = new();
+    private InvoiceSubmitPreviewModel SubmitPreviewModel { get; set; } = new();
     private InvoiceDeleteConfirmationModel DeleteConfirmation { get; set; } = new();
     private string? WorkflowMessage { get; set; }
 
@@ -377,8 +379,11 @@ else
         Filter.Namespace = string.IsNullOrWhiteSpace(_namespaceFilter) ? null : _namespaceFilter;
         Filter.CashCode = string.IsNullOrWhiteSpace(_cashCodeFilter) ? null : _cashCodeFilter;
         Filter.InvoiceType = _selectedInvoiceTypeCode?.ToString();
-        Filter.InvoiceStatus = _selectedInvoiceStatusCode?.ToString();
+        Filter.InvoiceStatus = _selectedInvoiceStatusCode.HasValue && _selectedInvoiceStatusCode.Value != -1
+            ? _selectedInvoiceStatusCode.Value.ToString()
+            : null;
         Filter.SelectedInvoiceNumber = Workspace.SelectedKey;
+        Filter.StatusUnsent = _selectedInvoiceStatusCode == -1;
 
         if (_selectedYearNumber.HasValue && _selectedYearNumber.Value > 0)
         {
@@ -686,9 +691,9 @@ else
 
         if (_selectedInvoiceStatusCode.HasValue)
         {
-            var invoiceStatusLabel = _invoiceStatusOptions
-                .FirstOrDefault(option => option.Value == _selectedInvoiceStatusCode.Value)?
-                .Label;
+            var invoiceStatusLabel = _selectedInvoiceStatusCode == -1
+                ? "Unsent"
+                : _invoiceStatusOptions.FirstOrDefault(option => option.Value == _selectedInvoiceStatusCode.Value)?.Label;
 
             if (!string.IsNullOrWhiteSpace(invoiceStatusLabel))
             {
@@ -768,6 +773,12 @@ else
                 break;
             case WorkspaceMode.UpdateDeleteInvoice:
                 builder.AddContent(seq++, RenderUpdateDeleteInvoiceWorkspace());
+                break;
+            case WorkspaceMode.SubmitEdit:
+                builder.AddContent(seq++, RenderSubmitEditorWorkspace());
+                break;
+            case WorkspaceMode.SubmitPreview:
+                builder.AddContent(seq++, RenderSubmitPreviewWorkspace());
                 break;
         }
     };
@@ -895,6 +906,7 @@ else
         builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, ShowRegisterModeAsync));
         builder.AddAttribute(seq++, "OnEditInvoice", EventCallback.Factory.Create<string>(this, OpenUpdateEditAsync));
         builder.AddAttribute(seq++, "OnCancelInvoice", EventCallback.Factory.Create<string>(this, OpenUpdateDeleteInvoiceAsync));
+        builder.AddAttribute(seq++, "OnSubmitInvoice", EventCallback.Factory.Create<string>(this, OpenSubmitAsync));
         builder.CloseComponent();
         builder.CloseElement();
     };
@@ -1019,6 +1031,28 @@ else
         builder.AddAttribute(seq++, "ConfirmButtonText", "Cancel invoice");
         builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToDetailPanelAsync));
         builder.AddAttribute(seq++, "OnConfirm", EventCallback.Factory.Create(this, ConfirmUpdateDeleteInvoiceAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderSubmitEditorWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceSubmitEditor>(seq++);
+        builder.AddAttribute(seq++, "Model", SubmitModel);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToDetailPanelAsync));
+        builder.AddAttribute(seq++, "OnPreview", EventCallback.Factory.Create(this, OpenSubmitPreviewAsync));
+        builder.AddAttribute(seq++, "OnSubmit", EventCallback.Factory.Create(this, ConfirmSubmitAsync));
+        builder.AddAttribute(seq++, "OnMarkSent", EventCallback.Factory.Create(this, ConfirmMarkSentAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderSubmitPreviewWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceSubmitPreview>(seq++);
+        builder.AddAttribute(seq++, "Model", SubmitPreviewModel);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToSubmitEditAsync));
+        builder.AddAttribute(seq++, "OnSubmit", EventCallback.Factory.Create(this, ConfirmSubmitAsync));
         builder.CloseComponent();
     };
 
@@ -1219,6 +1253,17 @@ else
     {
         var result = await WorkflowService.PostRaiseEntryAsync(RaisePostModel);
         WorkflowMessage = result.Message;
+
+        if (RaisePostModel.RequiresSubmission)
+        {
+            _selectedViewMode = InvoiceRegisterViewMode.Headers;
+            _selectedInvoiceStatusCode = -1;
+            Workspace.SelectedKey = null;
+            Workspace.Mode = WorkspaceMode.Register;
+            await LoadRegisterAsync();
+            return;
+        }
+
         await BackToRaiseListAsync();
     }
 
@@ -1226,6 +1271,17 @@ else
     {
         var result = await WorkflowService.PostRaiseAccountAsync(RaisePostModel);
         WorkflowMessage = result.Message;
+
+        if (RaisePostModel.RequiresSubmission)
+        {
+            _selectedViewMode = InvoiceRegisterViewMode.Headers;
+            _selectedInvoiceStatusCode = -1;
+            Workspace.SelectedKey = null;
+            Workspace.Mode = WorkspaceMode.Register;
+            await LoadRegisterAsync();
+            return;
+        }
+
         await BackToRaiseListAsync();
     }
 
@@ -1233,7 +1289,12 @@ else
     {
         var result = await WorkflowService.PostAllRaiseEntriesAsync();
         WorkflowMessage = result.Message;
-        await BackToRaiseListAsync();
+
+        _selectedViewMode = InvoiceRegisterViewMode.Headers;
+        _selectedInvoiceStatusCode = -1;
+        Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
+        await LoadRegisterAsync();
     }
 
     private async Task OpenUpdateEditAsync(string invoiceNumber)
@@ -1241,6 +1302,47 @@ else
         WorkflowMessage = null;
         UpdateEditModel = await WorkflowService.GetUpdateEditAsync(invoiceNumber);
         Workspace.Mode = WorkspaceMode.UpdateEdit;
+    }
+
+    private async Task OpenSubmitAsync(string invoiceNumber)
+    {
+        WorkflowMessage = null;
+        SubmitModel = await WorkflowService.GetSubmitAsync(invoiceNumber);
+        Workspace.Mode = WorkspaceMode.SubmitEdit;
+    }
+
+    private async Task OpenSubmitPreviewAsync()
+    {
+        WorkflowMessage = null;
+        SubmitPreviewModel = await WorkflowService.GetSubmitPreviewAsync(SubmitModel);
+        Workspace.Mode = WorkspaceMode.SubmitPreview;
+    }
+
+    private async Task BackToSubmitEditAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SubmitModel.InvoiceNumber))
+            return;
+
+        WorkflowMessage = null;
+        Workspace.Mode = WorkspaceMode.SubmitEdit;
+        await Task.CompletedTask;
+    }
+
+    private async Task ConfirmSubmitAsync()
+    {
+        var result = await WorkflowService.SendSubmitAsync(SubmitModel);
+        WorkflowMessage = result.Message;
+        await BackToDetailPanelAsync();
+    }
+
+    private async Task ConfirmMarkSentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SubmitModel.InvoiceNumber))
+            return;
+
+        var result = await WorkflowService.MarkInvoiceAsSentAsync(SubmitModel.InvoiceNumber);
+        WorkflowMessage = result.Message;
+        await BackToDetailPanelAsync();
     }
 
     private async Task BackToDetailPanelAsync()

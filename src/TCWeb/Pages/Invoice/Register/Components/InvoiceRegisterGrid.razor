@@ -50,6 +50,15 @@
                     </CellTemplate>
                 </TemplateColumn>
 
+                <TemplateColumn Title="Sent">
+                    <CellTemplate>
+                        <MudTooltip Text="@(context.Item.Printed ? "Sent" : "Unsent")">
+                            <MudIcon Icon="@(context.Item.Printed ? Icons.Material.Filled.MarkEmailRead : Icons.Material.Filled.MarkEmailUnread)"
+                                     Color="@(context.Item.Printed ? Color.Success : Color.Warning)" />
+                        </MudTooltip>
+                    </CellTemplate>
+                </TemplateColumn>
+
                 <PropertyColumn Property="x => x.InvoiceNumber" Title="Invoice">
                     <CellTemplate>
                         <MudTooltip Text="Open details panel">

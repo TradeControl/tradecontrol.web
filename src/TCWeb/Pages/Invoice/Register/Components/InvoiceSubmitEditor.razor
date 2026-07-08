@@ -1,0 +1,124 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">Submit Invoice</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12">
+            <MudAlert Severity="@(Model.Readiness.CanSubmit ? Severity.Info : Severity.Warning)" Dense="true" Variant="Variant.Outlined">
+                @if (Model.Readiness.Messages.Count == 0)
+                {
+                    <span>Select a recipient and template, then preview or submit.</span>
+                }
+                else
+                {
+                    <ul class="mb-0 ps-3">
+                        @foreach (var message in Model.Readiness.Messages)
+                        {
+                            <li>@message</li>
+                        }
+                    </ul>
+                }
+            </MudAlert>
+        </MudItem>
+
+        <MudItem xs="12" md="6"><b>Invoice:</b> @Model.InvoiceNumber</MudItem>
+        <MudItem xs="12" md="6"><b>Subject:</b> @Model.SubjectName</MudItem>
+        <MudItem xs="12" md="6"><b>Type:</b> @Model.InvoiceType</MudItem>
+        <MudItem xs="12" md="6"><b>Sent:</b> @(Model.Printed ? "Yes" : "No")</MudItem>
+        <MudItem xs="12" md="6"><b>Invoiced:</b> @Model.InvoicedOn.ToShortDateString()</MudItem>
+        <MudItem xs="12" md="6"><b>Due:</b> @Model.DueOn.ToShortDateString()</MudItem>
+        <MudItem xs="12" md="4"><b>Net:</b> @Model.InvoiceValue.ToString("C")</MudItem>
+        <MudItem xs="12" md="4"><b>Tax:</b> @Model.TaxValue.ToString("C")</MudItem>
+        <MudItem xs="12" md="4"><b>Total:</b> @Model.TotalValue.ToString("C")</MudItem>
+
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2">
+                Namespace:
+                <a href="@Model.SubjectBrowserUrl"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="link-primary text-decoration-none">
+                    <code>@(string.IsNullOrWhiteSpace(Model.NamespacePath) ? "—" : Model.NamespacePath)</code>
+                    <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                </a>
+            </MudText>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="string"
+                       Label="Recipient"
+                       Value="Model.SelectedEmailAddress"
+                       ValueChanged="HandleRecipientChangedAsync">
+                @foreach (var option in Model.RecipientOptions)
+                {
+                    <MudSelectItem T="string" Value="@option.EmailAddress">@option.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="string"
+                       Label="Template"
+                       Value="Model.SelectedTemplateFileName"
+                       ValueChanged="HandleTemplateChangedAsync">
+                @foreach (var option in Model.TemplateOptions)
+                {
+                    <MudSelectItem T="string" Value="@option.TemplateFileName">@option.TemplateFileName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Disabled="@(!Model.Readiness.CanSubmit)"
+                           OnClick="OnPreview">
+                    Preview
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Disabled="@(!Model.Readiness.CanSubmit)"
+                           OnClick="OnSubmit">
+                    Submit
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           Disabled="@(Model.Printed)"
+                           OnClick="OnMarkSent">
+                    Mark as sent
+                </MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public InvoiceSubmitModel Model { get; set; } = new();
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnPreview { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+    [Parameter] public EventCallback OnMarkSent { get; set; }
+
+    private Task HandleRecipientChangedAsync(string value)
+    {
+        Model.SelectedEmailAddress = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTemplateChangedAsync(string value)
+    {
+        Model.SelectedTemplateFileName = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+}
