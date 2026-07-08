@@ -1,0 +1,49 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">Post Invoice</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="2" Class="mb-4">
+        <MudItem xs="12" md="6"><b>Subject:</b> @Model.SubjectName</MudItem>
+        <MudItem xs="12" md="6"><b>Namespace:</b> @DisplayText(Model.NamespacePath)</MudItem>
+        <MudItem xs="12" md="6"><b>Cash Code:</b> @Model.CashDescription</MudItem>
+        <MudItem xs="12" md="6"><b>Type:</b> @Model.InvoiceType</MudItem>
+        <MudItem xs="12" md="6"><b>Invoiced:</b> @Model.InvoicedOn.ToShortDateString()</MudItem>
+        <MudItem xs="12" md="6"><b>Tax Code:</b> @Model.TaxDescription</MudItem>
+        <MudItem xs="12"><b>Reference:</b> @DisplayText(Model.ItemReference)</MudItem>
+        <MudItem xs="12" md="6"><b>Total Value:</b> @Model.TotalValue.ToString("C")</MudItem>
+        <MudItem xs="12" md="6"><b>Invoice Value:</b> @Model.InvoiceValue.ToString("C")</MudItem>
+    </MudGrid>
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="OnPostEntry">
+            Post Entry
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   OnClick="OnPostAccount">
+            Post Account
+        </MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public InvoiceEntryPostModel Model { get; set; } = new();
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnPostEntry { get; set; }
+    [Parameter] public EventCallback OnPostAccount { get; set; }
+
+    private static string DisplayText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

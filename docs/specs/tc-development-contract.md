@@ -103,3 +103,28 @@ When the requested work is complete:
 - Stop.
 
 Do not continue adding features or enhancements beyond the requested scope.
+
+## 10. SQL TRY/CATCH Preservation
+
+For SQL stored procedures that already use the established Trade Control error handling pattern:
+
+```sql
+BEGIN CATCH
+    EXEC App.proc_ErrorLog;
+END CATCH
+```
+
+the assistant must treat that pattern as authoritative and complete.
+
+Rules:
+
+- Do not add `ROLLBACK TRAN`.
+- Do not add `THROW`.
+- Do not add `RAISERROR` inside the `CATCH` block unless explicitly requested.
+- Do not add cursor cleanup in the `CATCH` block unless explicitly requested.
+- Do not add any supplementary error-handling statements around `EXEC App.proc_ErrorLog`.
+- Do not rewrite the `CATCH` block for style, consistency, or perceived safety.
+
+Assume `EXEC App.proc_ErrorLog` already performs the required logging, rollback handling, and error propagation for this codebase.
+
+If a change appears to require different `CATCH` behaviour, stop and request explicit instruction before modifying it.

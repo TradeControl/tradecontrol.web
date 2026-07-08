@@ -41,13 +41,19 @@
                 </div>
 
                 <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="true">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               OnClick="HandleEditClickedAsync">
                         Edit
                     </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="true">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Warning"
+                               OnClick="HandleCancelClickedAsync">
                         Cancel
                     </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="true">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="true">
                         Submit
                     </MudButton>
                 </MudStack>
@@ -313,6 +319,8 @@
     [Parameter] public List<Invoice_vwRegisterDetail> DetailItems { get; set; } = [];
     [Parameter] public List<Invoice_vwChangeLog> ChangeLogItems { get; set; } = [];
     [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<string> OnEditInvoice { get; set; }
+    [Parameter] public EventCallback<string> OnCancelInvoice { get; set; }
 
     private static string DisplayText(string? value)
     {
@@ -362,6 +370,18 @@
             return "/Subject/Browser/Index";
 
         return $"/Subject/Browser/Index?mode=Namespace&select={Uri.EscapeDataString(selectedPath)}&namespaceFilter={Uri.EscapeDataString(selectedPath)}";
+    }
+
+    private async Task HandleEditClickedAsync()
+    {
+        if (Header is not null && !string.IsNullOrWhiteSpace(Header.InvoiceNumber))
+            await OnEditInvoice.InvokeAsync(Header.InvoiceNumber);
+    }
+
+    private async Task HandleCancelClickedAsync()
+    {
+        if (Header is not null && !string.IsNullOrWhiteSpace(Header.InvoiceNumber))
+            await OnCancelInvoice.InvokeAsync(Header.InvoiceNumber);
     }
 
     private string GetTypeText(int typeCode)

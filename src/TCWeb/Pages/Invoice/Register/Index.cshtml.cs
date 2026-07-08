@@ -1,10 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
-
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Threading.Tasks;
 using TradeControl.Web.Data;
-using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Invoice.Register
 {
@@ -14,9 +9,9 @@ namespace TradeControl.Web.Pages.Invoice.Register
         {
         }
 
-        public void OnGet()
+        public async Task OnGetAsync()
         {
-
+            await SetViewData();
         }
     }
 

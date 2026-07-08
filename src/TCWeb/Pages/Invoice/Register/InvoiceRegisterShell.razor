@@ -11,6 +11,7 @@
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @inject IInvoiceRegisterService InvoiceRegisterService
 @inject IInvoiceRegisterLookupService InvoiceRegisterLookupService
+@inject IInvoiceRegisterWorkflowService WorkflowService
 @inject ISubjectBrowserService SubjectBrowserService
 
 <MudThemeProvider />
@@ -68,78 +69,17 @@
                                Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.TableRows"
                                OnClick="ShowRegisterAsync">
-                        Open register
+                        Open workspace
                     </MudButton>
                 </div>
             </div>
         </div>
     }
-    else if (_mobileView == InvoiceRegisterMobileView.Register)
+    else
     {
         <div class="tc-register tc-register-mobile">
             <div class="tc-register-frame border rounded bg-white p-2 tc-register-shell">
-                <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.ArrowBack"
-                               OnClick="ShowNavigationAsync">
-                        Filters
-                    </MudButton>
-
-                    <MudText Typo="Typo.body2">@GetSubtitle()</MudText>
-                </MudStack>
-
-                @if (_selectedViewMode == InvoiceRegisterViewMode.Headers)
-                {
-                    <InvoiceRegisterGrid Invoices="RegisterResult.Headers"
-                                         SelectedInvoice="Workspace.SelectedKey"
-                                         CurrentPage="Filter.PageNumber - 1"
-                                         RowsPerPage="Filter.PageSize"
-                                         OnSelectInvoice="ShowDetailsGridAsync"
-                                         OnOpenPanel="ShowDetailPanelAsync"
-                                         OnCurrentPageChanged="OnCurrentPageChangedAsync"
-                                         OnRowsPerPageChanged="OnRowsPerPageChangedAsync" />
-                }
-                else if (_selectedViewMode == InvoiceRegisterViewMode.Lines)
-                {
-                    <InvoiceRegisterDetailsGrid InvoiceNumber="@null"
-                                                Items="RegisterResult.Details"
-                                                ShowNavigation="false" />
-                }
-                else if (_selectedViewMode == InvoiceRegisterViewMode.CashCodes)
-                {
-                    <InvoiceRegisterCashCodeGrid Items="RegisterResult.CashCodes" />
-                }
-            </div>
-        </div>
-    }
-    else if (_mobileView == InvoiceRegisterMobileView.DetailGrid)
-    {
-        <div class="tc-register tc-register-mobile">
-            <div class="tc-register-frame border rounded bg-white p-2 tc-register-shell">
-                <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.ArrowBack"
-                               OnClick="BackToRegisterAsync">
-                        Back
-                    </MudButton>
-                </MudStack>
-
-                <InvoiceRegisterDetailsGrid InvoiceNumber="@Workspace.SelectedKey"
-                                            Items="RegisterResult.Details"
-                                            ShowNavigation="false" />
-            </div>
-        </div>
-    }
-    else if (_mobileView == InvoiceRegisterMobileView.DetailPanel)
-    {
-        <div class="tc-register tc-register-mobile">
-            <div class="tc-register-frame border rounded bg-white p-2 tc-register-shell">
-                <InvoiceDetailPanel Header="RegisterResult.SelectedHeader"
-                                    DetailItems="RegisterResult.Details"
-                                    ChangeLogItems="RegisterResult.ChangeLog"
-                                    OnBack="BackToRegisterAsync" />
+                @RenderMobileWorkspace()
             </div>
         </div>
     }
@@ -199,69 +139,7 @@ else
                 </aside>
 
                 <section class="tc-register-main-host">
-                    @if (Workspace.Mode == WorkspaceMode.Register)
-                    {
-                        <div class="tc-register-main-header">
-                            <div>
-                                <h1 class="h4 mb-1">Invoice Register</h1>
-                                <div class="text-muted small">@GetSubtitle()</div>
-                            </div>
-
-                            <div class="small text-muted">
-                                @GetResultCountText()
-                            </div>
-                        </div>
-
-                        <div class="tc-register-main-body">
-                            @if (_selectedViewMode == InvoiceRegisterViewMode.Headers)
-                            {
-                                <InvoiceRegisterGrid Invoices="RegisterResult.Headers"
-                                                     SelectedInvoice="Workspace.SelectedKey"
-                                                     CurrentPage="Filter.PageNumber - 1"
-                                                     RowsPerPage="Filter.PageSize"
-                                                     OnSelectInvoice="ShowDetailsGridAsync"
-                                                     OnOpenPanel="ShowDetailPanelAsync"
-                                                     OnCurrentPageChanged="OnCurrentPageChangedAsync"
-                                                     OnRowsPerPageChanged="OnRowsPerPageChangedAsync" />
-                            }
-                            else if (_selectedViewMode == InvoiceRegisterViewMode.Lines)
-                            {
-                                <InvoiceRegisterDetailsGrid InvoiceNumber="@null"
-                                                            Items="RegisterResult.Details"
-                                                            ShowNavigation="false" />
-                            }
-                            else if (_selectedViewMode == InvoiceRegisterViewMode.CashCodes)
-                            {
-                                <InvoiceRegisterCashCodeGrid Items="RegisterResult.CashCodes" />
-                            }
-                        </div>
-                    }
-                    else if (Workspace.Mode == WorkspaceMode.DetailGrid)
-                    {
-                        <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.ArrowBack"
-                                       OnClick="ShowRegisterModeAsync">
-                                Back
-                            </MudButton>
-                        </MudStack>
-
-                        <div class="tc-register-main-body">
-                            <InvoiceRegisterDetailsGrid InvoiceNumber="@Workspace.SelectedKey"
-                                                        Items="RegisterResult.Details"
-                                                        ShowNavigation="false" />
-                        </div>
-                    }
-                    else if (Workspace.Mode == WorkspaceMode.DetailPanel)
-                    {
-                        <div class="tc-register-main-body">
-                            <InvoiceDetailPanel Header="RegisterResult.SelectedHeader"
-                                                DetailItems="RegisterResult.Details"
-                                                ChangeLogItems="RegisterResult.ChangeLog"
-                                                OnBack="ShowRegisterModeAsync" />
-                        </div>
-                    }
+                    @RenderDesktopWorkspace()
                 </section>
             </div>
         </div>
@@ -386,14 +264,13 @@ else
     private enum InvoiceRegisterMobileView
     {
         Navigation,
-        Register,
-        DetailGrid,
-        DetailPanel
+        Workspace
     }
 
     private bool _isMobile;
     private bool _isSidebarCollapsed;
     private bool _isLoadingNamespaceSuggestions;
+    private bool _isLoadingRaiseNamespaceSuggestions;
     private string _namespaceFilter = string.Empty;
     private string _cashCodeFilter = string.Empty;
     private string _searchText = string.Empty;
@@ -413,6 +290,13 @@ else
     private IReadOnlyList<NamespaceSelectorSuggestion> _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
 
     private InvoiceRegisterResult RegisterResult { get; set; } = new();
+    private InvoiceRaiseListResult RaiseResult { get; set; } = new();
+    private InvoiceRaiseEditModel RaiseEditModel { get; set; } = new();
+    private InvoiceEntryPostModel RaisePostModel { get; set; } = new();
+    private InvoiceUpdateEditModel UpdateEditModel { get; set; } = new();
+    private InvoiceUpdateItemEditModel UpdateItemEditModel { get; set; } = new();
+    private InvoiceDeleteConfirmationModel DeleteConfirmation { get; set; } = new();
+    private string? WorkflowMessage { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -432,7 +316,7 @@ else
         _defaultPeriodStartOn = defaultPeriod?.StartOn;
 
         await ResetFiltersToDefaultAsync();
-        await LoadRegisterAsync();
+        await LoadCurrentWorkspaceAsync();
     }
 
     private async Task ResetFiltersToDefaultAsync()
@@ -458,6 +342,7 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
+        WorkflowMessage = null;
     }
 
     private async Task LoadPeriodsAsync(short? yearNumber)
@@ -521,41 +406,60 @@ else
         RegisterResult = await InvoiceRegisterService.QueryAsync(Filter);
     }
 
+    private async Task LoadRaiseAsync()
+    {
+        RaiseResult = await WorkflowService.GetRaiseListAsync(_selectedInvoiceTypeCode);
+    }
+
+    private async Task LoadCurrentWorkspaceAsync()
+    {
+        if (_selectedViewMode == InvoiceRegisterViewMode.Raise || Workspace.Mode == WorkspaceMode.RaiseList)
+        {
+            await LoadRaiseAsync();
+            Workspace.Mode = WorkspaceMode.RaiseList;
+            return;
+        }
+
+        await LoadRegisterAsync();
+    }
+
     private Task ToggleSidebar()
     {
         _isSidebarCollapsed = !_isSidebarCollapsed;
         return Task.CompletedTask;
     }
 
-    private Task ShowNavigationAsync()
-    {
-        _mobileView = InvoiceRegisterMobileView.Navigation;
-        return Task.CompletedTask;
-    }
-
     private Task ShowRegisterAsync()
     {
-        Workspace.Mode = WorkspaceMode.Register;
-        _mobileView = InvoiceRegisterMobileView.Register;
+        _mobileView = InvoiceRegisterMobileView.Workspace;
         return Task.CompletedTask;
     }
 
-    private Task ShowRegisterModeAsync()
+    private async Task ShowRegisterModeAsync()
     {
-        Workspace.Mode = WorkspaceMode.Register;
+        WorkflowMessage = null;
+
+        if (_selectedViewMode == InvoiceRegisterViewMode.Raise)
+        {
+            Workspace.Mode = WorkspaceMode.RaiseList;
+            await LoadRaiseAsync();
+        }
+        else
+        {
+            Workspace.Mode = WorkspaceMode.Register;
+            Workspace.SelectedKey = null;
+            await LoadRegisterAsync();
+        }
 
         if (_isMobile)
         {
-            _mobileView = InvoiceRegisterMobileView.Register;
+            _mobileView = InvoiceRegisterMobileView.Workspace;
         }
-
-        return Task.CompletedTask;
     }
 
-    private Task BackToRegisterAsync()
+    private Task BackToNavigationAsync()
     {
-        Workspace.Mode = WorkspaceMode.Register;
-        _mobileView = InvoiceRegisterMobileView.Register;
+        _mobileView = InvoiceRegisterMobileView.Navigation;
         return Task.CompletedTask;
     }
 
@@ -566,6 +470,7 @@ else
             return;
         }
 
+        WorkflowMessage = null;
         Workspace.SelectedKey = invoiceNumber;
         Workspace.Mode = WorkspaceMode.DetailGrid;
         Filter.SelectedInvoiceNumber = invoiceNumber;
@@ -573,7 +478,7 @@ else
 
         if (_isMobile)
         {
-            _mobileView = InvoiceRegisterMobileView.DetailGrid;
+            _mobileView = InvoiceRegisterMobileView.Workspace;
         }
     }
 
@@ -584,6 +489,7 @@ else
             return;
         }
 
+        WorkflowMessage = null;
         Workspace.SelectedKey = invoiceNumber;
         Workspace.Mode = WorkspaceMode.DetailPanel;
         Filter.SelectedInvoiceNumber = invoiceNumber;
@@ -591,7 +497,7 @@ else
 
         if (_isMobile)
         {
-            _mobileView = InvoiceRegisterMobileView.DetailPanel;
+            _mobileView = InvoiceRegisterMobileView.Workspace;
         }
     }
 
@@ -602,7 +508,8 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
-        await LoadRegisterAsync();
+        WorkflowMessage = null;
+        await LoadCurrentWorkspaceAsync();
     }
 
     private async Task HandlePeriodSelectedAsync(DateTime? startOn)
@@ -611,7 +518,8 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
-        await LoadRegisterAsync();
+        WorkflowMessage = null;
+        await LoadCurrentWorkspaceAsync();
     }
 
     private async Task HandleInvoiceTypeChangedAsync(short? invoiceTypeCode)
@@ -619,8 +527,18 @@ else
         _selectedInvoiceTypeCode = invoiceTypeCode;
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
-        Workspace.Mode = WorkspaceMode.Register;
-        await LoadRegisterAsync();
+        WorkflowMessage = null;
+
+        if (_selectedViewMode == InvoiceRegisterViewMode.Raise)
+        {
+            Workspace.Mode = WorkspaceMode.RaiseList;
+        }
+        else
+        {
+            Workspace.Mode = WorkspaceMode.Register;
+        }
+
+        await LoadCurrentWorkspaceAsync();
     }
 
     private async Task HandleInvoiceStatusChangedAsync(short? invoiceStatusCode)
@@ -629,16 +547,31 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
-        await LoadRegisterAsync();
+        WorkflowMessage = null;
+        await LoadCurrentWorkspaceAsync();
     }
 
     private async Task HandleViewChangedAsync(InvoiceRegisterViewMode viewMode)
     {
         _selectedViewMode = viewMode;
         Workspace.SelectedKey = null;
-        Workspace.Mode = WorkspaceMode.Register;
-        Filter.PageNumber = 1;
-        await LoadRegisterAsync();
+        WorkflowMessage = null;
+
+        if (viewMode == InvoiceRegisterViewMode.Raise)
+        {
+            Workspace.Mode = WorkspaceMode.RaiseList;
+            await LoadRaiseAsync();
+        }
+        else
+        {
+            Workspace.Mode = WorkspaceMode.Register;
+            await LoadRegisterAsync();
+        }
+
+        if (_isMobile)
+        {
+            _mobileView = InvoiceRegisterMobileView.Workspace;
+        }
     }
 
     private async Task HandleSearchTextChangedAsync(string searchText)
@@ -647,6 +580,7 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
+        WorkflowMessage = null;
         await LoadRegisterAsync();
     }
 
@@ -668,6 +602,7 @@ else
                 Filter.PageNumber = 1;
                 Workspace.SelectedKey = null;
                 Workspace.Mode = WorkspaceMode.Register;
+                WorkflowMessage = null;
                 await LoadRegisterAsync();
             }
 
@@ -695,6 +630,7 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
+        WorkflowMessage = null;
         await LoadRegisterAsync();
     }
 
@@ -704,13 +640,14 @@ else
         Filter.PageNumber = 1;
         Workspace.SelectedKey = null;
         Workspace.Mode = WorkspaceMode.Register;
+        WorkflowMessage = null;
         await LoadRegisterAsync();
     }
 
     private async Task HandleClearFiltersAsync()
     {
         await ResetFiltersToDefaultAsync();
-        await LoadRegisterAsync();
+        await LoadCurrentWorkspaceAsync();
     }
 
     private async Task OnCurrentPageChangedAsync(int currentPage)
@@ -728,6 +665,9 @@ else
 
     private string GetSubtitle()
     {
+        if (_selectedViewMode == InvoiceRegisterViewMode.Raise)
+            return "Pending entry workspace";
+
         var yearLabel = InvoiceRegisterOptionCatalog.GetYearLabel(_years, _selectedYearNumber);
         var periodLabel = InvoiceRegisterOptionCatalog.GetPeriodScopeLabel(_periods, _selectedPeriodStartOn);
         var viewLabel = InvoiceRegisterOptionCatalog.GetViewLabel(_selectedViewMode);
@@ -761,6 +701,9 @@ else
 
     private string GetResultCountText()
     {
+        if (_selectedViewMode == InvoiceRegisterViewMode.Raise)
+            return $"{RaiseResult.Entries.Count} pending entr{(RaiseResult.Entries.Count == 1 ? "y" : "ies")}";
+
         return _selectedViewMode switch
         {
             InvoiceRegisterViewMode.Headers => $"{RegisterResult.Headers.Count} invoice{(RegisterResult.Headers.Count == 1 ? string.Empty : "s")}",
@@ -768,5 +711,652 @@ else
             InvoiceRegisterViewMode.CashCodes => $"{RegisterResult.CashCodes.Count} cash code row{(RegisterResult.CashCodes.Count == 1 ? string.Empty : "s")}",
             _ => string.Empty
         };
+    }
+
+    private RenderFragment RenderDesktopWorkspace() => builder =>
+    {
+        var seq = 0;
+
+        if (!string.IsNullOrWhiteSpace(WorkflowMessage))
+        {
+            builder.OpenComponent<MudAlert>(seq++);
+            builder.AddAttribute(seq++, "Severity", Severity.Info);
+            builder.AddAttribute(seq++, "Dense", true);
+            builder.AddAttribute(seq++, "ChildContent", (RenderFragment)(messageBuilder =>
+            {
+                messageBuilder.AddContent(0, WorkflowMessage);
+            }));
+            builder.CloseComponent();
+        }
+
+        switch (Workspace.Mode)
+        {
+            case WorkspaceMode.Register:
+                builder.AddContent(seq++, RenderRegisterWorkspace());
+                break;
+            case WorkspaceMode.DetailGrid:
+                builder.AddContent(seq++, RenderDetailGridWorkspace());
+                break;
+            case WorkspaceMode.DetailPanel:
+                builder.AddContent(seq++, RenderDetailPanelWorkspace());
+                break;
+            case WorkspaceMode.RaiseList:
+                builder.AddContent(seq++, RenderRaiseListWorkspace());
+                break;
+            case WorkspaceMode.RaiseCreate:
+            case WorkspaceMode.RaiseEdit:
+                builder.AddContent(seq++, RenderRaiseEditorWorkspace());
+                break;
+            case WorkspaceMode.RaiseDetails:
+                builder.AddContent(seq++, RenderRaiseDetailsWorkspace());
+                break;
+            case WorkspaceMode.RaiseDelete:
+                builder.AddContent(seq++, RenderRaiseDeleteWorkspace());
+                break;
+            case WorkspaceMode.RaisePost:
+                builder.AddContent(seq++, RenderRaisePostWorkspace());
+                break;
+            case WorkspaceMode.UpdateEdit:
+                builder.AddContent(seq++, RenderUpdateEditWorkspace());
+                break;
+            case WorkspaceMode.UpdateCreateItem:
+            case WorkspaceMode.UpdateEditItem:
+                builder.AddContent(seq++, RenderUpdateItemWorkspace());
+                break;
+            case WorkspaceMode.UpdateDeleteItem:
+                builder.AddContent(seq++, RenderUpdateDeleteItemWorkspace());
+                break;
+            case WorkspaceMode.UpdateDeleteInvoice:
+                builder.AddContent(seq++, RenderUpdateDeleteInvoiceWorkspace());
+                break;
+        }
+    };
+
+    private RenderFragment RenderMobileWorkspace() => builder =>
+    {
+        var seq = 0;
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "d-flex flex-column h-100");
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "mb-2");
+        builder.OpenComponent<MudButton>(seq++);
+        builder.AddAttribute(seq++, "Variant", Variant.Outlined);
+        builder.AddAttribute(seq++, "Color", Color.Primary);
+        builder.AddAttribute(seq++, "StartIcon", Icons.Material.Filled.ArrowBack);
+        builder.AddAttribute(seq++, "OnClick", EventCallback.Factory.Create(this, BackToNavigationAsync));
+        builder.AddAttribute(seq++, "ChildContent", (RenderFragment)(buttonBuilder => buttonBuilder.AddContent(0, "Filters")));
+        builder.CloseComponent();
+        builder.CloseElement();
+
+        builder.AddContent(seq++, RenderDesktopWorkspace());
+
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderRegisterWorkspace() => builder =>
+    {
+        var seq = 0;
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "tc-register-main-header");
+        builder.OpenElement(seq++, "div");
+        builder.OpenElement(seq++, "h1");
+        builder.AddAttribute(seq++, "class", "h4 mb-1");
+        builder.AddContent(seq++, "Invoice Register");
+        builder.CloseElement();
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "text-muted small");
+        builder.AddContent(seq++, GetSubtitle());
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "small text-muted");
+        builder.AddContent(seq++, GetResultCountText());
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "tc-register-main-body");
+
+        if (_selectedViewMode == InvoiceRegisterViewMode.Headers)
+        {
+            builder.OpenComponent<InvoiceRegisterGrid>(seq++);
+            builder.AddAttribute(seq++, "Invoices", RegisterResult.Headers);
+            builder.AddAttribute(seq++, "SelectedInvoice", Workspace.SelectedKey);
+            builder.AddAttribute(seq++, "CurrentPage", Filter.PageNumber - 1);
+            builder.AddAttribute(seq++, "RowsPerPage", Filter.PageSize);
+            builder.AddAttribute(seq++, "OnSelectInvoice", EventCallback.Factory.Create<string>(this, ShowDetailsGridAsync));
+            builder.AddAttribute(seq++, "OnOpenPanel", EventCallback.Factory.Create<string>(this, ShowDetailPanelAsync));
+            builder.AddAttribute(seq++, "OnCurrentPageChanged", EventCallback.Factory.Create<int>(this, OnCurrentPageChangedAsync));
+            builder.AddAttribute(seq++, "OnRowsPerPageChanged", EventCallback.Factory.Create<int>(this, OnRowsPerPageChangedAsync));
+            builder.CloseComponent();
+        }
+        else if (_selectedViewMode == InvoiceRegisterViewMode.Lines)
+        {
+            builder.OpenComponent<InvoiceRegisterDetailsGrid>(seq++);
+            builder.AddAttribute(seq++, "InvoiceNumber", (string?)null);
+            builder.AddAttribute(seq++, "Items", RegisterResult.Details);
+            builder.AddAttribute(seq++, "ShowNavigation", false);
+            builder.CloseComponent();
+        }
+        else if (_selectedViewMode == InvoiceRegisterViewMode.CashCodes)
+        {
+            builder.OpenComponent<InvoiceRegisterCashCodeGrid>(seq++);
+            builder.AddAttribute(seq++, "Items", RegisterResult.CashCodes);
+            builder.CloseComponent();
+        }
+
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderDetailGridWorkspace() => builder =>
+    {
+        var seq = 0;
+
+        builder.OpenComponent<MudStack>(seq++);
+        builder.AddAttribute(seq++, "Class", "mb-2");
+        builder.AddAttribute(seq++, "Row", true);
+        builder.AddAttribute(seq++, "AlignItems", AlignItems.Center);
+        builder.AddAttribute(seq++, "Justify", Justify.SpaceBetween);
+        builder.AddAttribute(seq++, "ChildContent", (RenderFragment)(stackBuilder =>
+        {
+            stackBuilder.OpenComponent<MudButton>(0);
+            stackBuilder.AddAttribute(1, "Variant", Variant.Filled);
+            stackBuilder.AddAttribute(2, "Color", Color.Primary);
+            stackBuilder.AddAttribute(3, "StartIcon", Icons.Material.Filled.ArrowBack);
+            stackBuilder.AddAttribute(4, "OnClick", EventCallback.Factory.Create(this, ShowRegisterModeAsync));
+            stackBuilder.AddAttribute(5, "ChildContent", (RenderFragment)(b => b.AddContent(0, "Back")));
+            stackBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "tc-register-main-body");
+        builder.OpenComponent<InvoiceRegisterDetailsGrid>(seq++);
+        builder.AddAttribute(seq++, "InvoiceNumber", Workspace.SelectedKey);
+        builder.AddAttribute(seq++, "Items", RegisterResult.Details);
+        builder.AddAttribute(seq++, "ShowNavigation", false);
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderDetailPanelWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "tc-register-main-body");
+        builder.OpenComponent<InvoiceDetailPanel>(seq++);
+        builder.AddAttribute(seq++, "Header", RegisterResult.SelectedHeader);
+        builder.AddAttribute(seq++, "DetailItems", RegisterResult.Details);
+        builder.AddAttribute(seq++, "ChangeLogItems", RegisterResult.ChangeLog);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, ShowRegisterModeAsync));
+        builder.AddAttribute(seq++, "OnEditInvoice", EventCallback.Factory.Create<string>(this, OpenUpdateEditAsync));
+        builder.AddAttribute(seq++, "OnCancelInvoice", EventCallback.Factory.Create<string>(this, OpenUpdateDeleteInvoiceAsync));
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderRaiseListWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "tc-register-main-header");
+        builder.OpenElement(seq++, "div");
+        builder.OpenElement(seq++, "h1");
+        builder.AddAttribute(seq++, "class", "h4 mb-1");
+        builder.AddContent(seq++, "Raise Invoices");
+        builder.CloseElement();
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "text-muted small");
+        builder.AddContent(seq++, "Pending entry workspace");
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "tc-register-main-body");
+        builder.OpenComponent<InvoiceRaiseList>(seq++);
+        builder.AddAttribute(seq++, "Result", RaiseResult);
+        builder.AddAttribute(seq++, "OnCreate", EventCallback.Factory.Create(this, OpenRaiseCreateAsync));
+        builder.AddAttribute(seq++, "OnOpenDetails", EventCallback.Factory.Create<InvoiceEntryKey>(this, OpenRaiseDetailsAsync));
+        builder.AddAttribute(seq++, "OnEdit", EventCallback.Factory.Create<InvoiceEntryKey>(this, OpenRaiseEditAsync));
+        builder.AddAttribute(seq++, "OnDelete", EventCallback.Factory.Create<InvoiceEntryKey>(this, OpenRaiseDeleteAsync));
+        builder.AddAttribute(seq++, "OnPost", EventCallback.Factory.Create<InvoiceEntryKey>(this, OpenRaisePostAsync));
+        builder.AddAttribute(seq++, "OnPostAll", EventCallback.Factory.Create(this, PostAllRaiseAsync));
+        builder.CloseComponent();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderRaiseEditorWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceRaiseEditor>(seq++);
+        builder.AddAttribute(seq++, "Model", RaiseEditModel);
+        builder.AddAttribute(seq++, "IsEditMode", Workspace.Mode == WorkspaceMode.RaiseEdit);
+        builder.AddAttribute(seq++, "IsLoadingNamespaceSuggestions", _isLoadingRaiseNamespaceSuggestions);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToRaiseListAsync));
+        builder.AddAttribute(seq++, "OnNamespaceFilterChanged", EventCallback.Factory.Create<string>(this, HandleRaiseNamespaceFilterChangedAsync));
+        builder.AddAttribute(seq++, "OnNamespaceCommitted", EventCallback.Factory.Create<string>(this, HandleRaiseNamespaceCommittedAsync));
+        builder.AddAttribute(seq++, "OnSave", EventCallback.Factory.Create<InvoiceRaiseEditModel>(this, SaveRaiseEntryAsync));
+        builder.AddAttribute(seq++, "OnCashCodeChanged", EventCallback.Factory.Create<string>(this, HandleRaiseCashCodeChangedAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderRaiseDetailsWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceRaiseDetails>(seq++);
+        builder.AddAttribute(seq++, "Entry", RaiseEditModel.EntryHeader);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToRaiseListAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderRaiseDeleteWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceDeleteConfirmation>(seq++);
+        builder.AddAttribute(seq++, "Model", DeleteConfirmation);
+        builder.AddAttribute(seq++, "ConfirmButtonText", "Delete entry");
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToRaiseListAsync));
+        builder.AddAttribute(seq++, "OnConfirm", EventCallback.Factory.Create(this, ConfirmRaiseDeleteAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderRaisePostWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceEntryPostConfirmation>(seq++);
+        builder.AddAttribute(seq++, "Model", RaisePostModel);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToRaiseListAsync));
+        builder.AddAttribute(seq++, "OnPostEntry", EventCallback.Factory.Create(this, ConfirmRaisePostEntryAsync));
+        builder.AddAttribute(seq++, "OnPostAccount", EventCallback.Factory.Create(this, ConfirmRaisePostAccountAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderUpdateEditWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceUpdateEditor>(seq++);
+        builder.AddAttribute(seq++, "Model", UpdateEditModel);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToDetailPanelAsync));
+        builder.AddAttribute(seq++, "OnSave", EventCallback.Factory.Create<InvoiceUpdateEditModel>(this, SaveUpdateHeaderAsync));
+        builder.AddAttribute(seq++, "OnAddItem", EventCallback.Factory.Create(this, OpenUpdateCreateItemAsync));
+        builder.AddAttribute(seq++, "OnEditItem", EventCallback.Factory.Create<InvoiceUpdateItemKey>(this, OpenUpdateEditItemAsync));
+        builder.AddAttribute(seq++, "OnDeleteItem", EventCallback.Factory.Create<InvoiceUpdateItemKey>(this, OpenUpdateDeleteItemAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderUpdateItemWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceUpdateItemEditor>(seq++);
+        builder.AddAttribute(seq++, "Model", UpdateItemEditModel);
+        builder.AddAttribute(seq++, "IsEditMode", Workspace.Mode == WorkspaceMode.UpdateEditItem);
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToUpdateEditAsync));
+        builder.AddAttribute(seq++, "OnSave", EventCallback.Factory.Create<InvoiceUpdateItemEditModel>(this, SaveUpdateItemAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderUpdateDeleteItemWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceDeleteConfirmation>(seq++);
+        builder.AddAttribute(seq++, "Model", DeleteConfirmation);
+        builder.AddAttribute(seq++, "ConfirmButtonText", "Delete item");
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToUpdateEditAsync));
+        builder.AddAttribute(seq++, "OnConfirm", EventCallback.Factory.Create(this, ConfirmUpdateDeleteItemAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderUpdateDeleteInvoiceWorkspace() => builder =>
+    {
+        var seq = 0;
+        builder.OpenComponent<InvoiceDeleteConfirmation>(seq++);
+        builder.AddAttribute(seq++, "Model", DeleteConfirmation);
+        builder.AddAttribute(seq++, "ConfirmButtonText", "Cancel invoice");
+        builder.AddAttribute(seq++, "OnBack", EventCallback.Factory.Create(this, BackToDetailPanelAsync));
+        builder.AddAttribute(seq++, "OnConfirm", EventCallback.Factory.Create(this, ConfirmUpdateDeleteInvoiceAsync));
+        builder.CloseComponent();
+    };
+
+    private async Task OpenRaiseCreateAsync()
+    {
+        WorkflowMessage = null;
+        RaiseEditModel = await WorkflowService.InitializeRaiseCreateAsync(_selectedInvoiceTypeCode);
+        Workspace.Mode = WorkspaceMode.RaiseCreate;
+    }
+
+    private async Task OpenRaiseEditAsync(InvoiceEntryKey key)
+    {
+        WorkflowMessage = null;
+        RaiseEditModel = await WorkflowService.GetRaiseEditAsync(key.EntryId);
+        Workspace.Mode = WorkspaceMode.RaiseEdit;
+    }
+
+    private async Task OpenRaiseDetailsAsync(InvoiceEntryKey key)
+    {
+        WorkflowMessage = null;
+        RaiseEditModel = await WorkflowService.GetRaiseDetailsAsync(key.EntryId);
+        Workspace.Mode = WorkspaceMode.RaiseDetails;
+    }
+
+    private async Task OpenRaiseDeleteAsync(InvoiceEntryKey key)
+    {
+        WorkflowMessage = null;
+        var entry = await WorkflowService.GetRaiseDeleteAsync(key.EntryId);
+
+        DeleteConfirmation = new InvoiceDeleteConfirmationModel
+        {
+            Title = "Delete Entry",
+            EntryId = entry.EntryId,
+            Subject = entry.SubjectName,
+            NamespacePath = entry.NamespacePath,
+            Primary = entry.InvoiceNumberOrAccountDisplay,
+            Secondary = entry.CashDescription,
+            Notes = entry.ItemReference,
+            InvoiceNumber = entry.InvoiceNumberOrAccountDisplay,
+            AccountCode = entry.SubjectCode,
+            ParentSubjectCode = entry.ParentSubjectCode,
+            CashCode = entry.CashCode
+        };
+
+        Workspace.Mode = WorkspaceMode.RaiseDelete;
+    }
+
+    private async Task OpenRaisePostAsync(InvoiceEntryKey key)
+    {
+        WorkflowMessage = null;
+        RaisePostModel = await WorkflowService.GetRaisePostAsync(key.EntryId);
+
+        if (RaiseEditModel is not null
+            && string.Equals(RaiseEditModel.EntryId, RaisePostModel.EntryId, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(RaiseEditModel.NamespacePath))
+        {
+            var segments = RaiseEditModel.NamespacePath
+                .Trim()
+                .Trim('.')
+                .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (segments.Length > 0)
+            {
+                RaisePostModel.SubjectCode = segments[^1];
+                RaisePostModel.ParentSubjectCode = segments.Length > 1 ? segments[^2] : string.Empty;
+                RaisePostModel.NamespacePath = string.IsNullOrWhiteSpace(RaisePostModel.ParentSubjectCode)
+                    ? RaisePostModel.SubjectCode
+                    : $"{RaisePostModel.ParentSubjectCode}.{RaisePostModel.SubjectCode}";
+            }
+        }
+
+        Workspace.Mode = WorkspaceMode.RaisePost;
+    }
+
+    private async Task HandleRaiseNamespaceFilterChangedAsync(string filterText)
+    {
+        RaiseEditModel.NamespacePath = filterText?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(RaiseEditModel.NamespacePath))
+        {
+            RaiseEditModel.NamespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+            _isLoadingRaiseNamespaceSuggestions = false;
+            return;
+        }
+
+        _isLoadingRaiseNamespaceSuggestions = true;
+        StateHasChanged();
+
+        try
+        {
+            RaiseEditModel.NamespaceSuggestions = await WorkflowService.GetNamespaceSuggestionsAsync(
+                RaiseEditModel.NamespacePath,
+                NamespaceSuggestionPageSize);
+        }
+        finally
+        {
+            _isLoadingRaiseNamespaceSuggestions = false;
+        }
+    }
+
+    private async Task HandleRaiseNamespaceCommittedAsync(string namespacePath)
+    {
+        var committedPath = namespacePath?.Trim().Trim('.') ?? string.Empty;
+        RaiseEditModel.NamespacePath = committedPath;
+
+        if (string.IsNullOrWhiteSpace(committedPath))
+        {
+            RaiseEditModel.SubjectCode = string.Empty;
+            RaiseEditModel.ParentSubjectCode = string.Empty;
+            RaiseEditModel.SubjectName = string.Empty;
+            return;
+        }
+
+        var segments = committedPath
+            .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        RaiseEditModel.SubjectCode = segments.LastOrDefault() ?? string.Empty;
+        RaiseEditModel.ParentSubjectCode = segments.Length > 1
+            ? segments[^2]
+            : string.Empty;
+
+        var matchedSuggestion = RaiseEditModel.NamespaceSuggestions
+            .FirstOrDefault(item => string.Equals(item.FullPath, committedPath, StringComparison.OrdinalIgnoreCase));
+
+        if (matchedSuggestion is not null && !string.IsNullOrWhiteSpace(matchedSuggestion.DisplayLabel))
+        {
+            RaiseEditModel.SubjectName = matchedSuggestion.DisplayLabel;
+        }
+
+        await ApplyRaiseDefaultsAsync();
+    }
+
+    private async Task HandleRaiseCashCodeChangedAsync(string cashCode)
+    {
+        RaiseEditModel.CashCode = cashCode ?? string.Empty;
+        await ApplyRaiseDefaultsAsync(includeCashCode: true);
+    }
+
+    private async Task ApplyRaiseDefaultsAsync(bool includeCashCode = false)
+    {
+        if (RaiseEditModel is null || string.IsNullOrWhiteSpace(RaiseEditModel.SubjectCode))
+            return;
+
+        var defaults = await WorkflowService.GetRaiseDefaultsAsync(
+            RaiseEditModel.SubjectCode,
+            RaiseEditModel.ParentSubjectCode,
+            RaiseEditModel.EntryId,
+            includeCashCode ? RaiseEditModel.CashCode : null);
+
+        if (defaults is null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(defaults.TaxCode))
+            RaiseEditModel.TaxCode = defaults.TaxCode;
+
+        if (defaults.InvoiceTypeCode > 0)
+            RaiseEditModel.InvoiceTypeCode = defaults.InvoiceTypeCode;
+
+        if (!includeCashCode && !string.IsNullOrWhiteSpace(defaults.CashCode))
+        {
+            RaiseEditModel.CashCode = defaults.CashCode;
+            RaiseEditModel.CashDescription = RaiseEditModel.CashCodeOptions
+                .FirstOrDefault(option => option.Value == defaults.CashCode)?.Label ?? RaiseEditModel.CashDescription;
+        }
+
+        if (includeCashCode || !string.IsNullOrWhiteSpace(defaults.CashCode))
+        {
+            RaiseEditModel.TotalValue = defaults.TotalValue;
+            RaiseEditModel.InvoiceValue = defaults.InvoiceValue;
+            RaiseEditModel.ItemReference = defaults.ItemReference;
+        }
+    }
+
+    private async Task BackToRaiseListAsync()
+    {
+        Workspace.Mode = WorkspaceMode.RaiseList;
+        await LoadRaiseAsync();
+    }
+
+    private async Task SaveRaiseEntryAsync(InvoiceRaiseEditModel model)
+    {
+        var result = await WorkflowService.SaveRaiseEntryAsync(model);
+        WorkflowMessage = result.Message;
+        await BackToRaiseListAsync();
+    }
+
+    private async Task ConfirmRaiseDeleteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DeleteConfirmation.EntryId))
+            return;
+
+        var result = await WorkflowService.DeleteRaiseEntryAsync(DeleteConfirmation.EntryId);
+        WorkflowMessage = result.Message;
+        await BackToRaiseListAsync();
+    }
+
+    private async Task ConfirmRaisePostEntryAsync()
+    {
+        var result = await WorkflowService.PostRaiseEntryAsync(RaisePostModel);
+        WorkflowMessage = result.Message;
+        await BackToRaiseListAsync();
+    }
+
+    private async Task ConfirmRaisePostAccountAsync()
+    {
+        var result = await WorkflowService.PostRaiseAccountAsync(RaisePostModel);
+        WorkflowMessage = result.Message;
+        await BackToRaiseListAsync();
+    }
+
+    private async Task PostAllRaiseAsync()
+    {
+        var result = await WorkflowService.PostAllRaiseEntriesAsync();
+        WorkflowMessage = result.Message;
+        await BackToRaiseListAsync();
+    }
+
+    private async Task OpenUpdateEditAsync(string invoiceNumber)
+    {
+        WorkflowMessage = null;
+        UpdateEditModel = await WorkflowService.GetUpdateEditAsync(invoiceNumber);
+        Workspace.Mode = WorkspaceMode.UpdateEdit;
+    }
+
+    private async Task BackToDetailPanelAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Workspace.SelectedKey))
+        {
+            WorkflowMessage = null;
+            Workspace.Mode = WorkspaceMode.DetailPanel;
+            Filter.SelectedInvoiceNumber = Workspace.SelectedKey;
+            await LoadRegisterAsync();
+            return;
+        }
+
+        await ShowRegisterModeAsync();
+    }
+
+    private async Task BackToUpdateEditAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UpdateEditModel.InvoiceNumber))
+            return;
+
+        WorkflowMessage = null;
+        UpdateEditModel = await WorkflowService.GetUpdateEditAsync(UpdateEditModel.InvoiceNumber);
+        Workspace.Mode = WorkspaceMode.UpdateEdit;
+    }
+
+    private async Task SaveUpdateHeaderAsync(InvoiceUpdateEditModel model)
+    {
+        var result = await WorkflowService.SaveUpdateHeaderAsync(model);
+        WorkflowMessage = result.Message;
+        await OpenUpdateEditAsync(model.InvoiceNumber);
+    }
+
+    private async Task OpenUpdateCreateItemAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UpdateEditModel.InvoiceNumber))
+            return;
+
+        WorkflowMessage = null;
+        UpdateItemEditModel = await WorkflowService.InitializeCreateItemAsync(UpdateEditModel.InvoiceNumber);
+        Workspace.Mode = WorkspaceMode.UpdateCreateItem;
+    }
+
+    private async Task OpenUpdateEditItemAsync(InvoiceUpdateItemKey key)
+    {
+        WorkflowMessage = null;
+        UpdateItemEditModel = await WorkflowService.GetUpdateItemEditAsync(key.InvoiceNumber, key.CashCode);
+        Workspace.Mode = WorkspaceMode.UpdateEditItem;
+    }
+
+    private async Task OpenUpdateDeleteItemAsync(InvoiceUpdateItemKey key)
+    {
+        WorkflowMessage = null;
+        var item = await WorkflowService.GetUpdateItemDeleteAsync(key.InvoiceNumber, key.CashCode);
+
+        DeleteConfirmation = new InvoiceDeleteConfirmationModel
+        {
+            Title = "Delete Item",
+            Subject = item.SubjectName,
+            NamespacePath = item.NamespacePath,
+            Primary = item.InvoiceNumberOrAccountDisplay,
+            Secondary = item.CashDescription,
+            Notes = item.ItemReference,
+            InvoiceNumber = item.InvoiceNumberOrAccountDisplay,
+            CashCode = item.CashCode
+        };
+
+        Workspace.Mode = WorkspaceMode.UpdateDeleteItem;
+    }
+
+    private async Task OpenUpdateDeleteInvoiceAsync(string invoiceNumber)
+    {
+        WorkflowMessage = null;
+        var header = await WorkflowService.GetUpdateDeleteInvoiceAsync(invoiceNumber);
+
+        DeleteConfirmation = new InvoiceDeleteConfirmationModel
+        {
+            Title = "Cancel Invoice",
+            Subject = header.SubjectName,
+            NamespacePath = header.NamespacePath,
+            Primary = header.InvoiceNumberOrAccountDisplay,
+            Secondary = header.InvoiceType,
+            Notes = header.ItemReference,
+            InvoiceNumber = header.InvoiceNumberOrAccountDisplay
+        };
+
+        Workspace.Mode = WorkspaceMode.UpdateDeleteInvoice;
+    }
+
+    private async Task SaveUpdateItemAsync(InvoiceUpdateItemEditModel model)
+    {
+        var result = await WorkflowService.SaveUpdateItemAsync(model);
+        WorkflowMessage = result.Message;
+        await OpenUpdateEditAsync(model.InvoiceNumber);
+    }
+
+    private async Task ConfirmUpdateDeleteItemAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DeleteConfirmation.InvoiceNumber) || string.IsNullOrWhiteSpace(DeleteConfirmation.CashCode))
+            return;
+
+        var result = await WorkflowService.DeleteUpdateItemAsync(DeleteConfirmation.InvoiceNumber, DeleteConfirmation.CashCode);
+        WorkflowMessage = result.Message;
+        await OpenUpdateEditAsync(DeleteConfirmation.InvoiceNumber);
+    }
+
+    private async Task ConfirmUpdateDeleteInvoiceAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DeleteConfirmation.InvoiceNumber))
+            return;
+
+        var result = await WorkflowService.DeleteUpdateInvoiceAsync(DeleteConfirmation.InvoiceNumber);
+        WorkflowMessage = result.Message;
+
+        Workspace.SelectedKey = null;
+        Workspace.Mode = WorkspaceMode.Register;
+        await LoadRegisterAsync();
     }
 }

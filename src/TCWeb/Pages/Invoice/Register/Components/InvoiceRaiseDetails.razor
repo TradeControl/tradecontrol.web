@@ -1,0 +1,37 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">Proposed Entry</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    @if (Entry is not null)
+    {
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="6"><b>Subject:</b> @Entry.SubjectName</MudItem>
+            <MudItem xs="12" md="6"><b>Namespace:</b> @DisplayText(Entry.NamespacePath)</MudItem>
+            <MudItem xs="12" md="6"><b>Cash Code:</b> @Entry.CashDescription</MudItem>
+            <MudItem xs="12" md="6"><b>Type:</b> @Entry.InvoiceType</MudItem>
+            <MudItem xs="12" md="6"><b>Invoiced:</b> @Entry.InvoicedOn.ToShortDateString()</MudItem>
+            <MudItem xs="12" md="6"><b>Tax Code:</b> @Entry.TaxDescription</MudItem>
+            <MudItem xs="12"><b>Reference:</b> @DisplayText(Entry.ItemReference)</MudItem>
+            <MudItem xs="12" md="6"><b>Total Value:</b> @Entry.TotalValue.ToString("C")</MudItem>
+            <MudItem xs="12" md="6"><b>Invoice Value:</b> @Entry.InvoiceValue.ToString("C")</MudItem>
+        </MudGrid>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public InvoiceRaiseEntrySummaryModel? Entry { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private static string DisplayText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

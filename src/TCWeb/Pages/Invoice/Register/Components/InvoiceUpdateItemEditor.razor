@@ -1,0 +1,136 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">@(IsEditMode ? "Edit Item" : "Add Item")</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    <MudText Typo="Typo.subtitle1">@Model.SubjectName</MudText>
+    <MudText Typo="Typo.body2" Class="text-muted mb-3">@DisplayText(Model.NamespacePath)</MudText>
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="6">
+            <MudSelect T="string" Label="Cash Code" Value="_cashCode" ValueChanged="HandleCashCodeChangedAsync">
+                @foreach (var option in Model.CashCodeOptions)
+                {
+                    <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="string" Label="Tax Code" Value="_taxCode" ValueChanged="HandleTaxCodeChangedAsync">
+                @foreach (var option in Model.TaxCodeOptions)
+                {
+                    <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudTextField T="decimal"
+                          Label="Total Value"
+                          Value="_totalValue"
+                          ValueChanged="HandleTotalValueChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudTextField T="decimal"
+                          Label="Invoice Value"
+                          Value="_invoiceValue"
+                          ValueChanged="HandleInvoiceValueChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudTextField T="string"
+                          Label="Reference"
+                          Value="_itemReference"
+                          ValueChanged="HandleReferenceChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveAsync">
+                @(IsEditMode ? "Save Item" : "Add Item")
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public InvoiceUpdateItemEditModel Model { get; set; } = new();
+    [Parameter] public bool IsEditMode { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<InvoiceUpdateItemEditModel> OnSave { get; set; }
+
+    private string _cashCode = string.Empty;
+    private string _taxCode = string.Empty;
+    private decimal _totalValue;
+    private decimal _invoiceValue;
+    private string _itemReference = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _cashCode = Model.CashCode;
+        _taxCode = Model.TaxCode;
+        _totalValue = Model.TotalValue;
+        _invoiceValue = Model.InvoiceValue;
+        _itemReference = Model.ItemReference;
+    }
+
+    private Task HandleCashCodeChangedAsync(string value)
+    {
+        _cashCode = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTaxCodeChangedAsync(string value)
+    {
+        _taxCode = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleTotalValueChangedAsync(decimal value)
+    {
+        _totalValue = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInvoiceValueChangedAsync(decimal value)
+    {
+        _invoiceValue = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleReferenceChangedAsync(string value)
+    {
+        _itemReference = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task SaveAsync()
+    {
+        var cashLabel = Model.CashCodeOptions.FirstOrDefault(option => option.Value == _cashCode)?.Label ?? string.Empty;
+
+        Model.CashCode = _cashCode;
+        Model.CashDescription = cashLabel;
+        Model.TaxCode = _taxCode;
+        Model.TotalValue = _totalValue;
+        Model.InvoiceValue = _invoiceValue;
+        Model.ItemReference = _itemReference;
+
+        return OnSave.InvokeAsync(Model);
+    }
+
+    private static string DisplayText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

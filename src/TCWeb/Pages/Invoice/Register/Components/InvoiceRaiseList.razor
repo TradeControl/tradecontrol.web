@@ -1,0 +1,84 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<div class="tc-grid-workspace">
+    <MudStack Class="mb-3" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudText Typo="Typo.h6">Pending Entries</MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OnCreate">
+                New Entry
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Publish"
+                       OnClick="OnPostAll">
+                Post All
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TradeControl.Web.Models.Invoice_vwEntry"
+                     Items="Result.Entries"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     RowsPerPage="25">
+            <Columns>
+                <PropertyColumn Property="x => x.EntryId" Title="Entry" />
+                <PropertyColumn Property="x => x.UserId" Title="User" />
+                <PropertyColumn Property="x => x.SubjectName" Title="Subject" />
+                <PropertyColumn Property="x => x.InvoicedOn" Title="Invoiced" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.InvoiceType" Title="Type" />
+                <PropertyColumn Property="x => x.CashDescription" Title="Cash Code" />
+                <PropertyColumn Property="x => x.ItemReference" Title="Reference" />
+                <PropertyColumn Property="x => x.EntryValue" Title="Value" Format="C" />
+
+                <TemplateColumn Title="Actions">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                           Color="Color.Info"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OnOpenDetails.InvokeAsync(new InvoiceEntryKey(context.Item.EntryId, context.Item.SubjectCode, context.Item.CashCode)))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OnEdit.InvokeAsync(new InvoiceEntryKey(context.Item.EntryId, context.Item.SubjectCode, context.Item.CashCode)))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Publish"
+                                           Color="Color.Warning"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OnPost.InvokeAsync(new InvoiceEntryKey(context.Item.EntryId, context.Item.SubjectCode, context.Item.CashCode)))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OnDelete.InvokeAsync(new InvoiceEntryKey(context.Item.EntryId, context.Item.SubjectCode, context.Item.CashCode)))" />
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    [Parameter] public InvoiceRaiseListResult Result { get; set; } = new();
+    [Parameter] public EventCallback OnCreate { get; set; }
+    [Parameter] public EventCallback<InvoiceEntryKey> OnOpenDetails { get; set; }
+    [Parameter] public EventCallback<InvoiceEntryKey> OnEdit { get; set; }
+    [Parameter] public EventCallback<InvoiceEntryKey> OnDelete { get; set; }
+    [Parameter] public EventCallback<InvoiceEntryKey> OnPost { get; set; }
+    [Parameter] public EventCallback OnPostAll { get; set; }
+}

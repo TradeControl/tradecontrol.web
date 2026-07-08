@@ -9,7 +9,8 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
     {
         Headers,
         Lines,
-        CashCodes
+        CashCodes,
+        Raise
     }
 
     public sealed record InvoiceRegisterYearOption(
@@ -92,6 +93,7 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
                 InvoiceRegisterViewMode.Headers => "Headers",
                 InvoiceRegisterViewMode.Lines => "Lines",
                 InvoiceRegisterViewMode.CashCodes => "Cash Codes",
+                InvoiceRegisterViewMode.Raise => "Raise",
                 _ => viewMode.ToString()
             };
         }

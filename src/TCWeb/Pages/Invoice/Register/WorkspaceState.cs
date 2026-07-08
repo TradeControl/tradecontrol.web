@@ -4,7 +4,18 @@ public enum WorkspaceMode
 {
     Register,
     DetailGrid,
-    DetailPanel
+    DetailPanel,
+    RaiseList,
+    RaiseCreate,
+    RaiseEdit,
+    RaiseDetails,
+    RaiseDelete,
+    RaisePost,
+    UpdateEdit,
+    UpdateCreateItem,
+    UpdateEditItem,
+    UpdateDeleteItem,
+    UpdateDeleteInvoice
 }
 
 public sealed class WorkspaceState<TKey>

@@ -1,0 +1,39 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">@Model.Title</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="2" Class="mb-4">
+        <MudItem xs="12"><b>Subject:</b> @DisplayText(Model.Subject)</MudItem>
+        <MudItem xs="12"><b>Namespace:</b> @DisplayText(Model.NamespacePath)</MudItem>
+        <MudItem xs="12" md="6"><b>Primary:</b> @DisplayText(Model.Primary)</MudItem>
+        <MudItem xs="12" md="6"><b>Secondary:</b> @DisplayText(Model.Secondary)</MudItem>
+        <MudItem xs="12"><b>Notes:</b> @DisplayText(Model.Notes)</MudItem>
+    </MudGrid>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Error"
+               StartIcon="@Icons.Material.Filled.Delete"
+               OnClick="OnConfirm">
+        @ConfirmButtonText
+    </MudButton>
+</MudPaper>
+
+@code {
+    [Parameter] public InvoiceDeleteConfirmationModel Model { get; set; } = new();
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirm";
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private static string DisplayText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}

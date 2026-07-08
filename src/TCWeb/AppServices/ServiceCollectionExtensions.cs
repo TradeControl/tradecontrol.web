@@ -31,6 +31,7 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IInvoiceFormattingService, InvoiceFormattingService>();
             services.AddScoped<IInvoiceRegisterLookupService, InvoiceRegisterLookupService>();
             services.AddScoped<IInvoiceRegisterService, InvoiceRegisterService>();
+            services.AddScoped<IInvoiceRegisterWorkflowService, InvoiceRegisterWorkflowService>();
 
             services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();
             services.AddScoped<IExecutionQueue, ExecutionQueue>();

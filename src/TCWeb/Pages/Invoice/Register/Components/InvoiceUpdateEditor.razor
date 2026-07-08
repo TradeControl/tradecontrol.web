@@ -1,0 +1,220 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Invoice.Register.Models
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h6">Edit Invoice</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="OnBack">
+            Back
+        </MudButton>
+    </MudStack>
+
+    @if (Model.Header is not null)
+    {
+        <MudText Typo="Typo.subtitle1">@Model.Header.SubjectName</MudText>
+        <MudText Typo="Typo.body2" Class="text-muted mb-3">@DisplayText(Model.NamespacePath)</MudText>
+    }
+
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="6">
+            <MudSelect T="short" Label="Invoice Type" Value="_invoiceTypeCode" ValueChanged="HandleInvoiceTypeChangedAsync">
+                @foreach (var option in Model.InvoiceTypeOptions)
+                {
+                    <MudSelectItem T="short" Value="@option.Value">@option.Label</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="short" Label="Invoice Status" Value="_invoiceStatusCode" ValueChanged="HandleInvoiceStatusChangedAsync">
+                @foreach (var option in Model.InvoiceStatusOptions)
+                {
+                    <MudSelectItem T="short" Value="@option.Value">@option.Label</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudDatePicker Label="Invoiced On" Date="_invoicedOn" DateChanged="HandleInvoicedOnChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudDatePicker Label="Due On" Date="_dueOn" DateChanged="HandleDueOnChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudDatePicker Label="Expected On" Date="_expectedOn" DateChanged="HandleExpectedOnChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudTextField T="string" Label="Payment Terms" Lines="2" Value="_paymentTerms" ValueChanged="HandlePaymentTermsChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudCheckBox T="bool" Label="Sent" Value="_printed" ValueChanged="HandlePrintedChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudTextField T="string" Label="Notes" Lines="5" Value="_notes" ValueChanged="HandleNotesChangedAsync" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="SaveAsync">
+                    Save Header
+                </MudButton>
+
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OnAddItem">
+                    New Item
+                </MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-4" />
+
+    <MudText Typo="Typo.h6" Class="mb-3">Details</MudText>
+
+    <MudDataGrid T="TradeControl.Web.Models.Invoice_vwRegisterDetail"
+                 Items="Model.Details"
+                 Hover="true"
+                 Dense="true"
+                 Bordered="true"
+                 Striped="true"
+                 RowsPerPage="25">
+        <Columns>
+            <PropertyColumn Property="x => x.ProjectCode" Title="Project" />
+            <PropertyColumn Property="x => x.CashDescription" Title="Cash Code" />
+            <PropertyColumn Property="x => x.ItemReference" Title="Reference" />
+            <PropertyColumn Property="x => x.TaxValue" Title="Tax" Format="C" />
+            <PropertyColumn Property="x => x.TotalValue" Title="Total" Format="C" />
+            <PropertyColumn Property="x => x.InvoiceValue" Title="Invoice Value" Format="C" />
+
+            <TemplateColumn Title="Actions">
+                <CellTemplate>
+                    @if (!context.Item.IsProject)
+                    {
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OnEditItem.InvokeAsync(new InvoiceUpdateItemKey(context.Item.InvoiceNumber, context.Item.CashCode)))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OnDeleteItem.InvokeAsync(new InvoiceUpdateItemKey(context.Item.InvoiceNumber, context.Item.CashCode)))" />
+                        </MudStack>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+
+        <PagerContent>
+            <MudDataGridPager />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public InvoiceUpdateEditModel Model { get; set; } = new();
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<InvoiceUpdateEditModel> OnSave { get; set; }
+    [Parameter] public EventCallback OnAddItem { get; set; }
+    [Parameter] public EventCallback<InvoiceUpdateItemKey> OnEditItem { get; set; }
+    [Parameter] public EventCallback<InvoiceUpdateItemKey> OnDeleteItem { get; set; }
+
+    private short _invoiceTypeCode;
+    private short _invoiceStatusCode;
+    private DateTime? _invoicedOn;
+    private DateTime? _dueOn;
+    private DateTime? _expectedOn;
+    private string _paymentTerms = string.Empty;
+    private bool _printed;
+    private string _notes = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _invoiceTypeCode = Model.InvoiceTypeCode;
+        _invoiceStatusCode = Model.InvoiceStatusCode;
+        _invoicedOn = Model.InvoicedOn;
+        _dueOn = Model.DueOn;
+        _expectedOn = Model.ExpectedOn;
+        _paymentTerms = Model.PaymentTerms;
+        _printed = Model.Printed;
+        _notes = Model.Notes;
+    }
+
+    private Task HandleInvoiceTypeChangedAsync(short value)
+    {
+        _invoiceTypeCode = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInvoiceStatusChangedAsync(short value)
+    {
+        _invoiceStatusCode = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleInvoicedOnChangedAsync(DateTime? value)
+    {
+        _invoicedOn = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDueOnChangedAsync(DateTime? value)
+    {
+        _dueOn = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleExpectedOnChangedAsync(DateTime? value)
+    {
+        _expectedOn = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePaymentTermsChangedAsync(string value)
+    {
+        _paymentTerms = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePrintedChangedAsync(bool value)
+    {
+        _printed = value;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleNotesChangedAsync(string value)
+    {
+        _notes = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task SaveAsync()
+    {
+        Model.InvoiceTypeCode = _invoiceTypeCode;
+        Model.InvoiceStatusCode = _invoiceStatusCode;
+        Model.InvoicedOn = _invoicedOn ?? Model.InvoicedOn;
+        Model.DueOn = _dueOn ?? Model.DueOn;
+        Model.ExpectedOn = _expectedOn ?? Model.ExpectedOn;
+        Model.PaymentTerms = _paymentTerms;
+        Model.Printed = _printed;
+        Model.Notes = _notes;
+
+        return OnSave.InvokeAsync(Model);
+    }
+
+    private static string DisplayText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}
