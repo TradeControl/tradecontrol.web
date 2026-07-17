@@ -1,0 +1,128 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+@if (Workspace is null)
+{
+    <div class="text-muted">No Accounts workspace data available.</div>
+}
+else
+{
+    <div class="tc-tax-hub-accounts d-flex flex-column gap-4">
+        <MudTabs Rounded="true" PanelClass="pt-3">
+            <MudTabPanel Text="Annual P&amp;L">
+                <section class="d-flex flex-column gap-4">
+                    <div>
+                        <div class="text-muted small">@Workspace.SelectedYearName</div>
+                    </div>
+
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="h5 mb-1">Accounts</h2>
+                        </div>
+                        <TaxHubProfitAndLossGrid Items="@Workspace.AnnualProfitAndLoss"
+                                                 CurrentHeading="@Workspace.SelectedYearName"
+                                                 PreviousHeading="@Workspace.SelectedPreviousYearName" />
+                    </div>
+
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="h5 mb-1">Tax Totals</h2>
+                        </div>
+                        <TaxHubProfitAndLossGrid Items="@Workspace.AnnualTaxTotals"
+                                                 CurrentHeading="@Workspace.SelectedYearName"
+                                                 PreviousHeading="@Workspace.SelectedPreviousYearName" />
+                    </div>
+
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="h5 mb-1">Cash Code Details</h2>
+                            <div class="text-muted small">Detailed annual breakdown by cash code</div>
+                        </div>
+                        <TaxHubProfitAndLossDetailGrid Sections="@Workspace.AnnualDetails"
+                                                       CurrentHeading="@Workspace.SelectedYearName"
+                                                       PreviousHeading="@Workspace.SelectedPreviousYearName" />
+                    </div>
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Monthly P&amp;L">
+                <section class="d-flex flex-column gap-4">
+                    <div>
+                        <div class="text-muted small">@Workspace.SelectedPeriodName</div>
+                    </div>
+
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="h5 mb-1">Accounts</h2>
+                        </div>
+                        <TaxHubProfitAndLossGrid Items="@Workspace.MonthlyProfitAndLoss"
+                                                 CurrentHeading="@Workspace.SelectedPeriodName"
+                                                 PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
+                    </div>
+
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="h5 mb-1">Tax Totals</h2>
+                        </div>
+                        <TaxHubProfitAndLossGrid Items="@Workspace.MonthlyTaxTotals"
+                                                 CurrentHeading="@Workspace.SelectedPeriodName"
+                                                 PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
+                    </div>
+
+                    <div>
+                        <div class="mb-2">
+                            <h2 class="h5 mb-1">Cash Code Details</h2>
+                            <div class="text-muted small">Detailed monthly breakdown by cash code</div>
+                        </div>
+                        <TaxHubProfitAndLossDetailGrid Sections="@Workspace.MonthlyDetails"
+                                                       CurrentHeading="@Workspace.SelectedPeriodName"
+                                                       PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
+                    </div>
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Balance Sheet">
+                <section class="d-flex flex-column gap-3">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <div class="text-muted small">
+                                @Workspace.SelectedPeriodName
+                                @if (Workspace.IsYearEndBalanceSheet)
+                                {
+                                    <span class="ms-2 tc-tax-hub-year-end-glyph" title="Year end balance sheet" aria-label="Year end balance sheet">◆ Year end</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <TaxHubBalanceSheetGrid Items="@Workspace.BalanceSheet"
+                                            CurrentHeading="@Workspace.SelectedPeriodName"
+                                            PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Validation">
+                <section class="d-flex flex-column gap-3">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <div class="text-muted small">
+                                Equity bridge reconciliation
+                            </div>
+                        </div>
+
+                        <div class="small text-muted">
+                            Tolerance @Workspace.ValidationSummary.Tolerance.ToString("#,##0.00;(#,##0.00);-")
+                        </div>
+                    </div>
+
+                    <TaxHubAccountsValidationGrid Items="@Workspace.EquityReconciliation"
+                                                  Summary="@Workspace.ValidationSummary" />
+                </section>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+}
+
+@code {
+    [Parameter] public TaxHubAccountsWorkspaceModel? Workspace { get; set; }
+}

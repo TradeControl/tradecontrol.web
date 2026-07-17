@@ -1,0 +1,98 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-vat-periods-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubVatPeriodRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.StartOn" Title="Date" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.TaxCode" Title="Tax Code" />
+                <PropertyColumn Property="x => x.VatDue" Title="VAT Due" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalVatDue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.HomeSalesVat" Title="Home Sales VAT" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalHomeSalesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.ExportSalesVat" Title="Export Sales VAT" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalExportSalesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.HomePurchasesVat" Title="Home Purchases VAT" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalHomePurchasesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.ExportPurchasesVat" Title="Export Purchases VAT" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalExportPurchasesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubVatPeriodRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubVatPeriodRow> Items { get; set; } = Array.Empty<TaxHubVatPeriodRow>();
+
+    private List<TaxHubVatPeriodRow> VisibleItems { get; set; } = new();
+
+    private decimal TotalVatDue { get; set; }
+    private decimal TotalHomeSalesVat { get; set; }
+    private decimal TotalExportSalesVat { get; set; }
+    private decimal TotalHomePurchasesVat { get; set; }
+    private decimal TotalExportPurchasesVat { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        RecalculateTotals();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubVatPeriodRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalVatDue = VisibleItems.Sum(x => (decimal)x.VatDue);
+        TotalHomeSalesVat = VisibleItems.Sum(x => (decimal)x.HomeSalesVat);
+        TotalExportSalesVat = VisibleItems.Sum(x => (decimal)x.ExportSalesVat);
+        TotalHomePurchasesVat = VisibleItems.Sum(x => (decimal)x.HomePurchasesVat);
+        TotalExportPurchasesVat = VisibleItems.Sum(x => (decimal)x.ExportPurchasesVat);
+    }
+}

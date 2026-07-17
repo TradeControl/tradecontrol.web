@@ -1,0 +1,38 @@
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-tax-hub-grid">
+    @switch (Workspace)
+    {
+        case TaxHubWorkspace.Dashboard:
+            <TaxHubDashboard Dashboard="@Dashboard" IsMobile="@IsMobile" />
+            break;
+
+        case TaxHubWorkspace.Vat:
+            <TaxHubVatWorkspace Workspace="@VatWorkspace" />
+            break;
+
+        case TaxHubWorkspace.BusinessTax:
+            <div class="alert alert-info mb-0">
+                The Business Tax workspace will be implemented in the next Tax Hub step.
+            </div>
+            break;
+
+        case TaxHubWorkspace.Accounts:
+            <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace" />
+            break;
+
+        default:
+            <div class="alert alert-secondary mb-0">
+                No workspace selected.
+            </div>
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public TaxHubWorkspace Workspace { get; set; }
+    [Parameter] public TaxHubDashboardModel? Dashboard { get; set; }
+    [Parameter] public TaxHubVatWorkspaceModel? VatWorkspace { get; set; }
+    [Parameter] public TaxHubAccountsWorkspaceModel? AccountsWorkspace { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+}

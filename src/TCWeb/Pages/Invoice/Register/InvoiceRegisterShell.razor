@@ -1,4 +1,5 @@
 @using System.Linq
+@using Microsoft.AspNetCore.Components.Web
 @using MudBlazor
 @using TradeControl.Web.AppServices
 @using TradeControl.Web.AppServices.InvoiceRegister
@@ -36,6 +37,15 @@
                     </div>
                 </div>
 
+                <div class="border-top mt-3 pt-3 d-flex justify-content-end">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.TableRows"
+                               OnClick="ShowRegisterAsync">
+                        Open workspace
+                    </MudButton>
+                </div>
+
                 <div class="flex-grow-1 overflow-auto" style="min-height:0;">
                     <InvoiceRegisterSidebar Years="_years"
                                             Periods="_periods"
@@ -62,15 +72,6 @@
                                             OnNamespaceFilterCommitted="HandleNamespaceFilterCommittedAsync"
                                             OnCashCodeChanged="HandleCashCodeChangedAsync"
                                             OnClearFilters="HandleClearFiltersAsync" />
-                </div>
-
-                <div class="border-top mt-3 pt-3 d-flex justify-content-end">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.TableRows"
-                               OnClick="ShowRegisterAsync">
-                        Open workspace
-                    </MudButton>
                 </div>
             </div>
         </div>
@@ -434,7 +435,7 @@ else
         return Task.CompletedTask;
     }
 
-    private Task ShowRegisterAsync()
+    private Task ShowRegisterAsync(MouseEventArgs _)
     {
         _mobileView = InvoiceRegisterMobileView.Workspace;
         return Task.CompletedTask;
@@ -462,7 +463,7 @@ else
         }
     }
 
-    private Task BackToNavigationAsync()
+    private Task BackToNavigationAsync(MouseEventArgs _)
     {
         _mobileView = InvoiceRegisterMobileView.Navigation;
         return Task.CompletedTask;
@@ -796,7 +797,7 @@ else
         builder.AddAttribute(seq++, "Variant", Variant.Outlined);
         builder.AddAttribute(seq++, "Color", Color.Primary);
         builder.AddAttribute(seq++, "StartIcon", Icons.Material.Filled.ArrowBack);
-        builder.AddAttribute(seq++, "OnClick", EventCallback.Factory.Create(this, BackToNavigationAsync));
+        builder.AddAttribute(seq++, "OnClick", EventCallback.Factory.Create<MouseEventArgs>(this, BackToNavigationAsync));
         builder.AddAttribute(seq++, "ChildContent", (RenderFragment)(buttonBuilder => buttonBuilder.AddContent(0, "Filters")));
         builder.CloseComponent();
         builder.CloseElement();

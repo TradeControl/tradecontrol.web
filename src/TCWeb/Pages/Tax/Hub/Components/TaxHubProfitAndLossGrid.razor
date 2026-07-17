@@ -1,0 +1,90 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-profit-and-loss-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubProfitAndLossRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     RowsPerPage="50"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.CategoryCode" Title="Code" />
+                <PropertyColumn Property="x => x.Category" Title="Category" />
+                <PropertyColumn Property="x => x.CurrentValue" Title="@CurrentHeading" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.CurrentValue < 0 ? "text-danger" : null)">
+                            @context.Item.CurrentValue.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                    <FooterTemplate>
+                        <b class="@(CurrentTotal < 0 ? "text-danger" : null)">@CurrentTotal.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.PreviousValue" Title="@PreviousHeading" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.PreviousValue < 0 ? "text-danger" : null)">
+                            @context.Item.PreviousValue.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                    <FooterTemplate>
+                        <b class="@(PreviousTotal < 0 ? "text-danger" : null)">@PreviousTotal.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubProfitAndLossRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubProfitAndLossRow> Items { get; set; } = Array.Empty<TaxHubProfitAndLossRow>();
+    [Parameter] public string CurrentHeading { get; set; } = "Current";
+    [Parameter] public string PreviousHeading { get; set; } = "Previous";
+
+    private List<TaxHubProfitAndLossRow> VisibleItems { get; set; } = new();
+
+    private decimal CurrentTotal { get; set; }
+    private decimal PreviousTotal { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        RecalculateTotals();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubProfitAndLossRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private void RecalculateTotals()
+    {
+        CurrentTotal = VisibleItems.Sum(x => x.CurrentValue);
+        PreviousTotal = VisibleItems.Sum(x => x.PreviousValue);
+    }
+}

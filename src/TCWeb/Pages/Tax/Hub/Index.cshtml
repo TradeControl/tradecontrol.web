@@ -1,0 +1,19 @@
+@page
+@model TradeControl.Web.Pages.Tax.Hub.IndexModel
+@{
+    ViewData["Title"] = "Tax Hub";
+}
+
+<link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+<link href="~/css/modules/taxHub.css" rel="stylesheet" />
+
+<div class="tc-tax-hub-workspace">
+    <component type="typeof(TradeControl.Web.Pages.Tax.Hub.TaxHubShell)"
+               render-mode="ServerPrerendered" />
+</div>
+
+@section Scripts
+{
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_framework/blazor.server.js"></script>
+}

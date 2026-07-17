@@ -1,10 +1,11 @@
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Mail;
 
 namespace TradeControl.Web.Data
@@ -120,6 +121,23 @@ namespace TradeControl.Web.Data
             }
 
         });
+
+        public async Task<NodeEnum.TaxType> BizTaxType()
+        {
+            try
+            {
+                var taxType = await _context.Cash_tbTaxTypes
+                        .Where(t => t.IsEnabled && (t.TaxTypeCode == 0 || t.TaxTypeCode == 4))
+                        .FirstAsync();
+                return (NodeEnum.TaxType)taxType.TaxTypeCode;
+            }
+            catch (Exception e)
+            {
+                _ = _context.ErrorLog(e);
+                return NodeEnum.TaxType.BusinessTax;
+            }
+        }
+
         #endregion
 
         #region mail

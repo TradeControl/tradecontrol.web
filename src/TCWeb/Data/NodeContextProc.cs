@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Models;
+using TradeControl.Web.Pages.Tax.Hub.Models;
 
 namespace TradeControl.Web.Data
 {
@@ -2591,7 +2592,7 @@ namespace TradeControl.Web.Data
 #endif
                 return await EventLog(NodeEnum.EventType.IsError, eventMessage.ToString());
             }
-            catch //(Exception err)
+            catch
             {
                 return string.Empty;
             }
@@ -3327,6 +3328,41 @@ namespace TradeControl.Web.Data
             {
                 await ErrorLog(e);
                 return 0m;
+            }
+        }
+
+        public async Task<TaxHubProjectedTaxDue> GetProjectedTaxDueAsync()
+        {
+            try
+            {
+                var result = new TaxHubProjectedTaxDue();
+
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using (SqlCommand command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "Cash.proc_TaxObligations";
+
+                    using var reader = await command.ExecuteReaderAsync();
+
+                    if (await reader.ReadAsync() && !reader.IsDBNull(0))
+                        result = result with { VatDue = reader.GetDecimal(0) };
+
+                    if (await reader.NextResultAsync())
+                    {
+                        if (await reader.ReadAsync() && !reader.IsDBNull(0))
+                            result = result with { BusinessTaxDue = reader.GetDecimal(0) };
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return new TaxHubProjectedTaxDue();
             }
         }
         #endregion

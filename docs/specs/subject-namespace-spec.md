@@ -2,8 +2,6 @@
 
 Copyright Trade Control Ltd. 27 April 2026.
 
-> [Cannonical Source](https://tradecontrol.github.io/articles/tc_production/#organisations)
-
 ## Context and Purpose {#context}
 
 This document defines the changes required to enhance the **Subject model** across both the data layer and the UI layer.  

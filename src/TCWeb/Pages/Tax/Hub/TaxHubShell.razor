@@ -1,0 +1,395 @@
+@using TradeControl.Web.AppServices.TaxHub
+@using TradeControl.Web.Pages.Tax.Hub.Components
+@using TradeControl.Web.Pages.Tax.Hub.Models
+@using Wangkanai.Detection.Models
+@inject ITaxHubService TaxHubService
+@inject Wangkanai.Detection.Services.IDetectionService Detection
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@if (_isMobile)
+{
+    <div class="tc-tax-hub tc-tax-hub-mobile">
+        <div class="tc-tax-hub-frame border rounded bg-white p-3 tc-tax-hub-shell">
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    @_error
+                </div>
+            }
+            else if (_isLoading)
+            {
+                <div class="text-muted">Loading Tax Hub…</div>
+            }
+            else if (_state is not null)
+            {
+                @if (_mobileView == TaxHubMobileView.Navigation)
+                {
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <h1 class="h4 mb-1">Tax Hub</h1>
+                            <div class="text-muted small">@_state.Subtitle</div>
+                        </div>
+
+                        <div class="small text-muted">
+                            @GetPeriodSummary()
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-flex justify-content-end">
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="ShowWorkspaceAsync">
+                            Open workspace
+                        </button>
+                    </div>
+
+                    <div class="flex-grow-1 overflow-auto" style="min-height:0;">
+                        <TaxHubSidebar SelectedWorkspace="@_state.SelectedWorkspace"
+                                       Years="@_years"
+                                       Periods="@_periods"
+                                       SelectedYearNumber="@_selectedYearNumber"
+                                       SelectedPeriodStartOn="@_selectedPeriodStartOn"
+                                       ShowPeriodSelectors="@ShowPeriodSelectors"
+                                       ShowFinalPeriodAction="@ShowFinalPeriodAction"
+                                       OnWorkspaceSelected="HandleWorkspaceSelectedAsync"
+                                       OnYearSelected="HandleYearSelectedAsync"
+                                       OnPeriodSelected="HandlePeriodSelectedAsync"
+                                       OnFinalPeriodSelected="HandleFinalPeriodSelectedAsync" />
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column h-100">
+                        <div class="mb-3">
+                            <button type="button"
+                                    class="btn btn-outline-primary"
+                                    @onclick="BackToNavigationAsync">
+                                Back to filters
+                            </button>
+                        </div>
+
+                        <div class="card flex-grow-1">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h1 class="h3 mb-1">@_state.Title</h1>
+                                    @if (!string.IsNullOrWhiteSpace(_state.Subtitle))
+                                    {
+                                        <div class="text-muted">@_state.Subtitle</div>
+                                    }
+                                </div>
+
+                                <TaxHubGrid Workspace="@_state.SelectedWorkspace"
+                                            Dashboard="@_dashboard"
+                                            VatWorkspace="@_vatWorkspace"
+                                            AccountsWorkspace="@_accountsWorkspace"
+                                            IsMobile="@_isMobile" />
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="tc-tax-hub">
+        <div class="tc-tax-hub-frame border rounded bg-white tc-tax-hub-shell">
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <div class="alert alert-danger m-3" role="alert">
+                    @_error
+                </div>
+            }
+            else if (_isLoading)
+            {
+                <div class="text-muted p-3">Loading Tax Hub…</div>
+            }
+            else if (_state is not null)
+            {
+                <div class="tc-tax-hub-desktop-layout">
+                    <aside class="tc-tax-hub-sidebar-host border-end @(_isSidebarCollapsed ? "tc-tax-hub-sidebar-collapsed" : null)">
+                        <div class="tc-tax-hub-sidebar-header">
+                            @if (!_isSidebarCollapsed)
+                            {
+                                <div class="min-w-0 tc-tax-hub-sidebar-title">
+                                    <div class="fw-semibold">Tax Hub</div>
+                                    <div class="small text-muted text-truncate">@GetPeriodSummary()</div>
+                                </div>
+                            }
+
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary tc-tax-hub-sidebar-toggle"
+                                    @onclick="ToggleSidebar">
+                                @if (_isSidebarCollapsed)
+                                {
+                                    <span>&rsaquo;</span>
+                                }
+                                else
+                                {
+                                    <span>&lsaquo;</span>
+                                }
+                            </button>
+                        </div>
+
+                        @if (!_isSidebarCollapsed)
+                        {
+                            <div class="tc-tax-hub-sidebar-body">
+                                <TaxHubSidebar SelectedWorkspace="@_state.SelectedWorkspace"
+                                               Years="@_years"
+                                               Periods="@_periods"
+                                               SelectedYearNumber="@_selectedYearNumber"
+                                               SelectedPeriodStartOn="@_selectedPeriodStartOn"
+                                               ShowPeriodSelectors="@ShowPeriodSelectors"
+                                               ShowFinalPeriodAction="@ShowFinalPeriodAction"
+                                               OnWorkspaceSelected="HandleWorkspaceSelectedAsync"
+                                               OnYearSelected="HandleYearSelectedAsync"
+                                               OnPeriodSelected="HandlePeriodSelectedAsync"
+                                               OnFinalPeriodSelected="HandleFinalPeriodSelectedAsync" />
+                            </div>
+                        }
+                    </aside>
+
+                    <section class="tc-tax-hub-main-host">
+                        <div class="tc-tax-hub-main-header">
+                            <div>
+                                <h1 class="h3 mb-1">@_state.Title</h1>
+                                @if (!string.IsNullOrWhiteSpace(_state.Subtitle))
+                                {
+                                    <div class="text-muted">@_state.Subtitle</div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="tc-tax-hub-main-body">
+                            <TaxHubGrid Workspace="@_state.SelectedWorkspace"
+                                        Dashboard="@_dashboard"
+                                        VatWorkspace="@_vatWorkspace"
+                                        AccountsWorkspace="@_accountsWorkspace"
+                                        IsMobile="@_isMobile" />
+                        </div>
+                    </section>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private enum TaxHubMobileView
+    {
+        Navigation,
+        Workspace
+    }
+
+    private bool _isLoading = true;
+    private bool _isMobile;
+    private bool _isSidebarCollapsed;
+    private string? _error;
+    private TaxHubWorkflowState? _state;
+    private TaxHubDashboardModel? _dashboard;
+    private TaxHubVatWorkspaceModel? _vatWorkspace;
+    private TaxHubAccountsWorkspaceModel? _accountsWorkspace;
+    private TaxHubMobileView _mobileView = TaxHubMobileView.Navigation;
+    private IReadOnlyList<TaxHubYearOption> _years = Array.Empty<TaxHubYearOption>();
+    private IReadOnlyList<TaxHubPeriodOption> _periods = Array.Empty<TaxHubPeriodOption>();
+    private short? _selectedYearNumber;
+    private DateTime? _selectedPeriodStartOn;
+    private short? _defaultYearNumber;
+    private DateTime? _defaultPeriodStartOn;
+
+    private bool ShowPeriodSelectors =>
+        _state?.SelectedWorkspace is TaxHubWorkspace.Vat or TaxHubWorkspace.Accounts;
+
+    private bool ShowFinalPeriodAction =>
+        _state?.SelectedWorkspace == TaxHubWorkspace.Accounts && _selectedYearNumber.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _isMobile = Detection.Device.Type == Device.Mobile;
+
+            var result = await TaxHubService.GetShellStateAsync();
+
+            if (!result.IsSuccess || result.State is null)
+            {
+                _error = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Unable to initialise Tax Hub."
+                    : result.Message;
+                return;
+            }
+
+            _state = result.State;
+            _years = await TaxHubService.GetYearsAsync();
+
+            var defaultPeriod = await TaxHubService.GetDefaultPeriodAsync();
+            _defaultYearNumber = defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
+            _defaultPeriodStartOn = defaultPeriod?.StartOn;
+
+            await ResetPeriodsAsync();
+            await RefreshWorkspaceAsync();
+        }
+        catch (System.Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ResetPeriodsAsync()
+    {
+        _selectedYearNumber = _defaultYearNumber;
+        _selectedPeriodStartOn = null;
+
+        if (_selectedYearNumber.HasValue && _selectedYearNumber.Value > 0)
+        {
+            _periods = await TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value);
+        }
+        else
+        {
+            _periods = Array.Empty<TaxHubPeriodOption>();
+        }
+    }
+
+    private Task ToggleSidebar()
+    {
+        _isSidebarCollapsed = !_isSidebarCollapsed;
+        return Task.CompletedTask;
+    }
+
+    private Task ShowWorkspaceAsync()
+    {
+        _mobileView = TaxHubMobileView.Workspace;
+        return Task.CompletedTask;
+    }
+
+    private Task BackToNavigationAsync()
+    {
+        _mobileView = TaxHubMobileView.Navigation;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleWorkspaceSelectedAsync(TaxHubWorkspace workspace)
+    {
+        if (_state is null)
+            return;
+
+        _state = workspace switch
+        {
+            TaxHubWorkspace.Dashboard => _state with
+            {
+                SelectedWorkspace = TaxHubWorkspace.Dashboard,
+                Title = "Tax Hub",
+                Subtitle = "Reporting and validation workspace"
+            },
+            TaxHubWorkspace.Vat => _state with
+            {
+                SelectedWorkspace = TaxHubWorkspace.Vat,
+                Title = "VAT",
+                Subtitle = "VAT reporting workspace"
+            },
+            TaxHubWorkspace.BusinessTax => _state with
+            {
+                SelectedWorkspace = TaxHubWorkspace.BusinessTax,
+                Title = "Business Tax",
+                Subtitle = "Business tax reporting workspace"
+            },
+            TaxHubWorkspace.Accounts => _state with
+            {
+                SelectedWorkspace = TaxHubWorkspace.Accounts,
+                Title = "Accounts",
+                Subtitle = "Profit and loss and balance sheet workspace"
+            },
+            _ => _state
+        };
+
+        if (!ShowPeriodSelectors)
+        {
+            _selectedYearNumber = null;
+            _selectedPeriodStartOn = null;
+        }
+        else if (!_selectedYearNumber.HasValue)
+        {
+            _selectedYearNumber = _defaultYearNumber;
+            _selectedPeriodStartOn = null;
+
+            if (_selectedYearNumber.HasValue)
+                _periods = await TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value);
+        }
+
+        await RefreshWorkspaceAsync();
+
+        if (_isMobile)
+            _mobileView = TaxHubMobileView.Workspace;
+    }
+
+    private async Task HandleYearSelectedAsync(short yearNumber)
+    {
+        _selectedYearNumber = yearNumber > 0 ? yearNumber : null;
+
+        if (_selectedYearNumber.HasValue)
+        {
+            _periods = await TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value);
+            _selectedPeriodStartOn = null;
+        }
+        else
+        {
+            _periods = Array.Empty<TaxHubPeriodOption>();
+            _selectedPeriodStartOn = null;
+        }
+
+        await RefreshWorkspaceAsync();
+    }
+
+    private async Task HandlePeriodSelectedAsync(DateTime? startOn)
+    {
+        _selectedPeriodStartOn = startOn;
+        await RefreshWorkspaceAsync();
+    }
+
+    private async Task HandleFinalPeriodSelectedAsync()
+    {
+        if (_selectedYearNumber.HasValue && _periods.Count > 0)
+        {
+            _selectedPeriodStartOn = _periods
+                .OrderBy(p => p.StartOn)
+                .Last()
+                .StartOn;
+
+            await RefreshWorkspaceAsync();
+        }
+    }
+
+    private async Task RefreshWorkspaceAsync()
+    {
+        _dashboard = await TaxHubService.GetDashboardAsync();
+
+        if (_state?.SelectedWorkspace == TaxHubWorkspace.Vat)
+            _vatWorkspace = await TaxHubService.GetVatWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
+        else
+            _vatWorkspace = null;
+
+        if (_state?.SelectedWorkspace == TaxHubWorkspace.Accounts)
+            _accountsWorkspace = await TaxHubService.GetAccountsWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
+        else
+            _accountsWorkspace = null;
+    }
+
+    private string GetPeriodSummary()
+    {
+        if (!ShowPeriodSelectors)
+            return "No period filter";
+
+        var year = _years.FirstOrDefault(y => y.YearNumber == _selectedYearNumber)?.Description ?? "All years";
+        var period = _periods.FirstOrDefault(p => p.StartOn == _selectedPeriodStartOn)?.Description ?? "All months in year";
+        return $"{year} • {period}";
+    }
+}

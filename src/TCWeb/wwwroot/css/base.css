@@ -100,6 +100,9 @@
     --tc-cat-neutral: #1976d2;
     --tc-cat-dot-shadow: rgba(0, 0, 0, 0.04);
     --tc-mobile-sheet-shadow: rgba(0, 0, 0, 0.25);
+    --tc-selected-row-bg: rgba(255, 152, 0, 0.14);
+    --tc-selected-row-border: rgba(230, 110, 0, 0.45);
+    --tc-selected-row-text: inherit;
 }
 
 /* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
@@ -316,6 +319,27 @@ h1, h2, h3, h4, h5 {
 .table td:last-child > .action-buttons,
 .table th:last-child > .action-buttons {
     min-width: 0 !important;
+}
+
+/* Selected row styling shared by standard tables and MudBlazor grids */
+.tc-selected-row,
+.table tbody tr.tc-selected-row,
+.mud-table-body .tc-selected-row,
+.mud-table-row.tc-selected-row {
+    background-color: var(--tc-selected-row-bg) !important;
+    color: var(--tc-selected-row-text) !important;
+}
+
+.table tbody tr.tc-selected-row > td,
+.mud-table-row.tc-selected-row > td {
+    background-color: var(--tc-selected-row-bg) !important;
+    color: var(--tc-selected-row-text) !important;
+    box-shadow: inset 0 1px 0 var(--tc-selected-row-border), inset 0 -1px 0 var(--tc-selected-row-border);
+}
+
+.table tbody tr.tc-selected-row > td:first-child,
+.mud-table-row.tc-selected-row > td:first-child {
+    box-shadow: inset 3px 0 0 var(--tc-selected-row-border), inset 0 1px 0 var(--tc-selected-row-border), inset 0 -1px 0 var(--tc-selected-row-border);
 }
 
 /* Forms and Buttons */

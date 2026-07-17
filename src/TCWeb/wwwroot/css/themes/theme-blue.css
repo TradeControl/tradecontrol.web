@@ -39,4 +39,7 @@
     --tc-back-btn-shadow: rgba(30, 136, 229, 0.28);
     --tc-back-btn-hover-shadow: rgba(30, 136, 229, 0.34);
     --tc-back-btn-active-shadow: rgba(30, 136, 229, 0.24);
+    --tc-selected-row-bg: rgba(30, 136, 229, 0.14);
+    --tc-selected-row-border: rgba(13, 71, 161, 0.42);
+    --tc-selected-row-text: inherit;
 }

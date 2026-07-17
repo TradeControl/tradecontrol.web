@@ -1,0 +1,135 @@
+@using System.Globalization
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-tax-hub-sidebar d-flex flex-column h-100">
+    <div class="mb-3">
+        <label class="form-label small text-muted mb-2">Workspace</label>
+
+        <div class="d-grid gap-2">
+            @foreach (var item in _items)
+            {
+                <button type="button"
+                        class="btn @(item.Workspace == SelectedWorkspace ? "btn-primary" : "btn-outline-secondary") btn-sm text-start"
+                        @onclick="() => SelectAsync(item.Workspace)">
+                    @item.Text
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (ShowPeriodSelectors)
+    {
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label small text-muted mb-1" for="taxHubYearSelect">Financial Year</label>
+                <select id="taxHubYearSelect"
+                        class="form-select form-select-sm"
+                        value="@(SelectedYearNumber.GetValueOrDefault())"
+                        @onchange="HandleYearChangedAsync">
+                    <option value="0">All years</option>
+                    @foreach (var year in Years)
+                    {
+                        <option value="@year.YearNumber">@year.Description</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small text-muted mb-1" for="taxHubPeriodSelect">Period</label>
+                <select id="taxHubPeriodSelect"
+                        class="form-select form-select-sm"
+                        value="@GetSelectedPeriodValue()"
+                        @onchange="HandlePeriodChangedAsync">
+                    <option value="">All months in year</option>
+                    @foreach (var period in Periods)
+                    {
+                        <option value="@period.StartOn.ToString("O", CultureInfo.InvariantCulture)">@period.Description</option>
+                    }
+                </select>
+            </div>
+
+            @if (ShowFinalPeriodAction)
+            {
+                <div class="col-12">
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm w-100"
+                            @onclick="HandleFinalPeriodSelectedAsync">
+                        Set final period in year
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public TaxHubWorkspace SelectedWorkspace { get; set; }
+    [Parameter] public IReadOnlyList<TaxHubYearOption> Years { get; set; } = Array.Empty<TaxHubYearOption>();
+    [Parameter] public IReadOnlyList<TaxHubPeriodOption> Periods { get; set; } = Array.Empty<TaxHubPeriodOption>();
+    [Parameter] public short? SelectedYearNumber { get; set; }
+    [Parameter] public DateTime? SelectedPeriodStartOn { get; set; }
+    [Parameter] public bool ShowPeriodSelectors { get; set; }
+    [Parameter] public bool ShowFinalPeriodAction { get; set; }
+    [Parameter] public EventCallback<TaxHubWorkspace> OnWorkspaceSelected { get; set; }
+    [Parameter] public EventCallback<short> OnYearSelected { get; set; }
+    [Parameter] public EventCallback<DateTime?> OnPeriodSelected { get; set; }
+    [Parameter] public EventCallback OnFinalPeriodSelected { get; set; }
+
+    private readonly TaxHubSidebarItem[] _items =
+    {
+        new(TaxHubWorkspace.Dashboard, "Dashboard"),
+        new(TaxHubWorkspace.Vat, "VAT"),
+        new(TaxHubWorkspace.BusinessTax, "Business Tax"),
+        new(TaxHubWorkspace.Accounts, "Accounts")
+    };
+
+    private async Task SelectAsync(TaxHubWorkspace workspace)
+    {
+        if (OnWorkspaceSelected.HasDelegate)
+            await OnWorkspaceSelected.InvokeAsync(workspace);
+    }
+
+    private async Task HandleYearChangedAsync(ChangeEventArgs args)
+    {
+        if (short.TryParse(args.Value?.ToString(), out var yearNumber))
+        {
+            await OnYearSelected.InvokeAsync(yearNumber);
+            return;
+        }
+
+        await OnYearSelected.InvokeAsync(0);
+    }
+
+    private async Task HandlePeriodChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            await OnPeriodSelected.InvokeAsync(null);
+            return;
+        }
+
+        if (DateTime.TryParse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out var startOn))
+        {
+            await OnPeriodSelected.InvokeAsync(startOn);
+        }
+    }
+
+    private async Task HandleFinalPeriodSelectedAsync()
+    {
+        if (OnFinalPeriodSelected.HasDelegate)
+            await OnFinalPeriodSelected.InvokeAsync();
+    }
+
+    private string GetSelectedPeriodValue()
+    {
+        return SelectedPeriodStartOn?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private sealed record TaxHubSidebarItem(TaxHubWorkspace Workspace, string Text);
+}

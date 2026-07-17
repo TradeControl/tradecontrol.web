@@ -160,6 +160,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Subject_vwReal> Subject_vwReals { get; set; }
         public virtual DbSet<Subject_vwVirtual> Subject_vwVirtuals { get; set; }
         public virtual DbSet<Cash_vwCategoryPrimaryParent> Cash_vwCategoryPrimaryParents { get; set; }
+        public virtual DbSet<Cash_vwEquityReconciliationByYear> Cash_vwEquityReconciliationByYears { get; set; }
         public virtual DbSet<Subject_vwSubjectLookup> Subject_SubjectLookup { get; set; }
         public virtual DbSet<Subject_vwSubjectLookupAll> Subject_SubjectLookupAll { get; set; }
         public virtual DbSet<Subject_vwEmailAddress> Subject_EmailAddresses { get; set; }
@@ -2830,6 +2831,10 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwAccountStatementListing>(entity =>
             {
                 entity.ToView("vwAccountStatementListing", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwEquityReconciliationByYear>(entity => {
+                entity.ToView("vwEquityReconciliationByYear", "Cash");
             });
 
             modelBuilder.Entity<Invoice_vwType>(entity =>

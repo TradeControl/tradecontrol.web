@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.AppServices.Execution;
 using TradeControl.Web.AppServices.InvoiceRegister;
+using TradeControl.Web.AppServices.TaxHub;
 
 namespace TradeControl.Web.AppServices
 {
@@ -17,6 +18,7 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ITemplateSystemService, TemplateSystemService>();
             services.AddScoped<IInvoiceTypeLookup, InvoiceTypeLookup>();
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
+            services.AddScoped<ITaxHubService, TaxHubService>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();
             services.AddScoped<ICashManagerService, CashManagerService>();

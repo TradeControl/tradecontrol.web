@@ -1,0 +1,107 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-vat-statement-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubVatStatementRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     RowClassFunc="GetRowClass"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.StartOn" Title="Date" Format="dd/MM/yyyy" />
+
+                <PropertyColumn Property="x => x.VatDue" Title="VAT Due" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.VatDue < 0 ? "text-danger" : null)">
+                            @context.Item.VatDue.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.VatPaid" Title="VAT Paid" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.VatPaid < 0 ? "text-danger" : null)">
+                            @context.Item.VatPaid.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.Balance" Title="Balance" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.Balance < 0 ? "text-danger" : null)">
+                            @context.Item.Balance.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubVatStatementRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubVatStatementRow> Items { get; set; } = Array.Empty<TaxHubVatStatementRow>();
+    [Parameter] public DateTime? ActiveStartOn { get; set; }
+
+    private List<TaxHubVatStatementRow> VisibleItems { get; set; } = new();
+    private long? HighlightedRowNumber { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        SetHighlightedRow();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubVatStatementRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        SetHighlightedRow();
+        StateHasChanged();
+    }
+
+    private void SetHighlightedRow()
+    {
+        if (!ActiveStartOn.HasValue)
+        {
+            HighlightedRowNumber = null;
+            return;
+        }
+
+        HighlightedRowNumber = VisibleItems
+            .Where(t => t.StartOn.Date >= ActiveStartOn.Value.Date)
+            .OrderBy(t => t.StartOn)
+            .ThenBy(t => t.RowNumber)
+            .Select(t => (long?)t.RowNumber)
+            .FirstOrDefault();
+    }
+
+    private string GetRowClass(TaxHubVatStatementRow item, int rowNumber)
+    {
+        return HighlightedRowNumber.HasValue && item.RowNumber == HighlightedRowNumber.Value
+            ? "tc-selected-row"
+            : string.Empty;
+    }
+}

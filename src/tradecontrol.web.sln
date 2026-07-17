@@ -17,6 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.Generator", "TCEx
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tmp", "tmp", "{9CBE2E18-8652-40DB-B4BA-34CACF90365A}"
 	ProjectSection(SolutionItems) = preProject
+		..\docs\tmp\refactor-spec-framework.md = ..\docs\tmp\refactor-spec-framework.md
 		..\docs\tmp\session-brief.md = ..\docs\tmp\session-brief.md
 	EndProjectSection
 EndProject
@@ -34,8 +35,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0
 		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
 		..\docs\specs\subject-namespace-spec.md = ..\docs\specs\subject-namespace-spec.md
 		..\docs\specs\synthetic-dataset-spec.md = ..\docs\specs\synthetic-dataset-spec.md
+		..\docs\specs\tax-hub-spec-implementation-1.md = ..\docs\specs\tax-hub-spec-implementation-1.md
+		..\docs\specs\tax-hub-spec-programme.md = ..\docs\specs\tax-hub-spec-programme.md
+		..\docs\specs\tax-hub-workplan-1.md = ..\docs\specs\tax-hub-workplan-1.md
 		..\docs\specs\tc-design-principles.md = ..\docs\specs\tc-design-principles.md
 		..\docs\specs\tc-development-contract.md = ..\docs\specs\tc-development-contract.md
+		..\docs\specs\tc-reference-architecture.md = ..\docs\specs\tc-reference-architecture.md
 		..\docs\specs\theme-system-spec.md = ..\docs\specs\theme-system-spec.md
 	EndProjectSection
 EndProject

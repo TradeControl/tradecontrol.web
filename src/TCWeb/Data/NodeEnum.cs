@@ -20,7 +20,7 @@ namespace TradeControl.Web.Data
         public enum DocClassCode { Product, Money };
         public enum InvoiceType { SalesInvoice, CreditNote, PurchaseInvoice, DebitNote };
         public enum InvoiceStatus { Pending, Invoiced, PartiallyPaid, Paid };
-        public enum TaxType { BusinessTax, VAT, NI, General };
+        public enum TaxType { BusinessTax, VAT, NI, General, SoleTrader, QuarterlyReturn };
         public enum CashEntryType { Payment, Invoice, Order, Quote, BusinessTax, VAT, Forecast, Transfers };
         public enum EventType { IsError, IsWarning, IsInformation, IsPriceChange, IsReschedule, IsDelivered, IsStatusChange, IsPayment };
         public enum TransmitStatus { IsDisconnected, IsDeploy, IsUpdate, IsProcessed };

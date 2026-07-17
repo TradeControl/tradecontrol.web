@@ -1,0 +1,101 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-obligations-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubObligationSummary"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+
+            <Columns>
+                <PropertyColumn Property="x => x.TaxType" Title="Tax Type" />
+                <PropertyColumn Property="x => x.SubjectName" Title="Account" />
+                <PropertyColumn Property="x => x.CashDescription" Title="Cash Code" />
+
+                <TemplateColumn Title="Next Filing">
+                    <CellTemplate Context="context">
+                        @FormatDate(context.Item.NextFilingDueOn)
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Next Payment">
+                    <CellTemplate Context="context">
+                        @FormatDate(context.Item.NextPaymentDueOn)
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Filing Period">
+                    <CellTemplate Context="context">
+                        @FormatPeriod(context.Item.FilingPeriodFrom, context.Item.FilingPeriodTo)
+                    </CellTemplate>
+                </TemplateColumn>
+
+                <TemplateColumn Title="Payment Period">
+                    <CellTemplate Context="context">
+                        @FormatPeriod(context.Item.PaymentPeriodFrom, context.Item.PaymentPeriodTo)
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubObligationSummary>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubObligationSummary> Items { get; set; } = Array.Empty<TaxHubObligationSummary>();
+
+    private List<TaxHubObligationSummary> VisibleItems { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubObligationSummary> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        StateHasChanged();
+    }
+
+    private static string FormatDate(DateTime? value)
+    {
+        return value.HasValue ? value.Value.ToString("dd MMM yyyy") : "—";
+    }
+
+    private static string FormatPeriod(DateTime? from, DateTime? to)
+    {
+        if (!from.HasValue && !to.HasValue)
+            return "—";
+
+        if (from.HasValue && to.HasValue)
+            return $"{from:dd MMM yyyy} to {to:dd MMM yyyy}";
+
+        return from.HasValue
+            ? from.Value.ToString("dd MMM yyyy")
+            : to!.Value.ToString("dd MMM yyyy");
+    }
+}

@@ -1,0 +1,149 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-accounts-validation-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                Rows: @VisibleItems.Count
+            </MudChip>
+
+            <MudChip T="string"
+                     Variant="Variant.Filled"
+                     Color="@GetSummaryColour(Summary.Status)"
+                     Size="Size.Small">
+                @Summary.Status
+            </MudChip>
+        </MudStack>
+
+        <div class="small text-muted">
+            Pass @Summary.PassCount · Warn @Summary.WarnCount · Fail @Summary.FailCount
+        </div>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubEquityReconciliationRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     RowClassFunc="GetRowClass"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.YearNumber" Title="Year" />
+                <PropertyColumn Property="x => x.Description" Title="Description" />
+
+                <PropertyColumn Property="x => x.OpeningCapital" Title="Opening Capital" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.OpeningCapital < 0 ? "text-danger" : null)">@context.Item.OpeningCapital.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.ClosingCapital" Title="Closing Capital" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.ClosingCapital < 0 ? "text-danger" : null)">@context.Item.ClosingCapital.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.Profit" Title="Profit" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.Profit < 0 ? "text-danger" : null)">@context.Item.Profit.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.BusinessTax" Title="Business Tax" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.BusinessTax < 0 ? "text-danger" : null)">@context.Item.BusinessTax.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.ProfitAfterTax" Title="Profit After Tax" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.ProfitAfterTax < 0 ? "text-danger" : null)">@context.Item.ProfitAfterTax.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.CapitalMovement" Title="Capital Movement" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.CapitalMovement < 0 ? "text-danger" : null)">@context.Item.CapitalMovement.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.OpeningPosition" Title="Opening Position" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.OpeningPosition < 0 ? "text-danger" : null)">@context.Item.OpeningPosition.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.OpeningAccountPosition" Title="Opening Account Position" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.OpeningAccountPosition < 0 ? "text-danger" : null)">@context.Item.OpeningAccountPosition.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.CapitalDelta" Title="Capital Delta" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.CapitalDelta < 0 ? "text-danger" : null)">@context.Item.CapitalDelta.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.BridgeTotal" Title="Bridge Total" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.BridgeTotal < 0 ? "text-danger" : null)">@context.Item.BridgeTotal.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.Variance" Title="Variance" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.Variance < 0 ? "text-danger" : null)">@context.Item.Variance.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                </PropertyColumn>
+
+                <PropertyColumn Property="x => x.Status" Title="Status">
+                    <CellTemplate>
+                        <MudChip T="string"
+                                 Variant="Variant.Filled"
+                                 Color="@GetSummaryColour(context.Item.Status)"
+                                 Size="Size.Small">
+                            @context.Item.Status
+                        </MudChip>
+                    </CellTemplate>
+                </PropertyColumn>
+            </Columns>
+
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubEquityReconciliationRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubEquityReconciliationRow> Items { get; set; } = Array.Empty<TaxHubEquityReconciliationRow>();
+    [Parameter] public TaxHubAccountsValidationSummary Summary { get; set; } = new();
+
+    private List<TaxHubEquityReconciliationRow> VisibleItems { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubEquityReconciliationRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        StateHasChanged();
+    }
+
+    private static string GetRowClass(TaxHubEquityReconciliationRow item, int rowNumber)
+    {
+        return item.Status switch
+        {
+            "FAIL" => "tc-tax-hub-validation-fail",
+            "WARN" => "tc-tax-hub-validation-warn",
+            "PASS" => "tc-tax-hub-validation-pass",
+            _ => string.Empty
+        };
+    }
+
+    private static Color GetSummaryColour(string status)
+    {
+        return status switch
+        {
+            "FAIL" => Color.Error,
+            "WARN" => Color.Warning,
+            "PASS" => Color.Success,
+            _ => Color.Default
+        };
+    }
+}

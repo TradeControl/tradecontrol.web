@@ -1,0 +1,84 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+@if (Workspace is null)
+{
+    <div class="text-muted">No VAT workspace data available.</div>
+}
+else
+{
+    <div class="tc-tax-hub-vat d-flex flex-column gap-4">
+        <MudTabs Rounded="true" PanelClass="pt-3">
+
+            <MudTabPanel Text="VAT Statement">
+                <section>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="text-muted small">Due, paid and running balance</div>
+                        </div>
+                    </div>
+
+                    <TaxHubVatStatementGrid Items="@Workspace.Statement"
+                                            ActiveStartOn="@Workspace.ActiveStatementStartOn" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="VAT Totals">
+                <section>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="text-muted small">
+                                @if (Workspace.IsAllYears)
+                                {
+                                    <span>All financial years</span>
+                                }
+                                else
+                                {
+                                    <span>@Workspace.SelectedYearDescription</span>
+                                }
+                            </div>
+                        </div>
+
+                        <a href="/Admin/Manager/Index?node=TaxRates"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-sm btn-outline-warning">
+                            Adjust tax rates
+                        </a>
+                    </div>
+
+                    <TaxHubVatTotalsGrid Items="@Workspace.Totals" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="VAT Period Totals">
+                <section>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="text-muted small">
+                                @if (Workspace.IsAllYears)
+                                {
+                                    <span>All years</span>
+                                }
+                                else if (Workspace.IsAllPeriodsInYear)
+                                {
+                                    <span>@Workspace.SelectedYearDescription - All months in year</span>
+                                }
+                                else
+                                {
+                                    <span>@Workspace.SelectedPeriodName</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <TaxHubVatPeriodsGrid Items="@Workspace.Periods" />
+                </section>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+}
+
+@code {
+    [Parameter] public TaxHubVatWorkspaceModel? Workspace { get; set; }
+}

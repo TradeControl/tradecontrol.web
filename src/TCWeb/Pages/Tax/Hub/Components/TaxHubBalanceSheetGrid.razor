@@ -1,0 +1,79 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-balance-sheet-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubBalanceSheetRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     RowClassFunc="GetRowClass"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     RowsPerPage="50"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.AssetCode" Title="Code" />
+                <PropertyColumn Property="x => x.AssetName" Title="Asset" />
+                <PropertyColumn Property="x => x.CurrentBalance" Title="@CurrentHeading" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.CurrentBalance < 0 ? "text-danger" : null)">
+                            @context.Item.CurrentBalance.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.PreviousBalance" Title="@PreviousHeading" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.PreviousBalance < 0 ? "text-danger" : null)">
+                            @context.Item.PreviousBalance.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubBalanceSheetRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubBalanceSheetRow> Items { get; set; } = Array.Empty<TaxHubBalanceSheetRow>();
+    [Parameter] public string CurrentHeading { get; set; } = "Current";
+    [Parameter] public string PreviousHeading { get; set; } = "Previous";
+
+    private List<TaxHubBalanceSheetRow> VisibleItems { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubBalanceSheetRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        StateHasChanged();
+    }
+
+    private static string GetRowClass(TaxHubBalanceSheetRow item, int rowNumber)
+    {
+        return item.IsCapital ? "tc-selected-row" : string.Empty;
+    }
+}

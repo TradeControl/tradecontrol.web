@@ -1,0 +1,81 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+@if (Sections.Count == 0)
+{
+    <div class="alert alert-secondary mb-0">
+        No detail data available.
+    </div>
+}
+else
+{
+    <div class="tc-tax-hub-profit-and-loss-detail-grid d-flex flex-column gap-4">
+        @foreach (var detailSection in Sections)
+        {
+            <div class="tc-register-grid">
+                <div class="mb-2">
+                    <h3 class="h6 mb-1">@detailSection.Category</h3>
+                    <div class="text-muted small">@detailSection.CategoryCode</div>
+                </div>
+
+                <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                        Rows: @detailSection.Rows.Count
+                    </MudChip>
+                </MudStack>
+
+                <div class="tc-grid-host">
+                    <MudDataGrid T="TaxHubProfitAndLossDetailRow"
+                                 Class="tc-register-datagrid tc-tax-hub-datagrid"
+                                 Items="@detailSection.Rows"
+                                 FixedHeader="true"
+                                 Hover="true"
+                                 Dense="true"
+                                 Bordered="true"
+                                 Striped="true"
+                                 Filterable="true"
+                                 Sortable="true"
+                                 ShowPager="true"
+                                 ReadOnly="true"
+                                 RowsPerPage="50"
+                                 FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                                 FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive">
+                        <Columns>
+                            <PropertyColumn Property="x => x.CashCode" Title="Cash Code" />
+                            <PropertyColumn Property="x => x.CashDescription" Title="Description" />
+                            <PropertyColumn Property="x => x.CurrentValue" Title="@CurrentHeading" Format="#,##0.00;(#,##0.00);-">
+                                <CellTemplate>
+                                    <span class="@(context.Item.CurrentValue < 0 ? "text-danger" : null)">
+                                        @context.Item.CurrentValue.ToString("#,##0.00;(#,##0.00);-")
+                                    </span>
+                                </CellTemplate>
+                                <FooterTemplate>
+                                    <b class="@(detailSection.CurrentTotal < 0 ? "text-danger" : null)">@detailSection.CurrentTotal.ToString("#,##0.00;(#,##0.00);-")</b>
+                                </FooterTemplate>
+                            </PropertyColumn>
+                            <PropertyColumn Property="x => x.PreviousValue" Title="@PreviousHeading" Format="#,##0.00;(#,##0.00);-">
+                                <CellTemplate>
+                                    <span class="@(context.Item.PreviousValue < 0 ? "text-danger" : null)">
+                                        @context.Item.PreviousValue.ToString("#,##0.00;(#,##0.00);-")
+                                    </span>
+                                </CellTemplate>
+                                <FooterTemplate>
+                                    <b class="@(detailSection.PreviousTotal < 0 ? "text-danger" : null)">@detailSection.PreviousTotal.ToString("#,##0.00;(#,##0.00);-")</b>
+                                </FooterTemplate>
+                            </PropertyColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager />
+                        </PagerContent>
+                    </MudDataGrid>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<TaxHubProfitAndLossDetailSection> Sections { get; set; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
+    [Parameter] public string CurrentHeading { get; set; } = "Current";
+    [Parameter] public string PreviousHeading { get; set; } = "Previous";
+}

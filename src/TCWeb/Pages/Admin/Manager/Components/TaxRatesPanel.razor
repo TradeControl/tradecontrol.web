@@ -307,6 +307,9 @@
             return;
         }
 
+        NodeSettings nodeSettings = new NodeSettings(NodeContext);
+
+        var bizTaxType = await nodeSettings.BizTaxType();
         var monthEnd = new DateTime(startOn.Year, startOn.Month, 1).AddMonths(1).AddDays(-1);
 
         _editor = new PeriodEditorModel
@@ -314,7 +317,7 @@
             StartOn = startOn,
             YearNumber = yearNumber,
             VatAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.VAT),
-            BusinessTaxAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.BusinessTax),
+            BusinessTaxAdjustment = await NodeContext.TaxAdjustmentGet(startOn, bizTaxType),
             MonthlyBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m,
             RangeStartOn = startOn,
             RangeEndOn = monthEnd,
@@ -336,7 +339,10 @@
             var periods = new FinancialPeriods(NodeContext);
 
             await periods.AdjustTax(_editor.StartOn, NodeEnum.TaxType.VAT, (double)_editor.VatAdjustment);
-            await periods.AdjustTax(_editor.StartOn, NodeEnum.TaxType.BusinessTax, (double)_editor.BusinessTaxAdjustment);
+
+            NodeSettings nodeSettings = new NodeSettings(NodeContext);
+            var bizTaxType = await nodeSettings.BizTaxType();
+            await periods.AdjustTax(_editor.StartOn, bizTaxType, (double)_editor.BusinessTaxAdjustment);
 
             _actionTone = "success";
             _actionMessage = "Adjustments saved.";
@@ -370,7 +376,7 @@
             await NodeContext.SaveChangesAsync();
 
             _actionTone = "success";
-            _actionMessage = "Monthly corporation tax rate saved.";
+            _actionMessage = "Monthly business tax rate saved.";
 
             await LoadYearsAsync(true);
 
@@ -379,7 +385,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = "Unable to save the monthly corporation tax rate.";
+            _errorMessage = "Unable to save the monthly business tax rate.";
             await NodeContext.ErrorLog(ex);
         }
     }
@@ -392,7 +398,7 @@
             await periods.TaxRate(_editor.RangeStartOn, _editor.RangeEndOn, (float)(_editor.RangeBusinessTaxRatePercent / 100m));
 
             _actionTone = "success";
-            _actionMessage = "Corporation tax rate range saved.";
+            _actionMessage = "Business tax rate range saved.";
 
             await LoadYearsAsync(true);
 
@@ -401,7 +407,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = "Unable to save the corporation tax rate range.";
+            _errorMessage = "Unable to save the business tax rate range.";
             await NodeContext.ErrorLog(ex);
         }
     }
@@ -516,7 +522,7 @@
         @if (_selectedPeriod is null)
         {
             <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
-                Select a tax period to edit its adjustments and corporation tax rate.
+                Select a tax period to edit its adjustments and business tax rate.
             </div>
         }
         else
@@ -575,7 +581,7 @@
                     </div>
 
                     <div class="border rounded bg-light">
-                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Corporation Tax Rate (Monthly)</div>
+                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Tax Rate (Monthly)</div>
                         <div class="p-3 bg-white">
                             <EditForm Model="@_editor" OnValidSubmit="SaveMonthlyRateAsync">
                                 <DataAnnotationsValidator />
@@ -608,7 +614,7 @@
                 @if (_isAdministrator)
                 {
                     <div class="border rounded bg-light">
-                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Corporation Tax Rate (Date Range)</div>
+                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Tax Rate (Date Range)</div>
                         <div class="p-3 bg-white">
                             <EditForm Model="@_editor" OnValidSubmit="SaveRangeRateAsync">
                                 <DataAnnotationsValidator />
