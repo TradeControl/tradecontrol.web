@@ -56,7 +56,7 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "decimal(38, 5)")]
         [Display(Name = "Opening Position")]
         [DataType(DataType.Currency)]
-        public decimal OpeningPosition { get; init; }
+        public decimal OpeningSubjectPosition { get; init; }
 
         [Column(TypeName = "decimal(38, 5)")]
         [Display(Name = "Opening Account Position")]

@@ -67,8 +67,8 @@
                     <CellTemplate><span class="@(context.Item.CapitalMovement < 0 ? "text-danger" : null)">@context.Item.CapitalMovement.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
                 </PropertyColumn>
 
-                <PropertyColumn Property="x => x.OpeningPosition" Title="Opening Position" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.OpeningPosition < 0 ? "text-danger" : null)">@context.Item.OpeningPosition.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
+                <PropertyColumn Property="x => x.OpeningSubjectPosition" Title="Opening Subject Position" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate><span class="@(context.Item.OpeningSubjectPosition < 0 ? "text-danger" : null)">@context.Item.OpeningSubjectPosition.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
                 </PropertyColumn>
 
                 <PropertyColumn Property="x => x.OpeningAccountPosition" Title="Opening Account Position" Format="#,##0.00;(#,##0.00);-">

@@ -457,7 +457,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 {
                     var bridgeTotal = t.ProfitAfterTax
                         + t.CapitalMovement
-                        + t.OpeningPosition
+                        + t.OpeningSubjectPosition
                         + t.OpeningAccountPosition;
 
                     var variance = t.Variance;
@@ -474,7 +474,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                         ProfitAfterTax = t.ProfitAfterTax,
                         TaxCarry = t.TaxCarry,
                         CapitalMovement = t.CapitalMovement,
-                        OpeningPosition = t.OpeningPosition,
+                        OpeningSubjectPosition = t.OpeningSubjectPosition,
                         OpeningAccountPosition = t.OpeningAccountPosition,
                         OpeningLossesCarriedForward = t.OpeningLossesCarriedForward,
                         ClosingLossesCarriedForward = t.ClosingLossesCarriedForward,

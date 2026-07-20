@@ -136,19 +136,19 @@ header .navbar > .container-fluid {
     padding-right: 8px !important;
 }
 
-    /* Styling for navbar links / brand */
-    header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link,
-    header .navbar .navbar-brand {
-        color: var(--tc-footer-text) !important;
-        transition: color 0.2s;
-        padding-left: 0.25rem;
-        padding-right: 0.25rem;
-    }
+/* Styling for navbar links / brand */
+header .navbar .navbar-collapse > ul.navbar-nav > li > a.nav-link,
+header .navbar .navbar-brand {
+    color: var(--tc-footer-text) !important;
+    transition: color 0.2s;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+}
 
-        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
-        header .navbar > .container > .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
-            color: var(--tc-table-head-bg) !important;
-        }
+header .navbar .navbar-collapse > ul.navbar-nav > li > a.nav-link:hover,
+header .navbar .navbar-collapse > ul.navbar-nav > li > a.nav-link:focus {
+    color: var(--tc-table-head-bg) !important;
+}
 
 /* Company name in navbar */
 header .tc-brand,
@@ -194,11 +194,15 @@ header .tc-brand,
     z-index: 101;
 }
 
-    .navbar-logo-absolute img {
-        height: 28px;
-        width: auto;
-        display: block;
-    }
+.navbar-logo-absolute img {
+    height: 28px;
+    width: auto;
+    display: block;
+}
+
+.navbar-nav.ms-auto {
+    align-items: center;
+}
 
 /* Logo sizing used in brand anchor */
 .tc-logo {
@@ -213,11 +217,13 @@ header .tc-brand,
 .tc-auth-link {
     color: var(--tc-auth-link) !important;
     font-weight: 500;
-    vertical-align: middle;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    /*    vertical-align: middle;
     padding-top: 0.5rem;
     padding-bottom: 0.25rem;
     line-height: 1.5;
-    transition: color 0.2s;
+    transition: color 0.2s;*/
 }
 
     .tc-auth-link:hover,
@@ -639,3 +645,4 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
             display: table-row;
         }
 }
+

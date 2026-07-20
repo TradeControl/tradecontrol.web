@@ -35,16 +35,23 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbTaxTypes))]
         public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
+
         [ForeignKey(nameof(CashCode))]
         [InverseProperty(nameof(Cash_tbCode.TbTaxTypes))]
         public virtual Cash_tbCode CashCodeNavigation { get; set; }
+
         [ForeignKey(nameof(MonthNumber))]
         [InverseProperty(nameof(App_tbMonth.TbTaxTypes))]
         public virtual App_tbMonth MonthNumberNavigation { get; set; }
+
         [ForeignKey(nameof(RecurrenceCode))]
         [InverseProperty(nameof(App_tbRecurrence.TbTaxTypes))]
         public virtual App_tbRecurrence RecurrenceCodeNavigation { get; set; }
+
         [InverseProperty(nameof(App_tbTaxCode.TaxTypeCodeNavigation))]
         public virtual ICollection<App_tbTaxCode> TbTaxCodes { get; set; }
+
+        [InverseProperty(nameof(Cash_tbTaxTagSource.TaxTypeCodeNavigation))]
+        public virtual ICollection<Cash_tbTaxTagSource> TaxTagSourceNavigation { get; set; }
     }
 }

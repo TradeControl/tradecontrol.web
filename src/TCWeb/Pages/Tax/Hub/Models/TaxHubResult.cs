@@ -199,7 +199,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public decimal ProfitAfterTax { get; init; }
         public decimal TaxCarry { get; init; }
         public decimal CapitalMovement { get; init; }
-        public decimal OpeningPosition { get; init; }
+        public decimal OpeningSubjectPosition { get; init; }
         public decimal OpeningAccountPosition { get; init; }
         public decimal OpeningLossesCarriedForward { get; init; }
         public decimal ClosingLossesCarriedForward { get; init; }
