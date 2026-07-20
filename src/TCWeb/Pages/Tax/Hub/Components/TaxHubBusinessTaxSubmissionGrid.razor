@@ -1,0 +1,77 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-business-tax-submission-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubBusinessTaxSubmissionRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     RowsPerPage="20"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.TagCode" Title="Tag Code" />
+                <PropertyColumn Property="x => x.PeriodFrom" Title="Period From" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.PeriodTo" Title="Period To" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.TaxableAmount" Title="Taxable Amount" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.TaxableAmount < 0 ? "text-danger" : null)">
+                            @context.Item.TaxableAmount.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                    <FooterTemplate>
+                        <b class="@(TotalTaxableAmount < 0 ? "text-danger" : null)">@TotalTaxableAmount.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubBusinessTaxSubmissionRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubBusinessTaxSubmissionRow> Items { get; set; } = Array.Empty<TaxHubBusinessTaxSubmissionRow>();
+
+    private List<TaxHubBusinessTaxSubmissionRow> VisibleItems { get; set; } = new();
+
+    private decimal TotalTaxableAmount { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        RecalculateTotals();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubBusinessTaxSubmissionRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalTaxableAmount = VisibleItems.Sum(x => x.TaxableAmount);
+    }
+}

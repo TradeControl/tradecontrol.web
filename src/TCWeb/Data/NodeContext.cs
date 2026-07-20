@@ -157,6 +157,9 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Views
+        public virtual DbSet<Cash_vwTaxHubPayload> Cash_vwTaxHubPayloads { get; set; }
+        public virtual DbSet<Cash_vwTaxHubSubmission> Cash_vwTaxHubSubmissions { get; set; }
+        public virtual DbSet<Cash_vwTaxHubPayloadAudit> Cash_vwTaxHubPayloadAudits { get; set; }
         public virtual DbSet<Subject_vwReal> Subject_vwReals { get; set; }
         public virtual DbSet<Subject_vwVirtual> Subject_vwVirtuals { get; set; }
         public virtual DbSet<Cash_vwCategoryPrimaryParent> Cash_vwCategoryPrimaryParents { get; set; }
@@ -2835,6 +2838,18 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Cash_vwEquityReconciliationByYear>(entity => {
                 entity.ToView("vwEquityReconciliationByYear", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwTaxHubPayload>(entity => {
+                entity.ToView("vwTaxHubPayload", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwTaxHubSubmission>(entity => {
+                entity.ToView("vwTaxHubSubmission", "Cash");
+            });
+
+            modelBuilder.Entity<Cash_vwTaxHubPayloadAudit>(entity => {
+                entity.ToView("vwTaxHubPayloadAudit", "Cash");
             });
 
             modelBuilder.Entity<Invoice_vwType>(entity =>

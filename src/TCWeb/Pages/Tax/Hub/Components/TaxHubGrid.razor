@@ -12,9 +12,7 @@
             break;
 
         case TaxHubWorkspace.BusinessTax:
-            <div class="alert alert-info mb-0">
-                The Business Tax workspace will be implemented in the next Tax Hub step.
-            </div>
+            <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace" />
             break;
 
         case TaxHubWorkspace.Accounts:
@@ -33,6 +31,7 @@
     [Parameter] public TaxHubWorkspace Workspace { get; set; }
     [Parameter] public TaxHubDashboardModel? Dashboard { get; set; }
     [Parameter] public TaxHubVatWorkspaceModel? VatWorkspace { get; set; }
+    [Parameter] public TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace { get; set; }
     [Parameter] public TaxHubAccountsWorkspaceModel? AccountsWorkspace { get; set; }
     [Parameter] public bool IsMobile { get; set; }
 }

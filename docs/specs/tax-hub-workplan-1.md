@@ -246,14 +246,12 @@ Supporting EF models include:
 
 - `Cash_vwTaxBizTotal`
 - `Cash_vwTaxBizStatement`
-- `Cash_vwTaxBizAuditAccrual`
 - `Cash_vwTaxLossesCarriedForward`
 
 Supporting `NodeContext` DbSets include:
 
 - `Cash_TaxBizTotals`
 - `Cash_TaxBizStatement`
-- `Cash_TaxBizAuditAccruals`
 - `Cash_TaxLossesCarriedForward`
 
 ### Current behaviour

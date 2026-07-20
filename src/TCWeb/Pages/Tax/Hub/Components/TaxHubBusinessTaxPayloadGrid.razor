@@ -1,0 +1,81 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-business-tax-payload-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubBusinessTaxPayloadRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     RowsPerPage="25"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.TagCode" Title="Tag Code" />
+                <PropertyColumn Property="x => x.CashCode" Title="Cash Code" />
+                <PropertyColumn Property="x => x.CategoryCode" Title="Category" />
+                <PropertyColumn Property="x => x.ParentCode" Title="Parent" />
+                <PropertyColumn Property="x => x.PeriodStartOn" Title="Period Start" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.PeriodFrom" Title="Submission From" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.PeriodTo" Title="Submission To" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.PeriodInvoiceValue" Title="Invoice Value" Format="#,##0.00;(#,##0.00);-">
+                    <CellTemplate>
+                        <span class="@(context.Item.PeriodInvoiceValue < 0 ? "text-danger" : null)">
+                            @context.Item.PeriodInvoiceValue.ToString("#,##0.00;(#,##0.00);-")
+                        </span>
+                    </CellTemplate>
+                    <FooterTemplate>
+                        <b class="@(TotalInvoiceValue < 0 ? "text-danger" : null)">@TotalInvoiceValue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubBusinessTaxPayloadRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubBusinessTaxPayloadRow> Items { get; set; } = Array.Empty<TaxHubBusinessTaxPayloadRow>();
+
+    private List<TaxHubBusinessTaxPayloadRow> VisibleItems { get; set; } = new();
+
+    private decimal TotalInvoiceValue { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        RecalculateTotals();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubBusinessTaxPayloadRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalInvoiceValue = VisibleItems.Sum(x => x.PeriodInvoiceValue);
+    }
+}

@@ -95,13 +95,16 @@ namespace TradeControl.Web.AppServices.TaxHub
 
             var validationSummary = await GetAccountsValidationSummaryAsync();
             var businessTaxCard = await BuildBusinessTaxCard(businessTaxTotals, obligations, projectedDue);
+            var payloadAudit = await GetPayloadAuditSummaryAsync();
 
-            return new TaxHubDashboardModel {
+            return new TaxHubDashboardModel
+            {
                 BusinessType = businessType,
                 ActiveRegimes = taxTypes
                     .Select(t => t.TaxType)
                     .ToArray(),
                 Obligations = obligations,
+                PayloadAudit = payloadAudit,
                 Cards = new[]
                 {
                     BuildVatCard(vatTotals, obligations, projectedDue),
@@ -286,6 +289,208 @@ namespace TradeControl.Web.AppServices.TaxHub
             };
         }
 
+        public async Task<TaxHubBusinessTaxWorkspaceModel> GetBusinessTaxWorkspaceAsync(short? yearNumber, DateTime? periodStartOn)
+        {
+            var totalsQuery = _nodeContext.Cash_TaxBizTotals
+                .AsNoTracking()
+                .Where(t => t.StartOn <= DateTime.Today)
+                .AsQueryable();
+
+            if (yearNumber.HasValue)
+                totalsQuery = totalsQuery.Where(t => t.YearNumber == yearNumber.Value);
+
+            var totals = await totalsQuery
+                .OrderByDescending(t => t.StartOn)
+                .Select(t => new TaxHubBusinessTaxTotalRow
+                {
+                    YearNumber = t.YearNumber,
+                    StartOn = t.StartOn,
+                    Description = t.Description,
+                    Period = t.Period,
+                    BusinessTaxRate = t.BusinessTaxRate,
+                    BusinessTaxAdjustment = t.BusinessTaxAdjustment,
+                    NetProfit = t.NetProfit,
+                    BusinessTax = t.BusinessTax
+                })
+                .ToListAsync();
+
+            var statement = await _nodeContext.Cash_TaxBizStatement
+                .AsNoTracking()
+                .OrderBy(t => t.StartOn)
+                .Select(t => new TaxHubBusinessTaxStatementRow
+                {
+                    StartOn = t.StartOn,
+                    TaxDue = t.TaxDue,
+                    TaxPaid = t.TaxPaid,
+                    Balance = t.Balance
+                })
+                .ToListAsync();
+
+            var lossesCarriedForward = await _nodeContext.Cash_TaxLossesCarriedForward
+                .AsNoTracking()
+                .OrderBy(t => t.StartOn)
+                .Select(t => new TaxHubBusinessTaxLossesRow
+                {
+                    YearEndDescription = t.YearEndDescription,
+                    StartOn = t.StartOn,
+                    TaxDue = t.TaxDue,
+                    TaxBalance = t.TaxBalance,
+                    LossesCarriedForward = t.LossesCarriedForward
+                })
+                .ToListAsync();
+
+            string? selectedYearDescription = null;
+            string? selectedPeriodDescription = null;
+            bool isAllPeriodsInYear = !periodStartOn.HasValue;
+
+            if (yearNumber.HasValue)
+            {
+                selectedYearDescription = await _nodeContext.App_tbYears
+                    .AsNoTracking()
+                    .Where(t => t.YearNumber == yearNumber.Value)
+                    .Select(t => t.Description)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (periodStartOn.HasValue)
+            {
+                selectedPeriodDescription = await _nodeContext.App_Periods
+                    .AsNoTracking()
+                    .Where(t => t.StartOn == periodStartOn.Value)
+                    .Select(t => t.Description)
+                    .FirstOrDefaultAsync();
+            }
+
+            var sourceNames = await _nodeContext.Cash_tbTaxTagSources
+                .AsNoTracking()
+                .ToDictionaryAsync(t => t.TaxSourceCode, t => t.SourceName);
+
+            var yearPeriodStartDates = yearNumber.HasValue
+                ? await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(t => t.YearNumber == yearNumber.Value)
+                    .OrderBy(t => t.StartOn)
+                    .Select(t => t.StartOn)
+                    .ToListAsync()
+                : new List<DateTime>();
+
+            DateTime? yearStart = yearPeriodStartDates.Count > 0 ? yearPeriodStartDates.First() : null;
+            DateTime? yearLastPeriodStart = yearPeriodStartDates.Count > 0 ? yearPeriodStartDates.Last() : null;
+            DateTime? yearEndExclusive = null;
+
+            if (yearLastPeriodStart.HasValue)
+            {
+                var nextPeriodStart = await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(t => t.StartOn > yearLastPeriodStart.Value)
+                    .OrderBy(t => t.StartOn)
+                    .Select(t => (DateTime?)t.StartOn)
+                    .FirstOrDefaultAsync();
+
+                yearEndExclusive = nextPeriodStart ?? yearLastPeriodStart.Value.AddMonths(1);
+            }
+
+            var payloadQuery = _nodeContext.Cash_vwTaxHubPayloads
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (periodStartOn.HasValue)
+            {
+                payloadQuery = payloadQuery.Where(t => t.PeriodStartOn == periodStartOn.Value);
+            }
+            else if (yearPeriodStartDates.Count > 0)
+            {
+                payloadQuery = payloadQuery.Where(t => yearPeriodStartDates.Contains(t.PeriodStartOn));
+            }
+
+            var payload = await payloadQuery
+                .OrderBy(t => t.TaxSourceCode)
+                .ThenBy(t => t.PeriodFrom)
+                .ThenBy(t => t.TagCode)
+                .ThenBy(t => t.CashCode)
+                .Select(t => new TaxHubBusinessTaxPayloadRow
+                {
+                    TaxSourceCode = t.TaxSourceCode,
+                    TagCode = t.TagCode,
+                    ParentCode = t.ParentCode,
+                    CashCode = t.CashCode,
+                    CategoryCode = t.CategoryCode,
+                    CashTypeCode = t.CashTypeCode,
+                    PeriodStartOn = t.PeriodStartOn,
+                    PeriodFrom = t.PeriodFrom,
+                    PeriodTo = t.PeriodTo,
+                    PeriodInvoiceValue = t.PeriodInvoiceValue
+                })
+                .ToListAsync();
+
+            var submissionQuery = _nodeContext.Cash_vwTaxHubSubmissions
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (yearStart.HasValue && yearEndExclusive.HasValue)
+            {
+                submissionQuery = submissionQuery.Where(t =>
+                    t.PeriodFrom < yearEndExclusive.Value &&
+                    t.PeriodTo >= yearStart.Value);
+            }
+
+            if (periodStartOn.HasValue)
+            {
+                submissionQuery = submissionQuery.Where(t =>
+                    t.PeriodFrom <= periodStartOn.Value &&
+                    t.PeriodTo >= periodStartOn.Value);
+            }
+
+            var submissions = await submissionQuery
+                .OrderBy(t => t.TaxSourceCode)
+                .ThenBy(t => t.PeriodFrom)
+                .ThenBy(t => t.TagCode)
+                .Select(t => new TaxHubBusinessTaxSubmissionRow
+                {
+                    TaxSourceCode = t.TaxSourceCode,
+                    TagCode = t.TagCode,
+                    PeriodFrom = t.PeriodFrom,
+                    PeriodTo = t.PeriodTo,
+                    TaxableAmount = t.TaxableAmount
+                })
+                .ToListAsync();
+
+            var taxSourceCodes = payload
+                .Select(t => t.TaxSourceCode)
+                .Concat(submissions.Select(t => t.TaxSourceCode))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(t => t)
+                .ToList();
+
+            var sources = taxSourceCodes
+                .Select(taxSourceCode => new TaxHubBusinessTaxSourceWorkspace
+                {
+                    TaxSourceCode = taxSourceCode,
+                    SourceName = sourceNames.TryGetValue(taxSourceCode, out var sourceName) ? sourceName : taxSourceCode,
+                    Submissions = submissions
+                        .Where(t => string.Equals(t.TaxSourceCode, taxSourceCode, StringComparison.OrdinalIgnoreCase))
+                        .ToList(),
+                    Payload = payload
+                        .Where(t => string.Equals(t.TaxSourceCode, taxSourceCode, StringComparison.OrdinalIgnoreCase))
+                        .ToList()
+                })
+                .ToList();
+
+            return new TaxHubBusinessTaxWorkspaceModel
+            {
+                SelectedYearNumber = yearNumber,
+                SelectedYearDescription = selectedYearDescription,
+                SelectedPeriodStartOn = periodStartOn,
+                SelectedPeriodDescription = selectedPeriodDescription,
+                IsAllYears = !yearNumber.HasValue,
+                IsAllPeriodsInYear = isAllPeriodsInYear,
+                Totals = totals,
+                Statement = statement,
+                LossesCarriedForward = lossesCarriedForward,
+                Sources = sources
+            };
+        }
+
         public async Task<TaxHubAccountsWorkspaceModel> GetAccountsWorkspaceAsync(short? yearNumber, DateTime? periodStartOn)
         {
             var financialPeriods = new FinancialPeriods(_nodeContext);
@@ -442,6 +647,28 @@ namespace TradeControl.Web.AppServices.TaxHub
                 BalanceSheet = balanceSheet,
                 ValidationSummary = validationSummary,
                 EquityReconciliation = equityReconciliation
+            };
+        }
+
+        private async Task<TaxHubPayloadAuditSummary> GetPayloadAuditSummaryAsync()
+        {
+            var rows = await _nodeContext.Cash_vwTaxHubPayloadAudits
+                .AsNoTracking()
+                .Select(t => new
+                {
+                    t.Difference
+                })
+                .ToListAsync();
+
+            var errorRows = rows.Count(t => t.Difference != 0m);
+            var totalDifference = rows.Sum(t => t.Difference);
+
+            return new TaxHubPayloadAuditSummary
+            {
+                Status = totalDifference == 0m ? "PASS" : "FAIL",
+                TotalRows = rows.Count,
+                ErrorRows = errorRows,
+                TotalDifference = totalDifference
             };
         }
 

@@ -1,3 +1,4 @@
+@using MudBlazor
 @using TradeControl.Web.Pages.Tax.Hub.Models
 
 @if (Dashboard is null)
@@ -9,8 +10,6 @@ else
     <div class="tc-tax-hub-dashboard d-flex flex-column gap-3">
         <section>
             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                @* <h2 class="h5 mb-0">Active Regimes</h2> *@
-
                 @if (!string.IsNullOrWhiteSpace(Dashboard.BusinessType))
                 {
                     <span class="badge rounded-pill text-bg-secondary tc-tax-hub-badge">@Dashboard.BusinessType</span>
@@ -34,7 +33,7 @@ else
             <div class="row g-2">
                 @foreach (var card in Dashboard.Cards)
                 {
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-4">
                         <div class="card h-100 tc-tax-hub-summary-card">
                             <div class="card-body py-3">
                                 <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
@@ -53,6 +52,51 @@ else
                         </div>
                     </div>
                 }
+            </div>
+        </section>
+
+        <section>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <div>
+                    <h2 class="h5 mb-0">Payload Audit</h2>
+                    <div class="text-muted small">Aggregate integrity check comparing raw P&amp;L values with submission payload totals</div>
+                </div>
+
+                <MudChip T="string"
+                         Variant="Variant.Filled"
+                         Color="@GetAuditColour(Dashboard.PayloadAudit.Status)"
+                         Size="Size.Small">
+                    @Dashboard.PayloadAudit.Status
+                </MudChip>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 tc-tax-hub-summary-card">
+                        <div class="card-body py-3">
+                            <div class="text-muted small mb-1">Audited Rows</div>
+                            <div class="tc-tax-hub-card-value">@Dashboard.PayloadAudit.TotalRows</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 tc-tax-hub-summary-card">
+                        <div class="card-body py-3">
+                            <div class="text-muted small mb-1">Rows With Difference</div>
+                            <div class="tc-tax-hub-card-value">@Dashboard.PayloadAudit.ErrorRows</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 tc-tax-hub-summary-card">
+                        <div class="card-body py-3">
+                            <div class="text-muted small mb-1">Net Difference</div>
+                            <div class="tc-tax-hub-card-value">@Dashboard.PayloadAudit.TotalDifference.ToString("#,##0.00;(#,##0.00);-")</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -79,4 +123,15 @@ else
 @code {
     [Parameter] public TaxHubDashboardModel? Dashboard { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+
+    private static Color GetAuditColour(string status)
+    {
+        return status switch
+        {
+            "FAIL" => Color.Error,
+            "WARN" => Color.Warning,
+            "PASS" => Color.Success,
+            _ => Color.Default
+        };
+    }
 }

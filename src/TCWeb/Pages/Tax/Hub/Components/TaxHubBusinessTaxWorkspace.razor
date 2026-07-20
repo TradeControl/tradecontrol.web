@@ -1,0 +1,121 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+@if (Workspace is null)
+{
+    <div class="text-muted">No Business Tax workspace data available.</div>
+}
+else
+{
+    <div class="tc-tax-hub-business-tax d-flex flex-column gap-4">
+        <MudTabs Rounded="true" PanelClass="pt-3">
+            <MudTabPanel Text="Business Tax Totals">
+                <section>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="text-muted small">
+                                @if (Workspace.IsAllYears)
+                                {
+                                    <span>All financial years</span>
+                                }
+                                else if (Workspace.IsAllPeriodsInYear)
+                                {
+                                    <span>@Workspace.SelectedYearDescription</span>
+                                }
+                                else
+                                {
+                                    <span>@Workspace.SelectedYearDescription • @Workspace.SelectedPeriodDescription</span>
+                                }
+                            </div>
+                        </div>
+
+                        <a href="/Admin/Manager/Index?node=TaxRates"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="btn btn-sm btn-outline-warning">
+                            Adjust tax rates
+                        </a>
+                    </div>
+
+                    <TaxHubBusinessTaxTotalsGrid Items="@Workspace.Totals" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Business Tax Statement">
+                <section>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="text-muted small">Tax due, paid and running balance</div>
+                        </div>
+                    </div>
+
+                    <TaxHubBusinessTaxStatementGrid Items="@Workspace.Statement" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Losses Carried Forward">
+                <section>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="text-muted small">Losses carried forward by year end</div>
+                        </div>
+                    </div>
+
+                    <TaxHubBusinessTaxLossesGrid Items="@Workspace.LossesCarriedForward" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="HMRC View">
+                @if (Workspace.Sources.Count == 0)
+                {
+                    <div class="alert alert-secondary mb-0">
+                        No Business Tax HMRC payload or submission data is available for the current filter.
+                    </div>
+                }
+                else
+                {
+                    <MudTabs Rounded="true" PanelClass="pt-3">
+                        @foreach (var source in Workspace.Sources)
+                        {
+                            <MudTabPanel Text="@source.SourceName">
+                                <section class="d-flex flex-column gap-3">
+                                    <div>
+                                        <div class="text-muted small">@source.TaxSourceCode</div>
+                                    </div>
+
+                                    <MudTabs Rounded="true" PanelClass="pt-3">
+                                        <MudTabPanel Text="Submission Totals">
+                                            <section>
+                                                <div class="mb-2">
+                                                    <h2 class="h5 mb-1">Submission Totals</h2>
+                                                    <div class="text-muted small">HMRC submission totals for the selected source and period context</div>
+                                                </div>
+
+                                                <TaxHubBusinessTaxSubmissionGrid Items="@source.Submissions" />
+                                            </section>
+                                        </MudTabPanel>
+
+                                        <MudTabPanel Text="Payload Detail">
+                                            <section>
+                                                <div class="mb-2">
+                                                    <h2 class="h5 mb-1">Payload Detail</h2>
+                                                    <div class="text-muted small">Detailed ledger values mapped into the selected submission context</div>
+                                                </div>
+
+                                                <TaxHubBusinessTaxPayloadGrid Items="@source.Payload" />
+                                            </section>
+                                        </MudTabPanel>
+                                    </MudTabs>
+                                </section>
+                            </MudTabPanel>
+                        }
+                    </MudTabs>
+                }
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+}
+
+@code {
+    [Parameter] public TaxHubBusinessTaxWorkspaceModel? Workspace { get; set; }
+}

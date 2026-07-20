@@ -1,0 +1,86 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-business-tax-statement-grid">
+    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+            Rows: @VisibleItems.Count
+        </MudChip>
+    </MudStack>
+
+    <div class="tc-grid-host">
+        <MudDataGrid T="TaxHubBusinessTaxStatementRow"
+                     Class="tc-register-datagrid tc-tax-hub-datagrid"
+                     @ref="_grid"
+                     Items="Items"
+                     FixedHeader="true"
+                     Hover="true"
+                     Dense="true"
+                     Bordered="true"
+                     Striped="true"
+                     Filterable="true"
+                     Sortable="true"
+                     ShowPager="true"
+                     ReadOnly="true"
+                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
+                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                     FilteredItemsChanged="OnFilteredItemsChanged">
+            <Columns>
+                <PropertyColumn Property="x => x.StartOn" Title="Date" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.TaxDue" Title="Tax Due" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalTaxDue.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.TaxPaid" Title="Tax Paid" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalTaxPaid.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.Balance" Title="Balance" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@LatestBalance.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager />
+            </PagerContent>
+        </MudDataGrid>
+    </div>
+</div>
+
+@code {
+    private MudDataGrid<TaxHubBusinessTaxStatementRow>? _grid;
+
+    [Parameter] public IReadOnlyList<TaxHubBusinessTaxStatementRow> Items { get; set; } = Array.Empty<TaxHubBusinessTaxStatementRow>();
+
+    private List<TaxHubBusinessTaxStatementRow> VisibleItems { get; set; } = new();
+
+    private decimal TotalTaxDue { get; set; }
+    private decimal TotalTaxPaid { get; set; }
+    private decimal LatestBalance { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        VisibleItems = Items.ToList();
+        RecalculateTotals();
+    }
+
+    private void OnFilteredItemsChanged(IEnumerable<TaxHubBusinessTaxStatementRow> filteredItems)
+    {
+        VisibleItems = filteredItems.ToList();
+        RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private void RecalculateTotals()
+    {
+        TotalTaxDue = VisibleItems.Sum(x => x.TaxDue);
+        TotalTaxPaid = VisibleItems.Sum(x => x.TaxPaid);
+        LatestBalance = VisibleItems
+            .OrderByDescending(x => x.StartOn)
+            .Select(x => x.Balance)
+            .FirstOrDefault();
+    }
+}

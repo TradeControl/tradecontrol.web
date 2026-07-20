@@ -85,6 +85,7 @@
                                 <TaxHubGrid Workspace="@_state.SelectedWorkspace"
                                             Dashboard="@_dashboard"
                                             VatWorkspace="@_vatWorkspace"
+                                            BusinessTaxWorkspace="@_businessTaxWorkspace"
                                             AccountsWorkspace="@_accountsWorkspace"
                                             IsMobile="@_isMobile" />
                             </div>
@@ -169,6 +170,7 @@ else
                             <TaxHubGrid Workspace="@_state.SelectedWorkspace"
                                         Dashboard="@_dashboard"
                                         VatWorkspace="@_vatWorkspace"
+                                        BusinessTaxWorkspace="@_businessTaxWorkspace"
                                         AccountsWorkspace="@_accountsWorkspace"
                                         IsMobile="@_isMobile" />
                         </div>
@@ -193,6 +195,7 @@ else
     private TaxHubWorkflowState? _state;
     private TaxHubDashboardModel? _dashboard;
     private TaxHubVatWorkspaceModel? _vatWorkspace;
+    private TaxHubBusinessTaxWorkspaceModel? _businessTaxWorkspace;
     private TaxHubAccountsWorkspaceModel? _accountsWorkspace;
     private TaxHubMobileView _mobileView = TaxHubMobileView.Navigation;
     private IReadOnlyList<TaxHubYearOption> _years = Array.Empty<TaxHubYearOption>();
@@ -203,7 +206,7 @@ else
     private DateTime? _defaultPeriodStartOn;
 
     private bool ShowPeriodSelectors =>
-        _state?.SelectedWorkspace is TaxHubWorkspace.Vat or TaxHubWorkspace.Accounts;
+        _state?.SelectedWorkspace is TaxHubWorkspace.Vat or TaxHubWorkspace.BusinessTax or TaxHubWorkspace.Accounts;
 
     private bool ShowFinalPeriodAction =>
         _state?.SelectedWorkspace == TaxHubWorkspace.Accounts && _selectedYearNumber.HasValue;
@@ -376,6 +379,11 @@ else
             _vatWorkspace = await TaxHubService.GetVatWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
         else
             _vatWorkspace = null;
+
+        if (_state?.SelectedWorkspace == TaxHubWorkspace.BusinessTax)
+            _businessTaxWorkspace = await TaxHubService.GetBusinessTaxWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
+        else
+            _businessTaxWorkspace = null;
 
         if (_state?.SelectedWorkspace == TaxHubWorkspace.Accounts)
             _accountsWorkspace = await TaxHubService.GetAccountsWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);

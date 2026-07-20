@@ -16,6 +16,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public IReadOnlyList<string> ActiveRegimes { get; init; } = Array.Empty<string>();
         public IReadOnlyList<TaxHubObligationSummary> Obligations { get; init; } = Array.Empty<TaxHubObligationSummary>();
         public IReadOnlyList<TaxHubDashboardCard> Cards { get; init; } = Array.Empty<TaxHubDashboardCard>();
+        public TaxHubPayloadAuditSummary PayloadAudit { get; init; } = new();
     }
 
     public sealed class TaxHubDashboardCard
@@ -78,6 +79,14 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public decimal BusinessTaxDue { get; init; }
     }
 
+    public sealed class TaxHubPayloadAuditSummary
+    {
+        public string Status { get; init; } = "PASS";
+        public int TotalRows { get; init; }
+        public int ErrorRows { get; init; }
+        public decimal TotalDifference { get; init; }
+    }
+
     public sealed class TaxHubVatWorkspaceModel
     {
         public string? SelectedPeriodName { get; init; }
@@ -132,6 +141,80 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public double ExportSalesVat { get; init; }
         public double ExportPurchasesVat { get; init; }
         public double VatDue { get; init; }
+    }
+
+    public sealed class TaxHubBusinessTaxWorkspaceModel
+    {
+        public short? SelectedYearNumber { get; init; }
+        public string? SelectedYearDescription { get; init; }
+        public DateTime? SelectedPeriodStartOn { get; init; }
+        public string? SelectedPeriodDescription { get; init; }
+        public bool IsAllYears { get; init; }
+        public bool IsAllPeriodsInYear { get; init; }
+        public IReadOnlyList<TaxHubBusinessTaxTotalRow> Totals { get; init; } = Array.Empty<TaxHubBusinessTaxTotalRow>();
+        public IReadOnlyList<TaxHubBusinessTaxStatementRow> Statement { get; init; } = Array.Empty<TaxHubBusinessTaxStatementRow>();
+        public IReadOnlyList<TaxHubBusinessTaxLossesRow> LossesCarriedForward { get; init; } = Array.Empty<TaxHubBusinessTaxLossesRow>();
+        public IReadOnlyList<TaxHubBusinessTaxSourceWorkspace> Sources { get; init; } = Array.Empty<TaxHubBusinessTaxSourceWorkspace>();
+    }
+
+    public sealed class TaxHubBusinessTaxSourceWorkspace
+    {
+        public string TaxSourceCode { get; init; } = string.Empty;
+        public string SourceName { get; init; } = string.Empty;
+        public IReadOnlyList<TaxHubBusinessTaxSubmissionRow> Submissions { get; init; } = Array.Empty<TaxHubBusinessTaxSubmissionRow>();
+        public IReadOnlyList<TaxHubBusinessTaxPayloadRow> Payload { get; init; } = Array.Empty<TaxHubBusinessTaxPayloadRow>();
+    }
+
+    public sealed class TaxHubBusinessTaxTotalRow
+    {
+        public short YearNumber { get; init; }
+        public DateTime StartOn { get; init; }
+        public string Description { get; init; } = string.Empty;
+        public string Period { get; init; } = string.Empty;
+        public decimal BusinessTaxRate { get; init; }
+        public decimal BusinessTaxAdjustment { get; init; }
+        public decimal NetProfit { get; init; }
+        public decimal BusinessTax { get; init; }
+    }
+
+    public sealed class TaxHubBusinessTaxStatementRow
+    {
+        public DateTime StartOn { get; init; }
+        public decimal TaxDue { get; init; }
+        public decimal TaxPaid { get; init; }
+        public decimal Balance { get; init; }
+    }
+
+    public sealed class TaxHubBusinessTaxLossesRow
+    {
+        public string YearEndDescription { get; init; } = string.Empty;
+        public DateTime StartOn { get; init; }
+        public decimal TaxDue { get; init; }
+        public decimal TaxBalance { get; init; }
+        public decimal LossesCarriedForward { get; init; }
+    }
+
+    public sealed class TaxHubBusinessTaxSubmissionRow
+    {
+        public string TaxSourceCode { get; init; } = string.Empty;
+        public string TagCode { get; init; } = string.Empty;
+        public DateTime PeriodFrom { get; init; }
+        public DateTime PeriodTo { get; init; }
+        public decimal TaxableAmount { get; init; }
+    }
+
+    public sealed class TaxHubBusinessTaxPayloadRow
+    {
+        public string TaxSourceCode { get; init; } = string.Empty;
+        public string TagCode { get; init; } = string.Empty;
+        public string ParentCode { get; init; } = string.Empty;
+        public string CashCode { get; init; } = string.Empty;
+        public string CategoryCode { get; init; } = string.Empty;
+        public short CashTypeCode { get; init; }
+        public DateTime PeriodStartOn { get; init; }
+        public DateTime PeriodFrom { get; init; }
+        public DateTime PeriodTo { get; init; }
+        public decimal PeriodInvoiceValue { get; init; }
     }
 
     public sealed class TaxHubAccountsWorkspaceModel
