@@ -25,6 +25,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Subject_tbNamespace> Subject_tbNamespaces { get; set; }
         public virtual DbSet<Subject_tbReal> Subject_tbReals { get; set; }
         public virtual DbSet<Subject_tbClass> Subject_tbClasses { get; set; }
+        public virtual DbSet<Subject_tbExportType> Subject_tbExportTypes { get; set; }
 
         public virtual DbSet<App_tbJurisdiction> App_tbJurisdictions { get; set; }
         public virtual DbSet<Cash_tbTaxTagClass> Cash_tbTaxTagClasses { get; set; }
@@ -157,9 +158,9 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Views
-        public virtual DbSet<Cash_vwTaxHubPayload> Cash_vwTaxHubPayloads { get; set; }
-        public virtual DbSet<Cash_vwTaxHubSubmission> Cash_vwTaxHubSubmissions { get; set; }
-        public virtual DbSet<Cash_vwTaxHubPayloadAudit> Cash_vwTaxHubPayloadAudits { get; set; }
+        public virtual DbSet<Cash_vwTaxBizPayload> Cash_vwTaxBizPayloads { get; set; }
+        public virtual DbSet<Cash_vwTaxBizSubmission> Cash_vwTaxBizSubmissions { get; set; }
+        public virtual DbSet<Cash_vwTaxBizPayloadAudit> Cash_vwTaxBizPayloadAudits { get; set; }
         public virtual DbSet<Subject_vwReal> Subject_vwReals { get; set; }
         public virtual DbSet<Subject_vwVirtual> Subject_vwVirtuals { get; set; }
         public virtual DbSet<Cash_vwCategoryPrimaryParent> Cash_vwCategoryPrimaryParents { get; set; }
@@ -310,7 +311,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwTaxVatDetail> Cash_TaxVatDetails { get; set; }
         public virtual DbSet<Cash_vwTaxVatStatement> Cash_TaxVatStatement { get; set; }
         public virtual DbSet<Cash_vwTaxVatSummary> Cash_TaxVatSummary { get; set; }
-        public virtual DbSet<Cash_vwTaxVatTotal> Cash_TaxVatTotals { get; set; }
+        public virtual DbSet<Cash_vwTaxVatSubmission> Cash_TaxVatTotals { get; set; }
         public virtual DbSet<Project_vwTitle> Project_Titles { get; set; }
         public virtual DbSet<Cash_vwTransferCodeLookup> Cash_TransferCodeLookup { get; set; }
         public virtual DbSet<Cash_vwTransfersUnposted> Cash_TransfersUnposted { get; set; }
@@ -1935,6 +1936,9 @@ namespace TradeControl.Web.Data
                 entity.HasIndex(e => e.AreaCode, "IX_Subject_tb_AreaCode")
                     .HasFillFactor((byte)90);
 
+                entity.HasIndex(e => e.ExportTypeCode, "IX_Subject_tbSubject_ExportTypeCode")
+                    .HasFillFactor((byte)90);
+
                 entity.HasIndex(e => e.SubjectStatusCode, "IX_Subject_tb_SubjectStatusCode")
                     .HasFillFactor((byte)90);
 
@@ -1953,6 +1957,7 @@ namespace TradeControl.Web.Data
                     .HasDefaultValueSql("((1))")
                     .HasSentinel(true);
                 entity.Property(e => e.OpeningBalance).HasDefaultValueSql("((0))");
+                entity.Property(e => e.ExportTypeCode).HasDefaultValueSql("((0))");
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
@@ -1966,6 +1971,12 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbSubjects)
                     .HasForeignKey(d => d.AddressCode)
                     .HasConstraintName("FK_Subject_tb_Subject_tbAddress");
+
+                entity.HasOne(d => d.ExportTypeCodeNavigation)
+                    .WithMany(p => p.TbSubjects)
+                    .HasForeignKey(d => d.ExportTypeCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Subject_tbSubject_tbExportType");
 
                 entity.HasOne(d => d.SubjectStatusCodeNavigation)
                     .WithMany(p => p.TbSubjects)
@@ -2031,7 +2042,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.NumberOfEmployees).HasDefaultValueSql("((0))");
                 entity.Property(e => e.Turnover).HasDefaultValueSql("((0))");
-                entity.Property(e => e.Eujurisdiction).HasDefaultValueSql("((0))").HasSentinel(true);
 
                 //entity.Property(e => e.RowVer)
                 //    .IsRowVersion()
@@ -2087,6 +2097,15 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.SubjectClassCode).ValueGeneratedNever();
             });
+
+            modelBuilder.Entity<Subject_tbExportType>(entity =>
+            {
+                entity.HasKey(e => e.ExportTypeCode)
+                    .HasName("PK_Subject_tbExportType");
+
+                entity.Property(e => e.ExportTypeCode).ValueGeneratedNever();
+            });
+
             modelBuilder.Entity<Cash_tbPayment>(entity =>
             {
                 entity.HasKey(e => e.PaymentCode)
@@ -2840,16 +2859,16 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwEquityReconciliationByYear", "Cash");
             });
 
-            modelBuilder.Entity<Cash_vwTaxHubPayload>(entity => {
-                entity.ToView("vwTaxHubPayload", "Cash");
+            modelBuilder.Entity<Cash_vwTaxBizPayload>(entity => {
+                entity.ToView("vwTaxBizPayload", "Cash");
             });
 
-            modelBuilder.Entity<Cash_vwTaxHubSubmission>(entity => {
-                entity.ToView("vwTaxHubSubmission", "Cash");
+            modelBuilder.Entity<Cash_vwTaxBizSubmission>(entity => {
+                entity.ToView("vwTaxBizSubmission", "Cash");
             });
 
-            modelBuilder.Entity<Cash_vwTaxHubPayloadAudit>(entity => {
-                entity.ToView("vwTaxHubPayloadAudit", "Cash");
+            modelBuilder.Entity<Cash_vwTaxBizPayloadAudit>(entity => {
+                entity.ToView("vwTaxBizPayloadAudit", "Cash");
             });
 
             modelBuilder.Entity<Invoice_vwType>(entity =>
@@ -3673,9 +3692,9 @@ namespace TradeControl.Web.Data
                 entity.ToView("vwTaxVatSummary", "Cash");
             });
 
-            modelBuilder.Entity<Cash_vwTaxVatTotal>(entity =>
+            modelBuilder.Entity<Cash_vwTaxVatSubmission>(entity =>
             {
-                entity.ToView("vwTaxVatTotals", "Cash");
+                entity.ToView("vwTaxVatSubmission", "Cash");
             });
 
             modelBuilder.Entity<Project_vwTitle>(entity =>

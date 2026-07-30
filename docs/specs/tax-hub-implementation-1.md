@@ -45,7 +45,7 @@ The coding assistant shall work through the following documents in sequence:
 1. tc-design-principles.md
 2. tc-development-contract.md
 3. tax-hub-spec-programme.md
-4. tax-hub-spec-implementation-1.md
+4. tax-hub-implementation-1.md
 5. tc-reference-architecture.md
 
 These documents establish:

@@ -68,6 +68,18 @@
                                     }
                                 </InputSelect>
                             </div>
+                            <div class="col-lg-3">
+                                <label class="form-label" for="ExportTypeCode">Export Type</label>
+                                <InputSelect id="ExportTypeCode"
+                                             @bind-Value="_editor.ExportTypeCode"
+                                             class="form-select">
+                                    @foreach (var item in _exportTypeOptions)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => _editor.ExportTypeCode)" class="text-danger small" />
+                            </div>
                             <div class="col-lg-4">
                                 <label class="form-label" for="CompanyNumber">Company Number</label>
                                 <InputText id="CompanyNumber"
@@ -186,14 +198,6 @@
                                     <label class="form-check-label" for="PayBalance">Pay Balance?</label>
                                 </div>
                             </div>
-                            <div class="col-lg-3 d-flex align-items-end">
-                                <div class="form-check">
-                                    <InputCheckbox id="Eujurisdiction"
-                                                   @bind-Value="_editor.Eujurisdiction"
-                                                   class="form-check-input" />
-                                    <label class="form-check-label" for="Eujurisdiction">EU?</label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -259,6 +263,7 @@
     private const short CurrentSubjectClassCode = (short)NodeEnum.SubjectClass.Virtual;
 
     private sealed record ShortOption(short Value, string Text);
+    private sealed record ByteOption(byte Value, string Text);
     private sealed record StringOption(string Value, string Text);
 
     private sealed class EditorModel
@@ -266,6 +271,7 @@
         public string SubjectName { get; set; } = string.Empty;
         public short SubjectTypeCode { get; set; }
         public short SubjectStatusCode { get; set; }
+        public byte ExportTypeCode { get; set; }
         public string TaxCode { get; set; } = string.Empty;
         public string PaymentTerms { get; set; } = string.Empty;
         public short ExpectedDays { get; set; }
@@ -278,7 +284,6 @@
         public int NumberOfEmployees { get; set; }
         public string CompanyNumber { get; set; } = string.Empty;
         public string VatNumber { get; set; } = string.Empty;
-        public bool Eujurisdiction { get; set; }
         public string BusinessDescription { get; set; } = string.Empty;
         public decimal Turnover { get; set; }
         public string WebSite { get; set; } = string.Empty;
@@ -290,6 +295,7 @@
     private readonly EditContext _editContext;
     private readonly List<ShortOption> _subjectTypeOptions = [];
     private readonly List<ShortOption> _subjectStatusOptions = [];
+    private readonly List<ByteOption> _exportTypeOptions = [];
     private readonly List<StringOption> _taxCodeOptions = [];
     private readonly List<string> _paymentTermOptions = [];
     private readonly List<string> _subjectSourceOptions = [];
@@ -324,6 +330,7 @@
     {
         _subjectTypeOptions.Clear();
         _subjectStatusOptions.Clear();
+        _exportTypeOptions.Clear();
         _taxCodeOptions.Clear();
         _paymentTermOptions.Clear();
         _subjectSourceOptions.Clear();
@@ -340,6 +347,12 @@
             .AsNoTracking()
             .OrderBy(item => item.SubjectStatus)
             .Select(item => new ShortOption(item.SubjectStatusCode, item.SubjectStatus))
+            .ToListAsync());
+
+        _exportTypeOptions.AddRange(await NodeContext.Set<Subject_tbExportType>()
+            .AsNoTracking()
+            .OrderBy(item => item.ExportTypeCode)
+            .Select(item => new ByteOption(item.ExportTypeCode, item.ExportType))
             .ToListAsync());
 
         _taxCodeOptions.AddRange(await NodeContext.App_tbTaxCodes
@@ -377,6 +390,7 @@
         _editor.SubjectName = subject.SubjectName ?? string.Empty;
         _editor.SubjectTypeCode = subject.SubjectTypeCode;
         _editor.SubjectStatusCode = subject.SubjectStatusCode;
+        _editor.ExportTypeCode = subject.ExportTypeCode;
         _editor.TaxCode = subject.TaxCode ?? string.Empty;
         _editor.PaymentTerms = subject.PaymentTerms ?? string.Empty;
         _editor.ExpectedDays = subject.ExpectedDays;
@@ -389,7 +403,6 @@
         _editor.NumberOfEmployees = subject.TbVirtual.NumberOfEmployees;
         _editor.CompanyNumber = subject.TbVirtual.CompanyNumber ?? string.Empty;
         _editor.VatNumber = subject.TbVirtual.VatNumber ?? string.Empty;
-        _editor.Eujurisdiction = subject.TbVirtual.Eujurisdiction;
         _editor.BusinessDescription = subject.TbVirtual.BusinessDescription ?? string.Empty;
         _editor.Turnover = subject.TbVirtual.Turnover;
         _editor.WebSite = subject.TbVirtual.WebSite ?? string.Empty;
@@ -415,6 +428,13 @@
             _validationMessages.Add(() => _editor.SubjectTypeCode, "Select a valid type for this Subject class.");
         }
 
+        if (!await NodeContext.Set<Subject_tbExportType>()
+            .AsNoTracking()
+            .AnyAsync(item => item.ExportTypeCode == _editor.ExportTypeCode))
+        {
+            _validationMessages.Add(() => _editor.ExportTypeCode, "Select a valid export type.");
+        }
+
         _editContext.NotifyValidationStateChanged();
 
         if (_editContext.GetValidationMessages().Any())
@@ -437,6 +457,7 @@
             subject.SubjectName = _editor.SubjectName.Trim();
             subject.SubjectTypeCode = _editor.SubjectTypeCode;
             subject.SubjectStatusCode = _editor.SubjectStatusCode;
+            subject.ExportTypeCode = _editor.ExportTypeCode;
             subject.TaxCode = _editor.TaxCode?.Trim();
             subject.PaymentTerms = _editor.PaymentTerms?.Trim();
             subject.ExpectedDays = _editor.ExpectedDays;
@@ -450,7 +471,6 @@
             subject.TbVirtual.NumberOfEmployees = _editor.NumberOfEmployees;
             subject.TbVirtual.CompanyNumber = _editor.CompanyNumber?.Trim();
             subject.TbVirtual.VatNumber = _editor.VatNumber?.Trim();
-            subject.TbVirtual.Eujurisdiction = _editor.Eujurisdiction;
             subject.TbVirtual.BusinessDescription = _editor.BusinessDescription?.Trim();
             subject.TbVirtual.Turnover = _editor.Turnover;
             subject.TbVirtual.WebSite = _editor.WebSite?.Trim();

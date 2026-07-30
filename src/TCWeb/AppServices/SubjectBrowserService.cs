@@ -61,7 +61,8 @@ namespace TradeControl.Web.AppServices
                 .Take(Math.Max(pageSize, 1))
                 .ToList();
 
-            return new SubjectBrowserPageResult<SubjectBrowserNode> {
+            return new SubjectBrowserPageResult<SubjectBrowserNode>
+            {
                 Items = items,
                 TotalCount = totalCount,
                 HasMorePages = totalCount > pageNumber * pageSize
@@ -109,19 +110,18 @@ namespace TradeControl.Web.AppServices
                 .Take(Math.Max(pageSize, 1))
                 .ToList();
 
-            return new SubjectBrowserPageResult<SubjectBrowserNode> {
+            return new SubjectBrowserPageResult<SubjectBrowserNode>
+            {
                 Items = items,
                 TotalCount = totalCount,
                 HasMorePages = totalCount > pageNumber * pageSize
             };
         }
 
-        public async Task<IReadOnlyList<NamespaceSelectorSuggestion>> GetNamespaceSuggestionsAsync
-        (
+        public async Task<IReadOnlyList<NamespaceSelectorSuggestion>> GetNamespaceSuggestionsAsync(
             string filterText,
             int maxResults,
-            CancellationToken cancellationToken = default
-        )
+            CancellationToken cancellationToken = default)
         {
             var snapshot = await EnsureSnapshotAsync(cancellationToken);
             var filterContext = ParseNamespaceFilter(filterText);
@@ -153,7 +153,8 @@ namespace TradeControl.Web.AppServices
             var addresses = snapshot.Addresses.TryGetValue(subjectCode, out var addressList)
                 ? addressList
                     .OrderBy(address => address.AddressCode, StringComparer.OrdinalIgnoreCase)
-                    .Select(address => {
+                    .Select(address =>
+                    {
                         var projectReferenceCount =
                             snapshot.ProjectAddressUsage.TryGetValue(address.AddressCode, out var usageCount)
                                 ? usageCount
@@ -175,7 +176,12 @@ namespace TradeControl.Web.AppServices
                     string.Equals(row.ParentSubjectCode, parentSubjectCode, StringComparison.OrdinalIgnoreCase)
                     && row.IsDefault);
 
-            return new SubjectBrowserDetailModel {
+            var exportType = snapshot.ExportTypes.TryGetValue(subject.ExportTypeCode, out var exportTypeRecord)
+                ? exportTypeRecord.ExportType
+                : ((NodeEnum.ExportType)subject.ExportTypeCode).ToString();
+
+            return new SubjectBrowserDetailModel
+            {
                 SubjectCode = subject.SubjectCode,
                 SubjectTypeCode = subject.SubjectTypeCode,
                 SubjectType = subjectType.SubjectType,
@@ -183,10 +189,11 @@ namespace TradeControl.Web.AppServices
                 Name = subject.SubjectName,
                 DisplayLabel = GetDisplayLabel(snapshot, subject.SubjectCode),
                 NamespacePaths = namespacePaths,
-                IdentityFields = CreateIdentityFields(snapshot, subject, subjectClass),
+                IdentityFields = CreateIdentityFields(snapshot, subject, subjectClass, exportType),
                 Addresses = addresses,
                 IsDefaultInNamespace = isDefaultInNamespace,
-                Notes = subjectClass switch {
+                Notes = subjectClass switch
+                {
                     NodeEnum.SubjectClass.Structural when snapshot.Structurals.TryGetValue(subjectCode, out var structural) => structural.Notes,
                     _ => null
                 }
@@ -225,7 +232,8 @@ namespace TradeControl.Web.AppServices
                         subject.OpeningBalance,
                         subject.AreaCode,
                         subject.PhoneNumber,
-                        subject.EmailAddress))
+                        subject.EmailAddress,
+                        subject.ExportTypeCode))
                     .ToListAsync(cancellationToken);
 
                 var types = await _nodeContext.Subject_tbTypes
@@ -235,6 +243,13 @@ namespace TradeControl.Web.AppServices
                         type.SubjectType,
                         type.SubjectClassCode,
                         type.CashPolarityCode))
+                    .ToListAsync(cancellationToken);
+
+                var exportTypes = await _nodeContext.Set<Subject_tbExportType>()
+                    .AsNoTracking()
+                    .Select(exportType => new ExportTypeRecord(
+                        exportType.ExportTypeCode,
+                        exportType.ExportType))
                     .ToListAsync(cancellationToken);
 
                 var reals = await _nodeContext.Subject_tbReals
@@ -264,7 +279,6 @@ namespace TradeControl.Web.AppServices
                         virtualSubject.NumberOfEmployees,
                         virtualSubject.CompanyNumber,
                         virtualSubject.VatNumber,
-                        virtualSubject.Eujurisdiction,
                         virtualSubject.BusinessDescription,
                         virtualSubject.Turnover,
                         virtualSubject.WebSite,
@@ -338,6 +352,7 @@ namespace TradeControl.Web.AppServices
                 var baseSnapshot = new SubjectSnapshot(
                     subjects.ToDictionary(subject => subject.SubjectCode, StringComparer.OrdinalIgnoreCase),
                     types.ToDictionary(type => type.SubjectTypeCode),
+                    exportTypes.ToDictionary(exportType => exportType.ExportTypeCode),
                     reals.ToDictionary(real => real.SubjectCode, StringComparer.OrdinalIgnoreCase),
                     virtuals.ToDictionary(virtualSubject => virtualSubject.SubjectCode, StringComparer.OrdinalIgnoreCase),
                     structurals.ToDictionary(structural => structural.SubjectCode, StringComparer.OrdinalIgnoreCase),
@@ -347,7 +362,8 @@ namespace TradeControl.Web.AppServices
                     parentsByChild,
                     Array.Empty<NamespacePathRecord>());
 
-                _snapshot = baseSnapshot with {
+                _snapshot = baseSnapshot with
+                {
                     Paths = BuildPathRecords(baseSnapshot)
                 };
 
@@ -372,7 +388,8 @@ namespace TradeControl.Web.AppServices
                 ? children.Count
                 : 0;
 
-            return new SubjectBrowserNode {
+            return new SubjectBrowserNode
+            {
                 SubjectCode = subject.SubjectCode,
                 NamespacePath = namespacePath,
                 BranchKey = namespacePath,
@@ -528,7 +545,8 @@ namespace TradeControl.Web.AppServices
             int maxResults)
         {
             return suggestions
-                .Select(path => new {
+                .Select(path => new
+                {
                     Suggestion = CreateSuggestion(snapshot, path),
                     Rank = GetSuggestionRank(snapshot, path, filterContext)
                 })
@@ -627,8 +645,7 @@ namespace TradeControl.Web.AppServices
             return 10;
         }
 
-        private static bool IsDefaultNamespacePath
-        (
+        private static bool IsDefaultNamespacePath(
             SubjectSnapshot snapshot,
             NamespacePathRecord path
         )
@@ -648,7 +665,8 @@ namespace TradeControl.Web.AppServices
 
         private static NamespaceSelectorSuggestion CreateSuggestion(SubjectSnapshot snapshot, NamespacePathRecord path)
         {
-            return new NamespaceSelectorSuggestion {
+            return new NamespaceSelectorSuggestion
+            {
                 Segment = ExtractLastSegment(path.NamespacePath),
                 FullPath = path.NamespacePath,
                 HasChildren = snapshot.ChildrenByParent.TryGetValue(path.SubjectCode, out var children) && children.Count > 0,
@@ -834,7 +852,8 @@ namespace TradeControl.Web.AppServices
         private static IReadOnlyList<SubjectBrowserDetailField> CreateIdentityFields(
             SubjectSnapshot snapshot,
             SubjectRecord subject,
-            NodeEnum.SubjectClass subjectClass)
+            NodeEnum.SubjectClass subjectClass,
+            string exportType)
         {
             var fields = new List<SubjectBrowserDetailField>();
 
@@ -842,6 +861,7 @@ namespace TradeControl.Web.AppServices
             {
                 case NodeEnum.SubjectClass.Real:
                     AddField(fields, "Tax Code", subject.TaxCode);
+                    AddField(fields, "Export Type", exportType);
                     AddField(fields, "Payment Terms", subject.PaymentTerms);
                     AddField(fields, "Expected Days", subject.ExpectedDays);
                     AddField(fields, "Payment Days", subject.PaymentDays);
@@ -872,6 +892,7 @@ namespace TradeControl.Web.AppServices
                     if (snapshot.Virtuals.TryGetValue(subject.SubjectCode, out var virtualSubject))
                     {
                         AddField(fields, "Tax Code", subject.TaxCode);
+                        AddField(fields, "Export Type", exportType);
                         AddField(fields, "Payment Terms", subject.PaymentTerms);
                         AddField(fields, "Expected Days", subject.ExpectedDays);
                         AddField(fields, "Payment Days", subject.PaymentDays);
@@ -884,7 +905,6 @@ namespace TradeControl.Web.AppServices
                         AddField(fields, "Employees", virtualSubject.NumberOfEmployees);
                         AddField(fields, "Company Number", virtualSubject.CompanyNumber);
                         AddField(fields, "VAT Number", virtualSubject.VatNumber);
-                        AddField(fields, "EU Jurisdiction", FormatBool(virtualSubject.Eujurisdiction));
                         AddField(fields, "Turnover", virtualSubject.Turnover);
                         AddField(fields, "Web Site", virtualSubject.WebSite);
                         AddField(fields, "Source", virtualSubject.SubjectSource);
@@ -963,13 +983,18 @@ namespace TradeControl.Web.AppServices
             decimal OpeningBalance,
             string? AreaCode,
             string? PhoneNumber,
-            string? EmailAddress);
+            string? EmailAddress,
+            byte ExportTypeCode);
 
         private sealed record SubjectTypeRecord(
             short SubjectTypeCode,
             string SubjectType,
             short SubjectClassCode,
             short CashPolarityCode);
+
+        private sealed record ExportTypeRecord(
+            byte ExportTypeCode,
+            string ExportType);
 
         private sealed record RealRecord(
             string SubjectCode,
@@ -993,7 +1018,6 @@ namespace TradeControl.Web.AppServices
             int NumberOfEmployees,
             string? CompanyNumber,
             string? VatNumber,
-            bool Eujurisdiction,
             string? BusinessDescription,
             decimal Turnover,
             string? WebSite,
@@ -1033,6 +1057,7 @@ namespace TradeControl.Web.AppServices
         private sealed record SubjectSnapshot(
             IReadOnlyDictionary<string, SubjectRecord> Subjects,
             IReadOnlyDictionary<short, SubjectTypeRecord> Types,
+            IReadOnlyDictionary<byte, ExportTypeRecord> ExportTypes,
             IReadOnlyDictionary<string, RealRecord> Reals,
             IReadOnlyDictionary<string, VirtualRecord> Virtuals,
             IReadOnlyDictionary<string, StructuralRecord> Structurals,

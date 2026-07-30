@@ -11,6 +11,7 @@ namespace TradeControl.Web.Models
     [Table("tbSubject", Schema = "Subject")]
     [Index(nameof(SubjectName), Name = "IX_Subject_tb_AccountName")]
     [Index(nameof(AreaCode), Name = "IX_Subject_tb_AreaCode")]
+    [Index(nameof(ExportTypeCode), Name = "IX_Subject_tbSubject_ExportTypeCode")]
     [Index(nameof(SubjectStatusCode), Name = "IX_Subject_tb_SubjectStatusCode")]
     [Index(nameof(SubjectStatusCode), nameof(SubjectName), Name = "IX_Subject_tb_Status_AccountCode")]
     [Index(nameof(SubjectTypeCode), Name = "IX_Subject_tb_SubjectTypeCode")]
@@ -104,6 +105,9 @@ namespace TradeControl.Web.Models
         [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
 
+        [Display(Name = "Export Type Code")]
+        public byte ExportTypeCode { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Inserted By")]
@@ -125,6 +129,10 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(AddressCode))]
         [InverseProperty(nameof(Subject_tbAddress.TbSubjects))]
         public virtual Subject_tbAddress AddressCodeNavigation { get; set; }
+
+        [ForeignKey(nameof(ExportTypeCode))]
+        [InverseProperty(nameof(Subject_tbExportType.TbSubjects))]
+        public virtual Subject_tbExportType ExportTypeCodeNavigation { get; set; }
 
         [ForeignKey(nameof(SubjectStatusCode))]
         [InverseProperty(nameof(Subject_tbStatus.TbSubjects))]

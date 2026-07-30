@@ -73,6 +73,9 @@ namespace TradeControl.Web.Models
         [DataType(DataType.EmailAddress)]
         public string EmailAddress { get; set; }
 
+        [Display(Name = "Jurisdiction")]
+        public byte ExportTypeCode { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Inserted By")]
@@ -101,10 +104,6 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         [Display(Name = "Vat Number")]
         public string VatNumber { get; set; }
-
-        [Column("EUJurisdiction")]
-        [Display(Name = "EU?")]
-        public bool Eujurisdiction { get; set; }
 
         [Column(TypeName = "nvarchar(max)")]
         [Display(Name = "Description")]

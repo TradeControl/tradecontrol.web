@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -19,10 +19,10 @@ namespace TradeControl.Web.Models
         public DateTime StartOn { get; set; }
         [Display(Name = "Vat Due")]
         [DataType(DataType.Currency)]
-        public double VatDue { get; set; }
+        public decimal VatDue { get; set; }
         [Display(Name = "Vat Paid")]
         [DataType(DataType.Currency)]
-        public double VatPaid { get; set; }
+        public decimal VatPaid { get; set; }
         [Column(TypeName = "decimal(18, 5)")]
         [Display(Name = "Balance")]
         [DataType(DataType.Currency)]

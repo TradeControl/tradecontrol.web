@@ -28,29 +28,39 @@
             <Columns>
                 <PropertyColumn Property="x => x.StartOn" Title="Date" Format="dd/MM/yyyy" />
                 <PropertyColumn Property="x => x.TaxCode" Title="Tax Code" />
-                <PropertyColumn Property="x => x.VatDue" Title="VAT Due" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.vatDueSales" Title="VAT Due on Sales" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
-                        <b>@TotalVatDue.ToString("#,##0.00;(#,##0.00);-")</b>
+                        <b>@TotalVatDueSales.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
-                <PropertyColumn Property="x => x.HomeSalesVat" Title="Home Sales VAT" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.vatDueAcquisitions" Title="VAT Due on Acquisitions" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
-                        <b>@TotalHomeSalesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                        <b>@TotalVatDueAcquisitions.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
-                <PropertyColumn Property="x => x.ExportSalesVat" Title="Export Sales VAT" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.vatReclaimedCurrPeriod" Title="VAT Reclaimed" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
-                        <b>@TotalExportSalesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                        <b>@TotalVatReclaimedCurrPeriod.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
-                <PropertyColumn Property="x => x.HomePurchasesVat" Title="Home Purchases VAT" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.totalValueSalesExVAT" Title="Sales ex VAT" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
-                        <b>@TotalHomePurchasesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                        <b>@TotalValueSalesExVat.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
-                <PropertyColumn Property="x => x.ExportPurchasesVat" Title="Export Purchases VAT" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.totalValuePurchasesExVAT" Title="Purchases ex VAT" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
-                        <b>@TotalExportPurchasesVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                        <b>@TotalValuePurchasesExVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.totalValueGoodsSuppliedExVAT" Title="Goods Supplied ex VAT" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalValueGoodsSuppliedExVat.ToString("#,##0.00;(#,##0.00);-")</b>
+                    </FooterTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.totalValueGoodsReceivedExVAT" Title="Goods Received ex VAT" Format="#,##0.00;(#,##0.00);-">
+                    <FooterTemplate>
+                        <b>@TotalValueGoodsReceivedExVat.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
             </Columns>
@@ -68,11 +78,13 @@
 
     private List<TaxHubVatPeriodRow> VisibleItems { get; set; } = new();
 
-    private decimal TotalVatDue { get; set; }
-    private decimal TotalHomeSalesVat { get; set; }
-    private decimal TotalExportSalesVat { get; set; }
-    private decimal TotalHomePurchasesVat { get; set; }
-    private decimal TotalExportPurchasesVat { get; set; }
+    private decimal TotalVatDueSales { get; set; }
+    private decimal TotalVatDueAcquisitions { get; set; }
+    private decimal TotalVatReclaimedCurrPeriod { get; set; }
+    private decimal TotalValueSalesExVat { get; set; }
+    private decimal TotalValuePurchasesExVat { get; set; }
+    private decimal TotalValueGoodsSuppliedExVat { get; set; }
+    private decimal TotalValueGoodsReceivedExVat { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -89,10 +101,12 @@
 
     private void RecalculateTotals()
     {
-        TotalVatDue = VisibleItems.Sum(x => (decimal)x.VatDue);
-        TotalHomeSalesVat = VisibleItems.Sum(x => (decimal)x.HomeSalesVat);
-        TotalExportSalesVat = VisibleItems.Sum(x => (decimal)x.ExportSalesVat);
-        TotalHomePurchasesVat = VisibleItems.Sum(x => (decimal)x.HomePurchasesVat);
-        TotalExportPurchasesVat = VisibleItems.Sum(x => (decimal)x.ExportPurchasesVat);
+        TotalVatDueSales = VisibleItems.Sum(x => x.vatDueSales);
+        TotalVatDueAcquisitions = VisibleItems.Sum(x => x.vatDueAcquisitions);
+        TotalVatReclaimedCurrPeriod = VisibleItems.Sum(x => x.vatReclaimedCurrPeriod);
+        TotalValueSalesExVat = VisibleItems.Sum(x => x.totalValueSalesExVAT);
+        TotalValuePurchasesExVat = VisibleItems.Sum(x => x.totalValuePurchasesExVAT);
+        TotalValueGoodsSuppliedExVat = VisibleItems.Sum(x => x.totalValueGoodsSuppliedExVAT);
+        TotalValueGoodsReceivedExVat = VisibleItems.Sum(x => x.totalValueGoodsReceivedExVAT);
     }
 }

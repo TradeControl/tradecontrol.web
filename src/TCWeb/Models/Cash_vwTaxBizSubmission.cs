@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public class Cash_vwTaxHubPayloadAudit
+    public class Cash_vwTaxBizSubmission
     {
         [Required]
         [StringLength(20)]
@@ -20,11 +20,6 @@ namespace TradeControl.Web.Models
         [Display(Name = "Tag Code")]
         public string TagCode { get; init; }
 
-        [Required]
-        [StringLength(50)]
-        [Display(Name = "Cash Code")]
-        public string CashCode { get; init; }
-
         [Column(TypeName = "datetime")]
         [Display(Name = "Period From")]
         public DateTime PeriodFrom { get; init; }
@@ -33,20 +28,9 @@ namespace TradeControl.Web.Models
         [Display(Name = "Period To")]
         public DateTime PeriodTo { get; init; }
 
-        [Column(TypeName = "decimal(38, 5)")]
-        [Display(Name = "Raw Total")]
+        [Column(TypeName = "decimal(20, 5)")]
+        [Display(Name = "Taxable Amount")]
         [DataType(DataType.Currency)]
-        public decimal RawTotal { get; init; }
-
-        [Column(TypeName = "decimal(38, 5)")]
-        [Display(Name = "Payload Total")]
-        [DataType(DataType.Currency)]
-        public decimal PayloadTotal { get; init; }
-
-        [Column(TypeName = "decimal(38, 5)")]
-        [Display(Name = "Difference")]
-        [DataType(DataType.Currency)]
-        public decimal Difference { get; init; }
-
+        public decimal TaxableAmount { get; init; }
     }
 }

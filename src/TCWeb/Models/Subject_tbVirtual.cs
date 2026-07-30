@@ -24,10 +24,6 @@ namespace TradeControl.Web.Models
         [Display(Name = "Vat Number")]
         public string VatNumber { get; set; }
 
-        [Column("EUJurisdiction")]
-        [Display(Name = "EU?")]
-        public bool Eujurisdiction { get; set; }
-
         [Column(TypeName = "nvarchar(max)")]
         [Display(Name = "Description")]
         public string BusinessDescription { get; set; }
@@ -47,8 +43,6 @@ namespace TradeControl.Web.Models
         [StringLength(100)]
         [Display(Name = "Source")]
         public string SubjectSource { get; set; }
-
-        //public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbVirtual))]

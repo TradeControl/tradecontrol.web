@@ -107,24 +107,23 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public string Description { get; init; } = string.Empty;
         public string Period { get; init; } = string.Empty;
         public DateTime StartOn { get; init; }
-        public double HomeSales { get; init; }
-        public double HomePurchases { get; init; }
-        public double ExportSales { get; init; }
-        public double ExportPurchases { get; init; }
-        public double HomeSalesVat { get; init; }
-        public double HomePurchasesVat { get; init; }
-        public double ExportSalesVat { get; init; }
-        public double ExportPurchasesVat { get; init; }
-        public double VatAdjustment { get; init; }
-        public double VatDue { get; init; }
+        public decimal vatDueSales { get; init; }
+        public decimal vatDueAcquisitions { get; init; }
+        public decimal totalVatDue { get; init; }
+        public decimal vatReclaimedCurrPeriod { get; init; }
+        public decimal netVatDue { get; init; }
+        public decimal totalValueSalesExVAT { get; init; }
+        public decimal totalValuePurchasesExVAT { get; init; }
+        public decimal totalValueGoodsSuppliedExVAT { get; init; }
+        public decimal totalValueGoodsReceivedExVAT { get; init; }
     }
 
     public sealed class TaxHubVatStatementRow
     {
         public long RowNumber { get; init; }
         public DateTime StartOn { get; init; }
-        public double VatDue { get; init; }
-        public double VatPaid { get; init; }
+        public decimal VatDue { get; init; }
+        public decimal VatPaid { get; init; }
         public decimal Balance { get; init; }
     }
 
@@ -132,15 +131,13 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
     {
         public DateTime StartOn { get; init; }
         public string TaxCode { get; init; } = string.Empty;
-        public double HomeSales { get; init; }
-        public double HomePurchases { get; init; }
-        public double ExportSales { get; init; }
-        public double ExportPurchases { get; init; }
-        public double HomeSalesVat { get; init; }
-        public double HomePurchasesVat { get; init; }
-        public double ExportSalesVat { get; init; }
-        public double ExportPurchasesVat { get; init; }
-        public double VatDue { get; init; }
+        public decimal vatDueSales { get; init; }
+        public decimal vatDueAcquisitions { get; init; }
+        public decimal vatReclaimedCurrPeriod { get; init; }
+        public decimal totalValueSalesExVAT { get; init; }
+        public decimal totalValuePurchasesExVAT { get; init; }
+        public decimal totalValueGoodsSuppliedExVAT { get; init; }
+        public decimal totalValueGoodsReceivedExVAT { get; init; }
     }
 
     public sealed class TaxHubBusinessTaxWorkspaceModel

@@ -11,6 +11,7 @@ namespace TradeControl.Web.Data
         public enum OpStatus { Pending, InProgress, Complete }
         public enum SubjectStatus { Pending, Active, Hot, Dead };
         public enum SubjectClass { Virtual, Real, Structural }
+        public enum ExportType { Home, Export, NorthernIreland }
         public enum CategoryType { Nominal, CashTotal, Expression };
         public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, External, Money };

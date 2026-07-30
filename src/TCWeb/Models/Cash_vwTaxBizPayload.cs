@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Keyless]
-    public class Cash_vwTaxHubPayload
+    public class Cash_vwTaxBizPayload
     {
         [Required]
         [StringLength(20)]

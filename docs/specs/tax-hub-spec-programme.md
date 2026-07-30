@@ -264,8 +264,6 @@ Validates:
 
 Submission workflows shall clearly indicate PASS, WARN, and FAIL states prior to filing.
 
----
-
 ## 10. End-to-End Architecture
 
 Operational Transactions

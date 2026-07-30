@@ -178,16 +178,15 @@ namespace TradeControl.Web.AppServices.TaxHub
                     Description = t.Description,
                     Period = t.Period,
                     StartOn = t.StartOn,
-                    HomeSales = t.HomeSales,
-                    HomePurchases = t.HomePurchases,
-                    ExportSales = t.ExportSales,
-                    ExportPurchases = t.ExportPurchases,
-                    HomeSalesVat = t.HomeSalesVat,
-                    HomePurchasesVat = t.HomePurchasesVat,
-                    ExportSalesVat = t.ExportSalesVat,
-                    ExportPurchasesVat = t.ExportPurchasesVat,
-                    VatAdjustment = t.VatAdjustment,
-                    VatDue = t.VatDue
+                    vatDueSales = t.vatDueSales,
+                    vatDueAcquisitions = t.vatDueAcquisitions,
+                    totalVatDue = t.totalVatDue,
+                    vatReclaimedCurrPeriod = t.vatReclaimedCurrPeriod,
+                    netVatDue = t.netVatDue,
+                    totalValueSalesExVAT = t.totalValueSalesExVAT,
+                    totalValuePurchasesExVAT = t.totalValuePurchasesExVAT,
+                    totalValueGoodsSuppliedExVAT = t.totalValueGoodsSuppliedExVAT,
+                    totalValueGoodsReceivedExVAT = t.totalValueGoodsReceivedExVAT
                 })
                 .ToListAsync();
 
@@ -256,15 +255,13 @@ namespace TradeControl.Web.AppServices.TaxHub
                 {
                     StartOn = t.StartOn,
                     TaxCode = t.TaxCode,
-                    HomeSales = t.HomeSales,
-                    HomePurchases = t.HomePurchases,
-                    ExportSales = t.ExportSales,
-                    ExportPurchases = t.ExportPurchases,
-                    HomeSalesVat = t.HomeSalesVat,
-                    HomePurchasesVat = t.HomePurchasesVat,
-                    ExportSalesVat = t.ExportSalesVat,
-                    ExportPurchasesVat = t.ExportPurchasesVat,
-                    VatDue = t.VatDue
+                    vatDueSales = t.vatDueSales,
+                    vatDueAcquisitions = t.vatDueAcquisitions,
+                    vatReclaimedCurrPeriod = t.vatReclaimedCurrPeriod,
+                    totalValueSalesExVAT = t.totalValueSalesExVAT,
+                    totalValuePurchasesExVAT = t.totalValuePurchasesExVAT,
+                    totalValueGoodsSuppliedExVAT = t.totalValueGoodsSuppliedExVAT,
+                    totalValueGoodsReceivedExVAT = t.totalValueGoodsReceivedExVAT
                 })
                 .ToListAsync();
 
@@ -390,7 +387,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 yearEndExclusive = nextPeriodStart ?? yearLastPeriodStart.Value.AddMonths(1);
             }
 
-            var payloadQuery = _nodeContext.Cash_vwTaxHubPayloads
+            var payloadQuery = _nodeContext.Cash_vwTaxBizPayloads
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -423,7 +420,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 })
                 .ToListAsync();
 
-            var submissionQuery = _nodeContext.Cash_vwTaxHubSubmissions
+            var submissionQuery = _nodeContext.Cash_vwTaxBizSubmissions
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -652,7 +649,7 @@ namespace TradeControl.Web.AppServices.TaxHub
 
         private async Task<TaxHubPayloadAuditSummary> GetPayloadAuditSummaryAsync()
         {
-            var rows = await _nodeContext.Cash_vwTaxHubPayloadAudits
+            var rows = await _nodeContext.Cash_vwTaxBizPayloadAudits
                 .AsNoTracking()
                 .Select(t => new
                 {
@@ -1007,7 +1004,7 @@ namespace TradeControl.Web.AppServices.TaxHub
         }
 
         private TaxHubDashboardCard BuildVatCard(
-            Cash_vwTaxVatTotal? vatTotals,
+            Cash_vwTaxVatSubmission? vatTotals,
             IReadOnlyCollection<TaxHubObligationSummary> obligations,
             TaxHubProjectedTaxDue projectedDue)
         {
