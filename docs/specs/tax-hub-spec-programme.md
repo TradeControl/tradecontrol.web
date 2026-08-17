@@ -87,13 +87,30 @@ This objective produces the **HMRC payload specification**.
 
 Implement the HMRC transport layer:
 
-- OAuth  
-- Fraud headers  
-- JSON/XML transmission  
-- Attachment handling  
-- Logging  
-- Error semantics  
-- Environment selection  
+#### Modern Transport (MTD)
+
+- OAuth
+- Fraud headers
+- REST submission
+- JSON transmission
+
+#### Legacy Transport (Government Gateway)
+
+- XML envelope construction
+- XML canonicalisation
+- IRmark generation
+- Transaction Engine submission
+- XML receipt parsing
+- Attachment handling (iXBRL)
+
+Shared Transport Concerns:
+
+- Logging
+- Error semantics
+- Environment selection
+- Submission auditing
+
+Objective 4 provides the complete submission machinery for both modern MTD APIs and legacy XML-based HMRC services.
 
 ### Objective 5 — Workflow Integration (Updated)
 
