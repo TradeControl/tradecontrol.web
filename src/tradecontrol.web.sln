@@ -5,45 +5,64 @@ VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{2375B669-1B4B-4D74-84AF-4625B851D52B}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\categorytree_test_script.md = ..\docs\categorytree_test_script.md
 		..\readme.md = ..\readme.md
 		template_naming.md = template_naming.md
-		..\docs\template_tags.md = ..\docs\template_tags.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCWeb", "TCWeb\TCWeb.csproj", "{9A3F3A8F-AE33-4389-8779-59FDC3A6E45F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.Generator", "TCExports\src\TCExports.Generator\TCExports.Generator.csproj", "{B297B9DD-5233-F613-6EC0-216F4F6A22A4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tmp", "tmp", "{9CBE2E18-8652-40DB-B4BA-34CACF90365A}"
-	ProjectSection(SolutionItems) = preProject
-		..\docs\tmp\outstanding-issues.md = ..\docs\tmp\outstanding-issues.md
-		..\docs\tmp\refactor-spec-framework.md = ..\docs\tmp\refactor-spec-framework.md
-		..\docs\tmp\session-brief.md = ..\docs\tmp\session-brief.md
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0-872A-4AA1-86B2-72F808E282F7}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\specs\cash-manager-spec.md = ..\docs\specs\cash-manager-spec.md
-		..\docs\specs\invoice-register-spec.md = ..\docs\specs\invoice-register-spec.md
-		..\docs\specs\MTD_Tax_Configurator_Slice3.md = ..\docs\specs\MTD_Tax_Configurator_Slice3.md
-		..\docs\specs\sole-trader-capital.md = ..\docs\specs\sole-trader-capital.md
 		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
-		..\docs\specs\subject-namespace-spec.md = ..\docs\specs\subject-namespace-spec.md
-		..\docs\specs\synthetic-dataset-spec.md = ..\docs\specs\synthetic-dataset-spec.md
-		..\docs\specs\tax-hub-implementation-1.md = ..\docs\specs\tax-hub-implementation-1.md
 		..\docs\specs\tax-hub-payloads.md = ..\docs\specs\tax-hub-payloads.md
-		..\docs\specs\tax-hub-spec-programme.md = ..\docs\specs\tax-hub-spec-programme.md
-		..\docs\specs\tax-hub-vat-surface-sql.md = ..\docs\specs\tax-hub-vat-surface-sql.md
-		..\docs\specs\tax-hub-workplan-1.md = ..\docs\specs\tax-hub-workplan-1.md
-		..\docs\specs\tax-hub-workplan-2.md = ..\docs\specs\tax-hub-workplan-2.md
 		..\docs\specs\tc-design-principles.md = ..\docs\specs\tc-design-principles.md
 		..\docs\specs\tc-development-contract.md = ..\docs\specs\tc-development-contract.md
 		..\docs\specs\tc-reference-architecture.md = ..\docs\specs\tc-reference-architecture.md
-		..\docs\specs\theme-system-spec.md = ..\docs\specs\theme-system-spec.md
 	EndProjectSection
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "tcNodeDb4", "sqlnode\src\tcNodeDb4\tcNodeDb4.sqlproj", "{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMRC_MTD", "..\..\hmrc_mtd\src\HMRC_MTD\HMRC_MTD.csproj", "{6557BD9C-E163-79A7-50AE-E43538AA1E1E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "projects", "projects", "{BBA9A645-E4FD-4781-A324-76DE3A7E71BA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tax hub", "tax hub", "{CB6F3104-CF0B-47FC-AD73-396F64581FBF}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Tax Hub\change-log.md = ..\docs\projects\Tax Hub\change-log.md
+		..\docs\projects\Tax Hub\findings.md = ..\docs\projects\Tax Hub\findings.md
+		..\docs\projects\Tax Hub\session-brief.md = ..\docs\projects\Tax Hub\session-brief.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implementation", "{28089177-8B6D-4FFE-856A-56CFAC1E218A}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Tax Hub\implementation\tax-hub-implementation-1.md = ..\docs\projects\Tax Hub\implementation\tax-hub-implementation-1.md
+		..\docs\projects\Tax Hub\implementation\tax-hub-implementation-2.md = ..\docs\projects\Tax Hub\implementation\tax-hub-implementation-2.md
+		..\docs\projects\Tax Hub\implementation\tax-hub-workplan-1.md = ..\docs\projects\Tax Hub\implementation\tax-hub-workplan-1.md
+		..\docs\projects\Tax Hub\implementation\tax-hub-workplan-2.md = ..\docs\projects\Tax Hub\implementation\tax-hub-workplan-2.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{DEFB1068-AB8F-4086-9ED2-22CD4558419D}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Tax Hub\specs\refactor-spec-framework.md = ..\docs\projects\Tax Hub\specs\refactor-spec-framework.md
+		..\docs\projects\Tax Hub\specs\self-assessment-sql-node-spec.md = ..\docs\projects\Tax Hub\specs\self-assessment-sql-node-spec.md
+		..\docs\projects\Tax Hub\specs\tax-hub-spec-programme.md = ..\docs\projects\Tax Hub\specs\tax-hub-spec-programme.md
+		..\docs\projects\Tax Hub\specs\tax-hub-test-payloads.md = ..\docs\projects\Tax Hub\specs\tax-hub-test-payloads.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "reference", "reference", "{DC738C34-A9CF-4CEA-B696-51D8BDD33E58}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Tax Hub\specs\reference\brexit-vat-surface.md = ..\docs\projects\Tax Hub\specs\reference\brexit-vat-surface.md
+		..\docs\projects\Tax Hub\specs\reference\sole-trader-capital.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-capital.md
+		..\docs\projects\Tax Hub\specs\reference\sole-trader-field-sets.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-field-sets.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "history", "history", "{D79BA1BE-3274-4B5C-BAE2-802B3DED90AC}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Tax Hub\implementation\history\tax-hub-hmrc-repo-structure-2.md = ..\docs\projects\Tax Hub\implementation\history\tax-hub-hmrc-repo-structure-2.md
+		..\docs\projects\Tax Hub\implementation\history\tax-hub-vat-surface-sql.md = ..\docs\projects\Tax Hub\implementation\history\tax-hub-vat-surface-sql.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -97,13 +116,29 @@ Global
 		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}.Release|iPhoneSimulator.Deploy.0 = Release|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhone.Build.0 = Release|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{9CBE2E18-8652-40DB-B4BA-34CACF90365A} = {2375B669-1B4B-4D74-84AF-4625B851D52B}
 		{694D7BA0-872A-4AA1-86B2-72F808E282F7} = {2375B669-1B4B-4D74-84AF-4625B851D52B}
+		{CB6F3104-CF0B-47FC-AD73-396F64581FBF} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
+		{28089177-8B6D-4FFE-856A-56CFAC1E218A} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
+		{DEFB1068-AB8F-4086-9ED2-22CD4558419D} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
+		{DC738C34-A9CF-4CEA-B696-51D8BDD33E58} = {DEFB1068-AB8F-4086-9ED2-22CD4558419D}
+		{D79BA1BE-3274-4B5C-BAE2-802B3DED90AC} = {28089177-8B6D-4FFE-856A-56CFAC1E218A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}
