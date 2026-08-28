@@ -15,6 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.Generator", "TCEx
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0-872A-4AA1-86B2-72F808E282F7}"
 	ProjectSection(SolutionItems) = preProject
+		..\docs\specs\refactor-spec-framework.md = ..\docs\specs\refactor-spec-framework.md
 		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
 		..\docs\specs\tax-hub-payloads.md = ..\docs\specs\tax-hub-payloads.md
 		..\docs\specs\tc-design-principles.md = ..\docs\specs\tc-design-principles.md
@@ -45,7 +46,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implement
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{DEFB1068-AB8F-4086-9ED2-22CD4558419D}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\specs\refactor-spec-framework.md = ..\docs\projects\Tax Hub\specs\refactor-spec-framework.md
 		..\docs\projects\Tax Hub\specs\self-assessment-sql-node-spec.md = ..\docs\projects\Tax Hub\specs\self-assessment-sql-node-spec.md
 		..\docs\projects\Tax Hub\specs\tax-hub-spec-programme.md = ..\docs\projects\Tax Hub\specs\tax-hub-spec-programme.md
 		..\docs\projects\Tax Hub\specs\tax-hub-test-payloads.md = ..\docs\projects\Tax Hub\specs\tax-hub-test-payloads.md

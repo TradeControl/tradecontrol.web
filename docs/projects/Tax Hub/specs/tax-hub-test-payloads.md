@@ -1,328 +1,404 @@
-# Tax Hub — Test Harness Payload Specification  
+# Tax Hub — Test Harness Specification
 
-August 2026  
-Version: Objective 2.2  
+**Trade Control Tax Hub Programme**  
+**Development and Verification Infrastructure**  
+**28 August 2026**
 
-Author: TradeControl / Tax Hub  
-Status: Implementation Specification (Internal Harness)
+## 1. Purpose
 
-## 1. Overview
+The Tax Hub Test Harness is a **development, diagnostic and verification tool**.
 
-This document defines the **internal test harness payload schemas** used by the Tax Hub Submission Logic (Objective 2).
+Its purpose is to allow developers and development agents to exercise the real Tax Hub implementation, inspect data travelling through it, and verify behaviour at useful points in the submission pipeline.
 
-These payloads are **not HMRC payloads**.  
-They are **internal tag-based data structures** generated from Trade Control accounting data and returned by the WebHarness API for development, validation, and mapping verification.
+The Test Harness is **not part of the HMRC integration architecture**.
 
-The harness supports four tax sources:
+It does not define:
 
-- **UK‑ITSA‑SE‑QU** — Quarterly Update (Self‑Employment)  
-- **UK‑ITSA‑SE‑EOPS** — End of Period Statement (Self‑Employment)  
-- **UK‑MTD‑MICRO** — Micro‑entity accounting tags (FRS105-derived)  
-- **VAT‑MTD** — VAT Return tag set  
+- a statutory reporting model;
+- a Tax Tag vocabulary;
+- an alternative submission model;
+- an HMRC payload schema;
+- an HMRC simulator;
+- a production API contract;
+- or a transport protocol.
 
-Harness payloads are derived from:
+The Test Harness exists to make the real implementation observable and testable during development.
 
-- Internal SQL templates  
-- Tag seeds  
-- Category mappings  
-- Accounting engine outputs  
-- Tax classification layer  
+---
 
-These payloads serve as **raw tag sets** from which HMRC submission payloads (Objective 3) will later be constructed.
+## 2. Governing Principle
 
-## 2. Transport Envelope (Harness)
+> **The Test Harness exists to expose and exercise the real Tax Hub implementation during development. It does not define an alternative submission model, statutory vocabulary, canonical payload representation, or production integration API.**
 
-All harness payloads use a simple JSON envelope:
+Where practical, harness endpoints shall invoke the same production components that the Tax Hub itself uses.
 
-```json
-{
-    "payloadVersion": "2026.1",
-    "taxSourceCode": "UK-ITSA-SE-QU",
-    "periodStart": "2026-04-06",
-    "periodEnd": "2026-07-05",
-    "subjectCode": "SUB123",
-    "items": [
-        { "tag": "turnover", "value": 12345 }
-    ],
-    "meta": {
-        "generatedAt": "2026-07-21T10:00:00Z"
-    }
-}
-```
+The harness shall expose what those components actually produce rather than constructing a parallel representation of what they are expected to produce.
 
-## 3. UK‑ITSA‑SE‑QU Payload
+---
 
-Quarterly Update field set (tags defined in SQL seed: )
+## 3. Development-Agent Usage
 
-### 3.1 Tag List
+The Test Harness is explicitly intended for use by development agents such as Codex.
 
-All tags are numeric except where noted.
+Development agents are encouraged to use the Test Harness for:
 
-- turnover  
-- otherIncome  
-- costOfGoods  
-- constructionCosts  
-- wagesSalaries  
-- carVanExpenses  
-- travelExpenses  
-- premisesRunningCosts  
-- maintenanceCosts  
-- adminCosts  
-- advertisingMarketing  
-- interestOnLoans  
-- financialCharges  
-- badDebts  
-- professionalFees  
-- depreciation  
-- otherExpenses  
+- reconnaissance;
+- information gathering;
+- exercising application components;
+- inspecting intermediate data;
+- verifying mappings;
+- inspecting serialization;
+- regression testing;
+- HMRC Sandbox testing;
+- and end-to-end verification.
 
-### 3.2 JSON Schema
+A development agent may call existing harness endpoints and inspect their responses as part of its authorised work.
 
-``` json
-{
-    "payloadVersion": "2026.1",
-    "taxSourceCode": "UK-ITSA-SE-QU",
-    "periodStart": "...",
-    "periodEnd": "...",
-    "subjectCode": "...",
-    "items": [
-    { "tag": "turnover", "value": 0 },
-    { "tag": "otherIncome", "value": 0 },
-    { "tag": "costOfGoods", "value": 0 },
-    { "tag": "constructionCosts", "value": 0 },
-    { "tag": "wagesSalaries", "value": 0 },
-    { "tag": "carVanExpenses", "value": 0 },
-    { "tag": "travelExpenses", "value": 0 },
-    { "tag": "premisesRunningCosts", "value": 0 },
-    { "tag": "maintenanceCosts", "value": 0 },
-    { "tag": "adminCosts", "value": 0 },
-    { "tag": "advertisingMarketing", "value": 0 },
-    { "tag": "interestOnLoans", "value": 0 },
-    { "tag": "financialCharges", "value": 0 },
-    { "tag": "badDebts", "value": 0 },
-    { "tag": "professionalFees", "value": 0 },
-    { "tag": "depreciation", "value": 0 },
-    { "tag": "otherExpenses", "value": 0 }
-    ]
-}
-```
+A development agent may also add, modify or remove harness endpoints where doing so materially improves observability, diagnosis or verification.
 
-## 4. UK‑ITSA‑SE‑EOPS Payload
+This standing permission applies to **Test Harness infrastructure only**. It does not authorise changes to production behaviour outside the write scope of the current development phase.
 
-Annual business return tag set (defined in SQL seed).
+If obtaining an observation requires a change to production logic, normal programme approval and write-scope rules continue to apply.
 
-### 4.1 Tag Groups
+---
 
-EOPS includes all QU tags plus:
+## 4. Architectural Position
 
-#### Adjustments
+The production flow remains:
 
-- goodsForOwnUse  
-- disallowableCostOfGoods  
-- disallowableWages  
-- disallowableMotor  
-- disallowableTravel  
-- disallowablePremises  
-- disallowableMaintenance  
-- disallowableAdmin  
-- disallowableAdvertising  
-- disallowableInterest  
-- disallowableFinancial  
-- disallowableBadDebts  
-- disallowableProfessional  
-- disallowableOther  
+    Operational Transactions
+            ↓
+    Accounting Engine
+            ↓
+    Tax Classification Layer
+            ↓
+    Statutory Projection / Tax Tags
+            ↓
+    Submission Logic
+            ↓
+    HMRC Contract Adapter
+            ↓
+    HMRC Transport
+            ↓
+    HMRC
+            ↓
+    Response / Submission History
 
-#### Derived totals
+The Test Harness sits **outside this flow**.
 
-- accountingProfit  
-- totalDisallowables  
-- adjustedProfit  
+It may observe or exercise useful points within the flow, for example:
 
-#### Losses
+                        Test Harness
+                      ↙      ↓       ↘
+              SQL Projection   HMRC Payload   Transport
+                    ↓               ↓             ↓
+                  JSON          Serialized      Sandbox
+                 output           payload       response
 
-- lossBroughtForward  
-- lossUsedAgainstProfit  
-- lossCarriedForward  
-- lossUsedAgainstOtherIncome  
-- lossUsedAgainstCapitalGains  
-- postCessationReceipts  
-- postCessationExpenses  
+No production component shall depend upon the Test Harness.
 
-#### Basis period
+Removing the Test Harness must not break the production HMRC integration.
 
-- basisPeriodStart  
-- basisPeriodEnd  
-- basisPeriodAdjustedProfit  
-- basisPeriodDisallowables  
-- overlapProfit  
-- overlapReliefUsed  
-- transitionalProfit  
-- transitionalRelief  
-- transitionalProfitSpread  
-- adjustedProfitForTax  
+---
 
-#### Capital allowances
+## 5. Observation Points
 
-- capitalAllowancesClaimed  
-- annualInvestmentAllowance  
-- writingDownAllowanceMainPool  
-- writingDownAllowanceSpecialRate  
-- writingDownAllowanceSingleAsset  
-- smallPoolsAllowance  
-- balancingChargeMainPool  
-- balancingChargeSpecialRate  
-- balancingChargeSingleAsset  
-- balancingAllowanceMainPool  
-- balancingAllowanceSpecialRate  
-- balancingAllowanceSingleAsset  
-- privateUseAdjustment  
-- carMainRateAllowance  
-- carSpecialRateAllowance  
-- carBalancingCharge  
-- carBalancingAllowance  
-- enhancedCapitalAllowance  
-- superDeductionAllowance  
-- fullExpensingAllowance  
-- specialRateFirstYearAllowance  
-- poolOpeningValueMainPool  
-- poolOpeningValueSpecialRate  
-- poolOpeningValueSingleAsset  
-- poolClosingValueMainPool  
-- poolClosingValueSpecialRate  
-- poolClosingValueSingleAsset  
-- capitalAllowancesTotal  
+Harness endpoints may be provided wherever they are useful during development.
 
-### 4.2 JSON Schema
+Likely observation points include, but are not limited to:
 
-``` json
-{
-    "payloadVersion": "2026.1",
-    "taxSourceCode": "UK-ITSA-SE-EOPS",
-    "periodStart": "...",
-    "periodEnd": "...",
-    "subjectCode": "...",
-    "items": [
-    { "tag": "turnover", "value": 0 },
-    { "tag": "otherIncome", "value": 0 },
-    { "tag": "costOfGoods", "value": 0 },
-    { "tag": "goodsForOwnUse", "value": 0 },
-    { "tag": "disallowableCostOfGoods", "value": 0 },
-    { "tag": "accountingProfit", "value": 0 },
-    { "tag": "adjustedProfit", "value": 0 },
-    { "tag": "lossBroughtForward", "value": 0 },
-    { "tag": "basisPeriodStart", "value": "2026-04-06" },
-    { "tag": "capitalAllowancesClaimed", "value": 0 },
-    { "tag": "capitalAllowancesTotal", "value": 0 }
-    ]
-}
-```
+### 5.1 Accounting and SQL Output
 
-## 5. UK‑MTD‑MICRO Harness Payload
+The harness may expose data produced by authoritative SQL views or other accounting projections.
 
-Micro‑entity accounting tags (FRS105-derived).
-These are **internal accounting tags**, not CT600 payloads.
+This allows developers to inspect the source information before it is transformed into statutory or HMRC representations.
 
-Tags defined in SQL template:
-AC12, AC405, AC410, AC415, AC420, AC425, AC34, AC435, CP28, CP46
+### 5.2 Statutory Projection
 
-### 5.1 Tag List
+The harness may expose the Tax Tags or other Objective 2 statutory projection produced from accounting data.
 
-- AC12 — Turnover  
-- AC405 — Other Income  
-- AC410 — Cost of Sales  
-- AC415 — Staff Costs  
-- AC420 — Depreciation Total  
-- AC425 — Other Charges  
-- AC34 — Tax on Profit  
-- AC435 — Profit and Loss  
-- CP28 — Depreciation charge  
-- CP46 — Depreciation adjustment  
+This allows mappings, omissions, classifications and values to be inspected directly.
 
-### 5.2 JSON Schema
+### 5.3 HMRC Contract Generation
 
-``` json
-{
-    "payloadVersion": "2026.1",
-    "taxSourceCode": "UK-MTD",
-    "periodStart": "...",
-    "periodEnd": "...",
-    "subjectCode": "...",
-    "items": [
-    { "tag": "AC12", "value": 0 },
-    { "tag": "AC405", "value": 0 },
-    { "tag": "AC410", "value": 0 },
-    { "tag": "AC415", "value": 0 },
-    { "tag": "AC420", "value": 0 },
-    { "tag": "AC425", "value": 0 },
-    { "tag": "AC34", "value": 0 },
-    { "tag": "AC435", "value": 0 },
-    { "tag": "CP28", "value": 0 },
-    { "tag": "CP46", "value": 0 }
-    ]
-}
-```
+The harness may invoke the real Objective 3 payload generator and return the resulting HMRC representation.
 
-## 6. VAT Harness Payload
+This may include the exact serialized JSON or XML that would be presented to the transport layer.
 
-Fields defined by HMRC VAT API, but used here only as **internal tag values**.
+The harness shall not create a separate "harness version" of an HMRC payload.
 
-### 6.1 Tag List
+### 5.4 HMRC Transport
 
-- vatDueSales  
-- vatDueAcquisitions  
-- totalVatDue  
-- vatReclaimedCurrPeriod  
-- netVatDue  
-- totalValueSalesExVAT  
-- totalValuePurchasesExVAT  
-- totalValueGoodsSuppliedExVAT  
-- totalValueGoodsReceivedExVAT  
+Where useful, the harness may expose requests entering the Objective 4 transport layer and responses returned from it.
 
-### 6.2 JSON Schema
+### 5.5 HMRC Sandbox
 
-``` json
-{
-    "payloadVersion": "2026.1",
-    "taxSourceCode": "VAT",
-    "periodStart": "...",
-    "periodEnd": "...",
-    "subjectCode": "...",
-    "items": [
-    { "tag": "vatDueSales", "value": 0 },
-    { "tag": "vatDueAcquisitions", "value": 0 },
-    { "tag": "totalVatDue", "value": 0 },
-    { "tag": "vatReclaimedCurrPeriod", "value": 0 },
-    { "tag": "netVatDue", "value": 0 },
-    { "tag": "totalValueSalesExVAT", "value": 0 },
-    { "tag": "totalValuePurchasesExVAT", "value": 0 },
-    { "tag": "totalValueGoodsSuppliedExVAT", "value": 0 },
-    { "tag": "totalValueGoodsReceivedExVAT", "value": 0 }
-    ]
-}
-```
+The harness may be used to exercise HMRC Sandbox endpoints and expose the actual responses returned by HMRC.
 
-## 7. Validation Rules (all payloads)
+Sandbox responses should be preserved as faithfully as practical so that unexpected behaviour remains visible.
 
-- All numeric fields must be non‑negative.  
-- Dates must be ISO‑8601.  
-- Tag codes must match the tax source.  
-- Items must not contain duplicates.  
-- Derived totals (EOPS) must be internally consistent  
-- VAT fields must satisfy basic arithmetic constraints.
+---
 
-## 8. Implementation Notes
+## 6. Faithful Observation
 
-- QU and EOPS tags are created in the Sole Trader template (see: `App.proc_Template_ST_SOLE_CUR_MIN_2026`).  
-- Category mappings for QU/EOPS are defined in section 80 (see: `App.proc_Template_ST_SOLE_CUR_MIN_2026`).  
-- Micro‑entity tags are created in the MICRO template (see: `App.proc_Template_CO_MICRO_CUR_2026`).  
-- VAT values are sourced from the VAT Submission reader (`Cash.vwTaxVatSubmission`).
+The harness shall prefer **actual component output** over normalized or reconstructed representations.
 
-## 9. Appendix — Tag Classes
+In particular, the harness must not manufacture apparently complete data merely to satisfy a harness-specific schema.
 
-TagClassCode meanings (from SQL seeds):
+Missing information shall remain missing unless the production component being exercised legitimately supplies a value.
 
-- 0 - Rollup
-- 1 - Component
-- 2 - Derived
+The harness must not:
+
+- substitute zero for an absent monetary value merely for structural completeness;
+- invent Tax Tags;
+- manufacture HMRC fields;
+- silently repair mappings;
+- normalize an erroneous production payload into a correct-looking harness payload;
+- or conceal serialization or contract defects.
+
+If the real component produces incorrect output, the purpose of the harness is to make that defect visible.
+
+---
+
+## 7. Harness Responses
+
+Harness responses should be as simple as practical.
+
+Where useful, a response may contain minimal diagnostic metadata such as:
+
+- observation stage;
+- timestamp;
+- requested operation;
+- source or Tax Source;
+- correlation identifier;
+- HTTP status;
+- content type;
+- and diagnostic information.
+
+The substantive data should remain the real output of the component being inspected wherever practical.
+
+Diagnostic wrapping must not alter the semantics of that output.
+
+---
+
+## 8. Serialization
+
+Serialization is itself an important observable result.
+
+When testing an HMRC contract, the harness should expose the **actual serialized representation produced by the production serializer**.
+
+This allows development agents to detect issues including:
+
+- incorrect property names;
+- incorrect casing;
+- unwanted zero values;
+- missing properties;
+- unexpected properties;
+- incorrect nesting;
+- incorrect data types;
+- XML structure errors;
+- and other contract discrepancies.
+
+The harness must not independently reserialize an alternative model merely to produce cleaner diagnostic output.
+
+---
+
+## 9. Extensibility
+
+The Test Harness is intentionally extensible.
+
+Development agents may introduce diagnostic or exercise endpoints when this materially assists implementation or verification.
+
+New endpoints should be narrowly targeted at the question being investigated.
+
+A harness endpoint does not require a permanent architectural justification merely because it is useful during development.
+
+Temporary endpoints may be removed when their purpose has been served.
+
+The preferred principle is:
+
+> **Add the visibility needed to prove the implementation; do not build infrastructure merely to preserve the visibility mechanism.**
+
+---
+
+## 10. Disposable Infrastructure
+
+Harness endpoints are development infrastructure.
+
+Their existence does not create a compatibility obligation.
+
+An endpoint may be:
+
+- introduced for a particular development phase;
+- changed as the implementation evolves;
+- replaced by a more useful observation point;
+- or removed when no longer required.
+
+A harness endpoint becomes a supported product contract only through an explicit architectural decision.
+
+Production code must not acquire dependencies on temporary harness DTOs, routes, conventions or response formats.
+
+---
+
+## 11. Repository and Contract Boundaries
+
+The `hmrc_mtd` repository contains HMRC integration code, but the existence of historical classes within that repository does not establish that those classes represent valid HMRC contracts.
+
+During contract-alignment reconnaissance, relevant classes shall be classified according to their actual responsibility, including:
+
+1. **HMRC Contract** — represents a verified external HMRC request, response or related contract.
+2. **Trade Control Statutory Projection** — represents internal Objective 2 statutory information.
+3. **Harness / Development Infrastructure** — exists solely to exercise or observe the implementation.
+4. **Obsolete / Legacy** — represents superseded workflows, contracts or abandoned implementation.
+
+Internal harness representations must not masquerade as HMRC contracts merely because they currently reside in the `hmrc_mtd` repository.
+
+The appropriate namespace and repository disposition of existing classes shall be proposed from reconnaissance evidence rather than inferred from their current location.
+
+---
+
+## 12. Existing Harness Endpoints
+
+Existing Test Harness endpoints are **not protected behaviour**.
+
+They were developed while the purpose of the Test Harness was being interpreted differently and therefore must not be treated as architectural authority.
+
+In particular, existing Self Assessment QU and EOPS harness endpoints may be removed rather than preserved or repaired if they implement obsolete harness-specific payload models.
+
+Legacy EOPS behaviour must not be retained merely to maintain Test Harness compatibility.
+
+The existing VAT-MTD harness endpoint may be retained provisionally where reconnaissance confirms that it provides a useful example of exercising the real implementation.
+
+Its existence does not make its present design automatically canonical.
+
+---
+
+## 13. Relationship to Objective 2
+
+Objective 2 defines Trade Control's internal statutory projection and submission logic.
+
+The Test Harness may expose Objective 2 data, but **does not define Objective 2 data**.
+
+Tax Tags and statutory field sets are governed by the relevant Objective 2 specifications.
+
+No Tax Tag becomes canonical because it appears in a harness builder or response.
+
+The Test Harness therefore requires no independent canonical QU, annual, VAT or Corporation Tax tag inventory.
+
+---
+
+## 14. Relationship to Objective 3
+
+Objective 3 defines verified HMRC endpoints, versions and exact external payload contracts.
+
+The Test Harness may exercise Objective 3 and expose its generated payloads.
+
+It must not independently define those payloads.
+
+Where a harness observation conflicts with the verified Objective 3 contract, the conflict is evidence of an implementation defect; the harness representation is not authority.
+
+---
+
+## 15. Relationship to Objective 4
+
+Objective 4 implements HMRC transport.
+
+The Test Harness may exercise that transport and expose useful request and response information, including HMRC Sandbox interactions.
+
+The Test Harness does not implement an alternative transport stack.
+
+OAuth, fraud-prevention headers, REST/JSON handling, XML transport, canonicalisation, IRmark handling and related production responsibilities remain Objective 4 concerns.
+
+---
+
+## 16. Automated Verification
+
+The Test Harness should be usable from automated development tooling wherever practical.
+
+A development agent should be able to:
+
+    submit known request
+            ↓
+    exercise real component
+            ↓
+    receive observable output
+            ↓
+    compare against governing specification
+            ↓
+    identify discrepancy
+            ↓
+    correct authorised implementation
+            ↓
+    repeat request
+
+This capability is particularly valuable for iterative implementation because it allows correctness to be demonstrated from actual runtime behaviour rather than inferred solely from source inspection or successful compilation.
+
+Where stable test cases prove useful, they may subsequently be promoted into formal automated tests.
+
+The Test Harness itself does not replace unit, integration or contract testing.
+
+---
+
+## 17. Safety and Isolation
+
+Harness functionality must remain development-oriented and appropriately isolated.
+
+It must not create an unintended production submission route.
+
+Where endpoints can initiate external HMRC Sandbox communication or other consequential operations, their purpose and target must be explicit.
+
+Test Harness functionality must respect normal tenant isolation and must not expose credentials, authentication secrets or other sensitive transport information merely for diagnostic convenience.
+
+---
+
+## 18. Implementation Guidance
+
+When adding a harness endpoint, the preferred order is:
+
+1. identify the production component or boundary that needs to be observed;
+2. call that real component where practical;
+3. expose its input or output with minimal transformation;
+4. add only the diagnostic metadata needed to interpret the result;
+5. use the endpoint to verify the implementation;
+6. retain, simplify or remove the endpoint according to continuing development value.
+
+Do not create a new domain model simply because a diagnostic endpoint needs to return JSON.
+
+Do not move production business logic into the Test Harness.
+
+---
+
+## 19. Authority
+
+The Test Harness is an **observer and exerciser**, not an authority.
+
+Authority remains with:
+
+- Trade Control accounting specifications for accounting behaviour;
+- approved Tax Hub statutory projection specifications for Objective 2;
+- current authoritative HMRC specifications for Objective 3;
+- approved transport specifications for Objective 4;
+- and the governing Tax Hub Programme Specification for architectural boundaries.
+
+Historical harness code and historical harness documentation are evidence of previous implementation only.
+
+---
+
+## 20. Definition of Correctness
+
+The Test Harness satisfies this specification when:
+
+- it can expose useful points in the real Tax Hub data flow;
+- development agents can use it for reconnaissance and verification;
+- diagnostic endpoints can be added without creating production architectural dependencies;
+- actual component output is preserved faithfully;
+- missing information is not silently manufactured;
+- HMRC payload generation is exercised rather than duplicated;
+- HMRC Sandbox responses can be inspected when transport is available;
+- obsolete QU/EOPS harness models are not preserved merely for compatibility;
+- non-HMRC harness models are not mistaken for HMRC contracts;
+- and the complete production HMRC integration remains independent of the Test Harness.
+
+---
 
 **End of document.**

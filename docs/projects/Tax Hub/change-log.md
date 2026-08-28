@@ -48,3 +48,54 @@ No representative isolated database or configured bootstrap fixture was availabl
 - `src/hmrc_mtd`, WebHarness, DTOs, serializers, payload handling, and SQL `Scripts` scratch material.
 - Category Tree and CashCode classifications, which remain independent business classifications rather than HMRC taxonomies.
 - Pre-existing documentation reorganisation, superproject changes, submodule pointers, and repository history.
+
+## 28 August 2026 — Self Assessment SQL Node Phase 2: Wrapper Composition
+
+### Authorised objective
+
+Compose each Sole Trader variant wrapper from exactly one accounting template and exactly one matching dedicated tax-seeding procedure, with accounting initialisation first. Make each wrapper the outer atomic transaction boundary, following the established company-template composition pattern, while preserving child-procedure transaction, error-handling, return-code, and validation conventions. Stop before mappings or HMRC contract changes.
+
+### Files changed
+
+- `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_MIN_MTD_2026.sql`
+- `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_MIN_SA_2026.sql`
+- `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_MTD_2026.sql`
+- `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_SA_2026.sql`
+- `docs/projects/Tax Hub/change-log.md`
+
+### Meaningful changes
+
+- MIN MTD now calls `App.proc_Template_ST_SOLE_CUR_MIN_2026` and then `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`.
+- MIN SA now calls `App.proc_Template_ST_SOLE_CUR_MIN_2026` and then `App.proc_Template_ST_SOLE_CUR_TAX_SA_2026`.
+- STD MTD now calls `App.proc_Template_ST_SOLE_CUR_STD_2026` and then `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`.
+- STD SA now calls `App.proc_Template_ST_SOLE_CUR_STD_2026` and then `App.proc_Template_ST_SOLE_CUR_TAX_SA_2026`.
+- Each tax procedure call occurs after the accounting procedure and before the wrapper returns its existing accounting return code.
+- All four wrappers now set `NOCOUNT` and `XACT_ABORT` on, begin a wrapper-owned transaction before accounting initialisation, and commit it only after the matching tax procedure succeeds.
+- The outer transactions are named per variant: `SoleTraderMinMtdTemplate`, `SoleTraderMinSaTemplate`, `SoleTraderStdMtdTemplate`, and `SoleTraderStdSaTemplate`.
+
+### Validation performed
+
+- A static call-graph assertion confirmed that every wrapper contains exactly two relevant calls in the required order: one MIN/STD accounting procedure followed by one matching MTD/SA tax procedure.
+- The same assertion confirmed no MTD wrapper calls the SA procedure and no SA wrapper calls the MTD procedure.
+- Static transaction-order inspection confirmed each wrapper follows `BEGIN TRAN` -> accounting procedure -> matching tax procedure -> `COMMIT TRAN` -> `RETURN`, with the existing `App.proc_ErrorLog` catch retained.
+- Reviewed the focused wrapper diff: Phase 2 adds one matching parameterless tax-procedure call to each wrapper and makes no other Phase 2 SQL change.
+- `git -C src/sqlnode diff --check` completed without whitespace errors; Git reported only line-ending normalization notices.
+- Rebuilt `src/tcNodeDb4/tcNodeDb4.sqlproj` with Visual Studio MSBuild 18, Debug/AnyCPU. Result: success (exit code 0); `tcNodeDb4.dacpac` was produced. As in Phase 1, the build emitted unrelated `SQL71502` warnings concerning `#DatasetCodes` in synthetic dataset procedures and no wrapper errors.
+- Confirmed that the dedicated MTD procedure still validates `UK-ITSA-SE-QU` and `UK-ITSA-SE-EOPS`, and the dedicated SA procedure still validates `UK-SA-SE-RETURN`, before their respective commits. Validation was not moved or redesigned.
+
+No representative isolated database or configured bootstrap fixture was available, so the four wrappers were not executed. Static composition checks and a successful project build are not presented as runtime proof of source/tag creation, idempotency, or rollback behaviour.
+
+### Transaction and failure observation
+
+The wrappers now own the outer transaction across both composition calls. SQL Server nested `BEGIN TRAN` statements in the accounting and tax procedures increment `@@TRANCOUNT`; their matching inner `COMMIT` statements decrement it without committing the underlying transaction. The wrapper's final `COMMIT` is therefore the physical commit for the composed setup. If either child fails, `App.proc_ErrorLog` rolls back the active transaction and reraises, so the wrapper does not intentionally leave the accounting stage committed without its tax vocabulary.
+
+This conclusion follows the live transaction and error-handler structure and the successful database-project build. Runtime failure injection was not available, so atomic rollback remains to be demonstrated in isolated database execution rather than treated as empirically proven.
+
+### Deliberately unchanged
+
+- Dedicated MTD and SA procedures, their source/tag vocabularies, mapping placeholders, transactions, and validation calls.
+- MIN and STD accounting templates following accepted Phase 1 structural separation.
+- All Tax Tag mappings; no mappings were added, relocated, or inferred.
+- Canonical vocabulary decisions, HMRC contract audit, `src/hmrc_mtd`, WebHarness, DTOs, serializers, and payload handling.
+- Wrapper signatures, accounting argument forwarding, `@RC` handling, and `App.proc_ErrorLog` catches; only the wrapper transaction layer was added.
+- SQL `Scripts` scratch material, unrelated source, submodule pointers, commits, and repository history.

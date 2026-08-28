@@ -2,7 +2,7 @@
 
 July 2026
 
-These are the reusable invariants, architectural rules, and behavioural contracts that define how any Trade Control module should be refactored or built under the AI to AI system.
+These are the reusable invariants, architectural rules, and behavioural contracts that define how any prototype Trade Control module should be refactored or built under the AI to AI system.
 
 ## 1. Purpose Principle — Behavioural Refactor, Not Redesign
 
@@ -130,8 +130,6 @@ Every refactored module must:
 * preserve navigation
 * preserve workflow continuity
 
-This is crucial for Tax Hub, where Accounts + Tax + Submission must feel like one surface.
-
 ## 6. Functional Scope Principle — Preserve All Workflows
 
 Each module must preserve all workflows and surfaces such as:
@@ -141,13 +139,6 @@ Each module must preserve all workflows and surfaces such as:
 * creation
 * editing
 * posting
-
-Tax Hub will inherit this pattern:
-
-* Accounts surfaces
-* Tax surfaces
-* Submission surfaces
-* MTD surfaces
 
 ## 7. Phase Based Destination Principle
 

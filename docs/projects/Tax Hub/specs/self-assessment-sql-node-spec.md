@@ -1,379 +1,701 @@
 # Self Assessment SQL Node Implementation Specification
 
 Trade Control Tax Hub Programme  
-26 August 2026
+Revision 3 — 28 August 2026
 
-## 1. Status and purpose
+## 1. Status and Purpose
 
-This document specifies the next SQL Node work required to support the Sole Trader Self Assessment submission models used by Tax Hub.
+This document specifies the SQL Node work required to support Sole Trader Self Assessment through Making Tax Digital for Income Tax within Tax Hub.
 
-It is a review draft, not an instruction to implement. No SQL, mappings, commits, or submodule pointer changes are authorised by this document. Implementation may begin only after the proposed mapping matrix and the relevant phase have been reviewed and approved.
+It supersedes Revision 2.
 
-The immediate scope is the SQL bootstrap and classification layer for two distinct Self Assessment representations:
+This is a governing implementation specification, not a general authorisation to edit the repository. Each delivery phase remains separately reviewable and requires explicit approval before implementation.
 
-- MTD ITSA Self-Employment, comprising Quarterly Update and EOPS tax sources.
-- Legacy annual Self Assessment, represented by the SA100/SA103F self-employment tax source.
+No commits, pushes, submodule pointer changes, cross-repository edits, or unapproved mappings are authorised by this document.
 
-This work contributes to Tax Hub Programme Objective 2: generation of internal raw tag-set test payloads from Trade Control accounting data. It does not specify HMRC-ready payloads, endpoint behaviour, transport, authentication, filing workflow, or submission history.
+### 1.1 Product Scope
 
-## 2. Governing principles
+Trade Control supports Sole Trader Self Assessment submission through **Making Tax Digital for Income Tax only**.
 
-The implementation shall preserve the following programme principles:
+Legacy SA100/SA103F XML submission is not supported.
 
-- Existing accounting calculations remain authoritative.
-- The Cash Statement remains the primary operational financial representation.
-- Tax Hub consumes the tax classification layer; it does not reinterpret transactions or reproduce accounting calculations.
-- Every mapped statutory value must be deterministically traceable to its operational source.
-- Structural, numerical, and submission concerns remain separate.
-- MTD and SA100/SA103F are separate statutory vocabularies even where they describe similar accounting concepts.
-- Absence of a legitimate source is represented explicitly. It is not resolved through a speculative or approximate mapping.
+Users who are not eligible for, are exempt from, or choose not to use MTD Income Tax must use another submission method.
 
-## 3. Repository and submodule boundaries
+The SQL Node scope is therefore the accounting-to-statutory projection required by the current MTD Income Tax model.
 
-The working checkout is the live `tradecontrol.web` superproject, including its populated submodules. That complete checkout is authoritative for implementation. Its relevant submodules are independent repositories with independent histories:
+The former dual-path architecture comprising:
 
-- `src/sqlnode` owns the SQL schema, accounting bootstrap, tax sources, tax tags, and mappings addressed by this specification.
-- `src/hmrc_mtd` owns the Self Assessment submission models, serializers, payload-building logic, and later HMRC API and transport concerns. For this phase it is an authoritative reference for the consumer-facing tag vocabulary and shape.
-- `tradecontrol.web` owns the Tax Hub UI and workflow and is outside the immediate implementation scope.
-- `src/TCExports` is not relevant to this specification.
+- MTD Quarterly Update plus EOPS; and
+- legacy SA100/SA103F
 
-Submodule boundaries are repository boundaries. Work inside `src/sqlnode` must not be treated as an ordinary edit to the superproject. Reconnaissance may inspect the complete `tradecontrol.web` checkout, including every populated submodule, wherever necessary to establish contracts, dependencies, tests, and current behaviour. No implementation phase may modify `src/hmrc_mtd`, `tradecontrol.web`, or `src/TCExports` unless a separately reviewed and approved cross-repository requirement demonstrates that the contract itself must change.
+is retired.
 
-The implementation write scope is `src/sqlnode` only. The reconnaissance scope is the complete `tradecontrol.web` checkout, including all populated submodules. Advancing a submodule pointer in `tradecontrol.web`, creating commits, coordinating releases, or making any cross-repository change are separate, explicit actions and must never occur as a side effect.
+EOPS is not part of the current MTD filing workflow and must not remain as a live statutory target merely because historical Trade Control code models it.
 
-## 4. Evidence base and confidence
+### 1.2 Programme Objective
 
-This specification was prepared with reference to:
+This work contributes principally to Tax Hub Programme **Objective 2 — Submission Logic**.
 
-- `tax-hub-spec-programme.md`, which defines the programme objectives, separation of concerns, classification layer, validation duties, and deterministic reconciliation requirement.
-- `session-brief.md`, which identifies the intended template/tax-procedure split and the unfinished structural and mapping work.
-- Known current-state context that `@IsMTD` has already been removed from the repository. Live reconnaissance must verify that state; it must not treat the parameter as a presumed current defect or implementation task.
+Objective 2 owns:
 
-The live `tradecontrol.web` checkout, including its populated submodules, is authoritative for implementation. At the start of the work, Codex must inspect the relevant live files identified in the Appendix of `session-brief.md`, then follow dependencies and references anywhere in the checkout as necessary. The Appendix is an entry map, not a fence. Procedure names, signatures, wrapper call graphs, tag inventories, transaction boundaries, schema constraints, validation procedures, category hierarchy objects, `hmrc_mtd` builders and models, tests, and other dependencies must be established from live repository evidence.
+- extraction from Trade Control accounting classifications;
+- Tax Source and Tax Tag projection;
+- internal statutory representations;
+- internal test-harness payloads;
+- structural and numerical validation;
+- deterministic traceability back to operational accounting.
 
-## 5. Established current state
+Objective 2 does **not** define HMRC wire payloads.
 
-### 5.1 Accounting templates
+Exact HMRC request and response contracts, API versions, mandatory and optional properties, endpoint semantics, XML/JSON representations, and other externally governed contract details belong to **Objective 3 — HMRC API**.
 
-The Sole Trader template family includes:
+Transport, authentication, fraud-prevention headers, retry behaviour, envelopes, submission mechanics, and other communication concerns belong to **Objective 4 — HMRC Transport Platform**.
+
+---
+
+## 2. Governing Principles
+
+The implementation shall preserve the following principles.
+
+### 2.1 Accounting Authority
+
+Existing Trade Control accounting calculations remain authoritative for the operational financial result.
+
+The Cash Statement remains the primary operational financial representation.
+
+Tax Hub and the Tax Tag layer consume those results. They do not reinterpret transactions or reproduce the accounting engine.
+
+### 2.2 Deterministic Statutory Projection
+
+Every mapped statutory value must be deterministically traceable to an operational source.
+
+A mapping is permitted only where the accounting classification available to the configured template can supply the statutory concept without semantic ambiguity or double counting.
+
+Similarity of names is not evidence of equivalence.
+
+### 2.3 No Invented Precision
+
+Where the available accounting classification cannot deterministically supply a statutory distinction, the system must not manufacture that distinction.
+
+A coarse MIN classification may therefore support fewer detailed statutory fields than STD.
+
+Unsupported, contextual, externally calculated, derived, or optional values must remain explicitly identified as such.
+
+### 2.4 External Contract Authority
+
+Trade Control code and historical implementations are evidence of previous intent. They are not authoritative where an externally governed statutory or protocol contract is involved.
+
+Current authoritative HMRC specifications govern:
+
+- the statutory concepts that must or may be supplied;
+- their semantics;
+- the filing lifecycle;
+- required, optional, contextual, and derived distinctions;
+- the external contract ultimately produced by Objective 3.
+
+Existing SQL Tax Tags, `hmrc_mtd` classes, historical payload builders, test harnesses, and legacy mappings must be corrected where they conflict with the current external contract.
+
+### 2.5 Separation of Concerns
+
+The architecture shall preserve the following boundary:
+
+**Trade Control accounting**  
+→ **Tax Source / Tax Tag statutory projection — Objective 2**  
+→ **HMRC contract adapter — Objective 3**  
+→ **HMRC transport — Objective 4**
+
+A SQL Tax Tag is therefore not automatically an HMRC JSON or XML property.
+
+The Tax Tag layer exists to expose statutory meaning from Trade Control accounting in a deterministic and testable form.
+
+### 2.6 Explicit Absence
+
+The absence of a legitimate source is a valid result.
+
+Unknown, unsupported, not-applicable, contextual, or optional statutory information must not be represented as an artificial zero merely to make a projection appear complete.
+
+Zero may be supplied only where it is the correct accounting value or where the governing statutory contract explicitly requires it.
+
+---
+
+## 3. Repository and Submodule Boundaries
+
+The working checkout is the live `tradecontrol.web` superproject, including its populated submodules.
+
+The relevant repository responsibilities are:
+
+- `src/sqlnode` owns the SQL schema, accounting bootstrap, Tax Sources, Tax Tags, mappings, extraction, and SQL validation addressed by this specification.
+- `src/hmrc_mtd` owns the HMRC-facing model and adapter implementation associated with Objectives 3 and 4.
+- `tradecontrol.web` owns the Tax Hub UI and workflow.
+- `src/TCExports` is outside the present scope.
+
+The live repositories are authoritative for establishing **current implementation state**.
+
+They are not independently authoritative for externally governed HMRC semantics.
+
+Reconnaissance may inspect the complete populated superproject wherever necessary to establish dependencies and contracts.
+
+Unless separately approved, implementation write scope remains:
+
+`src/sqlnode`
+
+No implementation phase may modify `src/hmrc_mtd`, `tradecontrol.web`, `src/TCExports`, or a superproject submodule pointer as a side effect.
+
+Commits, releases, pointer advancement, and cross-repository changes are distinct review actions.
+
+---
+
+## 4. Revision 2 Work Already Completed
+
+Revision 3 does not rewrite implementation history.
+
+The following work was correctly performed under the then-current Revision 2 architecture and has already been reviewed and accepted.
+
+### 4.1 Phase 1 — Structural Separation — COMPLETE
+
+The MIN and STD Sole Trader accounting templates were made tax-neutral.
+
+Obsolete Self Assessment Tax Source, Tax Tag, mapping, and validation material was removed from the accounting templates.
+
+Stale `@IsMTD` arguments and associated misleading comments were removed.
+
+Unrelated accounting behaviour was preserved.
+
+### 4.2 Phase 2 — Wrapper Composition — COMPLETE
+
+The four then-defined wrapper variants were changed so that each composed:
+
+1. its accounting template; and
+2. its corresponding dedicated tax-seeding procedure.
+
+The accounting procedure executes before the tax procedure.
+
+An outer wrapper transaction provides atomic composition.
+
+No mappings, canonical vocabulary changes, or HMRC model changes were introduced.
+
+### 4.3 Effect of the Revised Product Decision
+
+The subsequent decision to support MTD Income Tax only changes the required end state.
+
+It does not make the completed Phase 1 or Phase 2 work erroneous.
+
+The legacy SA wrappers and SA tax-seeding procedure now become deliberate retirement candidates because the product requirement they served has been withdrawn.
+
+Likewise, the EOPS source and vocabulary must be replaced because the current MTD filing lifecycle no longer uses EOPS.
+
+Implementation history must record this as an architectural change after Phase 2, not as correction of an implementation defect.
+
+---
+
+## 5. Established Current State Requiring Reconciliation
+
+### 5.1 Accounting Templates
+
+The Sole Trader accounting variants are:
 
 - `App.proc_Template_ST_SOLE_CUR_MIN_2026`
 - `App.proc_Template_ST_SOLE_CUR_STD_2026`
 
-The MIN template builds the core Sole Trader environment after invoking the base minimum template. The evidence shows core reporting totals including:
+They are now tax-neutral.
 
-- `CT-TURNOV` — Turnover
-- `CT-OTHRIN` — Other Income
-- `CT-CSTSAL` — Cost of Sales
-- `CT-STAFFC` — Staff Costs
-- `CT-OVERHD` — Overheads
-- `CT-GROSSP` — Gross Profit
-- `CT-PANDL` — Profit and Loss
+MIN provides a deliberately coarse accounting model.
 
-These totals roll up nominal categories such as `CA-SALES`, `CA-INCOME`, `CA-DIRECT`, `CA-WAGES`, and `CA-ADMIN`. The base model also contains individual cash codes within those nominal categories.
+STD extends that model with more detailed CategoryCode and CashCode classification.
 
-The STD template extends the accounting model. The review-draft evidence indicates additional expense classification through cash codes and nominal categories, including:
+Neither template is an HMRC taxonomy.
 
-- travel and transport through `CA-TRAVEL`;
-- motor expenses through `CA-MOTOR`;
-- finance costs through `CA-FINANCE`;
-- premises running costs through `CA-PREMS`;
-- more specific administrative cash codes for phone, insurance, bank charges, professional fees, advertising, and repairs.
+The Category Tree remains an operational accounting structure configurable by the business.
 
-These STD additions roll into `CT-OVERHD`. Consequently, mapping both an overhead parent and one or more of its descendants to additive statutory fields may double count the same operational value.
+### 5.2 Existing MTD Tax Procedure
 
-### 5.2 Legacy tax material in accounting templates
+The existing procedure:
 
-The review-draft evidence identifies tax concerns inside the accounting templates, to be confirmed against the live checkout:
+`App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`
 
-- MIN section 9 creates MTD tax sources and obsolete tag seeds.
-- MIN section 10 maps a small set of MTD tags to category totals and invokes validation.
-- STD section 7 contains additional MTD mappings and invokes validation.
+currently contains historical MTD Tax Source and Tax Tag definitions including:
 
-The old tag names do not consistently match the dedicated tax-procedure vocabularies. Examples include `otherIncome` versus `otherBusinessIncome`, `wagesSalaries` versus `wagesSalariesStaffCosts`, and several STD mappings to tags that do not occur in the current dedicated QU/EOPS seeds. This material is historical evidence of mapping intent only. It is not an approved mapping matrix and must not be mechanically relocated.
+- Quarterly Update; and
+- EOPS.
 
-### 5.3 Dedicated tax procedures
+The Quarterly Update concept remains relevant but its exact Tax Tag vocabulary must be reconciled with the current MTD statutory requirements.
 
-The following procedures exist:
+The EOPS source is obsolete as a filing-stage model and must not survive into the required end state.
 
-- `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`
-- `App.proc_Template_ST_SOLE_CUR_TAX_SA_2026`
+Individual adjustment, allowance, loss, or other concepts formerly grouped beneath EOPS may still be relevant to the current annual MTD process. Their continued statutory relevance must be established individually rather than preserving the EOPS container.
 
-The MTD procedure defines:
+### 5.3 Existing Legacy SA Procedure
 
-- `UK-ITSA-SE-QU`, with Quarterly Update income and expense tags;
-- `UK-ITSA-SE-EOPS`, with basis-period, adjustment, capital-allowance, loss, and derived-total tags.
+The procedure:
 
-The SA procedure defines:
+`App.proc_Template_ST_SOLE_CUR_TAX_SA_2026`
 
-- `UK-SA-SE-RETURN`, with the canonical SA103F self-employment tag set used by the submission layer.
+creates the legacy:
 
-Both dedicated procedures contain mapping placeholders and invoke `Cash.proc_TaxTagMapValidate`. Their tax-source and tag-seed definitions are treated as the intended current vocabularies, subject to verification against the live `hmrc_mtd` consumers.
+`UK-SA-SE-RETURN`
 
-The SA procedure's placeholder comment refers to “QU + EOPS mappings”; that wording is stale and should not be treated as design intent for the SA source.
+SA100/SA103F vocabulary.
 
-### 5.4 Composition wrappers
+That submission path is outside the revised product scope.
 
-Four wrapper procedures exist:
+The procedure, source, tags, mappings, and references are therefore candidates for retirement.
+
+### 5.4 Existing Wrappers
+
+The current wrapper family contains:
 
 - `App.proc_Template_ST_SOLE_CUR_MIN_MTD_2026`
 - `App.proc_Template_ST_SOLE_CUR_MIN_SA_2026`
 - `App.proc_Template_ST_SOLE_CUR_STD_MTD_2026`
 - `App.proc_Template_ST_SOLE_CUR_STD_SA_2026`
 
-The review-draft evidence indicates that they call their corresponding MIN or STD accounting template but do not call the dedicated tax procedure. Known current-state context is that the obsolete `@IsMTD` forwarding argument has already been removed. Phase 0 must verify both points in the live checkout; unless live reconnaissance shows otherwise, no work concerning that parameter is required.
+The MTD wrappers remain valid composition entry points subject to the corrected MTD statutory projection.
 
-### 5.5 What is not yet established
+The SA wrappers no longer represent supported product variants and are candidates for retirement.
 
-The evidence does not establish an approved, complete mapping matrix. In particular, it does not prove:
+### 5.5 Existing Validation
 
-- that every statutory tag should be mapped;
-- that a similar name means equivalent accounting semantics;
-- that MIN and STD should map the same statutory fields at different levels of detail;
-- that adjustment, loss, allowance, date, or derived tags have legitimate sources in the current Category Tree;
-- that `Cash.proc_TaxTagMapValidate` alone detects completeness, double counting, or semantic errors;
-- that all dedicated tag seeds and `hmrc_mtd` model properties remain perfectly aligned in the live repositories.
+`Cash.proc_TaxTagMapValidate` provides structural validation of configured Tax Tag mappings.
 
-These are questions for reconnaissance and review, not assumptions for implementation.
+Existing reconnaissance established that it does not by itself prove:
 
-## 6. Required end state
+- statutory completeness;
+- semantic correctness;
+- cross-tag overlap;
+- absence of double counting through category ancestry;
+- appropriate treatment of required versus optional values;
+- correct derivation semantics;
+- conformity with current HMRC contracts.
 
-The completed design shall observe this composition model:
+Passing this procedure is therefore necessary where applicable but not sufficient for acceptance.
 
-1. The MIN and STD accounting templates create only the accounting environment appropriate to their variant.
-2. The dedicated MTD and SA procedures create only their respective tax sources and canonical tag vocabularies.
-3. Each wrapper composes exactly one accounting template with exactly one tax regime.
-4. Variant-specific mappings are owned by the wrapper because the wrapper is the point at which an accounting model and a statutory vocabulary are combined.
-5. Validation runs only after the relevant tax source, tags, and approved mappings all exist.
+---
 
-The required wrapper outcomes are:
+## 6. Current MTD Statutory Direction
 
-| Wrapper | Accounting template | Tax procedure | Mapping scope |
-|---|---|---|---|
-| MIN MTD | MIN | MTD | Approved mappings supported by the MIN classification model |
-| MIN SA | MIN | SA | Approved mappings supported by the MIN classification model |
-| STD MTD | STD | MTD | Approved mappings supported by the STD classification model, including valid inherited MIN coverage |
-| STD SA | STD | SA | Approved mappings supported by the STD classification model, including valid inherited MIN coverage |
+### 6.1 Quarterly Updates
 
-“Inherited MIN coverage” describes semantic reuse, not a requirement to duplicate or call another wrapper. Each wrapper must remain a coherent entry point and must not initialise an accounting template or tax vocabulary more than once.
+The current MTD Income Tax model requires cumulative quarterly reporting of self-employment accounting information from the start of the tax year to the end of the relevant update period.
 
-The accounting templates shall contain no creation of Self Assessment tax sources, tax tags, tax-tag mappings, or validation calls. The dedicated tax procedures shall contain no mappings whose validity depends on choosing MIN or STD.
+The core statutory accounting concepts comprise two income totals and thirteen expense totals.
 
-## 7. Mapping policy
+The SQL projection must support these concepts where the configured accounting model can supply them deterministically.
 
-### 7.1 Mapping is an accounting decision
+The existence of additional optional properties in an HMRC API request schema does not automatically create additional mandatory Tax Tags.
 
-Mappings determine the statutory meaning of operational values. They must be proposed from evidence and approved before insertion. Implementation must never infer a mapping solely from similar labels, an obsolete mapping, or apparent convenience.
+The Tax Tag model must distinguish between:
 
-For every tag in each of the three sources, the mapping analysis shall record:
+- statutory accounting information required from Trade Control;
+- optional information that Trade Control can legitimately supply;
+- information supplied elsewhere by workflow context;
+- information derived by Objective 3;
+- information not supported by the configured accounting model.
 
-- tax source code;
-- tag code and description;
-- tag class and whether it is raw, contextual, adjustment, or derived;
+### 6.2 Annual and Finalisation Information
+
+Current MTD Income Tax finalisation is not an EOPS workflow.
+
+Annual self-employment information may nevertheless require statutory concepts including adjustments and allowances.
+
+Losses are governed separately and must not remain embedded in an EOPS model merely because the historical implementation placed them there.
+
+The SQL projection must therefore model the current statutory concepts required from Trade Control without reproducing obsolete filing-stage terminology.
+
+### 6.3 Final Declaration and Personal Tax Calculation
+
+Trade Control's SQL accounting layer does not calculate the individual's definitive Income Tax liability.
+
+It provides the deterministic business accounting and statutory business information required by the MTD process.
+
+The definitive personal tax calculation may depend upon information outside the Business Node.
+
+Where an authoritative liability becomes available through the submission process, it may subsequently be reconciled with Trade Control's estimated tax provision through the existing period-adjustment mechanism.
+
+That liability-feedback mechanism belongs to later Tax Hub workflow integration and is not a Tax Tag mapping responsibility.
+
+---
+
+## 7. Required End State
+
+The completed SQL Node design shall observe the following composition model.
+
+### 7.1 Accounting Variants
+
+MIN and STD remain alternative accounting classifications.
+
+They remain tax-neutral.
+
+### 7.2 Supported Sole Trader Submission Variant
+
+MTD Income Tax is the only supported Sole Trader Self Assessment submission architecture.
+
+The supported bootstrap compositions are therefore:
+
+| Wrapper | Accounting template | Tax projection |
+|---|---|---|
+| MIN MTD | MIN | Current MTD Income Tax statutory projection |
+| STD MTD | STD | Current MTD Income Tax statutory projection |
+
+Legacy MIN SA and STD SA are not supported end-state variants.
+
+### 7.3 Tax Source Ownership
+
+Dedicated tax-seeding logic creates only Tax Sources and Tax Tags that represent the approved current MTD statutory projection.
+
+It shall not contain variant-dependent mappings whose correctness depends upon choosing MIN or STD.
+
+### 7.4 Mapping Ownership
+
+Variant-dependent mappings belong at the composition boundary where an accounting variant and the statutory projection meet.
+
+The MIN MTD and STD MTD wrappers are therefore responsible for installing only their approved mappings after both accounting classifications and Tax Tags exist.
+
+### 7.5 Validation Position
+
+Validation occurs after:
+
+1. accounting classifications exist;
+2. the approved Tax Source and Tax Tag vocabulary exists;
+3. the approved mappings have been installed.
+
+### 7.6 Retirement
+
+The required end state contains no live Sole Trader submission dependency upon:
+
+- SA100;
+- SA103F;
+- `UK-SA-SE-RETURN`;
+- MIN SA wrapper;
+- STD SA wrapper;
+- the dedicated legacy SA tax-seeding procedure;
+- EOPS as an MTD filing source;
+- legacy EOPS-specific workflow assumptions.
+
+Removal must be evidence-led.
+
+A reconnaissance phase must identify every dependency before deletion is authorised.
+
+This retirement applies to the Sole Trader Self Assessment path only.
+
+It must not be generalised into removal of XML, RIM, iXBRL, IRmark, or other legacy transport machinery required by unrelated current statutory regimes such as Corporation Tax.
+
+---
+
+## 8. Tax Tag and Mapping Policy
+
+### 8.1 Tax Tags Are a Statutory Projection
+
+Tax Tags form a statutory projection over Trade Control accounting classifications.
+
+They are not the Category Tree itself and they are not necessarily one-to-one HMRC wire properties.
+
+A business may use MIN, STD, or future custom classifications.
+
+Support for a statutory concept depends upon whether those classifications provide a deterministic source.
+
+### 8.2 Mapping Is an Accounting Decision
+
+Mappings determine the statutory meaning assigned to operational values.
+
+They must be proposed from evidence and approved before insertion.
+
+A mapping must never be inferred solely from:
+
+- similar names;
+- historical mappings;
+- current SQL seed names;
+- current `hmrc_mtd` property names;
+- apparent convenience.
+
+### 8.3 Mapping Matrix
+
+For every proposed current MTD Tax Tag, the mapping analysis shall record:
+
+- Tax Source;
+- Tax Tag code;
+- statutory description;
+- statutory provenance;
+- classification as required, optional, contextual, adjustment, allowance, derived, externally supplied, or unsupported;
 - MIN disposition;
 - STD disposition;
-- proposed source type: CategoryCode, CashCode, derived elsewhere, contextual input, or unmapped;
-- proposed source code, where applicable;
+- proposed source type;
+- proposed CategoryCode or CashCode where applicable;
 - accounting rationale;
 - roll-up and double-counting assessment;
+- Objective 3 contract relationship where known;
 - evidence reference;
 - confidence and unresolved questions;
 - explicit review decision.
 
-### 7.2 Category versus cash-code mappings
+### 8.4 CategoryCode Versus CashCode
 
-A CategoryCode is appropriate only when the complete category total has the same statutory meaning as the tag. A CashCode is appropriate when the statutory field requires a narrower amount than its containing category supplies.
+A CategoryCode is appropriate only where the complete category total has the same statutory meaning as the Tax Tag.
 
-Preference for a category or cash code must be driven by semantics, not by a general hierarchy rule. For example, STD-specific expense cash codes may legitimately separate professional fees or loan interest from a broader administrative or finance category. Conversely, mapping all of `CT-OVERHD` to one tag while mapping descendants to other tags would require proof that the extraction and aggregation rules prevent duplication.
+A CashCode is appropriate where the statutory concept requires a narrower amount that can be deterministically identified from a cash classification.
 
-### 7.3 Roll-ups and double counting
+The choice must be driven by semantics rather than a general preference for either level.
 
-Before approving any mapping, the analysis must trace the relevant `Cash.tbCategoryTotal` ancestry and the cash codes assigned beneath each category.
+### 8.5 Roll-Ups and Double Counting
 
-The matrix must identify overlapping mappings within a tax source. No set of additive statutory fields may receive both a parent total and its included child values unless the target model explicitly requires that relationship and the payload builder treats the parent as non-additive or derived.
+Before approving a mapping, the analysis must trace relevant category ancestry and the Cash Codes allocated beneath it.
 
-MIN-to-STD differences must also be explicit. A coarse MIN classification may support fewer detailed fields than STD. The implementation must not manufacture precision by splitting a broad MIN total without a deterministic source.
+No additive statutory projection may consume both a parent total and amounts already included beneath that parent unless the target semantics explicitly require the relationship and aggregation treats the parent appropriately.
 
-### 7.4 Unmapped, contextual, and derived tags
+MIN-to-STD differences must be explicit.
 
-Unmapped is a valid and sometimes required result. Tags representing basis-period dates, transitional adjustments, losses, private-use adjustments, capital allowances, or other values outside the Category Tree must remain unmapped unless a verified operational source exists.
+STD detail must not be retrospectively invented for MIN.
+
+### 8.6 Unsupported, Contextual and Derived Values
+
+Unmapped is a legitimate result.
 
 The matrix must distinguish:
 
-- genuinely unsupported values;
-- values supplied by user or workflow context;
-- values calculated by an existing authoritative service;
-- derived totals that should be calculated from mapped components;
-- optional fields that may correctly be absent.
+- genuinely unsupported statutory concepts;
+- workflow or user-supplied context;
+- values supplied from another authoritative subsystem;
+- statutory adjustments;
+- allowances;
+- derived totals;
+- externally calculated values;
+- optional values that may legitimately be absent.
 
-A derived tag must not be mapped to an accounting total merely to make validation appear complete. Likewise, depreciation and capital allowances must not be treated as interchangeable without explicit accounting approval.
+A derived value must not be mapped to an accounting total merely to achieve apparent completeness.
 
-### 7.5 Cross-regime reuse
+Accounting depreciation and statutory capital allowances must not be treated as interchangeable.
 
-MTD QU, MTD EOPS, and SA103F may share concepts, but mappings shall be approved per tax source and tag code. A mapping may be reused only after confirming equivalent semantics in both statutory models.
+### 8.7 Historical Mapping Evidence
 
-Historical mappings in MIN section 10 and STD section 7 may be cited as evidence of earlier intent. They have no presumptive authority.
+Historical mappings may be examined to understand prior intent.
 
-### 7.6 Validation semantics
+They have no presumptive authority.
 
-`Cash.proc_TaxTagMapValidate` shall be invoked for every configured source after mappings have been inserted. Its actual guarantees must be inspected and documented.
+Every retained mapping must survive the current semantic and statutory review independently.
 
-Passing that procedure is necessary but not sufficient. Acceptance also requires checks for canonical tag existence, valid CategoryCode/CashCode references, duplicate mappings, overlap through category roll-ups, expected unmapped tags, and numerical traceability using representative data.
+---
 
-## 8. Bounded delivery phases
+## 9. Bounded Delivery Phases
 
-Each phase is separately reviewable. A later phase must not be folded into an earlier one merely because the files are already open.
+Phases 1 and 2 are historical completed phases described in section 4.
 
-### Phase 0 — Live-state verification
+Work under Revision 3 begins with Phase 3.
 
-Read-only reconnaissance shall:
+A later phase must not be folded into an earlier phase merely because relevant files are already open.
 
-- begin with the relevant live files identified in the Appendix of `session-brief.md`, treating that Appendix as an entry map rather than a limit;
-- follow dependencies and references anywhere in the complete `tradecontrol.web` checkout, including populated submodules, as necessary to establish the implementation contracts;
-- confirm all procedure signatures and the removal of `@IsMTD`;
-- confirm the four wrapper call graphs;
-- inventory all three tax-source tag sets;
-- compare those inventories with the live `hmrc_mtd` models and builders;
-- inspect the tax mapping table constraints and validation procedure;
-- trace the MIN and STD category/cash-code hierarchies;
-- identify existing automated or repeatable bootstrap tests and follow any other repository trail relevant to the findings.
+### Phase 3 — Contract-Aligned MTD Reconnaissance and Proposal
 
-Deliverable: an evidence report listing confirmed facts, discrepancies, and open questions. No edits.
+Read-only reconnaissance shall establish the exact difference between the live SQL implementation and the revised MTD-only architecture.
 
-Gate: review confirms that this specification still matches the live repositories or approves amendments.
+It shall:
 
-### Phase 1 — Structural separation
+- confirm the current MIN and STD accounting-template state;
+- confirm the current four wrapper call graphs and transaction boundaries;
+- inventory all MTD and SA Tax Sources and Tax Tags;
+- locate every reference to the legacy SA procedure, SA wrappers, `UK-SA-SE-RETURN`, SA100, and SA103F;
+- locate every EOPS source, tag, builder, test, comment, and dependency relevant to SQL Node;
+- inspect the current MTD Quarterly Update vocabulary;
+- reconcile proposed statutory concepts against the current authoritative Objective 3 HMRC contract evidence;
+- distinguish the core quarterly accounting totals from additional optional API properties;
+- identify current annual adjustment and allowance concepts that legitimately require Trade Control projection;
+- identify loss information that belongs to the current losses architecture rather than EOPS;
+- trace MIN and STD CategoryCode/CashCode coverage for every proposed Tax Tag;
+- inspect `Cash.proc_TaxTagMapValidate` and document precisely what it does and does not prove;
+- identify all repeatable bootstrap or integration-test facilities;
+- identify any dependency that would make retirement of the SA or EOPS paths unsafe.
 
-After approval, remove obsolete Self Assessment tax-source, tag, mapping, and validation material from the MIN and STD accounting templates. Correct misleading comments associated with the removed material. Preserve all unrelated accounting behaviour and transaction/error-handling conventions.
+The deliverable shall contain:
 
-Deliverable: a mechanical structural change only. No new mappings and no speculative redesign.
+1. current-state evidence;
+2. proposed current MTD Tax Source and Tax Tag vocabulary;
+3. MIN and STD mapping matrices;
+4. explicit retirement list;
+5. dependency and issue log;
+6. validation proposal;
+7. unresolved questions.
 
-Gate: review of the focused diff and successful creation of the tax-neutral MIN and STD accounting environments.
+No SQL or C# edits are authorised in Phase 3.
 
-### Phase 2 — Wrapper composition
+**Gate:** explicit human approval of the Tax Source vocabulary, Tax Tags, mappings, retirement list, and any prerequisite accounting change.
 
-Update each wrapper so that it calls its accounting template and the matching dedicated tax procedure exactly once, in the order required for mappings to reference both accounting classifications and tax tags. Establish the intended validation position without adding unapproved mappings.
+### Phase 4 — Structural Retirement and Approved Vocabulary
 
-Transaction and failure semantics must be investigated before editing. The implementation must not assume that nested procedure transactions and caught errors provide atomic wrapper behaviour.
+After Phase 3 approval:
 
-Deliverable: four correctly composed wrappers with no mapping decisions beyond approved structural scaffolding.
+- retire the legacy SA bootstrap path from SQL Node;
+- retire EOPS as an MTD Tax Source;
+- remove obsolete Tax Tags and stale references within the authorised SQL scope;
+- establish only the approved current MTD Tax Sources and Tax Tags;
+- preserve MIN and STD accounting behaviour;
+- preserve the MTD wrapper transaction/composition behaviour except where an explicitly approved structural change requires otherwise.
 
-Gate: each wrapper independently produces only its intended accounting variant and tax-source vocabulary, with no cross-regime leakage or duplicate initialisation.
+No unapproved mappings or accounting classifications may be introduced.
 
-### Phase 3 — Mapping reconnaissance and proposal
+**Deliverable:** focused SQL diff corresponding to the approved structural retirement and vocabulary proposal.
 
-Produce the complete mapping matrix defined in section 7 for:
+**Gate:** review confirms that only supported MTD statutory structures remain and unrelated accounting behaviour is unchanged.
 
-- MIN MTD QU;
-- MIN MTD EOPS;
-- MIN SA103F;
-- STD MTD QU;
-- STD MTD EOPS;
-- STD SA103F.
+### Phase 5 — Approved Mapping Implementation
 
-Where several tags compete for a broad accounting category, show the alternatives and their numerical consequences. Identify schema or classification gaps rather than silently extending the accounting model.
+Install only the mappings explicitly approved in Phase 3.
 
-Deliverable: mapping matrix and issue log. No SQL mapping edits.
+Mappings must be inserted at the approved composition boundary.
 
-Gate: explicit human approval of each proposed mapping, each intentional unmapped disposition, and any prerequisite accounting-model change.
+Do not add Categories, Cash Codes, Tax Sources, or Tax Tags except where separately authorised as an approved prerequisite.
 
-### Phase 4 — Approved mapping implementation
+Invoke structural validation after the complete approved mapping set exists.
 
-Implement only approved mappings in the appropriate wrappers. Do not add tags, categories, or cash codes unless they were separately approved as prerequisites. Ensure mapping insertion is deterministic and compatible with the bootstrap's expected rerun behaviour.
+**Deliverable:** reviewed SQL changes corresponding one-for-one with the approved mapping matrix.
 
-Invoke validation for the source or sources configured by each wrapper after mapping insertion.
+**Gate:** structural validation passes and the live mappings reconcile exactly to the approved matrix without undocumented exceptions.
 
-Deliverable: reviewed SQL changes corresponding one-for-one with the approved matrix.
+### Phase 6 — Variant and Numerical Validation
 
-Gate: structural validation passes and the live mappings can be reconciled back to the approved matrix without undocumented exceptions.
+Exercise MIN MTD and STD MTD independently in isolated, repeatable test databases where available.
 
-### Phase 5 — Variant and reconciliation validation
+Verify:
 
-Exercise all four wrappers in isolated, repeatable test databases. Verify object creation, tag inventories, mapping integrity, idempotency expectations, transaction behaviour, and representative numerical extraction.
+- object creation;
+- Tax Source and Tax Tag inventories;
+- absence of retired SA/EOPS structures;
+- mapping integrity;
+- rerun/idempotency behaviour;
+- atomic failure behaviour;
+- category roll-up behaviour;
+- absence of double counting;
+- representative numerical extraction;
+- expected unsupported or absent values;
+- traceability from Tax Tag to CategoryCode/CashCode and underlying operational classification.
 
-Generate internal raw tag-set test payloads through the existing Objective 2 path where available. These are test-harness payloads, not HMRC submissions.
+Generate internal Objective 2 test-harness projections where available.
 
-Deliverable: validation report containing commands or test cases used, results for every wrapper/source combination, expected unmapped fields, and any residual limitations.
+These are internal statutory projections, not HMRC submissions.
 
-Gate: all acceptance criteria below are met or each exception is explicitly accepted.
+**Deliverable:** validation report containing the commands or test cases used, expected values, actual results, reconciliation evidence, known limitations, and any accepted unmapped statutory concepts.
 
-### Phase 6 — Repository integration
+**Gate:** all acceptance criteria are satisfied or every exception is explicitly reviewed and accepted.
 
-Only after the SQL Node work is approved should repository integration be considered. Commit creation in `sqlnode`, advancement of the `src/sqlnode` pointer in `tradecontrol.web`, and any coordinated `hmrc_mtd` versioning are distinct review actions.
+### Phase 7 — Repository Integration
 
-Deliverable: an integration proposal identifying exact repositories and revisions. No implicit pointer update.
+Only after SQL Node implementation has been approved may repository integration be considered.
 
-## 9. Acceptance criteria
+Commit creation within `sqlnode`, advancement of the `src/sqlnode` submodule pointer, coordinated `hmrc_mtd` work, and superproject integration are separate actions.
 
-### 9.1 Structural
+**Deliverable:** integration proposal identifying exact repositories and revisions.
 
-- MIN and STD accounting templates contain no Self Assessment tax sources, tax tags, mappings, or tax-tag validation calls.
-- The MTD procedure defines only `UK-ITSA-SE-QU` and `UK-ITSA-SE-EOPS` and their canonical vocabularies.
-- The SA procedure defines only `UK-SA-SE-RETURN` and its canonical vocabulary.
-- Every wrapper calls exactly one accounting template and exactly one matching tax procedure.
-- MTD wrappers do not create SA tags; SA wrappers do not create MTD tags.
-- No obsolete `@IsMTD` parameter or forwarding argument is reintroduced.
-- Variant-dependent mappings reside in wrappers, not in accounting templates or variant-neutral tax procedures.
+No implicit commits or pointer advancement are authorised.
 
-### 9.2 Mapping integrity
+---
+
+## 10. Acceptance Criteria
+
+### 10.1 Product Scope
+
+- Sole Trader Self Assessment SQL support is MTD Income Tax only.
+- No supported SQL bootstrap variant depends upon SA100 or SA103F.
+- EOPS is not represented as a current MTD filing stage.
+- Retirement of legacy Sole Trader submission code has not removed transport machinery required by other statutory regimes.
+
+### 10.2 Structural
+
+- MIN and STD accounting templates remain tax-neutral.
+- MIN MTD and STD MTD each compose exactly one accounting template with the approved current MTD tax projection.
+- Legacy SA wrappers and their dedicated tax procedure are absent from the supported bootstrap architecture.
+- The MTD Tax Source/Tag vocabulary contains only approved current statutory concepts.
+- Variant-dependent mappings do not reside in the accounting templates or variant-neutral tax-seeding logic.
+- No obsolete `@IsMTD` mechanism is reintroduced.
+
+### 10.3 Mapping Integrity
 
 - Every implemented mapping appears in the approved matrix.
-- Every mapping references an existing tag and exactly one valid operational source type.
-- No mapping uses an obsolete or near-match tag name.
-- Category roll-ups have been checked for overlap and double counting.
-- MIN mappings do not depend on STD-only categories or cash codes.
-- STD mappings use detailed sources only where that detail is semantically correct and deterministic.
-- Unsupported, contextual, optional, and derived tags are explicitly classified rather than guessed.
-- Validation passes for every configured tax source, and the limits of validation are documented.
+- Every mapped Tax Tag references a valid operational source.
+- No mapping relies solely upon label similarity or historical precedent.
+- Category roll-ups have been examined for overlap and double counting.
+- MIN mappings do not depend on STD-only classification.
+- STD detail is used only where semantically correct and deterministic.
+- Required, optional, contextual, adjustment, allowance, derived, externally supplied, and unsupported concepts are distinguished explicitly.
+- Artificial zero values are not used to conceal absence or unsupported information.
 
-### 9.3 Behavioural preservation
+### 10.4 Behavioural Preservation
 
-- Existing non-tax accounting bootstrap behaviour remains unchanged for both MIN and STD.
-- Existing accounting calculations remain the source of reported values.
-- VAT, owner capital, account creation, tax-year alignment, and other unrelated template behaviour are not altered by this work.
-- Failure handling does not leave a partially configured accounting/tax environment under the tested execution paths.
+- Existing non-tax MIN and STD accounting behaviour remains unchanged.
+- Existing accounting calculations remain the source of operational financial values.
+- VAT, owner capital, account creation, tax-year alignment, and unrelated accounting behaviour are unaffected.
+- Wrapper failure handling does not leave a partially configured accounting/tax environment under tested execution paths.
 
-### 9.4 Reconciliation and payload readiness
+### 10.5 Reconciliation and Projection Readiness
 
-- Representative mapped values can be traced from raw tag output to CategoryCode or CashCode and onward to the underlying operational classification.
-- Aggregate raw tag values reconcile with their approved accounting sources.
-- Expected unmapped fields are visible and explained.
-- All four wrapper variants can generate the intended internal tag-set shape without attempting HMRC transport.
+- Representative Tax Tag values can be traced back to their CategoryCode or CashCode and onward to underlying operational classification.
+- Aggregated statutory values reconcile with approved accounting sources.
+- Unsupported or absent statutory concepts are visible and explained.
+- MIN MTD and STD MTD can produce their approved internal Objective 2 statutory projection without invoking HMRC transport.
+- Objective 2 projections contain sufficient truthful information for Objective 3 to build supported HMRC contracts without inventing missing accounting detail.
 
-### 9.5 Repository discipline
+### 10.6 Repository Discipline
 
-- Changes are confined to the approved `sqlnode` scope unless a separate cross-repository change is authorised.
+- Changes remain within authorised repository scope.
 - No unrelated user changes are overwritten.
-- No submodule pointer changes or commits occur without explicit instruction.
-- The final handoff identifies changes by repository, not merely by paths within the superproject.
+- No commits, pushes, pull requests, releases, or submodule pointer updates occur without explicit instruction.
+- Final handoff identifies changes by repository and revision.
 
-## 10. Out of scope
+---
+
+## 11. Out of Scope
 
 This specification does not authorise:
 
-- changes to HMRC endpoints, JSON/XML payload specifications, serializers, or transport;
-- OAuth, fraud-prevention headers, Government Gateway envelopes, IRmark generation, or filing;
-- Tax Hub UI or workflow changes;
-- changes to the underlying accounting calculations;
-- invention of new accounting classifications to obtain apparent mapping completeness;
-- company-tax, VAT, or non-self-employment SA schedule work;
-- automatic commits, pushes, pull requests, releases, or submodule pointer updates.
+- legacy SA100/SA103F submission support;
+- definitive personal Income Tax calculation;
+- HMRC endpoint implementation;
+- exact HMRC JSON/XML DTO implementation;
+- serializers;
+- OAuth;
+- fraud-prevention headers;
+- Government Gateway transport;
+- retry policy;
+- filing workflow;
+- Tax Hub UI changes;
+- liability-feedback or period-adjustment workflow implementation;
+- changes to underlying accounting calculations;
+- invention of accounting classifications merely to achieve statutory completeness;
+- VAT or Corporation Tax work;
+- removal of XML/RIM/iXBRL/IRmark machinery required by other statutory regimes;
+- autonomous commits, pushes, releases, pull requests, or submodule pointer updates.
 
-## 11. Review decisions required before implementation
+---
 
-Review should resolve the following:
+## 12. Review Decisions Required Before Phase 4
 
-1. Confirm wrapper ownership of variant-specific mappings, with dedicated tax procedures limited to source/tag vocabulary.
-2. Confirm whether validation belongs in wrappers after mappings, or whether the validation calls in dedicated tax procedures should be moved or otherwise reorganised.
-3. Confirm the canonical source of truth when SQL tag seeds and `hmrc_mtd` model properties disagree.
-4. Approve the format and required evidence fields of the Phase 3 mapping matrix.
-5. Decide whether any mapping incompleteness is acceptable for Objective 2 and how it should surface as PASS, WARN, or FAIL.
-6. Confirm the required bootstrap rerun/idempotency behaviour and the transaction boundary expected across composed procedures.
+Phase 3 must produce sufficient evidence for explicit approval of:
 
-Until these decisions and the Phase 3 matrix are approved, the work remains specification and reconnaissance only.
+1. the current MTD Tax Source structure;
+2. the canonical Objective 2 Tax Tag vocabulary;
+3. the distinction between core quarterly accounting totals and optional HMRC API properties;
+4. the current treatment of annual adjustments and allowances;
+5. the treatment and location of losses;
+6. the MIN mapping matrix;
+7. the STD mapping matrix;
+8. every intentional unsupported or unmapped statutory concept;
+9. the complete SA100/SA103F retirement set;
+10. the complete EOPS retirement/replacement set;
+11. the required validation behaviour;
+12. bootstrap rerun/idempotency expectations;
+13. any requirement that genuinely crosses the `sqlnode` repository boundary.
 
-## 12. Definition of completion
+No Phase 4 implementation may begin until these decisions are approved.
 
-This implementation is complete when the four Sole Trader wrappers deterministically compose the correct accounting variant with the correct Self Assessment vocabulary; all and only approved mappings are installed at the composition boundary; mapping and numerical validation demonstrate traceability without double counting; internal Objective 2 tag-set payloads can be produced for the supported variants; and repository boundaries have been preserved.
+---
 
-Completion of this SQL Node work does not imply completion of HMRC payload specification, transport, or Tax Hub filing workflow.
+## 13. Definition of Completion
+
+The Self Assessment SQL Node work is complete when:
+
+- Sole Trader Self Assessment is represented exclusively through the supported current MTD Income Tax architecture;
+- MIN and STD accounting templates remain unchanged in their accounting purpose and tax-neutral in their construction;
+- the current statutory Tax Source and Tax Tag projection has been established from authoritative requirements rather than historical implementation;
+- every implemented mapping is deterministic, approved, traceable, and free from unintended double counting;
+- unsupported or externally supplied information is represented explicitly rather than guessed;
+- legacy SA100/SA103F and EOPS filing structures no longer participate in the supported Sole Trader bootstrap;
+- MIN MTD and STD MTD produce reconciled internal Objective 2 statutory projections;
+- repository boundaries and approval controls have been preserved.
+
+Completion of this SQL Node work does not imply completion of HMRC wire contracts, HMRC transport, personal tax calculation, Tax Hub filing workflow, or the wider Tax Hub Programme.
