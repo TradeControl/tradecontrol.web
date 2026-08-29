@@ -1,247 +1,153 @@
-# Tax Hub — Session Brief
+# Tax Hub Session Brief
 
-## Phase 3: Contract-Aligned MTD Reconnaissance and Proposal
+## Phase 4D — Sole Trader Cumulative Projection Foundation
 
 ### Purpose
 
-Perform reconnaissance of the current Sole Trader MTD implementation across the live SQL Node and `hmrc_mtd` codebase.
+Implement the approved SQL and Objective 2 foundation for the Sole Trader MTD cumulative projection described by the Phase 4C findings.
 
-The purpose of this session is to establish the evidence required for the next implementation phase.
+This is the first constructive implementation after reconnaissance.
 
-This is a reconnaissance and proposal session only.
+Do not implement HMRC transport.
 
-**Do not implement changes.**
+## Approved decisions
 
----
+The following Phase 4C proposals are approved for this phase:
 
-## Governing Documents
+- use `UK-ITSA-SE-CUM` as the cumulative Sole Trader Tax Source;
+- use the proposed sixteen-tag Objective 2 vocabulary:
+  - `turnover`
+  - `otherBusinessIncome`
+  - `consolidatedExpenses`
+  - the thirteen directed detailed expense tags;
+- MIN supports the consolidated-expenses pattern;
+- STD continues to inherit MIN's accounting base and supports the detailed-expenses pattern;
+- add the proposed `CT-CUMEXP` structural total to MIN;
+- refine STD using the proposed detailed accounting categories and Cash Codes from Phase 4C;
+- disable the ambiguous STD posting choices `CC-DIRCT` and `CC-ADMIN` once their replacements are installed;
+- retain/re-enable `CC-EMPNI` as a Sole Trader staff-cost code;
+- Tax Tag statutory orientation must be explicit metadata;
+- effective polarity comes from contributing leaf Cash Codes;
+- Income statutory amount retains Trade Control economic sign;
+- Expense statutory amount is Trade Control economic amount multiplied by `-1`;
+- `ABS()` / `Math.Abs()` is not valid statutory conversion;
+- MIN and STD mappings are installed by their respective MTD wrappers;
+- consolidated and detailed expense mappings are mutually exclusive;
+- submission capability is determined by current mappings and validation, not bootstrap identity;
+- no quarterly disallowable-expense taxonomy is to be introduced.
 
-Read the current Tax Hub documentation before beginning, in particular:
+For MIN consolidated reporting, `CT-CUMEXP` is an accounting/reporting roll-up. Keep owner capital/drawings, tax, asset movements, transfers and personal/non-business movements outside it. Do not create parallel allowable/disallowable Category Trees for quarterly reporting.
 
-- `docs/projects/Tax Hub/specs/self-assessment-sql-node-spec.md`
-- `docs/projects/Tax Hub/specs/sole-trader-field-sets.md`
-- `docs/projects/Tax Hub/specs/tax-hub-test-payloads.md`
-- the current Tax Hub programme specification
-- `docs/projects/Tax Hub/findings.md`
-- `docs/projects/Tax Hub/change-log.md`
+## Financial-period rule
 
-Treat the current governing specifications as authoritative over superseded implementation plans and historical code.
+Trade Control financial periods are configurable metadata over dated economic activity.
 
-For external HMRC contracts, current authoritative HMRC specifications take precedence over historical Trade Control implementation.
+For Sole Trader MTD, the configured Trade Control financial-year boundary should agree with the HMRC tax-year boundary. Intermediate Trade Control period boundaries may remain operationally flexible.
 
----
+The statutory projection must use explicit start/end dates rather than repurposing the existing discrete-quarter due-date machinery.
 
-## Current Position
+Where relevant, expose enough information for a later UI to warn:
 
-Earlier SQL work completed two valid structural phases:
+> Ensure that the HMRC submission dates agree with the Trade Control Financial Periods. If not transactions may be reported in the wrong years. It will take you 30 seconds to fix.
 
-1. MIN and STD accounting bootstrap procedures were made tax-neutral.
-2. The four then-supported Sole Trader wrappers were changed to compose accounting setup with dedicated tax setup.
+Do not implement Tax Hub UI in this phase.
 
-Subsequent HMRC contract verification and an architectural decision changed the required end state.
+## Implementation
 
-Trade Control now supports **Making Tax Digital for Income Tax only** for Self Assessment submission.
+Implement the following bounded work:
 
-Legacy SA100/SA103F submission is not supported.
+1. Replace the historical `UK-ITSA-SE-QU` Tax Source/tag seed with `UK-ITSA-SE-CUM` and the approved sixteen-tag manifest.
 
-The former EOPS filing stage is not part of the current MTD Income Tax architecture.
+2. Add explicit statutory orientation for cumulative Tax Tags.
 
-The existing implementation therefore contains a mixture of:
+3. Implement the approved MIN `CT-CUMEXP` accounting structure.
 
-1. current or potentially reusable HMRC contract code;
-2. Trade Control statutory-projection code;
-3. Test Harness/development infrastructure;
-4. obsolete or legacy implementation.
+4. Implement the Phase 4C STD detailed Category/CashCode structure, including the approved moves, additions and disabling of ambiguous coarse posting codes.
 
-Do not assume that an existing class, Tax Source, Tax Tag, endpoint, payload builder or service represents a current HMRC contract merely because it exists.
+5. Install wrapper-owned mappings:
+   - MIN MTD: income plus `consolidatedExpenses`;
+   - STD MTD: income plus all thirteen detailed expense mappings and no consolidated mapping.
 
----
+6. Propagate existing leaf `CashPolarityCode` through a reusable effective Tax Tag/CashCode projection without a second category traversal.
 
-## Authorised Reconnaissance
+7. Extend/add validation so that:
+   - mappings resolve to enabled non-neutral leaves;
+   - contributor polarity matches Tax Tag orientation;
+   - parent/descendant or multiple-root duplication fails;
+   - a CashCode cannot contribute to mutually exclusive cumulative tags;
+   - consolidated and detailed patterns cannot coexist;
+   - detailed submission readiness requires all thirteen directed expense tags mapped;
+   - consolidated readiness requires the consolidated mapping and no detailed mappings;
+   - a supported genuine zero remains distinct from an unmapped/unsupported concept;
+   - customised Category Trees are assessed from effective mappings rather than bootstrap identity.
 
-### 1. SQL Node
+8. Add a parameterised cumulative Objective 2 SQL interface taking explicit start/end dates.
 
-Inspect the live Sole Trader tax bootstrap implementation in `src/sqlnode`.
+Do not alter or repurpose `Cash.fnTaxTypeDueDates` or the existing generic discrete-period machinery.
 
-Confirm:
+Use the most direct dated accounting surface that preserves correct boundary semantics. Trade Control period boundaries must not be approximated as calendar months.
 
-- the current MIN and STD accounting templates;
-- the current Sole Trader MTD wrappers;
-- existing Tax Sources;
-- existing Tax Tags;
-- existing Tax Tag mappings;
-- the current validation procedure and its actual guarantees;
-- remaining dependencies on legacy SA100/SA103F or EOPS concepts.
+9. Add repeatable SQL/database fixtures covering:
+   - MIN consolidated projection;
+   - STD detailed projection;
+   - parent/descendant overlap;
+   - cross-tag overlap;
+   - mixed/neutral polarity failure;
+   - ordinary income;
+   - ordinary expense;
+   - expense credit/reversal;
+   - credits exceeding expenditure;
+   - genuine zero versus unsupported/unmapped;
+   - customised submission-capable and non-capable Category Trees;
+   - financial-year boundary/date handling.
 
-Reconcile the existing MTD Tax Tag vocabulary against the current statutory projection requirements in the governing specifications.
+$19. Add or adjust the minimal Objective 2 C# projection model and reader as required to consume the new cumulative projection.
 
-In particular, distinguish:
+Remove `Math.Abs` only as part of this verified replacement path.
 
-- the core cumulative quarterly accounting totals;
-- optional or contextual HMRC API properties;
-- annual adjustments and allowances;
-- losses and loss claims;
-- derived information;
-- external information which Trade Control cannot deterministically obtain from its accounting data.
-
-Do not treat matching field counts as proof of semantic equivalence.
-
----
-
-### 2. `hmrc_mtd`
-
-Inspect the complete current `hmrc_mtd` implementation, including models, services, builders, readers, runners, serializers and supporting infrastructure.
-
-Classify significant components as:
-
-1. current HMRC contract;
-2. Trade Control statutory projection;
-3. Test Harness/development infrastructure;
-4. obsolete/legacy implementation.
-
-Identify code dependent upon:
-
-- legacy SA100/SA103F submission;
-- EOPS as a filing stage;
-- superseded Quarterly Update contracts;
-- superseded Final Declaration contracts;
-- historical obligations, payments, liabilities or other Self Assessment API assumptions.
-
-Do not repair these components during this session.
-
-Where apparently current HMRC contract classes exist, compare them with the governing specifications and current authoritative HMRC contracts rather than accepting their names or namespaces as evidence of correctness.
-
-The Trade Control namespace version `v1_0` is not an HMRC API version.
-
----
-
-### 3. Operational Paths
-
-Trace the existing operational paths through the implementation.
-
-Where applicable, follow:
-
-`SQL/statutory data -> reader -> builder -> runner -> Test Harness`
-
-Establish which existing components actually participate in executable paths and which are disconnected models, historical experiments or unused infrastructure.
-
-Pay particular attention to places where:
-
-- missing statutory values are converted to zero;
-- generic Tax Tag collections are transformed into supposed HMRC payloads;
-- Test Harness structures have become de facto production contracts;
-- Objective 2 statutory projection and Objective 3 HMRC wire contracts are conflated.
-
-The Test Harness is development and diagnostic infrastructure only. It does not define an alternative Tax Hub or HMRC contract.
-
----
-
-### 4. MIN / STD Mapping Feasibility
-
-For both MIN and STD, inspect whether the accounting classifications can deterministically supply the proposed current MTD statutory projection.
-
-Produce a mapping assessment showing, where evidence permits:
-
-- statutory concept;
-- source CategoryCode and/or CashCode;
-- proposed Tax Tag;
-- mapping rationale;
-- whether mapping is deterministic;
-- possible overlap or double counting;
-- required roll-up;
-- unsupported/contextual/derived/external status;
-- unresolved ambiguity.
-
-Do not invent mappings where the accounting model does not contain sufficient information.
-
-Absence of information must remain absence rather than being represented as zero.
-
----
-
-### 5. Retirement Candidates
-
-Identify, but do not remove, implementation made obsolete by the current architecture.
-
-This includes investigation of:
-
-- legacy Sole Trader SA wrappers and tax-seeding procedures;
-- `UK-SA-SE-RETURN`;
-- `UK-ITSA-SE-EOPS`;
-- EOPS payload/build/runner/harness paths;
-- the `SA100` namespace and related Sole Trader XML submission machinery;
-- other classes whose apparent HMRC contracts are no longer current.
-
-Do not remove generic XML, canonicalisation, IRmark, RIM or iXBRL capabilities merely because they occur within historical Self Assessment implementation. Those mechanisms may be required by other tax regimes, particularly Corporation Tax.
-
----
-
-## Required Output
-
-At the end of the session, report:
-
-1. **Current-state evidence**
-   - relevant SQL procedures and call graph;
-   - relevant `hmrc_mtd` operational paths;
-   - significant dependencies and disconnected components.
-
-2. **Component classification**
-   - current HMRC contract;
-   - statutory projection;
-   - Test Harness/development infrastructure;
-   - obsolete/legacy.
-
-3. **Proposed MTD Tax Source and Tax Tag vocabulary**
-   - quarterly projection;
-   - annual/finalisation requirements where currently established;
-   - explicit unresolved areas where the governing material does not yet justify a frozen vocabulary.
-
-4. **MIN mapping assessment**
-
-5. **STD mapping assessment**
-
-6. **Retirement candidate list**
-
-7. **Validation assessment**
-   - what current validation proves;
-   - what it does not prove;
-   - validation required for the proposed end state.
-
-8. **Issue and uncertainty log**
-   - conflicting evidence;
-   - unsupported mappings;
-   - external information requirements;
-   - questions requiring a design or statutory decision.
-
-9. **Proposed bounded implementation sequence**
-   - for review only;
-   - no implementation in this session.
-
-Append durable reconnaissance findings to `findings.md` only where appropriate under the existing documentation rules.
+## Exclusions
+
+Do not implement in this phase:
+
+- Objective 3 HMRC cumulative request DTOs;
+- HMRC JSON serialization;
+- HMRC required-zero/default behaviour;
+- Test Harness cumulative endpoints;
+- Sandbox calls;
+- OAuth, fraud headers or transport;
+- annual adjustments or allowances;
+- losses or finalisation;
+- VAT;
+- Corporation Tax;
+- Tax Hub UI;
+- autonomous source-control operations.
+
+Do not perform deployed-data cleanup/migration unless required to make the source-tree implementation internally consistent. Record any such migration requirement instead.
+
+## Validation
+
+At minimum:
+
+- build the SQL project;
+- build `HMRC_MTD`;
+- execute the new database fixtures where the available environment permits;
+- demonstrate exact MIN and STD mapping inventories;
+- demonstrate polarity conversion numerically;
+- demonstrate consolidated/detailed mutual exclusion;
+- demonstrate customised-tree readiness is mapping-driven;
+- confirm no legacy `UK-ITSA-SE-QU` constructive path remains;
+- confirm no Objective 3 or transport implementation has been introduced.
+
+Append implementation evidence, decisions and any out-of-scope discoveries to `change-log.md`.
 
 Do not rewrite historical findings.
 
----
-
 ## Constraints
 
-- Reconnaissance and proposal only.
-- No production source changes.
-- No SQL implementation changes.
-- No Tax Tag or Tax Source changes.
-- No removal of legacy code.
-- No payload or serializer repairs.
-- No Test Harness redesign.
-- No transport implementation.
-- No commits or pushes.
-- Do not broaden scope into VAT, Corporation Tax, Tax Hub UI or unrelated repository work.
-- Record relevant out-of-scope discoveries rather than fixing them.
+Work may inspect the complete superproject and submodules.
 
----
+Modify only the files required for this bounded implementation.
 
-## Completion Gate
+Do not commit or push.
 
-Phase 3 is complete when the evidence, classification, mapping assessment, retirement candidates and proposed implementation sequence are sufficient for human review.
-
-**Stop at that point.**
-
-Do not begin Phase 4 without explicit approval.
+Stop after Phase 4D implementation and validation.

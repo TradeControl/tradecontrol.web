@@ -156,3 +156,110 @@ The removal of EOPS from the current filing lifecycle makes the existing EOPS Ta
 No retirement, replacement vocabulary, mapping, `hmrc_mtd` refactor, harness refactor, or other implementation change was performed as part of this architectural review.
 
 The next implementation-related stage remains gated by **Phase 3 — Contract-Aligned MTD Reconnaissance and Proposal**.
+
+## 29 August 2026 — Self Assessment Phase 4A: Structural Retirement
+
+### Authorised objective
+
+Remove the Sole Trader SA bootstrap, EOPS bootstrap content, obsolete QU/EOPS harness paths, and the obsolete local Quarterly Update, EOPS and Final Declaration contract interpretations. Preserve the supported MIN/STD MTD wrappers and potentially shared or unverified cross-regime capabilities. Stop before introducing replacement cumulative or annual architecture.
+
+### SQL components retired
+
+- Deleted `App/Stored Procedures/proc_Template_ST_SOLE_CUR_MIN_SA_2026.sql`.
+- Deleted `App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_SA_2026.sql`.
+- Deleted `App/Stored Procedures/proc_Template_ST_SOLE_CUR_TAX_SA_2026.sql`, removing the live bootstrap seed for `UK-SA-SE-RETURN` and its SA100/SA103F tags.
+- Removed all three deleted procedures from `tcNodeDb4.sqlproj`.
+- Removed the `STMIN26-SA` and `STSTD26-SA` registrations, stored-procedure references and SA100/SA103F descriptions from `App.proc_NodeDataInit`.
+- Removed the `UK-ITSA-SE-EOPS` source seed, its 25 tag seeds and its validation call from `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`.
+- Reworded the remaining MTD mapping placeholder so it no longer promises QU/EOPS mappings.
+- Reworded the two live MTD template descriptions so they no longer advertise EOPS or claim completed mappings.
+
+The supported `App.proc_Template_ST_SOLE_CUR_MIN_MTD_2026` and `App.proc_Template_ST_SOLE_CUR_STD_MTD_2026` wrappers were not changed. Each still owns its outer transaction and composes its matching accounting template followed by `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`.
+
+### `hmrc_mtd` components retired
+
+- Deleted the complete obsolete contract folders:
+  - `Hmrc/Sa/v1_0/Submissions/MTDITSA/QuarterlyUpdate`;
+  - `Hmrc/Sa/v1_0/Submissions/MTDITSA/Eops`;
+  - `Hmrc/Sa/v1_0/Submissions/MTDITSA/FinalDeclaration`.
+- Deleted the `MTDITSA/Shared` generic list/category models whose only consumers were those three obsolete interpretations.
+- Deleted `QuHarnessPayloadBuilder`, `EopsHarnessPayloadBuilder`, `QuValidator`, `EopsValidator`, `QuHarnessPayload`, and `EopsHarnessPayload`.
+- Deleted `QuTestController` and `EopsTestController`.
+- Removed `SubmitQu` and `SubmitEops` from `OperationType`, runner construction, validation dispatch and execution dispatch.
+- Removed the corresponding dependency-injection registrations and `.http` requests.
+- Removed the QU and EOPS capability claims from the `hmrc_mtd` README.
+
+### Shared and ambiguous components deliberately retained
+
+- The historical `SA100` schedule, envelope, serializer, canonicalisation and IRmark code remains. Although the Sole Trader SA bootstrap is retired, the session explicitly prohibited deleting generic XML/canonicalisation/IRmark capability merely by association. Its internal dependency cluster and possible cross-regime reuse require a separate decision.
+- `MTDITSA/Obligations`, `MTDITSA/Payments` and `MTDITSA/Liabilities` remain because Phase 3 classified them as unverified rather than positively obsolete. The runner enquiry branches still return not-implemented results.
+- VAT and Micro harness paths, shared SQL readers/mappers, transport placeholders, and all Corporation Tax code remain unchanged.
+- `tcNodeDb4/Scripts/MTDSoleTraderMappingEnquiry.sql` still contains EOPS exploration. It is intentionally retained as the previously classified non-authoritative developer scratch script and is neither built nor an acceptance asset.
+- Archived SQL and historical programme findings retain SA/EOPS references as implementation history.
+
+### Validation performed
+
+- Static searches found no live SQL project or bootstrap reference to the deleted SA wrapper/tax procedures, `UK-SA-SE-RETURN`, or `UK-ITSA-SE-EOPS`. The only non-archived SQL EOPS matches are in the intentionally retained scratch script.
+- Static searches found no surviving QU/EOPS controller, builder, validator, payload, runner operation, dependency-injection registration, `.http` request, or obsolete Quarterly Update/EOPS/Final Declaration endpoint path in live `hmrc_mtd` source.
+- Static wrapper inspection confirmed the MIN and STD MTD call graphs and outer transaction boundaries remain intact.
+- Rebuilt `src/tcNodeDb4/tcNodeDb4.sqlproj` with Visual Studio MSBuild 18, Debug/AnyCPU: success. Existing unrelated `SQL71502` warnings concerning `#DatasetCodes` remain.
+- Built `HMRC_MTD.csproj` with `dotnet build --no-restore`: success, zero warnings and zero errors.
+- Built `HMRC.WebHarness.csproj` with `dotnet build --no-restore`: success, zero warnings and zero errors. An initial parallel build collided on the shared `HMRC_MTD.dll` output; the required sequential rerun succeeded.
+- `git diff --check` completed without whitespace errors; only line-ending normalization warnings were reported.
+
+### Intentionally incomplete baseline
+
+- No cumulative or annual Tax Source, Tax Tag, mapping, DTO, endpoint, serializer, harness endpoint or transport was introduced.
+- The surviving `UK-ITSA-SE-QU` seed remains historical vocabulary pending the separately authorised constructive phase.
+- This source retirement prevents future bootstrap creation of SA/EOPS objects. It does not contain a data migration that deletes already-seeded `App.tbTemplate`, `Cash.tbTaxTagSource`, `Cash.tbTaxTag` or mapping rows from an existing deployed database; deployment cleanup must be designed and authorised with the normal upgrade path.
+- No configured database fixture was available, so wrapper execution and deployed-object cleanup were not tested.
+- Existing `TcBusinessTaxReader` sign handling and generic `TagMapper` zero filling remain because their retained Micro consumer prevents deletion and redesign is outside Phase 4A.
+
+Phase 4A stops at this cleaner, intentionally incomplete baseline. Replacement cumulative and annual implementation has not begun.
+
+## 29 August 2026 — Self Assessment Phase 4D: Cumulative Projection Foundation
+
+### Authorised objective
+
+Implement the approved Sole Trader cumulative SQL projection and the minimum Objective 2 C# consumption boundary. This phase deliberately excludes HMRC request DTOs, serialization, transport, harness endpoints and UI.
+
+### SQL implementation
+
+- Replaced the constructive `UK-ITSA-SE-QU` seed with `UK-ITSA-SE-CUM` and the approved sixteen-tag manifest: two income tags, the consolidated-expense alternative and thirteen directed detailed expense tags.
+- Added nullable `Cash.tbTaxTag.StatutoryPolarityCode`, constrained to Income or Expense and linked to `Cash.tbPolarity`. The cumulative manifest always supplies it explicitly; null remains available for older non-cumulative tag sets whose statutory orientation has not been audited in this phase.
+- Added `CT-CUMEXP` to MIN as a neutral accounting/reporting roll-up of cost of sales, staff costs and overheads. Owner movements, tax and asset movements remain outside it.
+- Re-enabled `CC-EMPNI` for Sole Traders.
+- Reworked STD into the approved detailed expense categories and CashCodes, including the approved code moves. `CC-DIRCT` and `CC-ADMIN` are disabled after their deterministic replacements are installed.
+- MIN MTD now replaces this source's mappings with turnover, other business income and consolidated expenses. STD MTD replaces them with turnover, other business income and all thirteen detailed expense mappings, with no consolidated mapping. Mapping installation remains inside each wrapper's outer transaction.
+- Added `Cash.vwTaxTagCashCode`, a reusable expansion of effective enabled mapping roots to enabled nominal leaf CashCodes. It preserves separate routes so parent/descendant and multiple-root duplication remain detectable and exposes the existing leaf `CashPolarityCode` without another traversal.
+- Extended mapping validation to cover the exact cumulative manifest, empty or invalid mapping roots, non-neutral leaf resolution, statutory-orientation mismatch, duplicate inclusion within a tag, cross-tag CashCode overlap, consolidated/detailed coexistence, both required income mappings and complete thirteen-tag detailed readiness. Validation is based on effective mappings, not bootstrap identifiers.
+- Added `Cash.fnTaxBizCumulative(@TaxSourceCode, @PeriodStart, @PeriodEnd)`. It returns the complete manifest with global validation status, per-tag support status, Trade Control economic amount and statutory amount. Income retains economic sign; Expense multiplies economic sign by `-1`. Unsupported values remain null, while mapped genuine zeros remain supported zeros.
+- The cumulative interface accepts only exact configured boundaries: the start must be the configured April 6 financial-year start and the inclusive end must immediately precede another configured Trade Control period start. It does not use or alter `Cash.fnTaxTypeDueDates`, and it does not assume calendar-month boundaries.
+
+### Objective 2 C# implementation
+
+- Added the minimum cumulative projection/value models and explicit orientation, support and validation enums.
+- Added `TcBusinessTaxReader.ReadCumulativeAsync`, which calls `Cash.fnTaxBizCumulative` with explicit start/end dates and consumes its validated statutory amounts without applying `Math.Abs` or inventing zeros.
+- Kept the older `ReadAsync` absolute-value behaviour isolated for its retained Corporation Tax Micro harness consumers. That method is not used by the Sole Trader cumulative statutory path; changing the unrelated Micro contract was outside Phase 4D.
+
+### Acceptance fixture
+
+- Added `Tests/Phase4D_CumulativeProjection.sql` as a project-listed, repeatable, rollback-only database acceptance fixture rather than extending the non-authoritative scratch enquiry.
+- The fixture checks exact MIN/STD mapping inventories, complete manifest and bootstrap validation, ordinary income, ordinary expense, expense credits/reversals, credits exceeding expenditure, genuine zero versus unsupported, parent/descendant overlap, cross-tag overlap, neutral polarity failure, consolidated/detailed coexistence, mapping-driven customised-tree capability, incomplete customised-tree failure and configured financial-boundary rejection.
+
+### Validation performed
+
+- Rebuilt `src/tcNodeDb4/tcNodeDb4.sqlproj` with Visual Studio MSBuild 18, Debug/AnyCPU: success. The dacpac was produced. Existing unrelated `SQL71502` warnings concerning synthetic-dataset `#DatasetCodes` references remain.
+- Built `HMRC_MTD.csproj` with `dotnet build --no-restore`: success, zero warnings and zero errors.
+- Static inventory inspection confirms MIN has exactly three mapping roots and no detailed mapping; STD has thirteen distinct detailed expense tags (fourteen expense roots because travel has two disjoint roots), two income roots and no consolidated mapping.
+- Static source inspection confirms no constructive `UK-ITSA-SE-QU` path remains. Historical findings and the explicitly non-authoritative `Scripts/MTDSoleTraderMappingEnquiry.sql` retain references as evidence only.
+- Static change inspection confirms Phase 4D added no HMRC request DTO, serializer, endpoint, OAuth, transport, harness endpoint or UI implementation.
+- `git diff --check` reported no whitespace errors; only repository line-ending normalization notices were emitted.
+
+The local SQL Server service was present, but `sqlcmd` could not establish an integrated connection because the installed ODBC client reported an encryption/credential-provider failure. The database fixture was therefore authored and included but could not be executed in the available environment. Its numerical and mutation assertions must be run against freshly bootstrapped MIN and STD MTD nodes when a working database connection is available.
+
+### Deployment note
+
+The source-tree bootstrap no longer constructs `UK-ITSA-SE-QU`. Existing deployed nodes may still contain that historical source and its tag rows. Phase 4D does not delete deployed business data; removal or migration of already-seeded legacy rows remains an explicitly authorised upgrade-path task.
+
+Phase 4D stops at the validated Objective 2 foundation. No Objective 3 or transport implementation has begun.
