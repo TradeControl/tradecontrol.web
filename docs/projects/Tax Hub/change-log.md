@@ -99,3 +99,60 @@ This conclusion follows the live transaction and error-handler structure and the
 - Canonical vocabulary decisions, HMRC contract audit, `src/hmrc_mtd`, WebHarness, DTOs, serializers, and payload handling.
 - Wrapper signatures, accounting argument forwarding, `@RC` handling, and `App.proc_ErrorLog` catches; only the wrapper transaction layer was added.
 - SQL `Scripts` scratch material, unrelated source, submodule pointers, commits, and repository history.
+
+---
+
+## 28 August 2026 — Self Assessment Contract Alignment and Architecture Decision
+
+### Reason for review
+
+Self Assessment SQL Node Phases 1 and 2 were completed and accepted under the then-current architecture.
+
+Before Phase 3 Tax Tag mapping began, the deliberately deferred HMRC contract audit was performed.
+
+The audit established that several historical Trade Control Self Assessment assumptions no longer represented the current MTD Income Tax architecture and that the Test Harness had acquired architectural responsibilities it was never intended to own.
+
+No Phase 1 or Phase 2 implementation is reclassified as erroneous. The required end state changed following subsequent external-contract verification and product decisions.
+
+### Decisions
+
+- Trade Control Sole Trader Self Assessment submission is **MTD Income Tax only**.
+- Legacy SA100 / SA103F submission is outside the supported product scope.
+- EOPS is not a current MTD Income Tax filing stage and will not remain a supported statutory target.
+- Historical SA100, SA103F, EOPS, Tax Tag, C# model, serializer, and harness structures have no continuing authority merely because they already exist.
+- Current authoritative external HMRC specifications govern Objective 3 contracts.
+- Objective 2 owns the Trade Control statutory projection required to truthfully supply those contracts.
+- Objective 3 owns exact HMRC-facing request and response contracts.
+- Objective 4 owns transport and communication mechanics.
+- The Test Harness is development and verification infrastructure outside the production integration architecture.
+- Harness endpoints may observe and exercise Objectives 2, 3, and 4 but do not define alternative canonical payloads or statutory vocabularies.
+- Existing QU/EOPS harness behaviour is not protected and may be removed where obsolete.
+- Classes and supporting infrastructure within `src/hmrc_mtd` require evidence-based classification rather than being assumed to represent HMRC contracts from repository location.
+- Sole Trader personal Income Tax liability is not assumed to be deterministically calculable from the Business Node alone. Trade Control may forecast an estimated liability and reconcile it through the existing period-adjustment mechanism when an authoritative result becomes available.
+- Corporation Tax and other legitimately deterministic business-tax calculations remain eligible for direct integration into Trade Control forecasting and scheduling.
+
+### Documentation consequences
+
+The governing documentation was revised to reflect these decisions:
+
+- `specs/tax-hub-spec-programme.md`
+- `specs/self-assessment-sql-node-spec.md`
+- `specs/reference/sole-trader-field-sets.md`
+- `specs/reference/sole-trader-capital.md`
+- `specs/tax-hub-test-payloads.md`
+
+The former Objective 2 implementation instructions and associated work plan describe the architecture under which that earlier work was performed. They are retained as historical implementation material but are superseded for current Self Assessment work by the revised governing specifications and subsequent authorised session briefs.
+
+### Current implementation position
+
+Self Assessment SQL Node Phase 1 remains complete and accepted.
+
+Self Assessment SQL Node Phase 2 remains complete and accepted.
+
+The MTD-only decision makes the legacy SA wrappers and SA tax-seeding procedure retirement candidates.
+
+The removal of EOPS from the current filing lifecycle makes the existing EOPS Tax Source and associated structures retirement/reconciliation candidates.
+
+No retirement, replacement vocabulary, mapping, `hmrc_mtd` refactor, harness refactor, or other implementation change was performed as part of this architectural review.
+
+The next implementation-related stage remains gated by **Phase 3 — Contract-Aligned MTD Reconnaissance and Proposal**.

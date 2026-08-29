@@ -315,3 +315,176 @@ Phase 1 exclusions remain explicit:
 Recommended Phase 1 evidence is a focused SQL diff, a SQL project build, and isolated MIN/STD bootstrap assertions showing preserved accounting behaviour with no Self Assessment sources, tags, mappings, or validation calls created by those accounting templates. The Phase 3 mapping gate and pre-Phase-3 HMRC contract audit remain mandatory.
 
 No Phase 1 work was performed in this session.
+
+---
+
+# HMRC Contract Audit — Self Assessment and VAT
+
+Date: 28 August 2026  
+Scope: current HMRC contract verification and consequential review of the Tax Hub Self Assessment architecture.
+
+## 13. Purpose
+
+Following completion of Self Assessment SQL Node Phases 1 and 2, the previously deferred HMRC contract audit was performed before authorising Tax Tag mapping work.
+
+The audit compared the current Trade Control Self Assessment and VAT assumptions with current authoritative HMRC specifications.
+
+The purpose was to establish the external statutory truth before existing SQL Tax Tags, C# models, harness payloads, serializers, or historical implementation were allowed to become canonical.
+
+## 14. Self Assessment Contract Findings
+
+### 14.1 Product submission route
+
+The existing implementation contained two Sole Trader submission architectures:
+
+- Making Tax Digital for Income Tax; and
+- legacy SA100 / SA103F XML submission.
+
+Current product review concluded that Trade Control should support Sole Trader Self Assessment submission through **Making Tax Digital for Income Tax only**.
+
+Legacy SA100 / SA103F submission therefore has no continuing product requirement.
+
+This does not imply that XML, RIM, iXBRL, IRmark, or related transport mechanisms are obsolete generally. Other statutory regimes, particularly Corporation Tax, may continue to require them.
+
+### 14.2 EOPS
+
+The historical Trade Control MTD implementation models:
+
+- Quarterly Updates; and
+- End of Period Statement (EOPS).
+
+The contract audit established that EOPS is no longer a current MTD Income Tax filing stage.
+
+The existing:
+
+`UK-ITSA-SE-EOPS`
+
+Tax Source and its associated SQL and C# structures are therefore historical implementation rather than a current statutory contract.
+
+Individual adjustment, allowance, loss, or other statutory concepts previously grouped beneath EOPS may still be relevant, but each must be independently verified against the current MTD architecture before reuse.
+
+### 14.3 Quarterly reporting
+
+Current MTD Self Employment quarterly reporting is cumulative from the beginning of the tax year to the end of the update period.
+
+The statutory accounting starting point comprises two income concepts and thirteen expense concepts.
+
+This produces a 15-value core quarterly accounting projection.
+
+The existing dedicated SQL Quarterly Update seed also contains 15 tags, but equality of count does not establish semantic equivalence. Names, meanings, mappings, and support by MIN and STD remain subject to the contract-aligned Phase 3 reconnaissance.
+
+The current HMRC Self Employment API exposes additional optional properties beyond this core accounting set.
+
+An HMRC API property is not automatically a Trade Control Tax Tag.
+
+### 14.4 Annual and finalisation information
+
+The historical EOPS and SA103F structures must not be used as canonical annual Tax Tag vocabularies.
+
+Current annual Self Employment requirements include statutory concepts such as adjustments and capital allowances.
+
+Losses are handled through dedicated HMRC processes and must not be treated as an EOPS field set.
+
+No canonical annual Objective 2 Tax Tag vocabulary has yet been approved.
+
+Establishing that vocabulary is deliberately deferred to contract-aligned Phase 3 reconnaissance.
+
+### 14.5 Final Declaration
+
+The inspected historical Final Declaration model does not represent the current HMRC contract.
+
+Current Final Declaration processing is tied to the HMRC calculation/finalisation workflow rather than the historical Trade Control request-body representation.
+
+Exact endpoint, request, response, identifier, and version semantics remain Objective 3 concerns.
+
+### 14.6 Obligations, calculations, liabilities and losses
+
+Existing Trade Control C# representations of MTD obligations, calculations, liabilities, losses, and related structures cannot be assumed to represent current HMRC wire contracts.
+
+They require classification and verification against their respective current HMRC services before being retained as Objective 3 contracts.
+
+## 15. Objective Boundary Findings
+
+The audit confirmed that the project had allowed several architectural concerns to become conflated.
+
+The corrected boundary is:
+
+**Trade Control accounting**  
+→ **Tax Source / Tax Tag statutory projection — Objective 2**  
+→ **HMRC contract adapter — Objective 3**  
+→ **HMRC transport — Objective 4**
+
+Objective 2 establishes truthful statutory information from Trade Control accounting and legitimate contextual sources.
+
+Objective 3 owns exact HMRC-facing contracts.
+
+Objective 4 owns transmission and receipt.
+
+Existing implementation is authoritative evidence of current repository state.
+
+It is not authority for externally governed HMRC semantics.
+
+## 16. Test Harness Findings
+
+The existing WebHarness had evolved around an interpretation in which harness-specific raw-tag payloads were treated as part of Objective 2 submission architecture.
+
+That interpretation is rejected.
+
+The Test Harness is development and verification infrastructure.
+
+Its purpose is to allow developers and coding agents to exercise real production components and inspect useful observation points including:
+
+- SQL/accounting output;
+- Objective 2 statutory projections;
+- Objective 3 serialized HMRC payloads;
+- Objective 4 transport behaviour; and
+- HMRC Sandbox responses.
+
+The harness must observe actual implementation output rather than define a parallel canonical representation.
+
+Existing QU and EOPS harness endpoints are not protected behaviour and may be removed rather than repaired where they represent obsolete architecture.
+
+The existing VAT-MTD harness path may remain useful as an implementation template, subject to reconnaissance confirming that it exercises the real production path.
+
+## 17. `hmrc_mtd` Classification Requirement
+
+The audit established that physical location beneath `src/hmrc_mtd` does not prove that a class represents an HMRC contract.
+
+Current models, services, builders, serializers, transport components, and harness infrastructure must therefore be classified during subsequent reconnaissance as one of:
+
+1. actual HMRC contract;
+2. Trade Control statutory projection;
+3. harness/development infrastructure; or
+4. obsolete/legacy implementation.
+
+Repository and namespace disposition should follow that evidence rather than be inferred from current location.
+
+This classification must include supporting services and infrastructure as well as the previously reviewed model classes.
+
+## 18. VAT Findings
+
+The existing VAT implementation is materially closer to the current HMRC contract than the Self Assessment implementation.
+
+The nine VAT accounting values remain valid.
+
+The principal identified contract defect is serialization: the current implementation must be verified to emit the exact HMRC JSON property names and casing rather than relying upon inappropriate default .NET serialization behaviour.
+
+`Cash.vwTaxVatSubmission` remains the authoritative Trade Control VAT accounting surface.
+
+The older pre-Brexit VAT surface is not authoritative.
+
+VAT does not block the current Self Assessment SQL mapping reconnaissance.
+
+## 19. Consequence for Self Assessment SQL Node Work
+
+The HMRC audit satisfies the reason that canonical vocabulary selection was deliberately deferred after Phase 2.
+
+However, it does not itself authorise mapping implementation.
+
+Self Assessment SQL Node Revision 3 therefore reopens the next stage as:
+
+**Phase 3 — Contract-Aligned MTD Reconnaissance and Proposal**
+
+Phase 3 must establish the proposed current Objective 2 Tax Source and Tax Tag vocabulary, MIN and STD support matrices, retirement set, validation requirements, and any genuine cross-repository consequences before implementation is authorised.
+
+No Phase 3 implementation has yet been performed.

@@ -41,7 +41,6 @@ Objective 2 owns:
 - extraction from Trade Control accounting classifications;
 - Tax Source and Tax Tag projection;
 - internal statutory representations;
-- internal test-harness payloads;
 - structural and numerical validation;
 - deterministic traceability back to operational accounting.
 
@@ -566,9 +565,9 @@ Verify:
 - expected unsupported or absent values;
 - traceability from Tax Tag to CategoryCode/CashCode and underlying operational classification.
 
-Generate internal Objective 2 test-harness projections where available.
+Where useful, exercise the Tax Hub Test Harness to inspect and verify the resulting Objective 2 statutory projections.
 
-These are internal statutory projections, not HMRC submissions.
+The Test Harness is development and verification infrastructure and does not define an alternative statutory projection or submission contract.
 
 **Deliverable:** validation report containing the commands or test cases used, expected values, actual results, reconciliation evidence, known limitations, and any accepted unmapped statutory concepts.
 

@@ -93,11 +93,11 @@ Therefore, TRADE classification is invalid.
 
 ---
 
-## 6. Compliance Note
+## 6. Statutory Treatment
 
-HMRC does **not** treat capital introduced or drawings as income or expenses.  
-They do **not** appear on SA103F or EOPS.  
-They must be handled entirely within the balance‑sheet layer.
+Capital introduced and drawings are owner-related balance-sheet movements rather than business income or deductible business expenses.
+
+They therefore do not form part of the Sole Trader statutory profit projection and must not be mapped into income or expense Tax Tags.
 
 ---
 

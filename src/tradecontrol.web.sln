@@ -17,7 +17,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0
 	ProjectSection(SolutionItems) = preProject
 		..\docs\specs\refactor-spec-framework.md = ..\docs\specs\refactor-spec-framework.md
 		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
-		..\docs\specs\tax-hub-payloads.md = ..\docs\specs\tax-hub-payloads.md
 		..\docs\specs\tc-design-principles.md = ..\docs\specs\tc-design-principles.md
 		..\docs\specs\tc-development-contract.md = ..\docs\specs\tc-development-contract.md
 		..\docs\specs\tc-reference-architecture.md = ..\docs\specs\tc-reference-architecture.md
@@ -25,7 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "tcNodeDb4", "sqlnode\src\tcNodeDb4\tcNodeDb4.sqlproj", "{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMRC_MTD", "..\..\hmrc_mtd\src\HMRC_MTD\HMRC_MTD.csproj", "{6557BD9C-E163-79A7-50AE-E43538AA1E1E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMRC_MTD", "hmrc_mtd\src\HMRC_MTD\HMRC_MTD.csproj", "{6557BD9C-E163-79A7-50AE-E43538AA1E1E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "projects", "projects", "{BBA9A645-E4FD-4781-A324-76DE3A7E71BA}"
 EndProject
@@ -63,6 +62,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "history", "history", "{D79B
 		..\docs\projects\Tax Hub\implementation\history\tax-hub-hmrc-repo-structure-2.md = ..\docs\projects\Tax Hub\implementation\history\tax-hub-hmrc-repo-structure-2.md
 		..\docs\projects\Tax Hub\implementation\history\tax-hub-vat-surface-sql.md = ..\docs\projects\Tax Hub\implementation\history\tax-hub-vat-surface-sql.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMRC.WebHarness", "hmrc_mtd\src\HMRC.WebHarness\HMRC.WebHarness.csproj", "{A1137199-F7DA-2175-9F7D-396ACCC7CC05}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HMRC", "HMRC", "{F6B01961-56EB-455F-9668-4814B8F70E85}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Export", "Export", "{BC8F5617-4B32-49EF-B585-E20CEEF90CDF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db", "db", "{C18FDC84-40B5-4B48-A904-28CC71942ECA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -128,17 +135,34 @@ Global
 		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhone.Build.0 = Release|Any CPU
 		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{6557BD9C-E163-79A7-50AE-E43538AA1E1E}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Release|iPhone.Build.0 = Release|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{B297B9DD-5233-F613-6EC0-216F4F6A22A4} = {BC8F5617-4B32-49EF-B585-E20CEEF90CDF}
 		{694D7BA0-872A-4AA1-86B2-72F808E282F7} = {2375B669-1B4B-4D74-84AF-4625B851D52B}
+		{B6A8BE87-D50B-45DB-A9D3-7E53270DA8BF} = {C18FDC84-40B5-4B48-A904-28CC71942ECA}
+		{6557BD9C-E163-79A7-50AE-E43538AA1E1E} = {F6B01961-56EB-455F-9668-4814B8F70E85}
+		{BBA9A645-E4FD-4781-A324-76DE3A7E71BA} = {2375B669-1B4B-4D74-84AF-4625B851D52B}
 		{CB6F3104-CF0B-47FC-AD73-396F64581FBF} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
 		{28089177-8B6D-4FFE-856A-56CFAC1E218A} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
 		{DEFB1068-AB8F-4086-9ED2-22CD4558419D} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
 		{DC738C34-A9CF-4CEA-B696-51D8BDD33E58} = {DEFB1068-AB8F-4086-9ED2-22CD4558419D}
 		{D79BA1BE-3274-4B5C-BAE2-802B3DED90AC} = {28089177-8B6D-4FFE-856A-56CFAC1E218A}
+		{A1137199-F7DA-2175-9F7D-396ACCC7CC05} = {F6B01961-56EB-455F-9668-4814B8F70E85}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}

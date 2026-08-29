@@ -95,9 +95,9 @@ Construct the reporting workspace and HMRC-aligned statutory views.
 
 ### Objective 2 — Submission Logic (Reopened: Contract Alignment)
 
-Generate **internal statutory projection and test-harness payloads** from Trade Control accounting data.
+Generate **internal statutory projections** from Trade Control accounting data.
 
-These payloads are **not HMRC wire payloads**.
+These statutory projections are **not HMRC wire payloads**.
 
 Objective 2 owns:
 
@@ -105,7 +105,6 @@ Objective 2 owns:
 - Tax classification and Tax Tag projection
 - Deterministic mapping from operational classifications
 - Internal submission-domain representations
-- Test-harness payload generation
 - Structural and numerical validation of those representations
 - Traceability from projected statutory values back to their accounting sources
 
