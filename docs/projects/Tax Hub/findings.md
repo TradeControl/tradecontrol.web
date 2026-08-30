@@ -1116,7 +1116,7 @@ Propose the following stable vocabulary:
 | `professionalFees` | Expense | Directed detailed category. |
 | `otherExpenses` | Expense | Directed residual category, populated only by explicitly classified other-expense codes. |
 
-Orientation should be explicit tag metadata, not inferred from `TagClassCode` labels or neutral total categories. A small constrained orientation code/table or an explicit `StatutoryPolarityCode` column is preferable to overloading presentation-oriented tag classes.
+Orientation should be explicit tag metadata, not inferred from `TagClassCode` labels or neutral total categories. An explicit `CashPolarityCode` column linked to `Cash.tbPolarity` is preferable to overloading presentation-oriented tag classes.
 
 Do not seed cumulative tags for `taxTakenOffTradingIncome`, `irrecoverableDebts`, `depreciation` or any disallowable-expense property in Phase 4D. The first is contextual/external; the next two are optional API properties outside the thirteen directed categories; and the last group has no Trade Control source. They may be introduced later only from verified need and deterministic data.
 
@@ -1182,7 +1182,7 @@ CT-OVERHD
 ├─ CA-OFFICE     Phone, stationery and office costs
 ├─ CA-ADVERT     Advertising
 ├─ CA-ENTERT     Business entertainment
-├─ CA-INTEREST   Bank and loan interest
+├─ CA-LOANINT    Bank and loan interest
 ├─ CA-FINANCE    Other financial charges
 ├─ CA-PROF       Accountancy, legal and professional fees
 └─ CA-OTHER      Other business expenses
@@ -1202,7 +1202,7 @@ All nominal categories above are Expense polarity. Structural totals remain Neut
 | `CA-OFFICE` | move existing `CC-PHONE`; add `CC-OFFICE` for stationery and other office costs. Disable inherited ambiguous `CC-ADMIN`. |
 | `CA-ADVERT` | move existing `CC-ADVT`. |
 | `CA-ENTERT` | new `CC-ENTERT`. This is an accounting total required by the direction; no disallowable duplicate is created. |
-| `CA-INTEREST` | move existing `CC-LOINT`. |
+| `CA-LOANINT` | move existing `CC-LOINT`. |
 | `CA-FINANCE` | existing `CC-FINCH`; move `CC-BANKC` here. |
 | `CA-PROF` | move existing `CC-PROF`. |
 | `CA-OTHER` | new `CC-OTHER`; use only for expenses affirmatively classified as the directed residual, never as an automatic remainder. |
@@ -1225,7 +1225,7 @@ STD may retain `CT-CUMEXP` as inherited accounting structure, but the STD MTD wr
 | `adminCosts` | Category | `CA-OFFICE` | Complete office branch; ambiguous inherited admin code disabled. |
 | `advertisingCosts` | Category | `CA-ADVERT` | Dedicated branch. |
 | `businessEntertainmentCosts` | Category | `CA-ENTERT` | Dedicated accounting branch. |
-| `interestOnBankOtherLoans` | Category | `CA-INTEREST` | Dedicated interest branch. |
+| `interestOnBankOtherLoans` | Category | `CA-LOANINT` | Dedicated interest branch. |
 | `financeCharges` | Category | `CA-FINANCE` | Financial charges and moved bank-charge code. |
 | `professionalFees` | Category | `CA-PROF` | Dedicated professional-fee branch. |
 | `otherExpenses` | Category | `CA-OTHER` | Explicit residual postings only. |
@@ -1404,3 +1404,50 @@ Implement one transport-free cumulative vertical slice in this order:
 Phase 4D acceptance must demonstrate both bootstrap patterns, prove that customised mappings—not template identity—govern capability, preserve credits exceeding expenses as negative statutory expense values, and show exact serialized HMRC requests without a parallel harness vocabulary.
 
 Phase 4C is complete as an implementation-ready proposal only. Phase 4D has not begun.
+
+## 23. Tax Tag Validator Correction Reconnaissance
+
+This section records the focused validator review performed on 30 August 2026 before corrective editing.
+
+### 23.1 Authority and defect
+
+The revised `specs/reference/sole-trader-field-sets.md` establishes `TagClassCode` as mapping eligibility: only Component (`1`) tags may have `Cash.tbTaxTagMap` rows; Rollup (`0`) and Derived (`2`) tags cannot be mapped. The Phase 4D rewrite of `Cash.fnTaxTagMapValidate` incorrectly embedded the `UK-ITSA-SE-CUM` manifest, exact tag count, named income tags, consolidated/detailed alternatives and thirteen-tag readiness. Those are bootstrap or source-specific acceptance concerns, not generic mapping integrity, and must be removed from the shared validator.
+
+### 23.2 Original generic invariants
+
+The pre-Phase-4D function spool shows four behaviours:
+
+- it collected enabled map rows for the selected source;
+- it warned about missing Category/CashCode references;
+- it expanded Category mappings down `Cash.tbCategoryTotal` and failed when the same CashCode reached the same tag through more than one mapping route; and
+- it warned about enabled, connected CashCodes not covered by any effective mapping for the selected source.
+
+Phase 4D retained and strengthened reference/root resolution and same-tag overlap detection through `Cash.vwTaxTagCashCode`, but lost the unmapped-CashCode warning. It also added useful leaf-polarity evidence while incorrectly restricting polarity comparison to one named source. Its cross-tag exclusivity rule is valid for the approved Sole Trader cumulative alternatives, but that rule is source-specific and belongs in the Sole Trader acceptance fixture rather than the generic validator.
+
+### 23.3 Proven Category Tree direction and relevance boundary
+
+`Cash.tbCategoryTotal.ParentCode -> ChildCode` is the ancestry-to-descendant direction. A Category mapping therefore expands from its selected root through descendant totals to enabled nominal categories (`CategoryTypeCode = 0`) and then enabled `Cash.tbCode` rows. `Cash.vwTaxTagCashCode` preserves each mapping root and route, so it already represents effective indirect coverage; a CashCode covered by a mapped ancestor is not unmapped.
+
+The original warning defined relevance negatively by excluding only categories with no parent. That means any enabled CashCode attached anywhere inside any Category Tree could be warned about, including branches irrelevant to a particular business-tax projection. The schema provides stronger positive evidence: `App.vwTaxBizCashCodes` traverses from `App.tbOptions.NetProfitCode` and identifies the CashCodes in the configured business profit-and-loss accounting universe. Disconnected owner/capital and other non-profit branches are intentionally capable of remaining outside that universe. The corrected generic warning should therefore consider enabled nominal leaves in `App.vwTaxBizCashCodes`, subtract CashCodes already present in the selected source's effective mapping, and describe them as uncovered business-tax CashCodes without naming MTD or HMRC.
+
+### 23.4 Smallest authorised correction
+
+The generic validator should:
+
+- reject enabled mappings whose Tax Tag is not Component;
+- validate enabled Category/CashCode roots and their effective enabled nominal contributors;
+- compare mandatory `CashPolarityCode` with every actual effective leaf;
+- retain same-tag duplicate-route detection;
+- retain generic same-tag overlap/double-counting detection, while leaving cross-tag exclusivity to source-specific acceptance rules because separate Component fields may legitimately reuse accounting evidence under a separately approved statutory design;
+- restore the corrected uncovered-business-tax-CashCode warning based on `App.vwTaxBizCashCodes`; and
+- contain no source-code literal, statutory tag literal, manifest count or submission-readiness rule.
+
+Exact Sole Trader manifest, MIN/STD mapping inventories and consolidated/detailed readiness remain in the Phase 4D database acceptance fixture. The fixture is the correct location for bootstrap-specific assertions, although runtime execution remains outstanding until a usable database connection is available.
+
+## 24. Mandatory Tax Tag Cash Polarity Correction
+
+The tag orientation field is accounting-domain metadata and is therefore named `Cash.tbTaxTag.CashPolarityCode`, consistently with `Cash.tbCategory.CashPolarityCode` and `Cash.tbPolarity`. It is mandatory and restricted to Income (`1`) or Expense (`0`). Neutral (`2`) remains invalid for a Tax Tag.
+
+The mapping remains user-selectable and the actual contributor polarity remains derived from the effective Category/CashCode relationships. The mandatory tag value is the independent expected polarity against which those contributors are validated; it is not inferred from the selected mapping. `Cash.fnTaxTagMapValidate` must therefore compare every effective leaf with the tag's `CashPolarityCode` unconditionally and reject null, neutral, mixed or contrary contributor polarity.
+
+No database migration is required because there are no deployed instances of this development schema. Older templates are not granted a nullable compatibility path. In particular, the current Corporation Tax template does not supply `CashPolarityCode` and is intentionally expected to fail until that template is updated in its later scheduled work. The Sole Trader cumulative seed supplies the field explicitly and remains the compliant bootstrap path for this wave.

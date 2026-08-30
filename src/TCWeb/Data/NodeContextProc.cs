@@ -2773,7 +2773,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task InstallBasicSetup(string templateName,
+        public async Task InstallBasicSetup(string templateCode,
                                         short financialMonth,
                                         string govSubjectName,
                                         string bankName,
@@ -2800,8 +2800,8 @@ namespace TradeControl.Web.Data
 
                     SqlParameter pk = command.CreateParameter();
                     pk.DbType = DbType.String;
-                    pk.ParameterName = "@TemplateName";
-                    pk.Value = templateName;
+                    pk.ParameterName = "@TemplateCode";
+                    pk.Value = templateCode;
                     command.Parameters.Add(pk);
 
                     SqlParameter p0 = command.CreateParameter();

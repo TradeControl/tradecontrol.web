@@ -2,7 +2,7 @@
 
 Trade Control Tax Hub Programme  
 MTD Income Tax — 2026 Edition  
-28 August 2026
+30 August 2026
 
 ## 1. Purpose
 
@@ -47,7 +47,7 @@ An HMRC API may contain:
 - contextual data;
 - identifiers;
 - dates;
-- derived values;
+- calculated or aggregate values;
 - values supplied elsewhere in the workflow;
 - values that do not originate in Trade Control accounting.
 
@@ -97,20 +97,33 @@ It is configurable and may differ between businesses.
 
 MIN and STD are bootstrap accounting templates, not statutory taxonomies.
 
-Tax Tags form a separate statutory projection over available:
+Tax Tags form a separate statutory projection. Component Tax Tags may be mapped from available CategoryCodes and CashCodes. Other statutory values may be calculated as Rollups or supplied outside the individual Business Node accounting projection as Derived values.
 
-- CategoryCodes;
-- CashCodes;
-- derived accounting values;
-- approved contextual sources.
+The Tax Tag class and the source/support classification are separate dimensions and must not be conflated.
 
-### 4.2 Deterministic Mapping
+### 4.2 Tax Tag Classes
 
-A Tax Tag may be mapped only where its statutory meaning can be obtained deterministically from the accounting classification.
+Every approved Tax Tag has a `TagClassCode`:
+
+| TagClassCode | Tag Class | Meaning | Mapping rule |
+|---:|---|---|---|
+| `0` | `Rollup` | A calculated or aggregate statutory field. It is informational from the accounting-mapping perspective. | Cannot be mapped in `Cash.tbTaxTagMap`. |
+| `1` | `Component` | A business accounting value projected from the individual Business Node's accounting records. | The only class permitted in `Cash.tbTaxTagMap`. |
+| `2` | `Derived` | A sole-trader statutory or finalisation value that occurs outside the individual Business Node or business balance-sheet accounting projection. It may depend on taxpayer-level context, span multiple businesses, or require a Tax Hub workflow/interface. | Cannot be mapped in `Cash.tbTaxTagMap`. |
+
+`Derived` must not be used as a generic synonym for any value that happens to be calculated. A value calculated or aggregated from other statutory fields is a Rollup. A value deterministically projected from business accounting is a Component. Derived is reserved for the off-business sole-trader statutory/finalisation boundary described above.
+
+This model does not require Derived tags in a limited-company taxonomy. They must not be introduced there unless a demonstrated statutory or architectural requirement establishes an equivalent off-accounts value.
+
+### 4.3 Deterministic Mapping
+
+A Component Tax Tag may be mapped only where its statutory meaning can be obtained deterministically from the accounting classification.
 
 A similar label is not sufficient evidence.
 
-### 4.3 MIN and STD May Differ
+Rollup and Derived Tax Tags cannot be mapped.
+
+### 4.4 MIN and STD May Differ
 
 MIN intentionally provides coarse accounting classification.
 
@@ -122,7 +135,7 @@ Therefore:
 - STD may support additional statutory distinctions;
 - unsupported MIN detail must not be manufactured by allocating or estimating portions of broader totals.
 
-### 4.4 Absence Is Valid
+### 4.5 Absence Is Valid
 
 A field may legitimately be:
 
@@ -130,7 +143,7 @@ A field may legitimately be:
 - not applicable;
 - contextual;
 - externally supplied;
-- derived elsewhere;
+- supplied outside the Business Node accounting projection;
 - optional and absent.
 
 Absence must not automatically become zero.
@@ -148,7 +161,7 @@ At the statutory accounting level, the core field set comprises:
 - 2 income totals;
 - 13 expense totals.
 
-These are the primary accounting Tax Tag candidates for the Quarterly Update projection.
+These are the primary accounting Tax Tag candidates for the Quarterly Update projection and are Component-class values.
 
 ---
 
@@ -161,7 +174,7 @@ These are the primary accounting Tax Tag candidates for the Quarterly Update pro
 
 These values represent business accounting income.
 
-They must be derived from approved Trade Control accounting sources.
+They must be projected from approved Trade Control accounting sources through Component mappings.
 
 ---
 
@@ -222,19 +235,14 @@ That API structure includes additional concepts such as:
 
 The existence of an API property does **not** automatically require a corresponding mandatory Tax Tag.
 
-For Objective 2 each such property must first be classified as one of:
+For Objective 2 each such property must first be classified by:
 
-1. operational accounting value;
-2. statutory adjustment;
-3. contextual/workflow information;
-4. derived value;
-5. optional accounting detail;
-6. externally supplied value;
-7. unsupported value.
+1. its Tax Tag class: Component, Rollup or Derived; and
+2. separately, whether and how Trade Control can supply it: an accounting mapping, contextual/workflow input, an authoritative external source, legitimate omission, or no current support.
 
 Only then may a Tax Tag be approved.
 
-This distinction prevents the SQL taxonomy from becoming a mechanical copy of an HMRC DTO.
+This distinction prevents the SQL taxonomy from becoming a mechanical copy of an HMRC DTO and prevents source/support terminology from obscuring `TagClassCode`.
 
 ---
 
@@ -256,7 +264,7 @@ The former EOPS grouping mixed several distinct statutory concepts:
 - allowances;
 - losses;
 - basis information;
-- derived totals.
+- calculated or aggregate totals.
 
 Those concepts must now be considered individually against the current MTD architecture.
 
@@ -269,9 +277,9 @@ Annual self-employment processing may require adjustments to the accounting resu
 Potential adjustment concepts must be admitted into the Tax Tag vocabulary only where:
 
 - the current statutory process requires them; and
-- Trade Control has a legitimate deterministic or contextual source.
+- Trade Control has a legitimate accounting, contextual/workflow or authoritative external source.
 
-Adjustment values are not automatically accounting Category Tree totals.
+Adjustment values are not automatically accounting Category Tree totals or automatically Derived. Their Tag Class depends on whether they belong to the Business Node accounting projection, are calculated or aggregated statutory fields, or occur outside that projection at sole-trader finalisation.
 
 Examples may include:
 
@@ -290,14 +298,11 @@ No historical EOPS adjustment tag is canonical merely because it already exists.
 
 Capital allowances are statutory tax concepts and must not be confused with accounting depreciation.
 
-Where current MTD reporting requires capital-allowance information, Trade Control must classify each value according to its legitimate source.
+Where current MTD reporting requires capital-allowance information, Trade Control must classify each value according to both its Tag Class and its legitimate source.
 
-A capital allowance Tax Tag may be:
+A capital-allowance value that occurs outside the individual Business Node accounting projection may be a Derived Tax Tag and may require a Tax Hub calculation, input or review interface. It may instead be supplied through statutory workflow context or another authoritative subsystem, or it may be unsupported.
 
-- derived by an approved Trade Control tax calculation;
-- entered through statutory workflow context;
-- supplied by another authoritative subsystem;
-- unsupported.
+The classification must be established from the actual statutory and architectural responsibility; capital-allowance fields are not made Derived merely by their label.
 
 Accounting depreciation must not be mapped directly to capital allowances merely to populate a field.
 
@@ -315,14 +320,14 @@ Loss creation, use, carry-forward and similar concepts must not be recreated fro
 
 The Objective 2 Tax Tag model must distinguish between:
 
-- accounting loss derived from business results;
+- accounting loss calculated from business results;
 - statutory loss;
 - loss claims or elections;
 - losses brought forward;
 - losses used;
 - losses remaining.
 
-These are not assumed to be interchangeable.
+These are not assumed to be interchangeable. Any resulting Tax Tag must also be assigned the correct Component, Rollup or Derived class under Section 4.2.
 
 ---
 
@@ -364,7 +369,7 @@ Trade Control deterministically establishes:
 - business profit;
 - supported statutory self-employment values.
 
-Personal Income Tax may depend upon information outside the Business Node.
+Personal Income Tax may depend upon information outside one Business Node and, at the extreme, may involve several businesses belonging to the same taxpayer.
 
 Trade Control may therefore maintain an estimated Income Tax provision for forecasting and production scheduling.
 
@@ -376,23 +381,23 @@ It is not part of the self-employment accounting Tax Tag field set.
 
 ---
 
-# 10. Mapping Classification
+# 10. Source and Support Classification
 
-Each approved Tax Tag must be assigned one of the following source classifications:
+After assigning `TagClassCode`, each approved Tax Tag must separately record whether and how Trade Control can supply it. This source/support classification does not change whether the tag is mappable; only Component tags may participate in `Cash.tbTaxTagMap`.
 
 | Classification | Meaning |
 |---|---|
-| `CategoryCode` | Complete Category total has the exact statutory meaning |
-| `CashCode` | Individual Cash Code provides the required statutory distinction |
-| `Derived` | Deterministically calculated from approved accounting values |
+| `CategoryCode` | A complete Category total has the exact statutory meaning for a Component mapping |
+| `CashCode` | An individual Cash Code provides the required statutory distinction for a Component mapping |
+| `Calculated` | The value is calculated or aggregated under an approved rule; its Tag Class must still be established independently |
 | `Contextual` | Supplied by Tax Hub, user workflow or Business Node configuration |
 | `External` | Supplied by an authoritative external process |
 | `OptionalAbsent` | Statutory field may legitimately be omitted |
-| `Unsupported` | Trade Control cannot currently supply the statutory concept deterministically |
+| `Unsupported` | Trade Control cannot currently supply the statutory concept legitimately |
 
 The exact stored representation of these classifications is an implementation concern.
 
-This table defines their semantic meaning.
+This table defines their semantic meaning. `Derived` is deliberately absent because it is a Tax Tag class, not a generic source/support classification.
 
 ---
 
@@ -401,15 +406,17 @@ This table defines their semantic meaning.
 For every Tax Tag:
 
 1. establish the current statutory meaning;
-2. identify whether Trade Control should supply the value;
-3. identify its correct source classification;
-4. inspect MIN and STD independently;
-5. identify the proposed CategoryCode or CashCode where applicable;
-6. trace category ancestry;
-7. check for overlapping parent/child mappings;
-8. verify that no additive amount can be counted twice;
-9. identify unsupported distinctions explicitly;
-10. obtain review approval before SQL insertion.
+2. assign the correct `TagClassCode` independently of source/support;
+3. identify whether Trade Control should supply the value;
+4. identify its correct source/support classification;
+5. inspect MIN and STD independently;
+6. for Component tags only, identify the proposed CategoryCode or CashCode where applicable;
+7. trace category ancestry;
+8. check for overlapping parent/child mappings;
+9. verify that no additive amount can be counted twice;
+10. verify that Rollup and Derived tags have no `Cash.tbTaxTagMap` rows;
+11. identify unsupported distinctions explicitly;
+12. obtain review approval before SQL insertion.
 
 Historical mappings may be cited as evidence.
 
@@ -461,6 +468,7 @@ Revision 3 of the Self Assessment SQL Node Specification therefore requires Phas
 - current annual adjustment concepts;
 - current capital-allowance concepts;
 - current loss responsibilities;
+- the correct Tag Class for each approved concept;
 - which values belong in Objective 2;
 - which belong in Objective 3 or workflow context;
 - which MIN can support;
@@ -498,15 +506,18 @@ This reference defines statutory meaning.
 
 It does not assert that every statutory concept is supported by every Trade Control accounting template.
 
-The Phase 3 mapping matrix must determine:
+The Phase 3 mapping matrix must record Tag Class and source/support separately, then determine:
 
 | Statutory Concept | MIN | STD |
 |---|---|---|
-| Deterministically supported | Map | Map |
-| Supported only by detailed classification | Unsupported | Map |
-| Requires contextual value | Contextual | Contextual |
-| Derived elsewhere | Derived | Derived |
+| Deterministically supported Component | Map | Map |
+| Component supported only by detailed classification | Unsupported | Map |
+| Requires contextual/workflow value | Contextual | Contextual |
+| Supplied externally | External | External |
+| Legitimately optional and absent | OptionalAbsent | OptionalAbsent |
 | Not available | Unsupported | Unsupported |
+
+Rollup and Derived are recorded in the separate Tag Class column and are never represented as mapping outcomes in this matrix.
 
 This is expected behaviour.
 
@@ -548,6 +559,9 @@ The Sole Trader statutory field model is correct when:
 - obsolete SA100/SA103F and EOPS structures are absent;
 - annual concepts are admitted only after current statutory verification;
 - Tax Tags contain only information appropriately owned by Objective 2;
+- every tag has the correct Component, Rollup or Derived class;
+- only Component tags are mapped in `Cash.tbTaxTagMap`;
+- Tag Class is kept separate from source/support classification;
 - every mapped accounting value is deterministic and traceable;
 - unsupported distinctions are explicit;
 - MIN is not forced to simulate STD detail;

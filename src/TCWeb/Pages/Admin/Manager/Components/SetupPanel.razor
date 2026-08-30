@@ -75,7 +75,7 @@
 
                     <div class="border rounded bg-white px-3 py-2">
                         <div class="small text-muted">Selected Template</div>
-                        <div class="fw-semibold">@_editor.TemplateName</div>
+                        <div class="fw-semibold">@SelectedTemplateName</div>
                     </div>
                 </div>
 
@@ -92,14 +92,14 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-3">
-                                        <label class="form-label" for="templateName">Configuration Template</label>
-                                        <select id="templateName"
+                                        <label class="form-label" for="templateCode">Configuration Template</label>
+                                        <select id="templateCode"
                                                 class="form-select"
-                                                @bind="_editor.TemplateName"
+                                                @bind="_editor.TemplateCode"
                                                 @bind:after="ApplyTemplateDefaultsAsync">
-                                            @foreach (var item in _templateNames)
+                                            @foreach (var item in _templates)
                                             {
-                                                <option value="@item">@item</option>
+                                                <option value="@item.TemplateCode">@item.TemplateName</option>
                                             }
                                         </select>
 
@@ -336,7 +336,8 @@
     {
         [Required]
         [Display(Name = "Configuration Template")]
-        public string TemplateName { get; set; } = string.Empty;
+        [StringLength(10)]
+        public string TemplateCode { get; set; } = string.Empty;
 
         [Required]
         [StringLength(100)]
@@ -443,7 +444,9 @@
         public bool IsVatRegistered { get; set; }
     }
 
-    private readonly List<string> _templateNames = [];
+    private sealed record TemplateOption(string TemplateCode, string TemplateName);
+
+    private readonly List<TemplateOption> _templates = [];
     private readonly List<string> _uocNames = [];
     private readonly List<string> _monthNames = [];
     private readonly Dictionary<string, string> _templateDescriptions = new(StringComparer.OrdinalIgnoreCase);
@@ -455,10 +458,14 @@
     private string? _errorMessage;
 
     private string SelectedTemplateDescription =>
-        !string.IsNullOrWhiteSpace(_editor.TemplateName)
-            && _templateDescriptions.TryGetValue(_editor.TemplateName, out var text)
+        !string.IsNullOrWhiteSpace(_editor.TemplateCode)
+            && _templateDescriptions.TryGetValue(_editor.TemplateCode, out var text)
                 ? text
                 : string.Empty;
+
+    private string SelectedTemplateName =>
+        _templates.FirstOrDefault(item => item.TemplateCode == _editor.TemplateCode)?.TemplateName
+            ?? string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -471,19 +478,19 @@
         var templates = await NodeContext.App_tbTemplates
             .AsNoTracking()
             .OrderBy(item => item.TemplateName)
-            .Select(item => new { item.TemplateName, item.TemplateDescription, item.IsVatRegistered })
+            .Select(item => new { item.TemplateCode, item.TemplateName, item.TemplateDescription, item.IsVatRegistered })
             .ToListAsync();
 
-        _templateNames.Clear();
-        _templateNames.AddRange(templates.Select(item => item.TemplateName));
+        _templates.Clear();
+        _templates.AddRange(templates.Select(item => new TemplateOption(item.TemplateCode, item.TemplateName)));
 
         _templateDescriptions.Clear();
         foreach (var item in templates)
-            _templateDescriptions[item.TemplateName] = item.TemplateDescription ?? string.Empty;
+            _templateDescriptions[item.TemplateCode] = item.TemplateDescription ?? string.Empty;
 
         _templateVatDefaults.Clear();
         foreach (var item in templates)
-            _templateVatDefaults[item.TemplateName] = item.IsVatRegistered;
+            _templateVatDefaults[item.TemplateCode] = item.IsVatRegistered;
 
         _monthNames.Clear();
         _monthNames.AddRange(await NodeContext.App_tbMonths
@@ -520,7 +527,7 @@
 
             _editor = new SetupEditorModel
             {
-                TemplateName = _templateNames.FirstOrDefault() ?? string.Empty,
+                TemplateCode = _templates.FirstOrDefault()?.TemplateCode ?? string.Empty,
                 SubjectName = company?.CompanyName ?? string.Empty,
                 BusinessAddress = company?.CompanyAddress ?? string.Empty,
                 UserName = currentUserName,
@@ -573,11 +580,11 @@
         }
         else
         {
-            var defaultTemplate = _templateNames.FirstOrDefault() ?? string.Empty;
+            var defaultTemplate = _templates.FirstOrDefault()?.TemplateCode ?? string.Empty;
 
             _editor = new SetupEditorModel
             {
-                TemplateName = defaultTemplate,
+                TemplateCode = defaultTemplate,
                 MonthName = await NodeContext.App_tbMonths
                     .Where(item => item.MonthNumber == 4)
                     .Select(item => item.MonthName)
@@ -607,7 +614,7 @@
 
     private Task ApplyTemplateDefaultsAsync()
     {
-        if (_templateVatDefaults.TryGetValue(_editor.TemplateName, out var isVat))
+        if (_templateVatDefaults.TryGetValue(_editor.TemplateCode, out var isVat))
             _editor.IsVatRegistered = isVat;
         else
             _editor.IsVatRegistered = false;
@@ -657,7 +664,7 @@
                 .SingleAsync();
 
             await NodeContext.InstallBasicSetup(
-                templateName: _editor.TemplateName,
+                templateCode: _editor.TemplateCode,
                 financialMonth: monthNumber,
                 govSubjectName: _editor.Government,
                 bankName: _editor.BankName,

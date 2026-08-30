@@ -226,7 +226,7 @@ Implement the approved Sole Trader cumulative SQL projection and the minimum Obj
 ### SQL implementation
 
 - Replaced the constructive `UK-ITSA-SE-QU` seed with `UK-ITSA-SE-CUM` and the approved sixteen-tag manifest: two income tags, the consolidated-expense alternative and thirteen directed detailed expense tags.
-- Added nullable `Cash.tbTaxTag.StatutoryPolarityCode`, constrained to Income or Expense and linked to `Cash.tbPolarity`. The cumulative manifest always supplies it explicitly; null remains available for older non-cumulative tag sets whose statutory orientation has not been audited in this phase.
+- Initially added nullable `Cash.tbTaxTag.StatutoryPolarityCode`, constrained to Income or Expense and linked to `Cash.tbPolarity`. This initial design was superseded on 30 August 2026 by the mandatory `CashPolarityCode` correction recorded below.
 - Added `CT-CUMEXP` to MIN as a neutral accounting/reporting roll-up of cost of sales, staff costs and overheads. Owner movements, tax and asset movements remain outside it.
 - Re-enabled `CC-EMPNI` for Sole Traders.
 - Reworked STD into the approved detailed expense categories and CashCodes, including the approved code moves. `CC-DIRCT` and `CC-ADMIN` are disabled after their deterministic replacements are installed.
@@ -263,3 +263,80 @@ The local SQL Server service was present, but `sqlcmd` could not establish an in
 The source-tree bootstrap no longer constructs `UK-ITSA-SE-QU`. Existing deployed nodes may still contain that historical source and its tag rows. Phase 4D does not delete deployed business data; removal or migration of already-seeded legacy rows remains an explicitly authorised upgrade-path task.
 
 Phase 4D stops at the validated Objective 2 foundation. No Objective 3 or transport implementation has begun.
+
+## 30 August 2026 — Generic Tax Tag Validator Correction
+
+### Authorised objective
+
+Correct `Cash.fnTaxTagMapValidate` so it enforces the shared Tax Tag mapping contract without embedding Sole Trader/HMRC manifest or submission-readiness knowledge. No Objective 3 or unrelated Tax Hub work was authorised or performed.
+
+### Evidence reviewed
+
+- Revised authoritative `specs/reference/sole-trader-field-sets.md`, including the agreed Rollup/Component/Derived mapping contract.
+- Complete current `findings.md` and `change-log.md`.
+- Current validator function/procedure, effective mapping view, tag/map/category/code tables, category relationship direction, enablement fields, polarity fields and existing business-tax CashCode view.
+- The pre-Phase-4D validator from the parent of SQL Node commit `60bbbc7`, used as the original function spool.
+
+### Original invariants and decisions
+
+- Retained: enabled selected-source map processing, Category descendant expansion, direct CashCode mapping and same-tag duplicate-route failure.
+- Corrected: missing/disabled/ineligible roots now fail with specific generic messages; configured tag orientation is compared with every effective Component leaf for every source rather than one named source.
+- Added from the agreed class contract: any map row attached to Rollup or Derived fails; only Component tags are mappable.
+- Restored with corrected semantics: uncovered enabled CashCodes now produce warnings only when they are enabled nominal leaves in `App.vwTaxBizCashCodes`, the configured net-profit/P&L universe, and are absent from the selected source's effective Component coverage. A CashCode covered through a mapped ancestor is not warned; disconnected owner/capital and other non-P&L branches are outside this warning boundary.
+- Kept source-specific: cross-tag exclusivity, exact manifest, tag count, named required income fields, consolidated/detailed alternatives and thirteen-field readiness. Different Component fields can only be declared mutually exclusive by their approved source contract; the generic validator must not assume that relationship.
+
+### Exact edits
+
+- `Cash/Functions/fnTaxTagMapValidate.sql`: removed all source/tag literals and readiness manifests; added data-driven source existence, tag-class eligibility, root eligibility, effective contributor, same-tag overlap, configured-polarity and corrected uncovered-P&L warning checks.
+- `Cash/Stored Procedures/proc_TaxTagMapValidate.sql`: changed the hard-coded `MTD` error heading to generic `Tax Tag` wording.
+- `Cash/Views/vwTaxTagCashCode.sql`: disabled or ineligible Category roots and descendants no longer enter effective coverage.
+- `Tests/TaxTagMapValidator.sql`: added a repeatable rollback-only generic fixture covering valid Component mappings, Rollup/Derived rejection, disabled roots, same-tag parent/descendant overlap, configured polarity mismatch and indirect-coverage-aware warnings.
+- `Tests/Phase4D_CumulativeProjection.sql`: moved Sole Trader cross-tag and consolidated/detailed assertions out of the generic validator and retained them as source-specific fixture checks.
+- `tcNodeDb4.sqlproj`: listed the new generic fixture as a non-build acceptance asset.
+- `findings.md`: appended the pre-edit reconnaissance, lost-invariant assessment and corrected warning rationale.
+
+The canonical quarterly accounting tag seed and `Cash.tbTaxTag` schema were not changed in this correction.
+
+### Verification
+
+- Static search found no source code, HMRC/MTD term, statutory tag name, manifest count, consolidated/detailed term or readiness literal in the generic function/procedure pair.
+- SQL project rebuild with Visual Studio MSBuild 18, Debug/AnyCPU: success; the dacpac was produced. Existing unrelated `SQL71502` warnings for synthetic-dataset `#DatasetCodes` references remain.
+- `git diff --check` reported no whitespace defects; only repository line-ending notices.
+- The repeatable database fixtures could not be executed because the available local SQL Server still cannot establish an integrated connection in this environment. The generic behavioural assertions are therefore present but remain runtime-pending.
+
+### Narrow unresolved point
+
+The validator's corrected uncovered-CashCode warning uses the existing configured net-profit/P&L universe as the strongest schema-backed definition of business-tax relevance. If a future Tax Source intentionally projects accounting values outside that universe, its coverage-warning boundary will need explicit source metadata rather than another hard-coded exception.
+
+## 30 August 2026 — Mandatory Tax Tag Cash Polarity
+
+### Authorised correction
+
+- Renamed `Cash.tbTaxTag.StatutoryPolarityCode` to `CashPolarityCode` and made it `NOT NULL`, retaining the Income/Expense check and foreign key to `Cash.tbPolarity`.
+- Renamed the related constraints and propagated the column name through the generic validator, cumulative SQL projection, Sole Trader cumulative tag seed and Objective 2 .NET reader.
+- Made polarity comparison unconditional in the generic validator: every Tax Tag now declares its required accounting cash polarity, and every effective contributor must match it.
+- Updated the rollback-only validator fixture terminology.
+
+No migration was added because the product has no deployed database requiring preservation at this development stage. The existing Corporation Tax tag seed deliberately remains without `CashPolarityCode`; it will now fail against the current schema and thereby expose that non-compliant template until its later scheduled update.
+
+## 30 August 2026 — Template Bootstrap and Synthetic Dataset Key Correction
+
+- Corrected the Sole Trader template keys in `App.proc_NodeDataInit` from over-width `STMIN26-MTD` / `STSTD26-MTD` values to the existing ten-character-compatible `STMIN26` / `STSTD26` keys used by `App.tbTemplateDataset`.
+- Changed `App.proc_DatasetSyntheticMIS` and `App.proc_DatasetSyntheticMIS_Bootstrap` to select, validate and pass templates by `TemplateCode`, not mutable `TemplateName` text.
+- Corrected synthetic Sole Trader selection so `UseStdCompanyTemplate` chooses `STMIN26` or `STSTD26`, matching the dataset configuration rows; the obsolete hard-coded SA title was removed.
+- Changed `App.proc_BasicSetup` to require `@TemplateCode` as its first parameter and removed the title-based parameter and lookup entirely.
+- Updated `TradeControl.Web.Data.NodeContext.InstallBasicSetup` to pass `@TemplateCode`.
+- Updated `SetupPanel.razor` so the selection value and editor state are `TemplateCode`, while the user continues to see `TemplateName`; descriptions and VAT defaults are also keyed by code.
+- Rebuilt `tcNodeDb4.sqlproj` successfully and produced the dacpac. `TCWeb.csproj` also builds successfully; its existing unrelated MudBlazor analyzer warnings remain.
+
+## 30 August 2026 — Sole Trader STD Code-Width Correction
+
+- Audited code literals across every 2026 template procedure against their target schema widths.
+- Replaced the sole over-width Category identifier, `CA-INTEREST` (11 characters), with `CA-LOANINT` (10 characters) in the STD Category seed, hierarchy, CashCode assignments and cumulative Tax Tag mapping.
+- Updated the design record to use the executable identifier consistently.
+
+## 30 August 2026 — STD Synthetic Miscellaneous Payment Correction
+
+- Corrected `App.proc_DatasetSyntheticMIS_PayMisc`, which continued to post energy and provisions payments to `CC-ADMIN` after the STD template disabled that coarse aggregate code.
+- Energy payments now select enabled `CC-UTILS`; provisions select enabled `CC-OTHER`. Each falls back to enabled `CC-ADMIN` for MIN templates, preserving the intentionally coarse MIN classification without relying on a disabled code in STD.
+- Added an explicit failure when neither the semantic code nor the MIN fallback is available.
