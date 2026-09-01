@@ -198,3 +198,170 @@ The architecture stores only a flat tag list plus accounting mappings. It has no
 16. Can the generic flat Tax Tag architecture remain the accounting projection layer while a separate contract-specific model supplies contexts, calculations and filing packaging, or must the schema itself represent those concepts?
 17. Is the existing `SubmitMicro` harness to be retained only as a diagnostic, replaced by a contract-shaped builder, or removed?
 18. Which legacy Corporation Tax forecast, accrual, statement and loss-carry-forward calculations remain valid internal planning features, and which—if any—may feed statutory computations?
+
+## 10. Workplan 3 Phase 1 — current `HMRC_MTD` repository reconnaissance
+
+Date: 1 September 2026
+
+Scope: current working tree only. The removed `Sa/v1_0/Submissions/SA100` model is not part of this analysis, is not an architectural precedent, and is not recommended for reconstruction or retention.
+
+### 10.1 Current contract-model surface
+
+The supported contract-shaped area now consists of:
+
+```text
+Hmrc/
+├── Shared/
+│   └── JsonExtract.cs
+├── Vat/v1_0/
+│   ├── CustomerInformation/
+│   ├── FinancialDetails/
+│   ├── Liabilities/
+│   ├── Obligations/
+│   ├── Payments/
+│   ├── Penalties/
+│   ├── Returns/
+│   └── ViewReturn/
+└── Sa/v1_0/Submissions/MTDITSA/
+    ├── Liabilities/
+    ├── Obligations/
+    └── Payments/
+```
+
+The stable namespace/folder convention is `Hmrc/<Regime>/v1_0/<operation>`, rooted in the project namespace `TradeControl.Tax.UK`. The full requested Corporation Tax namespace is therefore `TradeControl.Tax.UK.Hmrc.CorporationTax.v1_0`. Folders track namespaces, public type names carry a regime prefix, and one principal public class normally occupies each file.
+
+VAT groups classes by API resource and normally supplies `<Resource>Request`, `<Resource>Response`, `<Resource>Endpoint` and child DTO files. MTD ITSA follows the same operation grouping beneath an additional `Submissions/MTDITSA` boundary. There is no current repository precedent for a multi-document XML statutory return package. Its Corporation Tax shape must come from the authoritative CT contract and the workplan, not from a removed model.
+
+### 10.2 DTO/model conventions
+
+Current DTOs are mutable classes with public `get; set;` properties. There is no shared request, response, endpoint or statutory-document interface.
+
+- VAT uses `required` selectively for identifiers such as VRN and period key.
+- MTD ITSA requires UTR through constructors.
+- VAT mostly uses `DateTime`; MTD ITSA uses `DateOnly` for date-only API fields.
+- Monetary values use `decimal`; optional amounts use `decimal?`.
+- Repeating response groups use initialised `List<T>` properties.
+- Constrained statuses and methods are generally strings.
+- No immutable aggregate pattern, money type, identifier value object, accounting-period type, document type or provenance type exists.
+
+Mutable classes and one-type-per-file are reasonable style defaults for Corporation Tax. Requiredness, nullability, date types, enumerations, sign/precision and cardinality must be selected from the CT600/RIM/schema contract in Phase 2. The inconsistent VAT/MTD choices are observations, not rules to import.
+
+### 10.3 Serialization conventions
+
+The remaining supported contract surface is JSON-oriented:
+
+- request classes commonly expose `ToJson(bool indented = false)` using `System.Text.Json`;
+- path identifiers are held on requests and excluded from bodies with `[JsonIgnore]`;
+- static endpoint descriptors contain `Path`, `Method`, `Version` and `Scope` constants;
+- VAT responses commonly use whole-object `JsonSerializer.Deserialize<T>` plus `FromJson`;
+- MTD ITSA response types commonly accept `JsonElement` and use exact camel-case property names through `Hmrc.Shared.JsonExtract`.
+
+There is no shared `JsonSerializerOptions`, naming policy, source-generated context, date converter, required-member policy, deterministic fixture framework or schema-validation hook. Default `System.Text.Json` behaviour is therefore not a safe external-contract template without fixtures.
+
+No XML serializer remains in the supported contract tree. Phase 1 consequently provides no local basis for choosing Corporation Tax serialization. VAT JSON methods and REST endpoint descriptors do not imply that CT600, computations or accounts should use JSON or the VAT operation shape. Serialization must wait for the authoritative Corporation Tax technical contract and Phase 7 fixtures.
+
+### 10.4 Validation conventions
+
+VAT and MTD ITSA contract DTOs do not implement model-level validation. `Services/Validation` validates `Dictionary<string, object?>` inputs to the development runner, checks keys/environment/date strings, and sometimes queries Trade Control through SQL readers. Its `ValidationResult` is a simple string warning/error collection.
+
+That is harness/application validation, not statutory contract validation. It cannot validate CT600 requiredness, conditional pages, box arithmetic, accounting-period limits, computation consistency, schema rules or package completeness. It should not be referenced by CT DTOs merely because it is named `Validation`.
+
+The reusable principle is separation of validation orchestration from DTO storage. Actual Corporation Tax validators, result types and rule placement must be designed from authoritative rules in later authorised phases.
+
+### 10.5 Versioning conventions
+
+Live external-model namespaces use `v1_0`; endpoint descriptors expose `Version = "1.0"`. Separately, `ModuleInfo.Version` and internal harness payloads use `2026.1`.
+
+These are distinct version axes. `Hmrc.CorporationTax.v1_0` permits side-by-side internal contract versions, but does not identify the CT600 form, RIM, schema, generic validation rules, computational taxonomy or accounts taxonomy release. The eventual model needs explicit external provenance once those authorities are fixed.
+
+### 10.6 Contract versus transport
+
+VAT and MTD ITSA folders describe bodies and endpoint metadata but send no requests. `Services/Transport` is empty. Configuration, SQL data access, mapping, runner validation, logging and the WebHarness sit outside `Hmrc`:
+
+```text
+Hmrc/...             external contract shapes and operation metadata
+Infrastructure/...  configuration, database and logging
+Services/...        Trade Control readers, mapping, validation and runner orchestration
+HMRC.WebHarness      development observation host
+```
+
+This separation is directly relevant. CT600, supplementary pages, computations, accounts and contract-shared values belong below `Hmrc.CorporationTax.v1_0.Submissions`. Credentials, environment selection, SQL projection, Tax Tags, logging, HTTP/gateway clients and harness payloads do not.
+
+The existing `SubmitMicro` runner/harness is historical integration material, not a Corporation Tax contract or transport precedent.
+
+### 10.7 Reusable infrastructure
+
+`Hmrc.Shared` contains exactly one type: `JsonExtract`. It extracts strings, decimals and `DateOnly` values from `JsonElement`. It is reusable only if a later Corporation Tax JSON response has identical parsing semantics. Its non-nullable getters silently return null, zero or a default date when a value is absent/invalid, so it cannot distinguish contract failure from a legitimate zero and is unsuitable for required CT fields or contract validation.
+
+There are no reusable shared primitives for UTR, company number, accounting period, money, bank details, declaration, attachment, document identity, schema version or endpoint metadata.
+
+Infrastructure outside `Hmrc.Shared` is generic only at the application layer:
+
+- `EnvironmentSelector` and `HmrcSettings` configure environments;
+- `ConnectionFactory` and `SqlHelpers` support Trade Control data access;
+- `SubmissionLogger` logs runner activity;
+- `ValidationResult` reports runner validation messages.
+
+None belongs in Phase 2 CT600 DTOs. A new type should enter `Hmrc.Shared` only when identical cross-regime external semantics are proven; sharing the CLR type `string` or `decimal` is insufficient. SQL readers, raw tag mappers, reconciliation, harness and runner types are explicitly non-reusable for the authoritative CT model.
+
+### 10.8 Proposed Corporation Tax namespace/file structure
+
+The proposal is deliberately limited to ownership boundaries already required by the workplan. It does not invent fields, serializers, validators, endpoints, envelopes or base classes.
+
+```text
+src/HMRC_MTD/Hmrc/CorporationTax/v1_0/
+└── Submissions/
+    ├── CT600/
+    │   ├── Return/
+    │   │   └── Ct600Return.cs
+    │   ├── SupplementaryPages/
+    │   │   └── <one folder/namespace per implemented page>
+    │   └── Shared/
+    │       └── <types proven common to CT600 return and pages>
+    ├── Computations/
+    │   └── <computation aggregate and contract-proven sections>
+    ├── Accounts/
+    │   └── <HMRC accounts-attachment model, deferred to Phase 5>
+    └── Shared/
+        └── <types proven common across CT600, computations and accounts>
+```
+
+Phase ownership controls when these folders gain files:
+
+- Phase 2 creates only the CT600 core and supporting statutory groups proven by the current form/RIM/schema.
+- Phase 3 adds each supplementary page separately. It should not add a common interface/base class unless real shared contract behaviour is demonstrated.
+- Phase 4 adds computations without merging accounting facts into CT600 boxes.
+- Phase 5 adds the accounts attachment/iXBRL boundary.
+- Phase 6 may add a separate package namespace once authoritative package cardinality and envelope rules are known.
+- Phase 7 decides serializer placement from actual contract fixtures.
+
+`Validation`, `Serialization`, `Transport`, `Endpoints` and `Package` are intentionally absent from the initial physical tree. They should be introduced only by the phase with authoritative evidence for their contents.
+
+### 10.9 Safe conventions and exclusions
+
+Safe to carry forward:
+
+1. Full namespace `TradeControl.Tax.UK.Hmrc.CorporationTax.v1_0`.
+2. Folder/namespace alignment and one principal public type per file.
+3. Versioned regime isolation.
+4. Regime/document-prefixed public names.
+5. Contract types separated from infrastructure, Trade Control projection, harness and transport.
+6. Separate CT600, supplementary-page, computation and accounts families.
+7. Shared types placed at the narrowest scope with proven common semantics.
+
+Not safe without authoritative Corporation Tax evidence:
+
+- VAT REST/request-response patterns or JSON serialization;
+- MTD ITSA UTR constructors, query dates, response parsing or scopes;
+- `DateTime` versus `DateOnly` choices;
+- silent defaults from `JsonExtract`;
+- runner dictionary validation;
+- SQL readers, Tax Tags, generic harness items or `SubmitMicro`;
+- any removed SA100 class, schedule, serializer, envelope, canonicalisation or IRmark design;
+- any XML/package design inferred from repository history.
+
+### 10.10 Phase 1 conclusion and Phase 2 gate
+
+Current conventions are understood: versioned regime namespaces, small operation-focused DTO files, endpoint metadata separate from transport, and physical separation between `Hmrc` contracts and Trade Control/harness services. Reusable contract infrastructure is minimal and there is no generic statutory-document framework to adopt.
+
+The proposed Corporation Tax tree establishes boundaries without inventing CT content. Phase 2 must not begin until separately authorised and supplied with the exact current CT600 form, guide, RIM, generic validation rules and schema releases specified by the workplan. The removed SA100 implementation has no role in that decision.

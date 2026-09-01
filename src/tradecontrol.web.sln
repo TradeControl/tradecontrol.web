@@ -41,6 +41,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implement
 		..\docs\projects\Tax Hub\implementation\tax-hub-implementation-2.md = ..\docs\projects\Tax Hub\implementation\tax-hub-implementation-2.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-workplan-1.md = ..\docs\projects\Tax Hub\implementation\tax-hub-workplan-1.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-workplan-2.md = ..\docs\projects\Tax Hub\implementation\tax-hub-workplan-2.md
+		..\docs\projects\Tax Hub\implementation\tax-hub-workplan-3.md = ..\docs\projects\Tax Hub\implementation\tax-hub-workplan-3.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{DEFB1068-AB8F-4086-9ED2-22CD4558419D}"
@@ -55,6 +56,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "reference", "reference", "{
 		..\docs\projects\Tax Hub\specs\reference\brexit-vat-surface.md = ..\docs\projects\Tax Hub\specs\reference\brexit-vat-surface.md
 		..\docs\projects\Tax Hub\specs\reference\company-field-sets.md = ..\docs\projects\Tax Hub\specs\reference\company-field-sets.md
 		..\docs\projects\Tax Hub\specs\reference\sole-trader-capital.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-capital.md
+		..\docs\projects\Tax Hub\specs\reference\sole-trader-contracts.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-contracts.md
 		..\docs\projects\Tax Hub\specs\reference\sole-trader-field-sets.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-field-sets.md
 	EndProjectSection
 EndProject
