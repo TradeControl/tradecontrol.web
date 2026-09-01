@@ -53,6 +53,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "reference", "reference", "{DC738C34-A9CF-4CEA-B696-51D8BDD33E58}"
 	ProjectSection(SolutionItems) = preProject
 		..\docs\projects\Tax Hub\specs\reference\brexit-vat-surface.md = ..\docs\projects\Tax Hub\specs\reference\brexit-vat-surface.md
+		..\docs\projects\Tax Hub\specs\reference\company-field-sets.md = ..\docs\projects\Tax Hub\specs\reference\company-field-sets.md
 		..\docs\projects\Tax Hub\specs\reference\sole-trader-capital.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-capital.md
 		..\docs\projects\Tax Hub\specs\reference\sole-trader-field-sets.md = ..\docs\projects\Tax Hub\specs\reference\sole-trader-field-sets.md
 	EndProjectSection
