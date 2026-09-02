@@ -365,3 +365,263 @@ Not safe without authoritative Corporation Tax evidence:
 Current conventions are understood: versioned regime namespaces, small operation-focused DTO files, endpoint metadata separate from transport, and physical separation between `Hmrc` contracts and Trade Control/harness services. Reusable contract infrastructure is minimal and there is no generic statutory-document framework to adopt.
 
 The proposed Corporation Tax tree establishes boundaries without inventing CT content. Phase 2 must not begin until separately authorised and supplied with the exact current CT600 form, guide, RIM, generic validation rules and schema releases specified by the workplan. The removed SA100 implementation has no role in that decision.
+
+## Sole Trader Objective 2 / Objective 3 Contract Reconciliation
+
+Date: 2 September 2026
+
+Scope: static reconciliation of the current `tcNodeDb4` Sole Trader Objective 2 bootstrap and cumulative projection against `specs/reference/sole-trader-contracts.md`. This is a proposal only; no SQL, C#, harness or project change has been made.
+
+### 1. Current Objective 2 state
+
+The selectable MTD bootstrap paths are:
+
+- MIN: `App.proc_Template_ST_SOLE_CUR_MIN_MTD_2026` -> `App.proc_Template_ST_SOLE_CUR_MIN_2026` -> `App.proc_Template_BASE_MIN_2026`, followed by `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026` and MIN mappings;
+- STD: `App.proc_Template_ST_SOLE_CUR_STD_MTD_2026` -> `App.proc_Template_ST_SOLE_CUR_STD_2026` -> the same Sole Trader MIN/base accounting bootstrap, followed by the same Tax Source/Tag seed and STD mappings.
+
+Both use Tax Source `UK-ITSA-SE-CUM`, jurisdiction `UK`, Tax Type `5` (`Quarterly Return`), and source description `MTD ITSA Sole Trader cumulative accounting projection`. `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026` seeds 16 tags: two income, one consolidated expense and 13 detailed expense tags. It gives every tag `TagClassCode = 1` (Component), with income polarity `1` and expense polarity `0`.
+
+The effective extraction path is:
+
+`Cash.tbTaxTagMap` -> `Cash.vwTaxTagCashCode` -> `Cash.fnTaxBizCumulative` -> `TcBusinessTaxReader.ReadCumulativeAsync`.
+
+`Cash.fnTaxTagMapValidate` correctly restricts direct Category/CashCode mappings to Components, recursively expands Category mappings to enabled nominal CashCodes, rejects within-tag parent/child or multiple-root duplicates, and checks contributor polarity. It warns about uncovered enabled P&L CashCodes. It does not encode HMRC manifest requiredness, detailed/consolidated workflow choice, cross-tag exclusivity, tax allowability, or annual ownership.
+
+### 2. Authoritative contract mismatches
+
+1. The current Self Employment v5 detailed cumulative contract has 15 expense properties. Objective 2 has only 13 detailed concepts; `irrecoverableDebts` and `depreciation` are absent.
+2. `consolidatedExpenses` is currently a mapped Component (`CT-CUMEXP`). Authoritatively it is a Rollup plus a workflow election and eligibility decision, and must be mutually exclusive with detailed expenses.
+3. The SQL model contains no general allowable/disallowable split. It therefore cannot currently populate the 15 disallowable properties deterministically.
+4. No authoritative accounting source was found for `taxTakenOffTradingIncome`.
+5. `Cash.fnTaxBizCumulative` hard-codes 6 April and configured accounting-period boundaries. It does not support a later business-commencement start and cannot accept all obligation-supplied standard/calendar cumulative end dates.
+6. A mapped tag with no period rows is emitted as supported zero because `Amounts` uses `SUM(COALESCE(p.InvoiceValue, 0))`. Objective 2 therefore cannot distinguish “no contributing accounting fact” from a genuine recorded zero.
+7. The current cumulative path preserves reversals and negative expenses and does not apply `Math.Abs`; the historical discrete reader's `Math.Abs` defect is not present in this path.
+
+### 3. Quarterly field reconciliation
+
+| HMRC field/concept | Current Objective 2 code | Current status | Ownership/conclusion | Proposal class |
+|---|---|---|---|---|
+| `turnover` | `turnover` -> `CT-TURNOV` | MIN/STD supported | Component, polarity 1 | **No change required** |
+| `other` | `otherBusinessIncome` -> `CT-OTHRIN` | MIN/STD supported | Component; adapter renames to wire `other` | **No change required** |
+| `taxTakenOffTradingIncome` | none | unsupported | External/reviewed input; not turnover or subcontractor expense | **No change required** to Objective 2 |
+| `costOfGoods` | STD `costOfGoods` -> `CA-COGS` | STD supported | Component, polarity 0 | **No change required** |
+| `paymentsToSubcontractors` | STD tag -> `CA-SUBCON` | STD supported | Component, polarity 0; means expense, not CIS tax deducted | **No change required** |
+| `wagesAndStaffCosts` | STD tag -> `CT-STAFFC` | STD supported | Component; includes `CC-WAGES`, `CC-PENSN`, `CC-EMPNI` | **No change required** |
+| `carVanTravelExpenses` | STD tag -> `CA-MOTOR` and `CA-TRAVEL` | STD supported | One Component with two disjoint Category roots | **No change required** |
+| `premisesRunningCosts` | STD tag -> `CA-PREMS` | STD supported | Component | **No change required** |
+| `maintenanceCosts` | STD tag -> `CA-REPAIR` | STD supported | Component | **No change required** |
+| `adminCosts` | STD tag -> `CA-OFFICE` | STD supported | Component | **No change required** |
+| `businessEntertainmentCosts` | STD tag -> `CA-ENTERT` | STD total supported | Component total; no disallowable split | **No change required** for total |
+| `advertisingCosts` | STD tag -> `CA-ADVERT` | STD supported | Component | **No change required** |
+| `interestOnBankOtherLoans` | STD tag -> `CA-LOANINT` | STD supported | Component | **No change required** |
+| `financeCharges` | STD tag -> `CA-FINANCE` | STD supported | Component | **No change required** |
+| `irrecoverableDebts` | none | unsupported | Missing Component candidate; see section 6 | **Required before Objective 3** for a complete STD detailed projection |
+| `professionalFees` | STD tag -> `CA-PROF` | STD supported | Component | **No change required** |
+| `depreciation` | none | unsupported | Missing Component candidate; see section 7 | **Required before Objective 3** for a complete STD detailed projection |
+| `otherExpenses` | STD tag -> `CA-OTHER` | STD supported | Component | **No change required** |
+| `consolidatedExpenses` | MIN tag -> `CT-CUMEXP` | value extractable but misclassified | Rollup plus workflow choice, not a directly mapped Component | **Required before Objective 3** |
+| 15 disallowable fields | none | unsupported | OptionalAbsent unless an exact allowable/disallowable source is added | **No change required** to current mappings; see section 8 |
+
+The Objective 2 names need not match JSON property names. The present names are mostly wire-shaped and are not contract-blocking. If projection-oriented names such as `cisPaymentsToSubcontractors`, `wagesSalariesStaffCosts`, `rentRatesPowerInsurance`, `repairsMaintenance`, `phoneFaxStationeryOfficeCosts`, `businessEntertainment`, `advertising`, `bankCreditCardFinancialCharges`, `accountancyLegalProfessionalFees` and `otherBusinessExpenses` are preferred, rename them only as a separately migrated cleanup with adapter fixtures. This is **Recommended cleanup**, not a prerequisite for correct DTO population.
+
+### 4. MIN mapping assessment
+
+MIN installs exactly:
+
+| Tag | Root | Effective bootstrap contributors |
+|---|---|---|
+| `turnover` | `CT-TURNOV` | `CA-SALES` -> `CC-SALES` |
+| `otherBusinessIncome` | `CT-OTHRIN` | `CA-INCOME` -> `CC-INCME` |
+| `consolidatedExpenses` | `CT-CUMEXP` | `CT-CSTSAL`, `CT-STAFFC`, `CT-OVERHD`; ultimately enabled `CA-DIRECT`, `CA-WAGES`, `CA-ADMIN` CashCodes |
+
+The roots are disjoint, contributor polarities agree with their tags, and the base Sole Trader path disables `CC-DEPRC` and `CC-DEPRJ`, so `CA-ASSET` contributes no enabled code. No bootstrap-enabled MIN P&L CashCode is left outside the two income roots and `CT-CUMEXP`.
+
+The mapping is nevertheless not statutorily sufficient as implemented. HMRC defines consolidated expenses as allowable expenses and restricts their use by turnover/workflow choice. `CT-CUMEXP` is a raw accounting total; neither its tree nor `Cash.fnTaxBizCumulative` proves allowability or the under-£90,000 eligibility/election. MIN must remain an accounting template, not simulate 15 detailed categories. The safe boundary is:
+
+- retain `CT-CUMEXP` as an internal accounting rollup;
+- change Tax Tag `consolidatedExpenses` to `TagClassCode = 0` (Rollup);
+- remove its row from `Cash.tbTaxTagMap` because only Components may be mapped;
+- have the population/contract adapter select consolidated mode only after workflow eligibility and derive the approved allowable rollup without installing detailed MIN mappings;
+- do not make generic mapping validation source-specific. Detailed/consolidated exclusivity belongs in population/contract validation.
+
+This correction is **Required before Objective 3**. The existing MIN accounting categories and CashCodes otherwise require **No change**.
+
+### 5. STD mapping assessment
+
+STD maps two income tags and 13 detailed expense concepts. Its effective Category roots are disjoint between tags. The two roots for `carVanTravelExpenses` (`CA-MOTOR`, `CA-TRAVEL`) are siblings under `CT-OVERHD`, not a parent/child overlap. Every mapped income leaf has polarity 1 and every mapped expense leaf has polarity 0. No mapped parent/child conflict or within-tag double count was found.
+
+STD disables the coarse `CC-DIRCT` and `CC-ADMIN` codes, preserving the underlying MIN accounting structure while requiring detailed posting. It does not install a consolidated mapping, so the current STD bootstrap does not mix detailed and consolidated modes.
+
+One conditional enabled P&L CashCode can remain uncovered: `CC-MINER`, created by `proc_Template_BASE_MIN_2026` under `CA-DIRECT` when `CoinTypeCode < 2`. STD maps `CA-COGS` and `CA-SUBCON`, not their parent `CT-CSTSAL` or sibling `CA-DIRECT`, and disables `CC-DIRCT` but not `CC-MINER`. The generic validator will warn, but not fail. Classify and either remap/disable `CC-MINER` for STD Sole Trader nodes according to its real accounting meaning. This is **Required before Objective 3** if that conditional code can exist in a supported STD node; it must not silently escape the statutory projection.
+
+STD otherwise remains a valid accounting template rather than an HMRC taxonomy. Adding two dedicated accounting classifications for bad debts and depreciation is preferable to broadening parent mappings or forcing their values into `otherExpenses`.
+
+### 6. `irrecoverableDebts` assessment
+
+Repository searches found no Sole Trader Category or CashCode whose accounting meaning is irrecoverable/bad debt. `CA-OTHER`/`CC-OTHER` is too broad and mapping it simultaneously to `irrecoverableDebts` would double count `otherExpenses`. No existing child beneath `CA-OTHER` isolates the amount.
+
+| Branch | Deterministic source now | Candidate | Ancestry/overlap | Classification |
+|---|---|---|---|---|
+| MIN | No | none | Coarse consolidated accounting cannot isolate bad debt | OptionalAbsent in detailed mode; included only through an approved consolidated allowable rollup |
+| STD | No | add a dedicated expense nominal Category/CashCode beneath `CT-OVERHD` | Must be a sibling of `CA-OTHER`, not its child while `CA-OTHER` remains mapped; polarity 0 | Missing supported Component candidate |
+
+For STD, add a dedicated nominal expense Category (exact new code to be chosen under repository conventions), a dedicated CashCode, and a Component Tax Tag `irrecoverableDebts` with `CashPolarityCode = 0`. Map only that dedicated root. Do not map `CA-OTHER` to both tags and do not manufacture a zero merely to complete the manifest. This is **Required before Objective 3** if STD detailed submission is in scope. Existing/historical `CC-OTHER` transactions cannot be reclassified automatically; any migration is an accounting review, not a mechanical split.
+
+### 7. `depreciation` assessment
+
+The base template has exact accounting candidates `CC-DEPRC` (Depreciation) and `CC-DEPRJ` (Depreciation Adjustment), both under neutral money Category `CA-ASSET` (`CashPolarityCode = 2`), whose parent is `CT-PANDL`. The Sole Trader MIN bootstrap explicitly disables both as company-only codes, and STD inherits that state. Therefore neither MIN nor STD has an enabled, polarity-compatible depreciation contributor today.
+
+`CC-DEPRC` is the semantic accounting-depreciation candidate; `CC-DEPRJ` is not interchangeable and must not be swept into the quarterly field without a separately proven meaning. Mapping `CA-ASSET` is invalid because it is neutral and would also risk combining charge and adjustment. Mapping depreciation to annual capital allowances is prohibited: accounting depreciation and statutory capital allowances are distinct.
+
+| Branch | Deterministic source now | Correct direction | Classification |
+|---|---|---|---|
+| MIN | No; both codes disabled | Do not add a detailed mapping. If consolidated mode is chosen, only an approved allowable rollup may be sent; accounting depreciation is not silently treated as capital allowance or allowable consolidated expense. | OptionalAbsent for detailed property |
+| STD | No enabled source, but `CC-DEPRC` is an exact dormant accounting candidate | Place/enable the accounting charge in a dedicated enabled nominal expense Category with polarity 0 and map a new Component tag `depreciation`; keep `CC-DEPRJ` separate unless its semantics are proven. | Missing supported Component candidate |
+
+The STD accounting classification and tag are **Required before Objective 3** for complete detailed support. Capital-allowance treatment and any matching `depreciationDisallowable` rule remain a separate annual/disallowable decision.
+
+### 8. Disallowable-expense assessment
+
+Neither `Cash.tbCode`, `Cash.tbCategory`, `Cash.tbTaxTagMap` nor the Sole Trader templates store an allowable amount, a disallowable amount, an allowability percentage, private-use fraction, or reviewed statutory allocation. VAT `TaxCode` is not income-tax allowability. MIN's coarse Categories cannot distinguish the split. STD distinguishes accounting totals by expense kind, but not allowable and disallowable portions within a kind.
+
+`CA-ENTERT`/`CC-ENTERT` may look like a potential fully disallowable category, and a dedicated depreciation category could support a depreciation addition, but the current repository does not encode or validate those statutory rules. They cannot be declared deterministic solely from their labels. All 15 disallowable fields are therefore currently **OptionalAbsent/Unsupported** in Objective 2. The family is not deterministically supportable today.
+
+Do not create parallel Tax Tags or artificial allocations. A later, separately authorised phase may make selected fields supportable only by introducing explicit accounting/statutory classification and tests (for example, an approved fully-disallowable business-entertainment code or reviewed private-use split). This is **Deferred**. Omitting unsupported optional fields is **No change required** before Objective 3 DTO implementation, provided the adapter preserves absence and the product does not claim to submit those adjustments.
+
+### 9. `taxTakenOffTradingIncome` ownership assessment
+
+No authoritative CategoryCode, CashCode, Tax Tag, payment field or directly relevant procedure identifies tax deducted from this sole trader's trading income. `CC-SUBCON` is expenditure paid to subcontractors; VAT/general/business-tax codes represent other liabilities; turnover and supplier-payment deductions are not substitutes.
+
+Classify `taxTakenOffTradingIncome` as **External/reviewed workflow input**, not an Objective 2 accounting Component. Do not add a Tax Tag. This is **No change required** to Objective 2; Objective 3 must keep the property nullable/absent unless a legitimate external source is supplied.
+
+### 10. Annual Objective 2 candidate classification
+
+| Annual concept | Current Trade Control evidence | Ownership | Proposal |
+|---|---|---|---|
+| `includedNonTaxableProfits` | no distinct Category/CashCode | OptionalAbsent | **Deferred** until deterministic classification exists |
+| `basisAdjustment` | no basis-period calculation in reviewed path | External (potential reviewed Derived value) | **No Objective 2 mapping** |
+| `accountingAdjustment` | no change-of-practice statutory source | External | **No Objective 2 mapping** |
+| `outstandingBusinessIncome` | no distinct source; `otherBusinessIncome` is not equivalent | OptionalAbsent | **Deferred** |
+| `balancingChargeBpra` | no BPRA asset/allowance source | External | **No Objective 2 mapping** |
+| `balancingChargeOther` | no statutory disposal/allowance calculation | External | **No Objective 2 mapping** |
+| `goodsAndServicesOwnUse` | `CC-OWNCAP` records owner capital movements, not goods/services at normal sale value | OptionalAbsent | **Deferred**; add only with a dedicated Component source |
+| `transitionProfitAmount` | no transition-profit calculation | External | **No Objective 2 mapping** |
+| `transitionProfitAccelerationAmount` | user election with no accounting source | Contextual/External | **No Objective 2 mapping** |
+| current capital-allowance scalar fields | accounting depreciation exists only as a separate dormant accounting mechanism; no statutory allowance engine | External, potentially Derived in a future asset workflow | **Deferred**; never map from depreciation |
+| `tradingIncomeAllowance` | user election; requires removal of final cumulative expenses | Contextual | **No Objective 2 mapping** |
+| structured/enhanced structured-building allowances | no qualifying-expenditure/building statutory dataset | External; building identity/address is Contextual | **Deferred** |
+| Class 4 exemption reason | taxpayer status, not accounting | Contextual | **No Objective 2 mapping** |
+| current-year accounting profit/loss | P&L can supply an accounting starting point | Derived after approved statutory adjustments | **Deferred** to annual/loss workflow |
+| brought-forward losses, claims, preference order and carry-back liability credits | `Cash.vwTaxLossesCarriedForward` is internal planning based on configured tax rates, not authoritative HMRC per-business loss/claim state | External/Contextual; liability credit is professional calculation | **No Objective 2 mapping** |
+
+No annual value above is currently a proven Component suitable for `Cash.tbTaxTagMap`. `goodsAndServicesOwnUse`, `includedNonTaxableProfits` and `outstandingBusinessIncome` may become Components only after dedicated deterministic accounting classifications exist. The annual DTO must not recreate an EOPS aggregate.
+
+### 11. Existing quarterly Tax Tag vocabulary
+
+| Current tag | Decision |
+|---|---|
+| `turnover` | retain unchanged |
+| `otherBusinessIncome` | retain unchanged; adapter emits `other` |
+| `consolidatedExpenses` | retain name, change class from Component (1) to Rollup (0), remove direct map |
+| `costOfGoods` | retain unchanged |
+| `paymentsToSubcontractors` | retain; optional later rename to `cisPaymentsToSubcontractors` for projection clarity |
+| `wagesAndStaffCosts` | retain; optional later projection-oriented rename |
+| `carVanTravelExpenses` | retain unchanged |
+| `premisesRunningCosts` | retain; optional later projection-oriented rename |
+| `maintenanceCosts` | retain; optional later projection-oriented rename |
+| `adminCosts` | retain; optional later projection-oriented rename |
+| `advertisingCosts` | retain unchanged |
+| `businessEntertainmentCosts` | retain unchanged |
+| `interestOnBankOtherLoans` | retain unchanged |
+| `financeCharges` | retain; optional later projection-oriented rename |
+| `professionalFees` | retain; optional later projection-oriented rename |
+| `otherExpenses` | retain; optional later projection-oriented rename |
+| `irrecoverableDebts` | missing required candidate for STD detailed support |
+| `depreciation` | missing required candidate for STD detailed support |
+
+No existing quarterly tag is obsolete. The required vocabulary change is two missing Component candidates and the corrected class/derivation semantics for `consolidatedExpenses`. Wire-name versus projection-name cleanup is not blocking.
+
+### 12. Cumulative extraction assessment
+
+`Cash.fnTaxBizCumulative` is cumulative in aggregation: it accepts explicit start/end dates and sums all configured period values inclusively across that interval. It has no period key, obligation ID, NINO, business ID, calculation ID or declaration state. Those identifiers correctly remain outside Objective 2.
+
+The date validation is not contract-compatible in all supported cases:
+
+- start must be exactly 6 April and the first configured `App.tbYearPeriod.StartOn` for the year;
+- start cannot be a later business-commencement boundary;
+- end must be the day before a configured accounting-period start;
+- standard HMRC obligation ends such as 5 July are rejected unless the accounting calendar happens to contain 6 July;
+- calendar-quarter and first-year choice boundaries are not reliably represented;
+- annual/latent sources for which HMRC permits omitted body dates are not represented by this function.
+
+The period end should come from Objective 3/workflow obligation context and be checked there against HMRC rules. Objective 2 should aggregate to an supplied valid accounting cutoff without pretending its monthly accounting calendar is the HMRC obligation model. Correcting this boundary is **Required before Objective 3**.
+
+Sign handling is compatible: `Cash.vwCashCodePeriodValues` orients expense accounting values, and `fnTaxBizCumulative` converts them to statutory orientation without `ABS`. Credits and reversals can remain negative; `Tests/Phase4D_CumulativeProjection.sql` explicitly tests this. This requires **No change**.
+
+Absence handling is not fully compatible. An unmapped tag returns `Unsupported` and `NULL`, which is correct. A mapped tag with no period facts returns `Supported` zero, making absence indistinguishable from a genuine zero row. Preserve contributor presence (or equivalent provenance) so the adapter can apply the authoritative zero/omission rule and OQ-1 decision. This is **Required before Objective 3**; do not solve it by serializing every missing value as zero.
+
+### 13. Exact proposed changes before Objective 3
+
+#### Required before Objective 3
+
+1. In `App.proc_Template_ST_SOLE_CUR_TAX_MTD_2026`, seed `consolidatedExpenses` as Rollup (`TagClassCode = 0`) rather than Component.
+2. In `App.proc_Template_ST_SOLE_CUR_MIN_MTD_2026`, remove the direct `consolidatedExpenses -> CT-CUMEXP` mapping. Retain `CT-CUMEXP` only as an internal accounting rollup and define the population adapter's approved allowable-rollup/election path.
+3. Add STD-only dedicated accounting classifications and polarity-0 Component tags/mappings for `irrecoverableDebts` and `depreciation`, or explicitly declare STD detailed mode unsupported until those classifications exist. Do not reuse `CA-OTHER`, neutral `CA-ASSET`, or `CC-DEPRJ` mechanically.
+4. Resolve conditional uncovered `CC-MINER` in STD: classify it into one supported detailed root or disable it for that template based on its actual accounting meaning.
+5. Change cumulative extraction so the applicable tax-year/business-commencement start and obligation period end can be supplied by workflow without requiring HMRC dates to coincide with `App.tbYearPeriod` month boundaries.
+6. Preserve the distinction between no accounting contribution and a genuine zero in `Cash.fnTaxBizCumulative`/its reader contract.
+7. Add/adjust acceptance fixtures for: the 18-tag manifest (2 income, consolidated Rollup, 15 detailed Components); MIN Rollup/no direct map; STD 15-field coverage; no overlap; bad-debt/depreciation polarity and ancestry; `CC-MINER`; commencement and standard/calendar ends; negative reversals; unsupported/null versus recorded zero; and detailed/consolidated mutual exclusion at the adapter boundary.
+
+#### Recommended cleanup
+
+1. Document projection-name to HMRC-wire-name mappings explicitly in the future adapter rather than relying on identical strings.
+2. Consider projection-oriented tag renames only with a deliberate data/adapter migration; they are not contract blockers.
+3. Rename or narrow generic cumulative objects only if later work needs to make their Sole Trader date assumptions explicit; do not mix that cleanup into the blocking corrections.
+
+#### Deferred
+
+1. Explicit allowable/disallowable accounting splits and selected disallowable Tax Tags.
+2. Annual Component candidates for own use, non-taxable profits or outstanding income, if dedicated sources are later introduced.
+3. Capital-allowance, basis-period, transition-profit, structured-building and loss-claim workflows.
+4. HMRC Sandbox resolution of OQ-1 and the 2026-27 preview annual schema.
+
+### 14. Items requiring no change
+
+1. `UK-ITSA-SE-CUM` remains the appropriate Objective 2 source identity for the supported cumulative self-employment projection.
+2. The two income mappings are semantically correct.
+3. The existing 13 STD detailed expense mappings are semantically correct and polarity-compatible.
+4. STD's separate `CA-MOTOR` and `CA-TRAVEL` roots under one tag are disjoint and intentional.
+5. MIN should remain coarse and should not simulate STD's detailed taxonomy.
+6. NINO, HMRC business ID, tax year, obligation dates, accounting type, period-of-account details, calculation IDs, declaration state, Class 4 exemption and structured-building identity remain workflow/Objective 3 data, not Tax Tags.
+7. Negative expense values and reversals remain signed; no blanket `Math.Abs` belongs in the cumulative adapter.
+8. Unsupported optional disallowable, tax-deducted and annual values should remain absent rather than fabricated.
+9. Retired SA100, SA103F, EOPS, period-key and crystallisation models remain retired.
+
+### 15. Unresolved questions
+
+1. HMRC OQ-1 remains: confirm in the stateful Sandbox which zero leaves are mandatory versus omissible before serialization fixtures are frozen.
+2. Product decision: will MIN consolidated mode be supported, and where will the under-£90,000 eligibility, trading-allowance interaction and approved allowable-expense review be owned?
+3. Accounting decision: what permanent CategoryCode/CashCode identifiers should be assigned to STD irrecoverable debts and depreciation, and how should existing transactions currently posted to `CC-OTHER` or dormant depreciation codes be reviewed?
+4. Accounting decision: what is `CC-MINER` intended to represent in fiat/crypto configurations, and which STD statutory category, if any, owns it?
+5. Tax-policy decision: can any dedicated category (notably business entertainment or future depreciation) be asserted fully disallowable, and what evidence/rules/tests establish that assertion?
+
+### 16. Completion-gate answer
+
+The current Objective 2 projection is sufficient for the two ordinary income fields, the existing 13 STD detailed expense concepts, signed cumulative accounting values, and a coarse MIN accounting expense rollup. It is not yet sufficient to populate the current contract safely because consolidated expenses are misclassified/directly mapped, STD lacks deterministic irrecoverable-debt and depreciation classifications, one conditional STD P&L code may be uncovered, and cumulative date/absence semantics conflate accounting calendar boundaries and missing facts with the HMRC workflow contract.
+
+The smallest safe implementation phase is therefore the seven **Required before Objective 3** corrections in section 13. It must not add disallowable, tax-deducted or annual Tax Tags without deterministic sources, and it must not reintroduce EOPS or retired Self Assessment structures.
+
+### 17. Reviewed implementation decision addendum
+
+The implementation review refined the TagClass interpretation used in sections 4, 6, 7, 11, 13 and 16 above. This addendum records the final decision without rewriting the historical reconnaissance:
+
+1. TagClass describes the statutory field's behaviour, not whether its Trade Control accounting source is itself aggregated. A writable HMRC input is a Component and may be mapped; a Rollup is read-only/calculated on the HMRC side; a Derived value is obtained outside normal Business Node accounting mapping.
+2. `consolidatedExpenses` is a writable HMRC input and remains `TagClassCode = 1`, `CashPolarityCode = 0`. MIN intentionally retains the Category mapping `CT-CUMEXP -> consolidatedExpenses`. Eligibility, detailed/consolidated exclusivity and trading-allowance workflow remain Objective 3/population concerns; they do not change this Objective 2 mapping.
+3. `irrecoverableDebts` and `depreciation` are valid writable expense Components in the `UK-ITSA-SE-CUM` manifest. Both are seeded with polarity 0 and left unmapped by default. No accounting Category/CashCode is created, enabled or inferred for either field. A business may later configure an appropriate accounting treatment and map it through the Tax Configurator.
+4. Accounting depreciation remains distinct from capital allowances. The dormant base depreciation codes are not enabled or restructured by this synchronisation.
+5. `CC-MINER` is confined to cryptocurrency nodes by repository evidence: `Cash.tbCoinType` defines codes 0/1 as Main/TestNet and code 2 as Fiat; the base creates `CC-MINER` only when `CoinTypeCode < 2`; and `App.proc_BasicSetup` forces Fiat unless the unit of charge is BTC. It is not an Objective 3 blocker and receives no statutory mapping change.
+6. Missing-row versus explicit-zero behaviour remains unchanged pending the authoritative OQ-1 Sandbox decision. No provenance enhancement is included.
+7. `Cash.fnTaxBizCumulative` now validates only the generic chronological condition `@PeriodStart <= @PeriodEnd`. It no longer requires 6 April, the first configured financial period, or an end immediately before another configured accounting period. Obligation/calendar validation belongs to Objective 3 workflow.
+8. Disallowable expenses, `taxTakenOffTradingIncome` and annual fields remain outside this implementation exactly as classified above.
+
+The final quarterly manifest is 18 writable Components: two income, one consolidated expense and 15 detailed expenses. MIN maps two income fields plus consolidated expenses. STD maps two income fields plus its existing 13 detailed accounting fields; `irrecoverableDebts` and `depreciation` remain available but unmapped by default.
