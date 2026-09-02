@@ -74,6 +74,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Export", "Export", "{BC8F56
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "db", "db", "{C18FDC84-40B5-4B48-A904-28CC71942ECA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E38ACEA6-90EC-4077-AB8D-FE870F0791B8}"
+	ProjectSection(SolutionItems) = preProject
+		sqlnode\docs\changelog.md = sqlnode\docs\changelog.md
+		sqlnode\docs\installation.md = sqlnode\docs\installation.md
+		sqlnode\readme.md = sqlnode\readme.md
+		sqlnode\docs\tc_coding_practice.md = sqlnode\docs\tc_coding_practice.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -166,6 +174,7 @@ Global
 		{DC738C34-A9CF-4CEA-B696-51D8BDD33E58} = {DEFB1068-AB8F-4086-9ED2-22CD4558419D}
 		{D79BA1BE-3274-4B5C-BAE2-802B3DED90AC} = {28089177-8B6D-4FFE-856A-56CFAC1E218A}
 		{A1137199-F7DA-2175-9F7D-396ACCC7CC05} = {F6B01961-56EB-455F-9668-4814B8F70E85}
+		{E38ACEA6-90EC-4077-AB8D-FE870F0791B8} = {C18FDC84-40B5-4B48-A904-28CC71942ECA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}

@@ -625,3 +625,7 @@ The implementation review refined the TagClass interpretation used in sections 4
 8. Disallowable expenses, `taxTakenOffTradingIncome` and annual fields remain outside this implementation exactly as classified above.
 
 The final quarterly manifest is 18 writable Components: two income, one consolidated expense and 15 detailed expenses. MIN maps two income fields plus consolidated expenses. STD maps two income fields plus its existing 13 detailed accounting fields; `irrecoverableDebts` and `depreciation` remain available but unmapped by default.
+
+### 18. Runtime correction: STD administration mapping
+
+Runtime inspection found that the earlier conclusion that all 13 existing STD expense mappings were complete was too broad. The direct `adminCosts -> CA-OFFICE` mapping omitted the separate enabled `CA-ADMIN` branch and therefore left `CC-EXPENSE` uncovered. The corrected STD hierarchy introduces `CT-ADMIN` beneath `CT-OVERHD`, places the existing `CA-ADMIN` and `CA-OFFICE` Categories beneath that total, and maps `adminCosts` once to `CT-ADMIN`. This preserves the accounting classifications while allowing generic mapping expansion to cover both administration branches without double counting.
