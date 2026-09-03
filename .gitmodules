@@ -4,3 +4,6 @@
 [submodule "src/sqlnode"]
 	path = src/sqlnode
 	url = https://github.com/TradeControl/sqlnode.git
+[submodule "src/tax-hub"]
+	path = src/tax-hub
+	url = https://github.com/TradeControl/tax-hub.git
