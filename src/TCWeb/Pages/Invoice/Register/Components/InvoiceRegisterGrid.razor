@@ -27,11 +27,9 @@
                      Bordered="true"
                      Striped="true"
                      Filterable="true"
-                     Sortable="true"
-                     ShowPager="true"
                      FilterMode="DataGridFilterMode.ColumnFilterMenu"
                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                     FilteredItemsChanged="OnFilteredItemsChanged">
+                     FilterChanged="OnFilterChanged">
 
             <Columns>
                 <TemplateColumn Title="">
@@ -157,9 +155,9 @@
         TotalUnpaidValue = (decimal)VisibleInvoices.Sum(x => (x.InvoiceValue + x.TaxValue) - (x.PaidValue + x.PaidTaxValue));
     }
 
-    private void OnFilteredItemsChanged(IEnumerable<Invoice_vwRegister> filteredItems)
+    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<Invoice_vwRegister>> _)
     {
-        VisibleInvoices = filteredItems.ToList();
+        VisibleInvoices = _grid?.FilteredItems.ToList() ?? Invoices.ToList();
         RecalculateTotals();
         StateHasChanged();
     }

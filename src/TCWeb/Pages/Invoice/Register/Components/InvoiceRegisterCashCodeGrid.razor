@@ -12,6 +12,7 @@
         <div class="tc-grid-host">
             <MudDataGrid T="Invoice_vwRegisterCashCode"
                          Class="tc-register-cashcode-datagrid"
+                         @ref="_grid"
                          Items="Items"
                          FixedHeader="true"
                          FixedFooter="true"
@@ -21,11 +22,9 @@
                          Bordered="true"
                          Striped="true"
                          Filterable="true"
-                         Sortable="true"
-                         ShowPager="true"
                          FilterMode="DataGridFilterMode.ColumnFilterMenu"
                          FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                         FilteredItemsChanged="OnFilteredItemsChanged">
+                         FilterChanged="OnFilterChanged">
 
                 <Columns>
                     <PropertyColumn Property="x => x.StartOn" Title="Start On" Format="dd/MM/yyyy" />
@@ -99,6 +98,8 @@
 </style>
 
 @code {
+    private MudDataGrid<Invoice_vwRegisterCashCode>? _grid;
+
     [Parameter] public List<Invoice_vwRegisterCashCode> Items { get; set; } = [];
 
     private List<Invoice_vwRegisterCashCode> VisibleItems { get; set; } = [];
@@ -120,9 +121,9 @@
         TotalValue = (decimal)VisibleItems.Sum(x => x.TotalValue);
     }
 
-    private void OnFilteredItemsChanged(IEnumerable<Invoice_vwRegisterCashCode> filteredItems)
+    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<Invoice_vwRegisterCashCode>> _)
     {
-        VisibleItems = filteredItems.ToList();
+        VisibleItems = _grid?.FilteredItems.ToList() ?? Items.ToList();
         RecalculateTotals();
         StateHasChanged();
     }

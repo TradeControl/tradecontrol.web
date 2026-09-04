@@ -32,6 +32,7 @@
         <div class="tc-grid-host">
             <MudDataGrid T="Invoice_vwRegisterDetail"
                          Class="tc-register-details-datagrid"
+                         @ref="_grid"
                          Items="Items"
                          FixedHeader="true"
                          FixedFooter="true"
@@ -41,11 +42,9 @@
                          Bordered="true"
                          Striped="true"
                          Filterable="true"
-                         Sortable="true"
-                         ShowPager="true"
                          FilterMode="DataGridFilterMode.ColumnFilterMenu"
                          FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                         FilteredItemsChanged="OnFilteredItemsChanged">
+                         FilterChanged="OnFilterChanged">
 
                 <Columns>
                     <PropertyColumn Property="x => x.ProjectCode" Title="Project" />
@@ -87,6 +86,8 @@
 </div>
 
 @code {
+    private MudDataGrid<Invoice_vwRegisterDetail>? _grid;
+
     [Parameter] public string? InvoiceNumber { get; set; }
     [Parameter] public List<Invoice_vwRegisterDetail> Items { get; set; } = [];
     [Parameter] public bool ShowNavigation { get; set; } = true;
@@ -113,9 +114,9 @@
         TotalValue = (decimal)VisibleItems.Sum(x => x.TotalValue);
     }
 
-    private void OnFilteredItemsChanged(IEnumerable<Invoice_vwRegisterDetail> filteredItems)
+    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<Invoice_vwRegisterDetail>> _)
     {
-        VisibleItems = filteredItems.ToList();
+        VisibleItems = _grid?.FilteredItems.ToList() ?? Items.ToList();
         RecalculateTotals();
         StateHasChanged();
     }

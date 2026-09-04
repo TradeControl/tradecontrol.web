@@ -19,12 +19,10 @@
                      Bordered="true"
                      Striped="true"
                      Filterable="true"
-                     Sortable="true"
-                     ShowPager="true"
                      ReadOnly="true"
                      FilterMode="DataGridFilterMode.ColumnFilterMenu"
                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                     FilteredItemsChanged="OnFilteredItemsChanged">
+                     FilterChanged="OnFilterChanged">
             <Columns>
                 <PropertyColumn Property="x => x.YearEndDescription" Title="Period" />
                 <PropertyColumn Property="x => x.TaxDue" Title="Tax Due" Format="#,##0.00;(#,##0.00);-">
@@ -67,9 +65,9 @@
         RecalculateTotals();
     }
 
-    private void OnFilteredItemsChanged(IEnumerable<TaxHubBusinessTaxLossesRow> filteredItems)
+    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<TaxHubBusinessTaxLossesRow>> _)
     {
-        VisibleItems = filteredItems.ToList();
+        VisibleItems = _grid?.FilteredItems.ToList() ?? Items.ToList();
         RecalculateTotals();
         StateHasChanged();
     }

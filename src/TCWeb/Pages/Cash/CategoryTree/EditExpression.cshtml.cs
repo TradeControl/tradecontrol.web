@@ -104,7 +104,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     exp = new Cash_tbCategoryExp {
                         CategoryCode = catCode,
                         IsError = false,
-                        ErrorMessage = null
+                        ErrorMessage = string.Empty
                     };
                     NodeContext.Cash_tbCategoryExps.Add(exp);
                 }

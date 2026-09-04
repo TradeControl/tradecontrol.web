@@ -66,9 +66,9 @@ namespace TradeControl.Web.Models
         public short IsEnabled { get; set; }
         public int NextProjectNumber { get; set; }
         public short MenuViewCode { get; set; }
-        public string? ThemeCode { get; set; }
+        public string ThemeCode { get; set; }
 
-        public virtual Usr_tbTheme? ThemeCodeNavigation { get; set; }
+        public virtual Usr_tbTheme ThemeCodeNavigation { get; set; }
 
         [Required]
         [StringLength(50)]

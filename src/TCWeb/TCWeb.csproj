@@ -13,10 +13,11 @@
         <RepositoryUrl>https://github.com/tradecontrol/tradecontrol.web</RepositoryUrl>
         <UserSecretsId>80b1d6ff-f6e4-4ee3-aca9-0d0bb63c6992</UserSecretsId>
         <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+        <Nullable>annotations</Nullable>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-        <NoWarn>CS8669;1701;1702;7022;RCS1003;IDE0011;CS8632</NoWarn>
+        <NoWarn>CS8669;1701;1702;7022;RCS1003;IDE0011</NoWarn>
     </PropertyGroup>
 
 

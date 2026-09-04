@@ -216,14 +216,14 @@
                     </MudItem>
 
                     <MudItem xs="12">
-                        <MudTabs Rounded="true" PanelClass="pa-4">
-                            <MudTabPanel Text="Details">
+                        <MudTabs Rounded="true">
+                            <MudTabPanel Text="Details" Class="pa-4">
                                 <InvoiceRegisterDetailsGrid InvoiceNumber="@Header.InvoiceNumber"
                                                             Items="DetailItems"
                                                             ShowNavigation="false" />
                             </MudTabPanel>
 
-                            <MudTabPanel Text="Change Log">
+                            <MudTabPanel Text="Change Log" Class="pa-4">
                                 <div class="tc-grid-workspace">
                                     <div class="tc-grid-host">
                                         <MudDataGrid T="Invoice_vwChangeLog"
@@ -236,8 +236,6 @@
                                                      Bordered="true"
                                                      Striped="true"
                                                      Filterable="true"
-                                                     Sortable="true"
-                                                     ShowPager="true"
                                                      FilterMode="DataGridFilterMode.ColumnFilterMenu"
                                                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive">
                                             <Columns>
@@ -266,7 +264,7 @@
                                 </div>
                             </MudTabPanel>
 
-                            <MudTabPanel Text="Notes">
+                            <MudTabPanel Text="Notes" Class="pa-4">
                                 <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">
                                     @DisplayMultilineText(Header.Notes)
                                 </MudText>

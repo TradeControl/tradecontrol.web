@@ -19,13 +19,11 @@
                      Bordered="true"
                      Striped="true"
                      Filterable="true"
-                     Sortable="true"
-                     ShowPager="true"
                      ReadOnly="true"
                      RowsPerPage="20"
                      FilterMode="DataGridFilterMode.ColumnFilterMenu"
                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                     FilteredItemsChanged="OnFilteredItemsChanged">
+                     FilterChanged="OnFilterChanged">
             <Columns>
                 <PropertyColumn Property="x => x.TagCode" Title="Tag Code" />
                 <PropertyColumn Property="x => x.PeriodFrom" Title="Period From" Format="dd/MM/yyyy" />
@@ -63,9 +61,9 @@
         RecalculateTotals();
     }
 
-    private void OnFilteredItemsChanged(IEnumerable<TaxHubBusinessTaxSubmissionRow> filteredItems)
+    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<TaxHubBusinessTaxSubmissionRow>> _)
     {
-        VisibleItems = filteredItems.ToList();
+        VisibleItems = _grid?.FilteredItems.ToList() ?? Items.ToList();
         RecalculateTotals();
         StateHasChanged();
     }

@@ -80,21 +80,21 @@ The following are not shared statutory concepts and must stay in authority-speci
 
 Sharing must not be achieved by making an untyped property bag. Shared concepts should have explicit types and invariants. A generic XBRL fact collection is appropriate at the taxonomy/rendering boundary, but it is not a substitute for a typed statutory accounts or tax computation model.
 
-## Proposed Solution and Project Boundary
+## Established Solution and Project Boundary
 
-The recommended design is a new neutral contract assembly in the existing tax solution rather than placing Companies House types inside the `HMRC_MTD` assembly. A suitable project and root namespace are:
+The repository restructuring has established a neutral company contract assembly in the standalone `tax-hub` submodule. Companies House and Corporation Tax types do not share an assembly with the MTD Income Tax or VAT JSON contracts. The project and root namespace are:
 
 ```text
-TradeControl.Tax.UK.CompanyContracts
+TradeControl.Tax.UK.Company.Contracts
 TradeControl.Tax.UK.Company
 ```
 
-This avoids making Companies House appear to be an HMRC or MTD concern and prevents the current JSON API assumptions from becoming implicit dependencies. It also gives the relatively large schema, taxonomy metadata, fixtures, and generated sources a clear ownership boundary.
+This avoids making Companies House appear to be an HMRC or MTD concern and prevents the existing JSON API assumptions from becoming implicit dependencies. It also gives the relatively large schema, taxonomy metadata, fixtures, and generated sources a clear ownership boundary.
 
 The proposed source organisation is:
 
 ```text
-src/hmrc_mtd/src/TradeControl.Tax.UK.CompanyContracts/
+src/tax-hub/src/TradeControl.Tax.UK.Company.Contracts/
   Statutory/
     Identity/
     Accounts/
@@ -120,18 +120,18 @@ src/hmrc_mtd/src/TradeControl.Tax.UK.CompanyContracts/
         Validation/
       Computations/Taxonomy2025/
       Submission/V2026/
-  Infrastructure/
+  ContractInfrastructure/
     Endpoints/
     Artefacts/
     Validation/
 ```
 
-The exact project name and physical directory require approval because adding a new assembly affects the later implementation plan. If retaining one assembly is preferred for the first increment, the same namespace separation should still be used. Companies House types must not be placed below `TradeControl.Tax.UK.Hmrc`.
+The company contract assembly has no project references and currently contains no company implementation. That empty boundary was created deliberately during repository restructuring so implementation can begin with the intended dependency direction already enforced. Companies House types must not be placed below `TradeControl.Tax.UK.Hmrc`; only Corporation Tax authority contracts belong under the HMRC namespace.
 
-A companion offline test project is recommended:
+A companion offline test project has also been established:
 
 ```text
-src/hmrc_mtd/src/TradeControl.Tax.UK.CompanyContracts.ContractTests/
+src/tax-hub/tests/TradeControl.Tax.UK.Company.ContractTests/
   Fixtures/
     CompaniesHouse/
     HmrcCorporationTax/
@@ -140,7 +140,16 @@ src/hmrc_mtd/src/TradeControl.Tax.UK.CompanyContracts.ContractTests/
   Program.cs
 ```
 
-This follows the Objective 3 executable contract-test convention while keeping the company fixtures separate from Self Assessment fixtures. A conventional test framework could be adopted later, but it is not required to establish the contract boundary.
+This follows the Objective 3 executable contract-test convention while keeping company fixtures separate from the MTD Income Tax and VAT fixtures. It references only `TradeControl.Tax.UK.Company.Contracts`. A conventional test framework could be adopted later, but it is not required to establish the contract boundary.
+
+The wider project ownership is defined by `tax-hub-repo-structure.md`:
+
+- `TradeControl.Tax.UK.Application` will own filing preparation, population orchestration, reconciliation policy, submission use cases, and ports.
+- `TradeControl.Tax.UK.Adapters.TradeControl` will own SQL access and Trade Control-specific source projections and mappings.
+- `TradeControl.Tax.UK.Adapters.Submission` will own live HMRC and Companies House clients, authentication, retries, environment configuration, polling, and operational audit implementations.
+- `TradeControl.Tax.UK.WebHarness` remains a diagnostic composition root and is not part of the statutory contract model.
+
+This document remains authoritative for the internal design of `Company.Contracts`; the repository architecture document is authoritative for dependencies between projects.
 
 ## Principal Authority-Neutral Types
 
@@ -359,9 +368,9 @@ CompaniesHouseSubmissionCredentials
 CompaniesHouseSubmissionContext
 ```
 
-These types should be injectable at the final submission boundary and designed to prevent accidental string formatting or diagnostic output of secrets. A submission audit record may retain a non-secret presenter identity and authority correlation identifiers, but not reusable credentials.
+These types describe the information required at the final submission boundary, but their acquisition and live use belong in `TradeControl.Tax.UK.Adapters.Submission`. They should be designed to prevent accidental string formatting or diagnostic output of secrets. A submission audit record may retain a non-secret presenter identity and authority correlation identifiers, but not reusable credentials.
 
-Status polling is part of the contract. A successful initial gateway response does not necessarily mean that the filing has been accepted. The transport model must preserve the submission number/correlation identifier and expose the terminal status and authority errors separately from HTTP/XML transport success.
+Status polling semantics are part of the contract. A successful initial gateway response does not necessarily mean that the filing has been accepted. Contract types must preserve the submission number/correlation identifier and expose terminal status and authority errors separately from HTTP/XML transport success. The polling loop, retry policy, timeouts, and network client belong in `TradeControl.Tax.UK.Adapters.Submission`.
 
 ### Future Companies House service
 
@@ -635,14 +644,14 @@ SubmissionServiceDescriptor
   Status
 ```
 
-Authority-specific descriptors then add typed details:
+Authority-specific contract descriptors then add typed details:
 
 ```text
 CompaniesHouseEndpointSet
 HmrcCorporationTaxEndpointSet
 ```
 
-Descriptors contain no credentials. Environment addresses must be explicit and separately configured for production, test, and validator services. Production selection must not be the implicit fallback from an unknown environment name.
+Descriptors contain no credentials. They define the authority operation and its required protocol semantics. Concrete base addresses, secrets, HTTP/XML clients, retry policies, and environment configuration belong in `TradeControl.Tax.UK.Adapters.Submission`. Production selection must not be the implicit fallback from an unknown environment name.
 
 `SuccessSemantics` must distinguish transport receipt, schema acceptance, processing acceptance, and final filing acceptance. Correlation identifiers and status transitions should be represented as typed submission results so the audit layer can retain the authority's response without parsing log text.
 
@@ -675,9 +684,9 @@ The following dependencies are prohibited:
 - controller/view models; and
 - application service locators or database-backed configuration.
 
-A later population project may reference both Trade Control and this contract assembly. That project will map ledger/accounting evidence to stable statutory semantic fields, create the accounts and computation aggregates, and produce a reconciliation record. It is deliberately outside this design stage.
+A later population workflow will be coordinated by `TradeControl.Tax.UK.Application`, using source-data and mapping implementations from `TradeControl.Tax.UK.Adapters.TradeControl`. Those higher layers may reference this contract assembly to create accounts and computation aggregates and produce reconciliation evidence. The contract assembly must never reference either of them.
 
-To enforce the boundary, contract tests should inspect project references and namespaces as well as behaviour. The contract project should have only platform and explicitly approved XML/document dependencies.
+To enforce the boundary, contract tests should inspect project references and namespaces as well as behaviour. The contract project currently has no project or package references; future dependencies must be limited to platform libraries and explicitly approved XML/document dependencies.
 
 ## Offline Fixtures and Contract Tests
 
@@ -743,16 +752,17 @@ Network validation and test-submission suites belong in a later integration-test
 
 The recommended implementation order is:
 
-1. Establish the neutral project, dependency rules, version/status descriptors, validation result types, and offline contract-test harness.
-2. Add XBRL primitives, taxonomy manifest/catalog loading, deterministic context/unit handling, and focused infrastructure fixtures.
+1. Use the already-established `TradeControl.Tax.UK.Company.Contracts` and `TradeControl.Tax.UK.Company.ContractTests` project boundary; add version/status descriptors, validation result types, and the first substantive offline tests.
+2. Add XBRL primitives, taxonomy manifest/catalog loading, deterministic context/unit handling, and focused contract-infrastructure fixtures.
 3. Add the minimum authority-neutral statutory accounts and tax computation aggregates for the approved filing profile.
 4. Pin current official schemas/taxonomies and establish reproducible generation for generated wire types and catalogs.
-5. Implement Companies House TIS 5.9 contracts, serializer boundaries, projection rules, and offline fixtures.
-6. Implement current CT600/RIM contracts and supplementary-page applicability validation.
+5. Implement Companies House TIS 5.9 contracts, serializer boundaries, projection rules, and offline fixtures inside `Company.Contracts`.
+6. Implement current CT600/RIM contracts and supplementary-page applicability validation inside `Company.Contracts`.
 7. Implement HMRC accounts and computation iXBRL projections and cross-document reconciliation.
 8. Implement logical package/envelope serialization and acknowledgement/status contracts.
-9. Only then introduce the separate Trade Control population and reconciliation layer.
-10. Add official validator and test-service integrations after offline conformance is stable.
+9. Add typed application ports and orchestration in `TradeControl.Tax.UK.Application`, followed by Trade Control population/mapping implementations in `Adapters.TradeControl`.
+10. Add live Companies House and HMRC clients in `Adapters.Submission` only after documents and packages pass offline validation.
+11. Add official validator and test-service integrations after offline conformance is stable.
 
 Each increment should end with an exact fixture that proves the new contract behaviour. External transport should not begin until documents and packages can be built and validated entirely offline.
 
@@ -767,18 +777,19 @@ Each increment should end with an exact fixture that proves the new contract beh
 - Keep present and preview contracts in separate namespaces and prevent implicit production selection of previews.
 - Reuse the discipline of the Objective 3 endpoint inventory and offline fixture tests, but introduce submission-service metadata suitable for XML gateways and asynchronous acceptance.
 - Make the contract assembly independent of Trade Control storage and classification. Category-tree and Tax Tag work belongs in a later population layer.
-- Prefer a new neutral company-contract assembly rather than adding Companies House to the `HMRC_MTD` assembly.
+- Use the established neutral `TradeControl.Tax.UK.Company.Contracts` assembly; do not place company contracts in the MTD Income Tax or VAT assemblies.
 
 ## Open Questions / Decisions Required
 
-1. **Assembly boundary:** approve the recommended `TradeControl.Tax.UK.CompanyContracts` project, or keep the first increment inside the existing `HMRC_MTD` project with neutral namespaces?
-2. **Initial company profile:** is the first supported production profile a UK private micro-entity with ordinary trading activity, unaudited accounts where eligible, and no group/overseas/insurance/tonnage-tax complexity?
-3. **Supplementary pages:** approve generating all pages present in the current CT600 schema while enabling population only for the explicitly supported subset, initially core CT600 plus CT600A where required?
-4. **Computation breadth:** approve an initial computation surface covering trading profit adjustments, plant and machinery capital allowances, losses, taxable total profits, rate calculation, reliefs, liability, and payment reconciliation, with other scenarios rejected as unsupported?
-5. **Companies House baseline:** approve TIS 5.9 as the current implementable contract and keep the expected 2028 service as an isolated unavailable/preview family until final official specifications exist?
-6. **Taxonomy assets:** may the implementation check pinned official schemas and taxonomy files into the repository when licensing permits, or should it check in only derived catalogs plus a separately provisioned offline validation bundle?
-7. **Generation tooling:** should the implementation select and pin a .NET schema-generation tool after a short proof against the current RIM/GovTalk schemas, with generated source committed for deterministic builds?
-8. **iXBRL renderer:** should the initial renderer be a small XML-aware, contract-specific .NET document builder, with external XBRL tooling used for validation rather than as an application runtime dependency?
-9. **Filleting workflow:** should full statutory accounts be the immutable approved source, with Companies House filleting always represented as an explicit, separately approved filing projection?
-10. **Evidence and storage:** should artifact manifests and SHA-256 digests form part of the contract now, while persistence locations and retention policy remain a later application/audit design decision?
-11. **Acceptance threshold:** which official Companies House validator/test-service and HMRC test-submission outcomes will constitute the implementation milestone for “conformant,” distinct from any broader claim of HMRC approval?
+The assembly, repository, project-reference, test-project, and live-transport boundaries are settled by the completed repository restructuring. The remaining decisions concern filing scope and implementation policy:
+
+1. **Initial company profile:** is the first supported production profile a UK private micro-entity with ordinary trading activity, unaudited accounts where eligible, and no group/overseas/insurance/tonnage-tax complexity?
+2. **Supplementary pages:** approve generating all pages present in the current CT600 schema while enabling population only for the explicitly supported subset, initially core CT600 plus CT600A where required?
+3. **Computation breadth:** approve an initial computation surface covering trading profit adjustments, plant and machinery capital allowances, losses, taxable total profits, rate calculation, reliefs, liability, and payment reconciliation, with other scenarios rejected as unsupported?
+4. **Companies House baseline:** approve TIS 5.9 as the current implementable contract and keep the expected 2028 service as an isolated unavailable/preview family until final official specifications exist?
+5. **Taxonomy assets:** may the implementation check pinned official schemas and taxonomy files into the `tax-hub` repository when licensing permits, or should it check in only derived catalogs plus a separately provisioned offline validation bundle?
+6. **Generation tooling:** should the implementation select and pin a .NET schema-generation tool after a short proof against the current RIM/GovTalk schemas, with generated source committed for deterministic builds?
+7. **iXBRL renderer:** should the initial renderer be a small XML-aware, contract-specific .NET document builder, with external XBRL tooling used for validation rather than as an application runtime dependency?
+8. **Filleting workflow:** should full statutory accounts be the immutable approved source, with Companies House filleting always represented as an explicit, separately approved filing projection?
+9. **Evidence and storage:** should artifact manifests and SHA-256 digests form part of the contract now, while persistence locations and retention policy remain a later application/audit design decision?
+10. **Acceptance threshold:** which official Companies House validator/test-service and HMRC test-submission outcomes will constitute the implementation milestone for “conformant,” distinct from any broader claim of HMRC approval?

@@ -20,13 +20,11 @@
                      Bordered="true"
                      Striped="true"
                      Filterable="true"
-                     Sortable="true"
-                     ShowPager="true"
                      ReadOnly="true"
                      RowsPerPage="50"
                      FilterMode="DataGridFilterMode.ColumnFilterMenu"
                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                     FilteredItemsChanged="OnFilteredItemsChanged">
+                     FilterChanged="OnFilterChanged">
             <Columns>
                 <PropertyColumn Property="x => x.AssetCode" Title="Code" />
                 <PropertyColumn Property="x => x.AssetName" Title="Asset" />
@@ -66,9 +64,9 @@
         VisibleItems = Items.ToList();
     }
 
-    private void OnFilteredItemsChanged(IEnumerable<TaxHubBalanceSheetRow> filteredItems)
+    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<TaxHubBalanceSheetRow>> _)
     {
-        VisibleItems = filteredItems.ToList();
+        VisibleItems = _grid?.FilteredItems.ToList() ?? Items.ToList();
         StateHasChanged();
     }
 
