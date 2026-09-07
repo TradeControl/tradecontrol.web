@@ -94,6 +94,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeControl.Tax.UK.Adapter
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeControl.Tax.UK.Adapters.Submission", "tax-hub\src\TradeControl.Tax.UK.Adapters.Submission\TradeControl.Tax.UK.Adapters.Submission.csproj", "{BC43D50A-BC65-DFD4-4D8D-DEB06ED4FF50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.WebHarness", "TCExports\src\TCExports.WebHarness\TCExports.WebHarness.csproj", "{0E45DD55-280D-52AE-039C-7CB201E29961}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -230,6 +232,18 @@ Global
 		{BC43D50A-BC65-DFD4-4D8D-DEB06ED4FF50}.Release|iPhone.Build.0 = Release|Any CPU
 		{BC43D50A-BC65-DFD4-4D8D-DEB06ED4FF50}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{BC43D50A-BC65-DFD4-4D8D-DEB06ED4FF50}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Release|iPhone.Build.0 = Release|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{0E45DD55-280D-52AE-039C-7CB201E29961}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -252,6 +266,7 @@ Global
 		{99FE6D74-AA4E-226E-9FA0-034211973544} = {F6B01961-56EB-455F-9668-4814B8F70E85}
 		{8CDB4396-B8C5-2D16-C5EB-70119E9C2DC2} = {F6B01961-56EB-455F-9668-4814B8F70E85}
 		{BC43D50A-BC65-DFD4-4D8D-DEB06ED4FF50} = {F6B01961-56EB-455F-9668-4814B8F70E85}
+		{0E45DD55-280D-52AE-039C-7CB201E29961} = {BC8F5617-4B32-49EF-B585-E20CEEF90CDF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}
