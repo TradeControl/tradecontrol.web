@@ -27,17 +27,21 @@ namespace TradeControl.Web.AppServices
             await _dbGate.WaitAsync();
             try
             {
-                return await _nodeContext.App_tbJurisdictions
+                return await (from option in _nodeContext.App_tbOptions
+                    join jurisdiction in _nodeContext.App_tbJurisdictions
+                        on option.JurisdictionCode equals jurisdiction.JurisdictionCode
+                    select jurisdiction)
                     .AsNoTracking()
+                    .Distinct()
                     .OrderBy(j => j.JurisdictionName)
                     .Select(j => new TreeNode(
                         $"jurisdiction:{j.JurisdictionCode}",
                         $"{j.JurisdictionCode} - {j.JurisdictionName}",
                         "bi-geo-alt",
-                        j.TbTaxTagSources.Any(),
+                        _nodeContext.Cash_tbTaxTagSources.Any(),
                         false,
                         true,
-                        j.TbTaxTagSources.Any(s => s.TbTaxTags.Any(t => t.TbTaxTagMaps.Any(m => !m.IsEnabled)))))
+                        _nodeContext.Cash_tbTaxTagSources.Any(s => s.TbTaxTags.Any(t => t.TbTaxTagMaps.Any(m => !m.IsEnabled)))))
                     .ToListAsync();
             }
             finally
@@ -199,9 +203,13 @@ namespace TradeControl.Web.AppServices
             await _dbGate.WaitAsync();
             try
             {
+                if (!await _nodeContext.App_tbOptions
+                    .AsNoTracking()
+                    .AnyAsync(option => option.JurisdictionCode == jurisdictionCode))
+                    return Array.Empty<TreeNode>();
+
                 var sources = await _nodeContext.Cash_tbTaxTagSources
                     .AsNoTracking()
-                    .Where(s => s.JurisdictionCode == jurisdictionCode)
                     .OrderBy(s => s.SourceName)
                     .ThenBy(s => s.TaxSourceCode)
                     .Select(s => new
@@ -336,14 +344,15 @@ namespace TradeControl.Web.AppServices
             {
                 var source = await (
                     from s in _nodeContext.Cash_tbTaxTagSources.AsNoTracking()
+                    from option in _nodeContext.App_tbOptions.AsNoTracking()
                     join j in _nodeContext.App_tbJurisdictions.AsNoTracking()
-                        on s.JurisdictionCode equals j.JurisdictionCode
+                        on option.JurisdictionCode equals j.JurisdictionCode
                     where s.TaxSourceCode == sourceCode
                     select new {
                         s.TaxSourceCode,
                         s.SourceName,
                         s.SourceDescription,
-                        s.JurisdictionCode,
+                        j.JurisdictionCode,
                         j.JurisdictionName,
                     })
                     .SingleOrDefaultAsync();
@@ -384,15 +393,16 @@ namespace TradeControl.Web.AppServices
             {
                 var item = await (
                     from source in _nodeContext.Cash_tbTaxTagSources.AsNoTracking()
+                    from option in _nodeContext.App_tbOptions.AsNoTracking()
                     join jurisdiction in _nodeContext.App_tbJurisdictions.AsNoTracking()
-                        on source.JurisdictionCode equals jurisdiction.JurisdictionCode
+                        on option.JurisdictionCode equals jurisdiction.JurisdictionCode
                     join tagClass in _nodeContext.Cash_tbTaxTagClasses.AsNoTracking()
                         on tagClassCode equals tagClass.TagClassCode
                     where source.TaxSourceCode == sourceCode
                     select new {
                         source.TaxSourceCode,
                         source.SourceName,
-                        source.JurisdictionCode,
+                        jurisdiction.JurisdictionCode,
                         jurisdiction.JurisdictionName,
                         tagClass.TagClassCode,
                         tagClass.TagClass
@@ -452,8 +462,9 @@ namespace TradeControl.Web.AppServices
                         on tag.TagClassCode equals tagClass.TagClassCode
                     join source in _nodeContext.Cash_tbTaxTagSources.AsNoTracking()
                         on tag.TaxSourceCode equals source.TaxSourceCode
+                    from option in _nodeContext.App_tbOptions.AsNoTracking()
                     join jurisdiction in _nodeContext.App_tbJurisdictions.AsNoTracking()
-                        on source.JurisdictionCode equals jurisdiction.JurisdictionCode
+                        on option.JurisdictionCode equals jurisdiction.JurisdictionCode
                     where tag.TaxSourceCode == sourceCode && tag.TagCode == tagCode
                     select new {
                         tag.TaxSourceCode,
@@ -464,7 +475,7 @@ namespace TradeControl.Web.AppServices
                         tag.DisplayOrder,
                         tagClass.TagClass,
                         source.SourceName,
-                        source.JurisdictionCode,
+                        jurisdiction.JurisdictionCode,
                         jurisdiction.JurisdictionName
                     })
                     .SingleOrDefaultAsync();

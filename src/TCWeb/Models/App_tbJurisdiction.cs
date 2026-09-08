@@ -12,7 +12,7 @@ namespace TradeControl.Web.Models
     {
         public App_tbJurisdiction()
         {
-            TbTaxTagSources = new HashSet<Cash_tbTaxTagSource>();
+            TbOptions = new HashSet<App_tbOption>();
         }
 
         [Key]
@@ -30,7 +30,7 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(UocCode))]
         public virtual App_tbUoc UocCodeNavigation { get; set; }
 
-        [InverseProperty(nameof(Cash_tbTaxTagSource.JurisdictionCodeNavigation))]
-        public virtual ICollection<Cash_tbTaxTagSource> TbTaxTagSources { get; set; }
+        [InverseProperty(nameof(App_tbOption.JurisdictionCodeNavigation))]
+        public virtual ICollection<App_tbOption> TbOptions { get; set; }
     }
 }

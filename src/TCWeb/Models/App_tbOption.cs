@@ -36,6 +36,11 @@ namespace TradeControl.Web.Models
 
         public short TaxHorizon { get; set; }
         public bool IsAutoOffsetDays { get; set; }
+
+        [Required]
+        [StringLength(10)]
+        public string JurisdictionCode { get; set; }
+
         public string UnitOfCharge { get; set; }
 
         [StringLength(50)]
@@ -112,6 +117,10 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(RegisterName))]
         [InverseProperty(nameof(App_tbRegister.TbOptions))]
         public virtual App_tbRegister RegisterNameNavigation { get; set; }
+
+        [ForeignKey(nameof(JurisdictionCode))]
+        [InverseProperty(nameof(App_tbJurisdiction.TbOptions))]
+        public virtual App_tbJurisdiction JurisdictionCodeNavigation { get; set; }
 
         [ForeignKey(nameof(UnitOfCharge))]
         [InverseProperty(nameof(App_tbUoc.TbOptions))]

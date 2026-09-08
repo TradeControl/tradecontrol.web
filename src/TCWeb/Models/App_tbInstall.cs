@@ -17,6 +17,8 @@ namespace TradeControl.Web.Models
         public float SqldataVersion { get; set; }
         [Column("SQLRelease")]
         public int Sqlrelease { get; set; }
+        [Column("SQLBuild")]
+        public int Sqlbuild { get; set; }
         [Required]
         [StringLength(50)]
         public string InsertedBy { get; set; }

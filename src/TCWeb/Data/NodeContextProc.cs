@@ -2681,6 +2681,7 @@ namespace TradeControl.Web.Data
                                     string companyNumber,
                                     string vatNumber,
                                     string calendarCode,
+                                    string jurisdictionCode,
                                     string uocName)
         {
             try
@@ -2757,9 +2758,15 @@ namespace TradeControl.Web.Data
 
                     SqlParameter p11 = command.CreateParameter();
                     p11.DbType = DbType.String;
-                    p11.ParameterName = "@UnitOfCharge";
-                    p11.Value = unitOfCharge;
+                    p11.ParameterName = "@JurisdictionCode";
+                    p11.Value = jurisdictionCode;
                     command.Parameters.Add(p11);
+
+                    SqlParameter p12 = command.CreateParameter();
+                    p12.DbType = DbType.String;
+                    p12.ParameterName = "@UnitOfCharge";
+                    p12.Value = unitOfCharge;
+                    command.Parameters.Add(p12);
 
                     await command.ExecuteNonQueryAsync();
 

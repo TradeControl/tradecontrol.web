@@ -28,6 +28,16 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Subject_tbExportType> Subject_tbExportTypes { get; set; }
 
         public virtual DbSet<App_tbJurisdiction> App_tbJurisdictions { get; set; }
+        public virtual DbSet<App_tbAuthority> App_tbAuthorities { get; set; }
+        public virtual DbSet<App_tbRegistrationScheme> App_tbRegistrationSchemes { get; set; }
+        public virtual DbSet<App_tbReportingType> App_tbReportingTypes { get; set; }
+        public virtual DbSet<App_tbSettingDefinition> App_tbSettingDefinitions { get; set; }
+        public virtual DbSet<App_tbStatutoryStatus> App_tbStatutoryStatuses { get; set; }
+        public virtual DbSet<App_tbValueSource> App_tbValueSources { get; set; }
+        public virtual DbSet<App_tbValueType> App_tbValueTypes { get; set; }
+        public virtual DbSet<Subject_tbRegistration> Subject_tbRegistrations { get; set; }
+        public virtual DbSet<Cash_tbReportingProfile> Cash_tbReportingProfiles { get; set; }
+        public virtual DbSet<Cash_tbReportingProfileSetting> Cash_tbReportingProfileSettings { get; set; }
         public virtual DbSet<Cash_tbTaxTagClass> Cash_tbTaxTagClasses { get; set; }
         public virtual DbSet<Cash_tbTaxTagMapType> Cash_tbTaxTagMapTypes { get; set; }
         public virtual DbSet<Cash_tbTaxTagSource> Cash_tbTaxTagSources { get; set; }
@@ -389,11 +399,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
 
-                entity.HasOne(d => d.JurisdictionCodeNavigation)
-                    .WithMany(p => p.TbTaxTagSources)
-                    .HasForeignKey(d => d.JurisdictionCode)
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("FK_Cash_tbTaxTagSource_Jurisdiction");
             });
 
             modelBuilder.Entity<Cash_tbTaxTag>(entity =>
@@ -1912,6 +1917,12 @@ namespace TradeControl.Web.Data
                     .HasForeignKey(d => d.RegisterName)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_App_tbOptions_App_tbRegister");
+
+                entity.HasOne(d => d.JurisdictionCodeNavigation)
+                    .WithMany(p => p.TbOptions)
+                    .HasForeignKey(d => d.JurisdictionCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_App_tbOptions_App_tbJurisdiction");
 
                 entity.HasOne(d => d.UnitOfChargeNavigation)
                     .WithMany(p => p.TbOptions)

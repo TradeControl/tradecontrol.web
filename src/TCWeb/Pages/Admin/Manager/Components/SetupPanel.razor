@@ -111,6 +111,19 @@
 
                                     <div class="row g-3">
                                         <div class="col-12 col-md-6">
+                                            <label class="form-label" for="jurisdictionCode">Jurisdiction</label>
+                                            <InputSelect id="jurisdictionCode"
+                                                         @bind-Value="_editor.JurisdictionCode"
+                                                         @bind-Value:after="ApplyJurisdictionDefaultAsync"
+                                                         class="form-select">
+                                                @foreach (var item in _jurisdictions)
+                                                {
+                                                    <option value="@item.JurisdictionCode">@item.JurisdictionName</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
                                             <label class="form-label" for="uocName">Unit of Account</label>
                                             <InputSelect id="uocName"
                                                          @bind-Value="_editor.UocName"
@@ -340,6 +353,11 @@
         public string TemplateCode { get; set; } = string.Empty;
 
         [Required]
+        [StringLength(10)]
+        [Display(Name = "Jurisdiction")]
+        public string JurisdictionCode { get; set; } = string.Empty;
+
+        [Required]
         [StringLength(100)]
         [Display(Name = "Unit of Account")]
         public string UocName { get; set; } = string.Empty;
@@ -445,8 +463,10 @@
     }
 
     private sealed record TemplateOption(string TemplateCode, string TemplateName);
+    private sealed record JurisdictionOption(string JurisdictionCode, string JurisdictionName, string UocName);
 
     private readonly List<TemplateOption> _templates = [];
+    private readonly List<JurisdictionOption> _jurisdictions = [];
     private readonly List<string> _uocNames = [];
     private readonly List<string> _monthNames = [];
     private readonly Dictionary<string, string> _templateDescriptions = new(StringComparer.OrdinalIgnoreCase);
@@ -505,6 +525,17 @@
             .OrderBy(item => item.UocName)
             .Select(item => item.UocName)
             .ToListAsync());
+
+        _jurisdictions.Clear();
+        _jurisdictions.AddRange(await (from jurisdiction in NodeContext.App_tbJurisdictions.AsNoTracking()
+                                      join uoc in NodeContext.App_tbUocs.AsNoTracking()
+                                          on jurisdiction.UocCode equals uoc.UnitOfCharge
+                                      orderby jurisdiction.JurisdictionName
+                                      select new JurisdictionOption(
+                                          jurisdiction.JurisdictionCode,
+                                          jurisdiction.JurisdictionName,
+                                          uoc.UocName))
+            .ToListAsync());
     }
 
     private async Task LoadDefaultsAsync()
@@ -528,6 +559,9 @@
             _editor = new SetupEditorModel
             {
                 TemplateCode = _templates.FirstOrDefault()?.TemplateCode ?? string.Empty,
+                JurisdictionCode = options?.JurisdictionCode
+                    ?? _jurisdictions.FirstOrDefault()?.JurisdictionCode
+                    ?? string.Empty,
                 SubjectName = company?.CompanyName ?? string.Empty,
                 BusinessAddress = company?.CompanyAddress ?? string.Empty,
                 UserName = currentUserName,
@@ -585,6 +619,7 @@
             _editor = new SetupEditorModel
             {
                 TemplateCode = defaultTemplate,
+                JurisdictionCode = _jurisdictions.FirstOrDefault()?.JurisdictionCode ?? string.Empty,
                 MonthName = await NodeContext.App_tbMonths
                     .Where(item => item.MonthNumber == 4)
                     .Select(item => item.MonthName)
@@ -618,6 +653,17 @@
             _editor.IsVatRegistered = isVat;
         else
             _editor.IsVatRegistered = false;
+
+        return Task.CompletedTask;
+    }
+
+    private Task ApplyJurisdictionDefaultAsync()
+    {
+        var jurisdiction = _jurisdictions.FirstOrDefault(item =>
+            item.JurisdictionCode == _editor.JurisdictionCode);
+
+        if (jurisdiction is not null)
+            _editor.UocName = jurisdiction.UocName;
 
         return Task.CompletedTask;
     }
@@ -656,6 +702,7 @@
                 companyNumber: _editor.CompanyNumber,
                 vatNumber: _editor.VatNumber,
                 calendarCode: _editor.CalendarCode,
+                jurisdictionCode: _editor.JurisdictionCode,
                 uocName: _editor.UocName);
 
             var monthNumber = await NodeContext.App_tbMonths
