@@ -158,7 +158,7 @@ The MIN databases are retained as versioned reference snapshots rather than rout
 - `tcNodeDb4-COMIPFVT1-COMIN26` — company, minimal template; and
 - `tcNodeDb4-STMIPFVT1-STMIN26` — sole trader, minimal template.
 
-`App.tbInstall` records the database release. `Settings:SqlNodeVersion` records the release expected by TCWeb. A database is never classified by name or assumed current merely because it is reachable. The two parked databases may be deliberately reactivated or an active database regenerated with a MIN template when live MIN database evidence is required; ordinary MIN/STD contract-shape coverage remains offline.
+`App.tbInstall` records the released major/minor line separately from the development `SQLBuild`. During development, `Settings:SqlNodeVersion` identifies the compatible release line as `4.1.*`, while the latest install row identifies the exact database build. A database is never classified by name or assumed current merely because it is reachable. The two parked databases may be deliberately reactivated or an active database regenerated with a MIN template when live MIN database evidence is required; ordinary MIN/STD contract-shape coverage remains offline.
 
 Development credentials are resolved at runtime from the `TCWeb` client-secret setting `ConnectionStrings:TCNodeContext`. The secret value must never be copied into configuration committed to the repository, documentation, fixtures, test output or logs. Ordinary tests must not depend on mutable sandbox state for their pass/fail result; sandbox runs provide integration, reconciliation and approved golden-artifact evidence.
 
@@ -287,19 +287,19 @@ Authority
 RegistrationScheme
   RegistrationSchemeCode
   AuthorityCode
-  SubjectKind / applicability
   Value type, format and sensitivity metadata
 
 SubjectRegistration
   SubjectCode
+  RegistrationCode
   RegistrationSchemeCode
   RegistrationValue
   ValidFrom / ValidTo
   Status and provenance
 
 ReportingProfile
-  ReportingProfileId
   SubjectCode
+  ReportingProfileCode
   TaxSourceCode where accounting facts are required
   AuthorityCode
   ProfileTypeCode
@@ -315,7 +315,8 @@ SettingDefinition
   sensitivity and applicability metadata
 
 ReportingProfileSetting
-  ReportingProfileId
+  SubjectCode
+  ReportingProfileCode
   SettingCode
   effective period or tax-year range
   one typed value
@@ -386,6 +387,8 @@ Do not force existing `VatNumber` and `CompanyNumber` into a new table. They rem
 
 ## Phase DP3 — Canonical Subject and Statutory Context Projections
 
+**Status: complete (SQL build 4.1.2).**
+
 Implement reviewed read projections or functions which give adapters a coherent statutory context without exposing raw table joins.
 
 At minimum provide:
@@ -419,6 +422,17 @@ Address handling requires an explicit decision. The existing `Subject.tbAddress.
 - Missing, expired and contradictory data returns typed readiness findings.
 - Projection output is structurally jurisdiction-neutral.
 - Address structure is authoritative or explicitly unavailable; it is never guessed during population.
+
+### Implemented evidence
+
+- `App.tbLegalForm` is owned by `App.tbJurisdiction` through the key `(JurisdictionCode, LegalFormCode)` without seeding UK policy ahead of DP4.
+- `Subject.tbAddressDetail` preserves `Subject.tbAddress.Address` as the source record while supplying reviewed, structured address components when available; its address jurisdiction reuses `App.tbJurisdiction` rather than introducing a duplicate country catalogue.
+- `Subject.tbLegalProfile` uses the durable key `(SubjectCode, LegalFormJurisdictionCode, LegalFormCode, ValidFrom)` and records effective, reviewed legal form plus the separately modelled registry jurisdiction; active overlaps are rejected.
+- `Subject.fnStatutoryIdentity` and `Subject.vwStatutoryIdentity` resolve the home subject exclusively through `App.tbOptions.SubjectCode`, derive subject class from `Subject.tbType`/`Subject.tbClass`, and expose source row versions and update timestamps.
+- `Subject.fnRegistration`, `Cash.fnReportingProfile` and `Cash.fnReportingProfileSetting` resolve active records for an explicit date and retain source/status/provenance metadata.
+- `App.fnStatutoryContextReadiness` returns typed, non-sensitive findings for missing, expired, duplicate or unreviewed identity/context evidence. Operation policy supplies the registration and setting codes; the generic SQL layer does not embed UK filing requirements.
+- Statutory master data has no identity keys: registrations use `(SubjectCode, RegistrationCode)`, profiles use `(SubjectCode, ReportingProfileCode)`, and settings use `(SubjectCode, ReportingProfileCode, SettingCode, EffectiveFrom)`. Default registration/profile codes are generated through `App.proc_DefaultCodeGenerator` wrappers.
+- The SQL project builds successfully. Rollback-only tests on the active company STD and sole-trader STD sandboxes proved identity resolution, structural readiness, registration/profile/setting resolution, overlap rejection and complete test-data cleanup.
 
 ---
 

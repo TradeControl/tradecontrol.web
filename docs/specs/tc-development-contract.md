@@ -31,6 +31,7 @@ The objective is to produce production-quality code that follows the established
 ## 4. Architecture
 
 - Follow the Trade Control UI Design Principles.
+- Follow the Trade Control Database Schema Policy for every SQL or persistence-model change.
 - Keep module behaviour explicit.
 - Avoid unnecessary abstraction.
 - Prefer composition over inheritance.
@@ -70,6 +71,7 @@ Before considering implementation complete, verify:
 - Naming consistent.
 - No unnecessary abstractions introduced.
 - No dead code created.
+- Database keys, enumerations, schema ownership and initialization conform to `tc-database-schema-policy.md` where applicable.
 
 ## 9. Completion
 

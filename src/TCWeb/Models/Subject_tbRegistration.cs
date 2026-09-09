@@ -9,11 +9,11 @@ namespace TradeControl.Web.Models
     [Table("tbRegistration", Schema = "Subject")]
     public partial class Subject_tbRegistration
     {
-        [Key]
-        public int RegistrationId { get; set; }
-
         [Required, StringLength(50)]
         public string SubjectCode { get; set; }
+
+        [Required, StringLength(20)]
+        public string RegistrationCode { get; set; }
 
         [Required, StringLength(20)]
         public string RegistrationSchemeCode { get; set; }

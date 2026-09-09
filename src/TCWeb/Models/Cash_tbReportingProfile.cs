@@ -9,11 +9,11 @@ namespace TradeControl.Web.Models
     [Table("tbReportingProfile", Schema = "Cash")]
     public partial class Cash_tbReportingProfile
     {
-        [Key]
-        public int ReportingProfileId { get; set; }
-
         [Required, StringLength(50)]
         public string SubjectCode { get; set; }
+
+        [Required, StringLength(20)]
+        public string ReportingProfileCode { get; set; }
 
         [StringLength(20)]
         public string TaxSourceCode { get; set; }

@@ -17,9 +17,6 @@ namespace TradeControl.Web.Models
         [Required, StringLength(100)]
         public string SchemeName { get; set; }
 
-        [Required, StringLength(20)]
-        public string ApplicabilityCode { get; set; }
-
         [Required, StringLength(10)]
         public string ValueTypeCode { get; set; }
 

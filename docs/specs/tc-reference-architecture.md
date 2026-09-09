@@ -1556,6 +1556,8 @@ The Subject Browser’s namespace selector pattern can be successfully reused in
 
 ## 16. Persistence model conventions
 
+All SQL schema and persistence-model changes must conform to the [Trade Control Database Schema Policy](tc-database-schema-policy.md). The rules below describe application mapping patterns and do not override that policy's requirements for schema ownership, portable keys, controlled values, initialization or versioning.
+
 ## 16.1 Table model conventions
 
 Table models:

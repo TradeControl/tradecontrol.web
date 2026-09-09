@@ -17,6 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "specs", "specs", "{694D7BA0
 	ProjectSection(SolutionItems) = preProject
 		..\docs\specs\refactor-spec-framework.md = ..\docs\specs\refactor-spec-framework.md
 		..\docs\specs\spec-template.md = ..\docs\specs\spec-template.md
+		..\docs\specs\tc-database-schema-policy.md = ..\docs\specs\tc-database-schema-policy.md
 		..\docs\specs\tc-design-principles.md = ..\docs\specs\tc-design-principles.md
 		..\docs\specs\tc-development-contract.md = ..\docs\specs\tc-development-contract.md
 		..\docs\specs\tc-reference-architecture.md = ..\docs\specs\tc-reference-architecture.md

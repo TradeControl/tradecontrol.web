@@ -9,9 +9,11 @@ namespace TradeControl.Web.Models
     [Table("tbReportingProfileSetting", Schema = "Cash")]
     public partial class Cash_tbReportingProfileSetting
     {
-        [Key]
-        public int ReportingProfileSettingId { get; set; }
-        public int ReportingProfileId { get; set; }
+        [Required, StringLength(50)]
+        public string SubjectCode { get; set; }
+
+        [Required, StringLength(20)]
+        public string ReportingProfileCode { get; set; }
 
         [Required, StringLength(30)]
         public string SettingCode { get; set; }
@@ -56,8 +58,7 @@ namespace TradeControl.Web.Models
         [Timestamp]
         public byte[] RowVer { get; set; }
 
-        [ForeignKey(nameof(ReportingProfileId))]
-        public virtual Cash_tbReportingProfile ReportingProfileIdNavigation { get; set; }
+        public virtual Cash_tbReportingProfile ReportingProfileNavigation { get; set; }
 
         [ForeignKey(nameof(SettingCode))]
         public virtual App_tbSettingDefinition SettingCodeNavigation { get; set; }

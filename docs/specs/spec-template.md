@@ -17,7 +17,10 @@ Define the semantic centre of the module (e.g., “The **Entity** is the concept
 
 ### 2. Backend / Schema Requirements
 
+- Apply `tc-database-schema-policy.md` to every database change.
 - Add or extend fields required for module semantics.
+- Define stable, synchronisable primary and foreign keys.
+- Identify controlled enumerations and authoritative owners; do not duplicate derivable values.
 - Define resolution ordering (e.g., DAG → polarity → settlement).
 - Specify required schema changes across related tables.
 - Identify procedures requiring updates.

@@ -401,6 +401,38 @@ namespace TradeControl.Web.Data
 
             });
 
+            modelBuilder.Entity<Subject_tbRegistration>(entity =>
+            {
+                entity.HasKey(e => new { e.SubjectCode, e.RegistrationCode })
+                    .HasName("PK_Subject_tbRegistration");
+
+                entity.Property(e => e.RegistrationCode).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<Cash_tbReportingProfile>(entity =>
+            {
+                entity.HasKey(e => new { e.SubjectCode, e.ReportingProfileCode })
+                    .HasName("PK_Cash_tbReportingProfile");
+
+                entity.Property(e => e.ReportingProfileCode).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<Cash_tbReportingProfileSetting>(entity =>
+            {
+                entity.HasKey(e => new
+                {
+                    e.SubjectCode,
+                    e.ReportingProfileCode,
+                    e.SettingCode,
+                    e.EffectiveFrom
+                }).HasName("PK_Cash_tbReportingProfileSetting");
+
+                entity.HasOne(e => e.ReportingProfileNavigation)
+                    .WithMany()
+                    .HasForeignKey(e => new { e.SubjectCode, e.ReportingProfileCode })
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             modelBuilder.Entity<Cash_tbTaxTag>(entity =>
             {
                 entity.HasKey(e => new { e.TaxSourceCode, e.TagCode })
