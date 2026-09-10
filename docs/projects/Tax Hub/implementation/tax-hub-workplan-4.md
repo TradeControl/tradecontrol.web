@@ -359,7 +359,7 @@ All catalogue initialization and reset ordering is owned by `App.proc_NodeDataIn
 
 SQL integrity enforces validity ranges, one typed setting value, definition/value-type and scope agreement, allowed-value metadata, unique authority references, reporting-type authority and Tax Source requirements, and non-overlapping active registrations, profiles and settings. Status, provenance, review state, audit columns and row versions are first-class.
 
-The initial UK catalogue definitions contain two authorities, four registration schemes, four reporting types and five setting definitions. They contain no subject registration or reporting-profile values. VAT and company numbers remain solely in `Subject.tbVirtual`.
+The initial UK catalogue definitions contain two authorities, two registration schemes, four reporting types and five setting definitions. They contain no subject registration or reporting-profile values. VAT and company numbers remain solely in `Subject.tbVirtual`; they are not duplicated as subject registrations.
 
 Verification evidence:
 
@@ -425,9 +425,9 @@ Address handling requires an explicit decision. The existing `Subject.tbAddress.
 
 ### Implemented evidence
 
-- `App.tbLegalForm` is owned by `App.tbJurisdiction` through the key `(JurisdictionCode, LegalFormCode)` without seeding UK policy ahead of DP4.
 - `Subject.tbAddressDetail` preserves `Subject.tbAddress.Address` as the source record while supplying reviewed, structured address components when available; its address jurisdiction reuses `App.tbJurisdiction` rather than introducing a duplicate country catalogue.
-- `Subject.tbLegalProfile` uses the durable key `(SubjectCode, LegalFormJurisdictionCode, LegalFormCode, ValidFrom)` and records effective, reviewed legal form plus the separately modelled registry jurisdiction; active overlaps are rejected.
+- Entity type is derived from the existing business-tax configuration (`Cash.fnGetBizTaxType()`); no duplicate legal-form catalogue or subject legal-profile table is maintained.
+- `Subject.tbVirtual.RegistryJurisdictionCode` records the optional place of legal registration. `Subject.fnStatutoryIdentity` falls back to the node jurisdiction for Accounts Mode while preserving a distinct value for foreign-incorporated and future MIS subjects.
 - `Subject.fnStatutoryIdentity` and `Subject.vwStatutoryIdentity` resolve the home subject exclusively through `App.tbOptions.SubjectCode`, derive subject class from `Subject.tbType`/`Subject.tbClass`, and expose source row versions and update timestamps.
 - `Subject.fnRegistration`, `Cash.fnReportingProfile` and `Cash.fnReportingProfileSetting` resolve active records for an explicit date and retain source/status/provenance metadata.
 - `App.fnStatutoryContextReadiness` returns typed, non-sensitive findings for missing, expired, duplicate or unreviewed identity/context evidence. Operation policy supplies the registration and setting codes; the generic SQL layer does not embed UK filing requirements.
@@ -438,7 +438,9 @@ Address handling requires an explicit decision. The existing `Subject.tbAddress.
 
 ## Phase DP4 — Initial UK Seed Data and Configuration Workflow
 
-Seed the generic catalogues with the minimum reviewed UK definitions required by the operation matrix. Initial definitions are expected to include HMRC and Companies House authority records; VAT registration, NINO, UTR and company-registration schemes; VAT, self-employment income-tax and company reporting profiles; and controlled settings for accounting type, quarterly period type, periods of account, late-accounting-date-rule election and Class 4 exemption reason where those operations are supported.
+**Status: complete (SQL build 4.1.3).**
+
+Seed the generic catalogues with the minimum reviewed UK definitions required by the operation matrix. Initial definitions include HMRC and Companies House authority records; NINO and UTR registration schemes; VAT, self-employment income-tax and company reporting profiles; and controlled settings for accounting type, quarterly period type, periods of account, late-accounting-date-rule election and Class 4 exemption reason where those operations are supported. Existing VAT and company numbers remain on `Subject.tbVirtual` and are not duplicated in the registration catalogue.
 
 Seed values are definitions and allowed literals, not fabricated subject registrations. Fixture templates may supply conspicuously synthetic registrations and business references for test databases.
 
@@ -459,15 +461,28 @@ UI design may be delivered separately, but the SQL procedures/service boundary a
 
 - UK requirements are represented entirely through generic structures plus reviewed UK definitions/policy.
 - Fixture databases can be provisioned with valid synthetic VAT and self-employment profiles.
-- NINO and UTR receive appropriate access control and masking.
+- NINO and UTR are masked outside the restricted preparation boundary; raw-value authorization is enforced when that boundary is introduced.
 - One subject can support multiple authority business profiles without ambiguity.
 - A reporting profile maps deliberately to TaxSourceCode.
-- Missing required/path-unsafe values, overlapping effective records and incomplete profiles are rejected; authority validity is not claimed locally.
+- Missing required values, overlapping effective records and incomplete profiles are rejected; authority validity is not claimed locally. Path safety is enforced by prepared-request route construction, where the operation descriptor defines whether and how a value enters a path.
 - No real credential or production identifier is introduced by seed data.
+
+### Implemented evidence
+
+- `App.proc_NodeDataInit` now owns the reviewed company-account setting definitions for FRS 105, micro-entity accounts and balance-sheet format; entity type continues to come from the existing tax configuration.
+- No subject registration, authority business reference, credential or filing secret is created by catalogue initialization.
+- `Subject.proc_RegistrationSave`, `Cash.proc_ReportingProfileSave` and `Cash.proc_ReportingProfileSettingSave` provide durable-code, effective-dated maintenance boundaries over the DP2/DP3 tables.
+- `Cash.proc_ReportingProfileSave` derives authority from the controlled reporting type and rejects an unreviewed profile being made active.
+- `App.fnIdentifierMask` and `Subject.fnRegistrationMasked` provide a non-sensitive registration-list projection while retaining the raw resolver solely for the later restricted preparation boundary. TCWeb does not expose a raw-registration read surface.
+- `Subject.tbVirtual.RegistryJurisdictionCode` is maintained through the existing organisation editor. A null value deliberately inherits `App.tbOptions.JurisdictionCode`; no separate Accounts Mode configuration page or legal-form catalogue is required.
+- Both active STD sandboxes contain the same nine setting definitions, including the reusable accounting-policies suggestion. The rollback-only fixture proves company-tax and self-employment profile creation, independent HMRC and Companies House profiles, typed setting creation, incomplete and complete readiness states, NINO/UTR masking, generated durable codes and complete cleanup. Earlier negative tests proved that an unreviewed active profile is rejected without persistence.
+- Operation-specific registration/setting requirements remain application policy because they vary by contract operation. Raw identifier authorization and path-segment safety remain responsibilities of the prepared-request boundary because no DP4 database object can know the consuming operation or route template.
 
 ---
 
 ## Phase DP5 — Data Provision Verification Gate
+
+**Status: complete (SQL build 4.1.4).**
 
 Add database, adapter and application tests proving that the statutory data foundation supplies every input required by the corporate, VAT and sole-trader mandatory vertical slices.
 
@@ -488,7 +503,9 @@ Verify at least:
 
 Produce a signed-off data-readiness matrix showing one authoritative source for every corporate, VAT and cumulative preparation input. Any unresolved input remains a blocker or forces the consuming operation to be marked deferred.
 
-Provision all four named sandbox databases with conspicuously synthetic statutory registrations and reporting profiles. Use both company sandboxes to prove corporate MIN/STD context, both sole-trader sandboxes to prove MIN/STD context, and all four to prove VAT context where VAT is enabled. Resolve the base development connection exclusively through `ConnectionStrings:TCNodeContext`; select only a validated sandbox database name from the fixed catalogue.
+The working matrix is maintained in `tax-hub-data-readiness-matrix.md`. It is evidence for this gate, not a substitute for executable verification.
+
+Provision the two active company/sole-trader STD sandboxes with conspicuously synthetic statutory registrations and reporting profiles. Keep the two MIN databases parked until live MIN evidence is required; MIN/STD contract shape remains covered offline and is derived from configuration rather than database names. Resolve the base development connection exclusively through `ConnectionStrings:TCNodeContext`; select only a validated sandbox database name from the fixed catalogue.
 
 ### Acceptance criteria
 
@@ -498,6 +515,16 @@ Provision all four named sandbox databases with conspicuously synthetic statutor
 - Synthetic fixtures contain no production personal identifiers.
 - The data-readiness matrix has no guessed or multiply owned value.
 - Part II may begin only after this gate passes.
+
+### Implemented evidence
+
+- The verified matrix in `tax-hub-data-readiness-matrix.md` assigns every permanent non-ledger input to an authoritative source, editable default or filing-workflow boundary.
+- `PhaseDP5_Provision.sql` is idempotent, restricted to the four named sandboxes and provisions only conspicuously synthetic reviewed context. It is not part of node initialization.
+- `PhaseDP5_Verification.sql` proves persisted company and sole-trader identity, registrations, authority profiles, effective settings, Tax Source association and MIN/STD classification without using database names.
+- `PhaseDP5_Portability.sql` proves through complete rollback that a second jurisdiction, authority, registration scheme, reporting type, setting, subject registration and profile can be represented without schema migration.
+- `App.proc_StatutoryContext` owns the provider-specific relational composition; `IStatutoryContextSource`, `TcStatutoryContextReader` and `StatutoryContextVerifier` establish the neutral Application/adapter boundary with masked identifiers and source row-version provenance.
+- Company and Corporation Tax draft-default factories preserve the distinction between sourced values, system suggestions and explicit operator overrides. Optional schedules default to zero/empty without being persisted as facts.
+- The full Tax Hub solution builds without warnings. SQL and Application/adapter gates pass on both active STD sandboxes; the parked MIN databases remain unchanged.
 
 ---
 

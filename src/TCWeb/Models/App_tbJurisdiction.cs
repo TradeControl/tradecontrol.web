@@ -12,6 +12,7 @@ namespace TradeControl.Web.Models
     {
         public App_tbJurisdiction()
         {
+            TbVirtuals = new HashSet<Subject_tbVirtual>();
             TbOptions = new HashSet<App_tbOption>();
         }
 
@@ -32,5 +33,8 @@ namespace TradeControl.Web.Models
 
         [InverseProperty(nameof(App_tbOption.JurisdictionCodeNavigation))]
         public virtual ICollection<App_tbOption> TbOptions { get; set; }
+
+        [InverseProperty(nameof(Subject_tbVirtual.RegistryJurisdictionCodeNavigation))]
+        public virtual ICollection<Subject_tbVirtual> TbVirtuals { get; set; }
     }
 }

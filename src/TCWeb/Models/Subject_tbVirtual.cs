@@ -24,6 +24,10 @@ namespace TradeControl.Web.Models
         [Display(Name = "Vat Number")]
         public string VatNumber { get; set; }
 
+        [StringLength(10)]
+        [Display(Name = "Registry Jurisdiction")]
+        public string RegistryJurisdictionCode { get; set; }
+
         [Column(TypeName = "nvarchar(max)")]
         [Display(Name = "Description")]
         public string BusinessDescription { get; set; }
@@ -47,5 +51,9 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbVirtual))]
         public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
+
+        [ForeignKey(nameof(RegistryJurisdictionCode))]
+        [InverseProperty(nameof(App_tbJurisdiction.TbVirtuals))]
+        public virtual App_tbJurisdiction RegistryJurisdictionCodeNavigation { get; set; }
     }
 }

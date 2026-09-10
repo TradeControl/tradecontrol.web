@@ -2086,6 +2086,11 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.NumberOfEmployees).HasDefaultValueSql("((0))");
                 entity.Property(e => e.Turnover).HasDefaultValueSql("((0))");
 
+                entity.HasOne(d => d.RegistryJurisdictionCodeNavigation)
+                    .WithMany(p => p.TbVirtuals)
+                    .HasForeignKey(d => d.RegistryJurisdictionCode)
+                    .HasConstraintName("FK_Subject_tbVirtual_App_tbJurisdiction");
+
                 //entity.Property(e => e.RowVer)
                 //    .IsRowVersion()
                 //    .IsConcurrencyToken();

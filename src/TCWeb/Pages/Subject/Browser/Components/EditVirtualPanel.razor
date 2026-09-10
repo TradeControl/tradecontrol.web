@@ -93,6 +93,20 @@
                                            class="form-control" />
                             </div>
                             <div class="col-lg-4">
+                                <label class="form-label" for="RegistryJurisdictionCode">Registry Jurisdiction</label>
+                                <InputSelect id="RegistryJurisdictionCode"
+                                             @bind-Value="_editor.RegistryJurisdictionCode"
+                                             class="form-select">
+                                    <option value="">Use node jurisdiction@_nodeJurisdictionLabel</option>
+                                    @foreach (var item in _jurisdictionOptions)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </InputSelect>
+                                <div class="form-text">Only select an override when the organisation is registered elsewhere.</div>
+                                <ValidationMessage For="@(() => _editor.RegistryJurisdictionCode)" class="text-danger small" />
+                            </div>
+                            <div class="col-lg-4">
                                 <label class="form-label" for="NumberOfEmployees">Employees</label>
                                 <InputNumber id="NumberOfEmployees"
                                              @bind-Value="_editor.NumberOfEmployees"
@@ -284,6 +298,7 @@
         public int NumberOfEmployees { get; set; }
         public string CompanyNumber { get; set; } = string.Empty;
         public string VatNumber { get; set; } = string.Empty;
+        public string RegistryJurisdictionCode { get; set; } = string.Empty;
         public string BusinessDescription { get; set; } = string.Empty;
         public decimal Turnover { get; set; }
         public string WebSite { get; set; } = string.Empty;
@@ -297,11 +312,13 @@
     private readonly List<ShortOption> _subjectStatusOptions = [];
     private readonly List<ByteOption> _exportTypeOptions = [];
     private readonly List<StringOption> _taxCodeOptions = [];
+    private readonly List<StringOption> _jurisdictionOptions = [];
     private readonly List<string> _paymentTermOptions = [];
     private readonly List<string> _subjectSourceOptions = [];
     private readonly List<string> _areaCodeOptions = [];
     private string? _loadedKey;
     private string? _actionMessage;
+    private string _nodeJurisdictionLabel = string.Empty;
     private bool _hasValidationErrors;
     private bool _isBusy;
 
@@ -332,6 +349,7 @@
         _subjectStatusOptions.Clear();
         _exportTypeOptions.Clear();
         _taxCodeOptions.Clear();
+        _jurisdictionOptions.Clear();
         _paymentTermOptions.Clear();
         _subjectSourceOptions.Clear();
         _areaCodeOptions.Clear();
@@ -360,6 +378,21 @@
             .OrderBy(item => item.TaxCode)
             .Select(item => new StringOption(item.TaxCode, $"{item.TaxCode} — {item.TaxDescription}"))
             .ToListAsync());
+
+        _jurisdictionOptions.AddRange(await NodeContext.App_tbJurisdictions
+            .AsNoTracking()
+            .OrderBy(item => item.JurisdictionName)
+            .Select(item => new StringOption(item.JurisdictionCode, $"{item.JurisdictionName} ({item.JurisdictionCode})"))
+            .ToListAsync());
+
+        var nodeJurisdiction = await NodeContext.App_tbOptions
+            .AsNoTracking()
+            .OrderBy(item => item.Identifier)
+            .Select(item => item.JurisdictionCodeNavigation.JurisdictionName + " (" + item.JurisdictionCode + ")")
+            .FirstOrDefaultAsync();
+        _nodeJurisdictionLabel = string.IsNullOrWhiteSpace(nodeJurisdiction)
+            ? string.Empty
+            : $" — {nodeJurisdiction}";
 
         _paymentTermOptions.AddRange(await NodeContext.Subject_PaymentTerms
             .AsNoTracking()
@@ -403,6 +436,7 @@
         _editor.NumberOfEmployees = subject.TbVirtual.NumberOfEmployees;
         _editor.CompanyNumber = subject.TbVirtual.CompanyNumber ?? string.Empty;
         _editor.VatNumber = subject.TbVirtual.VatNumber ?? string.Empty;
+        _editor.RegistryJurisdictionCode = subject.TbVirtual.RegistryJurisdictionCode ?? string.Empty;
         _editor.BusinessDescription = subject.TbVirtual.BusinessDescription ?? string.Empty;
         _editor.Turnover = subject.TbVirtual.Turnover;
         _editor.WebSite = subject.TbVirtual.WebSite ?? string.Empty;
@@ -433,6 +467,15 @@
             .AnyAsync(item => item.ExportTypeCode == _editor.ExportTypeCode))
         {
             _validationMessages.Add(() => _editor.ExportTypeCode, "Select a valid export type.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(_editor.RegistryJurisdictionCode)
+            && !_jurisdictionOptions.Any(item => string.Equals(
+                item.Value,
+                _editor.RegistryJurisdictionCode,
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            _validationMessages.Add(() => _editor.RegistryJurisdictionCode, "Select a valid registry jurisdiction.");
         }
 
         _editContext.NotifyValidationStateChanged();
@@ -471,6 +514,7 @@
             subject.TbVirtual.NumberOfEmployees = _editor.NumberOfEmployees;
             subject.TbVirtual.CompanyNumber = _editor.CompanyNumber?.Trim();
             subject.TbVirtual.VatNumber = _editor.VatNumber?.Trim();
+            subject.TbVirtual.RegistryJurisdictionCode = NullIfWhiteSpace(_editor.RegistryJurisdictionCode);
             subject.TbVirtual.BusinessDescription = _editor.BusinessDescription?.Trim();
             subject.TbVirtual.Turnover = _editor.Turnover;
             subject.TbVirtual.WebSite = _editor.WebSite?.Trim();
@@ -503,5 +547,10 @@
     {
         _validationMessages.Clear();
         _editContext.NotifyValidationStateChanged();
+    }
+
+    private static string? NullIfWhiteSpace(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

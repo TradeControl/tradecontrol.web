@@ -142,6 +142,16 @@ No implementation phase may modify `src/hmrc_mtd`, `tradecontrol.web`, `src/TCEx
 
 Commits, releases, pointer advancement, and cross-repository changes are distinct review actions.
 
+### 3.1 Relational Provider Boundary
+
+Database-specific query composition belongs to the SQL Node, not to the Tax Hub application or its domain model.
+
+Where Tax Hub requires a statutory projection assembled from several SQL Node schemas, SQL Node should expose a stable relational routine or projection. The Trade Control adapter should invoke that database contract and translate its result into provider-neutral Application models; it should not embed the substantive Transact-SQL implementation in C#.
+
+This boundary does not make SQL Server routines portable in themselves. It confines provider-specific SQL to the provider-owned database implementation, however, so a future PostgreSQL implementation can supply the same logical application port without changing submission logic, draft models, or verification policy.
+
+Relational result sets are preferred at this boundary. Database-generated JSON or HMRC wire payloads would couple SQL Node to Objective 3 contract serialization and are therefore outside its responsibility.
+
 ---
 
 ## 4. Revision 2 Work Already Completed
