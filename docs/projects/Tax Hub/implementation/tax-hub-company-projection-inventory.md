@@ -22,9 +22,9 @@ Every populated value must also retain its SQL row-version or immutable preparat
 
 ## MIN and STD reconciliation
 
-The company MIN and STD templates compose the same `UK-CO-ACCTS-2026`, `UK-CO-CT-2026` and `UK-CO-CT600-2026` semantic manifests. Their seven direct mappings use the same stable category roots:
+The company MIN and STD templates compose the same `UK-CO-ACCTS-2026`, `UK-CO-CT-2026` and `UK-CO-CT600-2026` semantic manifests. Their ten direct mappings use the same stable category roots:
 
-- `CT-TURNOV`, `CT-OTHRIN`, `CT-CSTSAL`, `CT-STAFFC` and `CT-OVERHD` for accounts;
+- `CT-TURNOV`, `CT-OTHRIN`, `CT-CSTSAL`, `CT-STAFFC`, `CT-OVERHD`, `CA-ASSET`, `CA-DEPREC` and `CA-LIAB` for accounts;
 - `CA-DEPREC` for the Corporation Tax depreciation add-back evidence; and
 - `CT-TURNOV` for CT600 turnover reconciliation.
 
@@ -37,8 +37,8 @@ The parked company MIN sandbox is not required to prove a second contract shape.
 | Semantic | MIN and STD source | Classification | CO1 disposition |
 |---|---|---|---|
 | Company name, company number and registry jurisdiction | `Subject.fnStatutoryIdentity` | Statutory context | Ready; company number remains text. |
-| Registered office | registered `Subject.tbAddress` selected by `AddressTypeCode` | Statutory context and reviewed filing input | Free-form source is explicit; contract-specific address lines require filing review. |
-| Accounts period | Business-tax window from `Cash.fnTaxTypeDueDates(0, 0)` | Reviewed filing input | Default only; operator may alter the start date for first/long accounts. |
+| Registered office | registered `Subject.tbAddress`, falling back to the selected default address for existing nodes | Statutory context and reviewed filing input | Company bootstrap creates a distinct registered row; contract-specific address lines require filing review. |
+| Accounts period | Business-tax window from `Cash.fnTaxTypeDueDates(0, 0)` | Reviewed filing input | SQL `PayTo` is an exclusive boundary and is converted to the inclusive statutory period end; operator may alter the start date for first/long accounts. |
 | Comparative period | Preceding equal horizon | Reviewed filing input | Default only; absent for first accounts. |
 | FRS 105, micro-entity and audit profile | reviewed `STATUTORY-ACCOUNTS` profile/settings | Statutory context | Accounting standard is ready; audit assertions require filing review. |
 | Currency | `App.tbOptions.UnitOfCharge` through statutory identity | Statutory context | Ready. |
@@ -48,17 +48,17 @@ The parked company MIN sandbox is not required to prove a second contract shape.
 | Administrative expenses | two approved roots under `IncomeStatement.AdministrativeExpenses` | Accounting projection | Mapping ready; preserve both roots and contributor provenance. |
 | Tax on profit | approved Corporation Tax computation | Derived | Must not use the tax-control-account balance. |
 | Profit/loss for period | approved income-statement calculation | Derived | Must reconcile before and after tax explicitly. |
-| Fixed assets | `Cash.vwBalanceSheet` account evidence | Gap | Requires a statutory, as-at-date classification projection. |
-| Current assets | `Cash.vwBalanceSheet` account/subject evidence | Gap | Requires a statutory, as-at-date classification projection. |
-| Prepayments and accrued income | period-end adjustment evidence | Gap | No authoritative statutory classification currently exists. |
-| Creditors within one year | `Cash.vwBalanceSheet` evidence plus maturity | Gap | Maturity projection is not defined. |
-| Net current assets/liabilities | approved balance-sheet components | Derived | Blocked by component gaps. |
-| Total assets less current liabilities | approved balance-sheet components | Derived | Blocked by component gaps. |
-| Creditors after one year | `Cash.vwBalanceSheet` evidence plus maturity | Gap | Maturity projection is not defined. |
-| Provisions | reviewed period-end adjustment | Gap | No authoritative statutory classification currently exists. |
-| Accruals and deferred income | reviewed period-end adjustment | Gap | No authoritative statutory classification currently exists. |
-| Net assets/liabilities | approved balance-sheet components | Derived | Must reconcile to capital and reserves. |
-| Capital and reserves | balance-sheet/equity evidence | Gap | Requires an as-at-date statutory equity projection and reconciliation. |
+| Fixed assets | `Cash.fnTaxBizBalanceSheet`, using `CA-ASSET` and `CA-DEPREC` mappings | Accounting projection | Ready as a net neutral-polarity balance. |
+| Current assets | `Cash.fnTaxBizBalanceSheet`, using existing debtor, bank and cash account classifications | Accounting projection | Ready. |
+| Prepayments and accrued income | filing review | Reviewed filing input | Explicit zero default; editable during preparation. |
+| Creditors within one year | `Cash.fnTaxBizBalanceSheet`, using current creditor, Corporation Tax and VAT classifications | Accounting projection | Ready. |
+| Net current assets/liabilities | approved balance-sheet components | Derived | Ready and reconciled by the projection. |
+| Total assets less current liabilities | approved balance-sheet components | Derived | Ready and reconciled by the projection. |
+| Creditors after one year | `Cash.fnTaxBizBalanceSheet`, using the `CA-LIAB` mapping | Accounting projection | Ready; classification is explicit rather than inferred from names. |
+| Provisions | filing review | Reviewed filing input | Explicit zero default; editable during preparation. |
+| Accruals and deferred income | filing review | Reviewed filing input | Explicit zero default; editable during preparation. |
+| Net assets/liabilities | approved balance-sheet components | Derived | Ready and reconciled to capital and reserves. |
+| Capital and reserves | reconciled net-assets value | Derived | Ready for the supported single-company micro-entity profile. |
 | Principal activity | `Subject.tbVirtual.BusinessDescription` | Reviewed filing input | Source suggestion; editable for the filing. |
 | Accounting policies | reviewed `ACCOUNTING-POLICIES` setting | Reviewed filing input | Ready as a suggestion. |
 | Average employees | `Subject.tbVirtual.NumberOfEmployees` | Reviewed filing input | Headcount is a suggestion, not yet the statutory period average. |
@@ -118,10 +118,10 @@ The ports contain no HMRC box numbers, Companies House delivery choices, taxonom
 
 The following reviewed SQL work is required before a representative accounts artifact can be populated:
 
-1. a period-bounded company income-statement projection returning current/comparative semantic values and effective contributor provenance;
-2. an as-at-date company balance-sheet projection that classifies statutory asset, liability and equity headings without relying on display names;
-3. explicit maturity evidence for creditors within and after one year;
-4. a reconciliation projection proving income-statement totals, net assets and capital/reserves;
+1. ~~a period-bounded company income-statement projection returning current/comparative semantic values and effective contributor provenance;~~ Implemented by `Cash.fnTaxBizCumulative` with contributor evidence from `Cash.fnTaxBizCumulativeContributors`;
+2. ~~an as-at-date company balance-sheet projection that classifies statutory asset, liability and equity headings without relying on display names;~~ Implemented by `Cash.fnTaxBizBalanceSheet`;
+3. ~~explicit maturity evidence for creditors within and after one year;~~ Implemented through existing current-liability classifications and the configurable `CA-LIAB` long-term mapping;
+4. ~~a reconciliation projection proving income-statement totals, net assets and capital/reserves;~~ Implemented in the balance-sheet projection and enforced again by Application contract validation;
 5. a period-effective statutory Corporation Tax rate policy distinct from an accounting estimate;
 6. a CT tax-payment allocation/reconciliation projection; and
 7. persistent or immutable workflow evidence for accounts approval, signing director and CT600 declaration.
@@ -130,4 +130,4 @@ These are work packages, not permission to add tables. Each must first prefer ex
 
 ## CO1 gate conclusion
 
-The neutral source shape is defined and MIN/STD contract equivalence is established. Population must not begin yet: the balance-sheet, approval, statutory-rate and tax-payment gaps above require reviewed designs. Group and specialist scenarios are explicitly unsupported and fail closed through `CompanySourceSupport`.
+The neutral source shape and MIN/STD contract equivalence are established. CO3 accounts population uses the completed income-statement and balance-sheet projections plus explicit reviewed filing input; CO4 remains gated by statutory-rate and tax-payment work. Group and specialist scenarios are explicitly unsupported and fail closed through `CompanySourceSupport`.

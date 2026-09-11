@@ -425,7 +425,7 @@ Address handling requires an explicit decision. The existing `Subject.tbAddress.
 
 ### Implemented evidence
 
-- `Subject.tbAddress.AddressTypeCode` distinguishes trading, registered and finance addresses without changing the free-form address model. Company statutory context selects the registered address explicitly; filing-specific structured lines remain reviewed preparation values.
+- `Subject.tbAddress.AddressTypeCode` distinguishes trading, registered and finance addresses without changing the free-form address model. Statutory context prefers the registered address and falls back to the selected default address for any subject; company bootstrap creates a distinct registered-address row. Filing-specific structured lines remain reviewed preparation values.
 - Entity type is derived from the existing business-tax configuration (`Cash.fnGetBizTaxType()`); no duplicate legal-form catalogue or subject legal-profile table is maintained.
 - `Subject.tbVirtual.RegistryJurisdictionCode` records the optional place of legal registration. `Subject.fnStatutoryIdentity` falls back to the node jurisdiction for Accounts Mode while preserving a distinct value for foreign-incorporated and future MIS subjects.
 - `Subject.fnStatutoryIdentity` and `Subject.vwStatutoryIdentity` resolve the home subject exclusively through `App.tbOptions.SubjectCode`, derive subject class from `Subject.tbType`/`Subject.tbClass`, and expose source row versions and update timestamps.
@@ -482,7 +482,7 @@ UI design may be delivered separately, but the SQL procedures/service boundary a
 
 ## Phase DP5 — Data Provision Verification Gate
 
-**Status: complete (current SQL build 4.1.5; original gate passed at 4.1.4).**
+**Status: complete (current SQL build 4.1.6; original gate passed at 4.1.4).**
 
 Add database, adapter and application tests proving that the statutory data foundation supplies every input required by the corporate, VAT and sole-trader mandatory vertical slices.
 
@@ -534,7 +534,7 @@ Part II is the principal population programme. It uses one reconciled company ev
 
 ## Phase CO1 — Company Projection Inventory and Source Boundary
 
-**Status: in progress.** Initial inventory and typed source boundary are recorded in `tax-hub-company-projection-inventory.md`; the identified SQL projection work packages require review before the CO1 gate can close.
+**Status: complete.** The classified inventory and typed source boundary are recorded in `tax-hub-company-projection-inventory.md`. Identified SQL projection work packages remain explicit entry dependencies for the relevant CO3 and CO4 slices; they do not represent unclassified CO1 semantics.
 
 Inventory the authoritative `sqlnode` accounts and Corporation Tax projections for the approved ordinary UK private micro-company MIN and STD profiles. Map every required `StatutoryAccounts` and `CorporationTaxComputation` semantic to an existing projection, statutory-context value or reviewed filing input.
 
@@ -554,6 +554,8 @@ Any missing authoritative fact becomes a reviewed `sqlnode` work package or an e
 
 ## Phase CO2 — Common Prepared Artifact Core
 
+**Status: complete.** The immutable common artifact, API-request and submission-package types are implemented in Application with final-byte digesting, ordered HTTP metadata, constituent-document separation and Objective 4 gateway ports.
+
 Implement immutable `PreparedStatutoryArtifact`, `PreparedApiRequest` and `PreparedSubmissionPackage` concepts. The common artifact carries jurisdiction, authority, operation, version/preview status, media type, exact bytes, digest, source evidence and findings.
 
 An API request adds method, relative path, ordered query and headers. A submission package adds service metadata, exact envelope/package bytes, named constituent documents and polling semantics. It must distinguish the bytes actually transmitted from separately inspectable document bytes.
@@ -565,9 +567,19 @@ An API request adds method, relative path, ordered query and headers. A submissi
 - Every digest is calculated over final stored bytes.
 - Objective 4 gateway ports accept API requests or packages without regeneration.
 
+### Implemented evidence
+
+- `PreparedStatutoryArtifact` copies final content into immutable storage and calculates its SHA-256 digest over those stored bytes.
+- `PreparedApiRequest` adds a relative authority path and ordered query/header metadata while rejecting base addresses and credential headers.
+- `PreparedSubmissionPackage` keeps the transmitted envelope/package artifact distinct from its named inspectable constituent documents and records polling semantics.
+- Separate API-request and submission-package gateway ports form the Objective 4 handoff without exposing mutable contracts or requiring serialization to be repeated.
+- Offline architecture checks prove byte ownership, digest integrity, ordering, credential/base-address exclusion and envelope/document separation.
+
 ---
 
 ## Phase CO3 — Statutory Accounts and iXBRL Vertical Slice
+
+**Status: in progress (SQL build 4.1.8).** The SQL projections, Application population boundary and deterministic iXBRL preparation path are implemented. WebHarness currently demonstrates the complete path with explicitly labelled in-memory MIN and STD source fixtures; assembly of `CompanyStatutorySource` from a Trade Control node and a sandbox-populated WebHarness preview remain outstanding before CO3 sign-off.
 
 Populate the existing `StatutoryAccounts` contract from `CompanyStatutorySource`. Enforce company identity, reporting/comparative periods, approved accounts profile, statement reconciliation, notes, audit/exemption statements and reviewed approval/signing context.
 
@@ -582,6 +594,22 @@ Expose inspection and exact document routes through WebHarness. XML/XHTML bytes 
 - Full/filleted applicability is explicit.
 - Golden iXBRL bytes are deterministic and schema/taxonomy validation passes.
 - Raw preview bytes match the prepared document and digest.
+
+### Implemented evidence
+
+- `CompanyAccountsPopulator` is the single Application-owned translation from `CompanyStatutorySource` to the company contract and rejects non-company, unsupported-profile, missing-comparative and unreviewed-approval inputs.
+- `Cash.fnTaxBizCumulative` and `Cash.fnTaxBizBalanceSheet` provide the bounded income-statement and reconciled eleven-line balance-sheet projections without using display names; contributor provenance is available from `Cash.fnTaxBizCumulativeContributors`.
+- Neutral-polarity fixed assets support cost and contra-asset contributors while directional tax tags retain strict polarity validation.
+- Both active sandboxes are synchronized to SQL build 4.1.8, and company synthetic regeneration completes with all accounts, Corporation Tax and CT600 mapping validators enabled.
+- In-memory MIN and STD source fixtures pass through the same population path. Explicit filing zeros remain distinguishable from ledger-derived zeros.
+- WebHarness exposes fixture-backed `min-full`, `min-filleted`, `std-full` and `std-filleted` inspection and raw-document routes; raw content is returned from the immutable prepared bytes with matching SHA-256 headers.
+- The complete Tax Hub solution and offline population/contract suites pass, including deterministic iXBRL, current/comparative contexts and reconciliation rules.
+
+### Remaining sign-off gate
+
+- Implement the Trade Control adapter for `ICompanyStatutorySource`, composing statutory context, current/comparative income-statement projections, current/comparative balance-sheet projections and reviewed filing inputs without embedding submission-contract vocabulary in SQL.
+- Replace or supplement the fixture-backed WebHarness proof with a clearly labelled preview populated from an approved sandbox connection.
+- Exercise representative MIN and STD node data through that adapter and verify statement reconciliation, source evidence, exact raw bytes and digest equality. Until this gate passes, the generated document is a populated fixture preview rather than a node-populated filing preview.
 
 ---
 

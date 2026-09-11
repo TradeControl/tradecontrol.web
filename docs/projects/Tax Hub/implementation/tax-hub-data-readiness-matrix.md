@@ -1,7 +1,7 @@
 # Tax Hub Data Readiness Matrix
 
 **Status:** DP5 verified evidence  
-**Scope:** Accounts Mode, UK launch, SQL build 4.1.5
+**Scope:** Accounts Mode, UK launch, SQL build 4.1.6
 
 This matrix assigns one authoritative owner to every non-ledger and accounting input required by the mandatory Corporation Tax, Companies House accounts, VAT return and sole-trader cumulative-period slices. `Ready` means the source exists and its DP5 SQL evidence passes. `Workflow` means the value belongs to the reviewed preparation/filing instance rather than permanent business master data. `Gap` blocks population until an authoritative source or an explicitly unsupported scenario is agreed.
 
@@ -17,7 +17,7 @@ Database names are never evidence of entity or reporting shape. Entity type come
 | Registry jurisdiction | `Subject.tbVirtual.RegistryJurisdictionCode`, falling back to node jurisdiction | Ready | Effective value projected by `Subject.fnStatutoryIdentity`. |
 | Reporting currency | `App.tbOptions.UnitOfCharge` | Ready | Currency override remains distinct from jurisdiction. |
 | Free-form contact address | selected `Subject.tbAddress` | Ready | Remains the ordinary Trade Control source record. |
-| Statutory address | Company: registered `Subject.tbAddress`; sole trader: selected trading address | Ready as free-form source | `AddressTypeCode` prevents the default trading address being mistaken for a registered office. Contract-specific address lines require filing review. |
+| Statutory address | Registered `Subject.tbAddress`, falling back to the subject's selected default address | Ready as free-form source | The rule is entity-neutral. Company bootstrap creates a distinct registered row; the fallback supports existing nodes and subjects without a separate registered address. Contract-specific address lines require filing review. |
 | Phone, email and website | `Subject.tbSubject` / `Subject.tbVirtual` | Ready | Reusable contact data; not mandatory for every filing. |
 | Source freshness | row versions and update timestamps from identity/registration/profile/setting projections | Ready | The neutral adapter retains source versions. Accounting-artifact snapshot provenance is added with the accounting adapters. |
 
