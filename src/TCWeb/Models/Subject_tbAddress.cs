@@ -24,6 +24,7 @@ namespace TradeControl.Web.Models
         [Required]
         [StringLength(50)]
         public string SubjectCode { get; set; }
+        public short AddressTypeCode { get; set; }
         [Required]
         [Column(TypeName = "ntext")]
         public string Address { get; set; }
@@ -43,6 +44,9 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(SubjectCode))]
         [InverseProperty(nameof(Subject_tbSubject.TbAddresses))]
         public virtual Subject_tbSubject SubjectCodeNavigation { get; set; }
+        [ForeignKey(nameof(AddressTypeCode))]
+        [InverseProperty(nameof(Subject_tbAddressType.TbAddresses))]
+        public virtual Subject_tbAddressType AddressTypeCodeNavigation { get; set; }
         [InverseProperty(nameof(Subject_tbSubject.AddressCodeNavigation))]
         public virtual ICollection<Subject_tbSubject> TbSubjects { get; set; }
         [InverseProperty(nameof(Project_tbProject.AddressCodeFromNavigation))]

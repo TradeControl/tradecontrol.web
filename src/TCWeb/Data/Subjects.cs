@@ -200,12 +200,12 @@ namespace TradeControl.Web.Data
         #endregion
 
         #region Address Methods
-        public async Task AddAddressAsync(string address)
+        public async Task AddAddressAsync(string address, short addressTypeCode = 0)
         {
             try
             {
                 EnsureSubjectCode();
-                await _context.Database.ExecuteSqlRawAsync("Subject.proc_AddAddress @p0, @p1", parameters: [SubjectCode, address]);
+                await _context.Database.ExecuteSqlRawAsync("Subject.proc_AddAddress @p0, @p1, @p2", parameters: [SubjectCode, address, addressTypeCode]);
             }
             catch (Exception e)
             {
@@ -243,7 +243,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<SubjectActionResult> UpdateAddressAsync(string addressCode, string address)
+        public async Task<SubjectActionResult> UpdateAddressAsync(string addressCode, string address, short addressTypeCode = 0)
         {
             try
             {
@@ -262,6 +262,7 @@ namespace TradeControl.Web.Data
                     return SubjectActionResult.Failure("The selected address was not found.");
 
                 current.Address = address.Trim();
+                current.AddressTypeCode = addressTypeCode;
                 await _context.SaveChangesAsync();
 
                 return SubjectActionResult.Success("Address updated.");

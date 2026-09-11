@@ -102,15 +102,26 @@ An identity or surrogate key is permitted only when the data is explicitly insta
 - The application setting `Settings:SqlNodeVersion` may identify a compatible release line such as `4.1.*`; the latest install row identifies the exact database build.
 - Keep application, EF models, SQL project and active development databases synchronised.
 
-## 10. Change procedure
+## 10. AI-assisted schema design
+
+- Trade Control's established triadic and recursive schema semantics take priority over generic software and ERP conventions.
+- Conventional ERP master-data structures are not architectural precedent. Familiarity or prevalence elsewhere is not evidence that a pattern belongs in Trade Control.
+- Approval of a work plan grants implementation autonomy only where the policy, specification or current architecture already determines the design. It does not grant architectural autonomy over unresolved schema or ontology decisions.
+- Before proposing persistent design, an AI coding agent must inspect the existing Trade Control tables, keys, relationships, ownership and derivation paths relevant to the requirement.
+- An explicit review gate is required before the agent introduces a new persistent domain concept, table or entity, relationship, ownership boundary, or materially different schema abstraction not already established by the policy, specification or current architecture.
+- At the review gate, the agent must stop and report the unresolved decision, alternatives, evidence from the existing schema and its recommendation. It must not fill the gap from generic software conventions merely to continue implementation.
+- Implementation choices may follow established engineering practice where they do not alter domain semantics. Persistent schema design must remain grounded in Trade Control's established domain model and must not introduce concepts or structures solely because they are conventional elsewhere.
+
+## 11. Change procedure
 
 Before implementing a schema change:
 
 1. Inspect existing tables, keys, catalogues, procedures and naming conventions in the owning schema.
 2. Identify the authoritative owner and synchronisation requirements of every new value.
-3. State proposed tables, primary keys, foreign keys and enumerations before coding when the design introduces a new domain concept.
-4. Trace all SQL, EF, initialization, configuration UI and projection consumers.
-5. Preserve unrelated data and existing behaviour.
+3. Determine whether the policy, specification or current architecture already establishes the proposed concept and relationships. If not, stop at the explicit review gate in section 10.
+4. State proposed tables, primary keys, foreign keys and enumerations before coding when the design introduces a new domain concept.
+5. Trace all SQL, EF, initialization, configuration UI and projection consumers.
+6. Preserve unrelated data and existing behaviour.
 
 Before considering the change complete:
 
@@ -120,7 +131,7 @@ Before considering the change complete:
 4. Test the supported active sandbox profiles where database integration is required.
 5. Confirm the installed SQL build without changing the released version unintentionally.
 
-## 11. Design review checklist
+## 12. Design review checklist
 
 - Is every object in the correct domain schema?
 - Is every primary key durable across database instances?
@@ -131,4 +142,6 @@ Before considering the change complete:
 - Are distinct jurisdiction meanings modelled separately?
 - Is every foreign key complete and synchronisable?
 - Is initialization owned only by `App.proc_NodeDataInit`?
+- Does the design preserve established triadic and recursive semantics rather than import a conventional ERP pattern?
+- Has every unresolved persistent concept, relationship, ownership boundary or materially different abstraction passed explicit architectural review?
 - Have SQL, EF, UI and active sandbox databases been kept aligned?

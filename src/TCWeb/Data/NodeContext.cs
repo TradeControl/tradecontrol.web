@@ -50,6 +50,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Subject_tbAccountType> Subject_tbAccountTypes { get; set; }
         public virtual DbSet<Object_tbObject> Object_tbActivities { get; set; }
         public virtual DbSet<Subject_tbAddress> Subject_tbAddresses { get; set; }
+        public virtual DbSet<Subject_tbAddressType> Subject_tbAddressTypes { get; set; }
         public virtual DbSet<Project_tbAllocation> Project_tbAllocations { get; set; }
         public virtual DbSet<Project_tbAllocationEvent> Project_tbAllocationEvents { get; set; }
         public virtual DbSet<Cash_tbAssetType> Cash_tbAssetTypes { get; set; }
@@ -576,6 +577,12 @@ namespace TradeControl.Web.Data
                     .IsUnique()
                     .HasFillFactor((byte)90);
 
+                entity.HasIndex(e => e.SubjectCode, "IX_Subject_tbAddress_Registered")
+                    .IsUnique()
+                    .HasFilter("[AddressTypeCode] = 2");
+
+                entity.Property(e => e.AddressTypeCode).HasDefaultValueSql("((0))");
+
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
@@ -592,6 +599,18 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbAddresses)
                     .HasForeignKey(d => d.SubjectCode)
                     .HasConstraintName("FK_Subject_tbAddress_Subject_tb");
+
+                entity.HasOne(d => d.AddressTypeCodeNavigation)
+                    .WithMany(p => p.TbAddresses)
+                    .HasForeignKey(d => d.AddressTypeCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Subject_tbAddress_Subject_tbAddressType");
+            });
+
+            modelBuilder.Entity<Subject_tbAddressType>(entity =>
+            {
+                entity.HasKey(e => e.AddressTypeCode)
+                    .HasName("PK_Subject_tbAddressType");
             });
 
             modelBuilder.Entity<Project_tbAllocation>(entity =>

@@ -425,7 +425,7 @@ Address handling requires an explicit decision. The existing `Subject.tbAddress.
 
 ### Implemented evidence
 
-- `Subject.tbAddressDetail` preserves `Subject.tbAddress.Address` as the source record while supplying reviewed, structured address components when available; its address jurisdiction reuses `App.tbJurisdiction` rather than introducing a duplicate country catalogue.
+- `Subject.tbAddress.AddressTypeCode` distinguishes trading, registered and finance addresses without changing the free-form address model. Company statutory context selects the registered address explicitly; filing-specific structured lines remain reviewed preparation values.
 - Entity type is derived from the existing business-tax configuration (`Cash.fnGetBizTaxType()`); no duplicate legal-form catalogue or subject legal-profile table is maintained.
 - `Subject.tbVirtual.RegistryJurisdictionCode` records the optional place of legal registration. `Subject.fnStatutoryIdentity` falls back to the node jurisdiction for Accounts Mode while preserving a distinct value for foreign-incorporated and future MIS subjects.
 - `Subject.fnStatutoryIdentity` and `Subject.vwStatutoryIdentity` resolve the home subject exclusively through `App.tbOptions.SubjectCode`, derive subject class from `Subject.tbType`/`Subject.tbClass`, and expose source row versions and update timestamps.
@@ -482,7 +482,7 @@ UI design may be delivered separately, but the SQL procedures/service boundary a
 
 ## Phase DP5 — Data Provision Verification Gate
 
-**Status: complete (SQL build 4.1.4).**
+**Status: complete (current SQL build 4.1.5; original gate passed at 4.1.4).**
 
 Add database, adapter and application tests proving that the statutory data foundation supplies every input required by the corporate, VAT and sole-trader mandatory vertical slices.
 
@@ -533,6 +533,8 @@ Provision the two active company/sole-trader STD sandboxes with conspicuously sy
 Part II is the principal population programme. It uses one reconciled company evidence set to produce distinct HMRC Corporation Tax and Companies House artifacts without conflating their contracts or filing lifecycles.
 
 ## Phase CO1 — Company Projection Inventory and Source Boundary
+
+**Status: in progress.** Initial inventory and typed source boundary are recorded in `tax-hub-company-projection-inventory.md`; the identified SQL projection work packages require review before the CO1 gate can close.
 
 Inventory the authoritative `sqlnode` accounts and Corporation Tax projections for the approved ordinary UK private micro-company MIN and STD profiles. Map every required `StatutoryAccounts` and `CorporationTaxComputation` semantic to an existing projection, statutory-context value or reviewed filing input.
 

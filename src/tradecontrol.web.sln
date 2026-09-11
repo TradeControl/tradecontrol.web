@@ -37,6 +37,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implementation", "{28089177-8B6D-4FFE-856A-56CFAC1E218A}"
 	ProjectSection(SolutionItems) = preProject
 		..\docs\projects\Tax Hub\implementation\company-statutory-contract-design.md = ..\docs\projects\Tax Hub\implementation\company-statutory-contract-design.md
+		..\docs\projects\Tax Hub\implementation\tax-hub-company-projection-inventory.md = ..\docs\projects\Tax Hub\implementation\tax-hub-company-projection-inventory.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-data-provision-inventory.md = ..\docs\projects\Tax Hub\implementation\tax-hub-data-provision-inventory.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-data-readiness-matrix.md = ..\docs\projects\Tax Hub\implementation\tax-hub-data-readiness-matrix.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-implementation-1.md = ..\docs\projects\Tax Hub\implementation\tax-hub-implementation-1.md

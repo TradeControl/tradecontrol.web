@@ -1,6 +1,7 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
 @using TradeControl.Web.Data
 @using TradeControl.Web.Models
 
@@ -39,6 +40,16 @@
                 <div class="rounded border overflow-hidden mb-4">
                     <div class="px-3 py-2 text-bg-primary fw-semibold">Address</div>
                     <div class="bg-white p-3">
+                        <label class="form-label" for="AddressTypeCode">Address Type</label>
+                        <InputSelect id="AddressTypeCode"
+                                     @bind-Value="_editor.AddressTypeCode"
+                                     class="form-select mb-3">
+                            @foreach (var addressType in _addressTypes)
+                            {
+                                <option value="@addressType.AddressTypeCode">@addressType.AddressType</option>
+                            }
+                        </InputSelect>
+
                         <label class="form-label" for="Address">Address</label>
                         <InputTextArea id="Address"
                                        @bind-Value="_editor.Address"
@@ -79,6 +90,7 @@
     {
         [Required(ErrorMessage = "Address is required.")]
         public string Address { get; set; } = string.Empty;
+        public short AddressTypeCode { get; set; }
     }
 
     private readonly AddressEditorModel _editor = new();
@@ -87,13 +99,19 @@
     private string? _actionMessage;
     private bool _isBusy;
     private bool _hasValidationErrors;
+    private IReadOnlyList<Subject_tbAddressType> _addressTypes = Array.Empty<Subject_tbAddressType>();
 
     private bool _isEditMode => !string.IsNullOrWhiteSpace(AddressCode);
 
     protected override async Task OnInitializedAsync()
     {
+        // EditForm can render while the asynchronous option lookup is in progress.
         ResetEditContext();
-        await Task.CompletedTask;
+
+        _addressTypes = await NodeContext.Subject_tbAddressTypes
+            .AsNoTracking()
+            .OrderBy(addressType => addressType.AddressTypeCode)
+            .ToListAsync();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -111,6 +129,7 @@
     private async Task LoadAsync()
     {
         _editor.Address = string.Empty;
+        _editor.AddressTypeCode = 0;
 
         if (_isEditMode)
         {
@@ -118,7 +137,10 @@
             var currentAddress = await subjects.GetAddressAsync(AddressCode);
 
             if (currentAddress is not null)
+            {
                 _editor.Address = currentAddress.Address ?? string.Empty;
+                _editor.AddressTypeCode = currentAddress.AddressTypeCode;
+            }
         }
 
         ResetEditContext();
@@ -140,11 +162,11 @@
 
             if (_isEditMode)
             {
-                result = await subjects.UpdateAddressAsync(AddressCode, _editor.Address.Trim());
+                result = await subjects.UpdateAddressAsync(AddressCode, _editor.Address.Trim(), _editor.AddressTypeCode);
             }
             else
             {
-                await subjects.AddAddressAsync(_editor.Address.Trim());
+                await subjects.AddAddressAsync(_editor.Address.Trim(), _editor.AddressTypeCode);
                 result = SubjectActionResult.Success("Address added.");
             }
 
