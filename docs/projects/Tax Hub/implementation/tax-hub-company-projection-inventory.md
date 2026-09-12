@@ -78,14 +78,14 @@ The current contract has eleven balance-sheet lines. `company-field-sets.md` add
 | Other add-backs | filing adjustment schedule | Explicit zero or reviewed filing input | No entries default to explicit zero. |
 | Deductions | filing adjustment schedule | Explicit zero or reviewed filing input | No entries default to explicit zero. |
 | Capital allowances | filing allowance schedule | Explicit zero or reviewed filing input | No entries default to explicit zero; detailed pools are not yet supported. |
-| Loss relief | filing loss schedule | Explicit zero or reviewed filing input | Do not infer a claim from negative accounting profit. |
+| Loss relief | `Cash.vwTaxLossesCarriedForward` through `Cash.fnTaxBizComputation` plus reviewed losses-used claim | Source plus reviewed filing choice | Brought/current/carried values reconcile to the statement-derived loss position; the operator supplies only the claim. |
 | Chargeable gains | filing computation schedule | Explicit zero or reviewed filing input | Typed source retains the value; detailed gains computation is not yet supported. |
 | Taxable total profits | approved computation inputs | Derived | Versioned calculation required. |
-| Main rate | period-effective statutory rate | Gap | `App.tbYearPeriod.BusinessTaxRate` is an estimate, not yet an approved statutory-rate projection. |
-| Corporation Tax chargeable | taxable profits and approved rate calculation | Derived | Blocked by rate policy. |
+| Main rate | `App.tbYearPeriod.BusinessTaxRate` through `Cash.fnTaxBizComputation` | Source | The initial profile requires a uniform rate across the CT period. |
+| Corporation Tax chargeable | `Cash.vwTaxBizStatement`, reconciled to `Cash.vwTaxBizTotalsByPeriod` | Source/reconciled | Negative statement tax represents a loss and produces a zero CT600 charge. |
 | Other reliefs | filing relief schedule | Explicit zero or reviewed filing input | Unsupported relief types must not be collapsed into this value. |
 | Tax payable | approved liability calculation | Derived | Must retain calculation and rounding evidence. |
-| Tax paid/payment position | tax statement/payment evidence | Gap | Requires period-specific payment allocation and reconciliation. |
+| Tax paid/payment position | `Cash.vwTaxBizStatement` through `Cash.fnTaxBizComputation` | Source | Payment is allocated by the due-date window; the cumulative closing balance is retained separately. |
 | CT600A | reviewed loans-to-participators schedule | Conditional reviewed filing input | Supported only when the complete page input is supplied and validated. |
 
 ## CT600 population relationship
@@ -104,6 +104,12 @@ The current `Ct600Return` surface does not create another accounting source:
 | Declaration name and date | separate reviewed return-declaration event |
 
 Group, charity, insurance, tonnage-tax, ring-fence, energy-profits, R&D, restitution, residential-property-developer and other specialist or supplementary scenarios are unsupported by the ordinary-company profile. Detection must fail before contract population.
+
+The official computation-taxonomy validation bundle is deliberately deferred. Until pinned redistributable assets are added and validated offline, the derived computation catalogue and every package containing it remain preview-only. This deferral does not weaken source reconciliation, loss arithmetic, CT600 validation or deterministic-byte testing, but it prevents production transport from treating the artifact as submission-ready.
+
+### CO4 implementation disposition
+
+The first CO4 slice requires no additional persistent table. Period-bounded turnover, accounting profit and accounting depreciation are projected from the Category Tree. The Corporation Tax rate, calculated liability, payment position, balance and carried-forward loss position are projected from the established business-tax period and statement datasets. Filing adjustments, allowances, the amount of losses claimed, gains, reliefs, participator loans and declaration remain reviewed inputs with explicit value state. The adapter blocks a preview unless the reviewed computation reconciles to the statement-backed liability.
 
 ## Source boundary
 

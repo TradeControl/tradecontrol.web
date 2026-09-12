@@ -579,7 +579,7 @@ An API request adds method, relative path, ordered query and headers. A submissi
 
 ## Phase CO3 — Statutory Accounts and iXBRL Vertical Slice
 
-**Status: in progress (SQL build 4.1.8).** The SQL projections, Application population boundary and deterministic iXBRL preparation path are implemented. WebHarness currently demonstrates the complete path with explicitly labelled in-memory MIN and STD source fixtures; assembly of `CompanyStatutorySource` from a Trade Control node and a sandbox-populated WebHarness preview remain outstanding before CO3 sign-off.
+**Status: complete (SQL build 4.1.8).** The SQL projections, Application population boundary, Trade Control source adapter and deterministic iXBRL preparation path are implemented. WebHarness accepts a validated JSON request and returns company-sandbox-populated accounts XHTML with reconciled source figures and matching digest. The live proof, exclusive-period regression check and contract suite complete the agreed CO3 gate.
 
 Populate the existing `StatutoryAccounts` contract from `CompanyStatutorySource`. Enforce company identity, reporting/comparative periods, approved accounts profile, statement reconciliation, notes, audit/exemption statements and reviewed approval/signing context.
 
@@ -602,18 +602,17 @@ Expose inspection and exact document routes through WebHarness. XML/XHTML bytes 
 - Neutral-polarity fixed assets support cost and contra-asset contributors while directional tax tags retain strict polarity validation.
 - Both active sandboxes are synchronized to SQL build 4.1.8, and company synthetic regeneration completes with all accounts, Corporation Tax and CT600 mapping validators enabled.
 - In-memory MIN and STD source fixtures pass through the same population path. Explicit filing zeros remain distinguishable from ledger-derived zeros.
-- WebHarness exposes fixture-backed `min-full`, `min-filleted`, `std-full` and `std-filleted` inspection and raw-document routes; raw content is returned from the immutable prepared bytes with matching SHA-256 headers.
+- `TcCompanyStatutorySourceReader` composes reviewed statutory context, current/comparative income statements, current/comparative balance sheets and contributor/snapshot evidence into `CompanyStatutorySource` without submission-contract vocabulary in SQL.
+- WebHarness `POST /api/company/accounts` accepts the connection, `company-accounts` pilot, filing profile, projection controls and reviewed filing inputs in one validated JSON body. Invalid input is rejected before database access and source failures return structured errors without exposing the connection string.
+- The company sandbox returned a 7,764-byte full-accounts XHTML document containing 40 facts under taxonomy `FRC-2026-v1.0.0`; the response SHA-256 header matched the exact returned bytes. Income-statement facts were reconciled to the exclusive `PayTo` SQL projection boundary, while balance-sheet facts were reconciled to their inclusive reporting-date instants.
+- A reviewed company-number override demonstrates the submission-interface rule: default Trade Control data may be corrected for the filing without mutating the node.
 - The complete Tax Hub solution and offline population/contract suites pass, including deterministic iXBRL, current/comparative contexts and reconciliation rules.
-
-### Remaining sign-off gate
-
-- Implement the Trade Control adapter for `ICompanyStatutorySource`, composing statutory context, current/comparative income-statement projections, current/comparative balance-sheet projections and reviewed filing inputs without embedding submission-contract vocabulary in SQL.
-- Replace or supplement the fixture-backed WebHarness proof with a clearly labelled preview populated from an approved sandbox connection.
-- Exercise representative MIN and STD node data through that adapter and verify statement reconciliation, source evidence, exact raw bytes and digest equality. Until this gate passes, the generated document is a populated fixture preview rather than a node-populated filing preview.
 
 ---
 
 ## Phase CO4 — Corporation Tax Computation and CT600 Vertical Slice
+
+**Status: complete for Objective 3 preview scope (SQL build 4.1.9).** The authority-neutral reviewed-input model, Trade Control source adapter, computation/CT600 population boundary, preview package preparation and JSON WebHarness endpoint are implemented. Profit and loss scenarios reconcile to the canonical submission and business-tax statement datasets and produce deterministic packages. Production submission remains prohibited by the explicit computation-taxonomy asset deferral below.
 
 Populate `CorporationTaxComputation` from the approved source and reconcile it to statutory accounts. Allocate long accounts periods into valid Corporation Tax periods, apply explicit versioned adjustment/allowance/loss policy and generate deterministic computation iXBRL.
 
@@ -627,6 +626,27 @@ Populate the exact CT600 contract, including company identity, company number, U
 - CT600 RIM/version and package composition are pinned.
 - Golden envelope/package and constituent-document bytes are deterministic.
 - WebHarness inspection/raw routes return exact bytes and matching digests.
+
+### Implemented evidence
+
+- `TcCorporationTaxSourceReader` derives turnover, accounting profit and mapped accounting depreciation from period-bounded Trade Control projections using the exclusive `PayTo` boundary.
+- `Cash.fnTaxBizComputation` projects the period-effective rate from `App.tbYearPeriod`, reconciles calculated tax to `Cash.vwTaxBizStatement`, allocates payments by the due-date window and exposes the statement balance and carried-forward loss position.
+- Other adjustments, deductions, allowances, the amount of losses claimed, gains, reliefs, participator loans and declaration remain explicit reviewed filing inputs. A preview is blocked when those choices do not reconcile to the statement-backed liability.
+- Long accounts periods require one reviewed input set per contiguous Corporation Tax period and an explicit return-period selection for raw preview.
+- The combined preparation path derives accounts tax-on-profit from the approved Corporation Tax computations and validates accounts → computation → CT600 arithmetic.
+- The restored profit-making company sandbox reconciles £56,714.83512 accounting/taxable profit to £10,775.81867 Corporation Tax at the 19% source rate, matching `Cash.vwTaxBizStatement`, with a zero loss schedule. Two WebHarness requests returned byte-identical packages with SHA-256 `55D6FDBF5931F38339A4E37E9DE49E3826CF2ADBE6DBD5E2744D6B0759085BCF`. The request no longer accepts rate, tax-paid or a parallel loss schedule as operator-owned master values.
+- The regenerated loss-making company sandbox reconciles a £24,517.45988 current-period loss with £79,242.47 brought-forward and £103,759.93 carried-forward taxable losses. The preview-only computation catalogue serializes the complete loss movement. Two `POST /api/company/corporation-tax` requests returned byte-identical RIM 1.994 packages with zero taxable profit, zero Corporation Tax chargeable/payable and SHA-256 `EA0E79CBFD5E8D1CD371C029FC90A3C9A5E87FCFE5A3F9E75F5589D645414343`.
+- Preview preparation no longer depends on inaccessible `IsReviewed` workflow flags or reporting-profile rows. When no editable accounting-policies setting exists, the accounts draft supplies the documented FRS 105 suggestion for operator review; company mode, Tax Source validation and cross-document reconciliation remain enforced.
+- Long-accounting-period allocation uses the contract-owned `CorporationTaxPeriodAllocation` algorithm in both the contract and Trade Control reader paths. Tests prove exactly two contiguous CT periods, each no longer than 366 days.
+- Intrinsic source validation rejects reviewed add-backs and loss claims that do not reconcile to the statement-backed liability. Contract validation separately rejects broken loss movements, taxable-profit arithmetic and Corporation Tax charge calculations.
+- CT600A is serialized only when the typed loans-to-participators schedule is supplied. Tests cover presence, absence, outstanding loans without a charge, negative monetary values and the generic unsupported-supplementary-return boundary.
+
+### Explicit computation-taxonomy asset deferral
+
+- HMRC identifies the accepted computation taxonomy, but this repository does not contain a redistributable official taxonomy bundle suitable for offline schema/linkbase validation.
+- `HMRC-CT-COMPUTATION-2025` therefore remains a small derived semantic catalogue with `SubmissionReady = false`. Its QNames and generated iXBRL are diagnostic preview artifacts and must not be represented as authority-validated output.
+- Objective 4 may transport CO4 packages only through fake/local gateways while this deferral remains. Enabling a live Corporation Tax gateway requires pinned official validation assets, successful offline validation and an explicit contract-status change; transport code must not silently promote the preview.
+- This is an explicit external-asset deferral, not an unresolved population or reconciliation defect. CO4 is complete for the Objective 3 preparation/preview boundary.
 
 ---
 
