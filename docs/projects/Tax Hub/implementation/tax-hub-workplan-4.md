@@ -652,6 +652,8 @@ Populate the exact CT600 contract, including company identity, company number, U
 
 ## Phase CO5 — Companies House Accounts Filing Slice
 
+**Status: complete for Objective 3 preview scope.** A distinct Companies House package is prepared from the approved statutory-accounts evidence and exposed through exact package/document previews. Contract selection is enforced at both the API boundary and the Application preparation boundary. Live submission remains prohibited because the separately referenced official Filing TIS envelope schemas are not provisioned.
+
 Build the separate `CompaniesHouseFilingPackage` from the same approved statutory accounts evidence. Apply Companies House contract/version, delivery profile, registrar statements and package rules independently of HMRC Corporation Tax.
 
 Expose package and constituent-document previews, including asynchronous/polling metadata, without implementing submission or status polling.
@@ -663,9 +665,22 @@ Expose package and constituent-document previews, including asynchronous/polling
 - Unsupported replacement/future contracts require explicit preview opt-in.
 - Raw package/document previews match stored bytes and digests.
 
+### Implemented evidence to date
+
+- `CompaniesHouseAccountsPreparer` composes the Companies House envelope from the same populated statutory-accounts contract used by the accounts and Corporation Tax slices, while assigning Companies House authority, operation, contract and polling metadata independently.
+- WebHarness accepts a `companies-house-accounts` JSON payload at `POST /api/company/companies-house/accounts`; the sibling `/document` route returns the constituent accounts XHTML without reparsing or reformatting it.
+- Filing-specific input includes the envelope number, delivery profile, registrar statements and contract choice. The unsupported `future-api` contract is rejected unless the caller explicitly opts into preview use.
+- Contract validation rejects missing envelope/document content and absent micro-entity, audit-exemption or directors' responsibility statements; preparation rejects unsupported delivery profiles.
+- Delivery profile cannot diverge from the document: the Application preparer derives it from the already prepared full/filleted accounts artifact rather than accepting an independent envelope value.
+- Contract-registry policy selects effective production TIS 5.9 previews, rejects it before its effective date, rejects unknown versions, and permits `future-api` only with explicit preview opt-in. This policy is enforced inside Application preparation and therefore cannot be bypassed by a non-WebHarness caller.
+- A remote hotspot run against the standard company sandbox returned an 8,684-byte TIS-5.9 logical package and a 5,754-byte filleted accounts document. The document SHA-256 `0BB7822F5CBB81466C1147C3AD6E6588F425BDC119DA88631B9302B40F803654` matched both response headers and the decoded package attachment byte-for-byte. The package SHA-256 was `73A35AF7CB3C1AD10527135B47CF3AC7541739350639872FEC3CA641120475A5`, with `PollUntilTerminal` metadata and relative path `submission-status/CH-REMOTE-CO5-0001`.
+- The complete Tax Hub solution builds with zero warnings, the company contract suite passes 60 assertions and the offline source/prepared-artifact suite passes.
+
 ---
 
 ## Phase CO6 — Corporate Handoff and Coverage Gate
+
+**Status: complete. Part II is complete for Objective 3 preview scope.** Both mandatory corporate packages cross the Objective 4 port unchanged under offline fake-gateway verification. The service matrix classifies every registered company contract and keeps all live-authority limitations explicit.
 
 Complete the Corporation Tax and Companies House service/package matrix. Use fake gateways to prove both prepared packages cross the Objective 4 boundary unchanged, including exact envelope bytes, named documents, media types and polling semantics.
 
@@ -676,6 +691,28 @@ Complete the Corporation Tax and Companies House service/package matrix. Use fak
 - No live authority transport is reachable.
 - Objective 4 can transmit packages without population, serialization or package reconstruction.
 
+### Corporate service/package matrix
+
+| Authority | Operation | Contract | Disposition | Boundary outcome |
+|---|---|---|---|---|
+| Companies House | Prepare full/filleted micro-entity accounts | FRC 2026 | Supported | Deterministic validated iXBRL document |
+| Companies House | File company accounts | TIS 5.9 | Deferred | Logical package preview complete; official Filing TIS envelope schemas required before live filing |
+| Companies House | Poll filing status | TIS 5.9 | Deferred | `PollUntilTerminal` handoff metadata complete; transport belongs to Objective 4 |
+| Companies House | Replacement filing API | `future-api` | Unsupported | Diagnostic preview only with explicit opt-in |
+| HMRC | Submit Corporation Tax return | CT600 RIM 1.994 | Deferred | Deterministic package preview complete; computation validation-assets gate blocks live submission |
+| HMRC | Attach Corporation Tax computation | 2025 computation taxonomy | Deferred | Derived preview complete; official offline validation assets required |
+| HMRC | CT600A loans to participators | CT600 RIM 1.994 | Supported when applicable | Typed schedule, validation and conditional serialization complete |
+
+The same classifications are represented by `CompanyServiceCoverageCatalog`, and automated coverage fails if any registered company contract lacks a matrix entry or rationale.
+
+### Handoff evidence
+
+- `CorporateHandoffTests` prepares representative full and filleted statutory accounts, a TIS 5.9 Companies House package and an HMRC CT600/computation package using the production Application preparers.
+- A fake `IPreparedSubmissionPackageGateway` receives each original package instance. Assertions preserve exact transmission bytes, document bytes, SHA-256 digests, document names, media types, service codes and polling semantics across the boundary.
+- The Companies House handoff contains one named filleted accounts document and `PollUntilTerminal` metadata. The Corporation Tax handoff contains independently named accounts and computation documents and no polling instruction.
+- Neither package is populated, serialized or reconstructed by the gateway. The source tree contains no authority implementation of `IPreparedSubmissionPackageGateway`; live transport is therefore unreachable in Objective 3.
+- The complete solution builds with zero warnings. The company contract suite passes 61 assertions, and the offline source, prepared-artifact and corporate-handoff suite passes.
+
 ---
 
 # Part III — VAT and Sole-Trader MTD Income Tax Population and Preview
@@ -685,6 +722,8 @@ Part III retains the original API request implementation sequence. VAT and sole-
 ---
 
 ## Phase 1 — Contract Inventory and Canonical Wire Baseline
+
+**Status: complete.** Contract-owned catalogues classify all eight VAT operations and all 45 MTD Income Tax descriptors (44 production and one preview). Only VAT return submission and cumulative-period PUT are authorised for the initial Accounts Mode population slices; all other Income Tax operations are explicitly deferred and therefore fail closed.
 
 Build a generated-from-code operation coverage matrix for every current VAT and MTD Income Tax endpoint descriptor.
 
@@ -717,9 +756,21 @@ Do not add population, SQL or WebHarness behaviour in this phase.
 - Absence versus zero and production versus preview behaviour are tested.
 - Endpoint inventory tests detect an added, removed or unclassified descriptor.
 
+### Implemented evidence
+
+- `VatOperationCatalog` records stable operation identity, version, method, path and ordered parameters, request/response types, request shape, source ownership, Accounts Mode decision, planned use case/route and fixture/harness coverage for all eight VAT endpoints.
+- `SaOperationCatalog` provides the equivalent generated coverage matrix for 44 production MTD Income Tax descriptors plus the explicitly preview-gated annual 2026–27 descriptor.
+- Assembly-reflection tests compare every public endpoint descriptor with its catalogue entry. An added, removed, duplicate or unclassified operation fails the contract suite.
+- `VatJson` and `SaJson.SerializeCanonical` own deterministic, non-indented, BOM-free UTF-8 request serialization with null omission and invariant `System.Text.Json` date/number/enum handling.
+- Golden tests pin exact VAT return JSON, detailed cumulative-request SHA-256 and exact consolidated cumulative JSON. They also prove optional omission, explicit zero, explicit `false`, detailed/consolidated exclusivity, malformed period rejection and production/preview separation.
+- VAT serialization now emits the required HMRC lower-camel property names. The ignored `Vrn` path value is no longer incorrectly marked as a JSON-required member, so it remains outside the request body without invalidating serializer metadata.
+- The complete Tax Hub solution builds with zero warnings. VAT contract tests pass 17 assertions and MTD Income Tax contract tests pass 84 assertions across the complete descriptor inventory.
+
 ---
 
 ## Phase 2 — Application Source Vocabulary and Validation Model
+
+**Status: complete.** An authority-neutral `TradeControl.Tax.Data` boundary now expresses statutory subjects, periods, VAT and business-income source facts, provenance, readiness findings and distinct value states without exposing SQL, HMRC wire or ASP.NET Core concerns.
 
 Add the small authority-neutral source boundary inside `TradeControl.Tax.UK.Application`, using the `TradeControl.Tax.Data` namespace and a clear folder boundary rather than a new project.
 
@@ -753,9 +804,22 @@ Create `TradeControl.Tax.UK.Application.Tests` and prove the semantics using in-
 - Ports describe accounting meaning rather than tables or generic repositories.
 - Application tests run without SQL, ASP.NET Core or HMRC connectivity.
 
+### Implemented evidence
+
+- Typed `TaxSubject`, `TaxReportingPeriod`, `VatReturnSource` and `BusinessIncomeSource` models keep stable identifiers, display labels and provenance separate.
+- `TaxValue<T>` represents present, explicit-zero, absent, unsupported, invalid and not-applicable states without collapsing them into nullable values; explicit zero is guarded as a model invariant.
+- Monetary source facts remain `decimal`; no population rounding, polarity conversion or transport serialization occurs at this boundary.
+- `IVatReturnSourceReader`, `IBusinessIncomeSourceReader` and `ISourceReadinessEvaluator` are narrow asynchronous, cancellation-aware semantic ports with typed selectors.
+- `SourceKey` is a safe configured identifier rather than a connection string. Identifier validation rejects connection-string syntax before it can cross the Application boundary.
+- `TradeControl.Tax.UK.Application.Tests` uses in-memory adapters and checked-in neutral JSON snapshots. Its 16 assertions cover value-state distinctions, precision, identity and label separation, provenance, typed selection, safe source keys, structured readiness and cancellation.
+- Boundary vocabulary tests prevent SQL object names, HMRC wire terminology and connection-string concepts from entering the neutral models and ports.
+- The complete Tax Hub solution builds with zero warnings. Application, VAT and MTD Income Tax suites pass 16, 17 and 84 assertions respectively; the established offline CO1, CO2 and CO6 suites also pass.
+
 ---
 
 ## Phase 3 — Trade Control Adapter and Safe Source Selection
+
+**Status: complete.** The Trade Control adapter now implements the neutral VAT, cumulative business-income and readiness ports. SQL connection strings are resolved from safe source keys at composition time, while Application and WebHarness source processing no longer depends on `Tc*` projection models.
 
 Refactor `TradeControl.Tax.UK.Adapters.TradeControl` to implement the Application ports and translate SQL rows into neutral aggregates at the adapter boundary. Add a statutory-context port which consumes the Part I projections and returns only the effective subject, registration and reporting-profile data required by a typed preparation use case.
 
@@ -793,9 +857,24 @@ Create `TradeControl.Tax.UK.Adapters.TradeControl.Tests` with checked-in adapter
 - No absolute-value or sign transformation occurs unless the neutral accounting semantic explicitly requires it.
 - Integration tests are optional/categorised; the ordinary suite remains deterministic and offline.
 
+### Implemented evidence
+
+- `TradeControlTaxSourceAdapter` implements `IVatReturnSourceReader`, `IBusinessIncomeSourceReader` and `ISourceReadinessEvaluator` using parameterised, cancellation-aware SQL against `Cash.vwTaxVatSubmission`, `Cash.fnTaxBizCumulative`, `Cash.fnTaxBizCumulativeContributors`, `App.proc_StatutoryContext`, `App.fnStatutoryContextReadiness` and `Cash.fnTaxTagMapValidate`.
+- `SourceConnectionResolver` maps validated `SourceKey` values to connection strings inside the composition boundary. Unknown keys fail closed and connection strings do not enter Application selectors or aggregates.
+- VAT selection now matches both the projection `StartOn` and `VatEndOn`; the former misleading `periodEndOn`-to-`StartOn` assumption is no longer used by neutral preparation. Inclusive Application periods are translated explicitly to the cumulative SQL function's exclusive `PeriodEnd` boundary.
+- `TradeControlSourceMapper` preserves decimal precision, source polarity, explicit zero, unsupported and invalid states, Tax Tag names, contributor mapping keys and row-version provenance. It rejects mismatched periods and duplicate semantic facts rather than aggregating contradictory rows.
+- Reads compare the database row-version watermark before and after statutory-context and accounting projection access. A source change during capture fails the read instead of returning an incoherent snapshot.
+- WebHarness VAT and MTD payload builders now consume neutral `VatReturnSource` and `BusinessIncomeSource` aggregates. Structural validators no longer synchronously query legacy `Tc*` readers; source validation occurs through the asynchronous adapter path.
+- The neutral VAT adapter preserves the signed values emitted by `Cash.vwTaxVatSubmission`. The established HMRC-facing magnitude conversion for `vatReclaimedCurrPeriod` remains at the population boundary rather than altering the accounting source fact; complete VAT box arithmetic is verified in Phase 4.
+- `TradeControl.Tax.UK.Adapters.TradeControl.Tests` provides deterministic offline coverage for safe selection, subject translation, period matching, precision, polarity, explicit zero, unsupported/invalid facts, contributor provenance, exclusive end dates and duplicate rejection. The offline suite passes 10 assertions.
+- Separately invoked read-only integration runs cover both retained sandboxes. The populated company node passes VAT projection and structured-readiness checks (12 total adapter assertions). After synthetic regeneration, the sole-trader node passes VAT plus `UK-ITSA-SE-CUM` projection, contributor provenance and source/mapping-readiness checks (14 total adapter assertions).
+- The complete Tax Hub solution builds with zero warnings. Application, adapter, VAT and MTD Income Tax suites pass 16, 10, 17 and 84 offline assertions respectively.
+
 ---
 
 ## Phase 4 — Prepared API Request Mechanics and Common Preparation Pipeline
+
+**Status: complete.** `PreparedApiRequest` now represents an immutable, transport-neutral HTTP request artifact, and `PreparedApiRequestPipeline` supplies strict contract-driven path, query, header, validation, serialization and digest mechanics for both VAT and MTD Income Tax descriptors.
 
 Extend the Part II prepared-artifact core with `PreparedApiRequest` mechanics shared by typed VAT and MTD Income Tax use cases.
 
@@ -834,9 +913,23 @@ The common pipeline must not become a universal mapper or arbitrary operation di
 - No base address, OAuth data, fraud header, connection string or response data is representable in the artifact.
 - A fake gateway can receive all prepared fields unchanged without transport.
 
+### Implemented evidence
+
+- `PreparedApiRequest` records stable operation ID, contract family/version, explicit preview state, method, fully resolved relative path, ordered query pairs, safe contract headers, optional Content-Type, immutable body bytes, optional body SHA-256, source evidence and structured findings.
+- Body bytes are defensively copied before storage and the digest is calculated over those stored bytes. Bodyless requests contain neither fabricated `{}` bytes nor a digest.
+- `PreparedApiRequestPipeline` invokes operation-specific canonical serializers only after all named validation stages have run without an error finding. Blocking findings are retained while body creation and hashing are suppressed.
+- Path-template resolution requires the descriptor's declared placeholders in their exact order, rejects missing, duplicate and unknown values, URI-escapes each value and refuses unresolved or absolute paths.
+- Query construction rejects duplicate and unknown inputs, enforces required values, omits absent optional values and emits supplied values in descriptor order rather than caller/dictionary order.
+- `HmrcPreparedApiContracts` extracts request mechanics from the VAT and MTD Income Tax contract catalogues. Only descriptor-owned `Accept` and applicable `Content-Type` headers enter the artifact; credentials and runtime transport headers are outside the model.
+- Tests cover a body-bearing VAT request, a bodyless VAT enquiry, an MTD cumulative request blocked before serialization, immutable bytes/digest identity, escaped paths, ordered optional queries, missing/duplicate/unknown rejection and a fake Objective 4 gateway receiving the same prepared instance unchanged.
+- A reflection guard proves that base address, OAuth/token data, connection strings, fraud-prevention headers and response state are absent from the public prepared-request shape.
+- The complete Tax Hub solution builds with zero warnings, and the established offline CO1/CO2/CO6 source-boundary, prepared-artifact and corporate-handoff suite passes with the new Phase 4 mechanics.
+
 ---
 
 ## Phase 5 — VAT Return Vertical Slice
+
+**Status: complete and signed off.** The typed preparation use case, explicit VAT-adjustment source fact, safe inspection store and prepare/inspect/raw-body routes are implemented. The agreed population rule applies signed `App.tbYearPeriod.VatAdjustment` to the magnitude of acquisition VAT in box 2, then derives boxes 3 and 5 from the populated boxes. Independent review confirmed `VatEndOn` selection, quarterly period metadata, exact payload output and statement reconciliation.
 
 Implement a typed `PrepareVatReturn` use case against the production VAT return descriptor.
 
@@ -870,6 +963,18 @@ The prepare response returns safe inspection metadata and the preparation ID. Th
 - SHA-256 in inspection metadata matches the raw response.
 - Invalid arithmetic, missing periods and failed readiness return findings without a body.
 - No submission adapter or outbound HTTP handler is reachable from the route.
+
+### Verification evidence for sign-off
+
+- `PrepareVatReturn` resolves a safe source key at composition time, accepts an optional operator VAT-registration override without changing the authoritative subject default, reads statutory context and `VatReturnSource` through Application ports, and returns a transport-neutral `PreparedApiRequest`.
+- Source/context/readiness failures, a missing period, an invalid VAT registration, an unfinalised declaration and invalid box-2 arithmetic produce stable error findings and suppress body serialization.
+- Population is explicit: box 1 retains the sales-VAT sign; box 2 is `ABS(vatDueAcquisitions) + VatAdjustment`; boxes 3 and 5 are derived from populated boxes; box 4 is the reclaimed-VAT magnitude; boxes 6–9 use whole-pound, away-from-zero rounding.
+- `Cash.vwTaxVatSubmission` now obtains VAT adjustments once from `App.tbYearPeriod`, independently of transaction/VAT-code rows. This removes both duplicate adjustment aggregation and the loss of an adjustment in a period with no VAT transaction row.
+- Both retained sandboxes were re-provisioned with the guarded DP5 synthetic statutory context and updated to the corrected VAT submission view. VAT row identity is selected solely by `VatEndOn`; the returned quarterly period is resolved from `Cash.fnTaxTypeDueDates(1, 0)` as `PayFrom` through the day before exclusive `PayTo`, rather than copied from the lookup month. Sole-trader and company adapter integrations pass 15 and 13 assertions respectively.
+- Company sandbox preparation `442d268004424e4db077e96a2e94c2f4` produced a 283-byte exact VAT body with SHA-256 `14EFBA20FB1DE00585EF954D268B23FB290CC4A9651ADC3C7165B3FB01A6EA61`. The raw route returned those identical bytes as `application/json` with `X-TaxHub-Preview: true`.
+- In reversible preparation `0c31a4755f28474bb2f59b88ad84fce8`, a temporary `-0.05` adjustment on the final included accounting month changed only boxes 2, 3 and 5 by `-0.05`; boxes 1, 4 and 6–9 were unchanged. The adjustment was restored, and a repeat preparation reproduced the baseline digest exactly.
+- Harness evidence is retained below `.local/sandbox/tax-hub/vat`; neither the request connection string nor credentials appear in inspection metadata or persisted artifacts.
+- The complete solution builds with zero warnings. VAT, MTD Income Tax, company, Application and Data Provision suites pass 17, 84, 61, 19 and all established verification assertions respectively.
 
 ---
 
