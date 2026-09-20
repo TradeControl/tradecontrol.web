@@ -14,9 +14,24 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
     {
         public string BusinessType { get; init; } = string.Empty;
         public IReadOnlyList<string> ActiveRegimes { get; init; } = Array.Empty<string>();
+        public TaxHubReportingReadinessSummary ReportingReadiness { get; init; } = new();
         public IReadOnlyList<TaxHubObligationSummary> Obligations { get; init; } = Array.Empty<TaxHubObligationSummary>();
         public IReadOnlyList<TaxHubDashboardCard> Cards { get; init; } = Array.Empty<TaxHubDashboardCard>();
         public TaxHubPayloadAuditSummary PayloadAudit { get; init; } = new();
+    }
+
+    public sealed class TaxHubReportingReadinessSummary
+    {
+        public bool IsReady { get; init; }
+        public IReadOnlyList<TaxHubReportingReadinessItem> Profiles { get; init; } = Array.Empty<TaxHubReportingReadinessItem>();
+    }
+
+    public sealed class TaxHubReportingReadinessItem
+    {
+        public string ReportingType { get; init; } = string.Empty;
+        public string Authority { get; init; } = string.Empty;
+        public bool IsReady { get; init; }
+        public IReadOnlyList<string> Findings { get; init; } = Array.Empty<string>();
     }
 
     public sealed class TaxHubDashboardCard

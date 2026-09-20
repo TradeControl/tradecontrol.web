@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -96,10 +97,12 @@ namespace TradeControl.Web.AppServices.TaxHub
             var validationSummary = await GetAccountsValidationSummaryAsync();
             var businessTaxCard = await BuildBusinessTaxCard(businessTaxTotals, obligations, projectedDue);
             var payloadAudit = await GetPayloadAuditSummaryAsync();
+            var reportingReadiness = await GetReportingReadinessAsync();
 
             return new TaxHubDashboardModel
             {
                 BusinessType = businessType,
+                ReportingReadiness = reportingReadiness,
                 ActiveRegimes = taxTypes
                     .Select(t => t.TaxType)
                     .ToArray(),
@@ -111,6 +114,120 @@ namespace TradeControl.Web.AppServices.TaxHub
                     businessTaxCard,
                     BuildAccountsCard(validationSummary)
                 }
+            };
+        }
+
+        private async Task<TaxHubReportingReadinessSummary> GetReportingReadinessAsync()
+        {
+            var options = await _nodeContext.App_tbOptions
+                .AsNoTracking()
+                .Select(item => new { item.SubjectCode })
+                .SingleAsync();
+
+            var activeStatusCodes = await _nodeContext.App_tbStatutoryStatuses
+                .AsNoTracking()
+                .Where(item => item.IsActive)
+                .Select(item => item.StatusCode)
+                .ToListAsync();
+
+            var profiles = await (
+                from profile in _nodeContext.Cash_tbReportingProfiles.AsNoTracking()
+                join reportingType in _nodeContext.App_tbReportingTypes.AsNoTracking()
+                    on profile.ReportingTypeCode equals reportingType.ReportingTypeCode
+                join authority in _nodeContext.App_tbAuthorities.AsNoTracking()
+                    on profile.AuthorityCode equals authority.AuthorityCode
+                where profile.SubjectCode == options.SubjectCode
+                orderby reportingType.ReportingTypeName, profile.ValidFrom descending
+                select new
+                {
+                    profile.ReportingTypeCode,
+                    reportingType.ReportingTypeName,
+                    authority.AuthorityName,
+                    profile.TaxSourceCode,
+                    profile.StatusCode,
+                    profile.IsReviewed,
+                    profile.ValidFrom
+                })
+                .ToListAsync();
+
+            var currentProfiles = profiles
+                .GroupBy(item => item.ReportingTypeCode)
+                .Select(group => group.First())
+                .ToList();
+
+            if (currentProfiles.Count == 0)
+            {
+                return new TaxHubReportingReadinessSummary
+                {
+                    IsReady = false,
+                    Profiles = new[]
+                    {
+                        new TaxHubReportingReadinessItem
+                        {
+                            ReportingType = "Statutory reporting",
+                            IsReady = false,
+                            Findings = new[] { "No statutory reporting profiles are configured for this business." }
+                        }
+                    }
+                };
+            }
+
+            var results = new List<TaxHubReportingReadinessItem>();
+            var connection = _nodeContext.Database.GetDbConnection();
+            var closeConnection = connection.State != ConnectionState.Open;
+
+            if (closeConnection)
+                await connection.OpenAsync();
+
+            try
+            {
+                foreach (var profile in currentProfiles)
+                {
+                    var findings = new List<string>();
+
+                    await using var command = connection.CreateCommand();
+                    command.CommandText = "SELECT FindingMessage FROM App.fnStatutoryContextReadiness(@SubjectCode, @ReportingTypeCode, @TaxSourceCode, NULL, NULL, @AsOfDate)";
+                    command.Parameters.Add(new SqlParameter("@SubjectCode", SqlDbType.NVarChar, 50) { Value = options.SubjectCode });
+                    command.Parameters.Add(new SqlParameter("@ReportingTypeCode", SqlDbType.NVarChar, 20) { Value = profile.ReportingTypeCode });
+                    command.Parameters.Add(new SqlParameter("@TaxSourceCode", SqlDbType.NVarChar, 20)
+                    {
+                        Value = string.IsNullOrWhiteSpace(profile.TaxSourceCode) ? DBNull.Value : profile.TaxSourceCode
+                    });
+                    command.Parameters.Add(new SqlParameter("@AsOfDate", SqlDbType.Date) { Value = DateTime.Today });
+
+                    await using var reader = await command.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                        findings.Add(reader.GetString(0));
+
+                    if (!profile.IsReviewed)
+                        findings.Add("The reporting profile has not been reviewed.");
+
+                    if (!activeStatusCodes.Contains(profile.StatusCode))
+                        findings.Add("The reporting profile is not active.");
+
+                    findings = findings
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    results.Add(new TaxHubReportingReadinessItem
+                    {
+                        ReportingType = profile.ReportingTypeName,
+                        Authority = profile.AuthorityName,
+                        IsReady = findings.Count == 0,
+                        Findings = findings
+                    });
+                }
+            }
+            finally
+            {
+                if (closeConnection)
+                    await connection.CloseAsync();
+            }
+
+            return new TaxHubReportingReadinessSummary
+            {
+                IsReady = results.All(item => item.IsReady),
+                Profiles = results
             };
         }
 

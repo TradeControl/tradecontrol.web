@@ -1,9 +1,12 @@
 @using TradeControl.Web.AppServices.TaxHub
 @using TradeControl.Web.Pages.Tax.Hub.Components
 @using TradeControl.Web.Pages.Tax.Hub.Models
+@using TradeControl.Web.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Wangkanai.Detection.Models
 @inject ITaxHubService TaxHubService
 @inject Wangkanai.Detection.Services.IDetectionService Detection
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -26,6 +29,7 @@
             }
             else if (_state is not null)
             {
+                @ReportingReadinessAlert()
                 @if (_mobileView == TaxHubMobileView.Navigation)
                 {
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -112,6 +116,9 @@ else
             }
             else if (_state is not null)
             {
+                <div class="px-3 pt-3">
+                    @ReportingReadinessAlert()
+                </div>
                 <div class="tc-tax-hub-desktop-layout">
                     <aside class="tc-tax-hub-sidebar-host border-end @(_isSidebarCollapsed ? "tc-tax-hub-sidebar-collapsed" : null)">
                         <div class="tc-tax-hub-sidebar-header">
@@ -190,6 +197,7 @@ else
 
     private bool _isLoading = true;
     private bool _isMobile;
+    private bool _isAdministrator;
     private bool _isSidebarCollapsed;
     private string? _error;
     private TaxHubWorkflowState? _state;
@@ -211,11 +219,44 @@ else
     private bool ShowFinalPeriodAction =>
         _state?.SelectedWorkspace == TaxHubWorkspace.Accounts && _selectedYearNumber.HasValue;
 
+    private RenderFragment ReportingReadinessAlert() => @<text>
+        @if (_dashboard?.ReportingReadiness is { IsReady: false } readiness)
+        {
+            <div class="alert alert-warning mb-3" role="alert">
+                <div class="fw-semibold mb-1">Statutory reporting configuration is incomplete</div>
+                @foreach (var profile in readiness.Profiles.Where(item => !item.IsReady))
+                {
+                    <div class="small mb-1">
+                        <strong>@profile.ReportingType</strong>
+                        @if (!string.IsNullOrWhiteSpace(profile.Authority))
+                        {
+                            <span> — @profile.Authority</span>
+                        }
+                        @if (profile.Findings.Count > 0)
+                        {
+                            <span>: @string.Join(" ", profile.Findings)</span>
+                        }
+                    </div>
+                }
+                @if (_isAdministrator)
+                {
+                    <a class="alert-link" href="/Admin/Manager/Index?node=ReportingProfiles">Open Reporting Profiles in Admin Manager</a>
+                }
+                else
+                {
+                    <span class="small">Ask an administrator to complete the reporting profiles.</span>
+                }
+            </div>
+        }
+    </text>;
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
             _isMobile = Detection.Device.Type == Device.Mobile;
+            _isAdministrator = (await AuthenticationStateProvider.GetAuthenticationStateAsync())
+                .User.IsInRole(Constants.AdministratorsRole);
 
             var result = await TaxHubService.GetShellStateAsync();
 

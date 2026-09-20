@@ -100,6 +100,20 @@
                     </div>
                 </div>
             }
+            else if (_selected == ManagerTreeHost.ManagerNode.ReportingProfiles)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button" class="tc-back-btn" @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <ReportingProfilePanel IsMobile="true" />
+                    </div>
+                </div>
+            }
             else if (_selected == ManagerTreeHost.ManagerNode.TaxCode)
             {
                 <div class="d-flex flex-column" style="min-height:0; height:100%;">
@@ -347,6 +361,7 @@
         ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
         ManagerTreeHost.ManagerNode.Periods => $"{_companyName} / Financial Periods",
         ManagerTreeHost.ManagerNode.TaxSettings => $"{_companyName} / Tax Settings",
+        ManagerTreeHost.ManagerNode.ReportingProfiles => $"{_companyName} / Reporting Profiles",
         ManagerTreeHost.ManagerNode.TaxCode => $"{_companyName} / Tax Codes",
         ManagerTreeHost.ManagerNode.TaxRates => $"{_companyName} / Tax Rates & Adjustments",
         ManagerTreeHost.ManagerNode.InvoiceSettings => $"{_companyName} / Invoice Settings",
@@ -414,6 +429,11 @@
         ManagerTreeHost.ManagerNode.TaxSettings =>
             @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
     <TaxSettingsPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.ReportingProfiles =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <ReportingProfilePanel IsMobile="false" />
 </div>,
 
         ManagerTreeHost.ManagerNode.TaxCode =>
@@ -676,6 +696,16 @@
                 return Task.CompletedTask;
             }
 
+            if (node == ManagerTreeHost.ManagerNode.ReportingProfiles)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.ReportingProfiles
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=ReportingProfiles&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
             if (node == ManagerTreeHost.ManagerNode.TaxCode)
             {
                 var returnNode = previousNode == ManagerTreeHost.ManagerNode.TaxCode
@@ -743,6 +773,7 @@
             or ManagerTreeHost.ManagerNode.Users
             or ManagerTreeHost.ManagerNode.Periods
             or ManagerTreeHost.ManagerNode.TaxSettings
+            or ManagerTreeHost.ManagerNode.ReportingProfiles
             or ManagerTreeHost.ManagerNode.TaxCode
             or ManagerTreeHost.ManagerNode.TaxRates
             or ManagerTreeHost.ManagerNode.Host

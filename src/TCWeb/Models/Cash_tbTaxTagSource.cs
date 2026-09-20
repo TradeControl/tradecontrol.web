@@ -29,12 +29,19 @@ namespace TradeControl.Web.Models
         [Required]
         public short TaxTypeCode { get; set; }
 
+        [Required]
+        [StringLength(20)]
+        public string ReportingTypeCode { get; set; }
+
         [InverseProperty(nameof(Cash_tbTaxTag.TaxSourceCodeNavigation))]
         public virtual ICollection<Cash_tbTaxTag> TbTaxTags { get; set; }
 
         [ForeignKey(nameof(TaxTypeCode))]
         [InverseProperty(nameof(Cash_tbTaxType.TaxTagSourceNavigation))]
         public virtual Cash_tbTaxType TaxTypeCodeNavigation { get; set; }
+
+        [ForeignKey(nameof(ReportingTypeCode))]
+        public virtual App_tbReportingType ReportingTypeCodeNavigation { get; set; }
 
     }
 }

@@ -438,7 +438,7 @@ Address handling requires an explicit decision. The existing `Subject.tbAddress.
 
 ## Phase DP4 — Initial UK Seed Data and Configuration Workflow
 
-**Status: complete (SQL build 4.1.3).**
+**Status: database and service boundary complete (SQL build 4.1.3); TCWeb maintenance surface scheduled in Phase 6A.**
 
 Seed the generic catalogues with the minimum reviewed UK definitions required by the operation matrix. Initial definitions include HMRC and Companies House authority records; NINO and UTR registration schemes; VAT, self-employment income-tax and company reporting profiles; and controlled settings for accounting type, quarterly period type, periods of account, late-accounting-date-rule election and Class 4 exemption reason where those operations are supported. Existing VAT and company numbers remain on `Subject.tbVirtual` and are not duplicated in the registration catalogue.
 
@@ -455,7 +455,7 @@ Provide a controlled maintenance workflow which:
 - prevents an invalid or incomplete profile being marked ready; and
 - never stores credentials or access tokens.
 
-UI design may be delivered separately, but the SQL procedures/service boundary and validation behaviour must exist before Part II relies on the data.
+The SQL procedures/service boundary and validation behaviour must exist before Part II relies on the data. The user-facing maintenance workflow is delivered through TCWeb Admin Manager in Phase 6A; it is not part of an individual Tax Hub filing form.
 
 ### Acceptance criteria
 
@@ -477,6 +477,7 @@ UI design may be delivered separately, but the SQL procedures/service boundary a
 - `Subject.tbVirtual.RegistryJurisdictionCode` is maintained through the existing organisation editor. A null value deliberately inherits `App.tbOptions.JurisdictionCode`; no separate Accounts Mode configuration page or legal-form catalogue is required.
 - Both active STD sandboxes contain the same nine setting definitions, including the reusable accounting-policies suggestion. The rollback-only fixture proves company-tax and self-employment profile creation, independent HMRC and Companies House profiles, typed setting creation, incomplete and complete readiness states, NINO/UTR masking, generated durable codes and complete cleanup. Earlier negative tests proved that an unreviewed active profile is rejected without persistence.
 - Operation-specific registration/setting requirements remain application policy because they vary by contract operation. Raw identifier authorization and path-segment safety remain responsibilities of the prepared-request boundary because no DP4 database object can know the consuming operation or route template.
+- The completed DP4 boundary does not by itself make reporting profiles maintainable by an Accounts Mode user. Phase 6A supplies that missing TCWeb Admin Manager surface over the existing save procedures and readiness projection.
 
 ---
 
@@ -519,7 +520,7 @@ Provision the two active company/sole-trader STD sandboxes with conspicuously sy
 ### Implemented evidence
 
 - The verified matrix in `tax-hub-data-readiness-matrix.md` assigns every permanent non-ledger input to an authoritative source, editable default or filing-workflow boundary.
-- `PhaseDP5_Provision.sql` is idempotent, restricted to the four named sandboxes and provisions only conspicuously synthetic reviewed context. It is not part of node initialization.
+- `PhaseDP5_Provision.sql` is idempotent, restricted to the four named sandboxes and provisions only conspicuously synthetic reviewed context. It is not part of node initialization and is not a substitute for the TCWeb Admin Manager workflow in Phase 6A.
 - `PhaseDP5_Verification.sql` proves persisted company and sole-trader identity, registrations, authority profiles, effective settings, Tax Source association and MIN/STD classification without using database names.
 - `PhaseDP5_Portability.sql` proves through complete rollback that a second jurisdiction, authority, registration scheme, reporting type, setting, subject registration and profile can be represented without schema migration.
 - `App.proc_StatutoryContext` owns the provider-specific relational composition; `IStatutoryContextSource`, `TcStatutoryContextReader` and `StatutoryContextVerifier` establish the neutral Application/adapter boundary with masked identifiers and source row-version provenance.
@@ -980,6 +981,8 @@ The prepare response returns safe inspection metadata and the preparation ID. Th
 
 ## Phase 6 — MTD Income Tax Cumulative Vertical Slice
 
+**Status: preparation engine and harness implementation complete; awaiting user sign-off and the Phase 6A user-interface integration gate.** The typed cumulative PUT path, explicit MIN/STD population policy, Trade Control filing-context adapter and inspection/raw-body harness routes are implemented and verified offline. Both sole-trader profiles have produced exact populated bodies; calendar-quarter preparation remains deliberately blocked until its dates come from an HMRC obligation-backed workflow rather than inferred local dates. SQL-provisioned sandbox fixtures prove the boundary but do not replace the required TCWeb maintenance workflow.
+
 Implement a typed `PrepareCumulativePeriodSummary` use case against the Self Employment Business API v5 cumulative PUT descriptor.
 
 The input must type and validate:
@@ -1030,6 +1033,85 @@ GET  /harness/hmrc/mtd-income-tax/cumulative/{preparationId}/body
 - Each semantic key has a focused mapping test to its exact contract member.
 - Tax year, dates, accounting basis, rounding, zero and omission rules have positive and negative tests.
 - Raw response bytes and digest match the immutable prepared artifact.
+
+### Implemented evidence
+
+- `PrepareCumulativePeriodSummary` resolves the reviewed NINO, HMRC self-employment business ID, accounting basis and quarterly-period type through the statutory/reporting-profile boundary, reads `Cash.fnTaxBizCumulative(...)`, applies the versioned `2026.1` mapping profile and prepares the supported Self Employment Business API v5 cumulative PUT artifact.
+- The mapping policy names every supported Tax Tag key and exact contract member. It preserves the authoritative `StatutoryAmount` orientation supplied by SQL, rounds at the population boundary, preserves negative reversals, completes unsupported members of the selected expense shape with explicit zero and omits the alternate MIN/STD shape.
+- Validation rejects unknown keys, duplicate/mixed expense shapes, invalid or unreviewed filing context, malformed or pre-2025 tax years, periods outside the tax year, non-quarter-boundary standard periods and calendar periods without obligation-backed workflow evidence. Blocking findings suppress serialization, bytes and digest.
+- WebHarness exposes `POST /harness/hmrc/mtd-income-tax/cumulative/prepare`, inspection and raw-body routes. Persisted evidence is written below `.local/sandbox/tax-hub/mtd-income-tax`; request credentials are not retained in the inspection metadata or body artifact.
+- The standard sole-trader sandbox prepared `2026-04-06` through `2026-07-05` as a 503-byte detailed body with SHA-256 `90A6230B8D69D0C1C4903BFE248ECEA9F506856F4E4D2A2139C92ED313AFDE2A`. Income was `57949.95` turnover and `158.34` other income; populated expenses included `15229.79` cost of goods, `440.83` premises running costs, `219.00` administration costs and `260.00` other expenses. The raw route returned identical bytes as `application/json` with `X-TaxHub-Preview: true`.
+- After synthetic regeneration, the MIN sole-trader sandbox `tcNodeDb4-STMIPFVT1-STMIN26` reported SQL version `4.1.9` and passed statutory-context and Tax Tag readiness after the guarded DP5 sandbox provisioner restored its intentionally non-bootstrap synthetic identifiers. Preparation `a7772e3d980f4c2798c7451a0aa6a453` produced a 180-byte consolidated body with SHA-256 `88E0819B8C286744722542EC80D76F7F27E1B9638777C40EABE406209D06E2D8`: turnover `79879.11`, other income `378.00` and consolidated expenses `17105.35`. No detailed expense member appeared, and the inspection and raw-body routes returned matching bytes and digest.
+- A live request ending `2026-07-04` returned `ITSA-STANDARD-PERIOD-INVALID` with no body or digest. Offline coverage also proves every detailed semantic key-to-member mapping, MIN consolidated population, required zeros, negative reversal preservation, mixed-shape and unknown-key rejection, filing-context validation and unsupported-tax-year failure.
+- The complete Tax Hub solution builds with zero warnings. Application, MTD Income Tax, VAT and Trade Control adapter suites pass 47, 84, 17 and 10 assertions respectively; the secret-backed DP5/CO1-CO4 integration verification also passes.
+
+---
+
+## Phase 6A — TCWeb Admin Manager Statutory Profile Maintenance
+
+**Status: implementation complete; awaiting user verification and sign-off.** The administrator-only editor, primary-bootstrap profile shells, normal synthetic-dataset population, Tax Hub readiness alert and help-site integration are implemented and compile cleanly. Live UI persistence, regenerated-node verification, readiness refresh and subsequent Tax Hub payload equivalence remain to be verified before sign-off.
+
+Implement the user-facing maintenance workflow for durable statutory registrations, authority reporting profiles and effective-dated settings in TCWeb Admin Manager. Trade Control users interact with this data only through TCWeb; direct execution of fixture or save scripts is not an acceptable production workflow.
+
+Admin Manager owns durable business configuration:
+
+- subject registrations, initially including NINO and UTR;
+- authority reporting profiles and authority business references;
+- deliberate association of a reporting profile with an existing TaxSourceCode;
+- accounting basis, quarterly-period type and other controlled effective-dated settings;
+- status, effective dates, value source and explicit review state; and
+- masked display with appropriately authorised access to raw values during editing.
+
+The interface must use the established maintenance boundaries rather than writing tables directly:
+
+```text
+Subject.proc_RegistrationSave
+Cash.proc_ReportingProfileSave
+Cash.proc_ReportingProfileSettingSave
+```
+
+It must present structured findings from `App.fnStatutoryContextReadiness` and prevent an incomplete or unreviewed profile from appearing ready. Controlled definitions come from the generic jurisdiction, authority, registration-scheme, reporting-type and setting-definition catalogues; TCWeb must not hard-code a parallel HMRC-only data model.
+
+Tax Hub remains a consumer of this configuration. Its submission workspace must:
+
+- display a concise readiness summary without exposing unmasked identifiers;
+- identify the missing or unreviewed prerequisite;
+- link the user to the relevant Admin Manager profile editor;
+- refresh readiness after configuration changes; and
+- keep obligation selection, filing-period dates, adjustments, declarations and other filing-instance choices within the Tax Hub workflow rather than persisting them as master data.
+
+`PhaseDP5_Provision.sql` remains the repeatable synthetic-fixture equivalent for the named sandbox databases only. It must not be called by TCWeb, Tax Hub preparation or a production submission path.
+
+### Acceptance criteria
+
+- An authorised Accounts Mode user can create and amend the self-employment registration/profile context required by Phase 6 without direct SQL access.
+- Existing effective values load into the editor; changes use durable generated codes, effective dating and the established save procedures.
+- NINO, UTR and other sensitive identifiers are masked in lists, readiness results and navigation context; raw values are limited to the authorised edit boundary.
+- Reporting-profile TaxSourceCode association is explicit and cannot be inferred from database names or display labels.
+- Invalid value types, overlapping dates, incomplete required fields and an unreviewed active profile are rejected with actionable messages.
+- Tax Hub reports the same readiness state as Admin Manager and provides a working navigation path to correct missing configuration.
+- Filing-specific choices are not written into registration or reporting-profile master data.
+- A regenerated sole-trader sandbox can be configured through TCWeb and then produce the same deterministic MIN or STD cumulative payload as the fixture-provisioned path.
+
+### Implementation evidence to date
+
+- Admin Manager now exposes a `Reporting Profiles` node on desktop and mobile and hosts `ReportingProfilePanel.razor` using the existing manager layout conventions.
+- A standard tab navigator using the existing site styling displays the reporting-profile records applicable to the home subject and each profile's readiness state. It does not display every reporting type supported by the jurisdiction. Selecting a tab edits that profile without implying that another profile is deactivated; company accounts and company tax therefore coexist as separate, mutually required profiles.
+- The sole-trader and company statutory templates create inactive, unreviewed profile shells with `IMPORTED` provenance. Sole traders receive self-employment plus indirect tax only when VAT is enabled; companies receive statutory accounts, company tax and indirect tax only when VAT is enabled. Bootstrap selects the applicable Tax Source but does not fabricate identifiers, settings or review state.
+- Normal synthetic generation now invokes `App.proc_DatasetSyntheticMIS_StatutoryProfile` immediately after the node/template bootstrap. The procedure activates and reviews the applicable shells, supplies conspicuously synthetic registrations and settings, and creates a registered company address where required. `PhaseDP5_Provision.sql` is now only a guarded sandbox wrapper over that same implementation, eliminating the former second population path.
+- The editor derives enabled reporting types and authorities from the node jurisdiction, registration fields from the selected authority, setting controls and allowed values from `App.tbSettingDefinition`, and Tax Sources from an explicit reporting-type relationship. No UK identifier, authority, reporting type, setting or allowed-value code is embedded in the page.
+- `Cash.tbTaxTagSource.ReportingTypeCode` now provides the mandatory controlled relationship to `App.tbReportingType`; the UK templates classify self-employment, statutory-accounts and company-tax sources explicitly rather than inferring applicability from `TaxTypeCode` or display text.
+- The three company-account setting definitions now explicitly belong to the Companies House statutory-accounts reporting type, removing their former ambiguous jurisdiction-only applicability.
+- Writes use only `Subject.proc_RegistrationSave`, `Cash.proc_ReportingProfileSave` and `Cash.proc_ReportingProfileSettingSave` inside one transaction. The page does not write the statutory tables directly and does not call the sandbox provisioner.
+- The editor is restricted to administrators, masks stored identifiers outside their authorised input controls, reads structured findings from `App.fnStatutoryContextReadiness` and distinguishes persistent profile data from Tax Hub filing choices.
+- Sensitive identifier controls use visual concealment rather than HTML password inputs, preventing browser credential managers from treating UTR/NINO fields and the adjacent authority reference as a sign-in pair. Administrators retain an explicit show/hide control, and duplicate authority references produce an actionable editor message rather than an unhandled SQL exception.
+- Tax Hub evaluates every provisioned home-subject reporting profile when the dashboard loads. An incomplete profile produces a concise non-sensitive alert on every Tax Hub workspace; administrators receive a direct link to `Admin Manager > Reporting Profiles`, while other users are told to contact an administrator.
+- `App.tbReportingTypeRegistrationScheme` provides the controlled many-to-many applicability boundary between reporting purposes and required identifiers. The UK catalogue requires NINO and UTR for self-employment and UTR for company tax; VAT and statutory accounts do not acquire unrelated HMRC registrations. Admin Manager and `App.fnStatutoryContextReadiness` consume this same mapping, so removing the company UTR produces a `REGISTRATION-MISSING` finding in both Admin Manager and Tax Hub.
+- The Trade Control help site now includes an `Admin Manager - Reporting Profiles` page covering access, profile states, maintenance, masking and Tax Hub readiness. The Admin Manager overview and tax-configuration pages link to it.
+- SQL build 4.1.11 is synchronized across the two sole-trader sandboxes and the active company STD sandbox. Both sole-trader nodes classify `UK-ITSA-SE-CUM` as self-employment; the active company node classifies accounts as statutory accounts and Corporation Tax/CT600 as company tax. The parked company MIN sandbox remains on its older 4.1.1 schema and must be regenerated before it can participate in this gate; its build marker remains truthful.
+- `TCWeb.csproj` and the SQL project build with zero warnings, and the Astro help site builds successfully. Full regenerated-sandbox and user acceptance verification remain outstanding.
+- `Phase6A_ReportingProfileReadiness.sql` now provides rollback-only contract coverage for company and sole-trader registration applicability, ready-to-missing UTR transitions, transaction preservation and isolation from VAT/statutory-accounts readiness. It passes on the company STD, sole-trader STD and sole-trader MIN sandboxes without changing their persisted identifiers.
+- Edge Playwright smoke coverage verifies that statutory identifiers are ordinary concealed text controls rather than browser password fields, and that a company missing its UTR opens Tax Hub with the expected readiness warning and administrator repair link. Both tests pass against the company negative fixture.
 
 ---
 
@@ -1156,6 +1238,8 @@ Objective 3 is complete only when all of the following are true:
 - the Part I statutory data requirement and readiness matrices are complete;
 - reusable subject data has one authoritative source and is not duplicated in tax-specific storage;
 - registrations, reporting profiles and settings are jurisdiction-neutral, constrained, effective-dated and provenance-bearing;
+- authorised Accounts Mode users can maintain those registrations, reporting profiles and settings through TCWeb Admin Manager without direct SQL access;
+- Tax Hub exposes configuration readiness and navigation to Admin Manager while retaining filing-specific choices in the submission workflow;
 - the schema supplies every non-ledger input required by the supported operations without inference from database names or labels;
 - sensitive tax identifiers are access-controlled and masked in diagnostics;
 - every current VAT and MTD Income Tax endpoint descriptor and Corporation Tax/Companies House service package is classified;

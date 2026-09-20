@@ -31,6 +31,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbAuthority> App_tbAuthorities { get; set; }
         public virtual DbSet<App_tbRegistrationScheme> App_tbRegistrationSchemes { get; set; }
         public virtual DbSet<App_tbReportingType> App_tbReportingTypes { get; set; }
+        public virtual DbSet<App_tbReportingTypeRegistrationScheme> App_tbReportingTypeRegistrationSchemes { get; set; }
         public virtual DbSet<App_tbSettingDefinition> App_tbSettingDefinitions { get; set; }
         public virtual DbSet<App_tbStatutoryStatus> App_tbStatutoryStatuses { get; set; }
         public virtual DbSet<App_tbValueSource> App_tbValueSources { get; set; }
@@ -400,6 +401,12 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.TaxSourceCode).ValueGeneratedNever();
 
+            });
+
+            modelBuilder.Entity<App_tbReportingTypeRegistrationScheme>(entity =>
+            {
+                entity.HasKey(e => new { e.ReportingTypeCode, e.RegistrationSchemeCode })
+                    .HasName("PK_App_tbReportingTypeRegistrationScheme");
             });
 
             modelBuilder.Entity<Subject_tbRegistration>(entity =>
