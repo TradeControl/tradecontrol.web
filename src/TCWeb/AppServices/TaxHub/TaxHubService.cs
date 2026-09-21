@@ -796,9 +796,9 @@ namespace TradeControl.Web.AppServices.TaxHub
             return rows
                 .Select(t =>
                 {
-                    var bridgeTotal = t.ProfitAfterTax
+                    var calculatedClosingCapital = t.OpeningCapital
+                        + t.ProfitAfterTax
                         + t.CapitalMovement
-                        + t.OpeningSubjectPosition
                         + t.OpeningAccountPosition;
 
                     var variance = t.Variance;
@@ -822,7 +822,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                         LossesCarriedForwardDelta = t.LossesCarriedForwardDelta,
                         CapitalDelta = t.CapitalDelta,
                         Variance = variance,
-                        BridgeTotal = bridgeTotal,
+                        CalculatedClosingCapital = calculatedClosingCapital,
                         Status = status
                     };
                 })

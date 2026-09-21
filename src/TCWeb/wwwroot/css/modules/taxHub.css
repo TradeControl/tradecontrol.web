@@ -179,16 +179,76 @@
     min-height: 0;
 }
 
-.tc-tax-hub-validation-pass > td {
-    background-color: rgba(25, 135, 84, 0.08) !important;
+.tc-tax-hub-reconciliation-card {
+    height: 100%;
+    border: 1px solid var(--tc-border-colour, #dee2e6);
 }
 
-.tc-tax-hub-validation-warn > td {
-    background-color: rgba(255, 193, 7, 0.12) !important;
+.tc-tax-hub-reconciliation-header {
+    border-bottom: 1px solid var(--tc-border-colour, #dee2e6);
+    background-color: var(--tc-table-head-bg, #f8f9fa);
 }
 
-.tc-tax-hub-validation-fail > td {
-    background-color: rgba(220, 53, 69, 0.10) !important;
+.tc-tax-hub-reconciliation-values {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.tc-tax-hub-reconciliation-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+}
+
+.tc-tax-hub-reconciliation-row > :last-child {
+    flex: 0 0 auto;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tc-tax-hub-reconciliation-subtract {
+    padding-left: 1rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.tc-tax-hub-reconciliation-subtotal {
+    margin-bottom: 0.35rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid var(--tc-border-colour, #dee2e6);
+}
+
+.tc-tax-hub-reconciliation-total {
+    margin-top: 0.35rem;
+    padding-top: 0.55rem;
+    border-top: 2px solid var(--tc-heading-colour, #495057);
+}
+
+.tc-tax-hub-reconciliation-variance {
+    margin: 0.5rem -0.5rem -0.25rem;
+    padding: 0.55rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.tc-tax-hub-reconciliation-pass {
+    background-color: rgba(25, 135, 84, 0.08);
+}
+
+.tc-tax-hub-reconciliation-warn {
+    background-color: rgba(255, 193, 7, 0.12);
+}
+
+.tc-tax-hub-reconciliation-fail {
+    background-color: rgba(220, 53, 69, 0.10);
+}
+
+.tc-tax-hub-reconciliation-diagnostics {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.875rem;
+}
+
+.tc-tax-hub-reconciliation-diagnostics summary {
+    cursor: pointer;
 }
 
 @media (max-width: 991.98px) {

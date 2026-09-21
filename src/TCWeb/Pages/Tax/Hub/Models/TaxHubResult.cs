@@ -301,7 +301,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public decimal LossesCarriedForwardDelta { get; init; }
         public decimal CapitalDelta { get; init; }
         public decimal Variance { get; init; }
-        public decimal BridgeTotal { get; init; }
+        public decimal CalculatedClosingCapital { get; init; }
         public string Status { get; init; } = string.Empty;
     }
 

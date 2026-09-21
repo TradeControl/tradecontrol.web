@@ -2792,7 +2792,8 @@ namespace TradeControl.Web.Data
                                         string reserveAccount,
                                         string ra_SortCode,
                                         string ra_AccountNumber,
-                                        bool isVatRegistered)
+                                        bool isVatRegistered,
+                                        decimal? expectedAnnualProfit)
         {
             try
             {
@@ -2888,6 +2889,14 @@ namespace TradeControl.Web.Data
                     p12.ParameterName = "@IsVatRegistered";
                     p12.Value = isVatRegistered;
                     command.Parameters.Add(p12);
+
+                    SqlParameter p13 = command.CreateParameter();
+                    p13.DbType = DbType.Decimal;
+                    p13.ParameterName = "@ExpectedAnnualProfit";
+                    p13.Precision = 18;
+                    p13.Scale = 2;
+                    p13.Value = expectedAnnualProfit.HasValue ? expectedAnnualProfit.Value : DBNull.Value;
+                    command.Parameters.Add(p13);
 
                     await command.ExecuteNonQueryAsync();
                 }

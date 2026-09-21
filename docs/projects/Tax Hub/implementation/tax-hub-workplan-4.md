@@ -1,8 +1,10 @@
 # Tax Hub — Objective 3 Data Provision and HMRC Request Population Work Plan
 
+**Status: complete and user-signed-off — 21 September 2026.**
+
 ## Objective
 
-Complete Objective 3 in two parts:
+Complete Objective 3 in three parts:
 
 1. establish a jurisdiction-neutral statutory data-provision foundation for subject identity, registrations, reporting profiles, authority identifiers and effective-dated settings which do not belong in the Category Tree; and
 2. populate the existing Corporation Tax and Companies House contracts from authoritative company evidence; and
@@ -981,7 +983,7 @@ The prepare response returns safe inspection metadata and the preparation ID. Th
 
 ## Phase 6 — MTD Income Tax Cumulative Vertical Slice
 
-**Status: preparation engine and harness implementation complete; awaiting user sign-off and the Phase 6A user-interface integration gate.** The typed cumulative PUT path, explicit MIN/STD population policy, Trade Control filing-context adapter and inspection/raw-body harness routes are implemented and verified offline. Both sole-trader profiles have produced exact populated bodies; calendar-quarter preparation remains deliberately blocked until its dates come from an HMRC obligation-backed workflow rather than inferred local dates. SQL-provisioned sandbox fixtures prove the boundary but do not replace the required TCWeb maintenance workflow.
+**Status: complete and user-signed-off.** The typed cumulative PUT path, explicit MIN/STD population policy, Trade Control filing-context adapter, inspection/raw-body harness routes and Phase 6A user-interface integration gate are implemented and verified. Both sole-trader profiles have produced exact populated bodies; calendar-quarter preparation remains deliberately blocked until its dates come from an HMRC obligation-backed workflow rather than inferred local dates.
 
 Implement a typed `PrepareCumulativePeriodSummary` use case against the Self Employment Business API v5 cumulative PUT descriptor.
 
@@ -1049,7 +1051,7 @@ GET  /harness/hmrc/mtd-income-tax/cumulative/{preparationId}/body
 
 ## Phase 6A — TCWeb Admin Manager Statutory Profile Maintenance
 
-**Status: implementation complete; awaiting user verification and sign-off.** The administrator-only editor, primary-bootstrap profile shells, normal synthetic-dataset population, Tax Hub readiness alert and help-site integration are implemented and compile cleanly. Live UI persistence, regenerated-node verification, readiness refresh and subsequent Tax Hub payload equivalence remain to be verified before sign-off.
+**Status: complete and user-signed-off.** The administrator-only editor, primary-bootstrap profile shells, normal synthetic-dataset population, controlled registration applicability, Tax Hub readiness alert, help-site integration and automated regression coverage are implemented and verified. The company missing-UTR scenario was exercised through Edge and produced the expected non-sensitive warning and administrator repair link; rollback-only SQL coverage passed across the three active sandboxes.
 
 Implement the user-facing maintenance workflow for durable statutory registrations, authority reporting profiles and effective-dated settings in TCWeb Admin Manager. Trade Control users interact with this data only through TCWeb; direct execution of fixture or save scripts is not an acceptable production workflow.
 
@@ -1109,13 +1111,15 @@ Tax Hub remains a consumer of this configuration. Its submission workspace must:
 - `App.tbReportingTypeRegistrationScheme` provides the controlled many-to-many applicability boundary between reporting purposes and required identifiers. The UK catalogue requires NINO and UTR for self-employment and UTR for company tax; VAT and statutory accounts do not acquire unrelated HMRC registrations. Admin Manager and `App.fnStatutoryContextReadiness` consume this same mapping, so removing the company UTR produces a `REGISTRATION-MISSING` finding in both Admin Manager and Tax Hub.
 - The Trade Control help site now includes an `Admin Manager - Reporting Profiles` page covering access, profile states, maintenance, masking and Tax Hub readiness. The Admin Manager overview and tax-configuration pages link to it.
 - SQL build 4.1.11 is synchronized across the two sole-trader sandboxes and the active company STD sandbox. Both sole-trader nodes classify `UK-ITSA-SE-CUM` as self-employment; the active company node classifies accounts as statutory accounts and Corporation Tax/CT600 as company tax. The parked company MIN sandbox remains on its older 4.1.1 schema and must be regenerated before it can participate in this gate; its build marker remains truthful.
-- `TCWeb.csproj` and the SQL project build with zero warnings, and the Astro help site builds successfully. Full regenerated-sandbox and user acceptance verification remain outstanding.
+- `TCWeb.csproj` and the SQL project build with zero warnings, and the Astro help site builds successfully. User acceptance was recorded after the negative missing-UTR workflow and automated regression coverage passed.
 - `Phase6A_ReportingProfileReadiness.sql` now provides rollback-only contract coverage for company and sole-trader registration applicability, ready-to-missing UTR transitions, transaction preservation and isolation from VAT/statutory-accounts readiness. It passes on the company STD, sole-trader STD and sole-trader MIN sandboxes without changing their persisted identifiers.
 - Edge Playwright smoke coverage verifies that statutory identifiers are ordinary concealed text controls rather than browser password fields, and that a company missing its UTR opens Tax Hub with the expected readiness warning and administrator repair link. Both tests pass against the company negative fixture.
 
 ---
 
 ## Phase 7 — Remaining Approved Body-Bearing Operations
+
+**Status: complete and user-signed-off (21 September 2026).**
 
 Implement additional body-bearing operations in the order recorded in the coverage matrix. Likely families include annual submissions, business adjustments, losses/claims, tax-liability adjustments and business configuration, but none is automatically authorised by its presence in the contract assembly.
 
@@ -1139,9 +1143,24 @@ External or reviewed workflow values must remain typed operator/configuration in
 - Unsupported tax years, profiles and optional concepts fail or omit according to documented policy.
 - No generic reflection mapper or `Dictionary<string, object?>` dispatcher is introduced.
 
+### Implementation evidence
+
+- `SaOperationCatalog` now requires an explicit policy for every body-bearing Income Tax descriptor. Adding a new request-body endpoint without classifying its Accounts Mode ownership throws during catalogue construction and fails the contract suite.
+- The 14 body-bearing descriptors are classified as one supported operation, twelve deferred operations and one unsupported operation. The already-approved cumulative-period PUT remains the sole supported operation and retains its canonical preparation/serialization path and positive/negative fixtures.
+- The 2026-27 annual PUT preview is explicitly unsupported because its contract is not a production contract. Its presence in the contract assembly cannot accidentally enable a WebHarness route.
+- The production annual PUT is deferred until TCWeb provides a reviewed annual filing workflow for elections, allowances and adjustments. Accounting data alone is not treated as authoritative for those values.
+- Quarterly-period type, accounting type and periods-of-account writes are deferred as reviewed taxpayer configuration. They are not projected from accounting SQL.
+- BSAS trigger/adjustment, v6 and v7 loss/claim writes, and the tax-liability-adjustment PUT are deferred until their HMRC response state and operator-reviewed values have durable workflow ownership.
+- Deferred and unsupported operations advertise neither population fixtures nor harness coverage. Their catalogue entries carry a concrete decision reason and required source rather than a generated placeholder that suggests implementation exists.
+- The Income Tax contract suite fixes the body-operation policy baseline at 14 descriptors and verifies the `1 supported / 12 deferred / 1 unsupported` disposition. `TaxHub.slnx` builds with zero warnings and the contract suite passes 89 assertions across 44 production endpoint descriptors.
+
+No additional payload was generated in this phase: doing so would require inventing values or prematurely designing the annual filing/configuration interfaces. Those vertical slices can move from deferred to supported only when their reviewed input workflow is agreed and implemented.
+
 ---
 
 ## Phase 8 — Bodyless Request Descriptions
+
+**Status: complete and user-signed-off (21 September 2026).**
 
 Implement typed describe use cases for approved VAT and MTD Income Tax enquiry/command descriptors.
 
@@ -1165,9 +1184,25 @@ POST /harness/hmrc/mtd-income-tax/obligations/describe
 - Bodyless requests expose no body, `{}` placeholder or digest.
 - Response contracts remain fixture/test data until Objective 4 performs real requests.
 
+### Implementation evidence
+
+- `BodylessRequestDescriber` is an Application-layer typed use case over the common prepared-request pipeline. It has no SQL, ASP.NET Core, transport, credential or response dependency.
+- The initial approved scope is deliberately limited to the workflows surrounding the supported accounting writes: VAT obligations, VAT view-return and MTD Income Tax income-and-expenditure obligations. Other enquiries and commands remain deferred rather than becoming available merely because a descriptor exists.
+- The three typed WebHarness routes are:
+  - `POST /harness/hmrc/vat/obligations/describe`;
+  - `POST /harness/hmrc/vat/returns/view/describe`; and
+  - `POST /harness/hmrc/mtd-income-tax/obligations/describe`.
+- VAT descriptions validate and normalize the nine-digit VRN, validate the four-character period key, require date filters in pairs, constrain obligation status to `O` or `F`, and preserve descriptor query order.
+- The Income Tax description validates and normalizes NINO, restricts this approved slice to `self-employment`, validates the business ID, requires business type/ID and date filters in pairs, and constrains status to `Open` or `Fulfilled`.
+- Absent optional queries are omitted. Returned descriptions contain the resolved relative path, ordered query and required `Accept` header, but expose no body, placeholder body, content type, connection, credential or fabricated HMRC response.
+- Operation coverage metadata now advertises harness coverage only for these three approved bodyless descriptions. The remaining VAT and Income Tax enquiries/commands remain explicitly deferred for later workflow classification.
+- Live WebHarness verification returned the expected three resolved paths and ordered queries; invalid VAT identity returned HTTP 400. `TaxHub.slnx` builds with zero warnings, Application tests pass 54 assertions, VAT contract tests pass 18 assertions, and Income Tax contract tests pass 90 assertions across 44 production descriptors.
+
 ---
 
 ## Phase 9 — WebHarness Hardening and Legacy Separation
+
+**Status: complete and user-signed-off (21 September 2026).**
 
 Create `TradeControl.Tax.UK.WebHarness.Tests` and harden the diagnostic host.
 
@@ -1197,9 +1232,26 @@ Remove the WebHarness dependency on `Adapters.Submission` if it is used only by 
 - Logs and responses contain no connection strings, credentials or unredacted SQL detail.
 - Preview routes cannot invoke `Adapters.Submission` or an outbound network handler.
 
+### Implementation evidence
+
+- The duplicate VAT and cumulative in-memory stores have been replaced with one thread-safe `PreparedApiRequestStore`. It uses opaque 128-bit preparation IDs, configurable capacity and retention, removes expired entries on access, and deterministically evicts the oldest live entry at capacity.
+- Optional diagnostic persistence remains under `.local/sandbox/tax-hub/prepared`. Metadata and exact body bytes are written separately; persisted body files are not JSON-reformatted merely because the current supported bodies happen to be JSON.
+- VAT and cumulative inspection routes now resolve the same immutable `PreparedApiRequest` instance held by the shared store. Unknown, malformed, expired and evicted IDs all fail closed as not found.
+- Raw-body endpoints write the stored immutable bytes directly to `HttpResponse.Body`, with the exact content type, content length and `X-TaxHub-Preview: true`. MVC does not wrap or reserialize the payload.
+- `PreparedApiRequestInspection` remains distinct from the Application artifact and contains no body, source connection, credential, token or exception member. Bodyless descriptions likewise expose no placeholder body.
+- A correlation-safe exception boundary maps invalid requests to 400, preparation-state failures to 422 and unexpected failures to 500 without returning exception text, SQL detail, credentials or connection strings. Validation findings continue to return the non-sensitive inspection model and suppress sendable bytes.
+- Swagger exposes concrete request schemas for the preparation and description endpoints. Live inspection confirmed `PrepareVatReturnRequest`, `PrepareCumulativeSummaryRequest` and `DescribeVatObligations` rather than loose dictionaries.
+- `TradeControl.Tax.UK.WebHarness.Tests` now covers capacity eviction, expiry, opaque/unknown identifiers, exact raw bytes and headers, inspection redaction, bodyless output, correlation-safe problems and the Objective 3 controller dependency boundary.
+- The WebHarness still references `Adapters.Submission` solely for the explicitly retained legacy Objective 2 `HmrcSubmissionRunner` routes. Reflection coverage proves the VAT preparation, cumulative preparation and bodyless-description controllers cannot resolve that adapter or runner; no Objective 3 preview path has an outbound transport dependency.
+- `TaxHub.slnx` builds with zero warnings and the WebHarness hardening suite passes 11 assertions. Live HTTP/Swagger regression checks passed and the temporary host was stopped afterward.
+
+The secret-backed Data Provision executable was not rerun as part of this host-only phase because `TC_NODE_CONTEXT` was intentionally absent from the test process. The solution and new isolated hardening suite completed successfully without database access.
+
 ---
 
 ## Phase 10 — Architecture Tests and Objective 4 Handoff Proof
+
+**Status: complete and user-signed-off. Objective 3 is complete.**
 
 Add architecture tests which protect project references and prohibited namespace dependencies:
 
@@ -1229,9 +1281,25 @@ The fake gateway asserts that method, relative path, ordered query, contract hea
 - The full `TaxHub.slnx` builds and every contract, Application, adapter and WebHarness test passes.
 - Operation coverage documentation matches implemented route and test coverage.
 
+### Implementation evidence
+
+- `TradeControl.Tax.UK.Architecture.Tests` now enforces the project-reference direction: contract projects have no project dependencies; Application references only contract assemblies; and SQL/ASP.NET Core dependencies cannot enter Application.
+- Source-boundary tests prohibit transport, OAuth, submission-adapter and ASP.NET Core concerns in preparation code. They also prohibit Objective 3 WebHarness controllers from directly using SQL commands, `Tc*` data rows, contract serializers or the retained legacy submission runner.
+- The Application handoff proof runs VAT, consolidated-expense MIN and detailed-expense STD fixtures through typed source readers, readiness, exact population, canonical serialization and immutable `PreparedApiRequest` creation.
+- Checked-in SHA-256 expectations protect all three canonical bodies: VAT `5B8376A5...07C9`, MIN cumulative `B451B9B7...4494`, and STD cumulative `2823706A...D302`.
+- A fake `IPreparedApiRequestGateway` receives the same request object for each vertical slice and asserts the exact prepared body bytes are unchanged. No remapping, serialization, HTTP, authentication, environment selection, fraud headers, response handling or audit persistence occurs at this boundary.
+- The full offline suite builds 15 projects with zero warnings and passes: architecture 11 assertions; Application 60; Trade Control adapter 10; WebHarness 11; VAT contracts 18; Income Tax contracts 90 across 44 production descriptors; company contracts 61; and the existing offline source/artifact/corporate-handoff proof.
+- A neutral read-only integration run against the configured active sandbox also passed `DP5 context and CO1-CO4 source, artifact and reconciliation verification`. It made no database changes.
+- The optional `--corporation-tax-profit` scenario now fails immediately unless the configured node is a company (`BusinessTaxTypeCode = 0`). The earlier apparent rate mismatch came from running that company-only scenario against a sole-trader sandbox, whose estimated future rate is not a Corporation Tax submission value. Company sandboxes continue to own their soft-coded 19% through `App.tbYearPeriod`.
+- The normal sole-trader bootstrap now asks for expected annual profit and derives its opening cash-flow planning rate through `Cash.fnPersonalEffectiveRateCalculator`; it never borrows the 19% company assumption. Template metadata classifies company and sole-trader setups explicitly. Positive synthetic profit may refine the effective planning rate, while a loss, break-even or empty future year retains the latest calculated or expected-profit rate. Exact historical liabilities remain represented by `BusinessTaxAdjustment`/`Cash.proc_TaxAdjustment`, not by rewriting the planning rate.
+- SQL build 4.1.12 contains the revised bootstrap contract and regression coverage. The three active sandboxes are synchronized with explicit template classifications and the expected-profit bootstrap contract; the configured sole-trader STD sandbox also passes the rollback-only future-rate regression without changing its dataset. User acceptance passed for all four creation paths: non-synthetic company, synthetic company, non-synthetic sole trader and synthetic sole trader. The synthetic statutory-profile procedures were recreated with `QUOTED_IDENTIFIER ON`, and the company statutory-profile stage passed a rollback-only execution against its filtered profile index. The parked company MIN sandbox remains intentionally unchanged.
+- Phase 7 and Phase 8 operation coverage metadata remains aligned with the implemented preparation/description routes and their evidence; deferred operations remain fail-closed.
+
 ---
 
 ## Objective 3 Completion Gate
+
+**Status: passed and user-signed-off — 21 September 2026.** All supported corporate, VAT and sole-trader request/package families reach the immutable prepared-artifact boundary with the evidence recorded above. Explicitly deferred operations and missing official Corporation Tax/Companies House validation assets remain fail-closed and are not represented as supported production submissions. Authentication, live transport, authority responses and durable submission audit belong to Objective 4.
 
 Objective 3 is complete only when all of the following are true:
 

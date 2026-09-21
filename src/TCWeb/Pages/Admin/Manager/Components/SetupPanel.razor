@@ -257,6 +257,17 @@
                                                        @bind-Value="_editor.Government"
                                                        class="form-control" />
                                         </div>
+
+                                        @if (!SelectedTemplateIsCompany)
+                                        {
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="expectedAnnualProfit">Expected Annual Profit</label>
+                                                <InputNumber id="expectedAnnualProfit"
+                                                             @bind-Value="_editor.ExpectedAnnualProfit"
+                                                             class="form-control" />
+                                                <div class="form-text">Used to estimate the effective Income Tax and National Insurance rate for cash-flow forecasting.</div>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -460,9 +471,13 @@
 
         [Display(Name = "VAT Registered")]
         public bool IsVatRegistered { get; set; }
+
+        [Range(typeof(decimal), "0.01", "9999999999999999", ErrorMessage = "Expected annual profit must be greater than zero.")]
+        [Display(Name = "Expected Annual Profit")]
+        public decimal? ExpectedAnnualProfit { get; set; }
     }
 
-    private sealed record TemplateOption(string TemplateCode, string TemplateName);
+    private sealed record TemplateOption(string TemplateCode, string TemplateName, bool IsCompany);
     private sealed record JurisdictionOption(string JurisdictionCode, string JurisdictionName, string UocName);
 
     private readonly List<TemplateOption> _templates = [];
@@ -487,6 +502,9 @@
         _templates.FirstOrDefault(item => item.TemplateCode == _editor.TemplateCode)?.TemplateName
             ?? string.Empty;
 
+    private bool SelectedTemplateIsCompany =>
+        _templates.FirstOrDefault(item => item.TemplateCode == _editor.TemplateCode)?.IsCompany ?? true;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadLookupDataAsync();
@@ -498,11 +516,11 @@
         var templates = await NodeContext.App_tbTemplates
             .AsNoTracking()
             .OrderBy(item => item.TemplateName)
-            .Select(item => new { item.TemplateCode, item.TemplateName, item.TemplateDescription, item.IsVatRegistered })
+            .Select(item => new { item.TemplateCode, item.TemplateName, item.TemplateDescription, item.IsCompany, item.IsVatRegistered })
             .ToListAsync();
 
         _templates.Clear();
-        _templates.AddRange(templates.Select(item => new TemplateOption(item.TemplateCode, item.TemplateName)));
+        _templates.AddRange(templates.Select(item => new TemplateOption(item.TemplateCode, item.TemplateName, item.IsCompany)));
 
         _templateDescriptions.Clear();
         foreach (var item in templates)
@@ -686,6 +704,12 @@
         {
             _errorMessage = null;
 
+            if (!SelectedTemplateIsCompany && (!_editor.ExpectedAnnualProfit.HasValue || _editor.ExpectedAnnualProfit <= 0))
+            {
+                _errorMessage = "Enter an expected annual profit greater than zero for the sole-trader cash-flow forecast.";
+                return;
+            }
+
             await NodeContext.InitializeNode();
 
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -723,7 +747,8 @@
                 reserveAccount: _editor.ReserveSubjectName,
                 ra_SortCode: _editor.RASortCode,
                 ra_AccountNumber: _editor.RAAccountNumber,
-                isVatRegistered: _editor.IsVatRegistered);
+                isVatRegistered: _editor.IsVatRegistered,
+                expectedAnnualProfit: SelectedTemplateIsCompany ? null : _editor.ExpectedAnnualProfit);
 
             NavigationManager.NavigateTo("/Identity/Account/SignOutAndRegister", forceLoad: true);
         }

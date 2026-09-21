@@ -1,147 +1,139 @@
 @using MudBlazor
 @using TradeControl.Web.Pages.Tax.Hub.Models
 
-<div class="tc-register-grid tc-tax-hub-accounts-validation-grid">
-    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
-                Rows: @VisibleItems.Count
-            </MudChip>
-
-            <MudChip T="string"
-                     Variant="Variant.Filled"
-                     Color="@GetSummaryColour(Summary.Status)"
-                     Size="Size.Small">
-                @Summary.Status
-            </MudChip>
-        </MudStack>
-
+<div class="tc-tax-hub-accounts-validation">
+    <MudStack Class="mb-3" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+        <MudChip T="string" Variant="Variant.Filled" Color="@GetSummaryColour(Summary.Status)" Size="Size.Small">
+            @Summary.Status
+        </MudChip>
         <div class="small text-muted">
-            Pass @Summary.PassCount · Warn @Summary.WarnCount · Fail @Summary.FailCount
+            @Summary.TotalRows years · Pass @Summary.PassCount · Warn @Summary.WarnCount · Fail @Summary.FailCount
         </div>
     </MudStack>
 
-    <div class="tc-grid-host">
-        <MudDataGrid T="TaxHubEquityReconciliationRow"
-                     Class="tc-register-datagrid tc-tax-hub-datagrid"
-                     @ref="_grid"
-                     Items="Items"
-                     RowClassFunc="GetRowClass"
-                     FixedHeader="true"
-                     Hover="true"
-                     Dense="true"
-                     Bordered="true"
-                     Striped="true"
-                     Filterable="true"
-                     ReadOnly="true"
-                     FilterMode="DataGridFilterMode.ColumnFilterMenu"
-                     FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
-                     FilterChanged="OnFilterChanged">
-            <Columns>
-                <PropertyColumn Property="x => x.YearNumber" Title="Year" />
-                <PropertyColumn Property="x => x.Description" Title="Description" />
+    <MudGrid Spacing="3">
+        @foreach (var item in Items)
+        {
+            <MudItem xs="12" lg="6" xl="4">
+                <MudCard Class="tc-tax-hub-reconciliation-card" Elevation="1">
+                    <MudCardHeader Class="tc-tax-hub-reconciliation-header">
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@item.Description</MudText>
+                            <MudText Typo="Typo.caption">Financial year @item.YearNumber</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudChip T="string" Variant="Variant.Filled" Color="@GetSummaryColour(item.Status)" Size="Size.Small">
+                                @item.Status
+                            </MudChip>
+                        </CardHeaderActions>
+                    </MudCardHeader>
 
-                <PropertyColumn Property="x => x.OpeningCapital" Title="Opening Capital" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.OpeningCapital < 0 ? "text-danger" : null)">@context.Item.OpeningCapital.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
+                    <MudCardContent>
+                        <div class="tc-tax-hub-reconciliation-values">
+                            <div class="tc-tax-hub-reconciliation-row">
+                                <span>Opening capital</span>
+                                <span class="@AmountClass(item.OpeningCapital)">@FormatAmount(item.OpeningCapital)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row">
+                                <span>Profit</span>
+                                <span class="@AmountClass(item.Profit)">@FormatAmount(item.Profit)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-subtract">
+                                <span>Less business tax</span>
+                                <span class="@AmountClass(-item.BusinessTax)">@FormatAmount(-item.BusinessTax)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-subtotal">
+                                <span>Profit after tax</span>
+                                <span class="@AmountClass(item.ProfitAfterTax)">@FormatAmount(item.ProfitAfterTax)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row">
+                                <span>Capital movement</span>
+                                <span class="@AmountClass(item.CapitalMovement)">@FormatAmount(item.CapitalMovement)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row">
+                                <span>Opening account position</span>
+                                <span class="@AmountClass(item.OpeningAccountPosition)">@FormatAmount(item.OpeningAccountPosition)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-total">
+                                <strong>Calculated closing capital</strong>
+                                <strong class="@AmountClass(item.CalculatedClosingCapital)">@FormatAmount(item.CalculatedClosingCapital)</strong>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row">
+                                <span>Reported closing capital</span>
+                                <span class="@AmountClass(item.ClosingCapital)">@FormatAmount(item.ClosingCapital)</span>
+                            </div>
+                            <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-variance @VarianceClass(item.Status)">
+                                <strong>Variance</strong>
+                                <strong class="@AmountClass(item.Variance)">@FormatAmount(item.Variance)</strong>
+                            </div>
+                        </div>
 
-                <PropertyColumn Property="x => x.ClosingCapital" Title="Closing Capital" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.ClosingCapital < 0 ? "text-danger" : null)">@context.Item.ClosingCapital.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.Profit" Title="Profit" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.Profit < 0 ? "text-danger" : null)">@context.Item.Profit.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.BusinessTax" Title="Business Tax" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.BusinessTax < 0 ? "text-danger" : null)">@context.Item.BusinessTax.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.ProfitAfterTax" Title="Profit After Tax" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.ProfitAfterTax < 0 ? "text-danger" : null)">@context.Item.ProfitAfterTax.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.CapitalMovement" Title="Capital Movement" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.CapitalMovement < 0 ? "text-danger" : null)">@context.Item.CapitalMovement.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.OpeningSubjectPosition" Title="Opening Subject Position" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.OpeningSubjectPosition < 0 ? "text-danger" : null)">@context.Item.OpeningSubjectPosition.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.OpeningAccountPosition" Title="Opening Account Position" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.OpeningAccountPosition < 0 ? "text-danger" : null)">@context.Item.OpeningAccountPosition.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.CapitalDelta" Title="Capital Delta" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.CapitalDelta < 0 ? "text-danger" : null)">@context.Item.CapitalDelta.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.BridgeTotal" Title="Bridge Total" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.BridgeTotal < 0 ? "text-danger" : null)">@context.Item.BridgeTotal.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.Variance" Title="Variance" Format="#,##0.00;(#,##0.00);-">
-                    <CellTemplate><span class="@(context.Item.Variance < 0 ? "text-danger" : null)">@context.Item.Variance.ToString("#,##0.00;(#,##0.00);-")</span></CellTemplate>
-                </PropertyColumn>
-
-                <PropertyColumn Property="x => x.Status" Title="Status">
-                    <CellTemplate>
-                        <MudChip T="string"
-                                 Variant="Variant.Filled"
-                                 Color="@GetSummaryColour(context.Item.Status)"
-                                 Size="Size.Small">
-                            @context.Item.Status
-                        </MudChip>
-                    </CellTemplate>
-                </PropertyColumn>
-            </Columns>
-
-            <PagerContent>
-                <MudDataGridPager />
-            </PagerContent>
-        </MudDataGrid>
-    </div>
+                        @if (HasDiagnostics(item))
+                        {
+                            <details class="tc-tax-hub-reconciliation-diagnostics mt-3">
+                                <summary>Supporting tax and opening-position information</summary>
+                                <div class="pt-2">
+                                    @if (item.OpeningSubjectPosition != 0m)
+                                    {
+                                        <div class="tc-tax-hub-reconciliation-row">
+                                            <span>Opening subject position</span>
+                                            <span class="@AmountClass(item.OpeningSubjectPosition)">@FormatAmount(item.OpeningSubjectPosition)</span>
+                                        </div>
+                                    }
+                                    @if (item.TaxCarry != 0m)
+                                    {
+                                        <div class="tc-tax-hub-reconciliation-row">
+                                            <span>Tax carry</span>
+                                            <span class="@AmountClass(item.TaxCarry)">@FormatAmount(item.TaxCarry)</span>
+                                        </div>
+                                    }
+                                    @if (item.OpeningLossesCarriedForward != 0m || item.ClosingLossesCarriedForward != 0m)
+                                    {
+                                        <div class="tc-tax-hub-reconciliation-row">
+                                            <span>Opening losses carried forward</span>
+                                            <span class="@AmountClass(item.OpeningLossesCarriedForward)">@FormatAmount(item.OpeningLossesCarriedForward)</span>
+                                        </div>
+                                        <div class="tc-tax-hub-reconciliation-row">
+                                            <span>Closing losses carried forward</span>
+                                            <span class="@AmountClass(item.ClosingLossesCarriedForward)">@FormatAmount(item.ClosingLossesCarriedForward)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </details>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
 </div>
 
 @code {
-    private MudDataGrid<TaxHubEquityReconciliationRow>? _grid;
-
     [Parameter] public IReadOnlyList<TaxHubEquityReconciliationRow> Items { get; set; } = Array.Empty<TaxHubEquityReconciliationRow>();
     [Parameter] public TaxHubAccountsValidationSummary Summary { get; set; } = new();
 
-    private List<TaxHubEquityReconciliationRow> VisibleItems { get; set; } = new();
+    private static string FormatAmount(decimal value) => value.ToString("#,##0.00;(#,##0.00);-");
+    private static string? AmountClass(decimal value) => value < 0m ? "text-danger" : null;
 
-    protected override void OnParametersSet()
-    {
-        VisibleItems = Items.ToList();
-    }
+    private static bool HasDiagnostics(TaxHubEquityReconciliationRow item) =>
+        item.OpeningSubjectPosition != 0m ||
+        item.TaxCarry != 0m ||
+        item.OpeningLossesCarriedForward != 0m ||
+        item.ClosingLossesCarriedForward != 0m;
 
-    private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<TaxHubEquityReconciliationRow>> _)
+    private static string VarianceClass(string status) => status switch
     {
-        VisibleItems = _grid?.FilteredItems.ToList() ?? Items.ToList();
-        StateHasChanged();
-    }
+        "FAIL" => "tc-tax-hub-reconciliation-fail",
+        "WARN" => "tc-tax-hub-reconciliation-warn",
+        "PASS" => "tc-tax-hub-reconciliation-pass",
+        _ => string.Empty
+    };
 
-    private static string GetRowClass(TaxHubEquityReconciliationRow item, int rowNumber)
+    private static Color GetSummaryColour(string status) => status switch
     {
-        return item.Status switch
-        {
-            "FAIL" => "tc-tax-hub-validation-fail",
-            "WARN" => "tc-tax-hub-validation-warn",
-            "PASS" => "tc-tax-hub-validation-pass",
-            _ => string.Empty
-        };
-    }
-
-    private static Color GetSummaryColour(string status)
-    {
-        return status switch
-        {
-            "FAIL" => Color.Error,
-            "WARN" => Color.Warning,
-            "PASS" => Color.Success,
-            _ => Color.Default
-        };
-    }
+        "FAIL" => Color.Error,
+        "WARN" => Color.Warning,
+        "PASS" => Color.Success,
+        _ => Color.Default
+    };
 }

@@ -30,6 +30,8 @@ namespace TradeControl.Web.Models
 
         public string TemplateDescription { get; set; }
 
+        public bool IsCompany { get; set; }
+
         public bool IsVatRegistered { get; set; }
 
         [InverseProperty(nameof(App_tbTemplateDataset.TemplateCodeNavigation))]

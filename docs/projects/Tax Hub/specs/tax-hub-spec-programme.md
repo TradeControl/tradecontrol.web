@@ -3,7 +3,7 @@
 Trade Control  
 Accounts Mode Release
 
-**Draft 5 — August 2026**
+**Draft 6 — September 2026**
 
 ## 1. Introduction
 
@@ -114,7 +114,7 @@ Objective 2 must not invent accounting precision or statutory values that cannot
 
 The original Objective 2 implementation was completed against an earlier Self Assessment model. The objective has been reopened where necessary to align its Self Assessment projections with the current MTD ITSA contract and the MTD-only product policy.
 
-### Objective 3 — HMRC API (In Progress)
+### Objective 3 — HMRC API (Complete)
 
 Define the authoritative HMRC-facing contract suite.
 
@@ -132,6 +132,10 @@ Objective 3 owns:
 - Sandbox and production contract differences
 
 Objective 3 produces the **HMRC payload specification**.
+
+Objective 3 completed on 21 September 2026. The implemented boundary includes jurisdiction-neutral statutory data provision, exact populated Corporation Tax and Companies House packages, exact populated VAT and MTD Income Tax requests, canonical serialization, immutable prepared artifacts, deterministic digests, safe previews, operation coverage policy and unchanged handoff through the Objective 4 gateway ports. Real and synthetic initialization were accepted for both company and sole-trader configurations.
+
+Completion does not promote explicitly deferred operations or packages that lack pinned official validation assets. Those cases remain fail-closed. OAuth, fraud-prevention headers, live transmission, authority responses, retries and durable submission audit remain Objective 4 responsibilities.
 
 Current authoritative HMRC specifications and associated statutory artefacts govern this boundary.
 
@@ -525,11 +529,11 @@ Existing infrastructure should be preserved where valid. Obsolete SA100 and EOPS
 
 ### Objective 3
 
-In progress.
+Complete — 21 September 2026.
 
-The current priority is to establish truthful HMRC contracts before further statutory mapping or transport implementation.
+The supported Accounts Mode contract surface now has truthful, populated and validated preparation paths for company statutory accounts, Corporation Tax/CT600, Companies House accounts filing, VAT and sole-trader MTD Income Tax. Exact request or package bytes cross the Objective 4 gateway ports unchanged.
 
-The Self Assessment contract audit establishes the pattern to be used for subsequent Corporation Tax and statutory-accounts work: authoritative external contracts shall be established before internal submission models are treated as canonical.
+Unsupported and deferred operations remain explicitly classified and fail closed. The official Corporation Tax computation-taxonomy and Companies House Filing TIS validation-asset gaps remain recorded limitations on live transport, not incomplete Objective 3 population work.
 
 ### Objectives 4 and 5
 
