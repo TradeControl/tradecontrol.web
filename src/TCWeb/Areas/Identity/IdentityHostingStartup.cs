@@ -1,6 +1,8 @@
 using System;
 using System.Globalization;
+using System.IO;
 
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -10,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using MudBlazor;
 using MudBlazor.Services;
@@ -27,6 +30,18 @@ namespace TradeControl.Web.Areas.Identity
         public void Configure(IWebHostBuilder builder)
         {
             builder.ConfigureServices((context, services) => {
+                if (context.HostingEnvironment.IsDevelopment() && OperatingSystem.IsWindows())
+                {
+                    var sharedKeyRoot = Path.GetFullPath(Path.Combine(
+                        context.HostingEnvironment.ContentRootPath,
+                        "../../.local/tax-hub/shared-identity-keys"));
+                    Directory.CreateDirectory(sharedKeyRoot);
+                    services.AddDataProtection()
+                        .PersistKeysToFileSystem(new DirectoryInfo(sharedKeyRoot))
+                        .ProtectKeysWithDpapi()
+                        .SetApplicationName("TradeControl.Web");
+                }
+
                 services.AddDbContext<NodeContext>(options =>
                     options.UseSqlServer(
                         context.Configuration.GetConnectionString("TCNodeContext")));
@@ -71,6 +86,7 @@ namespace TradeControl.Web.Areas.Identity
 
                 services.ConfigureApplicationCookie(options =>
                 {
+                    options.Cookie.Name = ".TradeControl.Identity";
                     options.Cookie.HttpOnly = true;
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
 

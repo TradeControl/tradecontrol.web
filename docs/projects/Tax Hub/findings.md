@@ -1,3 +1,41 @@
+# Tax Hub Findings
+
+## 24 September 2026 — Objective 4 Phase 5.3 fraud-prevention boundary
+
+- HMRC fraud-prevention specification 3.3 currently requires 16 headers for `WEB_APP_VIA_SERVER`. The Tax Hub architecture fits that connection method: browser interaction initiates a server-side HMRC API call. HMRC requires all listed data; an unavailable value may be omitted only after discussion with HMRC and must never be replaced with `null`, `undefined` or invented data.
+- The current WebHarness is direct local Kestrel hosting. It has no configured forwarded-header middleware, proxy/WAF allow-list or authoritative public client-port source. Its localhost socket facts are therefore not valid public fraud facts. The earlier Azure deployment is historical context, not an approved current topology.
+- The implementation consequently makes topology explicit. Direct mode rejects forwarded data; proxy mode requires an exact trusted immediate peer and a configured ordered list of every public TLS hop. It rejects private, loopback, link-local, multicast and documentation-only client addresses and will not silently fall back to a proxy socket address.
+- Browser, ingress and vendor evidence is tenant/principal/actor-bound, topology-fingerprinted and stored in an AES-256-GCM authenticated envelope. Routine diagnostic representations are redacted. The development/reference context lifetime is 15 minutes and encrypted evidence retention is capped at 30 days; production storage, key custody, ACL and retention remain unapproved.
+- The ignored historical `.local` test client successfully reached HMRC's live fraud-header validator after sandbox sign-in and app authorization. The response identified specification 3.3 and returned three errors (non-public client IP, invalid screen scaling factor and non-public forwarded IP) plus three warnings (empty MFA, potentially unencoded forwarded data and empty vendor licence IDs). This validates sandbox access and exposes defects in that several-years-old incomplete client; it neither validates Tax Hub nor makes the old client a template.
+- Tax Hub's strict submission path rejects non-public client/topology addresses and absent MFA/licence evidence, preserves fractional scaling factors, and percent-encodes structured forwarded values including IPv6. The development-only Swagger UI automatically captures browser-only facts into a short-lived same-origin session; bodyless, parameterless `GET /diagnostics/hmrc/fraud-prevention/validate` combines them with principal/MFA and trusted socket facts and returns HMRC's bounded response verbatim. Neither that GET nor the browser-capture DTO lets a caller author network, vendor, licence, token or credential facts. A live Tax Hub run reached specification 3.3 with no browser/device, scaling or encoding findings. Its four errors were the three deliberately observed localhost/public-IP failures plus absent Tax Hub application user IDs; warnings covered absent Tax Hub MFA and product licence IDs. The HMRC sandbox login is authority consent and is not misrepresented as the application user or MFA. Public deployment topology and a real authenticated Trade Control principal are now required for the zero-error acceptance run.
+
+## 24 September 2026 — Objective 4 Phase 5.2 OAuth lifecycle
+
+- The existing sandbox app registration supports the exact local callback `https://localhost:44362/VatMTD`; the callback is now a fixed trusted entry-point value and is never derived from forwarded/request headers. No app identifier or credential value is checked in.
+- HMRC's current user-restricted guidance supports Authorization Code Grant with PKCE, ten-minute single-use codes, four-hour access tokens, single-use refresh-token rotation and an approximately 18-month authorization lifetime. The implementation requires `S256`, applies a five-minute access-token skew and serializes refresh per tenant/principal/scope across threads and processes.
+- State, PKCE verifiers, access tokens and refresh tokens share an AES-256-GCM encrypted atomic file envelope, but the key is separately host-supplied. This is a development/reference persistence implementation; production key custody, token persistence and service-identity ACLs remain unapproved.
+- OAuth ownership is tenant plus authorization principal. Initiation/completion additionally binds the authenticated actor. Each grant is also separated by the exact prepared-request scope; VAT read/write are enabled while represented MTD Income Tax scopes remain closed until Phase 5.15.
+- A refresh rejection or failure to rotate the single-use refresh token retires the local grant and produces a typed reauthorization-required result. Local revocation overwrites token values; HMRC authority consent remains separately revocable through HMRC's authorised-app management.
+- Phase 5.2 is locally complete and awaits human review. It does not call a VAT resource, construct a VAT body, add fraud-prevention headers, add an authentication-status UI, enable MTD Income Tax OAuth or activate production.
+
+## 24 September 2026 — Objective 4 Phase 5.1 trusted foundations
+
+- The approved local sandbox credential source is the existing ignored VAT client's `clientsettings.json`. Only `clientId` and `clientSecret` are secret inputs. Its historical `uri`, callback, app-version, SQL-version and server-IP fields are not trusted transport configuration.
+- The file is owned by the local user and inherits host ACLs suitable for the current development sandbox, but it is not a production secret facility. Production remains disabled until deployment supplies and reviews a dedicated protected provider and service-identity access policy.
+- The selected local durability facility is an atomic JSON metadata snapshot under a host-configured absolute path, guarded across threads/processes. It deliberately stores no bearer tokens, client credentials, fraud values, payloads or response bodies.
+- Raw payload/response storage is a separate access-controlled directory with opaque tenant/principal-scoped references, strict byte limits and shorter retention. Default policy is seven years for terminal attempt metadata and 30 days for raw content; active and unknown attempts remain until reconciled. Human review may revise those periods before hosted persistence is enabled.
+- Duplicate-write identity is tenant plus logical submission, not principal. Changing actor/principal cannot create a second active send. Reading or updating a record still requires both its tenant and original principal.
+- Sandbox credential values were compared in memory against tracked text files without printing them. No match was found, and the source file remains covered by the root `.local/` ignore rule.
+- Phase 5.1 is locally complete and awaits human review. OAuth, token persistence, fraud facts, REST calls and production activation remain absent.
+
+## 24 September 2026 — Objective 4 Phase 5.0 REST boundary
+
+- The current HMRC VAT (MTD) API remains version 1.0 (last updated 5 August 2026). The three catalogue-supported operations have exact success contracts: obligations `GET` is `200` with `read:vat`; return submission `POST` is `201` with `write:vat`; view return `GET` is `200` with `read:vat`.
+- HMRC's current VAT obligations guidance explicitly permits special four-character period keys containing `#`, with `#001` represented as `%23001` in the URL. The former alphanumeric-only validation incorrectly blocked that supported key.
+- Objective 3 already held all MTD Income Tax scope, exact-status and response-type facts, including the cumulative `PUT` empty `204` success. The loss occurred only at `HmrcPreparedApiContracts.From(...)`; carrying those descriptor facts removes the need for an adapter-side operation table.
+- Eligibility must remain distinct from preview state: catalogues own supported/deferred/unsupported policy, while a preview descriptor independently blocks dispatch. Prepared requests now preserve both decisions.
+- Phase 5.0 is locally complete and awaits human review. No Phase 5.1 storage, secret, host, OAuth, fraud-header or network implementation has begun.
+
 # Corporation Tax / Limited Company — Phase 1A Current SQL State Findings
 
 Date: 1 September 2026
