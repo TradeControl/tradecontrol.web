@@ -32,17 +32,20 @@
             {
                 <div class="d-flex flex-column" style="min-height:0; height:100%;">
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <button type="button"
-                                class="tc-back-btn"
-                                @onclick="NavigateToMobileTreeAsync">
-                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
-                        </button>
+                        @if (!IsInitialSetup)
+                        {
+                            <button type="button"
+                                    class="tc-back-btn"
+                                    @onclick="NavigateToMobileTreeAsync">
+                                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                            </button>
+                        }
 
                         <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
                     </div>
 
                     <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
-                        <SetupPanel />
+                        <SetupPanel IsInitialSetup="@IsInitialSetup" />
                     </div>
                 </div>
             }
@@ -301,22 +304,25 @@
         else
         {
             <div class="tc-tree-split">
-                <div id="leftCol" class="tc-pane tc-initial-left">
-                    <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
-                        <ManagerTreeHost @ref="_treeHost"
-                                         RootLabel="@_companyName"
-                                         IsMobile="false"
-                                         InitialSelectedNode="@_selected"
-                                         InitialContentType="@_selectedContentType"
-                                         InitialTemplateKey="@_initialTemplateKey"
-                                         OnNodeSelected="HandleNodeSelectedAsync"
-                                         OnNodeSelectedEx="HandleNodeSelectedExAsync"
-                                         OnTreeAction="HandleTreeActionAsync"
-                                         OnTemplateSelection="HandleTemplateSelectionAsync" />
+                @if (!IsInitialSetup)
+                {
+                    <div id="leftCol" class="tc-pane tc-initial-left">
+                        <div class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;">
+                            <ManagerTreeHost @ref="_treeHost"
+                                             RootLabel="@_companyName"
+                                             IsMobile="false"
+                                             InitialSelectedNode="@_selected"
+                                             InitialContentType="@_selectedContentType"
+                                             InitialTemplateKey="@_initialTemplateKey"
+                                             OnNodeSelected="HandleNodeSelectedAsync"
+                                             OnNodeSelectedEx="HandleNodeSelectedExAsync"
+                                             OnTreeAction="HandleTreeActionAsync"
+                                             OnTemplateSelection="HandleTemplateSelectionAsync" />
+                        </div>
                     </div>
-                </div>
+                }
 
-                <div id="rightCol" class="tc-pane tc-initial-right d-none d-lg-flex">
+                <div id="rightCol" class="tc-pane @(IsInitialSetup ? "tc-initial-setup" : "tc-initial-right")">
                     <div class="flex-grow-1 border rounded p-2 bg-light d-flex flex-column">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="fw-semibold">
@@ -334,6 +340,7 @@
 
 @code {
     [Parameter] public string CompanyName { get; set; } = "Business";
+    [Parameter] public bool IsInitialSetup { get; set; }
 
     private bool _isMobile;
     private string _companyName = "Business";
@@ -383,7 +390,7 @@
 
         ManagerTreeHost.ManagerNode.Setup =>
             @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
-    <SetupPanel />
+    <SetupPanel IsInitialSetup="@IsInitialSetup" />
 </div>,
 
         ManagerTreeHost.ManagerNode.DemoData =>
@@ -500,7 +507,10 @@
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var qs = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
 
-        if (qs.TryGetValue("node", out var nodeValue))
+        if (IsInitialSetup)
+            _selected = ManagerTreeHost.ManagerNode.Setup;
+
+        if (!IsInitialSetup && qs.TryGetValue("node", out var nodeValue))
         {
             if (Enum.TryParse<ManagerTreeHost.ManagerNode>(nodeValue.ToString(), ignoreCase: true, out var node))
                 _selected = node;

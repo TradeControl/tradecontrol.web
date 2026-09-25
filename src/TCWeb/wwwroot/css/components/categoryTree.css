@@ -22,6 +22,21 @@
 }
 
 /* Desktop split layout */
+@media (max-width: 991.98px) {
+    .tc-tree-split {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+    }
+
+    .tc-tree-split .tc-pane {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: none;
+    }
+}
+
 @media (min-width: 992px) {
     .tc-tree-split {
         display: flex;
@@ -48,6 +63,11 @@
     #rightCol.tc-initial-right {
         flex: 1 1 66.667%;
         max-width: 66.667%;
+    }
+
+    #rightCol.tc-initial-setup {
+        flex: 1 1 100%;
+        max-width: 100%;
     }
 
     /* Gutter styling (Split.js injects a div.gutter) */

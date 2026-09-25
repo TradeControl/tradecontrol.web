@@ -19,7 +19,17 @@
         </div>
     }
 
-    @if (!_showConfig)
+    @if (_isLoading)
+    {
+        <div class="border rounded bg-white p-4 d-flex align-items-center gap-3" role="status">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <div>
+                <div class="fw-semibold">Loading initialisation options</div>
+                <div class="text-muted">Preparing templates, jurisdictions, currencies, and financial periods…</div>
+            </div>
+        </div>
+    }
+    else if (!_showConfig)
     {
         <div class="border rounded bg-white p-4">
             <div class="d-flex align-items-start gap-3 mb-3">
@@ -69,8 +79,14 @@
             <div class="container-fluid px-0">
                 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
                     <div>
-                        <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">Business Setup</div>
-                        <div class="text-muted">Configure the business template, contacts, registration details, and banking defaults.</div>
+                        <div class="small text-uppercase text-muted mb-1" style="letter-spacing:0.06em;">
+                            @(IsInitialSetup ? "Business Initialisation" : "Business Setup")
+                        </div>
+                        <div class="text-muted">
+                            @(IsInitialSetup
+                                ? "Choose a template and enter the core details needed to initialise this business."
+                                : "Configure the business template, contacts, registration details, and banking defaults.")
+                        </div>
                     </div>
 
                     <div class="border rounded bg-white px-3 py-2">
@@ -344,8 +360,13 @@
 
                         <div class="col-12">
                             <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary">Initialise</button>
-                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync">Cancel</button>
+                                <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                                    @(_isSaving ? "Initialising…" : "Initialise")
+                                </button>
+                                @if (!IsInitialSetup)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync">Cancel</button>
+                                }
                             </div>
                         </div>
                     </div>
@@ -356,6 +377,8 @@
 </div>
 
 @code {
+    [Parameter] public bool IsInitialSetup { get; set; }
+
     private sealed class SetupEditorModel
     {
         [Required]
@@ -490,6 +513,8 @@
     private SetupEditorModel _editor = new();
     private bool _confirmWipe;
     private bool _showConfig;
+    private bool _isLoading = true;
+    private bool _isSaving;
     private string? _errorMessage;
 
     private string SelectedTemplateDescription =>
@@ -507,8 +532,21 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadLookupDataAsync();
-        await LoadDefaultsAsync();
+        _showConfig = IsInitialSetup;
+        try
+        {
+            await LoadLookupDataAsync();
+            await LoadDefaultsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to load the business initialisation options.";
+            await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     private async Task LoadLookupDataAsync()
@@ -559,12 +597,12 @@
     private async Task LoadDefaultsAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var currentUserId = UserManager.GetUserId(authState.User);
-        var profile = new Profile(NodeContext);
-        var currentUserName = await profile.UserName(currentUserId);
 
         if (await NodeContext.Usr_Doc.AnyAsync() && await NodeContext.App_tbOptions.AnyAsync())
         {
+            var currentUserId = UserManager.GetUserId(authState.User);
+            var profile = new Profile(NodeContext);
+            var currentUserName = await profile.UserName(currentUserId);
             var company = await NodeContext.Usr_Doc.Take(1).SingleOrDefaultAsync();
             var options = await NodeContext.App_tbOptions.Take(1).SingleOrDefaultAsync();
             var monthName = await (from year in NodeContext.App_tbYears
@@ -633,19 +671,19 @@
         else
         {
             var defaultTemplate = _templates.FirstOrDefault()?.TemplateCode ?? string.Empty;
+            var defaultJurisdiction = _jurisdictions.FirstOrDefault();
 
             _editor = new SetupEditorModel
             {
                 TemplateCode = defaultTemplate,
-                JurisdictionCode = _jurisdictions.FirstOrDefault()?.JurisdictionCode ?? string.Empty,
-                MonthName = await NodeContext.App_tbMonths
-                    .Where(item => item.MonthNumber == 4)
-                    .Select(item => item.MonthName)
-                    .SingleAsync(),
-                UocName = await NodeContext.App_tbUocs
-                    .Where(item => item.UnitOfCharge == "GBP")
-                    .Select(item => item.UocName)
-                    .SingleAsync(),
+                JurisdictionCode = defaultJurisdiction?.JurisdictionCode ?? string.Empty,
+                MonthName = _monthNames.FirstOrDefault(item => item == "APR")
+                    ?? _monthNames.FirstOrDefault()
+                    ?? string.Empty,
+                UocName = defaultJurisdiction?.UocName
+                    ?? _uocNames.FirstOrDefault()
+                    ?? string.Empty,
+                EmailAddress = authState.User.Identity?.Name ?? string.Empty,
                 IsVatRegistered = false
             };
 
@@ -700,8 +738,12 @@
 
     private async Task SaveAsync()
     {
+        if (_isSaving)
+            return;
+
         try
         {
+            _isSaving = true;
             _errorMessage = null;
 
             if (!SelectedTemplateIsCompany && (!_editor.ExpectedAnnualProfit.HasValue || _editor.ExpectedAnnualProfit <= 0))
@@ -710,7 +752,10 @@
                 return;
             }
 
-            await NodeContext.InitializeNode();
+            // A pristine database was already seeded before the first Identity
+            // registration. Only an explicit reinitialisation should wipe it again.
+            if (!IsInitialSetup)
+                await NodeContext.InitializeNode();
 
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var identityUser = await UserManager.GetUserAsync(authState.User);
@@ -750,12 +795,18 @@
                 isVatRegistered: _editor.IsVatRegistered,
                 expectedAnnualProfit: SelectedTemplateIsCompany ? null : _editor.ExpectedAnnualProfit);
 
-            NavigationManager.NavigateTo("/Identity/Account/SignOutAndRegister", forceLoad: true);
+            NavigationManager.NavigateTo(
+                IsInitialSetup ? "/" : "/Identity/Account/SignOutAndRegister",
+                forceLoad: true);
         }
         catch (Exception ex)
         {
             _errorMessage = "Unable to initialise the business.";
             await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isSaving = false;
         }
     }
 }

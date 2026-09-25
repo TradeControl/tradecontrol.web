@@ -127,19 +127,13 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
                     var code0 = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     await _userManager.ConfirmEmailAsync(user, code0);
 
-                    var setupAdminEmail = await _nodeContext.Usr_tbUsers
-                        .OrderBy(u => u.UserId)
-                        .Select(u => u.EmailAddress)
-                        .FirstOrDefaultAsync();
+                    // The business profile does not exist yet during pristine bootstrap.
+                    // The first registered Identity user is therefore the bootstrap administrator.
+                    if (!await _userManager.IsInRoleAsync(user, Constants.AdministratorsRole))
+                        await _userManager.AddToRoleAsync(user, Constants.AdministratorsRole);
 
-                    if (!string.IsNullOrWhiteSpace(setupAdminEmail)
-                        && string.Equals(setupAdminEmail.Trim(), email, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!await _userManager.IsInRoleAsync(user, Constants.AdministratorsRole))
-                            await _userManager.AddToRoleAsync(user, Constants.AdministratorsRole);
-                    }
-
-                    return RedirectToPage("./Login", new { returnUrl });
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    return LocalRedirect(returnUrl);
                 }
 
                 var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
