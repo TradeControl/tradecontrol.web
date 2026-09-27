@@ -1,5 +1,15 @@
 # Tax Hub Findings
 
+## 27 September 2026 — Objective 4 Phase 5.6 VAT milestone
+
+- The authenticated Azure sandbox journey now covers obligations, prepared submission, `201` receipt and view-return enquiry for a newly generated synthetic organisation. The retrieved period and all nine VAT boxes matched the exact prepared artifact sourced from `Cash.vwTaxVatSubmission`; identifiers, credentials and receipt references remain outside tracked evidence.
+- A dedicated fail-closed reconciliation compares HMRC's retrieved VAT return with the immutable prepared bytes. Its result carries the prepared SHA-256 and authoritative dataset/snapshot identity and reports field-level differences without recalculation, rounding or automatic correction.
+- The deployed Azure reconciliation endpoint was exercised against a fresh prepared artifact and returned `200`, `matches: true` and an empty difference set while preserving the prepared digest, `Cash.vwTaxVatSubmission` dataset identity and source snapshot token.
+- The accepted Phase 4 population boundary remains authoritative: VAT adjustments and accounting sign orientation are applied once, boxes 3 and 5 are derived from the populated boxes, and boxes 6–9 use the approved whole-pound rounding. Phase 5.6 does not create a second VAT calculation.
+- Review found and corrected a duplicate-write identity defect in the WebHarness: the logical identity had used the terminal path segment `returns`; it is now the hash of the actual prepared VRN and period key. Tenant plus logical-submission uniqueness remains enforced by the durable attempt store.
+- The full Tax Hub solution and all nine offline suites pass, including exact canonical bytes/digest, scoped transport, `200`/`201` handling, HMRC error preservation, ambiguous-write no-replay, restart recovery and source-to-authority reconciliation.
+- Technical sandbox readiness is established. Production approval, production credentials and persistence, operational support, a human-authorised live submission, HMRC recognition and compatible-software listing remain separate external decisions and are not complete.
+
 ## 24 September 2026 — Objective 4 Phase 5.3 fraud-prevention boundary
 
 - HMRC fraud-prevention specification 3.3 currently requires 16 headers for `WEB_APP_VIA_SERVER`. The Tax Hub architecture fits that connection method: browser interaction initiates a server-side HMRC API call. HMRC requires all listed data; an unavailable value may be omitted only after discussion with HMRC and must never be replaced with `null`, `undefined` or invented data.

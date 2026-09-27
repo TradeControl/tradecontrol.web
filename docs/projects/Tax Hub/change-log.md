@@ -1,5 +1,17 @@
 # Tax Hub Change Log
 
+## 27 September 2026 — Objective 4 Phases 5.4–5.6 VAT transport milestone
+
+- Added the closed HMRC VAT REST gateway for obligations, view-return and return submission, preserving prepared paths, ordered queries, headers, canonical body bytes and SHA-256.
+- Added durable pre-send attempt/payload evidence, exact `201` receipt capture, bounded raw responses, HMRC error-code fidelity, safe enquiry retries and no automatic replay after an ambiguous VAT write.
+- Added an authenticated Swagger reconciliation endpoint that retrieves HMRC's return for a short-lived prepared artifact and compares its period and nine boxes with the exact `Cash.vwTaxVatSubmission`-derived body. Matching returns produce `200`; differences produce `409` with field-level evidence.
+- Added a reusable reconciliation result carrying the prepared digest, authoritative dataset and snapshot token without recalculating or normalising VAT values.
+- Corrected the VAT write's duplicate-protection identity to use the prepared VRN and period key rather than the terminal `returns` path segment.
+- Corrected the four HMRC `ExVAT` JSON member names and updated the approved VAT canonical-body digest.
+- Added offline coverage for exact reconciliation, mismatch reporting, prepared-source provenance, VRN/period duplicate identity and the Swagger reconciliation surface. The full solution builds without warnings and all nine Tax Hub suites pass.
+- Deployed the Phase 5.6 harness to the Azure sandbox and verified the new reconciliation endpoint end to end: HTTP `200`, `matches: true`, no field differences, and intact prepared digest/source provenance.
+- Recorded the redacted Azure sandbox evidence: obligations/view `200`, controlled submission `201`, retained receipt fields and an exact nine-box post-submission match. No credential, VRN, bundle or charge-reference value was committed.
+
 ## 24 September 2026 — Objective 4 Phase 5.3 fraud-prevention boundary
 
 - Added typed browser, trusted-ingress, deployment-topology and vendor fact models for HMRC `WEB_APP_VIA_SERVER` specification 3.3.

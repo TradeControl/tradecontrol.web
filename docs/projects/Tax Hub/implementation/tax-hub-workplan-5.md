@@ -285,6 +285,8 @@ Requires 5.0–5.3. No VAT `POST`, MTD `PUT`, CT XML or deferred catalogue opera
 
 Record redacted sandbox status and response classifications. A human reviews the enquiry path before any write path is added.
 
+**Sandbox evidence (27 September 2026):** a newly generated synthetic HMRC sandbox organisation returned `200` for VAT obligations and view-return enquiries through the authenticated WebHarness path. The open obligation selected for the controlled write was subsequently readable by period key. Identifiers and credentials are deliberately omitted.
+
 ## Phase 5.5 — VAT `POST` write and ambiguity
 
 ### Purpose
@@ -318,6 +320,8 @@ Requires 5.4 and an approved declaration/actor reference. This phase does not bu
 
 Record sandbox receipt and ambiguity evidence without sensitive values. Human review of the VAT declaration, approval and unknown-outcome handling precedes Phase 5.6.
 
+**Sandbox evidence (27 September 2026):** after explicit human review of the prepared request, digest and declaration, one controlled synthetic VAT return was submitted through the write-scoped OAuth path. HMRC returned `201` with a processing date, form-bundle number, direct-debit payment indicator and charge reference. A subsequent view-return enquiry returned `200` and reproduced all nine submitted VAT values exactly. Receipt identifiers, the synthetic VRN and authorization material are deliberately omitted. Automatic replay remains prohibited for an ambiguous write outcome.
+
 ## Phase 5.6 — VAT HMRC recognition and production-readiness milestone
 
 ### Purpose
@@ -344,6 +348,8 @@ Requires accepted 5.0–5.5, including a human-approved fraud topology and decla
 ### Review gate
 
 Update Work Plan 5 phase status, forward-going `findings.md` for external evidence and decisions, and `change-log.md` for implemented changes. Human review signs off the VAT milestone before CT begins. It must distinguish technical readiness, production approval and public listing; pending external action is never reported as complete.
+
+**Implementation status (27 September 2026): technically complete and awaiting milestone sign-off.** The Azure sandbox obligation/view/submit journey returned the pinned `200`/`201` contracts. HMRC's post-submission view reproduced the exact period and nine boxes prepared from `Cash.vwTaxVatSubmission`. A fail-closed reconciliation now binds that comparison to the prepared SHA-256 and source snapshot and reports field differences without recalculation or replay; its deployed Swagger endpoint was exercised against a fresh preparation and returned `200`, `matches: true` and no differences with provenance intact. The durable adapter tests retain exact bytes and receipt evidence and prove timeout/reset ambiguity, restart recovery and duplicate-write refusal. The solution builds with zero warnings and all nine offline suites pass. Production access, production credentials and persistence, HMRC recognition, a controlled live submission and compatible-software listing remain pending external/human decisions and are not claimed complete.
 
 ## Phase 5.7 — CT conversation marker and fail-closed package gate
 
