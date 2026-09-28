@@ -1,0 +1,135 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
+@using System.Security.Claims
+@using TradeControl.Web.AppServices.TaxHub.Vat
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IVatHmrcConnectionService Connection
+@inject IVatFilingAuthorisationPolicy FilingPolicy
+@inject NavigationManager Navigation
+@inject IJSRuntime JavaScript
+
+<section class="@(Compact ? "tc-tax-hub-hmrc-compact border-bottom mb-3 pb-3" : "card mb-3")" aria-labelledby="hmrc-connection-title">
+    <div class="@(Compact ? "d-flex flex-column gap-2" : "card-body d-flex flex-wrap align-items-center justify-content-between gap-3")">
+        <div>
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <h3 id="hmrc-connection-title" class="h6 mb-1">HMRC VAT connection</h3>
+                @if (!_loading && Compact && _status.State == VatConnectionState.Connected)
+                {
+                    <button type="button"
+                            class="btn btn-sm btn-link p-0 text-decoration-none"
+                            aria-expanded="@_detailsExpanded"
+                            @onclick="ToggleDetails">
+                        @(_detailsExpanded ? "Hide" : "Manage")
+                    </button>
+                }
+            </div>
+            @if (_loading)
+            {
+                <div class="d-flex align-items-center gap-2 text-muted" role="status">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span>Checking the protected HMRC connection…</span>
+                </div>
+            }
+            else
+            {
+                <div><span class="badge @BadgeClass">@(ReportingProfileReady ? StatusText : "Configuration required")</span></div>
+                @if (ReportingProfileReady && _status.State == VatConnectionState.Unavailable)
+                {
+                    <div class="small text-muted mt-1">HMRC VAT connection is not configured for this deployment.</div>
+                }
+                else if (_detailsExpanded)
+                {
+                    <div class="small text-muted mt-1">Use this business's Government Gateway organisation account. Trade Control never stores HMRC sign-in credentials.</div>
+                }
+                @if (!ReportingProfileReady)
+                {
+                    <div class="small text-danger mt-1">@ReadinessMessage</div>
+                }
+            }
+        </div>
+        @if (!_loading && _detailsExpanded && ReportingProfileReady && _canManage
+            && _status.State != VatConnectionState.Unavailable)
+        {
+            <div class="d-flex @(Compact ? "flex-column" : null) gap-2">
+                <button class="btn btn-sm btn-primary"
+                        disabled="@(_status.State is not VatConnectionState.NotConnected and not VatConnectionState.Disconnected)"
+                        @onclick="Connect">Connect HMRC</button>
+                <button class="btn btn-sm btn-outline-primary"
+                        disabled="@(_status.State is not VatConnectionState.Connected and not VatConnectionState.ReauthorisationRequired)"
+                        @onclick="Reauthorise">Reauthorise HMRC</button>
+                <button class="btn btn-sm btn-outline-danger"
+                        disabled="@(_status.State is not VatConnectionState.Connected and not VatConnectionState.ReauthorisationRequired)"
+                        @onclick="DisconnectAsync">Disconnect HMRC</button>
+            </div>
+        }
+        @if (!_loading && _detailsExpanded && Compact && ReportingProfileReady
+            && _status.State != VatConnectionState.Unavailable)
+        {
+            <button class="btn btn-sm btn-outline-secondary" @onclick="SignOutAsync">Sign out locally</button>
+            <div class="small text-muted">Local sign-out retains the HMRC connection. Disconnect HMRC removes it.</div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public bool ReportingProfileReady { get; set; } = true;
+    [Parameter] public string? ReadinessMessage { get; set; }
+    private VatConnectionStatus _status = new(VatConnectionState.Unavailable);
+    private ClaimsPrincipal? _principal;
+    private bool _loading = true;
+    private bool _canManage;
+    private bool _detailsExpanded = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        _canManage = FilingPolicy.CanManageHmrcConnection(_principal);
+        if (!ReportingProfileReady)
+        {
+            _loading = false;
+            return;
+        }
+        try
+        {
+            _status = await Connection.GetStatusAsync(_principal);
+            _detailsExpanded = !Compact || _status.State != VatConnectionState.Connected;
+        }
+        catch { _status = new(VatConnectionState.Unavailable, "VAT-CONNECTION-UNAVAILABLE"); }
+        finally { _loading = false; }
+    }
+
+    private string StatusText => _status.State switch
+    {
+        VatConnectionState.NotConnected => "Not connected",
+        VatConnectionState.Connected => "Connected",
+        VatConnectionState.ReauthorisationRequired => "Reauthorisation required",
+        VatConnectionState.Disconnected => "Disconnected",
+        _ => "Unavailable"
+    };
+
+    private string BadgeClass => _status.State switch
+    {
+        VatConnectionState.Connected => "bg-success",
+        VatConnectionState.ReauthorisationRequired => "bg-warning text-dark",
+        VatConnectionState.Unavailable => "bg-secondary",
+        _ => "bg-light text-dark border"
+    };
+
+    private void Connect() => Navigation.NavigateTo(
+        _status.State == VatConnectionState.ReauthorisationRequired
+            ? "/TaxHub/Hmrc/Reauthorise" : "/TaxHub/Hmrc/Connect", forceLoad: true);
+
+    private void Reauthorise() => Navigation.NavigateTo("/TaxHub/Hmrc/Reauthorise", forceLoad: true);
+
+    private void ToggleDetails() => _detailsExpanded = !_detailsExpanded;
+
+    private Task SignOutAsync() => JavaScript.InvokeVoidAsync("taxHubHmrc.signOut").AsTask();
+
+    private async Task DisconnectAsync()
+    {
+        if (_principal is null) return;
+        await JavaScript.InvokeVoidAsync("taxHubHmrc.disconnect");
+        _status = await Connection.GetStatusAsync(_principal);
+    }
+}

@@ -211,6 +211,7 @@ namespace TradeControl.Web.AppServices.TaxHub
 
                     results.Add(new TaxHubReportingReadinessItem
                     {
+                        ReportingTypeCode = profile.ReportingTypeCode,
                         ReportingType = profile.ReportingTypeName,
                         Authority = profile.AuthorityName,
                         IsReady = findings.Count == 0,

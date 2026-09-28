@@ -23,6 +23,9 @@ namespace TradeControl.Web.AppServices
             services.AddHttpContextAccessor();
             services.AddScoped<IVatWorkflowIdentityAccessor, VatWorkflowIdentityAccessor>();
             services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();
+            services.AddScoped<IVatHmrcConnectionService, VatHmrcConnectionService>();
+            services.AddScoped<IVatFraudContextCapture, VatFraudContextCapture>();
+            services.AddSingleton<IVatFilingAuthorisationPolicy, VatFilingAuthorisationPolicy>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();
             services.AddScoped<ICashManagerService, CashManagerService>();

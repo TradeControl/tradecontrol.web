@@ -34,6 +34,8 @@ public sealed record VatWorkflowIdentity
 public interface IVatWorkflowIdentityAccessor
 {
     Task<VatWorkflowIdentity> GetRequiredAsync(CancellationToken cancellationToken = default);
+    Task<VatWorkflowIdentity> GetRequiredAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class VatWorkflowIdentityAccessor(
@@ -45,6 +47,13 @@ public sealed class VatWorkflowIdentityAccessor(
     {
         var principal = httpContextAccessor.HttpContext?.User
             ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        return await GetRequiredAsync(principal, cancellationToken);
+    }
+
+    public async Task<VatWorkflowIdentity> GetRequiredAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
         var aspNetSubject = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (principal.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(aspNetSubject))
             throw new UnauthorizedAccessException("An authenticated Trade Control subject is required.");

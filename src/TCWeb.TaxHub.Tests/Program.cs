@@ -2,6 +2,11 @@ using System.Xml.Linq;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using TradeControl.Web.AppServices.TaxHub.Vat;
+using TradeControl.Web.Authorization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TradeControl.Web.Controllers;
 
 var assertions = 0;
 void Assert(bool condition, string message)
@@ -57,12 +62,44 @@ Assert(developmentValidator.Validate(null, new VatProductHostOptions()).Succeede
 var sandbox = ValidDevelopmentOptions();
 Assert(developmentValidator.Validate(null, sandbox).Succeeded,
     "A sandbox host with an absolute development store should validate in Development.");
+
+var environmentSecrets = ValidDevelopmentOptions();
+environmentSecrets.SandboxSecretSource = VatSandboxSecretSource.EnvironmentVariables;
+environmentSecrets.DevelopmentClientSettingsPath = null;
+Assert(developmentValidator.Validate(null, environmentSecrets).Succeeded,
+    "A hosted sandbox cannot select protected environment client credentials.");
+
+var developmentHost = new TestHostEnvironment(Environments.Development)
+{
+    ContentRootPath = Path.Combine(root, "src", "TCWeb")
+};
+var localDefaults = new VatProductHostOptions
+{
+    Enabled = true,
+    PersistenceMode = VatPersistenceMode.DevelopmentFiles
+};
+new VatProductDevelopmentDefaults(developmentHost).PostConfigure(null, localDefaults);
+var localStoreRoot = localDefaults.DevelopmentStoreRoot;
+var localClientSettings = localDefaults.DevelopmentClientSettingsPath;
+Assert(localStoreRoot is not null && localClientSettings is not null
+    && Path.IsPathFullyQualified(localStoreRoot)
+    && Path.IsPathFullyQualified(localClientSettings)
+    && localStoreRoot.Contains(Path.Combine(".local", "tax-hub", "tcweb"), StringComparison.Ordinal)
+    && localClientSettings.EndsWith(
+        Path.Combine(".local", "vat_mtd_client_test-master", "mtd-client-vat", "clientsettings.json"),
+        StringComparison.Ordinal),
+    "Local development did not derive its ignored store and credential paths from the repository root.");
 Assert(productionValidator.Validate(null, sandbox).Failed,
     "A development file store must fail outside Development.");
 
 sandbox.DevelopmentStoreRoot = ".local/tax-hub";
 Assert(developmentValidator.Validate(null, sandbox).Failed,
     "A relative development store path must fail closed.");
+
+sandbox = ValidDevelopmentOptions();
+sandbox.FraudPublicTlsAddresses = ["127.0.0.1"];
+Assert(developmentValidator.Validate(null, sandbox).Failed,
+    "A non-public fraud-prevention TLS hop was accepted by product composition.");
 
 sandbox = ValidDevelopmentOptions();
 sandbox.AuthorityEnvironment = VatAuthorityEnvironment.Production;
@@ -104,6 +141,33 @@ catch (UnauthorizedAccessException)
 }
 Assert(crossTenantRejected, "A cross-tenant HMRC principal was accepted.");
 
+var filingPolicy = new VatFilingAuthorisationPolicy();
+Assert(filingPolicy.CanManageHmrcConnection(Principal(Constants.AdministratorsRole)),
+    "An administrator was denied the initial HMRC connection policy.");
+Assert(filingPolicy.CanManageHmrcConnection(Principal(Constants.ManagersRole)),
+    "A manager was denied the initial HMRC connection policy.");
+Assert(!filingPolicy.CanManageHmrcConnection(Principal("Users")),
+    "A general user was permitted to change the HMRC connection.");
+Assert(!filingPolicy.CanManageHmrcConnection(new ClaimsPrincipal(new ClaimsIdentity())),
+    "An unauthenticated principal was permitted to change the HMRC connection.");
+
+var hmrcController = typeof(TaxHubHmrcController);
+Assert(hmrcController.GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true).Length == 1,
+    "The TCWeb HMRC product endpoints are not protected by ASP.NET Identity.");
+var callback = hmrcController.GetMethod(nameof(TaxHubHmrcController.Callback))!;
+Assert(callback.GetParameters().All(parameter => !parameter.Name!.Contains("return", StringComparison.OrdinalIgnoreCase)),
+    "The fixed HMRC callback accepts a caller-controlled return target.");
+var disconnect = hmrcController.GetMethod(nameof(TaxHubHmrcController.Disconnect))!;
+Assert(disconnect.GetCustomAttributes(typeof(HttpPostAttribute), inherit: true).Length == 1,
+    "Disconnect HMRC is not a protected state-changing POST.");
+var browserProperties = typeof(VatBrowserFacts).GetProperties().Select(property => property.Name).ToArray();
+Assert(new[] { "Tenant", "Principal", "Actor", "UserIds", "Remote", "Forwarded" }
+        .All(name => browserProperties.All(property => !property.Contains(name, StringComparison.OrdinalIgnoreCase))),
+    "The browser facts contract accepts a protected server-derived identity or ingress fact.");
+Assert(typeof(IVatHmrcConnectionService).GetMethods().All(method =>
+        !method.ReturnType.Name.Contains("Token", StringComparison.OrdinalIgnoreCase)),
+    "The TCWeb HMRC connection boundary exposes bearer-token material.");
+
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 
 static VatProductHostOptions ValidDevelopmentOptions() => new()
@@ -113,8 +177,16 @@ static VatProductHostOptions ValidDevelopmentOptions() => new()
     PersistenceMode = VatPersistenceMode.DevelopmentFiles,
     TenantReference = Guid.NewGuid().ToString(),
     PublicOrigin = new Uri("https://localhost:44381/"),
-    DevelopmentStoreRoot = Path.Combine(Path.GetTempPath(), "tax-hub-tests")
+    DevelopmentStoreRoot = Path.Combine(Path.GetTempPath(), "tax-hub-tests"),
+    DevelopmentClientSettingsPath = Path.Combine(Path.GetTempPath(), "tax-hub-clientsettings.json"),
+    FraudPublicTlsAddresses = ["8.8.8.8"]
 };
+
+static ClaimsPrincipal Principal(string role) => new(new ClaimsIdentity(new[]
+{
+    new Claim(ClaimTypes.NameIdentifier, "subject"),
+    new Claim(ClaimTypes.Role, role)
+}, "test"));
 
 static string FindRoot(string start)
 {

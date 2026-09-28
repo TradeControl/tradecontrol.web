@@ -284,6 +284,18 @@ Requires accepted 6.0. This phase does not retrieve obligations, prepare or subm
 
 The reviewer exercises the complete TCWeb → HMRC → TCWeb sandbox journey, signs out/in locally, disconnects HMRC and confirms the expected distinctions. Approve the initial filing policy and browser/proxy topology before 6.2.
 
+### Implementation evidence — 28 September 2026
+
+**Status: implemented and accepted at the Phase 6.1 human review gate.** TCWeb now owns fixed connect, callback, reauthorise, status, disconnect and client-fact endpoints under `/TaxHub/Hmrc`; no product path depends on WebHarness. One state-bound PKCE journey requests the exact `read:vat write:vat` consent set and stores one encrypted refresh-token lineage. The existing per-scope Objective 4 behavior remains compatible. The callback has no return-target parameter, pending state remains tenant/principal/actor bound and single-use, and only the fixed configured callback is accepted.
+
+The VAT workspace presents the protected connection state independently of ASP.NET Identity roles. Local sign-out has no grant-store side effect; explicit disconnect retires both VAT scopes. Connect, reauthorise, disconnect and browser-fact capture use the replaceable TCWeb filing policy, initially Administrators and Managers. Other authenticated users may see the actual safe state but cannot perform those consequential actions.
+
+The browser contract contains only user-agent, persistent device identifier, screens, timezone and window size. TCWeb supplies tenant, ASP.NET subject, internal actor and socket facts. Forwarded client data is accepted only from an exact configured immediate-peer allow-list; strict Objective 4 topology validation rejects non-public client/server facts and encrypted evidence retains its 15-minute freshness boundary. Only the reviewed device identifier is stored in the browser. Setup and fixed redirect guidance is recorded in `phase-6.1-tcweb-hmrc-setup.md`; no credentials or local secret paths are committed.
+
+`TCWeb.csproj` and `TaxHub.slnx` build with zero warnings. Submission adapter tests pass 95 assertions, WebHarness hardening passes 34, TCWeb host/policy tests pass 32, and the remaining Objective 4/application/contract/architecture suites pass. Data Provision passed its supported offline source/preparation/handoff path because `TC_NODE_CONTEXT` was intentionally absent. The reviewer completed the interactive TCWeb sandbox consent journey with the generated organisation user, confirmed the retained connection, and accepted the collapsed connected-state controls. An isolated no-data-mutation UI acceptance run confirmed that a missing indirect-tax reporting profile presents configuration guidance and no HMRC actions.
+
+The same release was deployed successfully to `tcweb-payg-db96115e` and smoke-tested after App Service restart. Its Production composition remains deliberately fail-closed and reports that HMRC VAT is not configured, with no actionable controls, until the separately approved Azure SQL/Blob/Key Vault implementations and public-TLS/trusted-proxy topology are available. No development file store or localhost fraud topology was enabled in Azure.
+
 ## Phase 6.2 — HMRC-obligation-led VAT workspace
 
 ### Purpose

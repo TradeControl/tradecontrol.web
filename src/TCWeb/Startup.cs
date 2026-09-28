@@ -70,6 +70,8 @@ namespace TradeControl.Web
                 .ValidateOnStart();
             services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<VatProductHostOptions>,
                 VatProductHostOptionsValidator>();
+            services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<VatProductHostOptions>,
+                VatProductDevelopmentDefaults>();
             services.AddAppServices();
         }
 

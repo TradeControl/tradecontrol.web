@@ -56,6 +56,12 @@
                     </div>
 
                     <div class="flex-grow-1 overflow-auto" style="min-height:0;">
+                        @if (ShowHmrcConnection)
+                        {
+                            <TaxHubHmrcConnection Compact="true"
+                                                      ReportingProfileReady="@VatReportingProfileReady"
+                                                      ReadinessMessage="@VatReportingReadinessMessage" />
+                        }
                         <TaxHubSidebar SelectedWorkspace="@_state.SelectedWorkspace"
                                        Years="@_years"
                                        Periods="@_periods"
@@ -153,6 +159,12 @@ else
                         @if (!_isSidebarCollapsed)
                         {
                             <div class="tc-tax-hub-sidebar-body">
+                                @if (ShowHmrcConnection)
+                                {
+                                    <TaxHubHmrcConnection Compact="true"
+                                                              ReportingProfileReady="@VatReportingProfileReady"
+                                                              ReadinessMessage="@VatReportingReadinessMessage" />
+                                }
                                 <TaxHubSidebar SelectedWorkspace="@_state.SelectedWorkspace"
                                                Years="@_years"
                                                Periods="@_periods"
@@ -231,6 +243,20 @@ else
 
     private bool ShowFinalPeriodAction =>
         _state?.SelectedWorkspace == TaxHubWorkspace.Accounts && _selectedYearNumber.HasValue;
+
+    private bool ShowHmrcConnection => _dashboard?.ActiveRegimes.Any(regime =>
+        regime.Equals("VAT", StringComparison.OrdinalIgnoreCase)
+        || regime.Equals("Vat", StringComparison.OrdinalIgnoreCase)) == true;
+
+    private TaxHubReportingReadinessItem? VatReportingProfile =>
+        _dashboard?.ReportingReadiness.Profiles.FirstOrDefault(profile =>
+            profile.ReportingTypeCode.Equals("INDIRECT-TAX", StringComparison.OrdinalIgnoreCase));
+
+    private bool VatReportingProfileReady => VatReportingProfile?.IsReady == true;
+
+    private string VatReportingReadinessMessage => VatReportingProfile is null
+        ? "Configure and activate the indirect tax reporting profile before connecting to HMRC."
+        : string.Join(" ", VatReportingProfile.Findings);
 
     private RenderFragment LoadingIndicator(string text) => @<div class="tc-tax-hub-loading" role="status" aria-live="polite" aria-atomic="true">
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
