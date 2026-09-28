@@ -1,15 +1,45 @@
 .tc-tax-hub-workspace {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     min-height: 0;
     padding-top: 1rem;
 }
 
+.tc-tax-hub-page {
+    height: 100dvh;
+    min-height: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tc-tax-hub-page > .container-fluid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: var(--tc-footer-height);
+}
+
+.tc-tax-hub-page > .container-fluid > div,
+.tc-tax-hub-page > .container-fluid main {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .tc-tax-hub {
-    min-height: 100vh;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
 .tc-tax-hub-frame {
+    flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -106,7 +136,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    overflow: auto;
+    overflow: hidden;
     padding: 0 0.25rem 0.25rem 0.25rem;
 }
 
@@ -118,16 +148,65 @@
     min-height: 100%;
 }
 
+.tc-tax-hub-grid {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.tc-tax-hub-loading {
+    flex: 1 1 auto;
+    min-height: 10rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
 .tc-tax-hub-dashboard {
     min-height: 0;
 }
 
 .tc-tax-hub-vat {
+    flex: 1 1 auto;
     min-height: 0;
 }
 
+.tc-tax-hub-business-tax,
 .tc-tax-hub-accounts {
+    flex: 1 1 auto;
     min-height: 0;
+}
+
+/* MudTabs renders panels beneath its tab toolbar. Keep that generated wrapper in
+   the bounded workspace and let the active panel own vertical scrolling. */
+.tc-tax-hub-vat > .mud-tabs,
+.tc-tax-hub-business-tax > .mud-tabs,
+.tc-tax-hub-accounts > .mud-tabs {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tc-tax-hub-vat > .mud-tabs > .mud-tabs-panels,
+.tc-tax-hub-business-tax > .mud-tabs > .mud-tabs-panels,
+.tc-tax-hub-accounts > .mud-tabs > .mud-tabs-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.tc-tax-hub-vat > .mud-tabs > .mud-tabs-panels > .mud-tab-panel,
+.tc-tax-hub-business-tax > .mud-tabs > .mud-tabs-panels > .mud-tab-panel,
+.tc-tax-hub-accounts > .mud-tabs > .mud-tabs-panels > .mud-tab-panel {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
 }
 
 .tc-tax-hub-summary-card {
@@ -173,10 +252,56 @@
     width: 100%;
 }
 
-.tc-tax-hub-obligations-grid .tc-grid-host,
-.tc-tax-hub-vat .tc-grid-host,
-.tc-tax-hub-accounts .tc-grid-host {
+.tc-tax-hub .tc-register-grid {
+    min-width: 0;
+}
+
+.tc-tax-hub .tc-grid-host {
+    height: clamp(18rem, 46dvh, 32rem);
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tc-tax-hub-single-grid-panel {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tc-tax-hub-single-grid-panel > .tc-register-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tc-tax-hub-single-grid-panel > .tc-register-grid > .tc-grid-host {
+    flex: 1 1 auto;
+    height: auto;
+}
+
+/* MudDataGrid DOM: .mud-table contains a scrollable .mud-table-container and a
+   sibling .mud-table-pagination. Flexing only those scoped elements keeps the
+   header fixed and the pager anchored without affecting tables elsewhere. */
+.tc-tax-hub .tc-grid-host > .mud-table.tc-tax-hub-datagrid {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tc-tax-hub .tc-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.tc-tax-hub .tc-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-pagination {
+    flex: 0 0 auto;
 }
 
 .tc-tax-hub-reconciliation-card {
@@ -261,6 +386,60 @@
     }
 
     .tc-tax-hub-mobile .tc-tax-hub-frame {
-        min-height: 100vh;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+    }
+
+    .tc-tax-hub-mobile .card,
+    .tc-tax-hub-mobile .card-body {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tc-tax-hub-mobile .card {
+        overflow: hidden;
+    }
+
+    .tc-tax-hub-mobile .card-body {
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+
+    .tc-tax-hub-mobile .tc-tax-hub-grid,
+    .tc-tax-hub-mobile .tc-tax-hub-vat,
+    .tc-tax-hub-mobile .tc-tax-hub-business-tax,
+    .tc-tax-hub-mobile .tc-tax-hub-accounts {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .tc-tax-hub-mobile .tc-grid-host {
+        min-height: 14rem;
+    }
+
+    .tc-tax-hub-page > .container-fluid {
+        padding-bottom: var(--tc-footer-height);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .tc-tax-hub-desktop-layout {
+        flex-direction: column;
+    }
+
+    .tc-tax-hub-sidebar-host,
+    .tc-tax-hub-sidebar-collapsed {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        flex: 0 1 30%;
+        border-right: 0 !important;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .tc-tax-hub-main-host {
+        flex: 1 1 70%;
     }
 }

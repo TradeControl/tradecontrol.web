@@ -637,23 +637,10 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .ThenBy(t => t.DisplayOrder)
                 .ToListAsync();
 
-            var annualTax = await _nodeContext.Cash_ProfitAndLossByYear
-                .AsNoTracking()
-                .Where(t => t.CashTypeCode == (short)NodeEnum.CashType.External)
-                .OrderByDescending(t => t.YearNumber)
-                .ThenBy(t => t.DisplayOrder)
-                .ToListAsync();
-
             var annualProfitAndLoss = BuildProfitAndLossRows(
                 annualTrade.Where(t => t.YearNumber == selectedYear),
                 selectedPreviousYearNumber.HasValue
                     ? annualTrade.Where(t => t.YearNumber == selectedPreviousYearNumber.Value)
-                    : Enumerable.Empty<Cash_vwProfitAndLossByYear>());
-
-            var annualTaxTotals = BuildProfitAndLossRows(
-                annualTax.Where(t => t.YearNumber == selectedYear),
-                selectedPreviousYearNumber.HasValue
-                    ? annualTax.Where(t => t.YearNumber == selectedPreviousYearNumber.Value)
                     : Enumerable.Empty<Cash_vwProfitAndLossByYear>());
 
             var annualDetails = await BuildAnnualProfitAndLossDetailsAsync(selectedYear, selectedPreviousYearNumber);
@@ -701,32 +688,12 @@ namespace TradeControl.Web.AppServices.TaxHub
                     .ThenBy(t => t.DisplayOrder)
                     .ToListAsync();
 
-            var monthlyTax = selectedPeriodInfo is null
-                ? new List<Cash_vwProfitAndLossByPeriod>()
-                : await _nodeContext.Cash_ProfitAndLossByMonth
-                    .AsNoTracking()
-                    .Where(t =>
-                        t.MonthNumber == selectedPeriodInfo.MonthNumber &&
-                        t.StartOn <= selectedPeriod &&
-                        t.CashTypeCode == (short)NodeEnum.CashType.External)
-                    .OrderByDescending(t => t.YearNumber)
-                    .ThenBy(t => t.DisplayOrder)
-                    .ToListAsync();
-
             var monthlyProfitAndLoss = selectedPeriodInfo is null
                 ? Array.Empty<TaxHubProfitAndLossRow>()
                 : BuildProfitAndLossRows(
                     monthlyTrade.Where(t => t.YearNumber == selectedPeriodInfo.YearNumber),
                     selectedPreviousPeriodYear.HasValue
                         ? monthlyTrade.Where(t => t.YearNumber == selectedPreviousPeriodYear.Value)
-                        : Enumerable.Empty<Cash_vwProfitAndLossByPeriod>());
-
-            var monthlyTaxTotals = selectedPeriodInfo is null
-                ? Array.Empty<TaxHubProfitAndLossRow>()
-                : BuildProfitAndLossRows(
-                    monthlyTax.Where(t => t.YearNumber == selectedPeriodInfo.YearNumber),
-                    selectedPreviousPeriodYear.HasValue
-                        ? monthlyTax.Where(t => t.YearNumber == selectedPreviousPeriodYear.Value)
                         : Enumerable.Empty<Cash_vwProfitAndLossByPeriod>());
 
             var monthlyDetails = selectedPeriodInfo is null
@@ -753,9 +720,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 SelectedPreviousPeriodName = selectedPreviousPeriodName,
                 IsYearEndBalanceSheet = isYearEndBalanceSheet,
                 AnnualProfitAndLoss = annualProfitAndLoss,
-                AnnualTaxTotals = annualTaxTotals,
                 MonthlyProfitAndLoss = monthlyProfitAndLoss,
-                MonthlyTaxTotals = monthlyTaxTotals,
                 AnnualDetails = annualDetails,
                 MonthlyDetails = monthlyDetails,
                 BalanceSheet = balanceSheet,
@@ -944,6 +909,7 @@ namespace TradeControl.Web.AppServices.TaxHub
         {
             var categories = await _nodeContext.Cash_FlowCategories
                 .AsNoTracking()
+                .Where(c => c.CashTypeCode == (int)NodeEnum.CashType.Trade)
                 .OrderBy(c => c.EntryId)
                 .ToListAsync();
 
@@ -987,6 +953,7 @@ namespace TradeControl.Web.AppServices.TaxHub
         {
             var categories = await _nodeContext.Cash_FlowCategories
                 .AsNoTracking()
+                .Where(c => c.CashTypeCode == (int)NodeEnum.CashType.Trade)
                 .OrderBy(c => c.EntryId)
                 .ToListAsync();
 

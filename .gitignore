@@ -360,3 +360,4 @@ tests/ui/.cache/
 docs/tmp/
 .aider*
 .local/
+.codex*

@@ -1,29 +1,41 @@
 @using TradeControl.Web.Pages.Tax.Hub.Models
 
 <div class="tc-tax-hub-grid">
-    @switch (Workspace)
+    @if (IsLoading)
     {
-        case TaxHubWorkspace.Dashboard:
-            <TaxHubDashboard Dashboard="@Dashboard" IsMobile="@IsMobile" />
-            break;
+        <div class="tc-tax-hub-loading" role="status" aria-live="polite" aria-atomic="true">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+            <span>@LoadingText</span>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(Error))
+    {
+        <div class="alert alert-danger mb-0" role="alert">@Error</div>
+    }
+    else
+    {
+        @switch (Workspace)
+        {
+            case TaxHubWorkspace.Dashboard:
+                <TaxHubDashboard Dashboard="@Dashboard" IsMobile="@IsMobile" />
+                break;
 
-        case TaxHubWorkspace.Vat:
-            <TaxHubVatWorkspace Workspace="@VatWorkspace" />
-            break;
+            case TaxHubWorkspace.Vat:
+                <TaxHubVatWorkspace Workspace="@VatWorkspace" />
+                break;
 
-        case TaxHubWorkspace.BusinessTax:
-            <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace" />
-            break;
+            case TaxHubWorkspace.BusinessTax:
+                <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace" />
+                break;
 
-        case TaxHubWorkspace.Accounts:
-            <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace" />
-            break;
+            case TaxHubWorkspace.Accounts:
+                <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace" />
+                break;
 
-        default:
-            <div class="alert alert-secondary mb-0">
-                No workspace selected.
-            </div>
-            break;
+            default:
+                <div class="alert alert-secondary mb-0">No workspace selected.</div>
+                break;
+        }
     }
 </div>
 
@@ -34,4 +46,14 @@
     [Parameter] public TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace { get; set; }
     [Parameter] public TaxHubAccountsWorkspaceModel? AccountsWorkspace { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string? Error { get; set; }
+
+    private string LoadingText => Workspace switch
+    {
+        TaxHubWorkspace.Vat => "Loading VAT workspace…",
+        TaxHubWorkspace.BusinessTax => "Loading Business Tax workspace…",
+        TaxHubWorkspace.Accounts => "Loading Accounts workspace…",
+        _ => "Loading Dashboard…"
+    };
 }

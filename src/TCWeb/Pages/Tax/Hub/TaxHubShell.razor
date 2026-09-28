@@ -3,10 +3,14 @@
 @using TradeControl.Web.Pages.Tax.Hub.Models
 @using TradeControl.Web.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components
+@using System.Threading
 @using Wangkanai.Detection.Models
 @inject ITaxHubService TaxHubService
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject PersistentComponentState PersistentState
+@implements IDisposable
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -25,7 +29,7 @@
             }
             else if (_isLoading)
             {
-                <div class="text-muted">Loading Tax Hub…</div>
+                @LoadingIndicator("Loading Tax Hub…")
             }
             else if (_state is not null)
             {
@@ -91,7 +95,9 @@
                                             VatWorkspace="@_vatWorkspace"
                                             BusinessTaxWorkspace="@_businessTaxWorkspace"
                                             AccountsWorkspace="@_accountsWorkspace"
-                                            IsMobile="@_isMobile" />
+                                            IsMobile="@_isMobile"
+                                            IsLoading="@_isWorkspaceLoading"
+                                            Error="@_workspaceError" />
                             </div>
                         </div>
                     </div>
@@ -112,7 +118,7 @@ else
             }
             else if (_isLoading)
             {
-                <div class="text-muted p-3">Loading Tax Hub…</div>
+                @LoadingIndicator("Loading Tax Hub…")
             }
             else if (_state is not null)
             {
@@ -179,7 +185,9 @@ else
                                         VatWorkspace="@_vatWorkspace"
                                         BusinessTaxWorkspace="@_businessTaxWorkspace"
                                         AccountsWorkspace="@_accountsWorkspace"
-                                        IsMobile="@_isMobile" />
+                                        IsMobile="@_isMobile"
+                                        IsLoading="@_isWorkspaceLoading"
+                                        Error="@_workspaceError" />
                         </div>
                     </section>
                 </div>
@@ -196,10 +204,15 @@ else
     }
 
     private bool _isLoading = true;
+    private bool _isWorkspaceLoading;
     private bool _isMobile;
     private bool _isAdministrator;
     private bool _isSidebarCollapsed;
     private string? _error;
+    private string? _workspaceError;
+    private long _requestVersion;
+    private readonly SemaphoreSlim _serviceGate = new(1, 1);
+    private PersistingComponentStateSubscription _persistingSubscription;
     private TaxHubWorkflowState? _state;
     private TaxHubDashboardModel? _dashboard;
     private TaxHubVatWorkspaceModel? _vatWorkspace;
@@ -218,6 +231,11 @@ else
 
     private bool ShowFinalPeriodAction =>
         _state?.SelectedWorkspace == TaxHubWorkspace.Accounts && _selectedYearNumber.HasValue;
+
+    private RenderFragment LoadingIndicator(string text) => @<div class="tc-tax-hub-loading" role="status" aria-live="polite" aria-atomic="true">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+        <span>@text</span>
+    </div>;
 
     private RenderFragment ReportingReadinessAlert() => @<text>
         @if (_dashboard?.ReportingReadiness is { IsReady: false } readiness)
@@ -252,6 +270,15 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _persistingSubscription = PersistentState.RegisterOnPersisting(PersistState);
+
+        if (PersistentState.TryTakeFromJson<TaxHubShellSnapshot>(nameof(TaxHubShellSnapshot), out var snapshot) && snapshot is not null)
+        {
+            RestoreSnapshot(snapshot);
+            _isLoading = false;
+            return;
+        }
+
         try
         {
             _isMobile = Detection.Device.Type == Device.Mobile;
@@ -269,8 +296,8 @@ else
             }
 
             _state = result.State;
+            // The service owns a scoped EF context, so its queries must remain sequential.
             _years = await TaxHubService.GetYearsAsync();
-
             var defaultPeriod = await TaxHubService.GetDefaultPeriodAsync();
             _defaultYearNumber = defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
             _defaultPeriodStartOn = defaultPeriod?.StartOn;
@@ -355,6 +382,8 @@ else
             _ => _state
         };
 
+        var requestVersion = BeginWorkspaceOperation();
+
         if (!ShowPeriodSelectors)
         {
             _selectedYearNumber = null;
@@ -366,10 +395,18 @@ else
             _selectedPeriodStartOn = null;
 
             if (_selectedYearNumber.HasValue)
-                _periods = await TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value);
+            {
+                var periods = await RunLatestAsync(
+                    requestVersion,
+                    () => TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value));
+                if (requestVersion != _requestVersion)
+                    return;
+                if (periods is not null)
+                    _periods = periods;
+            }
         }
 
-        await RefreshWorkspaceAsync();
+        await RefreshWorkspaceAsync(requestVersion);
 
         if (_isMobile)
             _mobileView = TaxHubMobileView.Workspace;
@@ -377,11 +414,18 @@ else
 
     private async Task HandleYearSelectedAsync(short yearNumber)
     {
+        var requestVersion = BeginWorkspaceOperation();
         _selectedYearNumber = yearNumber > 0 ? yearNumber : null;
 
         if (_selectedYearNumber.HasValue)
         {
-            _periods = await TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value);
+            var periods = await RunLatestAsync(
+                requestVersion,
+                () => TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value));
+            if (requestVersion != _requestVersion)
+                return;
+            if (periods is not null)
+                _periods = periods;
             _selectedPeriodStartOn = null;
         }
         else
@@ -390,13 +434,14 @@ else
             _selectedPeriodStartOn = null;
         }
 
-        await RefreshWorkspaceAsync();
+        await RefreshWorkspaceAsync(requestVersion);
     }
 
     private async Task HandlePeriodSelectedAsync(DateTime? startOn)
     {
+        var requestVersion = BeginWorkspaceOperation();
         _selectedPeriodStartOn = startOn;
-        await RefreshWorkspaceAsync();
+        await RefreshWorkspaceAsync(requestVersion);
     }
 
     private async Task HandleFinalPeriodSelectedAsync()
@@ -408,29 +453,144 @@ else
                 .Last()
                 .StartOn;
 
-            await RefreshWorkspaceAsync();
+            await RefreshWorkspaceAsync(BeginWorkspaceOperation());
         }
     }
 
-    private async Task RefreshWorkspaceAsync()
+    private long BeginWorkspaceOperation()
     {
-        _dashboard = await TaxHubService.GetDashboardAsync();
-
-        if (_state?.SelectedWorkspace == TaxHubWorkspace.Vat)
-            _vatWorkspace = await TaxHubService.GetVatWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
-        else
-            _vatWorkspace = null;
-
-        if (_state?.SelectedWorkspace == TaxHubWorkspace.BusinessTax)
-            _businessTaxWorkspace = await TaxHubService.GetBusinessTaxWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
-        else
-            _businessTaxWorkspace = null;
-
-        if (_state?.SelectedWorkspace == TaxHubWorkspace.Accounts)
-            _accountsWorkspace = await TaxHubService.GetAccountsWorkspaceAsync(_selectedYearNumber, _selectedPeriodStartOn);
-        else
-            _accountsWorkspace = null;
+        var requestVersion = ++_requestVersion;
+        _isWorkspaceLoading = true;
+        _workspaceError = null;
+        return requestVersion;
     }
+
+    private Task RefreshWorkspaceAsync() => RefreshWorkspaceAsync(BeginWorkspaceOperation());
+
+    private async Task RefreshWorkspaceAsync(long requestVersion)
+    {
+        var workspace = _state?.SelectedWorkspace ?? TaxHubWorkspace.Dashboard;
+        var yearNumber = _selectedYearNumber;
+        var periodStartOn = _selectedPeriodStartOn;
+
+        try
+        {
+            await _serviceGate.WaitAsync();
+            try
+            {
+                if (requestVersion != _requestVersion)
+                    return;
+
+                switch (workspace)
+                {
+                    case TaxHubWorkspace.Vat:
+                        var vat = await TaxHubService.GetVatWorkspaceAsync(yearNumber, periodStartOn);
+                        if (requestVersion == _requestVersion)
+                            _vatWorkspace = vat;
+                        break;
+                    case TaxHubWorkspace.BusinessTax:
+                        var businessTax = await TaxHubService.GetBusinessTaxWorkspaceAsync(yearNumber, periodStartOn);
+                        if (requestVersion == _requestVersion)
+                            _businessTaxWorkspace = businessTax;
+                        break;
+                    case TaxHubWorkspace.Accounts:
+                        var accounts = await TaxHubService.GetAccountsWorkspaceAsync(yearNumber, periodStartOn);
+                        if (requestVersion == _requestVersion)
+                            _accountsWorkspace = accounts;
+                        break;
+                    default:
+                        var dashboard = await TaxHubService.GetDashboardAsync();
+                        if (requestVersion == _requestVersion)
+                            _dashboard = dashboard;
+                        break;
+                }
+            }
+            finally
+            {
+                _serviceGate.Release();
+            }
+        }
+        catch (System.Exception ex)
+        {
+            if (requestVersion == _requestVersion)
+                _workspaceError = $"Unable to load {GetWorkspaceName(workspace)}. {ex.Message}";
+        }
+        finally
+        {
+            if (requestVersion == _requestVersion)
+                _isWorkspaceLoading = false;
+        }
+    }
+
+    private async Task<T?> RunLatestAsync<T>(long requestVersion, Func<Task<T>> operation)
+    {
+        await _serviceGate.WaitAsync();
+        try
+        {
+            return requestVersion == _requestVersion ? await operation() : default;
+        }
+        finally
+        {
+            _serviceGate.Release();
+        }
+    }
+
+    private static string GetWorkspaceName(TaxHubWorkspace workspace) => workspace switch
+    {
+        TaxHubWorkspace.Vat => "the VAT workspace",
+        TaxHubWorkspace.BusinessTax => "the Business Tax workspace",
+        TaxHubWorkspace.Accounts => "the Accounts workspace",
+        _ => "the Dashboard"
+    };
+
+    private Task PersistState()
+    {
+        if (!_isLoading && _state is not null)
+            PersistentState.PersistAsJson(nameof(TaxHubShellSnapshot), CreateSnapshot());
+        return Task.CompletedTask;
+    }
+
+    private TaxHubShellSnapshot CreateSnapshot() => new(
+        _isMobile, _isAdministrator, _state, _dashboard, _vatWorkspace, _businessTaxWorkspace,
+        _accountsWorkspace, _years, _periods, _selectedYearNumber, _selectedPeriodStartOn,
+        _defaultYearNumber, _defaultPeriodStartOn);
+
+    private void RestoreSnapshot(TaxHubShellSnapshot snapshot)
+    {
+        _isMobile = snapshot.IsMobile;
+        _isAdministrator = snapshot.IsAdministrator;
+        _state = snapshot.State;
+        _dashboard = snapshot.Dashboard;
+        _vatWorkspace = snapshot.VatWorkspace;
+        _businessTaxWorkspace = snapshot.BusinessTaxWorkspace;
+        _accountsWorkspace = snapshot.AccountsWorkspace;
+        _years = snapshot.Years;
+        _periods = snapshot.Periods;
+        _selectedYearNumber = snapshot.SelectedYearNumber;
+        _selectedPeriodStartOn = snapshot.SelectedPeriodStartOn;
+        _defaultYearNumber = snapshot.DefaultYearNumber;
+        _defaultPeriodStartOn = snapshot.DefaultPeriodStartOn;
+    }
+
+    public void Dispose()
+    {
+        _persistingSubscription.Dispose();
+    }
+
+    public sealed record TaxHubShellSnapshot(
+        bool IsMobile,
+        bool IsAdministrator,
+        TaxHubWorkflowState State,
+        TaxHubDashboardModel? Dashboard,
+        TaxHubVatWorkspaceModel? VatWorkspace,
+        TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace,
+        TaxHubAccountsWorkspaceModel? AccountsWorkspace,
+        IReadOnlyList<TaxHubYearOption> Years,
+        IReadOnlyList<TaxHubPeriodOption> Periods,
+        short? SelectedYearNumber,
+        DateTime? SelectedPeriodStartOn,
+        short? DefaultYearNumber,
+        DateTime? DefaultPeriodStartOn);
 
     private string GetPeriodSummary()
     {

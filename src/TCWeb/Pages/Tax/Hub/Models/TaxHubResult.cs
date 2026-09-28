@@ -239,9 +239,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public string SelectedPreviousPeriodName { get; init; } = string.Empty;
         public bool IsYearEndBalanceSheet { get; init; }
         public IReadOnlyList<TaxHubProfitAndLossRow> AnnualProfitAndLoss { get; init; } = Array.Empty<TaxHubProfitAndLossRow>();
-        public IReadOnlyList<TaxHubProfitAndLossRow> AnnualTaxTotals { get; init; } = Array.Empty<TaxHubProfitAndLossRow>();
         public IReadOnlyList<TaxHubProfitAndLossRow> MonthlyProfitAndLoss { get; init; } = Array.Empty<TaxHubProfitAndLossRow>();
-        public IReadOnlyList<TaxHubProfitAndLossRow> MonthlyTaxTotals { get; init; } = Array.Empty<TaxHubProfitAndLossRow>();
         public IReadOnlyList<TaxHubProfitAndLossDetailSection> AnnualDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
         public IReadOnlyList<TaxHubProfitAndLossDetailSection> MonthlyDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
         public IReadOnlyList<TaxHubBalanceSheetRow> BalanceSheet { get; init; } = Array.Empty<TaxHubBalanceSheetRow>();

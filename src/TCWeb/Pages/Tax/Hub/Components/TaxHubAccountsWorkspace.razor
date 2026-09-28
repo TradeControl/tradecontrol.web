@@ -26,15 +26,6 @@ else
 
                     <div>
                         <div class="mb-2">
-                            <h2 class="h5 mb-1">Tax Totals</h2>
-                        </div>
-                        <TaxHubProfitAndLossGrid Items="@Workspace.AnnualTaxTotals"
-                                                 CurrentHeading="@Workspace.SelectedYearName"
-                                                 PreviousHeading="@Workspace.SelectedPreviousYearName" />
-                    </div>
-
-                    <div>
-                        <div class="mb-2">
                             <h2 class="h5 mb-1">Cash Code Details</h2>
                             <div class="text-muted small">Detailed annual breakdown by cash code</div>
                         </div>
@@ -56,15 +47,6 @@ else
                             <h2 class="h5 mb-1">Accounts</h2>
                         </div>
                         <TaxHubProfitAndLossGrid Items="@Workspace.MonthlyProfitAndLoss"
-                                                 CurrentHeading="@Workspace.SelectedPeriodName"
-                                                 PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
-                    </div>
-
-                    <div>
-                        <div class="mb-2">
-                            <h2 class="h5 mb-1">Tax Totals</h2>
-                        </div>
-                        <TaxHubProfitAndLossGrid Items="@Workspace.MonthlyTaxTotals"
                                                  CurrentHeading="@Workspace.SelectedPeriodName"
                                                  PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
                     </div>

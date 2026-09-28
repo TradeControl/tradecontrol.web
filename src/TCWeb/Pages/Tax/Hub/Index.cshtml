@@ -2,10 +2,11 @@
 @model TradeControl.Web.Pages.Tax.Hub.IndexModel
 @{
     ViewData["Title"] = "Tax Hub";
+    ViewData["BodyClass"] = "tc-tax-hub-page";
 }
 
 <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-<link href="~/css/modules/taxHub.css" rel="stylesheet" />
+<link href="~/css/modules/taxHub.css" rel="stylesheet" asp-append-version="true" />
 
 <div class="tc-tax-hub-workspace">
     <component type="typeof(TradeControl.Web.Pages.Tax.Hub.TaxHubShell)"
