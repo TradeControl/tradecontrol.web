@@ -1,5 +1,14 @@
 # Tax Hub Change Log
 
+## 28 September 2026 — Objective 5 Phase 6.0 product boundary
+
+- Added direct TCWeb references to the Tax Hub Application, Trade Control adapter and Submission adapter while architecture checks prohibit a WebHarness dependency and reverse adapter/contract dependencies on TCWeb.
+- Added an API-shaped VAT product workflow contract, server-derived tenant/ASP.NET subject/internal actor/reporting-subject identity and tenant-matched authority dispatch context without accepting VAT boxes, request bodies or tenant identity from browser callers.
+- Added fail-closed host options: disabled by default, absolute development stores only in Development, and no production HMRC or Azure-managed composition before the selected facilities are implemented and reviewed.
+- Selected a single-tenant-current/multi-tenant-by-design production direction using durable opaque tenant identity, Key Vault application secrets/keys, versioned encrypted Azure SQL grant/workflow records, digest-verified private Blob content and privacy-safe tenant-attribution telemetry.
+- Kept Administrators/Managers as an initial replaceable host filing policy rather than a Tax Hub role architecture; actual protected HMRC connection state drives connection presentation.
+- Added 20 TCWeb boundary assertions. Both solutions build cleanly and all established Tax Hub suites pass, with the secret-backed data-provision suite using its supported offline path for this boundary-only phase.
+
 ## 27 September 2026 — Objective 4 Phases 5.4–5.6 VAT transport milestone
 
 - Added the closed HMRC VAT REST gateway for obligations, view-return and return submission, preserving prepared paths, ordered queries, headers, canonical body bytes and SHA-256.

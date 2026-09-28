@@ -69,6 +69,13 @@
 
     <ItemGroup>
         <ProjectReference Include="..\TCExports\src\TCExports.Generator\TCExports.Generator.csproj" />
+        <ProjectReference Include="..\tax-hub\src\TradeControl.Tax.UK.Application\TradeControl.Tax.UK.Application.csproj" />
+        <ProjectReference Include="..\tax-hub\src\TradeControl.Tax.UK.Adapters.TradeControl\TradeControl.Tax.UK.Adapters.TradeControl.csproj" />
+        <ProjectReference Include="..\tax-hub\src\TradeControl.Tax.UK.Adapters.Submission\TradeControl.Tax.UK.Adapters.Submission.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="TradeControl.Web.TaxHub.Tests" />
     </ItemGroup>
 
     <ItemGroup>

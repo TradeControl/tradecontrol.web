@@ -31,6 +31,7 @@ using TradeControl.Web.Data;
 using System.Globalization;
 using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.AppServices;
+using TradeControl.Web.AppServices.TaxHub.Vat;
 
 namespace TradeControl.Web
 {
@@ -64,6 +65,11 @@ namespace TradeControl.Web
             });
 
             services.AddSingleton<IFileProvider>(new PhysicalFileProvider(_env.WebRootPath));
+            services.AddOptions<VatProductHostOptions>()
+                .Bind(Configuration.GetSection(VatProductHostOptions.SectionName))
+                .ValidateOnStart();
+            services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<VatProductHostOptions>,
+                VatProductHostOptionsValidator>();
             services.AddAppServices();
         }
 

@@ -1,159 +1,193 @@
-# Work Plan 5 — Human-readability rewrite
+# Work Plan 6 — Phase 6.0 review qualifications
 
-The technical content and phase structure of the revised Work Plan 5 are accepted.
+The Phase 6.0 hosting decision and Work Plan 6 have been reviewed.
 
-Now perform an editorial rewrite of the complete document:
+The overall design is accepted and is considered a strong basis for Objective 5 VAT integration.
 
-`docs\projects\Tax Hub\implementation\tax-hub-workplan-5.md`
+The selected Azure production direction is approved in principle:
 
-This is a readability rewrite, not another design or research exercise.
+- Azure Key Vault;
+- Azure SQL Tax Hub persistence;
+- private Azure Blob storage;
+- App Service managed identity;
+- fail-closed production composition; and
+- direct TCWeb integration with the Tax Hub Application/adapters rather than WebHarness.
 
-## Objective
+The following points are **qualifications and contextual improvements**, not a request to redesign the plan.
 
-Work Plan 5 is a project document maintained and reviewed by a human developer.
+Update:
 
-It must remain precise enough to hand individual phases to Codex for implementation, but it should be written for a **human technical reader first**.
+`docs/projects/Tax Hub/implementation/tax-hub-workplan-6.md`
 
-The current version is too compressed. It frequently combines requirements, exclusions, dependencies, implementation instructions and acceptance criteria into long compound sentences and paragraphs.
+and, where appropriate:
 
-Rewrite the entire Work Plan into clear, conventional technical prose.
+`docs/projects/Tax Hub/specs/reference/tax-hub-objective-5-hosting-decision.md`
 
-## Preserve the engineering content
+to make these decisions explicit.
 
-Do not:
+Do not implement Phase 6.1 yet.
 
-- change the agreed phase order;
-- change product priorities;
-- change architectural boundaries;
-- add or remove implementation requirements;
-- weaken acceptance criteria;
-- remove repository-specific file/type references;
-- remove authoritative references;
-- change the VAT, CT, Companies House or SA product scope;
-- change the Phase 5.14 programme exit gate;
-- change the meaning of the HMRC production-access restriction;
-- perform new research;
-- implement anything.
+## 1. Make the multi-tenant destination explicit
 
-This pass should preserve the technical decisions already made.
+The current Azure deployment contains one Trade Control node, but this is the first deployment shape of a future **multi-tenant hosted Trade Control service**.
 
-## Writing style
+The architecture must therefore be described as:
 
-Prefer:
+**single-tenant in the current deployment, multi-tenant by design.**
 
-- short paragraphs;
-- reasonably short sentences;
-- bullet lists for sets of requirements;
-- numbered lists for ordered implementation work;
-- subheadings where a phase contains distinct pieces of work;
-- explicit dependency statements;
-- explicit exclusions;
-- scannable acceptance criteria;
-- clear human review gates.
+The opaque tenant GUID introduced by Phase 6.0 is a durable architectural identity, not merely a convenient identifier for the current App Service.
 
-Avoid:
+It must:
 
-- long semicolon-separated sentences;
-- paragraphs containing many independent requirements;
-- `(a) ... (b) ... (c) ...` sequences buried inside prose;
-- repeating architectural invariants in every phase when a concise reference to an earlier invariant is sufficient;
-- AI-to-AI instructional language where normal technical documentation would be clearer.
+- be generated/assigned deliberately rather than from transient deployment state;
+- remain stable across deployment, restart, restore and migration;
+- scope HMRC grants, preparations, approvals, attempts, protected content and filing history;
+- later support many tenants within the hosted service without changing the Tax Hub contracts; and
+- never be accepted as an arbitrary browser-supplied value.
 
-Do not shorten the document merely for the sake of reducing its size. The goal is **clarity**, not brevity.
+Do not introduce multi-tenant provisioning or administration in Objective 5. The purpose of this clarification is to prevent current single-node assumptions becoming embedded in the Tax Hub architecture.
 
-## Phase format
+## 2. Preserve the deliberately simple Accounts Mode security model
 
-Where appropriate, use a consistent structure such as:
+Accounts Mode currently has a deliberately simple user/role model.
 
-### Purpose
+Objective 5 VAT integration must not introduce a general ERP permission framework.
 
-A short explanation of what the phase achieves and why.
+The existing proposal that Administrators and Managers perform HMRC connection, disconnection, approval and submission should therefore be described as an **initial product-policy proposal**, not an architectural requirement of Tax Hub.
 
-### Implementation
+Do not assume that an ordinary authenticated Trade Control user is incapable of possessing legitimate HMRC authority.
 
-The concrete work required, using bullets or numbered steps where this improves readability.
+Likewise, successful HMRC authorisation does not itself grant Trade Control membership, elevated Trade Control privileges or cross-tenant access.
 
-### Dependencies
+Keep these concepts distinct:
 
-What must already exist or be accepted.
+- Trade Control authentication;
+- tenant membership;
+- current Accounts Mode role/policy;
+- HMRC OAuth authority and scopes; and
+- attributable filing approval.
 
-### Exclusions
+The VAT workflow should depend only on a narrow filing-authorisation decision that can initially use the existing simple Accounts Mode policy and evolve later without changing Objective 3, Objective 4 or the VAT workflow contracts.
 
-What this phase deliberately does not do.
+Do not design a generic RBAC/permissions subsystem as part of this work.
 
-### Tests and acceptance
+## 3. HMRC connection visibility should use actual connection state
 
-Clear, individually readable acceptance requirements.
+The product now stores/shares the HMRC OAuth connection state through the ASP.NET Core Identity/product identity integration.
 
-### Review gate
+Do not use Administrator/Manager role membership as a proxy for whether HMRC functionality should be visible or meaningful to a user.
 
-What evidence the human reviewer must inspect before the next dependent phase.
+Where appropriate, UI presentation should use the actual protected HMRC connection/authorisation state available for the authenticated tenant/user context.
 
-Do not mechanically add empty headings where they provide no value, but use this structure consistently enough that a reader can navigate the plan quickly.
+For example, distinguish truthfully between:
 
-## Important distinction
+- not connected;
+- connected;
+- reauthorisation required;
+- disconnected; and
+- unavailable.
 
-This Work Plan serves two audiences:
+Role/policy checks still govern consequential actions where required, but UI visibility and connection status should not imply that only Administrators or Managers can ever possess HMRC authority.
 
-1. the human developer reviewing, approving and controlling the programme;
-2. Codex implementing an explicitly authorised phase.
+Do not expose tokens, secrets or raw OAuth state to the UI merely to make this decision.
 
-The first audience has priority.
+## 4. Clarify Key Vault versus tenant OAuth storage
 
-Codex should be able to obtain its implementation constraints from a clearly structured human document. The human should not have to decode prose optimised for another language model.
+Azure Key Vault is approved for **application-level secrets and cryptographic keys**, including:
 
-## Phase 5.15
+- HMRC application client secret;
+- encryption/envelope keys; and
+- other deployment-level secrets where appropriate.
 
-Pay particular attention to Phase 5.15.
+Per-tenant/per-principal mutable OAuth grant material belongs in the protected Tax Hub grant store in Azure SQL, encrypted using the approved key hierarchy.
 
-Retain its newly agreed full end-to-end MTD Income Tax/Self Assessment scope and all of its technical content.
+Do not model every tenant access token or refresh token as an individual Key Vault secret.
 
-Present:
+Persist enough key/version metadata with encrypted material to permit controlled key rotation and continued decryption of retained records.
 
-- product scope;
-- contract reconciliation;
-- existing prepared building blocks;
-- missing Objective 3 work;
-- Objective 4 transport work;
-- implementation slices;
-- exclusions;
-- tests;
-- external HMRC production-access restriction; and
-- review gates
+The existing ignored development `clientsettings.json` remains a development-only static sandbox credential source and must not define production secret architecture.
 
-as clearly separated material.
+## 5. Strengthen protected-content integrity and recovery requirements
 
-The implementation slices should be an explicit numbered sequence rather than being embedded inside prose.
+Prepared candidates, exact submitted VAT bytes and protected authority evidence stored in Blob must retain their recorded digest/integrity relationship with SQL metadata.
 
-Retain the exact HMRC quotation concerning new 2026–27 quarterly-update products.
+On retrieval, protected content used for filing or evidence should be verified against its recorded digest and fail closed on mismatch.
 
-## Cross-phase material
+Backup/restore planning must consider SQL metadata and Blob content together.
 
-Apply the same readability standard to:
+A restore exercise should demonstrate that:
 
-- Objective and authority;
-- current baseline;
-- invariants;
-- phase graph;
-- cross-phase verification;
-- programme decisions;
-- limited-company milestone; and
-- full Objective 4 completion.
+- SQL opaque references resolve to the intended Blob content/version;
+- stored digests still verify;
+- missing or orphaned content is detected rather than silently ignored; and
+- restored approval/attempt history remains internally consistent.
 
-Where information is genuinely cross-cutting, state it clearly once rather than repeatedly embedding it in individual phase prose.
+Do not design a large disaster-recovery framework in Phase 6.0. Make the invariant and later production acceptance requirement explicit.
 
-## Authorised change
+## 6. Add tenant-level resource telemetry as a hosting design requirement
 
-Modify only:
+The future Trade Control commercial model is intended to charge primarily for managed hosting rather than functionality or user count.
 
-`docs\projects\Tax Hub\implementation\tax-hub-workplan-5.md`
+The base service may include normal microbusiness usage, while materially exceptional infrastructure or AI consumption can later be attributed to the tenant.
 
-Do not modify source code or any other documentation.
+Tenant-level resource telemetry should therefore be designed in **from the beginning**.
 
-When complete, report:
+This phase does not implement billing.
 
-- that the readability rewrite is complete;
-- whether any technical ambiguity was discovered while restructuring the prose; and
-- any place where preserving the existing meaning prevented further simplification.
+It should establish that production observability can attribute appropriate operational consumption to the opaque tenant identity, for example:
 
-Then stop.
+- workflow/request activity;
+- Tax Hub SQL/storage consumption where measurable;
+- protected Blob storage/read activity;
+- HMRC/API activity;
+- submission attempts and operational load; and
+- later AI model/token consumption.
+
+Telemetry must not expose VAT payloads, tax identifiers, OAuth secrets, fraud facts or other protected content.
+
+Do not create per-user or per-feature licensing machinery.
+
+The purpose is future cost attribution and capacity planning for the multi-tenant hosted service.
+
+## 7. Preserve the existing Objective 5 boundaries
+
+These qualifications must not weaken the existing Work Plan 6 invariants.
+
+In particular preserve:
+
+- the accepted VAT truth chain;
+- exact Objective 3 prepared bytes;
+- immutable approval;
+- HMRC obligation authority over filing periods;
+- fail-closed submission;
+- durable duplicate protection;
+- unknown-outcome handling;
+- separation of ASP.NET Identity from HMRC OAuth;
+- secret isolation;
+- truthful external-status reporting;
+- TCWeb's direct use of Application/adapters;
+- WebHarness as diagnostics only; and
+- the initial business-self-filer product scope.
+
+Do not expand this revision into agent filing, generic ERP security, multi-tenant provisioning, billing, AI integration or other tax families.
+
+Those are future concerns.
+
+## 8. Nature of this revision
+
+This is a clarification pass over an already accepted design.
+
+Prefer small additions and qualifications to wholesale rewriting.
+
+The intention is to ensure that Work Plan 6:
+
+1. reflects the future multi-tenant hosted-service destination;
+2. does not accidentally fossilise today's simple Accounts Mode roles into a general ERP security architecture;
+3. uses actual HMRC connection state rather than role membership as a proxy for connection visibility;
+4. makes the Azure secret/key/token boundaries explicit;
+5. preserves content integrity through storage and recovery; and
+6. establishes tenant-level operational attribution before the hosted service grows.
+
+Do not modify source code.
+
+After updating the documentation, summarise the changes made and stop at the Phase 6.0 human review gate.

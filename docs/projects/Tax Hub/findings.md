@@ -1,5 +1,14 @@
 # Tax Hub Findings
 
+## 28 September 2026 — Objective 5 Phase 6.0 hosting boundary
+
+- The current Azure deployment is one node, but the accepted hosting design is multi-tenant by construction. A deliberately assigned opaque tenant GUID survives deployment/restore and scopes grants, preparations, approvals, attempts, protected content, history and safe operational attribution without being accepted from a browser.
+- Trade Control authentication, tenant membership, the replaceable Accounts Mode filing policy, HMRC OAuth authority/scopes and attributable approval are separate decisions. Administrators/Managers are the initial product policy, not a permanent workflow-contract requirement, and UI connection status comes from protected HMRC state rather than roles.
+- Key Vault owns application-level secrets and cryptographic keys. Mutable per-tenant/per-principal OAuth material belongs encrypted in Azure SQL with key/version metadata; it is not represented as one Key Vault secret per token or tenant.
+- SQL metadata and private Blob content form one evidence set. Exact prepared/submitted content and bounded authority evidence require digest/version verification on retrieval, explicit missing/orphan handling and coordinated restore acceptance.
+- Tenant-level telemetry is required from the start for capacity and future cost attribution, but it must exclude VAT payloads, tax identifiers, OAuth material, fraud facts and protected evidence. Billing, licensing, AI integration and tenant provisioning remain excluded.
+- TCWeb consumes Tax Hub Application/adapters directly through an API-shaped boundary. WebHarness remains a useful replaceable Swagger/sandbox client and test composition root, never a product dependency.
+
 ## 27 September 2026 — Objective 4 Phase 5.6 VAT milestone
 
 - The authenticated Azure sandbox journey now covers obligations, prepared submission, `201` receipt and view-return enquiry for a newly generated synthetic organisation. The retrieved period and all nine VAT boxes matched the exact prepared artifact sourced from `Cash.vwTaxVatSubmission`; identifiers, credentials and receipt references remain outside tracked evidence.

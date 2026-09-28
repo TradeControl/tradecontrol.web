@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.AppServices.Execution;
 using TradeControl.Web.AppServices.InvoiceRegister;
 using TradeControl.Web.AppServices.TaxHub;
+using TradeControl.Web.AppServices.TaxHub.Vat;
 
 namespace TradeControl.Web.AppServices
 {
@@ -19,6 +20,9 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IInvoiceTypeLookup, InvoiceTypeLookup>();
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
             services.AddScoped<ITaxHubService, TaxHubService>();
+            services.AddHttpContextAccessor();
+            services.AddScoped<IVatWorkflowIdentityAccessor, VatWorkflowIdentityAccessor>();
+            services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();
             services.AddScoped<ICashManagerService, CashManagerService>();
