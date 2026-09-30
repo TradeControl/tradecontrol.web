@@ -26,6 +26,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="AppServices\TaxHub\Vat\Declarations\hmrc-vat-business-2026-09-30.txt" />
         <Content Remove="wwwroot\content\templates\invoice_expense_standard.html" />
         <Content Remove="wwwroot\content\templates\support_request.html" />
     </ItemGroup>

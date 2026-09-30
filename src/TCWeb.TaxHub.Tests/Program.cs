@@ -7,6 +7,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TradeControl.Web.Controllers;
+using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 
 var assertions = 0;
 void Assert(bool condition, string message)
@@ -249,6 +250,59 @@ Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.
     && alignmentSql.Contains("Cash.proc_ReportingProfileSave", StringComparison.Ordinal)
     && alignmentSql.Contains("@SandboxVrn = N'999000001'", StringComparison.Ordinal),
     "The disposable VAT alignment guard or authoritative calculation/configuration boundary changed.");
+
+var returnReview = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubVatReturnReview.razor"));
+Assert(returnReview.Contains("The values below are read from the immutable prepared request", StringComparison.Ordinal)
+    && returnReview.Contains("following day as the exclusive period boundary", StringComparison.Ordinal)
+    && returnReview.Contains("Record approval", StringComparison.Ordinal)
+    && returnReview.Contains("Submission remains disabled until Phase 6.4", StringComparison.Ordinal),
+    "The Phase 6.3 exact-review boundary or no-submit gate is no longer explicit in the UI.");
+Assert(returnReview.Contains("@bind=\"_confirmed\"", StringComparison.Ordinal)
+    && !returnReview.Contains("checked=", StringComparison.OrdinalIgnoreCase)
+    && returnReview.Contains("_warningsAcknowledged", StringComparison.Ordinal),
+    "The legal declaration or warning acknowledgement is not explicit and unchecked by default.");
+Assert(!returnReview.Contains("<input", StringComparison.OrdinalIgnoreCase)
+        || !returnReview.Contains("VatDueSales", StringComparison.Ordinal),
+    "The exact VAT boxes appear to be editable or reconstructed in the browser.");
+var reviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "VatReturnReviewService.cs"));
+Assert(reviewService.Contains("new VatReturnPreparer", StringComparison.Ordinal)
+    && reviewService.Contains("Cash.vwTaxVatSubmission", StringComparison.Ordinal) == false
+    && reviewService.Contains("current.Request.BodySha256 != candidate.PreparedSha256", StringComparison.Ordinal)
+    && reviewService.Contains("source.SnapshotToken != candidate.SnapshotToken", StringComparison.Ordinal),
+    "VAT approval no longer reuses the Objective 3 preparer or rejects a stale exact candidate.");
+Assert(reviewService.Contains("_filingPolicy.CanManageHmrcConnection", StringComparison.Ordinal)
+    && reviewService.Contains("TenantReference == identity.TenantReference", StringComparison.Ordinal)
+    && reviewService.Contains("PrincipalReference == identity.AspNetSubjectReference", StringComparison.Ordinal)
+    && reviewService.Contains("ActorReference == identity.ActorReference", StringComparison.Ordinal),
+    "VAT approval lost its filing-role or server-derived tenant/principal/actor boundary.");
+Assert(reviewService.Contains("FileSubmissionContentStore", StringComparison.Ordinal)
+    && reviewService.Contains("PreparedSha256", StringComparison.Ordinal)
+    && reviewService.Contains("DeclarationSha256", StringComparison.Ordinal)
+    && reviewService.Contains("nodeContext.ErrorLog", StringComparison.Ordinal),
+    "The exact body, declaration evidence, digest, or Event Log support path is missing.");
+var declaration = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "Declarations", "hmrc-vat-business-2026-09-30.txt")).Trim();
+Assert(declaration == "When you submit this VAT information you are making a legal declaration that the information is true and complete. A false declaration can result in prosecution.",
+    "The versioned HMRC VAT business declaration changed without an explicit version change.");
+Assert(typeof(IVatReturnReviewService).GetMethod(nameof(IVatReturnReviewService.ApproveAsync))!
+        .GetParameters().All(parameter => !parameter.Name!.Contains("body", StringComparison.OrdinalIgnoreCase)
+            && !parameter.Name.Contains("tenant", StringComparison.OrdinalIgnoreCase)
+            && !parameter.Name.Contains("actor", StringComparison.OrdinalIgnoreCase)),
+    "The approval boundary accepts a caller-supplied body or protected identity.");
+var exactReturn = new VatReturnRequest
+{
+    PeriodKey = "18A2", VatDueSales = 101.23m, VatDueAcquisitions = 2.34m,
+    TotalVatDue = 103.57m, VatReclaimedCurrPeriod = 40.12m, NetVatDue = 63.45m,
+    TotalValueSalesExVat = 1001m, TotalValuePurchasesExVat = 402m,
+    TotalValueGoodsSuppliedExVat = 3m, TotalAcquisitionsExVat = 4m, Finalised = true
+};
+var exactBoxes = VatReturnReviewService.ProjectBoxes(exactReturn);
+Assert(exactBoxes.Select(box => box.Number).SequenceEqual(Enumerable.Range(1, 9))
+    && exactBoxes.Select(box => box.Value).SequenceEqual(
+        ["101.23", "2.34", "103.57", "40.12", "63.45", "1001", "402", "3", "4"]),
+    "The review projection does not reproduce all nine prepared VAT values exactly and invariantly.");
 
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 

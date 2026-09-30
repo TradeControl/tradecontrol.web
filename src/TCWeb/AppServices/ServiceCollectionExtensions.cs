@@ -34,6 +34,7 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IVatFraudContextCapture, VatFraudContextCapture>();
             services.AddSingleton<VatObligationReconciler>();
             services.AddScoped<IVatObligationWorkspaceService, VatObligationWorkspaceService>();
+            services.AddScoped<IVatReturnReviewService, VatReturnReviewService>();
             services.AddSingleton<IVatFilingAuthorisationPolicy, VatFilingAuthorisationPolicy>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();

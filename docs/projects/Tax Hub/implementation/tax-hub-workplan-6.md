@@ -398,6 +398,8 @@ Requires an accepted 6.2 matched open obligation and the 6.0 approval store. Thi
 
 The human reviewer compares the UI with the prepared JSON, source snapshot and HMRC business declaration. Approval of that evidence is required before any Objective 5 write is enabled.
 
+**Status (30 September 2026): accepted.** The deployed `18A2` review reproduced all nine values from the canonical Objective 3 bytes and displayed the same prepared SHA-256, source dataset and scoped snapshot identity. The versioned HMRC declaration and warning acknowledgement were unchecked by default, approval was role-gated, and no submission transport was enabled. The review also corrected VAT source selection to the authoritative accounting-period end and replaced database-wide `@@DBTS` evidence with a projection-scoped digest. The UI now explains that HMRC displays an inclusive final date while Trade Control stores the following day as the exclusive `PayTo` boundary.
+
 ## Phase 6.4 — Controlled submission and outcome handling
 
 ### Purpose

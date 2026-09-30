@@ -1,0 +1,165 @@
+@using TradeControl.Web.AppServices.TaxHub.Vat
+@inject IVatReturnReviewService Reviews
+
+<section class="card mt-3" aria-labelledby="vat-return-review-title">
+    <div class="card-body">
+        <h3 id="vat-return-review-title" class="h5">VAT return review</h3>
+        @if (_loading)
+        {
+            <div class="d-flex align-items-center gap-2 text-muted" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Preparing the exact VAT return…</span>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-warning" role="alert">@_error</div>
+            @foreach (var finding in _blockingFindings)
+            {
+                <div class="alert @FindingClass(finding.Severity) py-2">
+                    <strong>@finding.Severity.ToUpperInvariant()</strong> @finding.Code — @finding.Message
+                </div>
+            }
+        }
+        else if (_review is not null)
+        {
+            <div class="mb-3">
+                <div><strong>Period:</strong> @_review.PeriodStart.ToString("dd MMM yyyy") – @_review.PeriodEnd.ToString("dd MMM yyyy")</div>
+                <div><strong>VAT registration:</strong> @_review.MaskedVrn</div>
+                <div class="small text-muted">
+                    HMRC shows the inclusive final day. Trade Control internally stores the following day as the exclusive period boundary.
+                </div>
+                <div class="small text-muted">The values below are read from the immutable prepared request and cannot be edited here.</div>
+            </div>
+
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>Box</th><th>Statutory description</th><th class="text-end">Value</th></tr></thead>
+                    <tbody>
+                    @foreach (var box in _review.Boxes)
+                    {
+                        <tr><td>@box.Number</td><td>@box.Description</td><td class="text-end">@box.Value</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_review.Findings.Count == 0)
+            {
+                <div class="alert alert-success py-2">PASS — no preparation or reconciliation findings.</div>
+            }
+            else
+            {
+                @foreach (var finding in _review.Findings)
+                {
+                    <div class="alert @FindingClass(finding.Severity) py-2">
+                        <strong>@finding.Severity.ToUpperInvariant()</strong> @finding.Code — @finding.Message
+                    </div>
+                }
+            }
+
+            <details class="mb-3">
+                <summary>Advanced audit details</summary>
+                <dl class="row small mt-2 mb-0">
+                    <dt class="col-sm-3">Prepared SHA-256</dt><dd class="col-sm-9 text-break">@_review.PreparedSha256</dd>
+                    <dt class="col-sm-3">Source</dt><dd class="col-sm-9">@_review.SourceSystem / @_review.DatasetKey</dd>
+                    <dt class="col-sm-3">Snapshot</dt><dd class="col-sm-9 text-break">@_review.SnapshotToken</dd>
+                    <dt class="col-sm-3">Expires</dt><dd class="col-sm-9">@_review.ExpiresAtUtc.ToString("u")</dd>
+                </dl>
+            </details>
+
+            <div class="card bg-light mb-3">
+                <div class="card-body">
+                    <h4 class="h6">Legal declaration</h4>
+                    <p>@_review.DeclarationText</p>
+                    <div class="form-check">
+                        <input id="vat-declaration-confirmation" class="form-check-input" type="checkbox"
+                               @bind="_confirmed" disabled="@IsApproved" />
+                        <label class="form-check-label" for="vat-declaration-confirmation">
+                            I confirm this declaration for the exact VAT return shown above.
+                        </label>
+                    </div>
+                    @if (HasWarnings)
+                    {
+                        <div class="form-check mt-2">
+                            <input id="vat-warning-confirmation" class="form-check-input" type="checkbox"
+                                   @bind="_warningsAcknowledged" disabled="@IsApproved" />
+                            <label class="form-check-label" for="vat-warning-confirmation">
+                                I have reviewed and acknowledge the preparation warnings shown above.
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (IsApproved)
+            {
+                <div class="alert alert-success" role="status">
+                    Approval recorded. Submission remains disabled until Phase 6.4.
+                </div>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary"
+                        disabled="@(!_confirmed || (HasWarnings && !_warningsAcknowledged) || _approving)"
+                        @onclick="ApproveAsync">
+                    @(_approving ? "Recording approval…" : "Record approval")
+                </button>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string PeriodKey { get; set; } = string.Empty;
+    private VatReturnReviewModel? _review;
+    private string? _loadedPeriodKey;
+    private string? _error;
+    private IReadOnlyList<VatReturnReviewFinding> _blockingFindings = [];
+    private bool _loading;
+    private bool _approving;
+    private bool _confirmed;
+    private bool _warningsAcknowledged;
+    private bool IsApproved => !string.IsNullOrWhiteSpace(_review?.ApprovalReference);
+    private bool HasWarnings => _review?.Findings.Any(item =>
+        item.Severity.Equals("Warning", StringComparison.OrdinalIgnoreCase)) == true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PeriodKey == _loadedPeriodKey) return;
+        _loadedPeriodKey = PeriodKey;
+        _loading = true;
+        _error = null;
+        _blockingFindings = [];
+        _review = null;
+        _confirmed = false;
+        _warningsAcknowledged = false;
+        try { _review = await Reviews.PrepareAsync(PeriodKey); }
+        catch (VatReturnReviewException exception)
+        {
+            _error = exception.Message;
+            _blockingFindings = exception.Findings;
+        }
+        catch { _error = "The VAT return could not be prepared safely. Consult the Event Log."; }
+        finally { _loading = false; }
+    }
+
+    private async Task ApproveAsync()
+    {
+        if (!_confirmed || _review is null || _approving) return;
+        _approving = true;
+        _error = null;
+        try
+        {
+            _review = await Reviews.ApproveAsync(_review.PreparationReference,
+                _review.DeclarationVersion, _warningsAcknowledged);
+        }
+        catch (VatReturnReviewException exception) { _error = exception.Message; }
+        catch { _error = "The approval could not be recorded safely. Consult the Event Log."; }
+        finally { _approving = false; }
+    }
+
+    private static string FindingClass(string severity) => severity.Equals("Error", StringComparison.OrdinalIgnoreCase)
+        ? "alert-danger" : severity.Equals("Warning", StringComparison.OrdinalIgnoreCase)
+            ? "alert-warning" : "alert-info";
+}

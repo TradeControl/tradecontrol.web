@@ -78,9 +78,7 @@
             </div>
             @if (_selected is not null)
             {
-                <div class="alert alert-info mt-3 mb-0">
-                    <strong>@_selected.PeriodKey</strong> is selected for return review. The exact nine-box review and legal declaration follow in Phase 6.3.
-                </div>
+                <TaxHubVatReturnReview PeriodKey="@(_selected.PeriodKey ?? string.Empty)" />
             }
         }
     </div>
