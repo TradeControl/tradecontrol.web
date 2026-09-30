@@ -1,5 +1,8 @@
 @using TradeControl.Web.AppServices.TaxHub.Vat
+@using Microsoft.JSInterop
 @inject IVatReturnReviewService Reviews
+@inject IVatReturnSubmissionService Submissions
+@inject IJSRuntime JavaScript
 
 <section class="card mt-3" aria-labelledby="vat-return-review-title">
     <div class="card-body">
@@ -94,16 +97,79 @@
 
             @if (IsApproved)
             {
-                <div class="alert alert-success" role="status">
-                    Approval recorded. Submission remains disabled until Phase 6.4.
-                </div>
+                @if (_submission is null)
+                {
+                    <div class="alert alert-warning" role="status">
+                        <strong>Not yet submitted to HMRC.</strong>
+                        Your internal approval has been recorded. Complete the HMRC submission step below to file this return.
+                    </div>
+                    <div id="vat-hmrc-submission" class="card border-danger border-2 mt-3"
+                         tabindex="-1" @ref="_submissionStep">
+                        <div class="card-body">
+                            <h4 class="h5">Final step — submit to HMRC</h4>
+                            <p class="small">
+                                Approval alone does not file the return. This action sends the exact approved VAT return
+                                to HMRC. A submission cannot be amended here, and an uncertain outcome must be reconciled
+                                before any further attempt.
+                            </p>
+                            <div class="form-check mb-3">
+                                <input id="vat-submit-confirmation" class="form-check-input" type="checkbox"
+                                       @bind="_submitConfirmed" disabled="@_submitting" />
+                                <label class="form-check-label" for="vat-submit-confirmation">
+                                    I understand that this action submits the approved return to HMRC.
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-danger"
+                                    disabled="@(!_submitConfirmed || _submitting)" @onclick="SubmitAsync">
+                                @(_submitting ? "Submitting to HMRC…" : "Submit VAT return to HMRC")
+                            </button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert @SubmissionClass(_submission.State) mt-3" role="status">
+                        <strong>@SubmissionTitle(_submission.State)</strong>
+                        <div>@SubmissionMessage(_submission)</div>
+                        @if (!string.IsNullOrWhiteSpace(_submission.AttemptReference))
+                        {
+                            <div class="small">Attempt reference: @_submission.AttemptReference</div>
+                        }
+                        @if (_submission.AuthorityErrors is { Count: > 0 })
+                        {
+                            <ul class="small mt-2 mb-0">
+                                @foreach (var error in _submission.AuthorityErrors)
+                                {
+                                    <li><strong>@error.Code</strong> — @error.Message</li>
+                                }
+                            </ul>
+                        }
+                        @if (_submission.State == VatSubmissionResultState.Accepted)
+                        {
+                            <dl class="row small mt-2 mb-0">
+                                <dt class="col-sm-3">Processing date</dt><dd class="col-sm-9">@(_submission.ProcessingDate?.ToString("u") ?? "Not supplied")</dd>
+                                <dt class="col-sm-3">Form bundle</dt><dd class="col-sm-9">@(_submission.FormBundleNumber ?? "Not supplied")</dd>
+                                <dt class="col-sm-3">Payment indicator</dt><dd class="col-sm-9">@(_submission.PaymentIndicator ?? "Not supplied")</dd>
+                                <dt class="col-sm-3">Charge reference</dt><dd class="col-sm-9">@(_submission.ChargeReference ?? "Not supplied")</dd>
+                                <dt class="col-sm-3">HMRC readback</dt>
+                                <dd class="col-sm-9">@(ReadbackText(_submission))</dd>
+                                <dt class="col-sm-3">Obligation refresh</dt>
+                                <dd class="col-sm-9">@(_submission.ObligationRefreshSucceeded ? "Fulfilled obligation confirmed" : "Pending reconciliation")</dd>
+                            </dl>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_submission.SupportReference))
+                        {
+                            <div class="small">Support reference: @_submission.SupportReference</div>
+                        }
+                    </div>
+                }
             }
             else
             {
                 <button type="button" class="btn btn-primary"
                         disabled="@(!_confirmed || (HasWarnings && !_warningsAcknowledged) || _approving)"
                         @onclick="ApproveAsync">
-                    @(_approving ? "Recording approval…" : "Record approval")
+                    @(_approving ? "Recording approval…" : "Approve return — does not submit")
                 </button>
             }
         }
@@ -120,6 +186,10 @@
     private bool _approving;
     private bool _confirmed;
     private bool _warningsAcknowledged;
+    private bool _submitConfirmed;
+    private bool _submitting;
+    private ElementReference _submissionStep;
+    private VatSubmissionResult? _submission;
     private bool IsApproved => !string.IsNullOrWhiteSpace(_review?.ApprovalReference);
     private bool HasWarnings => _review?.Findings.Any(item =>
         item.Severity.Equals("Warning", StringComparison.OrdinalIgnoreCase)) == true;
@@ -153,11 +223,60 @@
         {
             _review = await Reviews.ApproveAsync(_review.PreparationReference,
                 _review.DeclarationVersion, _warningsAcknowledged);
+            await InvokeAsync(StateHasChanged);
+            await JavaScript.InvokeVoidAsync("taxHubHmrc.showSubmissionStep", _submissionStep);
         }
         catch (VatReturnReviewException exception) { _error = exception.Message; }
         catch { _error = "The approval could not be recorded safely. Consult the Event Log."; }
         finally { _approving = false; }
     }
+
+    private async Task SubmitAsync()
+    {
+        if (!_submitConfirmed || _review?.ApprovalReference is null || _submitting || _submission is not null) return;
+        _submitting = true;
+        _error = null;
+        try
+        {
+            await JavaScript.InvokeVoidAsync("taxHubHmrc.captureClientFacts");
+            _submission = await Submissions.SubmitAsync(_review.ApprovalReference);
+        }
+        catch (VatReturnReviewException exception) { _error = exception.Message; }
+        catch (UnauthorizedAccessException exception) { _error = exception.Message; }
+        catch { _error = "The VAT return could not be submitted safely. Consult the Event Log."; }
+        finally { _submitting = false; }
+    }
+
+    private static string SubmissionClass(VatSubmissionResultState state) => state switch
+    {
+        VatSubmissionResultState.Accepted => "alert-success",
+        VatSubmissionResultState.Rejected => "alert-danger",
+        VatSubmissionResultState.OutcomeUnknown => "alert-warning",
+        _ => "alert-secondary"
+    };
+
+    private static string SubmissionTitle(VatSubmissionResultState state) => state switch
+    {
+        VatSubmissionResultState.Accepted => "Accepted by HMRC",
+        VatSubmissionResultState.Rejected => "Rejected by HMRC",
+        VatSubmissionResultState.OutcomeUnknown => "Submission outcome unknown",
+        _ => "Return not sent"
+    };
+
+    private static string SubmissionMessage(VatSubmissionResult result) => result.State switch
+    {
+        VatSubmissionResultState.Accepted => "HMRC accepted the approved VAT return and returned a receipt.",
+        VatSubmissionResultState.Rejected => $"HMRC rejected the return ({result.OutcomeCode}). Review the authority response before preparing another return.",
+        VatSubmissionResultState.OutcomeUnknown => $"Sending may have begun ({result.OutcomeCode}). Do not submit again until the outcome is reconciled.",
+        _ => $"The return was not sent ({result.OutcomeCode}). Correct the issue before trying again."
+    };
+
+    private static string ReadbackText(VatSubmissionResult result) => result.ReadbackMatches switch
+    {
+        true => "Exact match confirmed",
+        false => "Mismatch requires investigation",
+        null => $"Pending ({result.ReadbackOutcomeCode ?? "not yet available"})"
+    };
 
     private static string FindingClass(string severity) => severity.Equals("Error", StringComparison.OrdinalIgnoreCase)
         ? "alert-danger" : severity.Equals("Warning", StringComparison.OrdinalIgnoreCase)

@@ -1,4 +1,9 @@
 window.taxHubHmrc = {
+    showSubmissionStep: function (element) {
+        if (!element) return;
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        element.focus({ preventScroll: true });
+    },
     signOut: async function () {
         const token = document.querySelector('meta[name="request-verification-token"]')?.content;
         if (!token) throw new Error('The request verification token is unavailable.');

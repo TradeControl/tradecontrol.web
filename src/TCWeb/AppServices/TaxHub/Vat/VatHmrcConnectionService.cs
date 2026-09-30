@@ -16,6 +16,7 @@ using TradeControl.Tax.UK.Adapters.Submission.OAuth;
 using TradeControl.Tax.UK.Adapters.Submission.Rest;
 using TradeControl.Tax.UK.Application.Preparation;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Obligations;
+using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -28,7 +29,24 @@ public interface IVatHmrcConnectionService
     Task DisconnectAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
-public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAuthorityObligationSource, IDisposable
+public sealed record VatAuthoritySubmissionResult(
+    PreparedApiOutcome Outcome,
+    VatReturnResponse? Receipt,
+    VatReturnReconciliationResult? Reconciliation,
+    bool ObligationRefreshSucceeded,
+    string? ReadbackOutcomeCode = null,
+    IReadOnlyList<VatAuthorityError>? Errors = null);
+
+public sealed record VatAuthorityError(string Code, string Message);
+
+public interface IVatAuthorityReturnSubmission
+{
+    Task<VatAuthoritySubmissionResult> DispatchApprovedAsync(ApprovedVatReturnDispatch approved,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAuthorityObligationSource,
+    IVatAuthorityReturnReadbackSource, IVatAuthorityReturnSubmission, IDisposable
 {
     private readonly IVatWorkflowIdentityAccessor _identities;
     private readonly VatProductHostOptions _host;
@@ -185,6 +203,141 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
             .OrderBy(item => item.Status == "O" ? 0 : 1)
             .ThenByDescending(item => item.End)
             .ToArray();
+    }
+
+    public async Task<bool> ExistsAsync(VatWorkflowIdentity identity, string vrn, string periodKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (_gateway is null)
+            throw new VatAuthorityRequestException("VAT-AUTHORITY-TOPOLOGY-UNAVAILABLE");
+        var sealedFacts = _fraudReferences.GetCurrent(identity, DateTimeOffset.UtcNow);
+        if (sealedFacts is null)
+            throw new VatAuthorityRequestException("FRAUD-CONTEXT-REQUIRED");
+        var request = new BodylessRequestDescriber(new PreparedApiRequestPipeline())
+            .Describe(new DescribeVatReturn(vrn, periodKey));
+        var context = new AuthorityDispatchContext(identity.TenantReference,
+            identity.AspNetSubjectReference, identity.ActorReference, "vat-return-preflight", sealedFacts);
+        var outcome = await _gateway.SendAsync(request, context, cancellationToken);
+        if (outcome.Kind == PreparedApiOutcomeKind.Succeeded) return true;
+        if (outcome.ActualStatusCode == 404) return false;
+        throw new VatAuthorityRequestException(outcome.OutcomeCode, outcome.AttemptReference);
+    }
+
+    public async Task<VatAuthoritySubmissionResult> DispatchApprovedAsync(ApprovedVatReturnDispatch approved,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(approved);
+        if (_gateway is null || _content is null)
+            return new(new(PreparedApiOutcomeKind.Failed, "VAT-AUTHORITY-TOPOLOGY-UNAVAILABLE"),
+                null, null, false);
+        var sealedFacts = _fraudReferences.GetCurrent(approved.Identity, DateTimeOffset.UtcNow);
+        if (sealedFacts is null)
+            return new(new(PreparedApiOutcomeKind.Failed, "FRAUD-CONTEXT-REQUIRED"),
+                null, null, false);
+        var context = new AuthorityDispatchContext(approved.Identity.TenantReference,
+            approved.Identity.AspNetSubjectReference, approved.Identity.ActorReference,
+            approved.ApprovalReference, sealedFacts, approved.LogicalSubmissionReference,
+            approved.SubjectPeriodReference);
+        PreparedApiOutcome outcome;
+        try { outcome = await _gateway.SendAsync(approved.Request, context, cancellationToken); }
+        catch (ActiveSubmissionAttemptException exception)
+        {
+            return new(new(PreparedApiOutcomeKind.Unknown, "ACTIVE-SUBMISSION-ATTEMPT",
+                AttemptReference: exception.AttemptReference), null, null, false);
+        }
+        if (outcome.Kind != PreparedApiOutcomeKind.Succeeded || outcome.SafeResponseReference is null)
+        {
+            var errors = outcome.SafeResponseReference is null
+                ? []
+                : ParseAuthorityErrors(await _content.ReadAsync(approved.Identity.TenantReference,
+                    approved.Identity.AspNetSubjectReference, outcome.SafeResponseReference, cancellationToken));
+            return new(outcome, null, null, false, Errors: errors);
+        }
+
+        var responseBytes = await _content.ReadAsync(approved.Identity.TenantReference,
+            approved.Identity.AspNetSubjectReference, outcome.SafeResponseReference, cancellationToken);
+        VatReturnResponse? receipt = null;
+        if (responseBytes is not null)
+        {
+            try
+            {
+                receipt = JsonSerializer.Deserialize<VatReturnResponse>(responseBytes,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException) { }
+        }
+
+        VatReturnReconciliationResult? reconciliation = null;
+        string? readbackCode = null;
+        try
+        {
+            var readbackRequest = new BodylessRequestDescriber(new PreparedApiRequestPipeline())
+                .Describe(new DescribeVatReturn(approved.Vrn, approved.PeriodKey));
+            var readbackContext = new AuthorityDispatchContext(approved.Identity.TenantReference,
+                approved.Identity.AspNetSubjectReference, approved.Identity.ActorReference,
+                approved.ApprovalReference, sealedFacts);
+            var readback = await _gateway.SendAsync(readbackRequest, readbackContext, cancellationToken);
+            readbackCode = readback.OutcomeCode;
+            if (readback.Kind == PreparedApiOutcomeKind.Succeeded && readback.SafeResponseReference is not null)
+            {
+                var readbackBytes = await _content.ReadAsync(approved.Identity.TenantReference,
+                    approved.Identity.AspNetSubjectReference, readback.SafeResponseReference, cancellationToken);
+                if (readbackBytes is not null)
+                    reconciliation = VatReturnReconciliation.Compare(approved.Request, readbackBytes);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            readbackCode = "VAT-READBACK-UNAVAILABLE";
+        }
+
+        var obligationRefreshed = false;
+        try
+        {
+            var obligations = await RetrieveAsync(approved.Identity, approved.Vrn,
+                approved.PeriodStart, approved.PeriodEnd, cancellationToken);
+            obligationRefreshed = obligations.Any(item => item.PeriodKey == approved.PeriodKey
+                && item.Status.Equals("F", StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException) { }
+        return new(outcome, receipt, reconciliation, obligationRefreshed, readbackCode);
+    }
+
+    private static IReadOnlyList<VatAuthorityError> ParseAuthorityErrors(byte[]? bytes)
+    {
+        if (bytes is null || bytes.Length == 0) return [];
+        try
+        {
+            using var document = JsonDocument.Parse(bytes);
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return [];
+            var root = document.RootElement;
+            var errors = new List<VatAuthorityError>();
+            Add(root, errors);
+            if (root.TryGetProperty("errors", out var items) && items.ValueKind == JsonValueKind.Array)
+                foreach (var item in items.EnumerateArray())
+                    if (item.ValueKind == JsonValueKind.Object) Add(item, errors);
+            return errors.Take(12).ToArray();
+        }
+        catch (JsonException) { return []; }
+
+        static void Add(JsonElement item, ICollection<VatAuthorityError> target)
+        {
+            var code = Text(item, "code", 96);
+            var message = Text(item, "message", 512);
+            if (code is not null && message is not null
+                && !target.Any(error => error.Code == code && error.Message == message))
+                target.Add(new(code, message));
+        }
+
+        static string? Text(JsonElement item, string name, int maximumLength)
+        {
+            if (!item.TryGetProperty(name, out var property) || property.ValueKind != JsonValueKind.String)
+                return null;
+            var value = property.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            var safe = new string(value.Where(character => !char.IsControl(character)).ToArray());
+            return safe.Length <= maximumLength ? safe : safe[..maximumLength];
+        }
     }
 
     private async Task<AuthorityDispatchContext> ContextAsync(ClaimsPrincipal principal,

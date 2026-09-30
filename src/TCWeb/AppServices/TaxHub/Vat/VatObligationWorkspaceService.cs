@@ -25,6 +25,7 @@ public enum VatObligationMatchState
 {
     OpenMatched,
     OpenLocalPeriodMissing,
+    AuthorityReturnAlreadyFiled,
     Fulfilled,
     LocalWithoutAuthorityObligation
 }
@@ -52,6 +53,12 @@ public interface IVatAuthorityObligationSource
 {
     Task<IReadOnlyList<VatAuthorityObligation>> RetrieveAsync(VatWorkflowIdentity identity,
         string vrn, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+}
+
+public interface IVatAuthorityReturnReadbackSource
+{
+    Task<bool> ExistsAsync(VatWorkflowIdentity identity, string vrn, string periodKey,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IVatObligationWorkspaceService
@@ -99,6 +106,7 @@ public sealed class VatObligationWorkspaceService(
     NodeContext nodeContext,
     IVatWorkflowIdentityAccessor identities,
     IVatAuthorityObligationSource authority,
+    IVatAuthorityReturnReadbackSource readback,
     VatObligationReconciler reconciler,
     TimeProvider timeProvider,
     IOptions<VatProductHostOptions> hostOptions,
@@ -115,21 +123,15 @@ public sealed class VatObligationWorkspaceService(
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var activeStatusCodes = await nodeContext.App_tbStatutoryStatuses.AsNoTracking()
             .Where(item => item.IsActive).Select(item => item.StatusCode).ToArrayAsync(cancellationToken);
-        var profile = await nodeContext.Cash_tbReportingProfiles.AsNoTracking()
-            .Where(item => item.SubjectCode == identity.ReportingSubjectReference
-                && item.ReportingTypeCode == "INDIRECT-TAX"
-                && item.ValidFrom <= today.ToDateTime(TimeOnly.MinValue)
-                && (!item.ValidTo.HasValue || item.ValidTo >= today.ToDateTime(TimeOnly.MinValue)))
-            .OrderByDescending(item => item.ValidFrom)
-            .Select(item => new { item.AuthorityReference, item.IsReviewed, item.StatusCode })
-            .FirstOrDefaultAsync(cancellationToken);
+        var profile = await ReadVatIdentityAsync(identity.ReportingSubjectReference, today, cancellationToken);
 
         if (profile is null || !profile.IsReviewed || !activeStatusCodes.Contains(profile.StatusCode)
+            || !profile.IsConsistent
             || profile.AuthorityReference is null || profile.AuthorityReference.Length != 9
             || profile.AuthorityReference.Any(character => !char.IsDigit(character))
             || profile.AuthorityReference == SyntheticPlaceholderVrn)
             return new(VatObligationWorkspaceState.ConfigurationRequired, [],
-                "Configure and activate a reviewed indirect-tax reporting profile with the business VAT registration number.");
+                "Configure and activate a reviewed indirect-tax reporting profile that matches the reporting subject VAT registration number.");
 
         try
         {
@@ -140,7 +142,14 @@ public sealed class VatObligationWorkspaceService(
             var obligations = await authority.RetrieveAsync(identity, profile.AuthorityReference,
                 window.From, window.To, cancellationToken);
             var local = await ReadLocalPeriodsAsync(cancellationToken);
-            return new(VatObligationWorkspaceState.Ready, reconciler.Reconcile(obligations, local));
+            var rows = reconciler.Reconcile(obligations, local).ToArray();
+            foreach (var row in rows.Where(item => item.CanReview && item.PeriodKey is not null))
+                if (await readback.ExistsAsync(identity, profile.AuthorityReference, row.PeriodKey!, cancellationToken))
+                    rows[Array.IndexOf(rows, row)] = row with
+                    {
+                        MatchState = VatObligationMatchState.AuthorityReturnAlreadyFiled
+                    };
+            return new(VatObligationWorkspaceState.Ready, rows);
         }
         catch (VatAuthorityRequestException exception)
         {
@@ -170,6 +179,42 @@ public sealed class VatObligationWorkspaceService(
             var supportReference = await RecordUnexpectedFailureAsync(exception, cancellationToken);
             return new(VatObligationWorkspaceState.AuthorityError, [],
                 "HMRC VAT obligations could not be refreshed. Try again later.", supportReference);
+        }
+    }
+
+    private sealed record VatIdentity(string? AuthorityReference, short StatusCode,
+        bool IsReviewed, bool IsConsistent);
+
+    private async Task<VatIdentity?> ReadVatIdentityAsync(string subjectCode, DateOnly asOfDate,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+SELECT TOP (1) AuthorityReference, StatusCode, IsReviewed, IsConsistent
+FROM Cash.vwTaxVatIdentity
+WHERE SubjectCode = @SubjectCode
+  AND ValidFrom <= @AsOfDate
+  AND (ValidTo IS NULL OR ValidTo >= @AsOfDate)
+ORDER BY ValidFrom DESC;
+""";
+        var connection = nodeContext.Database.GetDbConnection();
+        var close = connection.State != ConnectionState.Open;
+        if (close) await connection.OpenAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.Add(new SqlParameter("@SubjectCode", SqlDbType.NVarChar, 50) { Value = subjectCode });
+            command.Parameters.Add(new SqlParameter("@AsOfDate", SqlDbType.Date)
+                { Value = asOfDate.ToDateTime(TimeOnly.MinValue) });
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            return await reader.ReadAsync(cancellationToken)
+                ? new(reader.IsDBNull(0) ? null : reader.GetString(0), reader.GetInt16(1),
+                    reader.GetBoolean(2), reader.GetBoolean(3))
+                : null;
+        }
+        finally
+        {
+            if (close) await connection.CloseAsync();
         }
     }
 

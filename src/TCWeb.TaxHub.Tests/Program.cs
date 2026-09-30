@@ -225,7 +225,8 @@ Assert(VatObligationWorkspaceService.SyntheticPlaceholderVrn == "999000001",
 var obligationComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubVatObligations.razor"));
 Assert(new[] { "Retrieving authority obligations", "returned no VAT obligations", "Refresh HMRC",
-        "Review return", "History/readback", "separate from local forecast dates" }
+        "Review return", "History/readback", "Already submitted to HMRC",
+        "separate from local forecast dates" }
     .All(obligationComponent.Contains),
     "The VAT obligations UI lost a required loading, empty, retry, review, readback or forecast distinction.");
 Assert(!obligationComponent.Contains("@bind", StringComparison.OrdinalIgnoreCase),
@@ -241,13 +242,36 @@ var obligationService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "App
     "VatObligationWorkspaceService.cs"));
 Assert(obligationService.Contains("nodeContext.EventLog", StringComparison.Ordinal)
     && obligationService.Contains("nodeContext.ErrorLog", StringComparison.Ordinal)
+    && obligationService.Contains("readback.ExistsAsync", StringComparison.Ordinal)
+    && obligationService.Contains("AuthorityReturnAlreadyFiled", StringComparison.Ordinal)
+    && obligationService.Contains("Cash.vwTaxVatIdentity", StringComparison.Ordinal)
     && obligationService.Contains("Support reference:", StringComparison.Ordinal),
-    "VAT authority failures are no longer linked to the application Event Log and support reference.");
+    "The obligations workspace lost VAT identity validation, authority preflight or Event Log diagnostics.");
+var reportingProfilePanel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Admin",
+    "Manager", "Components", "ReportingProfilePanel.razor"));
+Assert(reportingProfilePanel.Contains("VAT registration number", StringComparison.Ordinal)
+    && reportingProfilePanel.Contains("_subjectVatNumber", StringComparison.Ordinal)
+    && reportingProfilePanel.Contains("Maintained in the reporting subject's organisation details", StringComparison.Ordinal),
+    "Indirect-tax reporting still exposes an ambiguous independently editable authority reference.");
+var profileSaveSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Cash",
+    "Stored Procedures", "proc_ReportingProfileSave.sql"));
+var readinessSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Functions", "fnStatutoryContextReadiness.sql"));
+Assert(profileSaveSql.Contains("SET @AuthorityReference = @SubjectVatNumber", StringComparison.Ordinal)
+    && readinessSql.Contains("VAT-IDENTITY-MISMATCH", StringComparison.Ordinal)
+    && readinessSql.Contains("Cash.vwTaxVatIdentity", StringComparison.Ordinal),
+    "The database no longer derives or validates the indirect-tax VAT identity from the reporting subject.");
+var reportingTypeSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Tables", "tbReportingType.sql"));
+Assert(reportingTypeSql.Contains("[ReportingTypeCode] SMALLINT", StringComparison.Ordinal)
+    && reportingTypeSql.Contains("[ReportingTypeName] NVARCHAR", StringComparison.Ordinal),
+    "The reporting-type catalogue no longer follows the numeric enum schema convention.");
 var alignmentSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
     "Stored Procedures", "proc_DatasetSyntheticMIS_VatSandboxAlign.sql"));
 Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.Ordinal)
     && alignmentSql.Contains("Cash.vwTaxVatSubmission", StringComparison.Ordinal)
     && alignmentSql.Contains("Cash.proc_ReportingProfileSave", StringComparison.Ordinal)
+    && alignmentSql.Contains("UPDATE Subject.tbVirtual", StringComparison.Ordinal)
     && alignmentSql.Contains("@SandboxVrn = N'999000001'", StringComparison.Ordinal),
     "The disposable VAT alignment guard or authoritative calculation/configuration boundary changed.");
 
@@ -255,9 +279,10 @@ var returnReview = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", 
     "Components", "TaxHubVatReturnReview.razor"));
 Assert(returnReview.Contains("The values below are read from the immutable prepared request", StringComparison.Ordinal)
     && returnReview.Contains("following day as the exclusive period boundary", StringComparison.Ordinal)
-    && returnReview.Contains("Record approval", StringComparison.Ordinal)
-    && returnReview.Contains("Submission remains disabled until Phase 6.4", StringComparison.Ordinal),
-    "The Phase 6.3 exact-review boundary or no-submit gate is no longer explicit in the UI.");
+    && returnReview.Contains("Approve return — does not submit", StringComparison.Ordinal)
+    && returnReview.Contains("Not yet submitted to HMRC", StringComparison.Ordinal)
+    && returnReview.Contains("Final step — submit to HMRC", StringComparison.Ordinal),
+    "The Phase 6.3 exact-review boundary or separate submit gate is no longer explicit in the UI.");
 Assert(returnReview.Contains("@bind=\"_confirmed\"", StringComparison.Ordinal)
     && !returnReview.Contains("checked=", StringComparison.OrdinalIgnoreCase)
     && returnReview.Contains("_warningsAcknowledged", StringComparison.Ordinal),
@@ -303,6 +328,36 @@ Assert(exactBoxes.Select(box => box.Number).SequenceEqual(Enumerable.Range(1, 9)
     && exactBoxes.Select(box => box.Value).SequenceEqual(
         ["101.23", "2.34", "103.57", "40.12", "63.45", "1001", "402", "3", "4"]),
     "The review projection does not reproduce all nine prepared VAT values exactly and invariantly.");
+Assert(returnReview.Contains("Submit VAT return to HMRC", StringComparison.Ordinal)
+    && returnReview.Contains("@bind=\"_submitConfirmed\"", StringComparison.Ordinal)
+    && returnReview.Contains("taxHubHmrc.captureClientFacts", StringComparison.Ordinal)
+    && returnReview.Contains("AuthorityErrors", StringComparison.Ordinal)
+    && returnReview.Contains("Do not submit again until the outcome is reconciled", StringComparison.Ordinal),
+    "The controlled submit confirmation, rejection detail, fresh fraud capture or unknown-outcome warning is missing.");
+var submissionService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "VatReturnSubmissionService.cs"));
+Assert(submissionService.Contains("IVatApprovedReturnResolver", StringComparison.Ordinal)
+    && submissionService.Contains("VatSubmissionResultState.OutcomeUnknown", StringComparison.Ordinal)
+    && submissionService.Contains("Succeeded when dispatched.Receipt is not null", StringComparison.Ordinal)
+    && submissionService.Contains("Automatic replay remains blocked pending reconciliation", StringComparison.Ordinal)
+    && submissionService.Contains("nodeContext.EventLog", StringComparison.Ordinal)
+    && submissionService.Contains("dispatched.Errors", StringComparison.Ordinal)
+    && !submissionService.Contains("HttpClient", StringComparison.Ordinal)
+    && !submissionService.Contains("JsonSerializer", StringComparison.Ordinal),
+    "TCWeb submission bypasses the durable approval/gateway boundary or lacks safe outcome diagnostics.");
+var connectionService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "VatHmrcConnectionService.cs"));
+Assert(connectionService.Contains("_gateway.SendAsync(approved.Request", StringComparison.Ordinal)
+    && connectionService.Contains("vat-return-preflight", StringComparison.Ordinal)
+    && connectionService.Contains("ActiveSubmissionAttemptException", StringComparison.Ordinal)
+    && connectionService.Contains("VatReturnReconciliation.Compare", StringComparison.Ordinal)
+    && connectionService.Contains("ParseAuthorityErrors", StringComparison.Ordinal)
+    && connectionService.Contains("FRAUD-CONTEXT-REQUIRED", StringComparison.Ordinal),
+    "Approved dispatch lost duplicate prevention, exact readback reconciliation or fresh fraud evidence.");
+Assert(reviewService.Contains("WithVerifiedBody(bytes)", StringComparison.Ordinal)
+    && reviewService.Contains("GetApprovalAsync", StringComparison.Ordinal)
+    && reviewService.Contains("approval.PreparedSha256 != candidate.PreparedSha256", StringComparison.Ordinal),
+    "Submission no longer resolves and verifies the durable approval and retained exact bytes.");
 
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 

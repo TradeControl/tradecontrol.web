@@ -31,10 +31,18 @@ namespace TradeControl.Web.AppServices
                 provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatAuthorityObligationSource>(provider =>
                 provider.GetRequiredService<VatHmrcConnectionService>());
+            services.AddScoped<IVatAuthorityReturnReadbackSource>(provider =>
+                provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatFraudContextCapture, VatFraudContextCapture>();
             services.AddSingleton<VatObligationReconciler>();
             services.AddScoped<IVatObligationWorkspaceService, VatObligationWorkspaceService>();
             services.AddScoped<IVatReturnReviewService, VatReturnReviewService>();
+            services.AddScoped<IVatApprovedReturnResolver>(provider =>
+                provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovedReturnResolver
+                ?? throw new InvalidOperationException("The VAT approval resolver is unavailable."));
+            services.AddScoped<IVatAuthorityReturnSubmission>(provider =>
+                provider.GetRequiredService<VatHmrcConnectionService>());
+            services.AddScoped<IVatReturnSubmissionService, VatReturnSubmissionService>();
             services.AddSingleton<IVatFilingAuthorisationPolicy, VatFilingAuthorisationPolicy>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();

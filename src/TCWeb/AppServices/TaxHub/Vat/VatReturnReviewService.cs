@@ -49,6 +49,23 @@ public interface IVatReturnReviewService
         CancellationToken cancellationToken = default);
 }
 
+public sealed record ApprovedVatReturnDispatch(
+    PreparedApiRequest Request,
+    VatWorkflowIdentity Identity,
+    string ApprovalReference,
+    string LogicalSubmissionReference,
+    string SubjectPeriodReference,
+    string Vrn,
+    string PeriodKey,
+    DateOnly PeriodStart,
+    DateOnly PeriodEnd);
+
+public interface IVatApprovedReturnResolver
+{
+    Task<ApprovedVatReturnDispatch> ResolveAsync(string approvalReference,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class VatReturnReviewException : Exception
 {
     public VatReturnReviewException(string safeMessage,
@@ -56,7 +73,7 @@ public sealed class VatReturnReviewException : Exception
     public IReadOnlyList<VatReturnReviewFinding> Findings { get; }
 }
 
-public sealed class VatReturnReviewService : IVatReturnReviewService
+public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprovedReturnResolver
 {
     private const string DeclarationVersion = "hmrc-vat-business-2026-09-30";
     private const string DeclarationResource =
@@ -196,6 +213,37 @@ public sealed class VatReturnReviewService : IVatReturnReviewService
         return await ReadModelAsync(candidate, approval.Reference, cancellationToken);
     }
 
+    public async Task<ApprovedVatReturnDispatch> ResolveAsync(string approvalReference,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(approvalReference) || approvalReference.Length > 64)
+            throw new VatReturnReviewException("The VAT approval reference is invalid.");
+        var identity = await _identities.GetRequiredAsync(cancellationToken);
+        var approval = await GetApprovalAsync(approvalReference, identity, cancellationToken)
+            ?? throw new VatReturnReviewException("The VAT approval is unavailable for this user and tenant.");
+        var candidate = await GetCandidateAsync(approval.PreparationReference, identity, cancellationToken)
+            ?? throw new VatReturnReviewException("The approved VAT preparation is unavailable.");
+        if (candidate.ExpiresAtUtc <= _time.GetUtcNow())
+            throw new VatReturnReviewException("The approved VAT preparation has expired. Review it again.");
+        if (approval.PreparedSha256 != candidate.PreparedSha256
+            || approval.DeclarationVersion != DeclarationVersion
+            || approval.DeclarationSha256 != _declarationSha256)
+            throw new VatReturnReviewException("The retained VAT approval no longer matches its reviewed evidence.");
+
+        var current = await PrepareCurrentAsync(identity, candidate.PeriodKey, cancellationToken);
+        EnsureCurrent(candidate, current);
+        var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
+            candidate.ContentReference, cancellationToken)
+            ?? throw new VatReturnReviewException("The exact approved VAT body is unavailable.");
+        if (!Sha256(bytes).Equals(candidate.PreparedSha256, StringComparison.Ordinal))
+            throw new VatReturnReviewException("The exact approved VAT body failed digest verification.");
+        var request = current.Request.WithVerifiedBody(bytes);
+        var vrn = ExtractVrn(request.RelativePath);
+        return new(request, identity, approval.Reference, approval.LogicalSubmissionIdentity,
+            approval.LogicalSubmissionIdentity, vrn, candidate.PeriodKey,
+            candidate.PeriodStart, candidate.PeriodEnd);
+    }
+
     private async Task<PreparedCurrent> PrepareCurrentAsync(VatWorkflowIdentity identity, string periodKey,
         CancellationToken cancellationToken)
     {
@@ -221,12 +269,32 @@ public sealed class VatReturnReviewService : IVatReturnReviewService
             $"VAT-{obligation.End:yyyy-MM-dd}");
         var request = await preparer.PrepareAsync(new(sourceKey, period, obligation.PeriodKey!, true),
             cancellationToken);
-        var vrn = request.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries)
+        var vrn = ExtractVrn(request.RelativePath);
+        if (vrn.Length != 9 || vrn.Any(character => !char.IsDigit(character)))
+            throw new VatReturnReviewException("The prepared VAT registration identity is invalid.");
+        return new(request, obligation, $"*****{vrn[^4..]}", Sha256(Encoding.UTF8.GetBytes(vrn)));
+    }
+
+    private static string ExtractVrn(string relativePath)
+    {
+        var vrn = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries)
             .SkipWhile(segment => !segment.Equals("vat", StringComparison.OrdinalIgnoreCase))
             .Skip(1).FirstOrDefault() ?? string.Empty;
         if (vrn.Length != 9 || vrn.Any(character => !char.IsDigit(character)))
             throw new VatReturnReviewException("The prepared VAT registration identity is invalid.");
-        return new(request, obligation, $"*****{vrn[^4..]}", Sha256(Encoding.UTF8.GetBytes(vrn)));
+        return vrn;
+    }
+
+    private static void EnsureCurrent(CandidateRecord candidate, PreparedCurrent current)
+    {
+        var source = current.Request.SourceEvidence.SingleOrDefault();
+        if (current.Request.HasErrors || current.Request.BodySha256 != candidate.PreparedSha256
+            || current.VrnSha256 != candidate.VrnSha256
+            || source is null || source.DatasetKey != candidate.DatasetKey
+            || source.SnapshotToken != candidate.SnapshotToken
+            || current.Obligation.Start != candidate.PeriodStart || current.Obligation.End != candidate.PeriodEnd)
+            throw new VatReturnReviewException(
+                "The VAT source or obligation changed after approval. Prepare and review a new return.");
     }
 
     private async Task<VatReturnReviewModel> ReadModelAsync(CandidateRecord candidate,
@@ -280,6 +348,20 @@ public sealed class VatReturnReviewService : IVatReturnReviewService
         try
         {
             return (await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken)).SingleOrDefault(item =>
+                item.Reference == reference && item.TenantReference == identity.TenantReference
+                && item.PrincipalReference == identity.AspNetSubjectReference
+                && item.ActorReference == identity.ActorReference);
+        }
+        finally { StoreGate.Release(); }
+    }
+
+    private async Task<ApprovalRecord?> GetApprovalAsync(string reference, VatWorkflowIdentity identity,
+        CancellationToken cancellationToken)
+    {
+        await StoreGate.WaitAsync(cancellationToken);
+        try
+        {
+            return (await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken)).SingleOrDefault(item =>
                 item.Reference == reference && item.TenantReference == identity.TenantReference
                 && item.PrincipalReference == identity.AspNetSubjectReference
                 && item.ActorReference == identity.ActorReference);

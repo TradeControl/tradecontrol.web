@@ -70,6 +70,10 @@
                                 {
                                     <span class="small text-muted">History/readback</span>
                                 }
+                                else if (item.MatchState == VatObligationMatchState.AuthorityReturnAlreadyFiled)
+                                {
+                                    <span class="small text-muted">Already filed — readback available</span>
+                                }
                             </td>
                         </tr>
                     }
@@ -138,6 +142,7 @@
     {
         VatObligationMatchState.OpenMatched => "Open — local return available",
         VatObligationMatchState.OpenLocalPeriodMissing => "Open — local period missing",
+        VatObligationMatchState.AuthorityReturnAlreadyFiled => "Already submitted to HMRC",
         VatObligationMatchState.Fulfilled => "Fulfilled",
         _ => "Local forecast only"
     };
@@ -145,6 +150,7 @@
     {
         VatObligationMatchState.OpenMatched => "bg-success",
         VatObligationMatchState.OpenLocalPeriodMissing => "bg-warning text-dark",
+        VatObligationMatchState.AuthorityReturnAlreadyFiled => "bg-info text-dark",
         VatObligationMatchState.Fulfilled => "bg-secondary",
         _ => "bg-light text-dark border"
     };
