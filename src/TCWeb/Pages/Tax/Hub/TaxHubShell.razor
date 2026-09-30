@@ -251,7 +251,7 @@ else
 
     private TaxHubReportingReadinessItem? VatReportingProfile =>
         _dashboard?.ReportingReadiness.Profiles.FirstOrDefault(profile =>
-            profile.ReportingTypeCode.Equals("INDIRECT-TAX", StringComparison.OrdinalIgnoreCase));
+            profile.ReportingTypeCode == 0);
 
     private bool VatReportingProfileReady => VatReportingProfile?.IsReady == true;
 

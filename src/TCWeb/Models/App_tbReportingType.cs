@@ -8,8 +8,8 @@ namespace TradeControl.Web.Models
     [Table("tbReportingType", Schema = "App")]
     public partial class App_tbReportingType
     {
-        [Key, StringLength(20)]
-        public string ReportingTypeCode { get; set; }
+        [Key]
+        public short ReportingTypeCode { get; set; }
 
         [Required, StringLength(20)]
         public string AuthorityCode { get; set; }

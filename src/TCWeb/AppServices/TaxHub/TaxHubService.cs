@@ -189,7 +189,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                     await using var command = connection.CreateCommand();
                     command.CommandText = "SELECT FindingMessage FROM App.fnStatutoryContextReadiness(@SubjectCode, @ReportingTypeCode, @TaxSourceCode, NULL, NULL, @AsOfDate)";
                     command.Parameters.Add(new SqlParameter("@SubjectCode", SqlDbType.NVarChar, 50) { Value = options.SubjectCode });
-                    command.Parameters.Add(new SqlParameter("@ReportingTypeCode", SqlDbType.NVarChar, 20) { Value = profile.ReportingTypeCode });
+                    command.Parameters.Add(new SqlParameter("@ReportingTypeCode", SqlDbType.SmallInt) { Value = profile.ReportingTypeCode });
                     command.Parameters.Add(new SqlParameter("@TaxSourceCode", SqlDbType.NVarChar, 20)
                     {
                         Value = string.IsNullOrWhiteSpace(profile.TaxSourceCode) ? DBNull.Value : profile.TaxSourceCode

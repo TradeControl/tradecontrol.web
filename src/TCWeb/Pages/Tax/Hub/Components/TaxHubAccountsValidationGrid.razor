@@ -38,12 +38,15 @@
                                 <span>Profit</span>
                                 <span class="@AmountClass(item.Profit)">@FormatAmount(item.Profit)</span>
                             </div>
-                            <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-subtract">
-                                <span>Less business tax</span>
-                                <span class="@AmountClass(-item.BusinessTax)">@FormatAmount(-item.BusinessTax)</span>
-                            </div>
+                            @if (item.BusinessTax != 0m)
+                            {
+                                <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-subtract">
+                                    <span>Less tax charged to equity</span>
+                                    <span class="@AmountClass(-item.BusinessTax)">@FormatAmount(-item.BusinessTax)</span>
+                                </div>
+                            }
                             <div class="tc-tax-hub-reconciliation-row tc-tax-hub-reconciliation-subtotal">
-                                <span>Profit after tax</span>
+                                <span>Retained profit contribution</span>
                                 <span class="@AmountClass(item.ProfitAfterTax)">@FormatAmount(item.ProfitAfterTax)</span>
                             </div>
                             <div class="tc-tax-hub-reconciliation-row">

@@ -20,8 +20,7 @@ namespace TradeControl.Web.Models
         [StringLength(20)]
         public string AuthorityCode { get; set; }
 
-        [StringLength(20)]
-        public string ReportingTypeCode { get; set; }
+        public short? ReportingTypeCode { get; set; }
 
         [Required, StringLength(10)]
         public string ValueTypeCode { get; set; }

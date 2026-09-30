@@ -30,8 +30,7 @@ namespace TradeControl.Web.Models
         public short TaxTypeCode { get; set; }
 
         [Required]
-        [StringLength(20)]
-        public string ReportingTypeCode { get; set; }
+        public short ReportingTypeCode { get; set; }
 
         [InverseProperty(nameof(Cash_tbTaxTag.TaxSourceCodeNavigation))]
         public virtual ICollection<Cash_tbTaxTag> TbTaxTags { get; set; }

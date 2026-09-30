@@ -28,7 +28,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
 
     public sealed class TaxHubReportingReadinessItem
     {
-        public string ReportingTypeCode { get; init; } = string.Empty;
+        public short ReportingTypeCode { get; init; }
         public string ReportingType { get; init; } = string.Empty;
         public string Authority { get; init; } = string.Empty;
         public bool IsReady { get; init; }
