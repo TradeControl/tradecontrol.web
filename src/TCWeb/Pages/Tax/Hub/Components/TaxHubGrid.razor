@@ -21,7 +21,7 @@
                 break;
 
             case TaxHubWorkspace.Vat:
-                <TaxHubVatWorkspace Workspace="@VatWorkspace" />
+                <TaxHubVatWorkspace Workspace="@VatWorkspace" VatFilingEnabled="@VatFilingEnabled" />
                 break;
 
             case TaxHubWorkspace.BusinessTax:
@@ -45,6 +45,7 @@
     [Parameter] public TaxHubVatWorkspaceModel? VatWorkspace { get; set; }
     [Parameter] public TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace { get; set; }
     [Parameter] public TaxHubAccountsWorkspaceModel? AccountsWorkspace { get; set; }
+    [Parameter] public bool VatFilingEnabled { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public string? Error { get; set; }

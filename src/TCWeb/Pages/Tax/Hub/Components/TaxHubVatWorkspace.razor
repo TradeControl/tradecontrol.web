@@ -75,10 +75,18 @@ else
                     <TaxHubVatPeriodsGrid Items="@Workspace.Periods" />
                 </section>
             </MudTabPanel>
+
+            @if (VatFilingEnabled)
+            {
+                <MudTabPanel Text="HMRC Obligations" Class="pt-3">
+                    <TaxHubVatObligations />
+                </MudTabPanel>
+            }
         </MudTabs>
     </div>
 }
 
 @code {
     [Parameter] public TaxHubVatWorkspaceModel? Workspace { get; set; }
+    [Parameter] public bool VatFilingEnabled { get; set; }
 }

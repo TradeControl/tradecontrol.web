@@ -347,6 +347,16 @@ Requires 6.1 and a connected read-scoped grant. The alignment facility additiona
 
 The reviewer confirms that authority obligations and local forecasts cannot be confused and that only a matching open HMRC obligation can enter return review. The reviewer also inspects one aligned synthetic sandbox case and confirms that its VRN/period provisioning did not alter or bypass the authoritative VAT calculation and preparation path.
 
+### Implementation checkpoint (28 September 2026)
+
+The product implementation and offline evidence are complete pending the interactive review gate. TCWeb now retrieves the reviewed statutory VRN server-side, obtains the opaque period key and bounded obligation dates from HMRC, and exactly reconciles those dates to `Cash.vwTaxVatSubmission`. The VAT workspace distinguishes matched open, unmatched open, fulfilled and local-only periods; only a matched open period exposes **Review return**. Authority dates are explicitly separated from local forecasts, refresh is bounded, and protected gateway evidence retains HMRC outcome/support references behind safe UI messages.
+
+The product boundary accepts no browser VRN, period key or search dates and explicitly rejects the synthetic placeholder VRN. The existing recording gateway evidence covers bodyless `GET`, pinned scope/Accept/path/query, special period keys and bounded enquiry retry behaviour. TCWeb host tests cover the 366-day inclusive search, ordering and all reconciliation states.
+
+The SQL synthetic generator now supports a nullable test temporal anchor, and the guarded `App.proc_DatasetSyntheticMIS_VatSandboxAlign` procedure accepts only a non-placeholder generated organisation VRN on an existing synthetic indirect-tax profile with an exact calculated submission period. It calls `Cash.proc_ReportingProfileSave`; it does not write a period key or any nine-box value. The procedure is not exposed by TCWeb and therefore is not selectable in Production composition. The controlled procedure is documented in `phase-6.2-vat-obligations-and-sandbox-alignment.md`.
+
+The review gate was accepted on 30 September 2026 after the reviewer inspected the aligned Azure sandbox journey. HMRC obligation `18A2` matched the calculated local 1 April–30 June 2017 period and alone exposed **Review return**; fulfilled `18A1` remained readback-only and unmatched periods remained explicitly local forecasts. The exercise also corrected an unsupported local `obligationId` requirement, added Event Log/support-reference diagnostics and retained the original VAT workspace as the default view with HMRC obligations in a separate tab. The existing Production composition remains deliberately fail-closed.
+
 ## Phase 6.3 — Exact return review, validation and legal approval
 
 ### Purpose

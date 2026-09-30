@@ -1,0 +1,153 @@
+@using TradeControl.Web.AppServices.TaxHub.Vat
+@using TradeControl.Web.Data
+@using Microsoft.JSInterop
+@inject IVatObligationWorkspaceService Obligations
+@inject IJSRuntime JavaScript
+@inject NodeContext NodeContext
+
+<section class="card" aria-labelledby="hmrc-vat-obligations-title">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h2 id="hmrc-vat-obligations-title" class="h5 mb-1">HMRC VAT obligations</h2>
+                <div class="small text-muted">Authority filing periods — separate from local forecast dates</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                    disabled="@_loading" @onclick="RefreshAsync">Refresh HMRC</button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_refreshNotice))
+        {
+            <div class="alert alert-info py-2" role="status">@_refreshNotice</div>
+        }
+
+        @if (_loading)
+        {
+            <div class="d-flex align-items-center gap-2 text-muted" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Retrieving authority obligations…</span>
+            </div>
+        }
+        else if (_result is null)
+        {
+            <div class="text-muted">HMRC obligations have not been loaded.</div>
+        }
+        else if (_result.State != VatObligationWorkspaceState.Ready)
+        {
+            <div class="alert alert-warning mb-0" role="status">
+                @_result.SafeMessage
+                @if (!string.IsNullOrWhiteSpace(_result.SupportReference))
+                {
+                    <div class="small mt-1">Support reference: @_result.SupportReference</div>
+                }
+            </div>
+        }
+        else if (_result.Rows.Count == 0)
+        {
+            <div class="text-muted">HMRC returned no VAT obligations for the supported search window.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Period</th><th>Dates</th><th>Due</th><th>Received</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var item in _result.Rows)
+                    {
+                        <tr>
+                            <td>@(item.PeriodKey ?? "Local only")</td>
+                            <td>@item.Start.ToString("dd MMM yyyy") – @item.End.ToString("dd MMM yyyy")</td>
+                            <td>@Date(item.Due)</td>
+                            <td>@Date(item.Received)</td>
+                            <td><span class="badge @Badge(item.MatchState)">@Label(item.MatchState)</span></td>
+                            <td class="text-end">
+                                @if (item.CanReview)
+                                {
+                                    <button type="button" class="btn btn-sm btn-primary"
+                                            @onclick="() => SelectForReview(item)">Review return</button>
+                                }
+                                else if (item.MatchState == VatObligationMatchState.Fulfilled)
+                                {
+                                    <span class="small text-muted">History/readback</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            @if (_selected is not null)
+            {
+                <div class="alert alert-info mt-3 mb-0">
+                    <strong>@_selected.PeriodKey</strong> is selected for return review. The exact nine-box review and legal declaration follow in Phase 6.3.
+                </div>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    private static readonly TimeSpan MinimumRefreshInterval = TimeSpan.FromSeconds(30);
+    private VatObligationWorkspaceResult? _result;
+    private VatObligationWorkspaceRow? _selected;
+    private string? _refreshNotice;
+    private DateTimeOffset? _lastRefresh;
+    private bool _loading = true;
+    private bool CanRefresh => !_lastRefresh.HasValue || DateTimeOffset.UtcNow - _lastRefresh >= MinimumRefreshInterval;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (!CanRefresh)
+        {
+            var remaining = MinimumRefreshInterval - (DateTimeOffset.UtcNow - _lastRefresh!.Value);
+            _refreshNotice = $"HMRC was refreshed recently. Try again in {Math.Ceiling(remaining.TotalSeconds)} seconds.";
+            return;
+        }
+        _refreshNotice = null;
+        _loading = true;
+        _selected = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            try { await JavaScript.InvokeVoidAsync("taxHubHmrc.captureClientFacts"); }
+            catch (JSException) { }
+            _result = await Obligations.GetAsync();
+            _lastRefresh = DateTimeOffset.UtcNow;
+        }
+        catch (Exception exception)
+        {
+            var supportReference = await NodeContext.ErrorLog(exception);
+            _result = new(VatObligationWorkspaceState.AuthorityError, [],
+                "HMRC VAT obligations could not be loaded safely.", supportReference);
+        }
+        finally { _loading = false; }
+    }
+
+    private void SelectForReview(VatObligationWorkspaceRow item) => _selected = item;
+    private static string Date(DateOnly? value) => value?.ToString("dd MMM yyyy") ?? "—";
+    private static string Label(VatObligationMatchState state) => state switch
+    {
+        VatObligationMatchState.OpenMatched => "Open — local return available",
+        VatObligationMatchState.OpenLocalPeriodMissing => "Open — local period missing",
+        VatObligationMatchState.Fulfilled => "Fulfilled",
+        _ => "Local forecast only"
+    };
+    private static string Badge(VatObligationMatchState state) => state switch
+    {
+        VatObligationMatchState.OpenMatched => "bg-success",
+        VatObligationMatchState.OpenLocalPeriodMissing => "bg-warning text-dark",
+        VatObligationMatchState.Fulfilled => "bg-secondary",
+        _ => "bg-light text-dark border"
+    };
+}

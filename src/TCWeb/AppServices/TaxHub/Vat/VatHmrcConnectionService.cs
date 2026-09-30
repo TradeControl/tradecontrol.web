@@ -4,10 +4,18 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
+using TradeControl.Tax.UK.Adapters.Submission.Audit;
 using TradeControl.Tax.UK.Adapters.Submission.Configuration;
+using TradeControl.Tax.UK.Adapters.Submission.FraudPrevention;
 using TradeControl.Tax.UK.Adapters.Submission.OAuth;
+using TradeControl.Tax.UK.Adapters.Submission.Rest;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Obligations;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -20,17 +28,23 @@ public interface IVatHmrcConnectionService
     Task DisconnectAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
-public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IDisposable
+public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAuthorityObligationSource, IDisposable
 {
     private readonly IVatWorkflowIdentityAccessor _identities;
     private readonly VatProductHostOptions _host;
     private readonly HmrcOAuthService? _oauth;
     private readonly HmrcOAuthTokenEndpoint? _tokens;
+    private readonly FraudHeaderService? _fraud;
+    private readonly HmrcPreparedApiRequestGateway? _gateway;
+    private readonly ISubmissionContentStore? _content;
+    private readonly IVatFraudContextReferenceStore _fraudReferences;
 
     public VatHmrcConnectionService(IVatWorkflowIdentityAccessor identities,
-        IOptions<VatProductHostOptions> hostOptions)
+        IOptions<VatProductHostOptions> hostOptions,
+        IVatFraudContextReferenceStore fraudReferences)
     {
         _identities = identities;
+        _fraudReferences = fraudReferences;
         _host = hostOptions.Value;
         if (!_host.Enabled) return;
         if (_host.PersistenceMode != VatPersistenceMode.DevelopmentFiles)
@@ -55,6 +69,34 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IDispo
             _oauth = HmrcOAuthService.CreateFileBackedSandbox(Path.Combine(root, "oauth-grants.json.enc"),
                 key, secrets, _tokens, options: new HmrcOAuthOptions(callback, TimeSpan.FromMinutes(10),
                     TimeSpan.FromMinutes(5), 18));
+
+            if (_host.FraudCaptureEnabled)
+            {
+                var trustedPeers = _host.FraudTrustedProxyAddresses.Select(IPAddress.Parse).ToHashSet();
+                var publicHops = _host.FraudPublicTlsAddresses.Select(IPAddress.Parse).ToArray();
+                var topology = trustedPeers.Count == 0
+                    ? FraudDeploymentTopology.Direct("tcweb-direct", publicHops.Single())
+                    : FraudDeploymentTopology.TrustedProxyChain("tcweb-trusted-proxy", trustedPeers, publicHops);
+                var fraudKey = LoadOrCreateKey(Path.Combine(root, "fraud-store.key"));
+                try
+                {
+                var vendor = new FraudVendorConfiguration("Trade Control",
+                    new Dictionary<string, string> { ["tcweb"] = "2.0.2" },
+                    new Dictionary<string, string>());
+                _fraud = _host.AllowIncompleteSandboxFraudHeaders
+                    ? FraudHeaderService.CreateFileBackedSandboxReference(
+                        Path.Combine(root, "fraud-contexts"), fraudKey, topology, vendor)
+                    : FraudHeaderService.CreateFileBacked(
+                        Path.Combine(root, "fraud-contexts"), fraudKey, topology, vendor);
+                }
+                finally { CryptographicOperations.ZeroMemory(fraudKey); }
+                var attempts = new FileSubmissionAttemptStore(
+                    SubmissionAttemptStoreOptions.SevenYearMetadata(Path.Combine(root, "attempts.json")));
+                _content = new FileSubmissionContentStore(new SubmissionContentStoreOptions(
+                    Path.Combine(root, "protected-content")));
+                _gateway = new HmrcPreparedApiRequestGateway(environment, _oauth, _fraud,
+                    attempts, _content);
+            }
         }
         finally { CryptographicOperations.ZeroMemory(key); }
     }
@@ -101,6 +143,50 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IDispo
         await oauth.RevokeAsync(context, HmrcOAuthScopes.WriteVat, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<VatAuthorityObligation>> RetrieveAsync(VatWorkflowIdentity identity,
+        string vrn, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    {
+        if (_oauth is null)
+            throw new VatAuthorityRequestException("VAT-HOST-DISABLED");
+        if (_gateway is null || _content is null)
+            throw new VatAuthorityRequestException("VAT-AUTHORITY-TOPOLOGY-UNAVAILABLE");
+        var sealedFacts = _fraudReferences.GetCurrent(identity, DateTimeOffset.UtcNow);
+        if (sealedFacts is null)
+            throw new VatAuthorityRequestException("FRAUD-CONTEXT-REQUIRED");
+
+        var request = new BodylessRequestDescriber(new PreparedApiRequestPipeline())
+            .Describe(new DescribeVatObligations(vrn, from, to));
+        var context = new AuthorityDispatchContext(identity.TenantReference,
+            identity.AspNetSubjectReference, identity.ActorReference, "vat-obligations", sealedFacts);
+        var outcome = await _gateway.SendAsync(request, context, cancellationToken);
+        if (outcome.Kind != PreparedApiOutcomeKind.Succeeded || outcome.SafeResponseReference is null)
+            throw new VatAuthorityRequestException(outcome.OutcomeCode, outcome.AttemptReference);
+        var bytes = await _content.ReadAsync(identity.TenantReference, identity.AspNetSubjectReference,
+            outcome.SafeResponseReference, cancellationToken)
+            ?? throw new VatAuthorityRequestException("HMRC-RESPONSE-EVIDENCE-MISSING", outcome.AttemptReference);
+        VatObligationsResponse? response;
+        try
+        {
+            response = JsonSerializer.Deserialize<VatObligationsResponse>(bytes,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            throw new VatAuthorityRequestException("HMRC-RESPONSE-MALFORMED", outcome.AttemptReference);
+        }
+        if (response is null)
+            throw new VatAuthorityRequestException("HMRC-RESPONSE-MALFORMED", outcome.AttemptReference);
+        if (response.Obligations.Any(item => item.Status is not "O" and not "F"))
+            throw new VatAuthorityRequestException("HMRC-RESPONSE-MALFORMED", outcome.AttemptReference);
+        return response.Obligations.Select(item => new VatAuthorityObligation(item.PeriodKey,
+                DateOnly.FromDateTime(item.Start), DateOnly.FromDateTime(item.End),
+                DateOnly.FromDateTime(item.Due), item.Status,
+                item.Received.HasValue ? DateOnly.FromDateTime(item.Received.Value) : null))
+            .OrderBy(item => item.Status == "O" ? 0 : 1)
+            .ThenByDescending(item => item.End)
+            .ToArray();
+    }
+
     private async Task<AuthorityDispatchContext> ContextAsync(ClaimsPrincipal principal,
         CancellationToken cancellationToken)
     {
@@ -144,6 +230,8 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IDispo
 
     public void Dispose()
     {
+        _gateway?.Dispose();
+        _fraud?.Dispose();
         _oauth?.Dispose();
         _tokens?.Dispose();
     }

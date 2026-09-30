@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using TradeControl.Tax.UK.Adapters.Submission.FraudPrevention;
 
@@ -23,17 +24,51 @@ public interface IVatFraudContextCapture
         int remotePort, string? forwardedFor, CancellationToken cancellationToken = default);
 }
 
+public interface IVatFraudContextReferenceStore
+{
+    void Set(VatWorkflowIdentity identity, string reference, DateTimeOffset capturedAtUtc);
+    string? GetCurrent(VatWorkflowIdentity identity, DateTimeOffset nowUtc);
+}
+
+public sealed class VatFraudContextReferenceStore : IVatFraudContextReferenceStore
+{
+    private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
+    private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
+
+    public void Set(VatWorkflowIdentity identity, string reference, DateTimeOffset capturedAtUtc) =>
+        _entries[Key(identity)] = new(reference, capturedAtUtc);
+
+    public string? GetCurrent(VatWorkflowIdentity identity, DateTimeOffset nowUtc)
+    {
+        var key = Key(identity);
+        if (!_entries.TryGetValue(key, out var entry)) return null;
+        if (entry.CapturedAtUtc < nowUtc - Lifetime || entry.CapturedAtUtc > nowUtc.AddMinutes(1))
+        {
+            _entries.TryRemove(key, out _);
+            return null;
+        }
+        return entry.Reference;
+    }
+
+    private static string Key(VatWorkflowIdentity identity) =>
+        $"{identity.TenantReference}\n{identity.AspNetSubjectReference}\n{identity.ActorReference}";
+
+    private sealed record Entry(string Reference, DateTimeOffset CapturedAtUtc);
+}
+
 public sealed class VatFraudContextCapture : IVatFraudContextCapture, IDisposable
 {
     private readonly IVatWorkflowIdentityAccessor _identities;
     private readonly VatProductHostOptions _host;
     private readonly FraudHeaderService? _fraud;
     private readonly HashSet<IPAddress> _trustedPeers;
+    private readonly IVatFraudContextReferenceStore _references;
 
     public VatFraudContextCapture(IVatWorkflowIdentityAccessor identities,
-        IOptions<VatProductHostOptions> options)
+        IOptions<VatProductHostOptions> options, IVatFraudContextReferenceStore references)
     {
         _identities = identities;
+        _references = references;
         _host = options.Value;
         if (!_host.Enabled || !_host.FraudCaptureEnabled)
         {
@@ -65,7 +100,7 @@ public sealed class VatFraudContextCapture : IVatFraudContextCapture, IDisposabl
         var fraud = _fraud ?? throw new InvalidOperationException("The VAT host is unavailable.");
         var identity = await _identities.GetRequiredAsync(principal, cancellationToken);
         ForwardedClientEndpoint? forwarded = null;
-        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        if (_trustedPeers.Count > 0 && !string.IsNullOrWhiteSpace(forwardedFor))
         {
             if (!_trustedPeers.Contains(remoteAddress))
                 throw new UnauthorizedAccessException("Forwarded client data came from an untrusted peer.");
@@ -76,10 +111,12 @@ public sealed class VatFraudContextCapture : IVatFraudContextCapture, IDisposabl
                 screen.ScalingFactor, screen.ColourDepth)).ToArray(), browser.Timezone,
             new Dictionary<string, string> { ["TradeControl"] = identity.ActorReference },
             new FraudWindowSize(browser.WindowSize.Width, browser.WindowSize.Height));
-        await fraud.CaptureAndSealAsync(new FraudActorIdentity(identity.TenantReference,
+        var capturedAt = DateTimeOffset.UtcNow;
+        var reference = await fraud.CaptureAndSealAsync(new FraudActorIdentity(identity.TenantReference,
                 identity.AspNetSubjectReference, identity.ActorReference), facts,
             new TrustedIngressConnectionObservation(remoteAddress, remotePort,
-                DateTimeOffset.UtcNow, forwarded), cancellationToken);
+                capturedAt, forwarded), cancellationToken);
+        _references.Set(identity, reference.Value, capturedAt);
     }
 
     private static ForwardedClientEndpoint ParseForwardedEndpoint(string value)

@@ -41,8 +41,10 @@ public sealed class VatProductHostOptions
     public string? DevelopmentClientSettingsPath { get; set; }
     public VatSandboxSecretSource SandboxSecretSource { get; set; } = VatSandboxSecretSource.DevelopmentJsonFile;
     public bool FraudCaptureEnabled { get; set; } = true;
+    public bool AllowIncompleteSandboxFraudHeaders { get; set; }
     public string[] FraudPublicTlsAddresses { get; set; } = [];
     public string[] FraudTrustedProxyAddresses { get; set; } = [];
+    public DateOnly? SandboxObligationAsOfDate { get; set; }
     public Uri? KeyVaultUri { get; set; }
     public string? WorkflowConnectionName { get; set; }
     public string? EvidenceBlobServiceUri { get; set; }
@@ -69,11 +71,24 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
         if (string.IsNullOrWhiteSpace(options.OAuthCallbackPath)
             || !options.OAuthCallbackPath.StartsWith('/')
             || options.OAuthCallbackPath.StartsWith("//", StringComparison.Ordinal)
-            || Uri.TryCreate(options.OAuthCallbackPath, UriKind.Absolute, out _))
+            || options.OAuthCallbackPath.Contains('\\')
+            || options.OAuthCallbackPath.Contains('?')
+            || options.OAuthCallbackPath.Contains('#')
+            || options.OAuthCallbackPath.Any(char.IsControl))
             failures.Add("OAuthCallbackPath must be one application-relative path.");
 
         if (options.AuthorityEnvironment == VatAuthorityEnvironment.Production)
             failures.Add("Production HMRC composition is unavailable until the Phase 6.0 durable facilities are implemented and approved.");
+        if (options.SandboxObligationAsOfDate.HasValue
+            && (!hostEnvironment.IsDevelopment()
+                || options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox
+                || options.PersistenceMode != VatPersistenceMode.DevelopmentFiles))
+            failures.Add("SandboxObligationAsOfDate is permitted only for a DevelopmentFiles HMRC sandbox host.");
+        if (options.AllowIncompleteSandboxFraudHeaders
+            && (!hostEnvironment.IsDevelopment()
+                || options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox
+                || options.PersistenceMode != VatPersistenceMode.DevelopmentFiles))
+            failures.Add("Incomplete sandbox fraud headers are permitted only for a DevelopmentFiles HMRC sandbox host.");
 
         switch (options.PersistenceMode)
         {

@@ -1,5 +1,12 @@
 # Tax Hub Findings
 
+## 28 September 2026 — Phase 6.2 historical HMRC sandbox calendar
+
+- HMRC supplies Uri Nielsen's deterministic VAT sandbox obligations for 2017, whereas an ordinary Trade Control synthetic node anchors its complete accounting calendar to the current year (2026). End-to-end reconciliation therefore uses a separately named disposable database generated with a test-only historical as-of date. This shifts the coherent synthetic accounting dataset only; it does not change calculated VAT values or bypass `Cash.vwTaxVatStatement` → `Cash.vwTaxVatSubmission` → Objective 3 preparation. Application, OAuth, fraud-prevention and HMRC communication clocks remain current, the facility is unavailable to production composition, and the current Azure dataset must not be regenerated for this purpose.
+- The isolated Development host may select a historical `SandboxObligationAsOfDate` solely to place HMRC's bounded, read-only obligation enquiry around that canned period. The option is server-owned and validation rejects it outside the Development + Sandbox + DevelopmentFiles composition; it does not alter any operational clock or accept dates from the browser.
+- TCWeb initially rejected its own Phase 6.2 fraud context before dispatch because the strict formatter forbids the empty MFA and vendor-licence headers that HMRC's sandbox validator had accepted as explicit warnings for this single-factor reference journey. A narrowly validated `AllowIncompleteSandboxFraudHeaders` mode now permits only that Development + Sandbox + DevelopmentFiles evidence case while retaining public topology, identity, integrity and freshness checks; production remains strict and fail-closed.
+- The live Phase 6.2 obligations response revealed that the VAT contract incorrectly required an `obligationId` which HMRC does not return. Removing that unsupported member allowed the authenticated Azure review to show canned `18A2` as open with an exact local return and `18A1` as fulfilled, while unmatched Trade Control periods remained explicitly local-only.
+
 ## 28 September 2026 — Objective 5 Phase 6.0 hosting boundary
 
 - The current Azure deployment is one node, but the accepted hosting design is multi-tenant by construction. A deliberately assigned opaque tenant GUID survives deployment/restore and scopes grants, preparations, approvals, attempts, protected content, history and safe operational attribution without being accepted from a browser.

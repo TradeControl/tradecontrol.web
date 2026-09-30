@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.AppServices.Execution;
 using TradeControl.Web.AppServices.InvoiceRegister;
@@ -23,8 +24,16 @@ namespace TradeControl.Web.AppServices
             services.AddHttpContextAccessor();
             services.AddScoped<IVatWorkflowIdentityAccessor, VatWorkflowIdentityAccessor>();
             services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();
-            services.AddScoped<IVatHmrcConnectionService, VatHmrcConnectionService>();
+            services.AddSingleton<TimeProvider>(TimeProvider.System);
+            services.AddSingleton<IVatFraudContextReferenceStore, VatFraudContextReferenceStore>();
+            services.AddScoped<VatHmrcConnectionService>();
+            services.AddScoped<IVatHmrcConnectionService>(provider =>
+                provider.GetRequiredService<VatHmrcConnectionService>());
+            services.AddScoped<IVatAuthorityObligationSource>(provider =>
+                provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatFraudContextCapture, VatFraudContextCapture>();
+            services.AddSingleton<VatObligationReconciler>();
+            services.AddScoped<IVatObligationWorkspaceService, VatObligationWorkspaceService>();
             services.AddSingleton<IVatFilingAuthorisationPolicy, VatFilingAuthorisationPolicy>();
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();

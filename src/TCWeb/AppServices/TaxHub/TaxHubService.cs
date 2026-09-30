@@ -47,7 +47,8 @@ namespace TradeControl.Web.AppServices.TaxHub
 
             var taxTypes = await _nodeContext.App_TaxTypes
                 .AsNoTracking()
-                .Where(t => t.TaxTypeCode == (short)bizTaxType || t.TaxTypeCode == (short)NodeEnum.TaxType.VAT)
+                .Where(t => t.IsEnabled && (t.TaxTypeCode == (short)bizTaxType
+                    || t.TaxTypeCode == (short)NodeEnum.TaxType.VAT))
                 .OrderBy(t => t.TaxTypeCode)
                 .ToListAsync();
 
