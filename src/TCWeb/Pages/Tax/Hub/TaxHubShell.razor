@@ -55,7 +55,7 @@
                         </button>
                     </div>
 
-                    <div class="flex-grow-1 overflow-auto" style="min-height:0;">
+                    <div class="tc-tax-hub-mobile-navigation">
                         @if (ShowHmrcConnection)
                         {
                             <TaxHubHmrcConnection Compact="true"
@@ -101,6 +101,7 @@
                                             VatWorkspace="@_vatWorkspace"
                                             BusinessTaxWorkspace="@_businessTaxWorkspace"
                                             AccountsWorkspace="@_accountsWorkspace"
+                                            VatFilingEnabled="@ShowHmrcConnection"
                                             IsMobile="@_isMobile"
                                             IsLoading="@_isWorkspaceLoading"
                                             Error="@_workspaceError" />

@@ -21,15 +21,17 @@
                 break;
 
             case TaxHubWorkspace.Vat:
-                <TaxHubVatWorkspace Workspace="@VatWorkspace" VatFilingEnabled="@VatFilingEnabled" />
+                <TaxHubVatWorkspace Workspace="@VatWorkspace"
+                                    VatFilingEnabled="@VatFilingEnabled"
+                                    IsMobile="@IsMobile" />
                 break;
 
             case TaxHubWorkspace.BusinessTax:
-                <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace" />
+                <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace" IsMobile="@IsMobile" />
                 break;
 
             case TaxHubWorkspace.Accounts:
-                <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace" />
+                <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace" IsMobile="@IsMobile" />
                 break;
 
             default:

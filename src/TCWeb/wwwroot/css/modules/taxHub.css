@@ -377,6 +377,22 @@
 }
 
 @media (max-width: 991.98px) {
+    .tc-tax-hub-page {
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+    }
+
+    .tc-tax-hub-page > .container-fluid,
+    .tc-tax-hub-page > .container-fluid > div,
+    .tc-tax-hub-page > .container-fluid main,
+    .tc-tax-hub-mobile,
+    .tc-tax-hub-mobile .tc-tax-hub-frame {
+        flex: 0 0 auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
     .tc-tax-hub-workspace {
         padding-top: 0.75rem;
     }
@@ -385,38 +401,119 @@
         font-size: 1.2rem;
     }
 
-    .tc-tax-hub-mobile .tc-tax-hub-frame {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow: auto;
-    }
-
     .tc-tax-hub-mobile .card,
     .tc-tax-hub-mobile .card-body {
         min-height: 0;
-        display: flex;
-        flex-direction: column;
+        display: block;
+        overflow: visible;
     }
 
-    .tc-tax-hub-mobile .card {
-        overflow: hidden;
-    }
-
-    .tc-tax-hub-mobile .card-body {
-        flex: 1 1 auto;
-        overflow: hidden;
+    .tc-tax-hub-mobile-navigation {
+        overflow: visible;
     }
 
     .tc-tax-hub-mobile .tc-tax-hub-grid,
     .tc-tax-hub-mobile .tc-tax-hub-vat,
     .tc-tax-hub-mobile .tc-tax-hub-business-tax,
     .tc-tax-hub-mobile .tc-tax-hub-accounts {
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         min-height: 0;
     }
 
+    .tc-tax-hub-mobile .tc-tax-hub-grid,
+    .tc-tax-hub-mobile :is(.tc-tax-hub-vat, .tc-tax-hub-business-tax, .tc-tax-hub-accounts) > .mud-tabs,
+    .tc-tax-hub-mobile :is(.tc-tax-hub-vat, .tc-tax-hub-business-tax, .tc-tax-hub-accounts) > .mud-tabs > .mud-tabs-panels,
+    .tc-tax-hub-mobile :is(.tc-tax-hub-vat, .tc-tax-hub-business-tax, .tc-tax-hub-accounts) > .mud-tabs > .mud-tabs-panels > .mud-tab-panel,
+    .tc-tax-hub-mobile .tc-tax-hub-single-grid-panel,
+    .tc-tax-hub-mobile .tc-tax-hub-single-grid-panel > .tc-register-grid {
+        height: auto;
+        overflow: visible;
+    }
+
     .tc-tax-hub-mobile .tc-grid-host {
-        min-height: 14rem;
+        display: block;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .tc-tax-hub-mobile .tc-grid-host > .mud-table.tc-tax-hub-datagrid {
+        display: block;
+        overflow: visible;
+    }
+
+    .tc-tax-hub-mobile .tc-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-container {
+        overflow: visible;
+    }
+
+    .tc-tax-hub-mobile .mud-table-pagination-toolbar {
+        height: auto;
+        min-height: 3.25rem;
+        flex-wrap: wrap;
+    }
+
+    .tc-tax-hub-mobile .mud-tabs-tabbar {
+        overflow: visible;
+    }
+
+    .tc-tax-hub-mobile .mud-tab {
+        flex: 1 1 25%;
+        min-width: 0 !important;
+        padding-inline: 0.2rem;
+        font-size: 0.7rem;
+    }
+
+    .tc-tax-hub-mobile .mud-tabs-scroll-button {
+        display: none;
+    }
+
+    .tc-tax-hub-mobile .mud-tabs-tabbar-content,
+    .tc-tax-hub-mobile .mud-tabs-tabbar-wrapper {
+        width: 100%;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligations-list {
+        overflow: visible;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligations-list thead {
+        display: none;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligations-list tbody,
+    .tc-tax-hub-mobile .tc-vat-obligations-list tr,
+    .tc-tax-hub-mobile .tc-vat-obligations-list td {
+        display: block;
+        width: 100%;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligations-list tr {
+        margin-bottom: 0.75rem;
+        padding: 0.75rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.375rem;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligations-list td {
+        display: grid;
+        grid-template-columns: minmax(5rem, 35%) minmax(0, 1fr);
+        gap: 0.75rem;
+        padding: 0.35rem 0;
+        border: 0;
+        text-align: left !important;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligations-list td[data-label]::before {
+        content: attr(data-label);
+        color: var(--bs-secondary-color, #6c757d);
+        font-weight: 600;
+    }
+
+    .tc-tax-hub-mobile .tc-vat-obligation-action {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 0.65rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
     }
 
     .tc-tax-hub-page > .container-fluid {

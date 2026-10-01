@@ -238,6 +238,58 @@ Assert(vatWorkspaceComponent.Contains("@if (VatFilingEnabled)", StringComparison
 Assert(vatWorkspaceComponent.IndexOf("VAT Statement", StringComparison.Ordinal)
         < vatWorkspaceComponent.IndexOf("HMRC Obligations", StringComparison.Ordinal),
     "The HMRC obligations surface displaced the original VAT workspace as the default tab.");
+Assert(vatWorkspaceComponent.Contains("IsMobile", StringComparison.Ordinal)
+    && vatWorkspaceComponent.Contains("\"HMRC\" : \"HMRC Obligations\"", StringComparison.Ordinal),
+    "The VAT tab labels no longer adapt to the mobile workspace.");
+var taxHubShellComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "TaxHubShell.razor"));
+var mobileGridStart = taxHubShellComponent.IndexOf("<TaxHubGrid", StringComparison.Ordinal);
+var mobileGridEnd = taxHubShellComponent.IndexOf("/>", mobileGridStart, StringComparison.Ordinal);
+Assert(mobileGridStart >= 0 && mobileGridEnd > mobileGridStart
+    && taxHubShellComponent[mobileGridStart..mobileGridEnd].Contains("VatFilingEnabled=\"@ShowHmrcConnection\"", StringComparison.Ordinal),
+    "The mobile Tax Hub no longer exposes the HMRC VAT filing workspace when configured.");
+foreach (var vatGridFile in new[]
+{
+    "TaxHubVatStatementGrid.razor",
+    "TaxHubVatTotalsGrid.razor",
+    "TaxHubVatPeriodsGrid.razor"
+})
+{
+    var vatGrid = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub", "Components", vatGridFile));
+    Assert(vatGrid.Contains("Breakpoint=\"Breakpoint.Md\"", StringComparison.Ordinal)
+        && !vatGrid.Contains("Breakpoint=\"Breakpoint.None\"", StringComparison.Ordinal),
+        $"{vatGridFile} no longer enables MudBlazor's responsive card layout.");
+}
+foreach (var responsiveGridFile in new[]
+{
+    "TaxHubObligationsGrid.razor",
+    "TaxHubBusinessTaxTotalsGrid.razor",
+    "TaxHubBusinessTaxStatementGrid.razor",
+    "TaxHubBusinessTaxLossesGrid.razor",
+    "TaxHubBusinessTaxSubmissionGrid.razor",
+    "TaxHubBusinessTaxPayloadGrid.razor",
+    "TaxHubProfitAndLossGrid.razor",
+    "TaxHubProfitAndLossDetailGrid.razor",
+    "TaxHubBalanceSheetGrid.razor"
+})
+{
+    var responsiveGrid = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub", "Components", responsiveGridFile));
+    Assert(responsiveGrid.Contains("Breakpoint=\"Breakpoint.Md\"", StringComparison.Ordinal)
+        && !responsiveGrid.Contains("Breakpoint=\"Breakpoint.None\"", StringComparison.Ordinal),
+        $"{responsiveGridFile} no longer enables MudBlazor's responsive card layout.");
+}
+var businessTaxWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubBusinessTaxWorkspace.razor"));
+var accountsWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubAccountsWorkspace.razor"));
+Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("IsMobile ? \"HMRC\"", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
+    "Business Tax or Accounts no longer provides compact mobile tab labels.");
+Assert(obligationComponent.Contains("tc-vat-obligations-list", StringComparison.Ordinal)
+    && obligationComponent.Contains("data-label=\"Status\"", StringComparison.Ordinal),
+    "The HMRC obligation rows no longer provide their mobile card labels.");
 var obligationService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
     "VatObligationWorkspaceService.cs"));
 Assert(obligationService.Contains("nodeContext.EventLog", StringComparison.Ordinal)

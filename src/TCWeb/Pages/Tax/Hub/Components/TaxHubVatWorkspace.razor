@@ -10,7 +10,7 @@ else
     <div class="tc-tax-hub-vat d-flex flex-column gap-4">
         <MudTabs Rounded="true">
 
-            <MudTabPanel Text="VAT Statement" Class="pt-3">
+            <MudTabPanel Text="@(IsMobile ? "Statement" : "VAT Statement")" Class="pt-3">
                 <section class="tc-tax-hub-single-grid-panel">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <div>
@@ -23,7 +23,7 @@ else
                 </section>
             </MudTabPanel>
 
-            <MudTabPanel Text="VAT Submission" Class="pt-3">
+            <MudTabPanel Text="@(IsMobile ? "Submission" : "VAT Submission")" Class="pt-3">
                 <section class="tc-tax-hub-single-grid-panel">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <div>
@@ -51,7 +51,7 @@ else
                 </section>
             </MudTabPanel>
 
-            <MudTabPanel Text="VAT Summary" Class="pt-3">
+            <MudTabPanel Text="@(IsMobile ? "Summary" : "VAT Summary")" Class="pt-3">
                 <section class="tc-tax-hub-single-grid-panel">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <div>
@@ -78,7 +78,7 @@ else
 
             @if (VatFilingEnabled)
             {
-                <MudTabPanel Text="HMRC Obligations" Class="pt-3">
+                <MudTabPanel Text="@(IsMobile ? "HMRC" : "HMRC Obligations")" Class="pt-3">
                     <TaxHubVatObligations />
                 </MudTabPanel>
             }
@@ -89,4 +89,5 @@ else
 @code {
     [Parameter] public TaxHubVatWorkspaceModel? Workspace { get; set; }
     [Parameter] public bool VatFilingEnabled { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
 }

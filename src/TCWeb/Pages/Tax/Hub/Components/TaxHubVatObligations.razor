@@ -48,19 +48,19 @@
         }
         else
         {
-            <div class="table-responsive">
+            <div class="table-responsive tc-vat-obligations-list">
                 <table class="table table-sm align-middle mb-0">
                     <thead><tr><th>Period</th><th>Dates</th><th>Due</th><th>Received</th><th>Status</th><th></th></tr></thead>
                     <tbody>
                     @foreach (var item in _result.Rows)
                     {
                         <tr>
-                            <td>@(item.PeriodKey ?? "Local only")</td>
-                            <td>@item.Start.ToString("dd MMM yyyy") – @item.End.ToString("dd MMM yyyy")</td>
-                            <td>@Date(item.Due)</td>
-                            <td>@Date(item.Received)</td>
-                            <td><span class="badge @Badge(item.MatchState)">@Label(item.MatchState)</span></td>
-                            <td class="text-end">
+                            <td data-label="Period">@(item.PeriodKey ?? "Local only")</td>
+                            <td data-label="Dates">@item.Start.ToString("dd MMM yyyy") – @item.End.ToString("dd MMM yyyy")</td>
+                            <td data-label="Due">@Date(item.Due)</td>
+                            <td data-label="Received">@Date(item.Received)</td>
+                            <td data-label="Status"><span class="badge @Badge(item.MatchState)">@Label(item.MatchState)</span></td>
+                            <td class="text-end tc-vat-obligation-action">
                                 @if (item.CanReview)
                                 {
                                     <button type="button" class="btn btn-sm btn-primary"

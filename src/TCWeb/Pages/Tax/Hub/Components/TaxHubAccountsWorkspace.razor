@@ -9,7 +9,7 @@ else
 {
     <div class="tc-tax-hub-accounts d-flex flex-column gap-4">
         <MudTabs Rounded="true">
-            <MudTabPanel Text="Annual P&amp;L" Class="pt-3">
+            <MudTabPanel Text="@(IsMobile ? "Annual" : "Annual P&L")" Class="pt-3">
                 <section class="d-flex flex-column gap-4">
                     <div>
                         <div class="text-muted small">@Workspace.SelectedYearName</div>
@@ -36,7 +36,7 @@ else
                 </section>
             </MudTabPanel>
 
-            <MudTabPanel Text="Monthly P&amp;L" Class="pt-3">
+            <MudTabPanel Text="@(IsMobile ? "Monthly" : "Monthly P&L")" Class="pt-3">
                 <section class="d-flex flex-column gap-4">
                     <div>
                         <div class="text-muted small">@Workspace.SelectedPeriodName</div>
@@ -63,7 +63,7 @@ else
                 </section>
             </MudTabPanel>
 
-            <MudTabPanel Text="Balance Sheet">
+            <MudTabPanel Text="@(IsMobile ? "Balance" : "Balance Sheet")">
                 <section class="d-flex flex-column gap-3">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
@@ -107,4 +107,5 @@ else
 
 @code {
     [Parameter] public TaxHubAccountsWorkspaceModel? Workspace { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
 }
