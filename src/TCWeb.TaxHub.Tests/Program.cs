@@ -287,6 +287,18 @@ Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringCom
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
     "Business Tax or Accounts no longer provides compact mobile tab labels.");
+var dashboardObligationsGrid = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubObligationsGrid.razor"));
+Assert(dashboardObligationsGrid.Contains("@if (Items.Count > 10)", StringComparison.Ordinal)
+    && dashboardObligationsGrid.Contains("RowsPerPage=\"10\"", StringComparison.Ordinal),
+    "The Dashboard obligations summary always renders a pager or lost its bounded page size.");
+var taxHubGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubGrid.razor"));
+var taxHubCss = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot", "css", "modules", "taxHub.css"));
+Assert(taxHubGridComponent.Contains("tc-tax-hub-grid-dashboard", StringComparison.Ordinal)
+    && taxHubCss.Contains(".tc-tax-hub-grid-dashboard", StringComparison.Ordinal)
+    && taxHubCss.Contains("overflow-x: hidden", StringComparison.Ordinal),
+    "The Dashboard can inherit the register workspace's horizontal scroller.");
 Assert(obligationComponent.Contains("tc-vat-obligations-list", StringComparison.Ordinal)
     && obligationComponent.Contains("data-label=\"Status\"", StringComparison.Ordinal),
     "The HMRC obligation rows no longer provide their mobile card labels.");
@@ -410,6 +422,43 @@ Assert(reviewService.Contains("WithVerifiedBody(bytes)", StringComparison.Ordina
     && reviewService.Contains("GetApprovalAsync", StringComparison.Ordinal)
     && reviewService.Contains("approval.PreparedSha256 != candidate.PreparedSha256", StringComparison.Ordinal),
     "Submission no longer resolves and verifies the durable approval and retained exact bytes.");
+var filingHistory = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "VatFilingHistoryService.cs"));
+var filingHistoryView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubVatFilingHistory.razor"));
+Assert(filingHistory.Contains("attempts.ListTenantAsync(identity.TenantReference", StringComparison.Ordinal)
+    && filingHistory.Contains("filingPolicy.CanManageHmrcConnection", StringComparison.Ordinal)
+    && filingHistory.Contains("attempt.PrincipalReference", StringComparison.Ordinal)
+    && filingHistory.Contains("SHA256.HashData(bytes)", StringComparison.Ordinal)
+    && filingHistory.Contains("IsVisible(approved, currentVrnDigest", StringComparison.Ordinal)
+    && filingHistory.Contains("vat.returns.submit", StringComparison.Ordinal),
+    "VAT filing history is not scoped to the server-derived tenant/principal or does not verify dispatched bytes.");
+Assert(filingHistoryView.Contains("VAT filing history", StringComparison.Ordinal)
+    && filingHistoryView.Contains("Approved return and audit references", StringComparison.Ordinal)
+    && filingHistoryView.Contains("Prepared SHA-256", StringComparison.Ordinal)
+    && filingHistoryView.Contains("MaskedVrn", StringComparison.Ordinal)
+    && filingHistoryView.Contains("All nine retrieved VAT values exactly match", StringComparison.Ordinal)
+    && filingHistoryView.Contains("Do not repeat an uncertain submission", StringComparison.Ordinal)
+    && filingHistoryView.Contains("Reconcile with HMRC", StringComparison.Ordinal)
+    && filingHistoryView.Contains("taxHubHmrc.captureClientFacts", StringComparison.Ordinal)
+    && filingHistoryView.Contains("selected Tax Hub period", StringComparison.Ordinal)
+    && !filingHistoryView.Contains("SafePayloadReference", StringComparison.Ordinal)
+    && !filingHistoryView.Contains("SafeResponseReference", StringComparison.Ordinal),
+    "The ordinary filing-history view lost its evidence summary, masked identity or protected-content boundary.");
+Assert(connectionService.Contains("RecordReconciliationAsync", StringComparison.Ordinal)
+    && connectionService.Contains("ReconcileApprovedAsync", StringComparison.Ordinal)
+    && connectionService.Contains("VatReturnReconciliation.Compare", StringComparison.Ordinal),
+    "Exact authority readback is not durably attached to the immutable filing attempt.");
+var visibleApproval = new VatApprovalEvidence("approval", "18A2", new DateOnly(2017, 4, 1),
+    new DateOnly(2017, 6, 30), "*****8554", "actor", "VRN-DIGEST", "BODY-DIGEST",
+    DateTimeOffset.UtcNow, [], true);
+Assert(VatFilingHistoryService.IsVisible(visibleApproval, "VRN-DIGEST", new DateOnly(2017, 6, 30),
+        new DateOnly(2017, 4, 1), new DateOnly(2018, 3, 31))
+    && !VatFilingHistoryService.IsVisible(visibleApproval, "OLD-VRN", new DateOnly(2017, 6, 30), null, null)
+    && !VatFilingHistoryService.IsVisible(visibleApproval, "VRN-DIGEST", new DateOnly(2017, 7, 1), null, null)
+    && !VatFilingHistoryService.IsVisible(visibleApproval, "VRN-DIGEST", new DateOnly(2017, 6, 30),
+        new DateOnly(2015, 4, 1), new DateOnly(2016, 3, 31)),
+    "Filing history did not enforce current VAT identity, adoption date and selected period boundaries.");
 
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 

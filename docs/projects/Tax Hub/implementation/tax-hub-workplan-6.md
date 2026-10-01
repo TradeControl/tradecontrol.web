@@ -436,6 +436,10 @@ Requires approved 6.3, a write-scoped grant, fresh fraud context and production-
 
 The reviewer inspects the sandbox receipt, exact digest/readback match and injected ambiguity evidence. No production application or live filing proceeds until unknown outcomes are visibly safe and duplicate writes are impossible under the tested failure model.
 
+**Status (1 October 2026): accepted.** A fresh HMRC sandbox organisation user completed the deployed TCWeb journey from connection and open obligation through exact review, explicit declaration, durable approval and one controlled submission. HMRC returned `201`; TCWeb retained the safe receipt fields, retrieved the filed return and confirmed that all nine authority values exactly matched the approved immutable request. The automatic obligation refresh and a subsequent manual refresh preserved HMRC's deterministic sandbox state: although the canned `18A2` obligation remained open, the authority readback proved that the return had already been filed, so TCWeb displayed it as already submitted and exposed no repeat filing action. Rejected duplicate evidence was retained in the application Event Log with a support reference rather than being lost in transient UI state.
+
+The retained adapter and host suites cover exact-byte dispatch, concurrent and cross-principal duplicate refusal, pre-send failure, malformed/oversized responses, token refresh, restart recovery and timeout/reset ambiguity before and after sending. Unknown outcomes remain visibly non-retryable until reconciliation; neither a browser action nor an application restart can create an automatic replay. This acceptance applies to the development/reference Azure sandbox composition only. Production secrets, persistence, access control, retention and HMRC enablement remain subject to the later production-readiness gates.
+
 ## Phase 6.5 — Filing history, readback and reconciliation
 
 ### Purpose
@@ -469,6 +473,8 @@ Requires 6.4 and the approved persistence/retention model. This is VAT filing hi
 ### Review gate
 
 The reviewer signs off ordinary and privileged evidence views, retention/purge behaviour and the operational procedure for unknown outcomes.
+
+**Status (1 October 2026): accepted.** The deployed tenant-wide privileged history view, approval/dispatch digest verification, safe receipt evidence, durable exact readback differences and controlled reconciliation action are described in `phase-6.5-vat-filing-history.md`. Interactive review confirmed that the history respects the selected Tax Hub accounting window and presents only filings belonging to the currently effective VAT identity from its adoption date, excluding the obsolete VAT-registration filing created during sandbox testing. The accepted filing displayed an exact nine-box HMRC readback match and immutable receipt/audit references. The development/reference file composition remains explicitly non-production; production SQL/Blob retention, purge, raw-evidence and coordinated restore facilities remain gated.
 
 ## Phase 6.6 — HMRC approval-ready product hardening
 

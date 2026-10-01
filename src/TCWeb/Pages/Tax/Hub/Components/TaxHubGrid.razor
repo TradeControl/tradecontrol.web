@@ -1,6 +1,6 @@
 @using TradeControl.Web.Pages.Tax.Hub.Models
 
-<div class="tc-tax-hub-grid">
+<div class="tc-tax-hub-grid @WorkspaceClass">
     @if (IsLoading)
     {
         <div class="tc-tax-hub-loading" role="status" aria-live="polite" aria-atomic="true">
@@ -58,5 +58,14 @@
         TaxHubWorkspace.BusinessTax => "Loading Business Tax workspace…",
         TaxHubWorkspace.Accounts => "Loading Accounts workspace…",
         _ => "Loading Dashboard…"
+    };
+
+    private string WorkspaceClass => Workspace switch
+    {
+        TaxHubWorkspace.Dashboard => "tc-tax-hub-grid-dashboard",
+        TaxHubWorkspace.Vat => "tc-tax-hub-grid-vat",
+        TaxHubWorkspace.BusinessTax => "tc-tax-hub-grid-business-tax",
+        TaxHubWorkspace.Accounts => "tc-tax-hub-grid-accounts",
+        _ => string.Empty
     };
 }

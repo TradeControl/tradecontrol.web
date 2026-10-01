@@ -21,6 +21,7 @@
                      Striped="true"
                      Filterable="true"
                      ReadOnly="true"
+                     RowsPerPage="10"
                      FilterMode="DataGridFilterMode.ColumnFilterMenu"
                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
                      FilterChanged="OnFilterChanged">
@@ -56,7 +57,10 @@
             </Columns>
 
             <PagerContent>
-                <MudDataGridPager />
+                @if (Items.Count > 10)
+                {
+                    <MudDataGridPager />
+                }
             </PagerContent>
         </MudDataGrid>
     </div>

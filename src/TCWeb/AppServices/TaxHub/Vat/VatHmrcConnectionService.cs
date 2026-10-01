@@ -43,6 +43,8 @@ public interface IVatAuthorityReturnSubmission
 {
     Task<VatAuthoritySubmissionResult> DispatchApprovedAsync(ApprovedVatReturnDispatch approved,
         CancellationToken cancellationToken = default);
+    Task<SubmissionReconciliationEvidence> ReconcileApprovedAsync(ApprovedVatReturnDispatch approved,
+        string attemptReference, CancellationToken cancellationToken = default);
 }
 
 public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAuthorityObligationSource,
@@ -54,6 +56,7 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
     private readonly HmrcOAuthTokenEndpoint? _tokens;
     private readonly FraudHeaderService? _fraud;
     private readonly HmrcPreparedApiRequestGateway? _gateway;
+    private readonly ISubmissionAttemptStore? _attempts;
     private readonly ISubmissionContentStore? _content;
     private readonly IVatFraudContextReferenceStore _fraudReferences;
 
@@ -108,12 +111,12 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
                         Path.Combine(root, "fraud-contexts"), fraudKey, topology, vendor);
                 }
                 finally { CryptographicOperations.ZeroMemory(fraudKey); }
-                var attempts = new FileSubmissionAttemptStore(
+                _attempts = new FileSubmissionAttemptStore(
                     SubmissionAttemptStoreOptions.SevenYearMetadata(Path.Combine(root, "attempts.json")));
                 _content = new FileSubmissionContentStore(new SubmissionContentStoreOptions(
                     Path.Combine(root, "protected-content")));
                 _gateway = new HmrcPreparedApiRequestGateway(environment, _oauth, _fraud,
-                    attempts, _content);
+                    _attempts, _content);
             }
         }
         finally { CryptographicOperations.ZeroMemory(key); }
@@ -283,7 +286,16 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
                 var readbackBytes = await _content.ReadAsync(approved.Identity.TenantReference,
                     approved.Identity.AspNetSubjectReference, readback.SafeResponseReference, cancellationToken);
                 if (readbackBytes is not null)
+                {
                     reconciliation = VatReturnReconciliation.Compare(approved.Request, readbackBytes);
+                    if (_attempts is not null && outcome.AttemptReference is not null)
+                        await _attempts.RecordReconciliationAsync(approved.Identity.TenantReference,
+                            approved.Identity.AspNetSubjectReference, outcome.AttemptReference,
+                            new(reconciliation.Matches, DateTimeOffset.UtcNow, readback.OutcomeCode,
+                                reconciliation.Differences.Select(item => new SubmissionReconciliationDifference(
+                                    item.Field, item.PreparedValue, item.AuthorityValue)).ToArray()),
+                            cancellationToken);
+                }
             }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -301,6 +313,44 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         }
         catch (Exception exception) when (exception is not OperationCanceledException) { }
         return new(outcome, receipt, reconciliation, obligationRefreshed, readbackCode);
+    }
+
+    public async Task<SubmissionReconciliationEvidence> ReconcileApprovedAsync(
+        ApprovedVatReturnDispatch approved, string attemptReference,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(approved);
+        if (_gateway is null || _content is null || _attempts is null)
+            throw new VatAuthorityRequestException("VAT-AUTHORITY-TOPOLOGY-UNAVAILABLE", attemptReference);
+        var attempt = (await _attempts.ListTenantAsync(approved.Identity.TenantReference, 500,
+                cancellationToken)).SingleOrDefault(item => item.AttemptReference == attemptReference)
+            ?? throw new VatAuthorityRequestException("VAT-ATTEMPT-NOT-AVAILABLE", attemptReference);
+        if (attempt.OperationId != "vat.returns.submit" || attempt.ApprovalReference != approved.ApprovalReference
+            || attempt.State is not (SubmissionAttemptState.Succeeded or SubmissionAttemptState.Unknown))
+            throw new VatAuthorityRequestException("VAT-ATTEMPT-NOT-RECONCILABLE", attemptReference);
+        if (attempt.Reconciliation is not null) return attempt.Reconciliation;
+        var sealedFacts = _fraudReferences.GetCurrent(approved.Identity, DateTimeOffset.UtcNow);
+        if (sealedFacts is null)
+            throw new VatAuthorityRequestException("FRAUD-CONTEXT-REQUIRED", attemptReference);
+        var request = new BodylessRequestDescriber(new PreparedApiRequestPipeline())
+            .Describe(new DescribeVatReturn(approved.Vrn, approved.PeriodKey));
+        var context = new AuthorityDispatchContext(approved.Identity.TenantReference,
+            approved.Identity.AspNetSubjectReference, approved.Identity.ActorReference,
+            approved.ApprovalReference, sealedFacts);
+        var readback = await _gateway.SendAsync(request, context, cancellationToken);
+        if (readback.Kind != PreparedApiOutcomeKind.Succeeded || readback.SafeResponseReference is null)
+            throw new VatAuthorityRequestException(readback.OutcomeCode,
+                readback.AttemptReference ?? attemptReference);
+        var bytes = await _content.ReadAsync(approved.Identity.TenantReference,
+            approved.Identity.AspNetSubjectReference, readback.SafeResponseReference, cancellationToken)
+            ?? throw new VatAuthorityRequestException("HMRC-RESPONSE-EVIDENCE-MISSING", attemptReference);
+        var compared = VatReturnReconciliation.Compare(approved.Request, bytes);
+        var evidence = new SubmissionReconciliationEvidence(compared.Matches, DateTimeOffset.UtcNow,
+            readback.OutcomeCode, compared.Differences.Select(item => new SubmissionReconciliationDifference(
+                item.Field, item.PreparedValue, item.AuthorityValue)).ToArray());
+        await _attempts.RecordReconciliationAsync(approved.Identity.TenantReference,
+            attempt.PrincipalReference, attemptReference, evidence, cancellationToken);
+        return evidence;
     }
 
     private static IReadOnlyList<VatAuthorityError> ParseAuthorityErrors(byte[]? bytes)

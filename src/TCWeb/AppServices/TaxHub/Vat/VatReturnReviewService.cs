@@ -17,6 +17,7 @@ using TradeControl.Tax.UK.Adapters.Submission.Audit;
 using TradeControl.Tax.UK.Adapters.TradeControl.Data;
 using TradeControl.Tax.UK.Application.Preparation;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
+using TradeControl.Tax.UK.Hmrc.Vat;
 using TradeControl.Web.Data;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
@@ -66,6 +67,19 @@ public interface IVatApprovedReturnResolver
         CancellationToken cancellationToken = default);
 }
 
+public sealed record VatApprovalEvidence(string ApprovalReference, string PeriodKey,
+    DateOnly PeriodStart, DateOnly PeriodEnd, string MaskedVrn, string ActorReference,
+    string VrnSha256, string PreparedSha256, DateTimeOffset ApprovedAtUtc, IReadOnlyList<VatReturnReviewBox> Boxes,
+    bool PayloadIntegrityVerified, string? EvidenceFailure = null);
+
+public interface IVatApprovalEvidenceSource
+{
+    Task<IReadOnlyDictionary<string, VatApprovalEvidence>> GetEvidenceAsync(
+        IReadOnlyCollection<string> approvalReferences, CancellationToken cancellationToken = default);
+    Task<ApprovedVatReturnDispatch> ResolveForReconciliationAsync(string approvalReference, string vrn,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed class VatReturnReviewException : Exception
 {
     public VatReturnReviewException(string safeMessage,
@@ -73,7 +87,8 @@ public sealed class VatReturnReviewException : Exception
     public IReadOnlyList<VatReturnReviewFinding> Findings { get; }
 }
 
-public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprovedReturnResolver
+public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprovedReturnResolver,
+    IVatApprovalEvidenceSource
 {
     private const string DeclarationVersion = "hmrc-vat-business-2026-09-30";
     private const string DeclarationResource =
@@ -242,6 +257,114 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         return new(request, identity, approval.Reference, approval.LogicalSubmissionIdentity,
             approval.LogicalSubmissionIdentity, vrn, candidate.PeriodKey,
             candidate.PeriodStart, candidate.PeriodEnd);
+    }
+
+    public async Task<IReadOnlyDictionary<string, VatApprovalEvidence>> GetEvidenceAsync(
+        IReadOnlyCollection<string> approvalReferences, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(approvalReferences);
+        var requested = approvalReferences.Where(reference => !string.IsNullOrWhiteSpace(reference))
+            .Take(500).ToHashSet(StringComparer.Ordinal);
+        if (requested.Count == 0) return new Dictionary<string, VatApprovalEvidence>();
+        var identity = await _identities.GetRequiredAsync(cancellationToken);
+        var principal = _httpContextAccessor.HttpContext?.User
+            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        if (!_filingPolicy.CanManageHmrcConnection(principal))
+            throw new UnauthorizedAccessException("VAT filing history requires Administrator or Manager permission.");
+        await StoreGate.WaitAsync(cancellationToken);
+        try
+        {
+            var approvals = (await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken))
+                .Where(item => requested.Contains(item.Reference)
+                    && item.TenantReference == identity.TenantReference)
+                .ToArray();
+            var candidates = await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken);
+            var result = new Dictionary<string, VatApprovalEvidence>(StringComparer.Ordinal);
+            foreach (var approval in approvals)
+            {
+                var candidate = candidates.SingleOrDefault(item => item.Reference == approval.PreparationReference
+                    && item.TenantReference == identity.TenantReference);
+                if (candidate is null)
+                {
+                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                        approval.PeriodStart, approval.PeriodEnd, "Unavailable", approval.ActorReference,
+                        string.Empty, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
+                        "The retained preparation metadata is missing.");
+                    continue;
+                }
+                var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
+                    candidate.ContentReference, cancellationToken);
+                if (bytes is null || !Sha256(bytes).Equals(approval.PreparedSha256, StringComparison.Ordinal))
+                {
+                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                        approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
+                        candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
+                        bytes is null ? "The protected approved payload is missing."
+                            : "The protected approved payload failed digest verification.");
+                    continue;
+                }
+                try
+                {
+                    var body = JsonSerializer.Deserialize<VatReturnRequest>(bytes,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                        ?? throw new JsonException();
+                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                        approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
+                        candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, ProjectBoxes(body), true);
+                }
+                catch (JsonException)
+                {
+                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                        approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
+                        candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
+                        "The protected approved payload is malformed.");
+                }
+            }
+            return result;
+        }
+        finally { StoreGate.Release(); }
+    }
+
+    public async Task<ApprovedVatReturnDispatch> ResolveForReconciliationAsync(string approvalReference,
+        string vrn, CancellationToken cancellationToken = default)
+    {
+        if (vrn.Length != 9 || vrn.Any(character => !char.IsDigit(character)))
+            throw new VatReturnReviewException("The current VAT registration identity is invalid.");
+        var identity = await _identities.GetRequiredAsync(cancellationToken);
+        var principal = _httpContextAccessor.HttpContext?.User
+            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        if (!_filingPolicy.CanManageHmrcConnection(principal))
+            throw new UnauthorizedAccessException("VAT reconciliation requires Administrator or Manager permission.");
+        ApprovalRecord approval;
+        CandidateRecord candidate;
+        await StoreGate.WaitAsync(cancellationToken);
+        try
+        {
+            approval = (await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken)).SingleOrDefault(item =>
+                item.Reference == approvalReference && item.TenantReference == identity.TenantReference)
+                ?? throw new VatReturnReviewException("The VAT approval is unavailable for this tenant.");
+            candidate = (await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken)).SingleOrDefault(item =>
+                item.Reference == approval.PreparationReference
+                && item.TenantReference == identity.TenantReference)
+                ?? throw new VatReturnReviewException("The approved VAT preparation is unavailable.");
+        }
+        finally { StoreGate.Release(); }
+        if (!Sha256(Encoding.UTF8.GetBytes(vrn)).Equals(candidate.VrnSha256, StringComparison.Ordinal))
+            throw new VatReturnReviewException("The current VAT registration does not match the filed return.");
+        var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
+            candidate.ContentReference, cancellationToken)
+            ?? throw new VatReturnReviewException("The exact approved VAT body is unavailable.");
+        if (!Sha256(bytes).Equals(approval.PreparedSha256, StringComparison.Ordinal))
+            throw new VatReturnReviewException("The exact approved VAT body failed digest verification.");
+        var descriptor = VatOperationCatalog.All.Single(item => item.OperationId == "vat.returns.submit");
+        var request = new PreparedApiRequestPipeline().Prepare(HmrcPreparedApiContracts.From(descriptor),
+            [new("vrn", vrn)], serializeBody: () => bytes,
+            sourceEvidence: [new(approval.SourceSystem, approval.DatasetKey, approval.SnapshotToken)]);
+        if (!string.Equals(request.BodySha256, approval.PreparedSha256, StringComparison.Ordinal))
+            throw new VatReturnReviewException("The reconstructed filing evidence failed digest verification.");
+        return new(request, identity, approval.Reference, approval.LogicalSubmissionIdentity,
+            approval.LogicalSubmissionIdentity, vrn, approval.PeriodKey,
+            approval.PeriodStart, approval.PeriodEnd);
     }
 
     private async Task<PreparedCurrent> PrepareCurrentAsync(VatWorkflowIdentity identity, string periodKey,

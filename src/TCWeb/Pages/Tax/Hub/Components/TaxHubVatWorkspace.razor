@@ -81,6 +81,9 @@ else
                 <MudTabPanel Text="@(IsMobile ? "HMRC" : "HMRC Obligations")" Class="pt-3">
                     <TaxHubVatObligations />
                 </MudTabPanel>
+                <MudTabPanel Text="@(IsMobile ? "History" : "Filing History")" Class="pt-3">
+                    <TaxHubVatFilingHistory PeriodFrom="@HistoryFrom" PeriodTo="@HistoryTo" />
+                </MudTabPanel>
             }
         </MudTabs>
     </div>
@@ -90,4 +93,16 @@ else
     [Parameter] public TaxHubVatWorkspaceModel? Workspace { get; set; }
     [Parameter] public bool VatFilingEnabled { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+
+    private DateOnly? HistoryFrom => Workspace is null || Workspace.IsAllYears ? null
+        : Workspace.SelectedPeriodStartOn.HasValue
+            ? DateOnly.FromDateTime(Workspace.SelectedPeriodStartOn.Value)
+            : Workspace.Periods.Count > 0
+                ? DateOnly.FromDateTime(Workspace.Periods.Min(item => item.StartOn)) : null;
+
+    private DateOnly? HistoryTo => Workspace is null || Workspace.IsAllYears ? null
+        : Workspace.SelectedPeriodStartOn.HasValue
+            ? DateOnly.FromDateTime(Workspace.SelectedPeriodStartOn.Value.AddMonths(1).AddDays(-1))
+            : Workspace.Periods.Count > 0
+                ? DateOnly.FromDateTime(Workspace.Periods.Max(item => item.StartOn).AddMonths(1).AddDays(-1)) : null;
 }

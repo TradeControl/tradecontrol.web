@@ -40,6 +40,10 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IVatApprovedReturnResolver>(provider =>
                 provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovedReturnResolver
                 ?? throw new InvalidOperationException("The VAT approval resolver is unavailable."));
+            services.AddScoped<IVatApprovalEvidenceSource>(provider =>
+                provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovalEvidenceSource
+                ?? throw new InvalidOperationException("The VAT approval evidence source is unavailable."));
+            services.AddScoped<IVatFilingHistoryService, VatFilingHistoryService>();
             services.AddScoped<IVatAuthorityReturnSubmission>(provider =>
                 provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatReturnSubmissionService, VatReturnSubmissionService>();

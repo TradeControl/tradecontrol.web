@@ -157,6 +157,10 @@
     overflow: auto;
 }
 
+.tc-tax-hub-grid-dashboard {
+    overflow-x: hidden;
+}
+
 .tc-tax-hub-loading {
     flex: 1 1 auto;
     min-height: 10rem;
@@ -302,6 +306,23 @@
 
 .tc-tax-hub .tc-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-pagination {
     flex: 0 0 auto;
+}
+
+/* Dashboard obligations are a short summary, not a bounded register. Let the
+   rows determine its height and avoid an empty scroll region below the data. */
+.tc-tax-hub-obligations-grid .tc-grid-host {
+    height: auto;
+    overflow: visible;
+}
+
+.tc-tax-hub-obligations-grid .tc-grid-host > .mud-table.tc-tax-hub-datagrid {
+    display: block;
+    overflow: visible;
+}
+
+.tc-tax-hub-obligations-grid .tc-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-container {
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 .tc-tax-hub-reconciliation-card {

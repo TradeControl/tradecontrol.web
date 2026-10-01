@@ -1,0 +1,211 @@
+@using TradeControl.Web.AppServices.TaxHub.Vat
+@inject IVatFilingHistoryService History
+@inject Microsoft.JSInterop.IJSRuntime JavaScript
+
+<section class="card" aria-labelledby="vat-filing-history-title">
+    <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div>
+                <h2 id="vat-filing-history-title" class="h5 mb-1">VAT filing history</h2>
+                <div class="small text-muted">Immutable approval, dispatch and HMRC receipt evidence</div>
+                @if (PeriodFrom.HasValue || PeriodTo.HasValue)
+                {
+                    <div class="small text-muted">Showing filings for the selected Tax Hub period: @RangeText</div>
+                }
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" disabled="@_loading"
+                    @onclick="LoadAsync">Refresh history</button>
+        </div>
+
+        @if (_loading)
+        {
+            <div class="d-flex align-items-center gap-2 text-muted" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Loading filing evidence…</span>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-warning" role="alert">@_error</div>
+        }
+        else if (_items.Count == 0)
+        {
+            <div class="text-muted">No VAT filing attempts have been recorded for this user.</div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3">
+                @foreach (var item in _items)
+                {
+                    <article class="card" aria-label="VAT filing @item.PeriodKey">
+                        <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+                            <div>
+                                <strong>@item.PeriodKey</strong>
+                                @if (item.PeriodStart != default)
+                                {
+                                    <span class="small ms-2">@item.PeriodStart.ToString("dd MMM yyyy") – @item.PeriodEnd.ToString("dd MMM yyyy")</span>
+                                }
+                            </div>
+                            <span class="badge @StateClass(item.State)">@StateLabel(item.State)</span>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row small mb-2">
+                                <dt class="col-sm-3">VAT registration</dt><dd class="col-sm-9">@item.MaskedVrn</dd>
+                                <dt class="col-sm-3">HMRC outcome</dt><dd class="col-sm-9">@item.OutcomeCode @Http(item.HttpStatus)</dd>
+                                <dt class="col-sm-3">Updated</dt><dd class="col-sm-9">@item.UpdatedAtUtc.ToLocalTime().ToString("g")</dd>
+                                <dt class="col-sm-3">Approved by</dt><dd class="col-sm-9">@item.ActorReference</dd>
+                                <dt class="col-sm-3">Attempt reference</dt><dd class="col-sm-9 text-break">@item.AttemptReference</dd>
+                                @if (!string.IsNullOrWhiteSpace(item.CorrelationReference))
+                                {
+                                    <dt class="col-sm-3">HMRC correlation</dt><dd class="col-sm-9 text-break">@item.CorrelationReference</dd>
+                                }
+                            </dl>
+
+                            <div class="alert @(item.PayloadIntegrityVerified ? "alert-success" : "alert-danger") py-2 small">
+                                <strong>Evidence:</strong> @item.EvidenceState
+                            </div>
+
+                            @if (item.Receipt is not null)
+                            {
+                                <dl class="row small mb-2">
+                                    <dt class="col-sm-3">Processing date</dt><dd class="col-sm-9">@(item.Receipt.ProcessingDate?.ToLocalTime().ToString("g") ?? "Not supplied")</dd>
+                                    <dt class="col-sm-3">Form bundle</dt><dd class="col-sm-9">@(item.Receipt.FormBundleNumber ?? "Not supplied")</dd>
+                                    <dt class="col-sm-3">Payment indicator</dt><dd class="col-sm-9">@(item.Receipt.PaymentIndicator ?? "Not supplied")</dd>
+                                    <dt class="col-sm-3">Charge reference</dt><dd class="col-sm-9">@(item.Receipt.ChargeReference ?? "Not supplied")</dd>
+                                </dl>
+                            }
+
+                            @if (item.Reconciliation is not null)
+                            {
+                                <div class="alert @(item.Reconciliation.Matches ? "alert-success" : "alert-danger") py-2 small">
+                                    <strong>HMRC readback:</strong>
+                                    @(item.Reconciliation.Matches
+                                        ? "All nine retrieved VAT values exactly match the approved return."
+                                        : $"{item.Reconciliation.Differences.Count} difference(s) require investigation.")
+                                    <span class="d-block">Checked @item.Reconciliation.CheckedAt.ToLocalTime().ToString("g")</span>
+                                </div>
+                                @if (!item.Reconciliation.Matches)
+                                {
+                                    <div class="table-responsive mb-2">
+                                        <table class="table table-sm">
+                                            <thead><tr><th>Field</th><th>Approved</th><th>HMRC</th></tr></thead>
+                                            <tbody>
+                                            @foreach (var difference in item.Reconciliation.Differences)
+                                            {
+                                                <tr><td>@difference.Field</td><td>@difference.ApprovedValue</td><td>@difference.AuthorityValue</td></tr>
+                                            }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            }
+                            else if (item.State is "Succeeded" or "Unknown")
+                            {
+                                <div class="alert alert-warning py-2 small">
+                                    <strong>HMRC readback:</strong> No durable exact reconciliation is recorded.
+                                    Do not repeat an uncertain submission; use the HMRC obligation/readback journey or seek support.
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-dark"
+                                                disabled="@(_reconciling == item.AttemptReference)"
+                                                @onclick="() => ReconcileAsync(item.AttemptReference)">
+                                            @(_reconciling == item.AttemptReference ? "Checking HMRC…" : "Reconcile with HMRC")
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+
+                            <details>
+                                <summary>Approved return and audit references</summary>
+                                @if (item.ApprovedBoxes.Count > 0)
+                                {
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm mb-2">
+                                            <thead><tr><th>Box</th><th>Description</th><th class="text-end">Approved value</th></tr></thead>
+                                            <tbody>
+                                            @foreach (var box in item.ApprovedBoxes)
+                                            {
+                                                <tr><td>@box.Number</td><td>@box.Description</td><td class="text-end">@box.Value</td></tr>
+                                            }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                <div class="small text-break"><strong>Prepared SHA-256:</strong> @item.PreparedDigest</div>
+                                <div class="small"><strong>Approved:</strong> @item.ApprovedAtUtc.ToLocalTime().ToString("g")</div>
+                            </details>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public DateOnly? PeriodFrom { get; set; }
+    [Parameter] public DateOnly? PeriodTo { get; set; }
+    private IReadOnlyList<VatFilingHistoryRecord> _items = [];
+    private bool _loading = true;
+    private string? _error;
+    private string? _reconciling;
+
+    private (DateOnly? From, DateOnly? To)? _loadedRange;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var range = (PeriodFrom, PeriodTo);
+        if (_loadedRange == range) return;
+        _loadedRange = range;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try { _items = await History.GetAsync(PeriodFrom, PeriodTo); }
+        catch { _error = "VAT filing history could not be loaded safely. Consult the Event Log."; }
+        finally { _loading = false; }
+    }
+
+    private async Task ReconcileAsync(string attemptReference)
+    {
+        if (_reconciling is not null) return;
+        _reconciling = attemptReference;
+        _error = null;
+        try
+        {
+            await JavaScript.InvokeVoidAsync("taxHubHmrc.captureClientFacts");
+            await History.ReconcileAsync(attemptReference);
+            _items = await History.GetAsync(PeriodFrom, PeriodTo);
+        }
+        catch (VatAuthorityRequestException exception)
+        {
+            _error = $"HMRC could not prove the filing outcome ({exception.SafeCode}). Do not submit again; seek support using reference {exception.SupportReference ?? attemptReference}.";
+        }
+        catch (Exception exception) when (exception is VatReturnReviewException or UnauthorizedAccessException)
+        {
+            _error = exception.Message;
+        }
+        catch { _error = "The VAT filing could not be reconciled safely. Do not submit again; consult the Event Log."; }
+        finally { _reconciling = null; }
+    }
+
+    private static string StateClass(string state) => state switch
+    {
+        "Succeeded" => "bg-success",
+        "Rejected" => "bg-danger",
+        "Unknown" or "Sending" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+    private static string StateLabel(string state) => state switch
+    {
+        "Succeeded" => "Accepted",
+        "Rejected" => "Rejected",
+        "Unknown" or "Sending" => "Outcome unknown",
+        "Failed" => "Not sent",
+        _ => state
+    };
+    private static string Http(int? status) => status.HasValue ? $"(HTTP {status})" : string.Empty;
+    private string RangeText => $"{PeriodFrom?.ToString("dd MMM yyyy") ?? "earliest"} – {PeriodTo?.ToString("dd MMM yyyy") ?? "latest"}";
+}
