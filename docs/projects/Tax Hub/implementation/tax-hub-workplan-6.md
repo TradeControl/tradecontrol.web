@@ -525,20 +525,20 @@ Complete the external VAT production process while retaining explicit human cont
 
 ### External sequence
 
-1. Within HMRC's current two-week window after completing API testing, the product owner contacts the Software Developers Support Team and supplies the redacted test references needed for log inspection.
-2. The owner completes HMRC's requested questionnaires and accepts the current terms of use. Repository work may prepare answers/evidence but cannot accept legal terms on the owner's behalf.
+1. Within HMRC's current two-week window after completing API testing, contact the Software Developers Support Team and supply the redacted test references needed for log inspection. State that the evidence covers the tested single-tenant Azure deployment, that Trade Control is free software with a public source repository and user guide, and that a shared multi-tenant Azure delivery is planned before wider commercial rollout.
+2. Complete HMRC's requested questionnaires and accept the current terms of use through the authorised human process. Supporting material may prepare answers and evidence but cannot accept legal terms.
 3. Resolve HMRC findings from fraud-header and VAT API testing. Code or journey changes return to the relevant earlier phase and repeat its regression/sandbox evidence.
 4. After HMRC grants production access, provision production application credentials and keys through the approved secret facility. Keep sandbox and production applications, redirect URIs, stores and hosts isolated.
 5. Perform a production smoke test that does not file a return, where the authority permits it, then obtain separate human approval for one controlled live VAT submission by an eligible Trade Control business.
 6. Retain the live attempt, approval, receipt and HMRC reconciliation evidence under the approved production policy. Never copy customer identifiers into tracked project documentation.
-7. If Trade Control is offered for retail/commercial use, request compatible-software listing and provide the live-submission VRN directly to HMRC through the approved channel. Listing is recorded only after HMRC confirms it.
-8. Make the production feature available to further tenants only after the owner approves rollout, support and monitoring. Provide an immediate kill switch that blocks new submissions without corrupting history or revoking grants unnecessarily.
+7. Request compatible-software listing and provide the live-submission VRN directly to HMRC through the approved channel. Record the listing only after HMRC confirms it.
+8. Before shared multi-tenant or wider commercial rollout, complete the approved Azure-managed persistence and tenant-resolution facilities, disclose the final hosting and network topology to HMRC, repeat the topology-sensitive fraud-header and isolation evidence, and complete any change review or retesting HMRC requires. Production rollout then requires explicit approval of support, monitoring and an immediate kill switch that blocks new submissions without corrupting history or revoking grants unnecessarily.
 
 ### Dependencies and exclusions
 
 Requires 6.6 technical approval-readiness, HMRC cooperation, production credentials, an eligible real business and explicit owner approval. Sandbox users and synthetic returns cannot satisfy the live-submission/listing requirement.
 
-This phase does not authorise Codex or an unattended process to accept terms, disclose a customer's VRN, create production credentials, submit a live VAT return, contact HMRC or publish a compatibility claim without the required contemporaneous human instruction.
+Legal and externally consequential actions—including accepting terms, disclosing a customer's VRN, creating production credentials, submitting a live VAT return, contacting HMRC and publishing a compatibility claim—require explicit contemporaneous human authorisation. Automated preparation of answers or evidence does not confer authority to perform those actions.
 
 ### Tests and acceptance
 
@@ -556,7 +556,9 @@ The human owner records one of these truthful statuses:
 - **Live VAT proven** — the separately approved live submission succeeded and reconciled.
 - **Compatible software listed** — HMRC has confirmed the public listing.
 
-Objective 5's VAT-continuity slice is complete when the agreed external target is reached and the implemented workflow remains operational. If HMRC action is pending, retain the technical milestone and leave external completion open.
+Objective 5's VAT-continuity slice is complete when HMRC has confirmed the compatible-software listing and the implemented workflow remains operational. If HMRC action is pending, retain the technical milestone and leave external completion open. Later multi-tenant activation remains a separate disclosed hosting-change gate even if the tested single-tenant product has already received production approval or listing.
+
+**Status (2 October 2026): in progress — HMRC response pending.** The truthful approval basis, public supporting material, Phase 6.6 evidence summary, multi-tenant disclosure and external action register are recorded in `phase-6.7-hmrc-production-approval.md`. The initial production-access request was sent to the Software Developers Support Team at 15:17 BST on 2 October 2026; production approval, questionnaires, credentials, live filing and listing remain pending.
 
 ## Test strategy and regression protection
 
