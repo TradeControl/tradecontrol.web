@@ -29,6 +29,8 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<VatHmrcConnectionService>();
             services.AddScoped<IVatHmrcConnectionService>(provider =>
                 provider.GetRequiredService<VatHmrcConnectionService>());
+            services.AddScoped<IVatFraudHeaderValidationService>(provider =>
+                provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatAuthorityObligationSource>(provider =>
                 provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatAuthorityReturnReadbackSource>(provider =>

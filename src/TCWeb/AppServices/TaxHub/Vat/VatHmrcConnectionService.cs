@@ -29,6 +29,18 @@ public interface IVatHmrcConnectionService
     Task DisconnectAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
+public sealed record VatFraudHeaderValidationResult(
+    int? StatusCode,
+    string? ContentType,
+    byte[]? Body,
+    OAuthReauthorisationReason? ReauthorisationReason = null);
+
+public interface IVatFraudHeaderValidationService
+{
+    Task<VatFraudHeaderValidationResult> ValidateAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record VatAuthoritySubmissionResult(
     PreparedApiOutcome Outcome,
     VatReturnResponse? Receipt,
@@ -48,7 +60,8 @@ public interface IVatAuthorityReturnSubmission
 }
 
 public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAuthorityObligationSource,
-    IVatAuthorityReturnReadbackSource, IVatAuthorityReturnSubmission, IDisposable
+    IVatAuthorityReturnReadbackSource, IVatAuthorityReturnSubmission,
+    IVatFraudHeaderValidationService, IDisposable
 {
     private readonly IVatWorkflowIdentityAccessor _identities;
     private readonly VatProductHostOptions _host;
@@ -56,6 +69,7 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
     private readonly HmrcOAuthTokenEndpoint? _tokens;
     private readonly FraudHeaderService? _fraud;
     private readonly HmrcPreparedApiRequestGateway? _gateway;
+    private readonly HmrcFraudPreventionValidator? _validator;
     private readonly ISubmissionAttemptStore? _attempts;
     private readonly ISubmissionContentStore? _content;
     private readonly IVatFraudContextReferenceStore _fraudReferences;
@@ -86,6 +100,7 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
             };
             var environment = EnvironmentSelector.Sandbox();
             _tokens = new HmrcOAuthTokenEndpoint(environment);
+            _validator = new HmrcFraudPreventionValidator(environment);
             var callback = new Uri(_host.PublicOrigin!, _host.OAuthCallbackPath);
             _oauth = HmrcOAuthService.CreateFileBackedSandbox(Path.Combine(root, "oauth-grants.json.enc"),
                 key, secrets, _tokens, options: new HmrcOAuthOptions(callback, TimeSpan.FromMinutes(10),
@@ -162,6 +177,30 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         var context = await ContextAsync(principal, cancellationToken);
         await oauth.RevokeAsync(context, HmrcOAuthScopes.ReadVat, cancellationToken);
         await oauth.RevokeAsync(context, HmrcOAuthScopes.WriteVat, cancellationToken);
+    }
+
+    public async Task<VatFraudHeaderValidationResult> ValidateAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default)
+    {
+        var oauth = _oauth ?? throw new InvalidOperationException("The HMRC OAuth service is unavailable.");
+        var fraud = _fraud ?? throw new InvalidOperationException("Fraud-header capture is unavailable.");
+        var validator = _validator ?? throw new InvalidOperationException("The HMRC validator is unavailable.");
+        var identity = await _identities.GetRequiredAsync(principal, cancellationToken);
+        var oauthContext = new AuthorityDispatchContext(identity.TenantReference,
+            identity.AspNetSubjectReference, identity.ActorReference,
+            "hmrc-fraud-header-validation", "client-facts-not-required");
+        using var access = await oauth.GetAccessAsync(oauthContext, HmrcOAuthScopes.ReadVat, cancellationToken);
+        if (access.Kind != OAuthAccessOutcomeKind.Available || access.AccessToken is null)
+            return new(null, null, null, access.ReauthorisationReason);
+        var sealedFacts = _fraudReferences.GetCurrent(identity, DateTimeOffset.UtcNow);
+        if (sealedFacts is null)
+            throw new FraudContextRejectedException("Fresh browser and session facts are required.");
+        var validationContext = new AuthorityDispatchContext(identity.TenantReference,
+            identity.AspNetSubjectReference, identity.ActorReference,
+            "hmrc-fraud-header-validation", sealedFacts);
+        var headers = await fraud.BuildHeadersAsync(validationContext, cancellationToken);
+        var result = await validator.ValidateAsync(headers, access.AccessToken, cancellationToken);
+        return new(result.StatusCode, result.ContentType, result.Body);
     }
 
     public async Task<IReadOnlyList<VatAuthorityObligation>> RetrieveAsync(VatWorkflowIdentity identity,
@@ -350,6 +389,12 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
                 item.Field, item.PreparedValue, item.AuthorityValue)).ToArray());
         await _attempts.RecordReconciliationAsync(approved.Identity.TenantReference,
             attempt.PrincipalReference, attemptReference, evidence, cancellationToken);
+        if (evidence.Matches && attempt.State is SubmissionAttemptState.Unknown or SubmissionAttemptState.Sending)
+            await _attempts.RecordOutcomeAsync(approved.Identity.TenantReference,
+                attempt.PrincipalReference, attemptReference,
+                new(SubmissionAttemptState.Succeeded, "HMRC-SUCCESS-RECONCILED",
+                    CorrelationReference: attempt.CorrelationReference,
+                    SafeResponseReference: attempt.SafeResponseReference), cancellationToken);
         return evidence;
     }
 
@@ -434,6 +479,7 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
     public void Dispose()
     {
         _gateway?.Dispose();
+        _validator?.Dispose();
         _fraud?.Dispose();
         _oauth?.Dispose();
         _tokens?.Dispose();

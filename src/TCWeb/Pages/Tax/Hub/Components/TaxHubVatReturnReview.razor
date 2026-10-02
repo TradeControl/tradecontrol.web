@@ -263,13 +263,8 @@
         _ => "Return not sent"
     };
 
-    private static string SubmissionMessage(VatSubmissionResult result) => result.State switch
-    {
-        VatSubmissionResultState.Accepted => "HMRC accepted the approved VAT return and returned a receipt.",
-        VatSubmissionResultState.Rejected => $"HMRC rejected the return ({result.OutcomeCode}). Review the authority response before preparing another return.",
-        VatSubmissionResultState.OutcomeUnknown => $"Sending may have begun ({result.OutcomeCode}). Do not submit again until the outcome is reconciled.",
-        _ => $"The return was not sent ({result.OutcomeCode}). Correct the issue before trying again."
-    };
+    private static string SubmissionMessage(VatSubmissionResult result) =>
+        VatAuthorityUserMessages.Submission(result);
 
     private static string ReadbackText(VatSubmissionResult result) => result.ReadbackMatches switch
     {

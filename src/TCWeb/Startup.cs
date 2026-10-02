@@ -25,6 +25,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 
 using Wangkanai.Detection.Models;
 using TradeControl.Web.Data;
@@ -62,6 +65,8 @@ namespace TradeControl.Web
                 options.IdleTimeout = TimeSpan.FromSeconds(120);
                 options.Cookie.HttpOnly = true;
                 options.Cookie.IsEssential = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Cookie.SameSite = SameSiteMode.Lax;
             });
 
             services.AddSingleton<IFileProvider>(new PhysicalFileProvider(_env.WebRootPath));
@@ -73,6 +78,9 @@ namespace TradeControl.Web
             services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<VatProductHostOptions>,
                 VatProductDevelopmentDefaults>();
             services.AddAppServices();
+            services.AddHealthChecks()
+                .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+                .AddCheck<TaxHubReadinessHealthCheck>("trade-control-node", tags: new[] { "ready" });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -88,6 +96,20 @@ namespace TradeControl.Web
             }
 
             app.UseHttpsRedirection();
+
+            app.Use(async (context, next) =>
+            {
+                context.Response.OnStarting(() =>
+                {
+                    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+                    context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+                    context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+                    context.Response.Headers.TryAdd("Content-Security-Policy",
+                        "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'");
+                    return Task.CompletedTask;
+                });
+                await next();
+            });
             
             app.Use(async (context, next) =>
             {
@@ -120,6 +142,15 @@ namespace TradeControl.Web
                 endpoints.MapBlazorHub();
 
                 endpoints.MapRazorPages();
+
+                endpoints.MapHealthChecks("/health/live", new HealthCheckOptions
+                {
+                    Predicate = registration => registration.Tags.Contains("live")
+                }).AllowAnonymous();
+                endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions
+                {
+                    Predicate = registration => registration.Tags.Contains("ready")
+                }).AllowAnonymous();
             });            
         }
     }

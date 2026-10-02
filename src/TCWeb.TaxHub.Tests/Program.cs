@@ -289,9 +289,15 @@ Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringCom
     "Business Tax or Accounts no longer provides compact mobile tab labels.");
 var dashboardObligationsGrid = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubObligationsGrid.razor"));
+var dashboardComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubDashboard.razor"));
 Assert(dashboardObligationsGrid.Contains("@if (Items.Count > 10)", StringComparison.Ordinal)
     && dashboardObligationsGrid.Contains("RowsPerPage=\"10\"", StringComparison.Ordinal),
     "The Dashboard obligations summary always renders a pager or lost its bounded page size.");
+Assert(dashboardComponent.Contains("A VAT filing needs confirmation", StringComparison.Ordinal)
+    && dashboardComponent.Contains("Do not submit the return again", StringComparison.Ordinal)
+    && dashboardComponent.Contains("Reconcile with HMRC", StringComparison.Ordinal),
+    "The Dashboard no longer restores actionable filing-reconciliation guidance after reconnect or restart.");
 var taxHubGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubGrid.razor"));
 var taxHubCss = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot", "css", "modules", "taxHub.css"));
@@ -396,7 +402,7 @@ Assert(returnReview.Contains("Submit VAT return to HMRC", StringComparison.Ordin
     && returnReview.Contains("@bind=\"_submitConfirmed\"", StringComparison.Ordinal)
     && returnReview.Contains("taxHubHmrc.captureClientFacts", StringComparison.Ordinal)
     && returnReview.Contains("AuthorityErrors", StringComparison.Ordinal)
-    && returnReview.Contains("Do not submit again until the outcome is reconciled", StringComparison.Ordinal),
+    && returnReview.Contains("VatAuthorityUserMessages.Submission", StringComparison.Ordinal),
     "The controlled submit confirmation, rejection detail, fresh fraud capture or unknown-outcome warning is missing.");
 var submissionService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
     "VatReturnSubmissionService.cs"));
@@ -447,7 +453,8 @@ Assert(filingHistoryView.Contains("VAT filing history", StringComparison.Ordinal
     "The ordinary filing-history view lost its evidence summary, masked identity or protected-content boundary.");
 Assert(connectionService.Contains("RecordReconciliationAsync", StringComparison.Ordinal)
     && connectionService.Contains("ReconcileApprovedAsync", StringComparison.Ordinal)
-    && connectionService.Contains("VatReturnReconciliation.Compare", StringComparison.Ordinal),
+    && connectionService.Contains("VatReturnReconciliation.Compare", StringComparison.Ordinal)
+    && connectionService.Contains("HMRC-SUCCESS-RECONCILED", StringComparison.Ordinal),
     "Exact authority readback is not durably attached to the immutable filing attempt.");
 var visibleApproval = new VatApprovalEvidence("approval", "18A2", new DateOnly(2017, 4, 1),
     new DateOnly(2017, 6, 30), "*****8554", "actor", "VRN-DIGEST", "BODY-DIGEST",
@@ -459,6 +466,36 @@ Assert(VatFilingHistoryService.IsVisible(visibleApproval, "VRN-DIGEST", new Date
     && !VatFilingHistoryService.IsVisible(visibleApproval, "VRN-DIGEST", new DateOnly(2017, 6, 30),
         new DateOnly(2015, 4, 1), new DateOnly(2016, 3, 31)),
     "Filing history did not enforce current VAT identity, adoption date and selected period boundaries.");
+
+Assert(VatAuthorityUserMessages.Obligations("HMRC-CLIENT_OR_AGENT_NOT_AUTHORISED")
+        .Contains("correct organisation account", StringComparison.OrdinalIgnoreCase)
+    && VatAuthorityUserMessages.Obligations("HMRC-HTTP-429")
+        .Contains("Wait", StringComparison.OrdinalIgnoreCase)
+    && VatAuthorityUserMessages.Obligations("HMRC-SCHEDULED_MAINTENANCE")
+        .Contains("temporarily unavailable", StringComparison.OrdinalIgnoreCase),
+    "Documented HMRC obligation failures no longer have actionable, non-technical user guidance.");
+var duplicateMessage = VatAuthorityUserMessages.Submission(new(VatSubmissionResultState.Rejected,
+    "HMRC-BUSINESS_ERROR", "attempt", 403,
+    AuthorityErrors: [new("DUPLICATE_SUBMISSION", "The period was already filed.")]));
+Assert(duplicateMessage.Contains("already been filed", StringComparison.OrdinalIgnoreCase)
+    && duplicateMessage.Contains("Do not submit", StringComparison.OrdinalIgnoreCase),
+    "A duplicate HMRC submission no longer fails safely with reconciliation guidance.");
+var connectionView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubHmrcConnection.razor"));
+Assert(connectionView.Contains("correct-errors-in-your-vat-return", StringComparison.Ordinal)
+    && connectionView.Contains("www.gov.uk/pay-vat", StringComparison.Ordinal)
+    && connectionView.Contains("Validate fraud headers", StringComparison.Ordinal),
+    "The VAT connection panel lost required HMRC journey guidance or deployed fraud validation.");
+var hmrcControllerSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Controllers",
+    "TaxHubHmrcController.cs"));
+Assert(hmrcControllerSource.Contains("FraudPrevention/Validate", StringComparison.Ordinal)
+    && hmrcControllerSource.Contains("IVatFraudHeaderValidationService", StringComparison.Ordinal),
+    "TCWeb no longer validates fraud headers through its own deployed product composition.");
+var startupSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Startup.cs"));
+Assert(startupSource.Contains("/health/live", StringComparison.Ordinal)
+    && startupSource.Contains("/health/ready", StringComparison.Ordinal)
+    && startupSource.Split(".AllowAnonymous();", StringSplitOptions.None).Length >= 3,
+    "The App Service liveness/readiness probes are missing or protected by interactive authentication.");
 
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 

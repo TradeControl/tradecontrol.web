@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TradeControl.Tax.UK.Adapters.Submission.FraudPrevention;
 using TradeControl.Tax.UK.Adapters.Submission.OAuth;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -13,6 +14,7 @@ namespace TradeControl.Web.Controllers;
 [Route("TaxHub/Hmrc")]
 public sealed class TaxHubHmrcController(
     IVatHmrcConnectionService connection,
+    IVatFraudHeaderValidationService fraudValidator,
     IVatFilingAuthorisationPolicy policy,
     IVatFraudContextCapture fraudCapture) : Controller
 {
@@ -77,6 +79,40 @@ public sealed class TaxHubHmrcController(
             return StatusCode(503, new ProblemDetails
             {
                 Title = "HMRC client-fact capture is unavailable for this deployment.", Status = 503
+            });
+        }
+    }
+
+    [HttpGet("FraudPrevention/Validate")]
+    public async Task<IActionResult> ValidateFraudPreventionHeaders(CancellationToken cancellationToken)
+    {
+        if (!policy.CanManageHmrcConnection(User)) return Forbid();
+        try
+        {
+            var result = await fraudValidator.ValidateAsync(User, cancellationToken);
+            if (result.ReauthorisationReason.HasValue)
+                return Unauthorized(new
+                {
+                    status = "reauthorisation-required",
+                    reason = result.ReauthorisationReason.Value.ToString(),
+                    authorize = "/TaxHub/Hmrc/Reauthorise"
+                });
+            if (result.StatusCode is null || result.Body is null) return StatusCode(503);
+            Response.StatusCode = result.StatusCode.Value;
+            return File(result.Body, result.ContentType ?? "application/json", enableRangeProcessing: false);
+        }
+        catch (FraudContextRejectedException)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "Fresh browser and session facts are required.", Status = 409
+            });
+        }
+        catch (InvalidOperationException)
+        {
+            return StatusCode(503, new ProblemDetails
+            {
+                Title = "The HMRC fraud-header validator is unavailable.", Status = 503
             });
         }
     }

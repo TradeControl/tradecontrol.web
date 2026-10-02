@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -88,6 +89,8 @@ namespace TradeControl.Web.Areas.Identity
                 {
                     options.Cookie.Name = ".TradeControl.Identity";
                     options.Cookie.HttpOnly = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
 
                     options.LoginPath = "/Identity/Account/Login";
@@ -120,6 +123,8 @@ namespace TradeControl.Web.Areas.Identity
                     options.IdleTimeout = TimeSpan.FromSeconds(sessionTimeSpan);
                     options.Cookie.HttpOnly = true;
                     options.Cookie.IsEssential = true;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
                 });
 
                 services.Configure<MvcOptions>(options =>

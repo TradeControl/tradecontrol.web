@@ -162,11 +162,9 @@ public sealed class VatObligationWorkspaceService(
             return new(reauthorisation ? VatObligationWorkspaceState.ReauthorisationRequired
                     : unavailable ? VatObligationWorkspaceState.Unavailable
                     : VatObligationWorkspaceState.AuthorityError, [],
-                reauthorisation
-                    ? "HMRC requires the business to reconnect before obligations can be retrieved."
-                    : unavailable
-                        ? "HMRC VAT obligations are not configured for this deployment."
-                    : "HMRC VAT obligations could not be refreshed. Try again later.",
+                unavailable
+                    ? "HMRC VAT obligations are not configured for this deployment."
+                    : VatAuthorityUserMessages.Obligations(exception.SafeCode),
                 exception.SupportReference);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -515,6 +515,8 @@ Requires accepted 6.0–6.5 in an internet-reachable HTTPS deployment whose topo
 
 Human review may mark **VAT product technically approval-ready**. This status does not mean HMRC approved, production access granted, a live return filed or the product listed.
 
+**Status (2 October 2026): accepted — VAT product technically approval-ready.** The fresh-organisation ordinary filing journey, exact readback, fraud validator and accessibility review passed. A genuine post-acceptance App Service interruption preserved the HTTP 201 receipt while preventing immediate readback; the restarted product warned against resubmission, exposed one controlled Filing History reconciliation action and then proved an exact nine-value HMRC match. Release builds and applicable offline regression suites are green, and redacted ordinary/recovery screenshots are assembled in the user-guide repository. This acceptance does not mean HMRC approved, production access was granted, a live return was filed or the product was listed. Phase 6.7 remains closed pending explicit owner approval for the external HMRC process.
+
 ## Phase 6.7 — HMRC approval, production activation and compatible-software listing
 
 ### Purpose

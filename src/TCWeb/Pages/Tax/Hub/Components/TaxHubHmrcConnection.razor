@@ -7,6 +7,7 @@
 @inject IVatFilingAuthorisationPolicy FilingPolicy
 @inject NavigationManager Navigation
 @inject IJSRuntime JavaScript
+@inject Microsoft.Extensions.Options.IOptions<VatProductHostOptions> HostOptions
 
 <section class="@(Compact ? "tc-tax-hub-hmrc-compact border-bottom mb-3 pb-3" : "card mb-3")" aria-labelledby="hmrc-connection-title">
     <div class="@(Compact ? "d-flex flex-column gap-2" : "card-body d-flex flex-wrap align-items-center justify-content-between gap-3")">
@@ -60,6 +61,12 @@
                 <button class="btn btn-sm btn-outline-danger"
                         disabled="@(_status.State is not VatConnectionState.Connected and not VatConnectionState.ReauthorisationRequired)"
                         @onclick="DisconnectAsync">Disconnect HMRC</button>
+                @if (HostOptions.Value.AuthorityEnvironment == VatAuthorityEnvironment.Sandbox)
+                {
+                    <button class="btn btn-sm btn-outline-secondary"
+                            disabled="@(_status.State != VatConnectionState.Connected)"
+                            @onclick="ValidateFraudHeadersAsync">Validate fraud headers</button>
+                }
             </div>
         }
         @if (!_loading && _detailsExpanded && Compact && ReportingProfileReady
@@ -67,6 +74,23 @@
         {
             <button class="btn btn-sm btn-outline-secondary" @onclick="SignOutAsync">Sign out locally</button>
             <div class="small text-muted">Local sign-out retains the HMRC connection. Disconnect HMRC removes it.</div>
+        }
+        @if (!_loading && _detailsExpanded && ReportingProfileReady)
+        {
+            <nav class="small" aria-label="HMRC VAT guidance">
+                <span class="text-muted">HMRC guidance:</span>
+                <a class="ms-1" href="https://www.gov.uk/government/collections/making-tax-digital-for-vat"
+                   target="_blank" rel="noopener noreferrer">Making Tax Digital for VAT</a>
+                <span aria-hidden="true"> · </span>
+                <a href="https://www.gov.uk/log-in-register-hmrc-online-services"
+                   target="_blank" rel="noopener noreferrer">Government Gateway sign-in</a>
+                <span aria-hidden="true"> · </span>
+                <a href="https://www.gov.uk/submit-vat-return/correct-errors-in-your-vat-return"
+                   target="_blank" rel="noopener noreferrer">Correct a filed return</a>
+                <span aria-hidden="true"> · </span>
+                <a href="https://www.gov.uk/pay-vat"
+                   target="_blank" rel="noopener noreferrer">Pay VAT</a>
+            </nav>
         }
     </div>
 </section>
@@ -125,6 +149,12 @@
     private void ToggleDetails() => _detailsExpanded = !_detailsExpanded;
 
     private Task SignOutAsync() => JavaScript.InvokeVoidAsync("taxHubHmrc.signOut").AsTask();
+
+    private async Task ValidateFraudHeadersAsync()
+    {
+        await JavaScript.InvokeVoidAsync("taxHubHmrc.captureClientFacts");
+        Navigation.NavigateTo("/TaxHub/Hmrc/FraudPrevention/Validate", forceLoad: true);
+    }
 
     private async Task DisconnectAsync()
     {

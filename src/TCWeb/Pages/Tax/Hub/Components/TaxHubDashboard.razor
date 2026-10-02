@@ -1,5 +1,7 @@
 @using MudBlazor
+@using TradeControl.Web.AppServices.TaxHub.Vat
 @using TradeControl.Web.Pages.Tax.Hub.Models
+@inject IVatFilingHistoryService FilingHistory
 
 @if (Dashboard is null)
 {
@@ -8,6 +10,17 @@
 else
 {
     <div class="tc-tax-hub-dashboard d-flex flex-column gap-3">
+        @if (_requiresFilingReconciliation)
+        {
+            <div class="alert alert-warning" role="alert">
+                <div class="fw-semibold">A VAT filing needs confirmation</div>
+                <div>
+                    Do not submit the return again. Open <strong>VAT</strong>, then
+                    <strong>Filing History</strong>, and choose <strong>Reconcile with HMRC</strong>.
+                </div>
+            </div>
+        }
+
         <section>
             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                 @if (!string.IsNullOrWhiteSpace(Dashboard.BusinessType))
@@ -123,6 +136,24 @@ else
 @code {
     [Parameter] public TaxHubDashboardModel? Dashboard { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+    private bool _requiresFilingReconciliation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var filings = await FilingHistory.GetAsync();
+            _requiresFilingReconciliation = filings.Any(item =>
+                item.State is "Unknown" or "Sending"
+                || item.State == "Succeeded" && item.Reconciliation is null);
+        }
+        catch
+        {
+            // Filing History owns its detailed safe error presentation. A dashboard warning
+            // must never prevent the Tax Hub itself from loading.
+            _requiresFilingReconciliation = false;
+        }
+    }
 
     private static Color GetAuditColour(string status)
     {
