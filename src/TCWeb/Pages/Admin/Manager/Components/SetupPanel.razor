@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.Data.SqlClient
 @using Microsoft.EntityFrameworkCore
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.Data
@@ -261,10 +262,17 @@
                                         </div>
 
                                         <div class="col-12 col-md-6">
-                                            <label class="form-label" for="vatNumber">Vat Number</label>
+                                            <label class="form-label" for="vatNumber">VAT Number</label>
                                             <InputText id="vatNumber"
                                                        @bind-Value="_editor.VatNumber"
+                                                       inputmode="numeric"
+                                                       maxlength="9"
+                                                       aria-describedby="vatNumberHelp"
                                                        class="form-control" />
+                                            <div id="vatNumberHelp" class="form-text">
+                                                Required when VAT registration is on. Enter the nine digits without spaces or a GB prefix.
+                                            </div>
+                                            <ValidationMessage For="@(() => _editor.VatNumber)" />
                                         </div>
 
                                         <div class="col-12">
@@ -379,7 +387,7 @@
 @code {
     [Parameter] public bool IsInitialSetup { get; set; }
 
-    private sealed class SetupEditorModel
+    private sealed class SetupEditorModel : IValidatableObject
     {
         [Required]
         [Display(Name = "Configuration Template")]
@@ -445,8 +453,22 @@
         public string? CompanyNumber { get; set; }
 
         [StringLength(50)]
-        [Display(Name = "Vat Number")]
+        [Display(Name = "VAT Number")]
         public string? VatNumber { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!IsVatRegistered)
+                yield break;
+
+            var vatNumber = VatNumber?.Trim();
+            if (vatNumber?.Length != 9 || vatNumber.Any(character => !char.IsDigit(character)))
+            {
+                yield return new ValidationResult(
+                    "Enter a nine-digit VAT registration number, using digits only.",
+                    new[] { nameof(VatNumber) });
+            }
+        }
 
         [Required]
         [StringLength(255)]
@@ -798,6 +820,11 @@
             NavigationManager.NavigateTo(
                 IsInitialSetup ? "/" : "/Identity/Account/SignOutAndRegister",
                 forceLoad: true);
+        }
+        catch (SqlException ex) when (ex.Number == 51033)
+        {
+            _errorMessage = "Enter a nine-digit VAT registration number, using digits only.";
+            await NodeContext.ErrorLog(ex);
         }
         catch (Exception ex)
         {

@@ -416,6 +416,10 @@ Requires 5.7 and follows the VAT milestone. It is independent of the fixture-onl
 
 Attach asset versions/checksums, validation findings and the IRmark slot/attachment map to history. Human approval of this Objective 3 contract change is required before any real CT package becomes eligible for 5.10.
 
+**Implementation status (2 October 2026): blocked on an unavailable official computation-taxonomy asset; family gate remains closed.** HMRC lists Corporation Tax computational 2025 as accepted for the target period but provides no download link, and the public 2025 entry point and inferred official package locations return `404`. The official LTS 8.3 service feed supplies CT600 RIM 1.994 and its calculator but not the computation taxonomy. CT 2024 expires for accounting periods ending after 31 March 2026 and cannot be substituted for the target period ending 30 June 2026. The available RIM 1.994, FRC 2026, LTS and sample assets were fingerprinted, and the RIM confirms embedded XHTML attachments plus a single reserved generic IRmark slot, but a genuine service artifact cannot be created, taxonomy-validated or promoted without the authoritative CT 2025 package. No service-root bytes or golden were introduced; the diagnostic serializer, existing iXBRL bytes/digests and Phase 5.7 zero-send gate remain unchanged. See [the Phase 5.8 assurance record](phase-5.8-corporation-tax-service-artifact-assurance.md).
+
+**External dependency update (3 October 2026):** At 11:04 BST the developer emailed HMRC Software Developers Support Team asking HMRC to confirm that Corporation Tax computational 2025 applies to the target accounting period ending 30 June 2026 and to provide the authoritative package location, version or schema entry point and distribution route. Phase 5.8 is paused pending an authoritative response. This enquiry does not change artifact readiness: the CT family gate remains closed and no implementation workaround is authorised.
+
 ## Phase 5.9 — Transaction Engine protocol, fixture only
 
 ### Purpose

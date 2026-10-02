@@ -1,5 +1,12 @@
 # Tax Hub Findings
 
+## 2 October 2026 — Phase 5.8 Corporation Tax computation-taxonomy blocker
+
+- HMRC's accepted-taxonomies register lists Corporation Tax computational 2025 for the target period ending 30 June 2026, but unlike prior releases it exposes no download link. The expected public 2025 schema entry point and inferred official package locations return `404`; CT 2024 is accepted only through 31 March 2026 and is not a valid substitute.
+- The official LTS 8.3 update feed offers CT600 RIM 1.994. Its CT payload contains the RIM XSD, Schematron, envelope schema and calculator but no computation taxonomy. It therefore confirms the selected live RIM without supplying the missing Objective 3 validation dependency.
+- RIM 1.994 and HMRC's valid samples confirm that `AttachedFiles/XBRLsubmission` embeds XHTML document elements rather than base64 attachment text, with computation preceding optional accounts when both are present, and that `IRheader` has one reserved generic IRmark slot. The current diagnostic serializer is not that contract and cannot be promoted by changing status metadata.
+- Phase 5.8 cannot truthfully produce or validate a genuine target-period service artifact until the official CT computational 2025 package and checksum are obtained. No product bytes changed, and the Phase 5.7 family gate remains closed.
+
 ## 2 October 2026 — Phase 6.6 current VAT approval baseline
 
 - A real App Service recycle after HMRC returned HTTP 201 proved the post-acceptance interruption path without replaying a VAT write. The durable receipt survived restart; the dashboard warned against resubmission; Filing History exposed the absent readback and one controlled reconciliation action; and HMRC readback then matched the period key and all nine approved values exactly. The outcome correctly remained `HMRC-SUCCESS` because acceptance was already known—the recovery supplied missing reconciliation evidence rather than reclassifying the filing.
