@@ -1,5 +1,31 @@
 # Tax Hub Findings
 
+## 6 October 2026 — Companies House test account issued
+
+- Companies House created the requested XML software-filing test account and supplied a protected test presenter ID, presenter authentication value, test flag and allocated package reference. The correspondence and values remain under `.local/companies-house/test-account`; none is copied into tracked documentation, fixtures, code or ordinary diagnostics.
+- Companies House requires unique incremental submission numbers and notification to its XML team after test submissions so manual review can occur. These are now official operational constraints rather than simulator assumptions.
+- The response did not provide the requested current testing criteria or a company authentication value. No test submission, gateway acceptance, manual-review result, production credential or production approval exists yet.
+- Access arrived after accepted Block A and before Block B authorisation. Block A is preserved for deterministic lifecycle, adverse-case and recovery regression. Block B is not started; future simulator extensions require observed authority behaviour or a concrete adapter/recovery need.
+- The smallest safe next implementation is a no-send official-test preflight: protected configuration binding, final credentialed-envelope materialisation, unique submission identity control, schema/contract validation, redacted hashes and an explicit human send gate. The missing criteria and company-authentication arrangement must be resolved before that gate can authorise a test submission.
+
+## 3 October 2026 — Companies House simulator Block A boundary
+
+- The useful simulator core does not require a Companies House transport adapter or committed XSD copies. Synthetic authentication is supplied out of band, which exercises lifecycle behavior without inventing the unresolved Phase 5.12 credential-materialisation boundary.
+- Current simulated batching, status advancement and acknowledgement behavior is explicitly recorded as assumption-led development scaffolding. It must yield to Companies House developer-test evidence.
+- A standalone contracts-only tool plus architecture checks keeps the simulator out of Application, production adapters and TCWeb. No network API or persistent simulator store is present.
+- The useful first consumer is an Application-owned immutable conversation, not a simulator dependency: test composition translates simulated XML responses into published contract types and applies them to the lifecycle. This proves acknowledgement-versus-acceptance, digest continuity, rejection fidelity, terminal immutability and conditional `StatusAck` before an HTTP endpoint or real adapter exists.
+- Block A closure review exposed two literal plan gaps and one isolation defect: decoded attachment bytes were not retained, reference generation was internal rather than injected, and the last general-poll batch was global. Exact immutable evidence, injected references and presenter-scoped batches/access now close those gaps with focused regression coverage.
+- The simulator blocks are not the accounting-preparation plan. The correct early composition mirrors VAT: the WebHarness calls the existing database-backed Companies House preparation runner, then a Development-only diagnostic passes its immutable output to the in-process simulator. Block C later replaces that direct call with a loopback transport boundary; it is not a prerequisite for proving the database-to-filing-package journey.
+
+## 3 October 2026 — Phase 5.11 Companies House prerequisite blocker
+
+- The official Companies House accounts TIS was updated on 25 September 2026 and identifies itself as version 6.0, superseding the repository's TIS 5.9 pin. The public live schemas establish GovTalk plus `FormSubmission-v2-11`, `GetSubmissionStatus-v2-9` and conditional `StatusAck`; accounts are exact iXBRL bytes base64 encoded in `FormSubmission/Document/Data`, not a `CompanyAccounts` body.
+- The Objective 3 preview is materially different: it uses an invented `CompanyAccounts-v1-0` body/Class, conflates envelope correlation with the six-character submission number, has no presenter/company authentication slots or official filing header, and exposes a fabricated REST-like status path. Its iXBRL projection also omits mandatory TIS 6.0 facts and the section 477 statement, so this requires a reviewed Objective 3 filing-contract correction rather than an Objective 4 relabelling.
+- Public examples are not a complete current filing golden: the status example references deprecated schema 2.5 and the linked accounts image example uses FormSubmission 2.5 with a 2009 taxonomy. Companies House makes its internal accounting validation rules and manual review route available to registered software testers; a test account, test presenter credentials and testing criteria must be requested through `xml@companieshouse.gov.uk`.
+- No code/readiness change or external contact was made. Phase 5.11 remains blocked pending the programme scope/sequence correction, approval of the precise Objective 3 correction, and authorised acquisition of Companies House developer-test evidence. Phase 5.12 was not started.
+- The user subsequently approved the programme/sequence and narrow Objective 3 corrections. Internal work from published material is implemented while `SubmissionReady` remains false and the gateway proves zero outbound sends.
+- The test-account application was submitted at 12:22 on 3 October 2026. This was the position at that date; the account and protected presenter test values were subsequently supplied on 6 October 2026, while current criteria and accepted gateway/manual-review evidence remain pending.
+
 ## 2 October 2026 — Phase 5.8 Corporation Tax computation-taxonomy blocker
 
 - HMRC's accepted-taxonomies register lists Corporation Tax computational 2025 for the target period ending 30 June 2026, but unlike prior releases it exposes no download link. The expected public 2025 schema entry point and inferred official package locations return `404`; CT 2024 is accepted only through 31 March 2026 and is not a valid substitute.

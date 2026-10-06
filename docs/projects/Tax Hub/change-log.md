@@ -1,5 +1,54 @@
 # Tax Hub Change Log
 
+## 6 October 2026 — Companies House external dependency update
+
+- Recorded receipt of the official XML software-filing test account and protected test presenter/configuration values without exposing any value in tracked material.
+- Recorded the official unique-and-incremental submission-number rule and post-submission notification/manual-review workflow.
+- Reclassified account issuance and presenter-credential availability as resolved while retaining fail-closed gates for testing criteria, company authentication, credentialed-envelope review and accepted developer-test evidence.
+- Preserved accepted simulator Block A and withdrew the prematurely started Block B-only regression increment. Future simulator work is evidence-led rather than sequence-led.
+- Recommended a no-send official-test preflight as the smallest next implementation step; no external Companies House submission or Phase 5.12 transport activation occurred.
+- Implemented the reviewed adapter hop through protected filing materialisation, a pinned internal/unregistered HTTP component with offline response parsing, and a Development-only digest preflight that cannot send.
+- Extended protected materialisation to `GetSubmissionStatus` and conditional empty-body `StatusAck`, keeping filing-only company authentication and package reference out of polling.
+- Aligned both the published contract serializer and preserved Block A simulator with the official control-message examples: `Function=submit` remains on accounts submissions but is absent from status and acknowledgement requests. No external request was made by that increment.
+- Added a doubly gated Development-only one-shot official-test path with protected pre-send evidence, no redirects/retries and process-lifetime duplicate prevention.
+- Following explicit human authorisation, sent `S00001`/`2026100600000001` once to the pinned official test gateway using synthetic company authentication. Companies House returned synchronous GovTalk error `501`, `Invalid Gateway Target (Class) supplied [AA]`; no filing acknowledgement, authentication verdict, accounts parsing or status outcome occurred.
+- Preserved the exact protected request/response evidence, stopped the temporary send-enabled process and marked both identifiers consumed.
+- Reconciled the 501 against more specific Companies House evidence: the live accounts wrapper example and recent successful-routing test requests use `Class=Accounts` and `FormIdentifier=Accounts`, and Companies House staff confirmed that Class in March 2026. Corrected the filing contract, simulator and offline transport fixtures accordingly. A fresh `S00002` preflight remains no-send and requires review before any separately authorised exchange.
+- Completed the corrected-route `S00002`/`2026100600000002` Development preflight. Database preparation and protected-envelope materialisation succeeded with wire SHA-256 `8EE86CF7D12DB6162C19661BEF44457ADBEC8E6A2153830C1648F84FD8BAC44C`; external sending remained disabled.
+- Following separate explicit human authorisation, sent that exact `S00002` request once. The corrected `Accounts`/`Accounts` route passed and Companies House returned synchronous iXBRL validation error `9999`, proving that document validation had been reached without establishing authentication or filing acceptance.
+- Corrected `IxbrlDocumentBuilder` to place `ix:resources` directly under the required `ix:header`, added a structural regression assertion and passed the relevant offline suites. Preserved the protected second-exchange evidence, stopped the send-enabled process and marked both identifiers consumed; no retry, poll or third exchange occurred.
+- Following a fresh preflight and explicit user instruction, sent `S00003`/`2026100600000003` once. Companies House progressed to the next embedded iXBRL rule and returned error `9999` because `link:schemaRef` was incorrectly inside `ix:resources`; no authentication or filing verdict was reached.
+- Reconciled that response with normative Inline XBRL 1.1, then changed the builder to emit a hidden `ix:header` with ordered `ix:references/link:schemaRef` and `ix:resources` contexts/units. Added hierarchy/order regression assertions, retained protected evidence, stopped the send-enabled process and consumed both identifiers. No retry, poll or fourth exchange occurred.
+- Following explicit approval of its exact preflight digest, sent `S00004`/`2026100600000004` once. Companies House accepted the corrected header hierarchy and reported an unobtainable HTTP FRC 2026 entry point, five invalid `xml:lang` attributes on fixed facts and one potentially cascading concept-content error. No authentication or filing decision was reached.
+- Inspected the official FRC 2026 v1.0.0 ZIP only under git-ignored `.local`, changed the taxonomy entry point to directly retrievable HTTPS and introduced explicit zero-length fixed values that do not emit language metadata. Added regression assertions, retained protected evidence, stopped the harness and consumed both identifiers. No retry, poll or fifth exchange occurred.
+- Following approval of its exact digest, sent `S00005`/`2026100600000005` once. All prior diagnostics were absent; Companies House returned only the undeclared `core:AccrualsDeferredIncome` QName error.
+- Corrected that authority mapping to the official FRC 2026 monetary item `core:AccruedLiabilitiesDeferredIncome`, added a regression assertion, preserved protected evidence and consumed both identifiers. No retry, poll or sixth exchange occurred.
+- Sent `S00010` once after the XHTML compatibility corrections. Companies House returned a well-formed but then-unclassified reply; the one-shot gate failed closed, but this exposed that the raw reply was not retained when classification failed.
+- Corrected that evidence gap so any unclassified official response is retained exactly in the protected evidence area with its SHA-256, while remaining fail-closed and non-retryable.
+- Sent `S00011` once and retained the official 1,085-byte response. It is the successful non-terminal receipt shape actually emitted by the test gateway: `Class=Accounts`, `Qualifier=response`, an empty body and gateway timestamp `2026-10-06T19:09:58Z`. The classifier now accepts this observed `response` form as an Accounts acknowledgement without broadening any other operation.
+- Separated the accounts reporting date from the contract-selection date in the WebHarness. The database has a ready 31 March 2026 balance sheet; TIS 6.0 is selected using the current preparation/submission date, so future-dated accounts are no longer needed.
+
+## 3 October 2026 — Companies House development simulator Block A
+
+- Added the standalone, memory-only and network-free Companies House development simulator plus a dedicated offline scenario suite.
+- Modelled deterministic simulated acknowledgement, all published asynchronous status values, specific/presenter polling and conditional `StatusAck` redelivery while preserving exact attachment digests.
+- Enforced synthetic-only authentication, duplicate refusal, presenter isolation, unsupported-input rejection and production-project isolation. Every result is classified `SIMULATED — NOT FILED`.
+- Added the first transport-neutral Application lifecycle consumer: immutable prepared/acknowledged/pending/parked/terminal transitions, exact transmission/accounts digests, bounded rejection evidence and conditional status acknowledgement, all exercised directly against the simulator.
+- Closed the literal Block A evidence and isolation requirements by retaining immutable exact request/decoded-accounts bytes, injecting transaction-reference generation and scoping outstanding general-poll acknowledgements and evidence access by synthetic presenter.
+- Added a Development-only WebHarness simulation endpoint that follows the established integration structure: read Trade Control, build statutory accounts and iXBRL through the existing preparation path, pass the exact filing package to the in-process simulator, poll through the Application lifecycle and return safe `SIMULATED — NOT FILED` evidence.
+- Prevented opportunistic HMRC browser-fact capture from redirecting an otherwise anonymous local Swagger session into the TCWeb identity bridge; explicit HMRC operations retain their authentication behavior while Companies House simulation remains usable when the local identity application is not running.
+- Corrected the earlier AI-derived balance-sheet boundary after its year-end query exceeded SQL Server optimiser resources: generic `Cash.fnTaxBizBalanceSheet` now exposes only non-current/current asset and liability source classifications, while `Cash.fnTaxBizBalanceSheetUK` performs the explicit UK fixed-assets and creditors-due extrapolation. Reviewed adjustments and derived statutory totals remain at the existing Application reconciliation boundary.
+- Kept Blocks B–C, the remaining transport-backed development journey, persistence, official XSD commitment and external submission out of scope pending separate review.
+
+## 3 October 2026 — Companies House Phase 5.11 prerequisite assurance
+
+- Acquired the current official general/accounts TIS, live filing/status/acknowledgement schemas and official examples into a temporary evidence directory; recorded URLs, byte sizes and SHA-256 values without committing the downloaded assets.
+- Established that the current accounts supplement is TIS 6.0, that the official filing body is `FormSubmission` with a base64 iXBRL `ACCOUNTS` document, and that status polling is a GovTalk XML operation followed conditionally by `StatusAck`, not a REST path.
+- Recorded the field-by-field preview mismatch and the narrow Objective 3 correction required for the mandatory iXBRL facts/statements, official filing header, authentication slots, transaction/submission identity and lifecycle models.
+- Kept the existing preview, iXBRL bytes, eligibility and all VAT/CT artifacts unchanged. Phase 5.11 remains at human review; no account, credential, network transport, test filing or Phase 5.12 work was created.
+- Following explicit approval, corrected Objective 4 scope/sequencing, added the TIS 6.0 mandatory micro-entity account facts/statements, replaced the obsolete logical body with a credential-free GovTalk/FormSubmission preview, modelled GetSubmissionStatus and conditional StatusAck, and added a fail-closed Companies House package gate.
+- Recorded the 12:22 XML software-filing test-account application as pending. No approval, testing acceptance, credential receipt, external filing or Phase 5.12 activation is claimed.
+
 ## 28 September 2026 — Objective 5 Phase 6.0 product boundary
 
 - Added direct TCWeb references to the Tax Hub Application, Trade Control adapter and Submission adapter while architecture checks prohibit a WebHarness dependency and reverse adapter/contract dependencies on TCWeb.

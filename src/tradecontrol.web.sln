@@ -37,6 +37,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tax hub", "tax hub", "{CB6F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implementation", "{28089177-8B6D-4FFE-856A-56CFAC1E218A}"
 	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Tax Hub\implementation\companies-house-development-simulator-workplan.md = ..\docs\projects\Tax Hub\implementation\companies-house-development-simulator-workplan.md
 		..\docs\projects\Tax Hub\implementation\company-statutory-contract-design.md = ..\docs\projects\Tax Hub\implementation\company-statutory-contract-design.md
 		..\docs\projects\Tax Hub\implementation\phase-6.2-vat-obligations-and-sandbox-alignment.md = ..\docs\projects\Tax Hub\implementation\phase-6.2-vat-obligations-and-sandbox-alignment.md
 		..\docs\projects\Tax Hub\implementation\phase-6.3-vat-return-review.md = ..\docs\projects\Tax Hub\implementation\phase-6.3-vat-return-review.md

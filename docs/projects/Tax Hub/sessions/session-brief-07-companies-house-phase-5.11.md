@@ -2,6 +2,22 @@
 
 3 October 2026
 
+> **6 October 2026 update:** Companies House issued the XML software-filing test account, test presenter credentials, test flag and package reference. These values remain protected under `.local/companies-house/test-account`. Block A is accepted; Block B remains deferred while the real adapter proceeds in evidence-led increments.
+
+> **6 October 2026 gateway milestone:** Corrected MIN micro-entity submission `S00013` / `2026100600000013`, for the year ended 30 September 2026 with comparative figures, received an error-free synchronous Companies House test-gateway acknowledgement. This proves gateway receipt only. A specific `GetSubmissionStatus` poll, terminal decision, testing-criteria evidence and Companies House manual review remain outstanding; do not describe the filing as accepted or production-ready.
+>
+> The first explicitly authorised official-test exchange has now occurred. A protected, doubly gated one-shot Development path sent submission `S00001` / transaction `2026100600000001` exactly once using synthetic company authentication. Companies House returned synchronous GovTalk error `501`, `Invalid Gateway Target (Class) supplied [AA]`. No filing acknowledgement, company-authentication verdict, accounts parsing or terminal filing result was reached; do not poll or retry. Exact protected evidence is retained under `.local/companies-house/test-account/evidence/20261006T161029Z-S00001`.
+>
+> Subsequent reconciliation found that the general TIS 5.3 `AA` route conflicts with more specific Companies House evidence. The live accounts wrapper example uses `Class=Accounts` and `FormIdentifier=Accounts`; a 2025 test request passed routing with those values; and Companies House staff explicitly confirmed `Class=Accounts` in March 2026. The contract and Block A simulator are therefore corrected to `Accounts`/`Accounts`. Treat the first identifiers as consumed. Prepare `S00002`/`2026100600000002` through the no-send preflight and stop for review before any second exchange.
+>
+> Human review subsequently authorised that exact second exchange. Companies House accepted the corrected route and returned error `9999` from embedded iXBRL validation because `ix:resources` was not under `ix:header`. The builder and a regression assertion are corrected from that authority evidence. `S00002` and its transaction ID are consumed; no retry, poll or third exchange is authorised. The next external step requires a fresh preflight and separate human approval.
+>
+> The user then explicitly authorised a fresh corrected attempt. `S00003` / `2026100600000003` reached the next iXBRL validation layer and returned error `9999` because `link:schemaRef` was inside `ix:resources`. This agrees with the normative Inline XBRL 1.1 structure. The builder now emits a hidden `ix:header` containing ordered `ix:references/link:schemaRef` and `ix:resources` contexts/units, with regression assertions. The third identifiers are consumed and no fourth exchange is authorised.
+>
+> Human review then authorised the exact `S00004` preflight digest. The request passed the corrected header structure and exposed an unretrievable HTTP FRC entry point plus invalid language metadata on five zero-length fixed facts. The official FRC 2026 v1.0.0 ZIP was inspected only under `.local`; the implementation now uses the directly retrievable HTTPS entry point and models fixed facts without `xml:lang`. `S00004` is consumed. No retry, poll or fifth exchange is authorised without a fresh preflight.
+>
+> Human review authorised the fresh `S00005` digest. It was sent once and returned only one remaining schema error: the undeclared `core:AccrualsDeferredIncome` QName. The official 2026 FRC monetary concept is `core:AccruedLiabilitiesDeferredIncome`; that authority mapping and a regression assertion are corrected. `S00005` is consumed. No retry, poll or sixth exchange is authorised without a fresh preflight.
+
 ## Session objective
 
 Move the active investigation from blocked Corporation Tax Phase 5.8 to the Companies House filing stream without weakening either authority's fail-closed boundary.

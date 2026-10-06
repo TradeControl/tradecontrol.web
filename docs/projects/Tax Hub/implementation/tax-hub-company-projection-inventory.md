@@ -48,17 +48,17 @@ The parked company MIN sandbox is not required to prove a second contract shape.
 | Administrative expenses | two approved roots under `IncomeStatement.AdministrativeExpenses` | Accounting projection | Mapping ready; preserve both roots and contributor provenance. |
 | Tax on profit | approved Corporation Tax computation | Derived | Must not use the tax-control-account balance. |
 | Profit/loss for period | approved income-statement calculation | Derived | Must reconcile before and after tax explicitly. |
-| Fixed assets | `Cash.fnTaxBizBalanceSheet`, using `CA-ASSET` and `CA-DEPREC` mappings | Accounting projection | Ready as a net neutral-polarity balance. |
-| Current assets | `Cash.fnTaxBizBalanceSheet`, using existing debtor, bank and cash account classifications | Accounting projection | Ready. |
+| Fixed assets | `Cash.fnTaxBizBalanceSheetUK`, extrapolated from generic non-current assets using `CA-ASSET` and `CA-DEPREC` mappings over the established balance-sheet asset view | Accounting projection | Ready as a net neutral-polarity source balance. |
+| Current assets | `Cash.fnTaxBizBalanceSheetUK`, preserving the generic current-assets result from the established debtor, bank and cash balance-sheet views | Accounting projection | Ready as a ledger-owned source balance. |
 | Prepayments and accrued income | filing review | Reviewed filing input | Explicit zero default; editable during preparation. |
-| Creditors within one year | `Cash.fnTaxBizBalanceSheet`, using current creditor, Corporation Tax and VAT classifications | Accounting projection | Ready. |
-| Net current assets/liabilities | approved balance-sheet components | Derived | Ready and reconciled by the projection. |
-| Total assets less current liabilities | approved balance-sheet components | Derived | Ready and reconciled by the projection. |
-| Creditors after one year | `Cash.fnTaxBizBalanceSheet`, using the `CA-LIAB` mapping | Accounting projection | Ready; classification is explicit rather than inferred from names. |
+| Creditors within one year | `Cash.fnTaxBizBalanceSheetUK`, mapping generic current liabilities from the established current-creditor, Corporation Tax and VAT balance-sheet views | Accounting projection | Ready as a ledger-owned source balance. |
+| Net current assets/liabilities | approved source components plus reviewed prepayments/accrued income | Derived | Calculated and reconciled by the Application population boundary. |
+| Total assets less current liabilities | approved balance-sheet components | Derived | Calculated and reconciled by the Application population boundary. |
+| Creditors after one year | `Cash.fnTaxBizBalanceSheetUK`, extrapolated from generic non-current liabilities using the `CA-LIAB` mapping over the established balance-sheet asset view | Accounting projection | Ready as a ledger-owned source balance; classification is explicit rather than inferred from names. |
 | Provisions | filing review | Reviewed filing input | Explicit zero default; editable during preparation. |
 | Accruals and deferred income | filing review | Reviewed filing input | Explicit zero default; editable during preparation. |
-| Net assets/liabilities | approved balance-sheet components | Derived | Ready and reconciled to capital and reserves. |
-| Capital and reserves | reconciled net-assets value | Derived | Ready for the supported single-company micro-entity profile. |
+| Net assets/liabilities | approved source components plus reviewed provisions and accruals/deferred income | Derived | Calculated by the Application population boundary and reconciled to capital and reserves. |
+| Capital and reserves | reconciled net-assets value | Derived | Calculated by the Application population boundary for the supported single-company micro-entity profile. |
 | Principal activity | `Subject.tbVirtual.BusinessDescription` | Reviewed filing input | Source suggestion; editable for the filing. |
 | Accounting policies | reviewed `ACCOUNTING-POLICIES` setting | Reviewed filing input | Ready as a suggestion. |
 | Average employees | `Subject.tbVirtual.NumberOfEmployees` | Reviewed filing input | Headcount is a suggestion, not yet the statutory period average. |
@@ -67,6 +67,8 @@ The parked company MIN sandbox is not required to prove a second contract shape.
 | Approval date and signing director | preparation workflow | Gap | Requires a reviewed approval event and director reference; submission date is not a substitute. |
 
 The current contract has eleven balance-sheet lines. `company-field-sets.md` additionally identifies called-up share capital not paid and alternative format totals. Those are outside the current supported typed surface and must not be silently folded into another line.
+
+The SQL boundary is deliberately split. `Cash.fnTaxBizBalanceSheet` retains the generic core name and returns four ledger-owned classifications: non-current assets, current assets, current liabilities and non-current liabilities. `Cash.fnTaxBizBalanceSheetUK` is the visibly jurisdiction-specific extrapolation that maps those values to fixed assets, current assets, creditors due within one year and creditors due after one year. Reviewed prepayments, provisions and accruals/deferred income are not fabricated in SQL, and neither function duplicates the derived statutory totals. `TcCompanyStatutorySourceReader` consumes the UK extrapolation, combines its four source balances with reviewed filing inputs, and the Application population boundary derives and reconciles the remaining statement lines.
 
 ## Corporation Tax computation source matrix
 
@@ -125,9 +127,9 @@ The ports contain no HMRC box numbers, Companies House delivery choices, taxonom
 The following reviewed SQL work is required before a representative accounts artifact can be populated:
 
 1. ~~a period-bounded company income-statement projection returning current/comparative semantic values and effective contributor provenance;~~ Implemented by `Cash.fnTaxBizCumulative` with contributor evidence from `Cash.fnTaxBizCumulativeContributors`;
-2. ~~an as-at-date company balance-sheet projection that classifies statutory asset, liability and equity headings without relying on display names;~~ Implemented by `Cash.fnTaxBizBalanceSheet`;
+2. ~~an as-at-date company balance-sheet source projection that classifies the four ledger-owned asset and liability headings without relying on display names;~~ Implemented by generic `Cash.fnTaxBizBalanceSheet` classifications and the explicitly jurisdictional `Cash.fnTaxBizBalanceSheetUK` extrapolation over the established balance-sheet component views;
 3. ~~explicit maturity evidence for creditors within and after one year;~~ Implemented through existing current-liability classifications and the configurable `CA-LIAB` long-term mapping;
-4. ~~a reconciliation projection proving income-statement totals, net assets and capital/reserves;~~ Implemented in the balance-sheet projection and enforced again by Application contract validation;
+4. ~~a reconciliation boundary proving income-statement totals, net assets and capital/reserves;~~ Implemented once at the Application population boundary and enforced by Application contract validation;
 5. a period-effective statutory Corporation Tax rate policy distinct from an accounting estimate;
 6. a CT tax-payment allocation/reconciliation projection; and
 7. persistent or immutable workflow evidence for accounts approval, signing director and CT600 declaration.
@@ -136,4 +138,4 @@ These are work packages, not permission to add tables. Each must first prefer ex
 
 ## CO1 gate conclusion
 
-The neutral source shape and MIN/STD contract equivalence are established. CO3 accounts population uses the completed income-statement and balance-sheet projections plus explicit reviewed filing input; CO4 remains gated by statutory-rate and tax-payment work. Group and specialist scenarios are explicitly unsupported and fail closed through `CompanySourceSupport`.
+The neutral source shape and MIN/STD contract equivalence are established. CO3 accounts population uses the completed income-statement projection, the four-value balance-sheet source projection and explicit reviewed filing input; derived balance-sheet lines are calculated and reconciled once in Application. CO4 remains gated by statutory-rate and tax-payment work. Group and specialist scenarios are explicitly unsupported and fail closed through `CompanySourceSupport`.

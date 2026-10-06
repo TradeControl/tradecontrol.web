@@ -141,13 +141,15 @@ Current authoritative HMRC specifications and associated statutory artefacts gov
 
 Existing Trade Control classes, serializers, test harnesses, SQL tags, mappings, and historical implementations are evidence of prior implementation intent. They are not authoritative where they conflict with the current external statutory contract.
 
-### Objective 4 — HMRC Transport Platform
+### Objective 4 — Statutory Authority Transport Platform
 
 Implement the machinery required to transmit and receive the contracts defined by Objective 3.
 
+Objective 4 covers both HMRC transport and Companies House accounts transport. Authority-specific protocols, credentials, environments and lifecycle handling remain separate even where they share audit and dispatch foundations.
+
 #### Modern Transport
 
-Where required by the relevant HMRC service:
+Where required by the relevant authority service:
 
 - OAuth
 - Fraud-prevention headers
@@ -157,7 +159,7 @@ Where required by the relevant HMRC service:
 
 #### XML-Based Transport
 
-Where required by the relevant HMRC service:
+Where required by the relevant authority service:
 
 - XML envelope construction
 - XML canonicalisation
@@ -176,6 +178,8 @@ Where required by the relevant HMRC service:
 - Retry and transport-failure handling where applicable
 
 Objective 4 does not define statutory accounting semantics or HMRC payload contents. It transports the contracts established by Objective 3.
+
+An external dependency blocking one authority family does not prevent independently justified prerequisite, contract and fail-closed implementation work for another authority. It does not waive either authority's validation, test-evidence or production-approval gates.
 
 Legacy SA100/XML Self Assessment is not a supported Objective 4 workflow.
 
