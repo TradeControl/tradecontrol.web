@@ -322,7 +322,7 @@ Prepayments and accrued income, provisions, and accrued liabilities/deferred inc
 
 | Item | Result |
 |---|---|
-| Dataset/build identity | Same three-year MIS dataset plus the tracked `EXEC_DatasetSyntheticMIS_Year3_Additive.sql` transition; Year 3 now contains 299 Projects, 277 invoices and 190 payments |
+| Dataset/build identity | Same three-year MIS dataset plus the tracked [`EXEC_DatasetSyntheticMIS_Year3_Additive.sql`](https://github.com/TradeControl/sqlnode/blob/HEAD/src/tcNodeDb4/Scripts/EXEC_DatasetSyntheticMIS_Year3_Additive.sql) transition; Year 3 now contains 299 Projects, 277 invoices and 190 payments |
 | Additive classifications | `CA-DIGSV` / `CC-DIGSV` (digital-services turnover), `CA-CLOUD` / `CC-CLOUD` (cloud infrastructure), and `CA-AUTO` / `CC-AUTO` (automation equipment); no existing Category, Cash Code or edge was updated or deleted |
 | Activity introduced | One ordinary digital-services sale, one cloud-infrastructure purchase and one automation-equipment purchase, with the equipment capitalised to Plant & Tools and depreciated through the established asset-account path |
 | Script safety | Dry-run by default, rerunnable, exact-definition checks, transaction rollback on failure, and fail-closed historical-fact/projection/Equity-Bridge gates |
