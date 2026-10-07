@@ -2,6 +2,8 @@
 
 2026-03-12
 
+> **7 October 2026 Companies House evidence extension:** the generator now accepts a bounded optional `@CompletedYearCount` with a default of `2`, preserving this specification's original two-completed-year behaviour. The Companies House longitudinal test programme uses `3` to add one earlier completed year to the same deterministic MIS history; it does not manufacture a future accounting period or change the ordinary Admin Manager default.
+
 **Introduction**
 
 Hello.
@@ -809,3 +811,22 @@ $110. **Optional enhancements** (future-proofing / BI data generation):
    * Add periodic depreciation payouts.
    * Post assets via the asset-posting mechanism (set `PaymentStatusCode = Posted`).
    * Verify capital vs cash statement behavior (asset movements excluded from cash statement).
+
+## Controlled Companies House Year 3 extension
+
+The ordinary generator continues to use the installed template and does not generate or mutate Category Trees. A narrowly scoped exception exists for the Companies House successive-period test programme: `src/sqlnode/src/tcNodeDb4/Scripts/EXEC_DatasetSyntheticMIS_Year3_Additive.sql`.
+
+This executable script is deliberately separate from `App.proc_DatasetSyntheticMIS`. It exercises an additive classification change only in the established three-completed-year STD synthetic company. It adds digital-services turnover, cloud-infrastructure and automation-equipment classifications beneath existing totals, creates ordinary Year 3 operational/accounting activity with those codes, and uses the existing Plant & Tools asset-account path for capitalisation and depreciation.
+
+The script is dry-run by default and must fail closed unless:
+
+* exactly three consecutive completed years exist;
+* every pre-existing definition needed by the exercise is present;
+* a rerun encounters only the exact definitions previously installed;
+* no new-code activity falls outside Year 3;
+* every canonical Year 1 and Year 2 statutory fact remains unchanged;
+* the Year 1 and Year 2 Equity Bridges remain unchanged;
+* all three Equity Bridges remain within the stated tolerance; and
+* all three statutory balance-sheet projections remain `Ready`.
+
+This script is test scaffolding, not the deferred production Category Tree issue/change-control lifecycle. It must not be generalized into a customer migration mechanism without that separate design and authority.

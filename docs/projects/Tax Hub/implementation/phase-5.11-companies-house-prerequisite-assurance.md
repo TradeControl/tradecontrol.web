@@ -1,25 +1,29 @@
 # Phase 5.11 — Companies House prerequisite assurance
 
-## Outcome updated 6 October 2026
+## Outcome updated 7 October 2026
 
-The approved internal portion of Phase 5.11 is implemented and remains fail-closed. Published TIS 6.0 and live schemas support the Objective 3 accounts correction and contract modelling. Companies House created the requested developer test account on 6 October 2026 and supplied the presenter-side values needed for controlled integration with its test gateway. Submission `S00013` has now received an error-free synchronous gateway acknowledgement. That acknowledgement establishes receipt, not the terminal filing decision, developer-test acceptance, manual-review acceptance or production approval.
+The approved internal portion of Phase 5.11 is implemented and remains fail-closed. Published TIS 6.0 and live schemas support the Objective 3 accounts correction and contract modelling. Companies House created the requested developer test account on 6 October 2026 and supplied the presenter-side values needed for controlled integration with its test gateway. Submission `S00013` received an error-free synchronous gateway acknowledgement, an official `PENDING` status and, on 7 October 2026, explicit manual acceptance from the Companies House XML team. This establishes the first successful developer-test case; it is not live approval or production readiness.
 
 Controlled test filings have been sent under separate one-shot human authorisations; no live filing has been sent. The application was submitted at 12:22 on 3 October 2026. Companies House's 6 October account response, its protected values and exact protected exchange evidence are retained under the git-ignored `.local/companies-house/test-account` area. No credential value is recorded in tracked documentation, fixtures, source code or ordinary diagnostics.
 
-The account-issuance and test-presenter-credential dependencies are resolved. The remaining inputs and evidence are:
+The account-issuance, test-presenter-credential, first accepted filing and initial testing-criteria dependencies are resolved. The remaining external evidence is:
 
-1. poll `S00013` through the separately modelled specific `GetSubmissionStatus` operation without resubmitting the accounts;
-2. preserve any pending, parked, rejected, failed or accepted authority result as protected evidence;
-3. notify the XML team of the submitted test when directed by the reviewed workflow; and
-4. obtain the terminal status, current testing-criteria and manual-review evidence before submission readiness can change.
+1. complete three further successful submissions within the intended unaudited FRS 105 micro-entity account type;
+2. preserve each authority result as protected evidence and notify the XML team for review;
+3. obtain Companies House confirmation that the four-case set satisfies its testing requirement; and
+4. establish the production presenter/live-approval arrangements before submission readiness can change.
 
 The absence of a separately attached testing-criteria document does not block construction of the adapter or the first controlled test under the published instructions. It does block any claim that Companies House testing is complete. A company authentication code is not part of the issued presenter account; it is a normal per-company filing input and need not be supplied by the XML team.
+
+### Manual acceptance evidence — 7 October 2026
+
+The XML team's 12:33 email confirms that `S00013` was manually reviewed and accepted. It also supplies the operative remaining criterion: normally at least four successful test submissions covering the account types intended for support are required before live approval can be considered. For the approved initial product this means representative cases within unaudited filleted FRS 105 micro-entity accounts, not expansion into full, dormant, audited, FRS 102 or other accounts regimes. The exact non-secret test matrix and next step are recorded in Work Plan 5 Phase 5.13. The correspondence remains git-ignored; protected values embedded in the historical email chain are not copied into tracked records.
 
 ## External test-account evidence — 6 October 2026
 
 The retained Companies House correspondence confirms that the XML software-filing test account has been created. It supplies four protected/configuration values: a test presenter ID, presenter authentication value, test flag and allocated test package reference. It further instructs that submission numbers must be unique and incremental, otherwise they will be rejected immediately, and that the XML team must be told when tests have been submitted so manual review can occur.
 
-The response does not include the requested current testing-criteria document, a company authentication value, a test result, manual-review acceptance or production presenter approval. This is not evidence that the issued test account is unusable: presenter credentials and the test package configuration are sufficient to target the test gateway once the chosen test company's separate authentication code is supplied. The published XML Gateway address remains authoritative published material rather than a new value supplied by the correspondence. Account creation therefore resolves access and presenter-credential availability, but not final envelope completeness or developer-test acceptance.
+At issuance, the response did not include the requested current testing-criteria document, a company authentication value, a test result, manual-review acceptance or production presenter approval. This was not evidence that the issued test account was unusable: presenter credentials and the test package configuration were sufficient to target the test gateway once the chosen test company's separate authentication code was supplied. The later accepted S00013 exchange and 7 October review resolved the first developer-test case and established the remaining four-success criterion; production presenter approval remains separate.
 
 ## Authoritative selection
 

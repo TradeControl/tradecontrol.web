@@ -1,5 +1,13 @@
 # Tax Hub Findings
 
+## 7 October 2026 — First Companies House manual acceptance
+
+- The Companies House XML team manually reviewed and accepted official test submission `S00013`. The protected correspondence is retained under `.local/companies-house/emails`; tracked records contain no presenter credentials or authentication values.
+- Companies House normally requires at least four successful test submissions covering the account types intended for support before live approval can be considered. `S00013` is success 1 of 4; this is developer-test acceptance, not live approval.
+- The initial account type remains unaudited filleted FRS 105 micro-entity accounts. The remaining matrix is one coherent three-year STD-company journey: first accounts without comparatives, a second year with genuine Year 1 comparatives, and richer ordinary Year 3 activity after a constrained additive Category Tree evolution. The transaction-derived annual Equity Bridges and exact comparative continuity are part of the evidence; full, dormant, audited and FRS 102 regimes remain excluded.
+- The synthetic generator can now extend its historical edge to three completed years while retaining a two-year default. The STD run produced consecutive years ending September 2024, 2025 and 2026, populated by the existing MIS generation path. All year-end statutory balance-sheet projections are ready and annual Equity Bridge variances are `0.00`, `0.00` and `0.08`, within the `0.10` gate.
+- Block A remains valuable deterministic failure/lifecycle infrastructure. Further simulator blocks, loopback hosting and persistence are not justified while the real test gateway is available; extend it only for a concrete official-test or recovery need.
+
 ## 6 October 2026 — Companies House test account issued
 
 - Companies House created the requested XML software-filing test account and supplied a protected test presenter ID, presenter authentication value, test flag and allocated package reference. The correspondence and values remain under `.local/companies-house/test-account`; none is copied into tracked documentation, fixtures, code or ordinary diagnostics.
@@ -24,7 +32,7 @@
 - Public examples are not a complete current filing golden: the status example references deprecated schema 2.5 and the linked accounts image example uses FormSubmission 2.5 with a 2009 taxonomy. Companies House makes its internal accounting validation rules and manual review route available to registered software testers; a test account, test presenter credentials and testing criteria must be requested through `xml@companieshouse.gov.uk`.
 - No code/readiness change or external contact was made. Phase 5.11 remains blocked pending the programme scope/sequence correction, approval of the precise Objective 3 correction, and authorised acquisition of Companies House developer-test evidence. Phase 5.12 was not started.
 - The user subsequently approved the programme/sequence and narrow Objective 3 corrections. Internal work from published material is implemented while `SubmissionReady` remains false and the gateway proves zero outbound sends.
-- The test-account application was submitted at 12:22 on 3 October 2026. This was the position at that date; the account and protected presenter test values were subsequently supplied on 6 October 2026, while current criteria and accepted gateway/manual-review evidence remain pending.
+- The test-account application was submitted at 12:22 on 3 October 2026. This was the position at that date; the account and protected presenter test values were subsequently supplied on 6 October 2026, and the first manual acceptance plus the four-success criterion followed on 7 October 2026.
 
 ## 2 October 2026 — Phase 5.8 Corporation Tax computation-taxonomy blocker
 

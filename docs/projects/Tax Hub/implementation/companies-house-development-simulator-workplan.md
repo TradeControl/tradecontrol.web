@@ -555,6 +555,17 @@ The expected order is A → B or C → D → E, but only Block A is foundational
 
 At no point is completion of all blocks a project goal in itself. The stopping rule is: stop extending the simulator when the next increment does not remove a current risk or accelerate a named Companies House integration task.
 
+### Simulator decision after first manual acceptance — 7 October 2026
+
+Companies House has manually accepted official test submission `S00013`, and the real gateway has now supplied observed filing receipt, status response and manual-review evidence. No further simulator block is justified before the remaining official success cases:
+
+- preserve Block A as fast deterministic regression coverage for accepted, rejected, pending, parked and internal-failure lifecycles, duplicate isolation, general polling and conditional `StatusAck`;
+- keep the official-response parser fixtures that capture observed namespace and acknowledgement differences;
+- do not implement Block B's broader mutation catalogue, Block C's loopback host, Block D's fuller simulated journey or persistent simulator storage merely for completeness; and
+- add or change a simulator scenario only when a named official-test defect, recovery case or unsafe-to-reproduce authority failure requires it.
+
+The remaining three successful cases are cheaper and more authoritative through the real test environment. Block E's purpose is being fulfilled directly by evidence-led contract/parser corrections; a separate simulator-versus-authority parity project would now duplicate that work. The simulator remains a useful test double, not a parallel Companies House implementation.
+
 ## Verification strategy
 
 At minimum, an implementation should run:
