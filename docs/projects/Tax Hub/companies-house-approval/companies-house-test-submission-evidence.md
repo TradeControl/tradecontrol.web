@@ -154,15 +154,15 @@ Variance = CapitalDelta
               + OpeningAccountPosition)
 ```
 
-The accepted tolerance is:
+The fail-closed tolerance used by this test programme is:
 
 ```text
 ABS(Variance) <= 0.10
 ```
 
-The result is obtained from `Cash.vwEquityReconciliationByYear` and checked by the Equity Bridge regression. A zero or in-tolerance variance demonstrates that the movement in the company's balance-sheet capital is explained by its accounting result and capital movements; it does not merely assert that the iXBRL arithmetic adds up.
+The result is obtained from `Cash.vwEquityReconciliationByYear` and checked by the Equity Bridge regression. A zero or in-tolerance variance demonstrates that `CapitalDelta` reconciles to `ProfitAfterTax`, `CapitalMovement` and `OpeningAccountPosition` within the programme's rounding tolerance. The variance is an observed residual, not a balancing item; a breach identifies a reconciliation defect. This test is independent of the separate assertion that the iXBRL arithmetic adds up.
 
-The conceptual basis for this reconciliation is documented in [DEBK — Double-Entry Bookkeeping is a Category Error](https://github.com/iamonnox/papers/blob/main/DEBK/debk.md).
+The conceptual basis for this reconciliation is documented in [Cash Statement Proofs (DEBK Invariants)](https://github.com/iamonnox/papers/blob/HEAD/DEBK/debk.md). The paper expresses the permitted rounding bound generally as **ρ** and describes the observed residual as typically being at penny resolution; it does not prescribe `0.10` as a universal theoretical bound.
 
 ### Successive-period continuity
 
