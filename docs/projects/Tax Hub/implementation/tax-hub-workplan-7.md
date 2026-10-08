@@ -212,6 +212,106 @@ Record implementation evidence in this plan, durable external decisions in `find
 
 This Companies House Objective 5 slice is complete when an authorised user can review, approve, file and follow one supported accounts submission through a durable terminal outcome in TCWeb, with recovery/history and production evidence accepted. Administrative live-package approval alone does not satisfy that product completion condition.
 
-## Initial status — 8 October 2026
+## Phase 7.0 status — 8 October 2026
 
-The work plan and Objective 4 → Objective 5 boundary are authorised. No Objective 5 filing code has been added yet. Phase 7.0 is the next implementation gate. The user guide may now record the approved filing scope and current product boundary, while live filing controls remain forthcoming until their corresponding phases are implemented and reviewed.
+Phase 7.0 is implemented and accepted at its human review gate. The TCWeb product contract accepts only safe workflow references and a period selection; durable preparation, approval and XML-conversation record shapes preserve exact digests and opaque protected-content handles. A tenant/company-scoped persistence port defines atomic mutation, one-active-conversation and restart-recovery requirements.
+
+TCWeb Companies House options contain no credentials, company authentication or gateway URL. Their only dispatch mode is `SendDisabled`; development files are restricted to the Development host, and the selected Azure-managed composition remains fail-closed until implemented. Presenter/live-package secret references and the company-specific dispatch-time authentication resolver exist only in the Submission adapter.
+
+The reviewer accepted the seven-year operational-evidence policy and selected Azure-managed persistence as the first real Phase 7.1 implementation; development files remain an isolated test facility rather than a product stepping stone. The initially single-node deployment retains a stable tenant GUID and tenant-partitioned records, content and tests so the design does not collapse into single-tenant global state.
+
+The detailed decision record is `phase-7.0-companies-house-integration-boundary.md`. `TaxHub.slnx` and `TCWeb.csproj` build without warnings, and the TCWeb Tax Hub suite passes 106 boundary assertions. No UI, external request or Phase 7.1 preparation service was added by Phase 7.0.
+
+### Azure accounting-source checkpoint — 8 October 2026
+
+Following Phase 7.0 acceptance, the separate Candidate 4 development database `tcNodeDb4-COSIPFVT1-COSTD26` was created on the existing Azure SQL server while the MIN/VAT databases and deployed bindings remained untouched. The current DACPAC and corrected synthetic generator produced the three-year STD company with the October financial month and `2026-10-07` test anchor. The completed-year regression and Year 3 additive rollback rehearsal passed before the additive change was committed; the final regression also passed. The database was returned from temporary S3 to Basic after validation.
+
+After validation, TCWeb was rebound through a dedicated Key Vault reference to the STD database and restarted; its root, liveness and database-backed readiness checks returned HTTP `200`. The unused Swagger/WebHarness App Service was stopped. An authenticated Dashboard request then proved Basic inadequate for the interactive Tax Hub workload: DTU and CPU both reached 100% for two consecutive minutes before the command timed out. The database is temporarily at Standard S2 for Azure development and must be reviewed/downscaled when that interval ends. This establishes the Azure accounting source and product host for the next manageable Phase 7.1 increment. It does not implement the Azure workflow/evidence stores, enable dispatch or authorise a Companies House submission.
+
+### Azure reference environment replication runbook
+
+This is a non-production reference environment for Objective 5 development. Its purpose is to reproduce the product-hosting and accounting-source conditions under which the Companies House workflow is developed; it is not a template that grants live-filing authority. Resource names below identify the present reference deployment. A replica may use different names, but must preserve the boundaries and checks.
+
+#### Reference topology
+
+| Role | Reference resource | Required property |
+|---|---|---|
+| Subscription | `dad8f85c-390e-4797-ab8d-88d5db96115e` | Operator is authenticated to the intended subscription before any mutation. |
+| Resource group / region | `tradecontrol-taxhub-sandbox` / UK West | Development resources remain isolated from production. |
+| Linux App Service plan | `tc-taxhub-sandbox-plan` | Hosts TCWeb and the separately stoppable WebHarness. |
+| Product host | `tcweb-payg-db96115e` | Authenticated TCWeb; its database binding is a Key Vault reference. |
+| Diagnostic host | `taxhub-payg-db96115e` | WebHarness/Swagger; stopped when it is not explicitly required. |
+| Azure SQL logical server | `tradecontrol-db96115e` | Source and target databases coexist so the configured-node copy is server-side. |
+| Configured source node | `tcNodeDb4-COMIPFVT1-COMIN26` | Supplies node/user/bootstrap configuration only; it remains unchanged. |
+| Candidate 4 STD node | `tcNodeDb4-COSIPFVT1-COSTD26` | Three completed September year ends plus the controlled Year 3 additive evolution. |
+| Existing VAT node | `tcNodeDb4-HMRC62-2017` | Remains unchanged and is not a regeneration source. |
+| Secret store | `tcsecretsdb96115e` | Holds connection strings and future protected configuration; values are never tracked. |
+
+The current STD database is temporarily Standard S2 for interactive development. Basic was measured, not guessed, to be inadequate for the authenticated Tax Hub Dashboard. Synthetic regeneration used temporary S3 capacity and was downscaled after completion. These are operational settings, not product requirements: measure a replica and select the cheapest tier that completes the workload reliably.
+
+#### Protected prerequisites
+
+Before replication, obtain through the deployment environment rather than Git:
+
+1. an Azure identity permitted to administer the named resource group, SQL database, App Service configuration and Key Vault references;
+2. the SQL deployment identity/secret required by the DACPAC and generator;
+3. a configured synthetic source node containing valid application bootstrap and user identity data; and
+4. the stable opaque tenant GUID used by the TCWeb Companies House host configuration.
+
+Do not print or paste connection strings, SQL credentials, Key Vault values, presenter credentials or company authentication into commands captured as evidence. Secret names and versionless Key Vault references may be recorded; secret values may not.
+
+#### Reproduction sequence
+
+1. **Inventory before mutation.** Select the intended Azure subscription and record the resource group, SQL database names/service objectives, App Service plan, current TCWeb database-setting reference, Key Vault name and application running states. Confirm the source node and VAT database are not the target.
+2. **Create an isolated target.** Use an Azure SQL server-side database copy of the configured MIN source node to create the explicitly named STD target. Do not manually manufacture application-user or node-identity rows. Wait for the copy to become `Online`, then verify source and target names again before deployment.
+3. **Build and deploy the current schema.** Build `src/sqlnode/src/tcNodeDb4/tcNodeDb4.sqlproj` and deploy that DACPAC to the isolated target with the guarded deployment settings. Review every potential data-loss or type-conversion warning. The reference copy contained obsolete reporting-profile/classification data from an earlier schema: those rows were removed in foreign-key order only in the disposable target, after inspection, so the current typed classifications could be deployed and reseeded. A replica must assess its actual migration; this observation is not authority for indiscriminate deletion.
+4. **Temporarily scale for generation.** Raise only the isolated target to a tier capable of completing the synthetic generator (S3 was used for the reference run). Record the original tier so restoration is explicit.
+5. **Generate the coherent STD history.** Invoke `App.proc_DatasetSyntheticMIS` with the standard-company template, three completed years, financial month `10` (a September year end), and test anchor `2026-10-07`. Retain the generator's normal full accounting surface—projects, multi-level object/BOM flows, invoices, payments, wages, expenses, assets, tax, transfers and opening balance. The decisive parameters are:
+
+   ```sql
+   @IsCompany = 1,
+   @IsVatRegistered = 1,
+   @UseStdCompanyTemplate = 1,
+   @CompletedYearCount = 3,
+   @FinancialMonth = 10,
+   @AsOfDate = '2026-10-07'
+   ```
+
+   Other generation ratios and switches must use the reviewed STD scenario in `Scripts/EXEC_DatasetSyntheticMIS.sql`; if that script's defaults later change, record the committed revision used rather than silently relying on new defaults.
+6. **Prove the base history.** Run `Tests/SyntheticDatasetCompletedYearHorizon.sql`. It must report three consecutive completed years, every Equity Bridge variance within `0.10`, statutory balance-sheet projections `Ready`, and both multi-level Object and Project flows present.
+7. **Exercise the Year 3 additive change safely.** Run `Scripts/EXEC_DatasetSyntheticMIS_Year3_Additive.sql` first with its default `@ApplyChanges = 0`. Inspect the rolled-back results. Set `@ApplyChanges = 1` only against the intended STD target after the rehearsal passes, then rerun the completed-year regression. The script is additive and fail-closed; it must not rewrite Years 1 or 2.
+8. **Check the reference accounting outcome.** The reference run produced year ends `2024-09-30`, `2025-09-30` and `2026-09-30`, with Equity Bridge variances `0.00`, `0.00` and `0.08`. Its final statutory balance sheet reported fixed assets `6,800.00000`, current assets `495,943.40048`, creditors within one year `40,125.60613` and creditors after one year `3,000.00000`, all `Ready`. Exact monetary values are evidence for this deterministic reference revision, not universal deployment constants; the structural checks and reconciliation gate are mandatory.
+9. **Create a dedicated protected binding.** Add a new Key Vault secret containing the STD connection string under the reference name `tcnodecontext-costd26` (or an equivalently scoped name). Bind TCWeb `ConnectionStrings__TCNodeContext` to a versionless Key Vault reference for that secret. Do not replace or expose the older secret, and do not bind the diagnostic App Service by accident.
+10. **Restart and verify the product host.** Restart TCWeb and require HTTP `200` from the application root, `/health/live` and the database-backed `/health/ready`. Sign in through the normal application identity path, open the Tax Hub Dashboard and Accounts workspace, and confirm the business is the STD synthetic company with the expected September year ends. A liveness response alone is not sufficient.
+11. **Control auxiliary services and capacity.** Stop `taxhub-payg-db96115e` unless a separately authorised diagnostic exercise requires it. During interactive development monitor Azure SQL DTU, CPU, reads and log writes. The reference Basic trial reached 100% DTU and CPU for two consecutive minutes and timed out; S2 restored an acceptable interactive response. At the end of the development interval, stop unused hosts and review/downscale the database rather than leaving temporary capacity in place.
+
+#### Recovery and non-filing controls
+
+- The configured source node, VAT database and previous Key Vault secret remain intact. Rollback is a TCWeb rebind to the previously reviewed versionless secret reference followed by restart and all three health checks; never recover by copying a secret value into tracked configuration.
+- A failed or partial regeneration is discarded or repeated only in the explicitly identified isolated target. Resolve and verify the absolute database name before deletion or replacement.
+- Database backup/restore and deployment evidence are operational records. Application logs may contain safe resource names and digests, but not secret material or unrestricted statutory documents.
+- This environment currently establishes only the accounting source and product host. Azure workflow/evidence persistence must be implemented and reviewed in Phase 7.1 before it is relied upon.
+- Companies House dispatch remains `SendDisabled`. Reproducing this environment, generating an accounts document or passing readiness checks makes no external request and grants no filing authority.
+
+## Phase 7.1 progress — increment A: server-derived readiness
+
+Phase 7.1 is now in progress. Its first increment adds a Companies House tab to the existing Accounts workspace without adding a prepare, approve or submit control. For the selected accounting year the server derives and displays:
+
+- the bounded company-number display and exact accounting-period bounds;
+- the supported unaudited filleted FRS 105 micro-entity profile;
+- first-accounts or subsequent-accounts/comparatives status;
+- closed-year and year-end selection eligibility;
+- reviewed statutory-context/reporting-profile findings; and
+- the selected year's Equity Bridge result against the accepted `0.10` tolerance.
+
+The assessment obtains statutory context through the existing Trade Control adapter and accepts no company identity, statutory values, iXBRL, XML or credentials from the browser. Any missing period, company identity, reporting profile, source context or Equity Bridge evidence blocks readiness. The browser model explicitly reports that no exact document has been prepared and no external request has occurred.
+
+The first Azure product check exposed and corrected a pre-existing calendar assumption in the Accounts workspace: an October-start financial year cannot derive its bounds or year-end marker from calendar `MonthNumber` order or `MonthNumber == 12`. Both now use the actual ordered `StartOn` dates. This prevents a September year end from being presented as December and is a prerequisite to binding an immutable filing candidate to the correct period.
+
+The Azure check also established the necessary temporal distinction between the accounting evidence and operational configuration: accounts figures are bound to the selected period end, whereas statutory identity/reporting-profile eligibility is evaluated at the current preparation date. Evaluating a profile at the historical year end incorrectly hides a profile reviewed after that year end but before filing. Both dates must be retained when the exact candidate is introduced.
+
+The live Azure review of the STD candidate selected `2025-26 SEP` and reported **Ready to prepare document** for company `••3456`, period `1 October 2025` to `30 September 2026`, the supported unaudited filleted FRS 105 micro-entity profile, subsequent accounts with comparatives, and an Equity Bridge pass with variance `0.08`. The screen also stated that no statutory document had been retained, no Companies House request had occurred and submission remained disabled.
+
+Increment B will establish the tenant-partitioned Azure workflow metadata and protected evidence facilities and collect the reviewed filing-only inputs without generating an exact artifact prematurely. Increment C will prepare through `CompaniesHouseAccountsPreparer`, atomically retain and digest-verify the exact document/package, and render the authorised safe review. This sequencing keeps exact preparation and protected retention together. Phase 7.1 remains open, and the Phase 7.2 approval boundary is not authorised by this increment.
+
+The increment builds without warnings, the TCWeb Tax Hub suite passes 112 assertions, and the deployed product host remains healthy. The diagnostic WebHarness remains stopped. No Companies House network request was made.

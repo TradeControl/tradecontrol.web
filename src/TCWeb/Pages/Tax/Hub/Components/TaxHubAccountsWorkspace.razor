@@ -101,6 +101,57 @@ else
                                                   Summary="@Workspace.ValidationSummary" />
                 </section>
             </MudTabPanel>
+
+            <MudTabPanel Text="Companies House">
+                <section class="d-flex flex-column gap-3 pt-2">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                        <div>
+                            <h2 class="h5 mb-1">Filing readiness</h2>
+                            <div class="text-muted small">Server-derived review for the selected accounting year</div>
+                        </div>
+                        <span class="badge @(Workspace.CompaniesHouse.IsEligible ? "bg-success" : "bg-warning text-dark")">
+                            @Workspace.CompaniesHouse.Status
+                        </span>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Company number</dt>
+                                <dd class="col-sm-8">@DisplayOrDash(Workspace.CompaniesHouse.CompanyNumberDisplay)</dd>
+                                <dt class="col-sm-4">Accounting period</dt>
+                                <dd class="col-sm-8">@DisplayOrDash(Workspace.CompaniesHouse.PeriodDisplay)</dd>
+                                <dt class="col-sm-4">Filing profile</dt>
+                                <dd class="col-sm-8">@Workspace.CompaniesHouse.FilingProfile</dd>
+                                <dt class="col-sm-4">Accounts sequence</dt>
+                                <dd class="col-sm-8">@DisplayOrDash(Workspace.CompaniesHouse.AccountsSequence)</dd>
+                                <dt class="col-sm-4">Equity Bridge</dt>
+                                <dd class="col-sm-8 mb-0">@DisplayOrDash(Workspace.CompaniesHouse.EquityBridgeStatus)</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    @if (Workspace.CompaniesHouse.Findings.Count > 0)
+                    {
+                        <div>
+                            <h3 class="h6">Readiness findings</h3>
+                            <ul class="mb-0">
+                                @foreach (var finding in Workspace.CompaniesHouse.Findings)
+                                {
+                                    <li class="@(finding.IsBlocking ? "text-danger" : "text-muted")">
+                                        @finding.Message <span class="small">(@finding.Code)</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="alert alert-info mb-0" role="status">
+                        Review only — no statutory document has been retained and no request has been made to Companies House.
+                        Exact-document preparation is the next reviewed increment; submission remains disabled.
+                    </div>
+                </section>
+            </MudTabPanel>
         </MudTabs>
     </div>
 }
@@ -108,4 +159,6 @@ else
 @code {
     [Parameter] public TaxHubAccountsWorkspaceModel? Workspace { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+
+    private static string DisplayOrDash(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }

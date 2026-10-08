@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Tax.Hub.Models;
+using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
 namespace TradeControl.Web.AppServices.TaxHub
 {
@@ -17,10 +18,12 @@ namespace TradeControl.Web.AppServices.TaxHub
         private const decimal ValidationTolerance = 0.10m;
 
         private readonly NodeContext _nodeContext;
+        private readonly ICompaniesHouseReadinessService _companiesHouseReadiness;
 
-        public TaxHubService(NodeContext nodeContext)
+        public TaxHubService(NodeContext nodeContext, ICompaniesHouseReadinessService companiesHouseReadiness)
         {
             _nodeContext = nodeContext;
+            _companiesHouseReadiness = companiesHouseReadiness;
         }
 
         public Task<TaxHubResult> GetShellStateAsync()
@@ -706,11 +709,19 @@ namespace TradeControl.Web.AppServices.TaxHub
                 ? Array.Empty<TaxHubBalanceSheetRow>()
                 : await BuildBalanceSheetAsync(selectedPeriod, selectedPeriodInfo);
 
+            var selectedYearEndStartOn = selectedPeriodInfo is null
+                ? null
+                : await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(t => t.YearNumber == selectedPeriodInfo.YearNumber)
+                    .MaxAsync(t => (DateTime?)t.StartOn);
             var isYearEndBalanceSheet = selectedPeriodInfo is not null
-                && selectedPeriodInfo.MonthNumber == 12;
+                && selectedYearEndStartOn.HasValue
+                && selectedPeriodInfo.StartOn.Date == selectedYearEndStartOn.Value.Date;
 
             var equityReconciliation = await GetEquityReconciliationRowsAsync();
             var validationSummary = BuildAccountsValidationSummary(equityReconciliation);
+            var companiesHouse = await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod);
 
             return new TaxHubAccountsWorkspaceModel
             {
@@ -727,7 +738,8 @@ namespace TradeControl.Web.AppServices.TaxHub
                 MonthlyDetails = monthlyDetails,
                 BalanceSheet = balanceSheet,
                 ValidationSummary = validationSummary,
-                EquityReconciliation = equityReconciliation
+                EquityReconciliation = equityReconciliation,
+                CompaniesHouse = companiesHouse
             };
         }
 

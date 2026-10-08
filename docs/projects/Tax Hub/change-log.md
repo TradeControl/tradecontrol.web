@@ -1,5 +1,32 @@
 # Tax Hub Change Log
 
+## 8 October 2026 — Companies House Phase 7.1 readiness increment
+
+- Added a server-derived Companies House tab to the existing authenticated Accounts workspace, showing bounded company identity, exact accounting period, supported filing profile, first/subsequent-accounts status, readiness findings and Equity Bridge evidence.
+- Kept the browser contract narrow: it supplies only the selected year/period, while Trade Control adapters derive company identity, statutory context and accounting evidence. No credentials, filing values, iXBRL or GovTalk content enter the browser request.
+- Corrected financial-period ordering and year-end detection to use actual `StartOn` dates, supporting October-start/September-end accounting years correctly.
+- Separated period-end accounting evidence from preparation-date statutory-profile evaluation, so a legitimately reviewed current filing profile is not hidden by historical period-end lookup.
+- Added boundary coverage and verified 112 TCWeb Tax Hub assertions with a warning-free build. Deployed and reviewed the result against the Azure STD candidate with submission disabled and the WebHarness stopped; no Companies House request was made.
+
+## 8 October 2026 — Azure Candidate 4 regeneration
+
+- Added an optional, range-checked financial-month input to the synthetic MIS generator and execution script so disposable nodes can reproduce an intended accounting calendar instead of inheriting a copied node's calendar.
+- Normalized invalid legacy VAT identity to the existing synthetic test value before `BasicSetup` creates reporting profiles, with a second defensive normalization in the statutory-profile step.
+- Created and validated the isolated Azure STD database `tcNodeDb4-COSIPFVT1-COSTD26`; preserved the MIN/VAT databases and kept existing App Service bindings unchanged until validation completed.
+- Rebuilt the coherent three-year STD dataset, passed the completed-year/Equity Bridge/statutory-readiness regression, rehearsed the Year 3 additive evolution under rollback, applied it and passed the final regression.
+- Measured the temporary Azure SQL capacity requirement and returned the database to Basic after validation.
+- Added a dedicated Key Vault database connection for the STD node, rebound and restarted TCWeb, verified HTTP `200` root/liveness/readiness responses, and stopped the unused Swagger/WebHarness App Service.
+- Recorded Basic-tier Dashboard saturation at 100% DTU/CPU and temporarily promoted the interactive development database to Standard S2 while retaining a downscale requirement. No Companies House request or Phase 7.1 workflow store was enabled.
+
+## 8 October 2026 — Companies House Objective 5 Phase 7.0
+
+- Added the TCWeb Companies House product workflow contract and safe preparation, approval, filing-status and history projections without accepting credentials, statutory values or raw authority content from callers.
+- Defined Companies House-specific durable preparation, approval and conversation records plus a tenant/company-scoped persistence port, 24-hour preparation lifetime and seven-year terminal-evidence policy.
+- Added fail-closed Companies House host options: disabled by default, absolute development stores only in Development, Azure facilities selected but not implemented and `SendDisabled` as the sole dispatch mode.
+- Confined live presenter/package secret references and the company-specific dispatch-time authentication resolver to the Submission adapter; no protected value entered source or tracked configuration.
+- Extended local readiness and TCWeb boundary tests. `TaxHub.slnx` and `TCWeb.csproj` build cleanly, and 106 TCWeb Tax Hub assertions pass. No filing UI or external request was added.
+- Recorded human acceptance of the seven-year evidence policy and the Azure-first Phase 7.1 implementation decision. The single initial deployment remains multi-tenant by construction; Candidate 4 regeneration and any temporary Azure SQL promotion remain separate controlled operations.
+
 ## 8 October 2026 — Companies House Objective 4 milestone
 
 - Recorded the XML team's confirmation that the completed four-case micro-entity test programme qualifies Trade Control for a live package covering the document types developed to date.

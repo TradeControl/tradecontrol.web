@@ -1,5 +1,32 @@
 # Tax Hub Findings
 
+## 8 October 2026 — Companies House Phase 7.1 readiness increment
+
+- Added a Companies House readiness view to the authenticated TCWeb Accounts workspace. It derives company, period, supported filing profile, first/subsequent-accounts position and Equity Bridge evidence on the server and accepts no statutory values, identity or credentials from the browser.
+- Readiness fails closed on missing source evidence, unsupported or unreviewed reporting configuration, a non-year-end/open selection or a failed Equity Bridge. The view contains no prepare, approve or submit action and states that no exact document or external request exists.
+- Azure validation exposed two material time distinctions. Financial-year bounds and year end must follow ordered period dates rather than calendar month numbers; accounting figures are evaluated at period end while the filing profile is evaluated at the current preparation date. Both have been corrected.
+- The deployed STD candidate for `2025-26 SEP` is ready to prepare: masked company `••3456`, period 1 October 2025 to 30 September 2026, unaudited filleted FRS 105 micro-entity subsequent accounts with comparatives, and Equity Bridge variance `0.08` within tolerance.
+- Phase 7.1 remains open. The next increment establishes tenant-partitioned Azure workflow/protected-evidence facilities and reviewed filing-only inputs; exact preparation and retention remain a later reviewable increment. No Companies House request was made.
+
+## 8 October 2026 — Azure Candidate 4 accounting source
+
+- Created the separate Azure SQL database `tcNodeDb4-COSIPFVT1-COSTD26` from the configured MIN sandbox and deployed the current schema while leaving the source MIN database, VAT database and App Service bindings unchanged throughout generation and validation.
+- Corrected two generator portability defects found by the Azure run: legacy non-nine-digit VAT identity is normalized to the established synthetic fallback before reporting-profile creation, and an optional range-checked financial month prevents a copied node's accounting calendar from silently determining the generated candidate.
+- Regenerated the STD company with three completed October financial years and a `2026-10-07` test anchor. The repository regression passed with September 2024/2025/2026 year-ends, ready balance-sheet projections and Equity Bridge variances `0.00`, `0.00`, `0.08`.
+- The Year 3 additive script passed its rollback rehearsal, preserved Year 1/2 statutory facts and bridges, then applied successfully. Final Year 3 contains 281 Projects, 274 invoices and 190 payments and retains the `0.08` bridge variance.
+- S0 was functionally adequate but took about 30 minutes for base generation; temporary S3 reduced the corrected run to a few minutes. The database is back online at Basic/2 GiB.
+- After validation, TCWeb was rebound through a dedicated Key Vault secret to the STD database. Root, liveness and database-backed readiness checks returned HTTP `200`; the unused Swagger/WebHarness App Service was stopped.
+- The first authenticated Dashboard request on Basic saturated DTU and CPU at 100% for two minutes and exceeded the application timeout, with no material read or log-write bottleneck. The database is temporarily Standard S2 for interactive Azure development and remains readiness-healthy. Review and downscale it when the development interval ends. No workflow store, external request or filing authority changed.
+
+## 8 October 2026 — Companies House Objective 5 Phase 7.0 boundary
+
+- Companies House uses its own durable preparation, approval and XML-conversation records; it reuses VAT's accepted tenant isolation, immutable approval, protected-content, exact-digest and restart-recovery principles without forcing acknowledgement/status semantics into the VAT REST outcome model.
+- TCWeb callers may select a period and use opaque workflow references only. Tenant/company/principal/actor identity, statutory values, iXBRL/GovTalk bytes, presenter/package values and company authentication are all server-owned.
+- Presenter/live-package protected references and the company-specific authentication resolver are confined to the Submission adapter. TCWeb host options expose neither credentials nor a configurable authority endpoint, and Phase 7.0 offers only `SendDisabled` dispatch.
+- The durable port requires atomic tenant-scoped mutation, one active conversation per logical company/period/profile filing, digest verification on every protected-content retrieval and continuation rather than replay after restart or ambiguous send.
+- The reviewer accepted seven years from the final conversation event as the operational evidence-retention policy and selected Azure-managed persistence as the first real Phase 7.1 store. Development files remain isolated test infrastructure rather than a disposable deployed implementation.
+- The first deployment may host one tenant, but tenant partitioning remains mandatory in SQL metadata, Blob content, company-authentication lookup and automated cross-tenant tests. Azure preflight established that `tradecontrol-db96115e` is the SQL server: the current Basic company database is MIN `tcNodeDb4-COMIPFVT1-COMIN26`, while TCWeb is separately bound to VAT database `tcNodeDb4-HMRC62-2017`. Candidate 4 needs an explicit STD database and cutover decision; any regeneration will preserve accepted filing evidence, verify recovery, temporarily promote capacity where required and return the database to Basic.
+
 ## 8 October 2026 — Companies House live-package approval and Objective 5 release
 
 - After the four-case unaudited filleted FRS 105 micro-entity programme was reported, the Companies House XML team confirmed that it was content to issue a live package for the document types developed to date.

@@ -34,6 +34,7 @@ using TradeControl.Web.Data;
 using System.Globalization;
 using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.AppServices;
+using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 
 namespace TradeControl.Web
@@ -77,6 +78,13 @@ namespace TradeControl.Web
                 VatProductHostOptionsValidator>();
             services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<VatProductHostOptions>,
                 VatProductDevelopmentDefaults>();
+            services.AddOptions<CompaniesHouseProductHostOptions>()
+                .Bind(Configuration.GetSection(CompaniesHouseProductHostOptions.SectionName))
+                .ValidateOnStart();
+            services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<CompaniesHouseProductHostOptions>,
+                CompaniesHouseProductHostOptionsValidator>();
+            services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<CompaniesHouseProductHostOptions>,
+                CompaniesHouseProductDevelopmentDefaults>();
             services.AddAppServices();
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })

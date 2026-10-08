@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -16,7 +17,8 @@ namespace TradeControl.Web.AppServices.TaxHub.Vat;
 /// </summary>
 public sealed class TaxHubReadinessHealthCheck(
     IServiceScopeFactory scopes,
-    IOptions<VatProductHostOptions> hostOptions) : IHealthCheck
+    IOptions<VatProductHostOptions> hostOptions,
+    IOptions<CompaniesHouseProductHostOptions> companiesHouseHostOptions) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
         CancellationToken cancellationToken = default)
@@ -33,6 +35,13 @@ public sealed class TaxHubReadinessHealthCheck(
                 && (string.IsNullOrWhiteSpace(options.DevelopmentStoreRoot)
                     || !Path.IsPathFullyQualified(options.DevelopmentStoreRoot)))
                 return HealthCheckResult.Unhealthy("The VAT evidence store is not configured.");
+
+            var companiesHouse = companiesHouseHostOptions.Value;
+            if (companiesHouse.Enabled
+                && companiesHouse.PersistenceMode == CompaniesHousePersistenceMode.DevelopmentFiles
+                && (string.IsNullOrWhiteSpace(companiesHouse.DevelopmentStoreRoot)
+                    || !Path.IsPathFullyQualified(companiesHouse.DevelopmentStoreRoot)))
+                return HealthCheckResult.Unhealthy("The Companies House evidence store is not configured.");
 
             return HealthCheckResult.Healthy();
         }

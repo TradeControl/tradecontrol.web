@@ -1,6 +1,7 @@
 using System.Xml.Linq;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 using TradeControl.Web.Authorization;
 using System.Security.Claims;
@@ -46,6 +47,29 @@ Assert(workflowContract.GetMethods().SelectMany(method => method.GetParameters()
         prohibitedInputNames.All(prohibited => !parameter.Name!.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
     "The VAT workflow accepts caller-supplied tenant identity, request bodies or VAT boxes.");
 
+var companiesHouseWorkflowContract = typeof(ICompaniesHouseProductWorkflow);
+var companiesHouseContractTypes = companiesHouseWorkflowContract.GetMethods()
+    .SelectMany(method => method.GetParameters().Select(parameter => parameter.ParameterType)
+        .Append(method.ReturnType))
+    .Append(companiesHouseWorkflowContract);
+Assert(companiesHouseContractTypes.All(type => prohibitedContractNamespaces.All(prohibited =>
+        !(type.Namespace ?? string.Empty).StartsWith(prohibited, StringComparison.Ordinal))),
+    "The Companies House workflow contract contains a host, UI, MVC or EF type.");
+var prohibitedCompaniesHouseInputs = new[]
+{
+    "tenant", "credential", "authentication", "presenter", "package", "xml", "ixbrl", "body",
+    "companyNumber"
+};
+Assert(companiesHouseWorkflowContract.GetMethods().SelectMany(method => method.GetParameters()).All(parameter =>
+        prohibitedCompaniesHouseInputs.All(prohibited =>
+            !parameter.Name!.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The Companies House workflow accepts caller-supplied identity, credentials or statutory content.");
+Assert(typeof(CompaniesHouseProductHostOptions).GetProperties().All(property =>
+        prohibitedCompaniesHouseInputs.Where(value => value is "credential" or "authentication" or "presenter"
+            or "companyNumber").All(prohibited =>
+                !property.Name.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The TCWeb Companies House options expose protected transport inputs.");
+
 var taxHubProjects = Directory.GetFiles(Path.Combine(root, "src", "tax-hub", "src"), "*.csproj",
     SearchOption.AllDirectories);
 foreach (var project in taxHubProjects.Where(path => !path.Contains("WebHarness", StringComparison.OrdinalIgnoreCase)))
@@ -56,6 +80,74 @@ var development = new TestHostEnvironment(Environments.Development);
 var production = new TestHostEnvironment(Environments.Production);
 var developmentValidator = new VatProductHostOptionsValidator(development);
 var productionValidator = new VatProductHostOptionsValidator(production);
+var companiesHouseDevelopmentValidator = new CompaniesHouseProductHostOptionsValidator(development);
+var companiesHouseProductionValidator = new CompaniesHouseProductHostOptionsValidator(production);
+
+Assert(companiesHouseDevelopmentValidator.Validate(null, new CompaniesHouseProductHostOptions()).Succeeded,
+    "The disabled Companies House product boundary must permit an unconfigured host.");
+var companiesHouseDevelopment = ValidCompaniesHouseDevelopmentOptions();
+Assert(companiesHouseDevelopmentValidator.Validate(null, companiesHouseDevelopment).Succeeded,
+    "A send-disabled Companies House host with an absolute development store should validate in Development.");
+Assert(companiesHouseDevelopment.DispatchMode == CompaniesHouseDispatchMode.SendDisabled,
+    "Phase 7.0 must not expose a send-enabled Companies House composition.");
+Assert(companiesHouseProductionValidator.Validate(null, companiesHouseDevelopment).Failed,
+    "A Companies House development file store was accepted outside Development.");
+companiesHouseDevelopment.DevelopmentStoreRoot = ".local/tax-hub/companies-house";
+Assert(companiesHouseDevelopmentValidator.Validate(null, companiesHouseDevelopment).Failed,
+    "A relative Companies House development store path was accepted.");
+var companiesHouseProduction = new CompaniesHouseProductHostOptions
+{
+    Enabled = true,
+    AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.Production,
+    PersistenceMode = CompaniesHousePersistenceMode.AzureManaged,
+    DispatchMode = CompaniesHouseDispatchMode.SendDisabled,
+    TenantReference = Guid.NewGuid().ToString(),
+    KeyVaultUri = new Uri("https://example.vault.azure.net/"),
+    WorkflowConnectionName = "TaxHubWorkflow",
+    EvidenceBlobServiceUri = "https://example.blob.core.windows.net/"
+};
+Assert(companiesHouseProductionValidator.Validate(null, companiesHouseProduction).Failed,
+    "Unimplemented production Companies House persistence was accepted.");
+var companiesHouseDefaults = new CompaniesHouseProductHostOptions
+{
+    Enabled = true,
+    PersistenceMode = CompaniesHousePersistenceMode.DevelopmentFiles
+};
+new CompaniesHouseProductDevelopmentDefaults(new TestHostEnvironment(Environments.Development)
+{
+    ContentRootPath = Path.Combine(root, "src", "TCWeb")
+}).PostConfigure(null, companiesHouseDefaults);
+Assert(companiesHouseDefaults.DevelopmentStoreRoot is not null
+    && Path.IsPathFullyQualified(companiesHouseDefaults.DevelopmentStoreRoot)
+    && companiesHouseDefaults.DevelopmentStoreRoot.EndsWith(
+        Path.Combine(".local", "tax-hub", "tcweb", "companies-house"), StringComparison.Ordinal),
+    "Local development did not derive a git-ignored Companies House evidence-store path.");
+Assert(CompaniesHouseProductPolicy.RetainUntil(new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero))
+        == new DateOnly(2033, 10, 8),
+    "The reviewed Companies House evidence-retention rule changed.");
+Assert(CompaniesHouseReadinessService.MaskCompanyNumber("01234567") == "••••4567",
+    "Companies House readiness did not bound the company number shown in the browser model.");
+Assert(CompaniesHouseReadinessService.MaskCompanyNumber("  SC123456  ") == "••••3456",
+    "Companies House readiness did not normalize and bound an alphanumeric company number.");
+var octoberYearBounds = CompaniesHouseReadinessService.ResolvePeriodBounds([
+    new DateTime(2027, 1, 1), new DateTime(2026, 10, 1), new DateTime(2027, 9, 1)]);
+Assert(octoberYearBounds.PeriodStart == new DateTime(2026, 10, 1)
+       && octoberYearBounds.LastPeriodStart == new DateTime(2027, 9, 1)
+       && octoberYearBounds.PeriodEnd == new DateTime(2027, 9, 30),
+    "Companies House readiness reverted to calendar-month ordering for an October financial year.");
+Assert(typeof(ICompaniesHouseReadinessService).GetMethods()
+        .SelectMany(method => method.GetParameters())
+        .All(parameter => prohibitedCompaniesHouseInputs.All(prohibited =>
+            !parameter.Name!.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The Companies House readiness boundary accepts caller-supplied identity, credentials or statutory content.");
+var readinessProperties = typeof(TradeControl.Web.Pages.Tax.Hub.Models.TaxHubCompaniesHouseReadiness)
+    .GetProperties();
+Assert(readinessProperties.All(property => new[] { "xml", "ixbrl", "credential", "authentication", "presenter" }
+        .All(prohibited => !property.Name.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The Companies House readiness browser model exposes protected or unrestricted content.");
+Assert(readinessProperties.Any(property => property.Name == "ExternalRequestMade")
+       && readinessProperties.Any(property => property.Name == "IsExactDocumentPrepared"),
+    "The readiness browser model does not distinguish assessment from preparation and external exchange.");
 
 Assert(developmentValidator.Validate(null, new VatProductHostOptions()).Succeeded,
     "The disabled product boundary must permit an unconfigured host.");
@@ -509,6 +601,16 @@ static VatProductHostOptions ValidDevelopmentOptions() => new()
     DevelopmentStoreRoot = Path.Combine(Path.GetTempPath(), "tax-hub-tests"),
     DevelopmentClientSettingsPath = Path.Combine(Path.GetTempPath(), "tax-hub-clientsettings.json"),
     FraudPublicTlsAddresses = ["8.8.8.8"]
+};
+
+static CompaniesHouseProductHostOptions ValidCompaniesHouseDevelopmentOptions() => new()
+{
+    Enabled = true,
+    AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.OfficialTest,
+    PersistenceMode = CompaniesHousePersistenceMode.DevelopmentFiles,
+    DispatchMode = CompaniesHouseDispatchMode.SendDisabled,
+    TenantReference = Guid.NewGuid().ToString(),
+    DevelopmentStoreRoot = Path.Combine(Path.GetTempPath(), "tax-hub-companies-house-tests")
 };
 
 static ClaimsPrincipal Principal(string role) => new(new ClaimsIdentity(new[]

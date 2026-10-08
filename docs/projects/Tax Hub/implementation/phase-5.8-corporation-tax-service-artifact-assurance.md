@@ -8,6 +8,22 @@ HMRC lists **Corporation Tax computational 2025** as the applicable accepted com
 
 The official Local Test Service does not close this gap. LTS 8.3 contains the update manager and generic validators. Its live service feed offers `ct_ct600_v1-994.zip`, which contains the RIM XSD, Schematron, envelope schema and `Calc.jar`, but no computation taxonomy. Substituting CT 2024, reconstructing CT 2025 from names or treating a derived QName catalog as validation evidence would violate the Objective 3 assurance boundary.
 
+## Authoritative asset received on 8 October 2026
+
+HMRC Software Developers Support Team supplied `CT2025-v1.0.0.zip` directly by email and confirmed that CT Computational 2025 is available in both test and live environments, can be used immediately, and applies to accounting periods starting on or after 1 April 2015. HMRC also explained that technical changes prevent it from hyperlinking taxonomies from the accepted-taxonomies page; future computation releases will be distributed through registered-developer communications.
+
+The retained local evidence is:
+
+- authoritative email: `.local/hmrc/corporation-tax/emails/Corporation Tax computational 2025 taxonomy package.txt`;
+- original HMRC attachment: `.local/hmrc/corporation-tax/CT2025-v1.0.0.zip`;
+- extracted review copy: `.local/hmrc/corporation-tax/CT2025-v1.0.0`;
+- locally calculated archive SHA-256: `6A4E33434C3E546D664B7344B4490B87B95D854A41ED232F894D274E1FA8C604`; and
+- taxonomy entry point: `http://www.hmrc.gov.uk/schemas/ct/comp/2025-01-01/ct-comp-2025.xsd`.
+
+The package metadata identifies HM Revenue & Customs as publisher, version `1.0.0`, formal version date `2025-01-01` and release date `2024-12-19`. The package contains the taxonomy-package manifest, OASIS catalog, entry-point and supporting schemas/linkbases, schema-location and change reports, and XBRL/iXBRL validation samples.
+
+Receipt resolves the external acquisition blocker but does not promote any artifact. Work remains deliberately sequenced behind the active Companies House Objective 5 slice. The CT family gate stays closed until Phase 5.8 provisions and validates the complete asset set, constructs the genuine service root, collects LTS/TPVS evidence and passes human review.
+
 ## Authoritative release selection
 
 - CT600 V3 (2026) RIM 1.994 remains the selected RIM. HMRC identifies it as currently implemented in LTS, TPVS and live. RIM 1.995 is a 2027 release and is still awaiting implementation.
@@ -57,6 +73,6 @@ The available RIM and FRC assets are individually identifiable, but the required
 - `HmrcComputationTaxonomy2025.SubmissionReady` remains `false`;
 - the Phase 5.7 family gate remains closed before outbound I/O.
 
-## Required unblock evidence
+## Resumption requirements
 
-Resume Phase 5.8 only after obtaining the official HMRC Corporation Tax computational 2025 taxonomy bundle, or an authoritative HMRC location and checksum for the complete package. Then provision the complete pinned validation set, construct the service root, validate XSD/Schematron/taxonomies, obtain the relevant LTS/TPVS evidence, freeze the new golden and submit the readiness change for human review.
+The authoritative taxonomy-bundle requirement is now satisfied. When the sequential plan returns to Corporation Tax, provision the complete pinned validation set, construct the service root, validate XSD/Schematron/taxonomies, obtain the relevant LTS/TPVS evidence, freeze the new golden and submit the readiness change for human review. Until then, `HmrcComputationTaxonomy2025.SubmissionReady` remains `false` and no CT bytes may reach test or live HMRC.

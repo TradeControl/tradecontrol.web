@@ -246,6 +246,30 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public IReadOnlyList<TaxHubBalanceSheetRow> BalanceSheet { get; init; } = Array.Empty<TaxHubBalanceSheetRow>();
         public TaxHubAccountsValidationSummary ValidationSummary { get; init; } = new();
         public IReadOnlyList<TaxHubEquityReconciliationRow> EquityReconciliation { get; init; } = Array.Empty<TaxHubEquityReconciliationRow>();
+        public TaxHubCompaniesHouseReadiness CompaniesHouse { get; init; } = new();
+    }
+
+    public sealed class TaxHubCompaniesHouseReadiness
+    {
+        public bool IsEligible { get; init; }
+        public string Status { get; init; } = "Not assessed";
+        public string CompanyNumberDisplay { get; init; } = string.Empty;
+        public string PeriodDisplay { get; init; } = string.Empty;
+        public string FilingProfile { get; init; } = "Unaudited filleted FRS 105 micro-entity accounts";
+        public string AccountsSequence { get; init; } = string.Empty;
+        public string EquityBridgeStatus { get; init; } = string.Empty;
+        public bool IsYearClosed { get; init; }
+        public bool IsExactDocumentPrepared { get; init; }
+        public bool ExternalRequestMade { get; init; }
+        public IReadOnlyList<TaxHubCompaniesHouseReadinessFinding> Findings { get; init; } =
+            Array.Empty<TaxHubCompaniesHouseReadinessFinding>();
+    }
+
+    public sealed class TaxHubCompaniesHouseReadinessFinding
+    {
+        public bool IsBlocking { get; init; }
+        public string Code { get; init; } = string.Empty;
+        public string Message { get; init; } = string.Empty;
     }
 
     public sealed class TaxHubProfitAndLossRow
