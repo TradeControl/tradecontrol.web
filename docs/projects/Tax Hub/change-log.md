@@ -1,5 +1,12 @@
 # Tax Hub Change Log
 
+## 8 October 2026 — Companies House Objective 4 milestone
+
+- Recorded the XML team's confirmation that the completed four-case micro-entity test programme qualifies Trade Control for a live package covering the document types developed to date.
+- Closed Companies House Phase 5.13 while preserving the distinction between approval, administrative package issuance and an authorised live filing.
+- Released the Companies House workflow into a separate Objective 5 work plan without claiming completion of the externally blocked Corporation Tax stream or deferred MTD Income Tax work.
+- Updated the public test-evidence dossier from pending collective review to the confirmed live-package outcome without reproducing protected correspondence, credentials or personal details.
+
 ## 7 October 2026 — Companies House submission audit trail
 
 - Added an explicit `regenerate-document` WebHarness route for rebuilding an S13-style Companies House iXBRL document from the reviewed database and filing inputs without sending it externally.

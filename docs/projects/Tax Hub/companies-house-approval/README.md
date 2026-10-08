@@ -1,6 +1,6 @@
 # Companies House approval evidence
 
-This folder contains the public, non-secret evidence package supporting Trade Control's request for approval of its initial Companies House XML filing scope:
+This folder contains the public, non-secret evidence package for Trade Control's completed Companies House XML test programme and the resulting live-package decision for its initial filing scope:
 
 > **Unaudited filleted FRS 105 micro-entity accounts.**
 

@@ -2,7 +2,7 @@
 
 7 October 2026
 
-**Status:** Living evidence record. `S00013` has been manually accepted by Companies House. STD Year 1 (`S00014`), STD Year 2 (`S00015`) and STD Year 3 (`S00016`) have been acknowledged without errors by the official test gateway and await the collective Companies House review.
+**Status:** Completed external test-programme record. `S00013` was manually accepted, and STD Year 1 (`S00014`), STD Year 2 (`S00015`) and STD Year 3 (`S00016`) were acknowledged without errors by the official test gateway. Following receipt of the completed four-case report, the Companies House XML team confirmed on 8 October 2026 that it was content to issue a live package for the document types developed to date. Administrative provisioning remains in progress; the live package has not yet been issued.
 
 ## Purpose
 
@@ -25,7 +25,7 @@ This document must not contain presenter credentials, company authentication val
 
 1. A locally generated document is not a Companies House submission.
 2. A synchronous gateway acknowledgement is not a terminal filing decision or manual acceptance.
-3. The three remaining cases are expected to be assessed collectively by Companies House after submission. A case may be recorded as gateway-successful before that review, but the four-case programme is not complete until Companies House confirms the collective result.
+3. The three remaining cases were reported together after submission. Gateway success was recorded separately from the XML team's decision; the four-case programme became complete only when the team confirmed the live-package outcome on 8 October 2026.
 4. Submission and transaction identifiers are unique, incremental and never reused.
 5. Every external request is separately reviewed and human-authorised. Automatic retry remains prohibited.
 6. A planned result is never recorded as passed. Pending rows below must be replaced only with retained evidence from an executed test.
@@ -38,9 +38,9 @@ The accepted `S00013` case remains an independent MIN-template baseline. The rem
 | Case | Accounting period | Filing narrative | Material evidence | Programme status |
 |---|---|---|---|---|
 | `S00013` | Year ended 30 September 2026, with year ended 30 September 2025 comparatives | Established MIN synthetic company | Proves the baseline database-to-Equity-Bridge-to-filleted-iXBRL route and official manual acceptance. | **Accepted by Companies House** |
-| STD Year 1 | 1 October 2023 to 30 September 2024 | First accounts; no comparative period | Proves the first-accounts branch, absence of comparative contexts and a transaction-derived opening trading year. | `S00014` acknowledged without errors; collective review pending |
-| STD Year 2 | 1 October 2024 to 30 September 2025 | Subsequent accounts with genuine Year 1 comparatives | Proves exact comparative continuity, retained-profit movement and a second reconciled accounting year. | `S00015` acknowledged without errors; collective review pending |
-| STD Year 3 | 1 October 2025 to 30 September 2026 | Further developed ordinary trading following a controlled additive Category Tree evolution | Proves richer FRS 105 balance-sheet activity without changing the previously established Year 1 or Year 2 statutory history. | `S00016` acknowledged without errors; collective review pending |
+| STD Year 1 | 1 October 2023 to 30 September 2024 | First accounts; no comparative period | Proves the first-accounts branch, absence of comparative contexts and a transaction-derived opening trading year. | `S00014` acknowledged without errors; included in the completed programme reported before the live-package decision |
+| STD Year 2 | 1 October 2024 to 30 September 2025 | Subsequent accounts with genuine Year 1 comparatives | Proves exact comparative continuity, retained-profit movement and a second reconciled accounting year. | `S00015` acknowledged without errors; included in the completed programme reported before the live-package decision |
+| STD Year 3 | 1 October 2025 to 30 September 2026 | Further developed ordinary trading following a controlled additive Category Tree evolution | Proves richer FRS 105 balance-sheet activity without changing the previously established Year 1 or Year 2 statutory history. | `S00016` acknowledged without errors; included in the completed programme reported before the live-package decision |
 
 All four cases remain within the same supported account type. The programme does not introduce full accounts, dormant accounts, audited accounts, FRS 102 or another accounting regime merely to manufacture test variety.
 
@@ -301,7 +301,7 @@ Prepayments and accrued income, provisions, and accrued liabilities/deferred inc
 | Gateway evidence | Acknowledgement at 17:19:19 UTC on 7 October 2026; no errors; event log `SA14` |
 | Request SHA-256 | `A4D89BD31C18B0A4B38CF066417C378C40AFE0374FFFB937DB88D88C68D6DC0F` |
 | Response SHA-256 | `106A08EE62FA31708ED2C8B10FD6672EF96EA651643BA97E9DADB7ECB54F29B6` |
-| Companies House collective review | Four-case submission matrix complete; collective review pending |
+| Companies House collective outcome | Included in the completed four-case report preceding the live-package decision on 8 October 2026 |
 
 ### STD Year 2 — first genuine comparatives
 
@@ -316,7 +316,7 @@ Prepayments and accrued income, provisions, and accrued liabilities/deferred inc
 | Gateway evidence | Acknowledgement at 17:19:39 UTC on 7 October 2026; no errors; event log `SA15` |
 | Request SHA-256 | `A3C8E1C38E89D7B5BE992F057CA0EE4AA6A01A5AA0D7AF1B2609E36C2F83CC1D` |
 | Response SHA-256 | `2442E16AEF7B0AEE07B13A126EAFB3BEB419A079B21B6425404813DCC3619B5D` |
-| Companies House collective review | Four-case submission matrix complete; collective review pending |
+| Companies House collective outcome | Included in the completed four-case report preceding the live-package decision on 8 October 2026 |
 
 ### STD Year 3 — additive Category Tree evolution
 
@@ -337,23 +337,25 @@ Prepayments and accrued income, provisions, and accrued liabilities/deferred inc
 | Gateway evidence | Acknowledgement at 18:10:08 UTC on 7 October 2026; no errors; event log `SA17` |
 | Request SHA-256 | `15637634A931031ACAFEDD32333B0AE501C5DA65F2D71E8556775C43F2640A7A` |
 | Response SHA-256 | `B2529DCF4F75ABB9EA7FF22036047565EE8D7344DEB5140D7252DCA79C88C2D1` |
-| Companies House collective review | Four-case submission matrix complete; collective review pending |
+| Companies House collective outcome | Included in the completed four-case report preceding the live-package decision on 8 October 2026 |
 
-## Completion gate and report to Companies House
+## Completion outcome
 
-All four planned submissions now have reproducible evidence and official gateway acknowledgements, with `S00013` also manually accepted. This dossier is complete only when Companies House has applied the collective completion gate to `S00014`–`S00016` and confirmed the overall result. The gateway-acknowledged candidates are not assumed to receive or require separate case-by-case approval messages.
+All four planned submissions have reproducible evidence and official gateway acknowledgements, with `S00013` also individually confirmed as accepted. The completed matrix was reported to the Companies House XML team on 7 October 2026. At 08:06 BST on 8 October 2026, the team confirmed that it was content to issue a live package for the document types developed to date and requested the vendor, presenter and contact details needed to begin its internal provisioning process.
 
-The final report to the Companies House XML team should link to this document and summarise:
+This is the collective programme outcome; it is not a claim that `S00014`–`S00016` each received a separate terminal case-by-case acceptance message. It establishes external approval for the tested document scope: unaudited filleted FRS 105 micro-entity accounts. The live package itself has not yet been supplied, and no production filing is authorised merely by this decision.
+
+The completed report to the Companies House XML team covered:
 
 - the single supported account type;
-- the four accepted submission numbers;
+- the four reviewed submission numbers;
 - the first/subsequent-accounts coverage;
 - the coherent STD three-year accounting history;
 - the Equity Bridge and comparative-continuity results;
 - the Category Tree preservation result; and
 - the safe request and response digests.
 
-It must not link to or reproduce protected `.local` evidence. Any exact protected artifact requested by Companies House should be supplied through an explicitly reviewed secure route.
+Protected correspondence, presenter credentials, company authentication values and personal contact details remain under the git-ignored `.local/companies-house` area. They are not reproduced in this public dossier.
 
 ## Related project records
 

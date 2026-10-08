@@ -1,5 +1,13 @@
 # Tax Hub Findings
 
+## 8 October 2026 — Companies House live-package approval and Objective 5 release
+
+- After the four-case unaudited filleted FRS 105 micro-entity programme was reported, the Companies House XML team confirmed that it was content to issue a live package for the document types developed to date.
+- The decision completes the Companies House Phase 5.13 external testing and approval gate. Administrative vendor/presenter details are required before package provisioning; the package and live credentials have not yet been issued.
+- Protected correspondence remains under the git-ignored `.local/companies-house` area because the chain contains credentials and personal information. Tracked records contain only the safe outcome and scope.
+- The human reviewer released a Companies House-specific Objective 5 slice while Corporation Tax remains externally blocked. This does not complete Objective 4 as a whole or enable a live filing.
+- Production remains fail-closed pending issued live-package configuration, an accepted TCWeb review/approval/history workflow and explicit authority for the particular filing.
+
 ## 7 October 2026 — First Companies House manual acceptance
 
 - The Companies House XML team manually reviewed and accepted official test submission `S00013`. The protected correspondence is retained under `.local/companies-house/emails`; tracked records contain no presenter credentials or authentication values.

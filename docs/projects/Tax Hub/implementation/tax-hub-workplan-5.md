@@ -515,7 +515,7 @@ Record schema acquisition, validation findings and any required Objective 3 corr
 
 ### Phase 5.11 prerequisite reconnaissance — 3 October 2026
 
-**Implementation status:** internal published-contract work and Phase 5.12 transport are implemented. Official test credentials were received, `S00013` passed the gateway and status path, and Companies House manually accepted it on 7 October 2026 as the first of the normally required four successful test submissions. Live approval remains pending Phase 5.13.
+**Implementation status:** internal published-contract work and Phase 5.12 transport are implemented. Official test credentials were received, `S00013` passed the gateway and status path, and Companies House manually accepted it on 7 October 2026 as the first of the normally required four successful test submissions. Phase 5.13 subsequently completed the four-case programme and obtained the XML team's live-package approval on 8 October 2026; administrative issuance of that package remains pending.
 
 - The official accounts supplement published on 25 September 2026 is version 6.0, not the repository's pinned TIS 5.9. The public live contract is GovTalk plus `FormSubmission-v2-11`, `GetSubmissionStatus-v2-9` and `GetStatusAck-v1-1`.
 - Accounts are exact self-contained iXBRL bytes base64 encoded once in `FormSubmission/Document/Data` with category `ACCOUNTS`. The current `CompanyAccounts-v1-0` logical body, `Class=CompanyAccounts`, correlation-based envelope identity and `submission-status/{envelopeNumber}` path are not official gateway contracts and cannot be promoted.
@@ -661,13 +661,13 @@ The initial product supports one account type: unaudited filleted FRS 105 micro-
 
 This matrix deliberately excludes full accounts, dormant accounts, audited accounts, FRS 102 and other regimes. It also does not count the earlier rejected submissions among the four successes. Each new case remains a separately reviewed one-shot filing with unique incremental identifiers, protected evidence and proportionate status follow-up. Once all three remaining cases have successful retained gateway evidence, report the complete matrix to the XML team for the expected collective completion review rather than assuming separate approval after each candidate.
 
-The detailed accounting narrative, mathematical invariants, evidence requirements and per-case result sheets are maintained in the [Companies House test-submission evidence dossier](../companies-house-approval/companies-house-test-submission-evidence.md). The next increment is to extend and validate the single STD transaction history, then prepare STD Year 1 without comparative facts. Stop for human review before any official exchange.
+The detailed accounting narrative, mathematical invariants, evidence requirements and per-case result sheets are maintained in the [Companies House test-submission evidence dossier](../companies-house-approval/companies-house-test-submission-evidence.md). At this review point, the next authorised increment was to extend and validate the single STD transaction history, then prepare STD Year 1 without comparative facts. Those increments and the three controlled official exchanges were subsequently completed; the dossier now records their final outcome.
 
 **Three-year dataset increment — 7 October 2026:** `App.proc_DatasetSyntheticMIS` now accepts a bounded `@CompletedYearCount`, defaulting to the original two-year behaviour. The default was verified in a rolled-back run. The STD sandbox was then rebuilt with three completed consecutive years ending 30 September 2026. Its read-only horizon regression passed: every year contains Project, invoice and payment activity; the dataset retains multi-level Object/BOM and Project flows; all three statutory balance-sheet projections are ready; and Equity Bridge variances are `0.00`, `0.00` and `0.08` against the `0.10` tolerance. No iXBRL candidate or external request was produced. The next reviewed increment is STD Year 1 document preparation and no-comparative proof.
 
 ### Dependencies and exclusions
 
-Requires 5.11–5.12, test credentials and official Filing TIS assets. Real company accounts require separate approval. Specialist ZIP/package accounts and a future REST replacement require a new reviewed contract. A pending test case is not an accepted filing.
+Requires 5.11–5.12, test credentials and official Filing TIS assets. An actual live filing additionally requires the issued live package, protected live presenter configuration, valid company authentication, an accepted Objective 5 review/approval workflow and separate authority for the specific filing. Specialist ZIP/package accounts and a future REST replacement require a new reviewed contract. A gateway acknowledgement is not a terminal filing decision.
 
 ### Tests and acceptance
 
@@ -678,6 +678,14 @@ Requires 5.11–5.12, test credentials and official Filing TIS assets. Real comp
 ### Review gate
 
 Retain redacted testing, presenter/approval and production-access evidence in Work Plan 5 and forward-going project records. Human sign-off distinguishes technical readiness from pending Companies House action before the limited-company milestone is accepted.
+
+### Phase 5.13 completion — 8 October 2026
+
+The four-case test programme is complete for the initial product scope of unaudited filleted FRS 105 micro-entity accounts. `S00013` was manually accepted, and `S00014`–`S00016` each received an error-free gateway acknowledgement before the complete matrix and its public accounting evidence were reported to the Companies House XML team.
+
+At 08:06 BST on 8 October 2026, the XML team confirmed that it was content to issue a live package for the document types developed to date. It requested vendor, presenter and contact details for its internal records before beginning package provisioning. The correspondence is retained only in the protected git-ignored area because the message chain contains test credentials and personal information.
+
+This completes Phase 5.13's external testing and approval gate. It does not mean that the live package or live credentials have already been issued, that a production filing has been made, or that another accounts regime is supported. Production activation remains fail-closed until the issued package is received through protected configuration and the Objective 5 workflow has passed its own review gates.
 
 ## Phase 5.14 — Limited-company completion, hardening and programme exit gate
 
@@ -716,6 +724,12 @@ A human makes one of two explicit decisions:
 
 1. **Continue Objective 4:** authorise 5.15–5.16.
 2. **Proceed to Objective 5:** defer SA and start ASP.NET Core Tax Hub integration. Record the limited-company milestone as achieved, but full Objective 4 as partially complete/deferred.
+
+### Companies House family exit decision — 8 October 2026
+
+The human reviewer accepted the Companies House Objective 4 milestone and authorised a Companies House-specific Objective 5 workflow slice. [Work Plan 7](tax-hub-workplan-7.md) governs that integration. This follows the earlier VAT precedent: an independently complete authority family may proceed into its product workflow while a different family is externally blocked.
+
+This decision does not claim the three-family Phase 5.14 completion condition. Corporation Tax Phases 5.8–5.10 remain blocked by the missing authoritative computation-taxonomy asset, and MTD Income Tax Phases 5.15–5.16 remain deferred. Full Objective 4 is therefore partially complete/deferred. The pending Companies House live-package issuance is an external activation step inside the new workflow plan, not a reason to withhold the already approved internal product integration work.
 
 ## Phase 5.15 — Full end-to-end MTD Income Tax/Self Assessment contracts and transport, if continued
 

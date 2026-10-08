@@ -194,6 +194,8 @@ Integrate Objectives 2–4 into the Tax Hub UI:
 - Submission history
 - User feedback and error presentation
 
+Objective 5 may proceed in independently accepted authority-family slices. VAT is governed by Work Plan 6. Following Companies House completion of the four-case micro-entity test programme and confirmation of live-package approval on 8 October 2026, the Companies House accounts slice is governed by Work Plan 7. Releasing either slice does not imply that blocked Corporation Tax transport or deferred MTD Income Tax work is complete.
+
 ---
 
 ## 5. Architectural Principles
