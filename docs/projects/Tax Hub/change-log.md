@@ -1,6 +1,101 @@
 # Tax Hub Change Log
 
-## 8 October 2026 — Companies House Phase 7.1 readiness increment
+## 9 October 2026 — Year-end evidence review separated from authority workflows
+
+- Accepted the Phase 7.5 immutable approval mechanism after the deployed Azure journey produced an attributable, digest-bound **Approved — not filed** result.
+- Kept Phase 7.6 unopened and product dispatch disabled while a reusable guided year-end evidence review is developed.
+- Moved operational debtor/creditor ageing into a separate Subjects work plan. Tax Hub will later consume its reconciled year-end evidence alongside native bank/cash and fixed-asset evidence rather than duplicate the Subject Browser.
+- Recorded the guided review as a Companies House pre-submission dependency without changing the accepted external filing contract or transport implementation.
+
+## 9 October 2026 — Companies House Phase 7.5 immutable approval
+
+- Recorded human acceptance of the Phase 7.4 exact XHTML and paged PDF review journey and marked Phase 7.4 passed.
+- Added a versioned approval declaration and an Administrator/Manager-only server boundary. Tenant, authenticated principal, internal actor and reporting subject are derived from the session and database rather than accepted from the browser.
+- Retain the reviewed filing inputs as a third protected, digest-verified artifact. Approval reopens the inputs, exact iXBRL and package, then rebuilds the current document and rejects changed company identity, period, source snapshot or document digest.
+- Added one immutable approval per tenant/preparation through the tracked additive unique index. The outcome is visibly **Approved — not filed** and no submit control or Companies House request exists.
+- The TCWeb boundary suite passes 140 assertions. Deployment `bc7ea676-3397-4fb4-a368-8a1e31c6f5eb` completed successfully; liveness and database-backed readiness return HTTP `200`.
+- Deferred the public User Guide screenshot journey until the complete Companies House workflow has passed review. Added a non-gating pre-live courtesy reminder to star PDFsharp.
+
+## 9 October 2026 — Companies House Phase 7.4 paged draft PDF
+
+- Added an authenticated **Download draft PDF** action alongside the clearly distinguished **Download filing XHTML** action. The XHTML remains the exact retained filing document; the PDF is a disposable human-review derivative and is never used for filing.
+- Generate the PDF only after the existing tenant/principal, expiry and SHA-256 checks have returned the retained iXBRL. The A4 review copy is watermarked `DRAFT — NOT FILED` on every page and prints the complete source-document SHA-256 in its metadata and page footer.
+- Added an explicit cross-platform font resolver and pinned PDFsharp Core 6.2.4. The renderer fails closed if a supported host font is unavailable rather than silently substituting an unreviewed presentation.
+- Added route, byte-contract and renderer regression evidence. The TCWeb boundary suite passes 137 assertions; a representative retained STD XHTML rendered as a two-page A4 PDF and was visually inspected after PNG conversion.
+- Included the PDFsharp MIT notice in the published application and deployed the final send-disabled increment as `33d1d509-7508-4ecd-83ab-88beedf4351b`; both liveness and database-backed readiness return HTTP `200`. No Companies House request was made. Phase 7.4 awaits authenticated human review of the deployed PDF.
+- Record the Companies House filing journey in the public User Guide incrementally, but only from reviewed, non-secret Azure product states. The first screenshot set follows acceptance of this PDF increment so the guide does not describe an unstable control.
+
+## 9 October 2026 — Companies House Phase 7.4 filing-information presentation correction
+
+- Replaced raw taxonomy keys and four apparently blank fixed-item values in **Accounts information** with human-readable labels and interpretations derived from their existing XBRL context dimensions: unaudited/audit-exempt status, filleted accounts, FRS 105 micro-entities and trading status.
+- Preserved the accepted zero-length `fixedItemType` facts exactly; the correction changes only their human presentation. Relabelled the boolean as **Dormant company** and explained that these classifications come from the supported filing profile and XBRL contexts.
+- Added regression checks for both the visible classifications and continued zero-length fixed facts. The Company contract suite passes 92 assertions and the TCWeb boundary suite passes 135 assertions with warning-free builds.
+- Considered a paged, `DRAFT — NOT FILED` PDF as a useful derivative hard-copy format. Deferred it as a bounded presentation enhancement: it must be generated from the digest-verified retained iXBRL and must never replace or be confused with the exact filing artifact.
+- Deployed the correction as `3c8399a6-a09b-4173-8a59-f8757afed0d1`; liveness and database-backed readiness both return HTTP `200`. A corrected retained draft must now be regenerated for human review; no Companies House request was made.
+
+## 9 October 2026 — Companies House Phase 7.4 period and download correction
+
+- Corrected the Accounts selector so changing financial year selects that year's final accounting period instead of allowing the Accounts service to fall back to the system-wide active period.
+- Added a service-side invariant that rejects an explicit period belonging to a different financial year and defaults an omitted Accounts period to the selected year's final period.
+- Added an authenticated **Download accounts draft** action. It returns the same tenant/principal-scoped, expiry-checked and digest-verified retained iXBRL bytes as the on-screen review, as a non-cacheable XHTML attachment; it does not regenerate or submit accounts.
+- The TCWeb boundary suite passes 135 assertions and the Company contract suite passes 90 assertions with warning-free builds. Azure deployment `3e721a5a-11dc-4983-a699-f306bf1205e3` is healthy; live review confirmed `2025-26` selects `2025-26 SEP` and the readiness period `01 Oct 2025 – 30 Sept 2026`. No Companies House request was made.
+
+## 9 October 2026 — Companies House Phase 7.4 statutory presentation correction
+
+- Added sterling units to current/comparative balance-sheet headings and accounting presentation for monetary facts: thousands separators, two decimal places and brackets for negative amounts.
+- Implemented the presentation within the exact iXBRL using the published 2020 `ixt:num-dot-decimal` transformation and `sign="-"` for negative facts, rather than applying an untagged TCWeb display overlay.
+- Added regression coverage for currency headings, formatted positive amounts and bracketed negative amounts. The company-contract suite passes 90 assertions and the TCWeb boundary suite passes 132 assertions with warning-free builds.
+- Deployed the correction as `1282caa3-9dbd-40a1-8b17-3a257ccc7601`; liveness/readiness both return HTTP `200`. Phase 7.4 is corrected and awaits authenticated regeneration/human re-review; no Companies House request was made.
+
+## 9 October 2026 — Companies House Phase 7.4 exact-document review implemented
+
+- Added the authenticated exact-accounts preparation action to the Accounts workspace, using the server-derived statutory source and reviewed non-ledger facts without accepting browser-supplied filing values or identity.
+- Added tenant/principal-scoped preparation metadata and immutable protected-Blob retention for the exact iXBRL and credential-free GovTalk package, including 24-hour expiry and digest verification on retrieval.
+- Added the protected, sandboxed same-origin accounts viewer and clear `Prepared — not approved or filed` state; approval and submission remain absent and product dispatch remains disabled.
+- Normalised numeric company registrations to eight characters before projection while preserving prefixed registrations.
+- Prepared and visually reviewed the Azure STD 30 September 2026 document. Repeated preparation produced the same document and package SHA-256 values. Deployment `5dd2a057-93d9-40f9-b3af-d13bd7f8afc3` succeeded, both health endpoints returned HTTP `200`, and 132 boundary assertions passed with zero warnings.
+- Marked Phase 7.4 `IMPLEMENTED — AWAITING HUMAN REVIEW`; Phase 7.5 remains blocked and no Companies House request was made.
+
+## 9 October 2026 — Companies House Phase 7.4 preparation-state correction
+
+- Replaced the obsolete `CH-PENDING-DEVELOPER-TEST` preparation error with `CH-TRANSPORT-MATERIALISATION-REQUIRED`, a warning that accurately describes the credential-free retained review package.
+- Kept the artifact at `Preview`; protected presenter, company-authentication and live-package values remain transport-only and no send path was enabled.
+- Updated the data-provision regression expectation and retained backward compatibility in the test-envelope materialiser for historical preview evidence.
+
+## 9 October 2026 — Companies House live package dependency update
+
+- Recorded receipt of the protected Companies House live package reference without recording its value or placing it in product configuration.
+- Kept Phase 7.8 fail-closed: live credentials, completed Objective 5 workflow gates and explicit authority for a genuine filing remain outstanding.
+- Recorded the authority restriction that the live service must never be used for testing; the retained official test account remains the sole development/test route.
+
+## 9 October 2026 — Companies House Phase 7.3 gate accepted
+
+- Recorded human acceptance of the corrected source-derived accounting boundary, first-release eligibility treatment and director-note presentation.
+- Marked Phase 7.3 passed and authorised Phase 7.4 exact-document preparation. Approval, submission and all live exchange remain disabled.
+
+## 8 October 2026 — Companies House Phase 7.3 reviewed filing inputs
+
+- Added an authoritative phase-status register and explicit gate vocabulary to Work Plan 7. Each phase now states `PASSED`, `IMPLEMENTED — AWAITING HUMAN REVIEW`, `NOT STARTED` or `EXTERNALLY BLOCKED`; implementation evidence alone can no longer be mistaken for human acceptance. Phase 7.3 is the visible current gate and Phase 7.4 is explicitly blocked pending review.
+- Replaced the temporary sub-phase lettering with a development-cycle sequence from Phase 7.0 through Phase 7.8, giving persistence, input review, exact-document preparation and approval their own reviewable outcomes.
+- Added the authenticated Accounts-workspace filing-input form with server-derived defaults and review-only validation for approval, director, narratives, employees and exceptional disclosures; the initially included balance-sheet and commitment editors were removed by the subsequent review corrections below.
+- Added reconciliation validation for director advances, range/cardinality checks and automatic invalidation when inputs or the selected period change.
+- Corrected the readiness boundary so missing VAT registration and unrelated VAT/Corporation Tax configuration cannot block Companies House; Companies House identity/profile evidence remains mandatory.
+- Expanded the TCWeb Tax Hub suite to 122 passing assertions, deployed the send-disabled build, verified HTTP `200` liveness/readiness and reviewed the form against the closed Azure STD year-end. No document, durable filing record, Blob object or Companies House request was created.
+- Corrected the human-review finding that balance-sheet filing allocations must not be free-entry values. Removed prepayments, provisions and accruals/deferred income from both the browser draft and core reviewed-input contract; the source reader now preserves them as system-derived zero additional lines over the native four-bucket balance sheet, and diagnostic non-zero overrides fail closed.
+- Returned Phase 7.3 to `CORRECTED — AWAITING HUMAN RE-REVIEW`; Phase 7.4 remains blocked until the corrected Azure form and accounting provenance are accepted.
+- Deployed the correction to the send-disabled Azure development host as deployment `8e76a956-a4a4-4fb5-acf7-454cab49e2fe`; liveness and readiness both return HTTP `200` and no Companies House request was made.
+- Removed the commitments/contingencies entry schedule from the Accounts Mode first-release form. Added an explicit three-state eligibility decision which permits only confirmed none and blocks yes/unsure or unanswered; expanded the TCWeb boundary suite to 124 assertions and deployed the correction as Azure deployment `a1e22e86-675e-4afc-b2a6-ec7dc688fa47` with healthy liveness/readiness.
+- Defaulted the ordinary eligibility answer to no commitments/contingencies, while preserving fail-closed yes/unsure and unanswered outcomes. Relabelled director advances as a per-director period movement schedule with explicit opening, advances/credits, repayments and closing fields; expanded the TCWeb suite to 126 assertions and deployed the result as Azure deployment `320a90bd-d323-4cab-9a3c-7903dfbe7e12` with healthy liveness/readiness.
+
+## 8 October 2026 — Companies House Phase 7.2 Azure persistence
+
+- Added the tracked, idempotent Azure SQL workflow schema for tenant-partitioned Companies House preparation, approval and conversation metadata, including tenant-scoped foreign keys and a filtered uniqueness gate for one active logical filing.
+- Added the Azure-managed workflow/content implementation using the named Key Vault connection and TCWeb managed identity. Exact Blob content is immutable by reference and digest-verified on retrieval.
+- Added strict Azure host validation, private-container configuration and readiness probing of both the workflow schema and evidence container.
+- Provisioned and configured the isolated Basic workflow database and private Standard LRS Blob account/container. Disabled public Blob and shared-key access and granted TCWeb only the required Blob data role.
+- Deployed the send-disabled composition and verified HTTP `200` liveness/readiness, zero workflow rows and 117 passing TCWeb Tax Hub assertions with a warning-free build. No statutory document, protected Blob, approval, conversation or Companies House request was created.
+
+## 8 October 2026 — Companies House Phase 7.1 accounts readiness
 
 - Added a server-derived Companies House tab to the existing authenticated Accounts workspace, showing bounded company identity, exact accounting period, supported filing profile, first/subsequent-accounts status, readiness findings and Equity Bridge evidence.
 - Kept the browser contract narrow: it supplies only the selected year/period, while Trade Control adapters derive company identity, statutory context and accounting evidence. No credentials, filing values, iXBRL or GovTalk content enter the browser request.
@@ -16,7 +111,7 @@
 - Rebuilt the coherent three-year STD dataset, passed the completed-year/Equity Bridge/statutory-readiness regression, rehearsed the Year 3 additive evolution under rollback, applied it and passed the final regression.
 - Measured the temporary Azure SQL capacity requirement and returned the database to Basic after validation.
 - Added a dedicated Key Vault database connection for the STD node, rebound and restarted TCWeb, verified HTTP `200` root/liveness/readiness responses, and stopped the unused Swagger/WebHarness App Service.
-- Recorded Basic-tier Dashboard saturation at 100% DTU/CPU and temporarily promoted the interactive development database to Standard S2 while retaining a downscale requirement. No Companies House request or Phase 7.1 workflow store was enabled.
+- Recorded Basic-tier Dashboard saturation at 100% DTU/CPU and temporarily promoted the interactive development database to Standard S2 while retaining a downscale requirement. No Companies House request or workflow store was enabled by the accounting-source checkpoint.
 
 ## 8 October 2026 — Companies House Objective 5 Phase 7.0
 
@@ -25,7 +120,7 @@
 - Added fail-closed Companies House host options: disabled by default, absolute development stores only in Development, Azure facilities selected but not implemented and `SendDisabled` as the sole dispatch mode.
 - Confined live presenter/package secret references and the company-specific dispatch-time authentication resolver to the Submission adapter; no protected value entered source or tracked configuration.
 - Extended local readiness and TCWeb boundary tests. `TaxHub.slnx` and `TCWeb.csproj` build cleanly, and 106 TCWeb Tax Hub assertions pass. No filing UI or external request was added.
-- Recorded human acceptance of the seven-year evidence policy and the Azure-first Phase 7.1 implementation decision. The single initial deployment remains multi-tenant by construction; Candidate 4 regeneration and any temporary Azure SQL promotion remain separate controlled operations.
+- Recorded human acceptance of the seven-year evidence policy and the Azure-first Phase 7.2 implementation decision. The single initial deployment remains multi-tenant by construction; Candidate 4 regeneration and any temporary Azure SQL promotion remain separate controlled operations.
 
 ## 8 October 2026 — Companies House Objective 4 milestone
 

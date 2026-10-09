@@ -38,7 +38,7 @@ Database names are never evidence of entity or reporting shape. Entity type come
 | Accounting policies narrative | effective `ACCOUNTING-POLICIES` profile setting | Ready default | Reusable suggestion in the existing data dictionary, editable per submission. |
 | Average employees for period | `Subject.tbVirtual.NumberOfEmployees` | Ready default | Treated as a suggestion rather than a claim that a period average has been calculated. |
 | Director advances | empty/zero submission schedule | Ready default | Absence defaults to none and remains operator-reviewable. |
-| Commitments and contingencies | empty/zero submission schedule | Ready default | Absence defaults to none and remains operator-reviewable. |
+| Commitments and contingencies | MIS-only structured disclosure | Accounts Mode first-release limitation | The eligibility answer defaults to none and is confirmed by reviewing the form. Yes, unsure or unanswered blocks automated filing; an empty schedule is not evidence of absence. |
 | Accounts approval date and signing director | prepared filing workflow | Workflow | Must be captured per accounts artifact, not stored as permanent registration data. |
 | Income-statement components | company Accounts Tax Tags and accounting projection | Partial | Tag definitions/mappings exist; CO1 must prove complete period and comparative semantics. |
 | Balance-sheet components | existing balance-sheet/account evidence plus company semantic projection | Gap | `Cash.vwBalanceSheet` exists, but the authoritative statutory semantic adapter and comparative snapshot are not yet defined. |

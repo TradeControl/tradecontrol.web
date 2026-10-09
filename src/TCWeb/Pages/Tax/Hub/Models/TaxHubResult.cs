@@ -261,8 +261,32 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public bool IsYearClosed { get; init; }
         public bool IsExactDocumentPrepared { get; init; }
         public bool ExternalRequestMade { get; init; }
+        public TaxHubCompaniesHouseFilingInputDraft FilingInputs { get; init; } = new();
         public IReadOnlyList<TaxHubCompaniesHouseReadinessFinding> Findings { get; init; } =
             Array.Empty<TaxHubCompaniesHouseReadinessFinding>();
+    }
+
+    public sealed class TaxHubCompaniesHouseFilingInputDraft
+    {
+        public DateOnly PeriodEnd { get; set; }
+        public bool IsFirstAccountsPeriod { get; set; }
+        public DateTime? ApprovedOn { get; set; }
+        public string SigningDirectorName { get; set; } = string.Empty;
+        public string PrincipalActivity { get; set; } = string.Empty;
+        public string AccountingPolicies { get; set; } = string.Empty;
+        public int AverageEmployees { get; set; }
+        public bool? ConfirmsNoMaterialCommitmentsOrContingencies { get; set; } = true;
+        public List<TaxHubCompaniesHouseDirectorAdvanceInput> DirectorAdvances { get; set; } = [];
+    }
+
+    public sealed class TaxHubCompaniesHouseDirectorAdvanceInput
+    {
+        public string DirectorName { get; set; } = string.Empty;
+        public decimal OpeningBalance { get; set; }
+        public decimal Advances { get; set; }
+        public decimal Repayments { get; set; }
+        public decimal ClosingBalance { get; set; }
+        public string Terms { get; set; } = string.Empty;
     }
 
     public sealed class TaxHubCompaniesHouseReadinessFinding

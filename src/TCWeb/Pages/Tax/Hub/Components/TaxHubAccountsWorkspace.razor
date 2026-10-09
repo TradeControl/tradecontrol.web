@@ -146,9 +146,12 @@ else
                         </div>
                     }
 
+                    <TaxHubCompaniesHouseFilingInputs Readiness="Workspace.CompaniesHouse"
+                                                          YearNumber="Workspace.SelectedYearNumber"
+                                                          SelectedPeriodStart="Workspace.SelectedPeriodStartOn" />
+
                     <div class="alert alert-info mb-0" role="status">
-                        Review only — no statutory document has been retained and no request has been made to Companies House.
-                        Exact-document preparation is the next reviewed increment; submission remains disabled.
+                        Preparation and immutable approval only — no request is made to Companies House. Submission remains disabled.
                     </div>
                 </section>
             </MudTabPanel>

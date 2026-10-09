@@ -687,7 +687,7 @@ The four-case test programme is complete for the initial product scope of unaudi
 
 At 08:06 BST on 8 October 2026, the XML team confirmed that it was content to issue a live package for the document types developed to date. It requested vendor, presenter and contact details for its internal records before beginning package provisioning. The correspondence is retained only in the protected git-ignored area because the message chain contains test credentials and personal information.
 
-This completes Phase 5.13's external testing and approval gate. It does not mean that the live package or live credentials have already been issued, that a production filing has been made, or that another accounts regime is supported. Production activation remains fail-closed until the issued package is received through protected configuration and the Objective 5 workflow has passed its own review gates.
+This completes Phase 5.13's external testing and approval gate. The protected live package reference was subsequently confirmed as created on 9 October 2026 and is deliberately omitted from tracked records. Separate live credentials and the remaining Objective 5 review/approval gates are still required; no production filing has been made and no other accounts regime is supported. Companies House prohibits testing against the live service, so production activation remains fail-closed until one genuine filing is separately authorised.
 
 ## Phase 5.14 — Limited-company completion, hardening and programme exit gate
 

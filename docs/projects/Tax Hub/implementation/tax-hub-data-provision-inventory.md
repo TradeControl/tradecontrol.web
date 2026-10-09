@@ -160,7 +160,7 @@ Consequences:
 | Accounting policies | Versioned profile narrative plus reviewed override | Missing; not a Category fact |
 | Average employees | Period-derived/reviewed disclosure | `Subject.tbVirtual.NumberOfEmployees` is point-in-time only; insufficient without calculation policy |
 | Director advances | Repeating structured filing evidence | Missing; cannot be a scalar dictionary setting |
-| Commitments and contingencies | Repeating structured filing evidence | Missing; absence must be explicit/reviewed |
+| Commitments and contingencies | MIS-only repeating structured evidence | Inaccessible to Accounts Mode first release; explicit none permits filing, otherwise block |
 | Prepayments/accrued income | Accounting/period-end adjustment evidence | Manifest marks derived/external; source must be confirmed in CO1 |
 | Provisions | Accounting/period-end adjustment evidence | Source gap to confirm in CO1 |
 | Accruals/deferred income | Accounting/period-end adjustment evidence | Source gap to confirm in CO1 |

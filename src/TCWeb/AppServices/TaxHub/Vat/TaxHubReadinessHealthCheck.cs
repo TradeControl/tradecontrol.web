@@ -42,6 +42,14 @@ public sealed class TaxHubReadinessHealthCheck(
                 && (string.IsNullOrWhiteSpace(companiesHouse.DevelopmentStoreRoot)
                     || !Path.IsPathFullyQualified(companiesHouse.DevelopmentStoreRoot)))
                 return HealthCheckResult.Unhealthy("The Companies House evidence store is not configured.");
+            if (companiesHouse.Enabled
+                && companiesHouse.PersistenceMode == CompaniesHousePersistenceMode.AzureManaged)
+            {
+                var persistence = scope.ServiceProvider.GetService<ICompaniesHousePersistenceProbe>();
+                if (persistence is null)
+                    return HealthCheckResult.Unhealthy("The Companies House Azure persistence boundary is unavailable.");
+                await persistence.ProbeAsync(cancellationToken);
+            }
 
             return HealthCheckResult.Healthy();
         }

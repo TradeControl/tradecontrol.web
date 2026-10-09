@@ -85,7 +85,7 @@ namespace TradeControl.Web
                 CompaniesHouseProductHostOptionsValidator>();
             services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<CompaniesHouseProductHostOptions>,
                 CompaniesHouseProductDevelopmentDefaults>();
-            services.AddAppServices();
+            services.AddAppServices(Configuration);
             services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
                 .AddCheck<TaxHubReadinessHealthCheck>("trade-control-node", tags: new[] { "ready" });

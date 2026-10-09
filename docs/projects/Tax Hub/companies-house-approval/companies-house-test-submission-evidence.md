@@ -2,7 +2,7 @@
 
 7 October 2026
 
-**Status:** Completed external test-programme record. `S00013` was manually accepted, and STD Year 1 (`S00014`), STD Year 2 (`S00015`) and STD Year 3 (`S00016`) were acknowledged without errors by the official test gateway. Following receipt of the completed four-case report, the Companies House XML team confirmed on 8 October 2026 that it was content to issue a live package for the document types developed to date. Administrative provisioning remains in progress; the live package has not yet been issued.
+**Status:** Completed external test-programme record. `S00013` was manually accepted, and STD Year 1 (`S00014`), STD Year 2 (`S00015`) and STD Year 3 (`S00016`) were acknowledged without errors by the official test gateway. Following receipt of the completed four-case report, the Companies House XML team confirmed on 8 October 2026 that it was content to issue a live package for the document types developed to date. The protected live package reference was confirmed as created on 9 October 2026; it is intentionally omitted here. It does not authorise testing or any live filing.
 
 ## Purpose
 
@@ -343,7 +343,7 @@ Prepayments and accrued income, provisions, and accrued liabilities/deferred inc
 
 All four planned submissions have reproducible evidence and official gateway acknowledgements, with `S00013` also individually confirmed as accepted. The completed matrix was reported to the Companies House XML team on 7 October 2026. At 08:06 BST on 8 October 2026, the team confirmed that it was content to issue a live package for the document types developed to date and requested the vendor, presenter and contact details needed to begin its internal provisioning process.
 
-This is the collective programme outcome; it is not a claim that `S00014`–`S00016` each received a separate terminal case-by-case acceptance message. It establishes external approval for the tested document scope: unaudited filleted FRS 105 micro-entity accounts. The live package itself has not yet been supplied, and no production filing is authorised merely by this decision.
+This is the collective programme outcome; it is not a claim that `S00014`–`S00016` each received a separate terminal case-by-case acceptance message. It establishes external approval for the tested document scope: unaudited filleted FRS 105 micro-entity accounts. The live package reference was subsequently received through protected correspondence, but no production filing is authorised merely by its receipt. Companies House prohibits testing against the live service; the retained test account remains the only development/test route.
 
 The completed report to the Companies House XML team covered:
 

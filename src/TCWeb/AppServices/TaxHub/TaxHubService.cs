@@ -614,7 +614,21 @@ namespace TradeControl.Web.AppServices.TaxHub
         {
             var financialPeriods = new FinancialPeriods(_nodeContext);
             var selectedYear = yearNumber ?? financialPeriods.ActiveYear;
-            var selectedPeriod = periodStartOn ?? financialPeriods.ActiveStartOn;
+            var selectedPeriodInfo = periodStartOn.HasValue
+                ? await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(t => t.YearNumber == selectedYear && t.StartOn == periodStartOn.Value)
+                    .FirstOrDefaultAsync()
+                : await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(t => t.YearNumber == selectedYear)
+                    .OrderByDescending(t => t.StartOn)
+                    .FirstOrDefaultAsync();
+            if (selectedPeriodInfo is null)
+                throw new InvalidOperationException(periodStartOn.HasValue
+                    ? "The selected accounting period does not belong to the selected financial year."
+                    : "The selected financial year has no accounting periods.");
+            var selectedPeriod = selectedPeriodInfo.StartOn;
 
             var selectedYearName = await _nodeContext.App_tbYears
                 .AsNoTracking()
@@ -649,11 +663,6 @@ namespace TradeControl.Web.AppServices.TaxHub
                     : Enumerable.Empty<Cash_vwProfitAndLossByYear>());
 
             var annualDetails = await BuildAnnualProfitAndLossDetailsAsync(selectedYear, selectedPreviousYearNumber);
-
-            var selectedPeriodInfo = await _nodeContext.App_tbYearPeriods
-                .AsNoTracking()
-                .Where(t => t.StartOn == selectedPeriod)
-                .FirstOrDefaultAsync();
 
             var selectedPeriodName = await _nodeContext.App_Periods
                 .AsNoTracking()

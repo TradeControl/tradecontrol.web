@@ -45,6 +45,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "implementation", "implement
 		..\docs\projects\Tax Hub\implementation\phase-6.5-vat-filing-history.md = ..\docs\projects\Tax Hub\implementation\phase-6.5-vat-filing-history.md
 		..\docs\projects\Tax Hub\implementation\phase-6.6-hmrc-approval-readiness.md = ..\docs\projects\Tax Hub\implementation\phase-6.6-hmrc-approval-readiness.md
 		..\docs\projects\Tax Hub\implementation\phase-6.7-hmrc-production-approval.md = ..\docs\projects\Tax Hub\implementation\phase-6.7-hmrc-production-approval.md
+		..\docs\projects\Tax Hub\implementation\phase-7.0-companies-house-integration-boundary.md = ..\docs\projects\Tax Hub\implementation\phase-7.0-companies-house-integration-boundary.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-company-projection-inventory.md = ..\docs\projects\Tax Hub\implementation\tax-hub-company-projection-inventory.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-data-provision-inventory.md = ..\docs\projects\Tax Hub\implementation\tax-hub-data-provision-inventory.md
 		..\docs\projects\Tax Hub\implementation\tax-hub-data-readiness-matrix.md = ..\docs\projects\Tax Hub\implementation\tax-hub-data-readiness-matrix.md

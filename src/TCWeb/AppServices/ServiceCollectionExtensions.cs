@@ -1,5 +1,9 @@
 using System;
+using Azure.Identity;
+using Azure.Storage.Blobs;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.Execution;
 using TradeControl.Web.AppServices.InvoiceRegister;
 using TradeControl.Web.AppServices.TaxHub;
@@ -14,7 +18,8 @@ namespace TradeControl.Web.AppServices
     /// </summary>
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddAppServices(this IServiceCollection services)
+        public static IServiceCollection AddAppServices(this IServiceCollection services,
+            IConfiguration configuration)
         {
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<ITemplateInvoicesService, TemplateInvoicesService>();
@@ -23,6 +28,38 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ITaxConfiguratorService, TaxConfiguratorService>();
             services.AddScoped<ITaxHubService, TaxHubService>();
             services.AddScoped<ICompaniesHouseReadinessService, CompaniesHouseReadinessService>();
+            services.AddSingleton<ICompaniesHouseDraftPdfRenderer, CompaniesHouseDraftPdfRenderer>();
+            services.AddSingleton<ICompaniesHouseFilingAuthorisationPolicy,
+                CompaniesHouseFilingAuthorisationPolicy>();
+            services.AddScoped<ICompaniesHouseWorkflowIdentityAccessor,
+                CompaniesHouseWorkflowIdentityAccessor>();
+            if (configuration.GetValue<CompaniesHousePersistenceMode>(
+                    $"{CompaniesHouseProductHostOptions.SectionName}:PersistenceMode")
+                == CompaniesHousePersistenceMode.AzureManaged)
+            {
+                services.AddSingleton(provider =>
+                {
+                    var options = provider.GetRequiredService<IOptions<CompaniesHouseProductHostOptions>>().Value;
+                    var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                    {
+                        ExcludeInteractiveBrowserCredential = true
+                    });
+                    var service = new BlobServiceClient(new Uri(options.EvidenceBlobServiceUri!), credential);
+                    return service.GetBlobContainerClient(options.EvidenceContainerName);
+                });
+                services.AddScoped<AzureCompaniesHousePersistence>();
+                services.AddScoped<ICompaniesHouseWorkflowStore>(provider =>
+                    provider.GetRequiredService<AzureCompaniesHousePersistence>());
+                services.AddScoped<ICompaniesHouseProtectedContentStore>(provider =>
+                    provider.GetRequiredService<AzureCompaniesHousePersistence>());
+                services.AddScoped<ICompaniesHousePersistenceProbe>(provider =>
+                    provider.GetRequiredService<AzureCompaniesHousePersistence>());
+                services.AddScoped<ICompaniesHousePreparationReviewService,
+                    CompaniesHousePreparationReviewService>();
+            }
+            else
+                services.AddScoped<ICompaniesHousePreparationReviewService,
+                    DisabledCompaniesHousePreparationReviewService>();
             services.AddHttpContextAccessor();
             services.AddScoped<IVatWorkflowIdentityAccessor, VatWorkflowIdentityAccessor>();
             services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();

@@ -89,7 +89,7 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, Time
         else if (!profile.IsReviewed)
             Block("CH-PROFILE-UNREVIEWED", "The Companies House statutory-accounts reporting profile has not been reviewed.");
 
-        foreach (var finding in StatutoryContextVerifier.Verify(context))
+        foreach (var finding in VerifyCompaniesHouseContext(context, profile?.ProfileCode))
             Block($"CH-{finding.Code}", finding.Message);
 
         if (!equityVariance.HasValue)
@@ -98,11 +98,14 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, Time
             Block("CH-EQUITY-BRIDGE-FAILED", "The selected year's Equity Bridge exceeds the accepted tolerance.");
 
         var isEligible = findings.All(item => !item.IsBlocking);
+        var accountsDefaults = context.Identity.BusinessTaxTypeCode == 0
+            ? CompanyAccountsDraftDefaults.Create(context)
+            : null;
         return new()
         {
             IsEligible = isEligible,
             Status = isEligible ? "Ready to prepare document" : "Not ready",
-            CompanyNumberDisplay = MaskCompanyNumber(context.Identity.CompanyNumber),
+            CompanyNumberDisplay = MaskCompanyNumber(NormalizeCompanyNumber(context.Identity.CompanyNumber)),
             PeriodDisplay = $"{firstPeriod:dd MMM yyyy} – {periodEndDateTime:dd MMM yyyy}",
             AccountsSequence = priorClosedYearExists ? "Subsequent accounts with comparatives" : "First accounts",
             EquityBridgeStatus = equityVariance.HasValue
@@ -111,6 +114,14 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, Time
             IsYearClosed = isClosed,
             IsExactDocumentPrepared = false,
             ExternalRequestMade = false,
+            FilingInputs = new()
+            {
+                PeriodEnd = periodEnd,
+                IsFirstAccountsPeriod = !priorClosedYearExists,
+                PrincipalActivity = accountsDefaults?.PrincipalActivity.Value ?? string.Empty,
+                AccountingPolicies = accountsDefaults?.AccountingPolicies.Value ?? string.Empty,
+                AverageEmployees = accountsDefaults?.AverageEmployees.Value ?? 0,
+            },
             Findings = findings
         };
     }
@@ -129,6 +140,58 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, Time
         if (normalized.Length <= 4)
             return normalized;
         return $"{new string('•', normalized.Length - 4)}{normalized[^4..]}";
+    }
+
+    internal static string NormalizeCompanyNumber(string? value)
+    {
+        var normalized = value?.Trim().Replace(" ", string.Empty, StringComparison.Ordinal)
+            .ToUpperInvariant() ?? string.Empty;
+        return normalized.Length is > 0 and < 8 && normalized.All(char.IsAsciiDigit)
+            ? normalized.PadLeft(8, '0')
+            : normalized;
+    }
+
+    internal static IReadOnlyList<DataProvisionFinding> VerifyCompaniesHouseContext(
+        StatutoryContextSnapshot context, string? companiesHouseProfileCode)
+    {
+        var findings = new List<DataProvisionFinding>();
+        var identity = context.Identity;
+
+        Required(identity.SubjectName, "LEGAL-NAME-MISSING", "The reporting name is missing.");
+        Required(identity.RegistryJurisdictionCode, "REGISTRY-JURISDICTION-MISSING",
+            "The registry jurisdiction is missing.");
+        Required(identity.CurrencyCode, "CURRENCY-MISSING", "The reporting currency is missing.");
+        Required(identity.StatutoryAddress, "STATUTORY-ADDRESS-MISSING", "The statutory address is missing.");
+
+        if (identity.Versions.Count == 0
+            || identity.Versions.Any(version => string.IsNullOrWhiteSpace(version.RowVersion)))
+            findings.Add(new("IDENTITY-PROVENANCE-MISSING", "Identity source provenance is incomplete."));
+
+        foreach (var registration in context.Registrations.Where(item => item.IsSensitive))
+            if (!registration.DisplayValue.Contains('*'))
+                findings.Add(new("SENSITIVE-IDENTIFIER-UNMASKED",
+                    $"{registration.SchemeCode} is not masked."));
+
+        if (!string.IsNullOrWhiteSpace(companiesHouseProfileCode))
+        {
+            foreach (var setting in context.Settings.Where(item =>
+                         item.ProfileCode == companiesHouseProfileCode))
+            {
+                if (!setting.IsReviewed)
+                    findings.Add(new("SETTING-UNREVIEWED",
+                        "A Companies House reporting setting has not been reviewed."));
+                if (setting.IsSensitive && !setting.DisplayValue.Contains('*'))
+                    findings.Add(new("SENSITIVE-SETTING-UNMASKED",
+                        $"{setting.SettingCode} is not masked."));
+            }
+        }
+
+        return findings;
+
+        void Required(string? value, string code, string message)
+        {
+            if (string.IsNullOrWhiteSpace(value)) findings.Add(new(code, message));
+        }
     }
 
     internal static (DateTime PeriodStart, DateTime LastPeriodStart, DateTime PeriodEnd)

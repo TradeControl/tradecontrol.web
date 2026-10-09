@@ -42,7 +42,7 @@ The logical filing identity is tenant + company identity + period + filing profi
 - Restart recovery resumes the retained conversation. An ambiguous send is not converted into a new preparation or submission.
 - Terminal conversation evidence is retained for seven years from its last event. This is a conservative Tax Hub operational-evidence policy, not a statement of the Companies Act accounting-record retention period.
 
-The development-file composition remains useful for isolated automated tests, but it is not the product implementation path. The first real store will be Azure-managed and implemented with the Phase 7.1 preparation workflow. Phase 7.0 defines the records and invariants without adding a second ad-hoc JSON store that would immediately be replaced for deployment.
+The development-file composition remains useful for isolated automated tests, but it is not the product implementation path. The first real store will be Azure-managed and implemented in Phase 7.2 before exact preparation. Phase 7.0 defines the records and invariants without adding a second ad-hoc JSON store that would immediately be replaced for deployment.
 
 ## Protected configuration
 
@@ -75,14 +75,14 @@ Detailed evidence is recovered through authorised workflow services, tenant/comp
 | Company authentication | Protected dispatch-time resolver only |
 | External dispatch | Send-disabled |
 | Filing UI | Not added |
-| Live package | Approved for issue but not yet received/installed |
+| Live package | Protected reference received 9 October 2026; not reproduced in source or installed in diagnostics; live-service testing prohibited |
 
 ## Human review decision — accepted 8 October 2026
 
 The reviewer accepted:
 
 1. seven years from the last conversation event as the Tax Hub operational-evidence retention policy; and
-2. an Azure-first Phase 7.1 implementation rather than a disposable local product store.
+2. an Azure-first Phase 7.2 implementation rather than a disposable local product store.
 
 The current single deployed Trade Control node will use one stable opaque tenant GUID, while schemas, keys, lookups, protected-content paths and tests remain tenant-partitioned from the start. Cross-tenant isolation will be exercised with artificial second-tenant test records even though only one tenant is initially deployed.
 

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
@@ -7,8 +8,10 @@ using TradeControl.Web.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using TradeControl.Web.Controllers;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
+using TradeControl.Tax.UK.Application.DataProvision;
 
 var assertions = 0;
 void Assert(bool condition, string message)
@@ -106,8 +109,11 @@ var companiesHouseProduction = new CompaniesHouseProductHostOptions
     WorkflowConnectionName = "TaxHubWorkflow",
     EvidenceBlobServiceUri = "https://example.blob.core.windows.net/"
 };
+Assert(companiesHouseProductionValidator.Validate(null, companiesHouseProduction).Succeeded,
+    "The reviewed Azure-managed Companies House persistence boundary was rejected.");
+companiesHouseProduction.EvidenceContainerName = "Invalid_Container";
 Assert(companiesHouseProductionValidator.Validate(null, companiesHouseProduction).Failed,
-    "Unimplemented production Companies House persistence was accepted.");
+    "An invalid Companies House evidence-container name was accepted.");
 var companiesHouseDefaults = new CompaniesHouseProductHostOptions
 {
     Enabled = true,
@@ -129,12 +135,80 @@ Assert(CompaniesHouseReadinessService.MaskCompanyNumber("01234567") == "••�
     "Companies House readiness did not bound the company number shown in the browser model.");
 Assert(CompaniesHouseReadinessService.MaskCompanyNumber("  SC123456  ") == "••••3456",
     "Companies House readiness did not normalize and bound an alphanumeric company number.");
+Assert(CompaniesHouseReadinessService.NormalizeCompanyNumber("123456") == "00123456"
+       && CompaniesHouseReadinessService.NormalizeCompanyNumber(" sc123456 ") == "SC123456",
+    "Companies House readiness did not canonicalise numeric registrations or preserve prefixed registrations.");
 var octoberYearBounds = CompaniesHouseReadinessService.ResolvePeriodBounds([
     new DateTime(2027, 1, 1), new DateTime(2026, 10, 1), new DateTime(2027, 9, 1)]);
 Assert(octoberYearBounds.PeriodStart == new DateTime(2026, 10, 1)
        && octoberYearBounds.LastPeriodStart == new DateTime(2027, 9, 1)
        && octoberYearBounds.PeriodEnd == new DateTime(2027, 9, 30),
     "Companies House readiness reverted to calendar-month ordering for an October financial year.");
+var statutoryVersion = new SourceVersion("test", "01", null);
+var nonVatContext = new StatutoryContextSnapshot(
+    new("HOME", "Example Ltd", 0, "GB", "EW", "GBP", "01234567", null,
+        "Example activity", 1, "Trading", "Registered", "Registered", [statutoryVersion]),
+    [],
+    [
+        new("accounts", "STATUTORY-ACCOUNTS", "COMPANIES-HOUSE", "UK-CO-ACCTS-2026", null,
+            true, "test", statutoryVersion),
+        new("vat", "VAT", "HMRC", "HMRC-VAT", null, false, "test", statutoryVersion)
+    ],
+    [new("vat", "UNRELATED", "Text", "unreviewed", false, false, "test", statutoryVersion)],
+    new(new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30)));
+Assert(CompaniesHouseReadinessService.VerifyCompaniesHouseContext(nonVatContext, "accounts").Count == 0,
+    "A non-VAT company or unrelated tax profile blocked Companies House readiness.");
+var validFilingInputs = new TradeControl.Web.Pages.Tax.Hub.Models.TaxHubCompaniesHouseFilingInputDraft
+{
+    PeriodEnd = new DateOnly(2026, 9, 30),
+    ApprovedOn = new DateTime(2026, 10, 8),
+    SigningDirectorName = "Example Director",
+    PrincipalActivity = "Software development",
+    AccountingPolicies = "FRS 105 historical-cost basis.",
+    AverageEmployees = 2,
+    ConfirmsNoMaterialCommitmentsOrContingencies = true
+};
+Assert(new TradeControl.Web.Pages.Tax.Hub.Models.TaxHubCompaniesHouseFilingInputDraft()
+        .ConfirmsNoMaterialCommitmentsOrContingencies == true,
+    "The ordinary first-release filing eligibility answer does not default to confirmed none.");
+var filingInputComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCompaniesHouseFilingInputs.razor"));
+Assert(new[] { "Opening balance", "Advances or credits", "Repayments", "Closing balance", "Add director" }
+        .All(filingInputComponent.Contains),
+    "The director movement schedule does not explain its four period-summary values.");
+Assert(CompaniesHouseFilingInputReview.Validate(validFilingInputs, new DateOnly(2026, 10, 8)).Count == 0,
+    "A valid reviewed Companies House filing-input draft was rejected.");
+validFilingInputs.DirectorAdvances.Add(new()
+{
+    DirectorName = "Example Director", OpeningBalance = 10m, Advances = 5m,
+    Repayments = 3m, ClosingBalance = 11m, Terms = "Repayable on demand"
+});
+Assert(CompaniesHouseFilingInputReview.Validate(validFilingInputs, new DateOnly(2026, 10, 8))
+        .Any(error => error.Contains("does not reconcile", StringComparison.Ordinal)),
+    "A non-reconciling director-advance disclosure was accepted.");
+validFilingInputs.DirectorAdvances.Clear();
+validFilingInputs.ConfirmsNoMaterialCommitmentsOrContingencies = false;
+Assert(CompaniesHouseFilingInputReview.Validate(validFilingInputs, new DateOnly(2026, 10, 8))
+        .Any(error => error.Contains("outside the first-release", StringComparison.Ordinal)),
+    "A company with commitments or contingencies was accepted by the Accounts Mode filing gate.");
+validFilingInputs.ConfirmsNoMaterialCommitmentsOrContingencies = null;
+Assert(CompaniesHouseFilingInputReview.Validate(validFilingInputs, new DateOnly(2026, 10, 8))
+        .Any(error => error.StartsWith("Confirm whether", StringComparison.Ordinal)),
+    "An unanswered commitments/contingencies eligibility decision was accepted.");
+validFilingInputs.ConfirmsNoMaterialCommitmentsOrContingencies = true;
+var prohibitedBalanceSheetOverrides = new[]
+{
+    "PrepaymentsAndAccruedIncome", "ComparativePrepaymentsAndAccruedIncome",
+    "Provisions", "ComparativeProvisions",
+    "AccrualsAndDeferredIncome", "ComparativeAccrualsAndDeferredIncome"
+};
+Assert(typeof(TradeControl.Web.Pages.Tax.Hub.Models.TaxHubCompaniesHouseFilingInputDraft).GetProperties()
+        .All(property => !prohibitedBalanceSheetOverrides.Contains(property.Name, StringComparer.Ordinal)),
+    "The browser filing-input model permits a balance-sheet value to override source accounting evidence.");
+Assert(typeof(TradeControl.Web.Pages.Tax.Hub.Models.TaxHubCompaniesHouseFilingInputDraft).GetProperties()
+        .All(property => prohibitedCompaniesHouseInputs.All(prohibited =>
+            !property.Name.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The reviewed filing-input model accepts identity, credentials or transport content.");
 Assert(typeof(ICompaniesHouseReadinessService).GetMethods()
         .SelectMany(method => method.GetParameters())
         .All(parameter => prohibitedCompaniesHouseInputs.All(prohibited =>
@@ -148,6 +222,141 @@ Assert(readinessProperties.All(property => new[] { "xml", "ixbrl", "credential",
 Assert(readinessProperties.Any(property => property.Name == "ExternalRequestMade")
        && readinessProperties.Any(property => property.Name == "IsExactDocumentPrepared"),
     "The readiness browser model does not distinguish assessment from preparation and external exchange.");
+var preparationContract = typeof(ICompaniesHousePreparationReviewService);
+Assert(preparationContract.GetMethods().SelectMany(method => method.GetParameters())
+        .All(parameter => prohibitedCompaniesHouseInputs.All(prohibited =>
+            !parameter.Name!.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The exact-document review boundary accepts caller-supplied identity, credentials or statutory content.");
+Assert(filingInputComponent.Contains("Prepare exact accounts", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Prepared — not approved or filed", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Download filing XHTML", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Download draft PDF", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Approve accounts — does not file", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Approved — not filed", StringComparison.Ordinal)
+       && !filingInputComponent.Contains(">Submit<", StringComparison.Ordinal),
+    "The Phase 7.4 UI does not clearly separate exact preparation from approval and submission.");
+var approvalPolicy = new CompaniesHouseFilingAuthorisationPolicy();
+var administrator = new ClaimsPrincipal(new ClaimsIdentity([
+    new Claim(ClaimTypes.NameIdentifier, "admin"),
+    new Claim(ClaimTypes.Role, Constants.AdministratorsRole)
+], "test"));
+var ordinaryUser = new ClaimsPrincipal(new ClaimsIdentity([
+    new Claim(ClaimTypes.NameIdentifier, "user")
+], "test"));
+Assert(approvalPolicy.CanApproveAccounts(administrator)
+       && !approvalPolicy.CanApproveAccounts(ordinaryUser)
+       && CompaniesHouseApprovalDeclaration.Sha256.Length == 64,
+    "Companies House approval lost its privileged-role or versioned-declaration boundary.");
+var companiesHouseReviewController = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Controllers",
+    "TaxHubCompaniesHouseController.cs"));
+Assert(companiesHouseReviewController.Contains("frame-ancestors 'self'", StringComparison.Ordinal)
+       && companiesHouseReviewController.Contains("no-store", StringComparison.Ordinal)
+       && companiesHouseReviewController.Contains("Preparation/{reference}/Download", StringComparison.Ordinal)
+       && companiesHouseReviewController.Contains("companies-house-accounts-draft.xhtml", StringComparison.Ordinal)
+       && filingInputComponent.Contains("sandbox=\"\" referrerpolicy=\"no-referrer\"", StringComparison.Ordinal),
+    "The retained Companies House document endpoint lost its safe inline-review controls.");
+var retainedDownloadBytes = new byte[] { 0x3c, 0x68, 0x74, 0x6d, 0x6c, 0x3e };
+var retainedPdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46 };
+var downloadController = new TaxHubCompaniesHouseController(
+    new StubCompaniesHousePreparationReviewService(retainedDownloadBytes),
+    new StubCompaniesHouseDraftPdfRenderer(retainedPdfBytes))
+{
+    ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+};
+var downloadResult = await downloadController.Download("chp1-test", CancellationToken.None)
+    as FileContentResult;
+Assert(downloadResult is not null
+       && downloadResult.FileContents.SequenceEqual(retainedDownloadBytes)
+       && downloadResult.ContentType == "application/xhtml+xml"
+       && downloadResult.FileDownloadName == "companies-house-accounts-draft.xhtml"
+       && downloadController.Response.Headers.CacheControl == "no-store, max-age=0",
+    "The accounts-draft download does not return the exact retained bytes as a non-cacheable XHTML attachment.");
+var pdfDownloadResult = await downloadController.DraftPdf("chp1-test", CancellationToken.None)
+    as FileContentResult;
+Assert(pdfDownloadResult is not null
+       && pdfDownloadResult.FileContents.SequenceEqual(retainedPdfBytes)
+       && pdfDownloadResult.ContentType == "application/pdf"
+       && pdfDownloadResult.FileDownloadName == "companies-house-accounts-draft.pdf"
+       && downloadController.Response.Headers["X-Source-Document-SHA256"] == "TEST-DIGEST",
+    "The draft-PDF route does not bind its derivative to the retained source document.");
+var pdfFixture = """
+<?xml version="1.0" encoding="utf-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><body><div class="accounts-document">
+<h1>Example Limited</h1><p class="identity">Registered number: 01234567</p>
+<h2>Filleted micro-entity accounts</h2><h2>Balance sheet as at 2026-09-30</h2>
+<table class="accounts"><thead><tr><th></th><th>2026 £'s</th><th>2025 £'s</th></tr></thead>
+<tbody><tr><td>Fixed assets</td><td>6,800.00</td><td>3,000.00</td></tr>
+<tr class="total"><td>Capital and reserves</td><td>455,817.79</td><td>318,406.91</td></tr></tbody></table>
+<div class="statements"><h2>Statements</h2><p>These accounts have been prepared in accordance with the micro-entity provisions.</p></div>
+<div class="filing-information"><h2>Accounts information</h2><ul><li>Accounts type: Filleted accounts</li></ul></div>
+</div></body></html>
+""";
+var renderedPdf = new CompaniesHouseDraftPdfRenderer().Render(
+    Encoding.UTF8.GetBytes(pdfFixture), new string('A', 64));
+Assert(renderedPdf.Length > 1000 && Encoding.ASCII.GetString(renderedPdf, 0, 5) == "%PDF-",
+    "The draft-PDF renderer did not produce a substantive PDF document.");
+var pdfOutputArgument = args.FirstOrDefault(value => value.StartsWith("--pdf-output=", StringComparison.Ordinal));
+if (pdfOutputArgument is not null)
+{
+    var pdfOutputPath = Path.GetFullPath(pdfOutputArgument["--pdf-output=".Length..]);
+    Directory.CreateDirectory(Path.GetDirectoryName(pdfOutputPath)!);
+    var pdfSourceArgument = args.FirstOrDefault(value => value.StartsWith("--pdf-source=", StringComparison.Ordinal));
+    if (pdfSourceArgument is null)
+    {
+        File.WriteAllBytes(pdfOutputPath, renderedPdf);
+    }
+    else
+    {
+        var sourceBytes = File.ReadAllBytes(Path.GetFullPath(pdfSourceArgument["--pdf-source=".Length..]));
+        var sourceDigest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(sourceBytes));
+        File.WriteAllBytes(pdfOutputPath, new CompaniesHouseDraftPdfRenderer().Render(sourceBytes, sourceDigest));
+    }
+}
+var taxHubShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "TaxHubShell.razor"));
+Assert(taxHubShell.Contains("_state?.SelectedWorkspace == TaxHubWorkspace.Accounts", StringComparison.Ordinal)
+       && taxHubShell.Contains("LastOrDefault()?.StartOn", StringComparison.Ordinal),
+    "The Accounts workspace no longer selects the chosen financial year's final period.");
+var taxHubService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub",
+    "TaxHubService.cs"));
+Assert(taxHubService.Contains("t.YearNumber == selectedYear && t.StartOn == periodStartOn.Value",
+           StringComparison.Ordinal)
+       && taxHubService.Contains("does not belong to the selected financial year", StringComparison.Ordinal),
+    "The Accounts service accepts a period from a different financial year.");
+var companiesHouseReviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CompaniesHouse", "CompaniesHousePreparationReviewService.cs"));
+Assert(companiesHouseReviewService.Contains("text/html; charset=utf-8", StringComparison.Ordinal),
+    "The exact retained Companies House document is not exposed through a browser-renderable review media type.");
+Assert(companiesHouseReviewService.Contains("CanApproveAccounts", StringComparison.Ordinal)
+       && companiesHouseReviewService.Contains("reviewed-input", StringComparison.Ordinal)
+       && companiesHouseReviewService.Contains("VerifyCurrentCandidateAsync", StringComparison.Ordinal)
+       && companiesHouseReviewService.Contains("identity.AspNetSubjectReference", StringComparison.Ordinal)
+       && companiesHouseReviewService.Contains("CompaniesHouseApprovalDeclaration.Sha256", StringComparison.Ordinal),
+    "Companies House immutable approval lost role, principal, retained-input, stale-source or declaration binding.");
+var companiesHousePreparer = File.ReadAllText(Path.Combine(root, "src", "tax-hub", "src",
+    "TradeControl.Tax.UK.Application", "Preparation", "CompaniesHouseAccountsPreparer.cs"));
+Assert(companiesHousePreparer.Contains("CH-TRANSPORT-MATERIALISATION-REQUIRED", StringComparison.Ordinal)
+       && !companiesHousePreparer.Contains("CH-PENDING-DEVELOPER-TEST", StringComparison.Ordinal),
+    "The exact preparation path still claims developer-test acceptance is pending or lost its transport boundary.");
+Assert(typeof(AzureCompaniesHousePersistence).GetInterfaces().Contains(typeof(ICompaniesHouseWorkflowStore))
+       && typeof(AzureCompaniesHousePersistence).GetInterfaces()
+           .Contains(typeof(ICompaniesHouseProtectedContentStore)),
+    "The Azure composition does not provide both workflow metadata and protected-content boundaries.");
+var companiesHouseDdl = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub",
+    "CompaniesHouse", "Sql", "CompaniesHouseWorkflow.sql"));
+Assert(companiesHouseDdl.Contains("PRIMARY KEY (TenantReference, Reference)", StringComparison.Ordinal)
+       && companiesHouseDdl.Contains("WHERE IsActive = 1", StringComparison.Ordinal),
+    "Companies House workflow SQL lost tenant partitioning or one-active-filing enforcement.");
+Assert(companiesHouseDdl.Contains("FOREIGN KEY (TenantReference, PreparationReference)",
+           StringComparison.Ordinal)
+       && companiesHouseDdl.Contains("FOREIGN KEY (TenantReference, ApprovalReference)",
+           StringComparison.Ordinal),
+    "Companies House workflow SQL no longer preserves its tenant-scoped evidence chain.");
+Assert(companiesHouseDdl.Contains("UX_CompaniesHouseApproval_Preparation", StringComparison.Ordinal),
+    "Companies House workflow SQL permits competing approvals for one exact preparation.");
+Assert(!companiesHouseDdl.Contains("DROP TABLE", StringComparison.OrdinalIgnoreCase)
+       && !companiesHouseDdl.Contains("DELETE FROM", StringComparison.OrdinalIgnoreCase),
+    "The additive Companies House workflow deployment script contains destructive DDL or DML.");
 
 Assert(developmentValidator.Validate(null, new VatProductHostOptions()).Succeeded,
     "The disabled product boundary must permit an unconfigured host.");
@@ -640,4 +849,26 @@ file sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
     public string ApplicationName { get; set; } = "TradeControl.Web.TaxHub.Tests";
     public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
     public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+}
+
+file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
+    : ICompaniesHousePreparationReviewService
+{
+    public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
+        CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(new CompaniesHouseReviewDocument("text/html; charset=utf-8", bytes, "TEST-DIGEST"));
+
+    public Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
+        string declarationVersion, bool declarationsConfirmed,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+}
+
+file sealed class StubCompaniesHouseDraftPdfRenderer(byte[] bytes) : ICompaniesHouseDraftPdfRenderer
+{
+    public byte[] Render(byte[] retainedIxbrl, string sourceSha256) => bytes;
 }

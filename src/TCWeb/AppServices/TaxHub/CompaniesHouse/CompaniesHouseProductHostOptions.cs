@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -44,6 +45,7 @@ public sealed class CompaniesHouseProductHostOptions
     public Uri? KeyVaultUri { get; set; }
     public string? WorkflowConnectionName { get; set; }
     public string? EvidenceBlobServiceUri { get; set; }
+    public string EvidenceContainerName { get; set; } = "companies-house-evidence";
 }
 
 public sealed class CompaniesHouseProductHostOptionsValidator(IHostEnvironment hostEnvironment)
@@ -81,7 +83,14 @@ public sealed class CompaniesHouseProductHostOptionsValidator(IHostEnvironment h
                 if (!Uri.TryCreate(options.EvidenceBlobServiceUri, UriKind.Absolute, out var blobUri)
                     || !IsAzureHttpsHost(blobUri, ".blob.core.windows.net"))
                     failures.Add("AzureManaged requires an HTTPS Azure Blob service URI.");
-                failures.Add("AzureManaged Companies House persistence is selected but is not implemented; hosted composition remains disabled.");
+                if (string.IsNullOrWhiteSpace(options.EvidenceContainerName)
+                    || options.EvidenceContainerName.Length is < 3 or > 63
+                    || options.EvidenceContainerName.Any(character =>
+                        !(char.IsLower(character) || char.IsDigit(character) || character == '-'))
+                    || options.EvidenceContainerName.StartsWith('-')
+                    || options.EvidenceContainerName.EndsWith('-')
+                    || options.EvidenceContainerName.Contains("--", StringComparison.Ordinal))
+                    failures.Add("AzureManaged requires a valid lower-case private Blob container name.");
                 break;
         }
 

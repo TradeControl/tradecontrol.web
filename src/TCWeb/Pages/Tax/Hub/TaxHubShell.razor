@@ -434,6 +434,15 @@ else
             }
         }
 
+        if (workspace == TaxHubWorkspace.Accounts && _selectedYearNumber.HasValue
+            && (!_selectedPeriodStartOn.HasValue
+                || !_periods.Any(period => period.StartOn.Date == _selectedPeriodStartOn.Value.Date)))
+        {
+            _selectedPeriodStartOn = _periods
+                .OrderBy(period => period.StartOn)
+                .LastOrDefault()?.StartOn;
+        }
+
         await RefreshWorkspaceAsync(requestVersion);
 
         if (_isMobile)
@@ -444,22 +453,25 @@ else
     {
         var requestVersion = BeginWorkspaceOperation();
         _selectedYearNumber = yearNumber > 0 ? yearNumber : null;
+        _selectedPeriodStartOn = null;
 
         if (_selectedYearNumber.HasValue)
         {
+            var selectedYearNumber = _selectedYearNumber.Value;
             var periods = await RunLatestAsync(
                 requestVersion,
-                () => TaxHubService.GetPeriodsAsync(_selectedYearNumber.Value));
+                () => TaxHubService.GetPeriodsAsync(selectedYearNumber));
             if (requestVersion != _requestVersion)
                 return;
             if (periods is not null)
                 _periods = periods;
-            _selectedPeriodStartOn = null;
+            _selectedPeriodStartOn = _state?.SelectedWorkspace == TaxHubWorkspace.Accounts
+                ? _periods.OrderBy(period => period.StartOn).LastOrDefault()?.StartOn
+                : null;
         }
         else
         {
             _periods = Array.Empty<TaxHubPeriodOption>();
-            _selectedPeriodStartOn = null;
         }
 
         await RefreshWorkspaceAsync(requestVersion);
@@ -468,7 +480,12 @@ else
     private async Task HandlePeriodSelectedAsync(DateTime? startOn)
     {
         var requestVersion = BeginWorkspaceOperation();
-        _selectedPeriodStartOn = startOn;
+        _selectedPeriodStartOn = startOn.HasValue
+            && _periods.Any(period => period.StartOn.Date == startOn.Value.Date)
+                ? startOn.Value
+                : _state?.SelectedWorkspace == TaxHubWorkspace.Accounts
+                    ? _periods.OrderBy(period => period.StartOn).LastOrDefault()?.StartOn
+                    : null;
         await RefreshWorkspaceAsync(requestVersion);
     }
 

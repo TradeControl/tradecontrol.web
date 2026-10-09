@@ -77,7 +77,11 @@ internal sealed record CompaniesHousePreparationRecord(
     string ProtectedDocumentReference,
     string ProtectedPackageReference,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset ExpiresAtUtc);
+    DateTimeOffset ExpiresAtUtc,
+    short? YearNumber = null,
+    DateOnly? SelectedPeriodStart = null,
+    string? ReviewedInputSha256 = null,
+    string? ProtectedInputReference = null);
 
 internal sealed record CompaniesHouseApprovalRecord(
     string Reference,
@@ -97,7 +101,7 @@ internal sealed record CompaniesHouseApprovalRecord(
     string SnapshotToken,
     string DocumentSha256,
     string PackageSha256,
-    bool WarningsAcknowledged,
+    bool DeclarationsConfirmed,
     DateTimeOffset ApprovedAtUtc);
 
 internal sealed record CompaniesHouseConversationRecord(
@@ -138,10 +142,27 @@ internal interface ICompaniesHouseWorkflowStore
         CancellationToken cancellationToken = default);
     Task<CompaniesHouseApprovalRecord?> GetApprovalAsync(string tenantReference, string reference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseApprovalRecord?> GetApprovalForPreparationAsync(string tenantReference,
+        string preparationReference, CancellationToken cancellationToken = default);
     Task<CompaniesHouseConversationRecord?> GetActiveConversationAsync(string tenantReference,
         string logicalFilingIdentity, CancellationToken cancellationToken = default);
     Task UpsertConversationAsync(CompaniesHouseConversationRecord conversation,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CompaniesHouseConversationRecord>> ListConversationsAsync(string tenantReference,
         string companyIdentitySha256, CancellationToken cancellationToken = default);
+}
+
+internal sealed record CompaniesHouseProtectedContent(string Reference, string Sha256, long Length,
+    byte[] Bytes);
+
+/// <summary>
+/// Exact statutory and gateway bytes are held outside workflow metadata. Implementations must use
+/// tenant-scoped opaque handles, verify the expected SHA-256 on every read and refuse replacement.
+/// </summary>
+internal interface ICompaniesHouseProtectedContentStore
+{
+    Task<CompaniesHouseProtectedContent> WriteAsync(string tenantReference, string contentKind,
+        ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default);
+    Task<CompaniesHouseProtectedContent> ReadAsync(string tenantReference, string reference,
+        string expectedSha256, CancellationToken cancellationToken = default);
 }

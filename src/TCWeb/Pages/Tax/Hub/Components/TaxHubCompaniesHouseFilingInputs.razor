@@ -1,0 +1,364 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
+@using TradeControl.Web.Pages.Tax.Hub.Models
+@implements IDisposable
+@inject TimeProvider TimeProvider
+@inject ICompaniesHousePreparationReviewService PreparationService
+
+@if (!Readiness.IsEligible)
+{
+    <div class="alert alert-secondary mb-0">Resolve the readiness findings before reviewing filing inputs.</div>
+}
+else if (_draft is not null && _editContext is not null)
+{
+    <EditForm EditContext="_editContext" OnValidSubmit="ReviewInputs">
+        <section class="d-flex flex-column gap-3">
+            <div>
+                <h3 class="h6 mb-1">Reviewed filing inputs</h3>
+                <div class="text-muted small">
+                    These are non-ledger facts that cannot be taken reliably from the accounting records. Balance-sheet values remain
+                    source-derived and cannot be overridden here. Reviewing these inputs does not prepare or file accounts.
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="ch-approved-on">Accounts approved on</label>
+                    <InputDate id="ch-approved-on" class="form-control" @bind-Value="_draft.ApprovedOn" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="ch-director">Signing director</label>
+                    <InputText id="ch-director" class="form-control" @bind-Value="_draft.SigningDirectorName" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="ch-activity">Principal activity</label>
+                    <InputTextArea id="ch-activity" class="form-control" rows="2" @bind-Value="_draft.PrincipalActivity" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="ch-policies">Accounting policies</label>
+                    <InputTextArea id="ch-policies" class="form-control" rows="3" @bind-Value="_draft.AccountingPolicies" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="ch-employees">Average employees</label>
+                    <InputNumber id="ch-employees" class="form-control" @bind-Value="_draft.AverageEmployees" />
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Director advances and credits</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddDirectorAdvance">Add director</button>
+                </div>
+                <div class="card-body d-flex flex-column gap-3">
+                    <div class="text-muted small">
+                        Add one summary for each affected director. The four amounts describe movement over the selected accounting
+                        period; they are not four separate advances and individual transaction dates are not required here.
+                    </div>
+                    @if (_draft.DirectorAdvances.Count == 0)
+                    {
+                        <div class="text-muted small">No director advance or credit disclosure entered.</div>
+                    }
+                    @for (var index = 0; index < _draft.DirectorAdvances.Count; index++)
+                    {
+                        var item = _draft.DirectorAdvances[index];
+                        var itemIndex = index;
+                        <div class="border rounded p-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong>Director @(index + 1)</strong>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => RemoveDirectorAdvance(itemIndex)">Remove</button>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6"><InputText class="form-control" placeholder="Director name" @bind-Value="item.DirectorName" /></div>
+                                <div class="col-md-6"><InputText class="form-control" placeholder="Terms" @bind-Value="item.Terms" /></div>
+                                <div class="col-md">
+                                    <label class="form-label">Opening balance</label>
+                                    <InputNumber class="form-control" @bind-Value="item.OpeningBalance" />
+                                </div>
+                                <div class="col-md">
+                                    <label class="form-label">Advances or credits</label>
+                                    <InputNumber class="form-control" @bind-Value="item.Advances" />
+                                </div>
+                                <div class="col-md">
+                                    <label class="form-label">Repayments</label>
+                                    <InputNumber class="form-control" @bind-Value="item.Repayments" />
+                                </div>
+                                <div class="col-md">
+                                    <label class="form-label">Closing balance</label>
+                                    <InputNumber class="form-control" @bind-Value="item.ClosingBalance" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">First-release filing eligibility</div>
+                <div class="card-body">
+                    <label class="form-label" for="ch-commitments-eligibility">
+                        Does the company have any material commitments, guarantees, legal contingencies or similar obligations
+                        requiring disclosure that are not already reflected in these accounts?
+                    </label>
+                    <InputSelect id="ch-commitments-eligibility" class="form-select"
+                                 @bind-Value="_draft.ConfirmsNoMaterialCommitmentsOrContingencies">
+                        <option value="">Select an answer</option>
+                        <option value="true">No — I confirm there are none</option>
+                        <option value="false">Yes, or I am unsure</option>
+                    </InputSelect>
+                    <div class="form-text">
+                        Accounts Mode cannot prepare these disclosures in the first release. A Yes or unsure answer requires
+                        separate professional review and cannot continue through this filing workflow.
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-light border mb-0">
+                Supported-profile facts: micro-entity provisions apply; members have not required an audit; directors acknowledge their Companies Act responsibilities. Attribution and confirmation belong to Phase 7.5 approval.
+            </div>
+
+            @if (_errors.Count > 0)
+            {
+                <div class="alert alert-danger mb-0">
+                    <ul class="mb-0">@foreach (var error in _errors) { <li>@error</li> }</ul>
+                </div>
+            }
+            @if (_reviewed)
+            {
+                <div class="alert alert-success mb-0">
+                    Filing inputs reviewed. You may now prepare the exact accounts document for review.
+                </div>
+            }
+
+            @if (_prepared is not null)
+            {
+                <section class="card border-success">
+                    <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+                        <strong>Exact retained accounts document</strong>
+                        @if (_approval is null)
+                        {
+                            <span class="badge bg-secondary">Prepared — not approved or filed</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary">Approved — not filed</span>
+                        }
+                    </div>
+                    <div class="card-body d-flex flex-column gap-3">
+                        <dl class="row small mb-0">
+                            <dt class="col-md-3">Document SHA-256</dt>
+                            <dd class="col-md-9 text-break font-monospace">@_prepared.DocumentSha256</dd>
+                            <dt class="col-md-3">Package SHA-256</dt>
+                            <dd class="col-md-9 text-break font-monospace">@_prepared.PackageSha256</dd>
+                            <dt class="col-md-3">Review expires</dt>
+                            <dd class="col-md-9 mb-0">@_prepared.ExpiresAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</dd>
+                        </dl>
+                        <div>
+                            <a class="btn btn-primary" href="@_prepared.PdfPath">
+                                Download draft PDF
+                            </a>
+                            <a class="btn btn-outline-primary ms-2" href="@_prepared.DownloadPath">
+                                Download filing XHTML
+                            </a>
+                            <div class="small text-muted mt-2">
+                                The PDF is a paged review copy marked DRAFT — NOT FILED. The XHTML download is the exact retained filing document shown below.
+                            </div>
+                        </div>
+                        <iframe src="@_prepared.DocumentPath" title="Prepared Companies House accounts document"
+                                sandbox="" referrerpolicy="no-referrer"
+                                class="w-100 border rounded" style="min-height: 42rem"></iframe>
+
+                        @if (_approval is null)
+                        {
+                            <section class="card border-primary" aria-labelledby="ch-approval-title">
+                                <div class="card-body">
+                                    <h4 id="ch-approval-title" class="h6">Approve these exact accounts</h4>
+                                    <p class="small mb-2">@CompaniesHouseApprovalDeclaration.Text</p>
+                                    <div class="form-check mb-3">
+                                        <input id="ch-approval-confirmed" type="checkbox" class="form-check-input"
+                                               @bind="_approvalConfirmed" />
+                                        <label class="form-check-label" for="ch-approval-confirmed">
+                                            I confirm the declaration above for this exact document and package.
+                                        </label>
+                                    </div>
+                                    <button type="button" class="btn btn-primary"
+                                            disabled="@(!_approvalConfirmed || _approving)"
+                                            @onclick="ApproveExactDocument">
+                                        @(_approving ? "Recording approval…" : "Approve accounts — does not file")
+                                    </button>
+                                </div>
+                            </section>
+                        }
+                        else
+                        {
+                            <div class="alert alert-primary mb-0" role="status">
+                                <strong>Approved — not filed.</strong>
+                                This immutable approval is bound to the document and package digests above.
+                                No request has been made to Companies House.
+                                <dl class="row small mt-2 mb-0">
+                                    <dt class="col-md-3">Approved by</dt>
+                                    <dd class="col-md-9">@_approval.ApprovedBy</dd>
+                                    <dt class="col-md-3">Approved at</dt>
+                                    <dd class="col-md-9">@_approval.ApprovedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</dd>
+                                    <dt class="col-md-3">Approval reference</dt>
+                                    <dd class="col-md-9 mb-0 font-monospace">@_approval.Reference</dd>
+                                </dl>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            <div>
+                <button type="submit" class="btn btn-primary">Review filing inputs</button>
+                @if (_reviewed && _prepared is null)
+                {
+                    <button type="button" class="btn btn-success ms-2" disabled="@_preparing"
+                            @onclick="PrepareExactDocument">
+                        @(_preparing ? "Preparing…" : "Prepare exact accounts")
+                    </button>
+                }
+            </div>
+        </section>
+    </EditForm>
+}
+
+@code {
+    [Parameter, EditorRequired] public TaxHubCompaniesHouseReadiness Readiness { get; set; } = new();
+    [Parameter] public short? YearNumber { get; set; }
+    [Parameter] public DateTime? SelectedPeriodStart { get; set; }
+
+    private TaxHubCompaniesHouseFilingInputDraft? _draft;
+    private EditContext? _editContext;
+    private string? _draftKey;
+    private IReadOnlyList<string> _errors = Array.Empty<string>();
+    private bool _reviewed;
+    private bool _preparing;
+    private bool _approvalConfirmed;
+    private bool _approving;
+    private CompaniesHousePreparedReview? _prepared;
+    private CompaniesHouseApprovalReview? _approval;
+
+    protected override void OnParametersSet()
+    {
+        var key = $"{Readiness.FilingInputs.PeriodEnd:yyyy-MM-dd}:{Readiness.FilingInputs.IsFirstAccountsPeriod}";
+        if (_draftKey == key) return;
+        if (_editContext is not null) _editContext.OnFieldChanged -= InvalidateReview;
+        _draftKey = key;
+        _draft = Clone(Readiness.FilingInputs);
+        _editContext = new EditContext(_draft);
+        _editContext.OnFieldChanged += InvalidateReview;
+        _errors = Array.Empty<string>();
+        _reviewed = false;
+        _prepared = null;
+        _approval = null;
+        _approvalConfirmed = false;
+    }
+
+    private void ReviewInputs()
+    {
+        _errors = CompaniesHouseFilingInputReview.Validate(_draft!,
+            DateOnly.FromDateTime(TimeProvider.GetUtcNow().UtcDateTime));
+        _reviewed = _errors.Count == 0;
+    }
+
+    private async Task PrepareExactDocument()
+    {
+        if (!_reviewed || _draft is null || !YearNumber.HasValue || !SelectedPeriodStart.HasValue
+            || !_draft.ApprovedOn.HasValue || !_draft.ConfirmsNoMaterialCommitmentsOrContingencies.HasValue)
+            return;
+        _preparing = true;
+        _errors = Array.Empty<string>();
+        try
+        {
+            _prepared = await PreparationService.PrepareAsync(YearNumber.Value,
+                SelectedPeriodStart.Value, new(
+                    _draft.PeriodEnd,
+                    DateOnly.FromDateTime(_draft.ApprovedOn.Value),
+                    _draft.SigningDirectorName,
+                    _draft.PrincipalActivity,
+                    _draft.AccountingPolicies,
+                    _draft.AverageEmployees,
+                    _draft.ConfirmsNoMaterialCommitmentsOrContingencies.Value,
+                    _draft.DirectorAdvances.Select(item => new CompaniesHouseDirectorAdvanceReview(
+                        item.DirectorName, item.OpeningBalance, item.Advances, item.Repayments,
+                        item.ClosingBalance, item.Terms)).ToArray()));
+            _approval = null;
+            _approvalConfirmed = false;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or UnauthorizedAccessException)
+        {
+            _errors = [exception.Message];
+        }
+        finally
+        {
+            _preparing = false;
+        }
+    }
+
+    private async Task ApproveExactDocument()
+    {
+        if (_prepared is null || !_approvalConfirmed || _approving) return;
+        _approving = true;
+        _errors = Array.Empty<string>();
+        try
+        {
+            _approval = await PreparationService.ApproveAsync(_prepared.Reference,
+                CompaniesHouseApprovalDeclaration.Version, true);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _errors = [exception.Message];
+        }
+        finally
+        {
+            _approving = false;
+        }
+    }
+
+    private void AddDirectorAdvance()
+    {
+        _draft!.DirectorAdvances.Add(new());
+        InvalidateReview();
+    }
+
+    private void RemoveDirectorAdvance(int index)
+    {
+        _draft!.DirectorAdvances.RemoveAt(index);
+        InvalidateReview();
+    }
+
+    private void InvalidateReview(object? sender = null, FieldChangedEventArgs? args = null)
+    {
+        _reviewed = false;
+        _prepared = null;
+        _approval = null;
+        _approvalConfirmed = false;
+        _errors = Array.Empty<string>();
+    }
+
+    private static TaxHubCompaniesHouseFilingInputDraft Clone(TaxHubCompaniesHouseFilingInputDraft value) => new()
+    {
+        PeriodEnd = value.PeriodEnd,
+        IsFirstAccountsPeriod = value.IsFirstAccountsPeriod,
+        ApprovedOn = value.ApprovedOn,
+        SigningDirectorName = value.SigningDirectorName,
+        PrincipalActivity = value.PrincipalActivity,
+        AccountingPolicies = value.AccountingPolicies,
+        AverageEmployees = value.AverageEmployees,
+        ConfirmsNoMaterialCommitmentsOrContingencies = value.ConfirmsNoMaterialCommitmentsOrContingencies,
+        DirectorAdvances = value.DirectorAdvances.Select(item => new TaxHubCompaniesHouseDirectorAdvanceInput
+        {
+            DirectorName = item.DirectorName, OpeningBalance = item.OpeningBalance,
+            Advances = item.Advances, Repayments = item.Repayments,
+            ClosingBalance = item.ClosingBalance, Terms = item.Terms
+        }).ToList()
+    };
+
+    public void Dispose()
+    {
+        if (_editContext is not null) _editContext.OnFieldChanged -= InvalidateReview;
+    }
+}
