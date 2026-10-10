@@ -10,6 +10,8 @@ namespace TradeControl.Web.Data
 		// generating OUTPUT ... (without INTO) statements that fail when triggers exist.
 		partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
 		{
+			ConfigureSubjectBalanceFunctions(modelBuilder);
+
 			// Explicit list: add only the tables you know have triggers.
 			// Start with the failing one.
 			//modelBuilder.Entity<TradeControl.Web.Models.App_tbTaxCode>().HasTrigger("EFCore_MarkTrigger_App_tbTaxCode");

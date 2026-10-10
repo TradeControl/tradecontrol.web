@@ -47,13 +47,13 @@ It must identify:
 
 The repository already contains substantial Tax Hub foundation capability, but the currently visible tax and accounts pages are prototype implementations and are now designated as deprecated for the Accounts Mode release.
 
-The deprecated prototype page groups are:
+The deprecated prototype page groups identified by this plan were:
 
 - `src/TCWeb/Pages/Tax/Vat/*`
 - `src/TCWeb/Pages/Tax/Company/*`
 - `src/TCWeb/Pages/Cash/Accounts/*`
 
-These pages will be deleted upon completion of the new Tax Hub module.
+The `src/TCWeb/Pages/Tax/Company/*` group was deleted on 10 October 2026 after its business-tax totals, statement and losses flows had been replaced in the Tax Hub. Retirement of the other prototype groups remains governed by their own acceptance checks.
 
 However, their underlying functionality remains valuable and must be transferred into the new Tax Hub UI and UX.
 
@@ -1065,7 +1065,7 @@ These assets are reusable as behaviour, not as final UI structure.
 
 ## 10.3 Assets To Be Replaced
 
-The following page groups are to be replaced and later deleted:
+The following page groups are to be replaced and later deleted (the Tax/Company group was retired on 10 October 2026):
 
 - `src/TCWeb/Pages/Tax/Vat/*`
 - `src/TCWeb/Pages/Tax/Company/*`
@@ -1292,10 +1292,10 @@ as read-model-backed comparison panels within Tax Hub.
 
 Verify that Tax Hub has replaced the required flows.
 
-Then retire:
+Then retire (completion noted where applicable):
 
 - `Pages/Tax/Vat/*`
-- `Pages/Tax/Company/*`
+- `Pages/Tax/Company/*` — complete, 10 October 2026
 - `Pages/Cash/Accounts/*`
 
 ## 15. Minimum Safe Implementation Path

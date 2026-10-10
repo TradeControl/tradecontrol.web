@@ -542,12 +542,74 @@ form.mb-3 > .row.g-2.align-items-center input.form-control[type="text"] {
                 white-space: normal !important;
             }
 
-    .tc-brand {
-        max-width: calc(100vw - 5.25rem);
+    header .navbar > .container,
+    header .navbar > .container-fluid {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+    }
+
+    header .navbar .navbar-brand:first-of-type {
+        margin-right: 0.25rem;
+    }
+
+    header .navbar .tc-brand {
+        min-width: 0;
+        max-width: none;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         display: inline-block;
+    }
+
+    header .navbar .navbar-toggler {
+        margin-left: 0.25rem;
+        justify-self: end;
+    }
+
+    header .navbar .navbar-collapse {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin-top: 0.5rem;
+        padding: 0.35rem 0.25rem 0.65rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    header .navbar .navbar-collapse .navbar-nav {
+        align-items: stretch;
+    }
+
+    header .navbar .navbar-collapse .nav-link,
+    header .navbar .navbar-collapse .tc-auth-link {
+        padding: 0.45rem 0.5rem;
+    }
+
+    header .navbar .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon {
+        position: relative;
+        background-image: none;
+    }
+
+    header .navbar .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon::before {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: currentColor;
+        font-size: 2rem;
+        font-weight: 300;
+        line-height: 1;
+        content: "\00d7";
+    }
+
+    .tc-subject-browser-modes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.25rem;
+    }
+
+    .tc-subject-browser-modes > .btn {
+        width: 100%;
+        border-radius: var(--bs-btn-border-radius) !important;
     }
 
     .navbar > .container,

@@ -118,6 +118,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCExports.WebHarness", "TCE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCWeb.TaxHub.Tests", "TCWeb.TaxHub.Tests\TCWeb.TaxHub.Tests.csproj", "{CD5D7EE0-9F52-441D-86F3-A7B0A2E1F0D7}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "subjects", "subjects", "{E0DDD42C-BF9A-4A77-BA49-A649E6F85393}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Subjects\subject-aged-balances-s1-evidence.md = ..\docs\projects\Subjects\subject-aged-balances-s1-evidence.md
+		..\docs\projects\Subjects\subject-aged-balances-workplan.md = ..\docs\projects\Subjects\subject-aged-balances-workplan.md
+		..\docs\projects\Subjects\subject-namespace-spec.md = ..\docs\projects\Subjects\subject-namespace-spec.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -302,6 +309,7 @@ Global
 		{BC43D50A-BC65-DFD4-4D8D-DEB06ED4FF50} = {F6B01961-56EB-455F-9668-4814B8F70E85}
 		{0E45DD55-280D-52AE-039C-7CB201E29961} = {BC8F5617-4B32-49EF-B585-E20CEEF90CDF}
 		{CD5D7EE0-9F52-441D-86F3-A7B0A2E1F0D7} = {F6B01961-56EB-455F-9668-4814B8F70E85}
+		{E0DDD42C-BF9A-4A77-BA49-A649E6F85393} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}

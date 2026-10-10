@@ -191,8 +191,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Project_vwActiveDatum> Project_ActiveData { get; set; }
         public virtual DbSet<App_vwActivePeriod> App_ActivePeriods { get; set; }
         public virtual DbSet<Project_vwActiveStatusCode> Project_ActiveStatusCodes { get; set; }
-        public virtual DbSet<Invoice_vwAgedDebtPurchase> Invoice_AgedDebtPurchases { get; set; }
-        public virtual DbSet<Invoice_vwAgedDebtSale> Invoice_AgedDebtSales { get; set; }
         public virtual DbSet<Project_vwAllocationSvD> Project_AllocationSvD { get; set; }
         public virtual DbSet<Subject_vwAreaCode> Subject_AreaCodes { get; set; }
         public virtual DbSet<Subject_vwAssetStatementAudit> Subject_AssetStatementAudits { get; set; }
@@ -2988,16 +2986,6 @@ namespace TradeControl.Web.Data
             {
                 entity.HasKey(e => e.HostId)
                     .HasName("PK_App_tbHost");
-            });
-
-            modelBuilder.Entity<Invoice_vwAgedDebtPurchase>(entity =>
-            {
-                entity.ToView("vwAgedDebtPurchases", "Invoice");
-            });
-
-            modelBuilder.Entity<Invoice_vwAgedDebtSale>(entity =>
-            {
-                entity.ToView("vwAgedDebtSales", "Invoice");
             });
 
             modelBuilder.Entity<Project_vwAllocationSvD>(entity =>

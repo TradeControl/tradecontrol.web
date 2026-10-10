@@ -244,9 +244,23 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public IReadOnlyList<TaxHubProfitAndLossDetailSection> AnnualDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
         public IReadOnlyList<TaxHubProfitAndLossDetailSection> MonthlyDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
         public IReadOnlyList<TaxHubBalanceSheetRow> BalanceSheet { get; init; } = Array.Empty<TaxHubBalanceSheetRow>();
+        public TaxHubSubjectBalanceEvidence? SubjectBalanceEvidence { get; init; }
         public TaxHubAccountsValidationSummary ValidationSummary { get; init; } = new();
         public IReadOnlyList<TaxHubEquityReconciliationRow> EquityReconciliation { get; init; } = Array.Empty<TaxHubEquityReconciliationRow>();
         public TaxHubCompaniesHouseReadiness CompaniesHouse { get; init; } = new();
+    }
+
+    public sealed class TaxHubSubjectBalanceEvidence
+    {
+        public DateOnly EffectiveDate { get; init; }
+        public decimal DebtorTotal { get; init; }
+        public decimal CreditorTotal { get; init; }
+        public int DebtorCount { get; init; }
+        public int CreditorCount { get; init; }
+        public bool IsReconciled { get; init; }
+        public bool IsClosedPeriod { get; init; }
+        public string SnapshotToken { get; init; } = string.Empty;
+        public string SubjectBrowserUrl { get; init; } = string.Empty;
     }
 
     public sealed class TaxHubCompaniesHouseReadiness

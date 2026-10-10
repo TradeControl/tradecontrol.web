@@ -80,6 +80,57 @@ else
                     <TaxHubBalanceSheetGrid Items="@Workspace.BalanceSheet"
                                             CurrentHeading="@Workspace.SelectedPeriodName"
                                             PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
+
+                    @if (Workspace.SubjectBalanceEvidence is not null)
+                    {
+                        var evidence = Workspace.SubjectBalanceEvidence;
+                        <div class="card shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                                    <div>
+                                        <h3 class="h6 mb-1">Year-end debtors and creditors</h3>
+                                        <div class="text-muted small">
+                                            Subject statement positions at @evidence.EffectiveDate.ToString("d MMMM yyyy")
+                                        </div>
+                                    </div>
+                                    <span class="badge @(evidence.IsReconciled ? "bg-success" : "bg-danger")">
+                                        @(evidence.IsReconciled ? "Reconciled" : "Review required")
+                                    </span>
+                                </div>
+
+                                <div class="row g-2">
+                                    <div class="col-12 col-sm-6">
+                                        <div class="border rounded bg-light p-3 h-100">
+                                            <div class="small text-muted">Debtors · @evidence.DebtorCount Subject@(evidence.DebtorCount == 1 ? string.Empty : "s")</div>
+                                            <div class="fw-semibold">@evidence.DebtorTotal.ToString("C")</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-sm-6">
+                                        <div class="border rounded bg-light p-3 h-100">
+                                            <div class="small text-muted">Creditors · @evidence.CreditorCount Subject@(evidence.CreditorCount == 1 ? string.Empty : "s")</div>
+                                            <div class="fw-semibold">@evidence.CreditorTotal.ToString("C")</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (!evidence.IsClosedPeriod)
+                                {
+                                    <div class="alert alert-warning py-2 mb-0 small" role="status">
+                                        This accounting year is still open. Source changes will create a new snapshot digest.
+                                    </div>
+                                }
+
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div class="small text-muted text-break" title="@evidence.SnapshotToken">
+                                        Evidence SHA-256: <code>@evidence.SnapshotToken[..12]…</code>
+                                    </div>
+                                    <a class="btn btn-outline-primary btn-sm" href="@evidence.SubjectBrowserUrl">
+                                        Review in Subject Browser
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </section>
             </MudTabPanel>
 

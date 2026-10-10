@@ -9,7 +9,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Controllers;
+using TradeControl.Web.Data;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Application.DataProvision;
 
@@ -792,6 +794,64 @@ var hmrcControllerSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "
 Assert(hmrcControllerSource.Contains("FraudPrevention/Validate", StringComparison.Ordinal)
     && hmrcControllerSource.Contains("IVatFraudHeaderValidationService", StringComparison.Ordinal),
     "TCWeb no longer validates fraud headers through its own deployed product composition.");
+var subjectEvidenceContract = typeof(SubjectBalanceEvidenceSnapshot);
+Assert(subjectEvidenceContract.Namespace == "TradeControl.Tax.UK.Application.DataProvision"
+    && subjectEvidenceContract.GetProperties().All(property => new[]
+        { "CompaniesHouse", "Hmrc", "Credential", "Declaration", "Submission" }
+        .All(prohibited => !property.Name.Contains(prohibited, StringComparison.OrdinalIgnoreCase))),
+    "The year-end Subject evidence contract is not authority-neutral.");
+Assert(typeof(Subjects).GetMethod(nameof(Subjects.YearEndBalanceSnapshotAsync))?.ReturnType
+       == typeof(Task<SubjectBalanceEvidenceSnapshot>),
+    "Subjects is no longer the intermediary for the year-end balance evidence contract.");
+using (var translationContext = new NodeContext(new DbContextOptionsBuilder<NodeContext>()
+           .UseSqlServer("Server=translation-only;Database=translation-only;Integrated Security=True;TrustServerCertificate=True")
+           .Options))
+{
+    var translatedSummary = translationContext.SubjectDatedBalances(new DateTime(2026, 9, 30))
+        .GroupBy(_ => 1)
+        .Select(group => new
+        {
+            DebtorCount = group.Count(row => row.PositionCode == (short)SubjectBalancePosition.OwedToUs),
+            CreditorCount = group.Count(row => row.PositionCode == (short)SubjectBalancePosition.OwedByUs),
+            DebtorTotal = group.Where(row => row.PositionCode == (short)SubjectBalancePosition.OwedToUs)
+                .Sum(row => row.HumanBalance),
+            CreditorTotal = group.Where(row => row.PositionCode == (short)SubjectBalancePosition.OwedByUs)
+                .Sum(row => row.HumanBalance)
+        })
+        .ToQueryString();
+    Assert(translatedSummary.Contains("fnDatedBalances", StringComparison.Ordinal)
+        && translatedSummary.Contains("COUNT", StringComparison.OrdinalIgnoreCase)
+        && translatedSummary.Contains("SUM", StringComparison.OrdinalIgnoreCase),
+        "The SQL Server provider cannot translate the bounded Subject evidence summary query.");
+}
+var accountsWorkspaceView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubAccountsWorkspace.razor"));
+var taxHubServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub",
+    "TaxHubService.cs"));
+var subjectBrowserShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
+    "SubjectBrowserShell.razor"));
+var subjectBrowserPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
+    "Index.cshtml"));
+Assert(accountsWorkspaceView.Contains("Year-end debtors and creditors", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("Review in Subject Browser", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("Evidence SHA-256", StringComparison.Ordinal)
+    && !accountsWorkspaceView.Contains("SubjectBalanceEvidence.Subjects", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("DateTime.DaysInMonth(selectedPeriod.Year, selectedPeriod.Month)", StringComparison.Ordinal)
+    && !taxHubServiceSource.Contains("companiesHouse.FilingInputs.PeriodEnd", StringComparison.Ordinal)
+    && subjectBrowserShell.Contains("balanceView", StringComparison.Ordinal)
+    && subjectBrowserShell.Contains("InitialAsOfDate", StringComparison.Ordinal)
+    && subjectBrowserShell.Contains("_mode != SubjectBrowserMode.Balances", StringComparison.Ordinal)
+    && subjectBrowserPage.IndexOf("window.subjectBrowser =", StringComparison.Ordinal)
+       < subjectBrowserPage.IndexOf("/_framework/blazor.server.js", StringComparison.Ordinal),
+    "Tax Hub no longer presents the bounded accounting-period evidence summary or deep-links to historical Subject balances.");
+var navigationView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared", "_Navigation.cshtml"));
+var legacyCompanyPages = Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Company");
+Assert((!Directory.Exists(legacyCompanyPages) || !Directory.EnumerateFiles(legacyCompanyPages).Any())
+    && !File.Exists(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Reports", "DebtorsAndCreditors.cshtml"))
+    && !File.Exists(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Reports", "DebtorsAndCreditors.cshtml.cs"))
+    && !navigationView.Contains("/Tax/Company", StringComparison.OrdinalIgnoreCase)
+    && !navigationView.Contains("/Subject/Reports/DebtorsAndCreditors", StringComparison.OrdinalIgnoreCase),
+    "A retired Business Tax or Debtors and Creditors Razor Page remains reachable from the application.");
 var startupSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Startup.cs"));
 Assert(startupSource.Contains("/health/live", StringComparison.Ordinal)
     && startupSource.Contains("/health/ready", StringComparison.Ordinal)

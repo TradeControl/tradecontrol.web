@@ -1,71 +1,58 @@
-# Subjects Work Plan — Polarity-Based Aged Balances
+# Subjects Work Plan — Current Aged Invoices and Historical Balances
 
-9 October 2026
-**Status:** approved for implementation; not started.
+10 October 2026
+**Status:** COMPLETE — Phases S1–S4 accepted, including retirement of the superseded Razor Pages.
 
 ## Purpose
 
-Replace the legacy combined Debtors and Creditors report with a reusable, dated statement-and-ageing capability in the Subject Browser.
+Replace the legacy combined Debtors and Creditors report with two deliberately different Subject Browser capabilities:
 
-Trade Control does not assign permanent customer and supplier identities. A Subject's accounting position is determined by its statement balance at the selected effective date:
+1. a current, operational aged-invoice schedule sourced from genuinely unpaid invoices; and
+2. historical debtor and creditor balances sourced from the Subject statement at a selected date.
 
-- a negative balance is owed to the business;
-- a positive balance is owed by the business; and
-- a zero balance is absent from both active populations.
+Trade Control does not assign permanent customer and supplier identities. A Subject's accounting position is determined by the relevant balance:
 
-That single mathematical model serves different human functions. Credit control needs an aged-debt view of amounts owed to the business. Buyers and debit-control users need an aged-liability view of amounts the business owes. The implementation must preserve one calculation while giving each audience appropriate language and actions.
+- a positive business-polarity balance is owed to the business;
+- a negative business-polarity balance is owed by the business; and
+- a zero balance is absent from the active population.
 
-This is a Subjects project. Companies House and Corporation Tax may later consume a year-end evidence snapshot, but neither tax workflow owns the operational calculation or Subject Browser interface.
+This is a Subjects project. Companies House and Corporation Tax may later consume a year-end balance snapshot, but neither tax workflow owns the operational calculation or Subject Browser interface.
 
-## Human decision — 9 October 2026
+## Human decisions
 
-The following direction is approved:
+### 9 October 2026
 
-1. keep the domain model polarity-based; do not introduce artificial customer or supplier classifications;
-2. implement one dated statement-and-ageing engine;
-3. expose two role-oriented Subject Browser experiences over that engine;
-4. keep detailed operational investigation in the Subject Browser;
-5. let later accounts/tax reviews consume reconciled summaries and immutable evidence rather than duplicate the operational interface; and
-6. defer the Tax Hub year-end evidence wizard until this framework is coherent and reviewed.
+The domain model remains polarity-based, without artificial customer or supplier classifications. Credit-control and buying/debit-control users receive distinct language and entry points over shared accounting services.
 
-## Superseded prototype
+### 10 October 2026
+
+The source and meaning of the two reports are now explicitly separated:
+
+1. **Aged debt and liabilities are current only.** They are derived from the present unpaid balances on `Invoice.tbInvoice` and aged from contractual `DueOn` dates.
+2. **Historical debtors and creditors are balances, not aged debt.** They are derived from the Subject statement at the selected date and multiplied by `-1` to convert native statement polarity to business polarity.
+3. **Reconciliation remains visible.** At the current date, the statement balance equals the open-invoice balance plus an explicit residual for opening balances or other non-invoice statement movement.
+4. The superseded `[Invoice].[vwAgedDebtSales]` and `[Invoice].[vwAgedDebtPurchases]` views were removed after their current totals were reproduced by the modern contract.
+
+## Retired prototype
 
 `/Subject/Reports/DebtorsAndCreditors` and its current implementation in:
 
 - `src/TCWeb/Pages/Subject/Reports/DebtorsAndCreditors.cshtml`; and
 - `src/TCWeb/Pages/Subject/Reports/DebtorsAndCreditors.cshtml.cs`
 
-are **deprecated prototypes**. They remain available until the replacement passes its review gate, but they are not an implementation target and must receive no new product behaviour.
-
-The prototype usefully demonstrates period selection, polarity filtering and links to subject details, invoices, payments and statements. Its limitations are that it combines distinct operational roles, is separate from the modern Subject Browser, and does not prove that every drill-down explains the balance at the same effective date.
-
-After acceptance of the replacement, update navigation and bookmarks to the Subject Browser. Remove or redirect the old route only after its useful behaviour and access rules are covered by the new implementation and tests.
+were deprecated prototypes. They were removed on 10 October 2026 after the Subject Browser replacement passed its desktop and mobile review gates. The Subject Browser is now the sole UI for current aged invoices and historical debtor/creditor balances.
 
 ## Accounting contract
 
-### Effective-date balance
+### Current aged invoices
 
-For each real Subject, calculate the statement closing balance at `AsOfDate`. The same cutoff applies to the population, statement drill-down, open items and reconciliation totals.
+The current schedule uses invoices whose status is not closed and whose present unpaid balance is non-zero:
 
-Do not use today's balance to explain a historical report. A Subject may legitimately move between negative, zero and positive positions over time and may consequently appear in different operational populations at different dates.
+`(InvoiceValue + TaxValue) - (PaidValue + PaidTaxValue)`
 
-### Classification and gross presentation
+Invoice type polarity converts that balance to the business perspective. Sales invoices and sales credit notes contribute to amounts owed to the business; purchase invoices and purchase credit notes contribute to amounts owed by the business. Credits remain in their own contractual age bands and are not silently reallocated.
 
-Classify each Subject independently from its dated closing balance:
-
-| Native closing balance | Accounting position | Human presentation |
-|---:|---|---|
-| `< 0` | Owed to the business | Credit control — aged debt |
-| `> 0` | Owed by the business | Buying/debit control — aged liabilities |
-| `= 0` | Settled | Omit from active schedules |
-
-Do not net different Subjects. For example, 10,000 owed to the business and 7,000 owed by the business remain gross populations of 10,000 and 7,000, not a net balance of 3,000.
-
-Namespace paths and multiple-parent appearances are navigation context, not additional accounting identities. A Subject balance must be counted once by stable Subject identity even when it can be reached through more than one namespace path.
-
-### Ageing
-
-Age open items from their contractual due dates at `AsOfDate`, using reviewed bands initially proposed as:
+Age each item from `Invoice.tbInvoice.DueOn` at today's local business date:
 
 - not yet due/current;
 - 1–30 days overdue;
@@ -73,101 +60,136 @@ Age open items from their contractual due dates at `AsOfDate`, using reviewed ba
 - 61–90 days overdue; and
 - more than 90 days overdue.
 
-The first implementation increment must inspect the native invoice, payment-allocation and statement SQL before fixing these bands or an open-item algorithm. It must not infer settlement merely from a transaction's age or silently allocate payments.
+The date parameter anchors the age calculation; it is not a historical transaction cutoff. The report must be labelled as a current unpaid-invoice schedule and must not imply that it reconstructs the open invoices that existed at an earlier date.
 
-The aged items plus any explicitly identified unapplied, unallocated or non-invoice statement movement must reconcile to the Subject's dated statement balance. A mismatch is visible evidence requiring investigation; it is never hidden in an invented balancing item.
+### Historical dated balances
+
+For each real Subject, calculate the native statement closing balance at `AsOfDate` from:
+
+- the Subject opening balance;
+- invoice movements posted on or before the date; and
+- posted Subject-account payments on or before the date.
+
+Convert it to business polarity:
+
+`BusinessBalance = NativeStatementBalance * -1`
+
+Historical results contain no ageing bands. A Subject may legitimately cross through zero and move between debtor and creditor populations at different dates.
+
+### Classification and gross presentation
+
+Classify each Subject independently. Do not net different Subjects, and group by stable `SubjectCode` rather than namespace path.
+
+| Business balance | Accounting position | Human presentation |
+|---:|---|---|
+| `> 0` | Owed to the business | Debtors / aged debt |
+| `< 0` | Owed by the business | Creditors / aged liabilities |
+| `= 0` | Settled | Omit from active schedules |
+
+### Current reconciliation
+
+For every Subject:
+
+`StatementBusinessBalance = CurrentOpenInvoiceBusinessBalance + ReconciliationResidual`
+
+The residual is evidence, not an invented aged item. Opening balances and non-invoice statement movement remain visible but do not acquire a fictional due date or age band.
 
 ## Product experience
 
-### Credit-control view
+### Credit control
 
-Present negative dated positions as positive human amounts under **Aged debt — owed to us**. The view is intended for collection work and should lead naturally to the Subject's dated invoices, payments and statement.
+Present the positive current invoice population as **Aged debt — owed to us**, with positive human amounts, ageing totals and invoice drill-down.
 
-### Buying/debit-control view
+### Buying/debit control
 
-Present positive dated positions under **Aged liabilities — amounts we owe**. The view is intended for payment planning, invoice queries and supplier relationships, with the same dated drill-down expressed from the business's payable perspective.
+Present the negative current invoice population as **Aged liabilities — amounts we owe**, oriented as positive human amounts for the user, with the same current invoice source and due-date bands.
+
+### Historical balances
+
+Provide a separate dated **Debtors and creditors** view. It has an effective-date selector, gross debtor/creditor totals and Subject statement drill-down, but no ageing columns or aged-debt label.
 
 ### Shared Subject Browser behaviour
 
-Both views use the same service and result contract. The Subject Browser supplies:
-
-- an effective-date selector with a clear default;
-- separate role-oriented entry points or filters rather than one ambiguous combined button;
-- population totals and ageing-band totals;
-- sorting and bounded paging suitable for operational use;
-- drill-down to the selected Subject at the same `AsOfDate`;
-- clear native/accounting sign semantics in diagnostics while presenting ordinary positive amounts to users; and
-- no free-entry balance or filing adjustment.
-
-Role-oriented wording is presentation, not persisted Subject classification. Access control may later permit different roles to see the two experiences without duplicating their accounting logic.
+The Subject Browser supplies bounded paging, sorting, accessible totals, empty/error states and links into existing Subject enquiries. Role-oriented wording is presentation, not persisted Subject classification.
 
 ## Delivery sequence
 
 ### Phase S1 — Source and reconciliation proof
 
-**Status:** NOT STARTED.
+**Status:** COMPLETE — DESIGN ACCEPTED AND SANDBOX VERIFIED.
 
-1. Inventory the SQL views/functions behind `Subject.vwBalanceSheetAudit`, the Subject statement, invoices and payment allocation.
-2. Define one bounded service result for a Subject's balance and open-item ageing at `AsOfDate`.
-3. Prove sign orientation, due-date semantics, payments/credits, zero balances, historical cutoffs and reconciliation to the statement.
-4. Prove stable Subject identity prevents namespace double counting.
+1. Inventory the Subject statement, invoice status and legacy aged-debt sources.
+2. Define separate current-invoice and historical-statement result contracts.
+3. Prove signs, due-date bands, credits, payments, zero balances and stable Subject identity.
+4. Reconcile current unpaid invoices to the current statement through an explicit residual.
+5. Reproduce the legacy current totals, then retire the two legacy views.
 
-**Gate:** human review of representative negative, positive, settled, crossed-period and exceptional subjects. No UI replacement proceeds until the dated totals reconcile.
+Implementation and IAM-01 sandbox evidence are recorded in [`subject-aged-balances-s1-evidence.md`](subject-aged-balances-s1-evidence.md).
 
 ### Phase S2 — Subject Browser operational views
 
-**Status:** NOT STARTED.
+**Status:** COMPLETE — MOBILE AND DESKTOP EXPERIENCE ACCEPTED.
 
-1. Add the separate Credit Control and Buying/debit-control experiences to the modern Subject Browser.
-2. Reuse the existing enquiry components for invoices, payments and statements, extending them to preserve `AsOfDate` where necessary.
-3. Add accessible totals, ageing columns, empty/error states, paging and links without reintroducing standalone Razor Page logic.
-4. Verify that changing the date can legitimately move a Subject between views.
+1. Add separate Credit Control and Buying/debit-control current ageing experiences.
+2. Add a distinct historical Debtors and Creditors balance experience.
+3. Reuse existing enquiry components for invoices, payments and statements.
+4. Add accessible totals, ageing columns, empty/error states, bounded paging and links without standalone Razor Page query logic.
 
-**Gate:** credit-control and buying perspectives are independently understandable while producing the same underlying reconciled accounting result.
+Implementation note: all report and drill-down data reaches the components through `src/TCWeb/Data/Subjects.cs`, preserving the established Subject data intermediary. That class contains provider-translated LINQ rather than embedded SQL; the database functions are mapped centrally in `NodeContext.SubjectBalances.cs` in preparation for the later PostgreSQL provider migration. The Subject Browser exposes a **Balances** mode with three clearly separated views.
+
+Responsive note: wide layouts retain the compact ageing and enquiry tables. Below the large breakpoint, current schedules use one Subject card per position with the total balance first and labelled age-band tiles beneath it. Invoice, payment and statement enquiries likewise use labelled record cards with their existing drill-down links, while the Browser mode selector becomes a two-column grid on narrow phones. This avoids compressing monetary values and Subject identities into unreadable table columns. The current Bootstrap/Blazor interaction model remains in place for this release; a future MudBlazor conversion may replace the presentation components without changing the data contract.
+
+**Gate:** all three perspectives are independently understandable; current schedules reconcile visibly and historical balances are never described as aged debt.
 
 ### Phase S3 — Evidence-consumer contract
 
-**Status:** NOT STARTED.
+**Status:** COMPLETE — AUTOMATED AND IAM-01 RUNTIME VERIFICATION PASSED.
 
-1. Expose a read-only year-end snapshot containing the effective date, gross polarity populations, constituent Subject balances, reconciliation state and deterministic digest.
+1. Expose a read-only year-end balance snapshot containing the effective date, gross polarity populations, constituent Subject balances, reconciliation state and deterministic digest.
 2. Keep the contract authority-neutral and free of Companies House, HMRC, filing credentials or declarations.
-3. Define invalidation when relevant source transactions or allocations change.
+3. Define invalidation when relevant source transactions change.
 4. Demonstrate how Tax Hub can show summary totals and deep-link to the Subject Browser without cloning its operational UI.
+
+Implementation note: the authority-neutral `subject-balances/v1` contract lives in the Tax UK Application layer and records an immutable, canonically ordered Subject population, gross debtor and creditor totals, reconciliation state and a deterministic SHA-256 snapshot token. `Data.Subjects` remains the TCWeb intermediary and builds the snapshot from the mapped dated-balance function without embedded SQL. Separate aggregate and constituent reads make a concurrent source change visible as an unreconciled snapshot rather than silently presenting mixed evidence.
+
+The Tax Hub year-end Balance Sheet displays only the evidence summary and token, then deep-links to the Subject Browser's Historical view with the accounting period end preselected. Automated contract, provider-translation and IAM-01 browser evidence is recorded in [`subject-aged-balances-s3-evidence.md`](subject-aged-balances-s3-evidence.md). No Azure resource was started or changed.
 
 **Gate:** the snapshot is sufficient for a future guided year-end evidence review and remains reproducible from unchanged accounting records.
 
 ### Phase S4 — Prototype retirement
 
-**Status:** NOT STARTED.
+**Status:** COMPLETE — LEGACY ROUTE AND DUPLICATED PAGE MODEL REMOVED.
 
 1. Replace navigation to `/Subject/Reports/DebtorsAndCreditors` with the reviewed Subject Browser entry points.
 2. Redirect or remove the prototype only after route usage and bookmarks have been considered.
-3. Remove duplicated page-model queries and retain one authoritative service.
+3. Remove duplicated page-model queries and retain the authoritative services.
 4. Update user documentation from reviewed screenshots and terminology.
+
+Implementation note: the obsolete `/Subject/Reports/DebtorsAndCreditors` route, its page model and its Finance-menu entry were removed after the Subject Browser replacement was accepted. Automated source-boundary coverage now prevents the retired route or page files from returning.
 
 **Gate:** no user journey or test depends on the prototype and no second debtor/creditor calculation remains.
 
 ## Tests and acceptance
 
-At minimum, executable coverage must prove:
+Executable coverage must prove:
 
-- negative, positive and zero classification at an explicit date;
-- a Subject changing polarity between two dates;
+- current unpaid-invoice signs and zero-net omission;
+- contractual due-date ageing at all band boundaries;
+- sales, purchases, credits and paid values;
+- reconciliation of current invoices to the current statement through an explicit residual;
+- dated statement classification and a Subject changing polarity between dates;
 - gross population totals without cross-Subject netting;
-- due-date ageing at band boundaries;
-- invoices, credits, payments and exceptional/unallocated movements;
-- aged/open-item reconciliation to each dated statement and to the population total;
 - no namespace double counting;
-- consistent results across paging and role-oriented presentation;
-- authorisation and bounded queries; and
-- deterministic year-end evidence for unchanged source data and invalidation after a relevant change.
+- bounded queries and consistent paging; and
+- deterministic year-end evidence for unchanged source data in Phase S3.
 
 ## Exclusions
 
 This work does not:
 
+- assign historical age bands to a closed-period statement balance;
 - add customer or supplier flags to the accounting model;
-- change the sign convention of Subject statements;
+- change the native sign convention of Subject statements;
 - permit users to type or override accounting balances;
 - implement debt collection, automated reminders, payment runs or credit limits;
 - implement the Tax Hub year-end wizard itself;
@@ -176,4 +198,4 @@ This work does not:
 
 ## Return to the Tax Hub wizard
 
-After Phase S3 is accepted, resume the deferred guided year-end evidence review. Its debtor/creditor step should display the gross year-end totals, reconciliation status and review completion, then deep-link into these Subject Browser views. Bank/cash and fixed-asset evidence remain separate native-system steps. Completion of that wizard becomes a pre-submission product gate; it does not alter the external filing contract.
+With Phases S1–S4 accepted, resume the deferred guided year-end evidence review. Its debtor/creditor step should display gross year-end balance totals, reconciliation status and review completion, then deep-link into the Subject Browser's historical balance view. Current aged invoices remain an operational control rather than statutory year-end evidence.

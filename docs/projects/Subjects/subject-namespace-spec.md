@@ -883,10 +883,8 @@ Delete all other pages in `Subject/Enquiry`.
 
 ### 3. Reports
 
-- Leave the **`System.Reports`** folder untouched.  
-  It contains the **Debtors and Creditors** report, which must be retained.
-
-- Delete any **Subject‑level** reports that are not explicitly retained above.
+- The legacy **Debtors and Creditors** Razor Page has been superseded by the Subject Browser's current aged-invoice and historical balance views and is not retained.
+- Delete any other obsolete **Subject-level** reports that are not explicitly retained above.
 
 ### 4. Subject.Type
 

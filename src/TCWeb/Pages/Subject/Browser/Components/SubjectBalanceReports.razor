@@ -1,0 +1,467 @@
+@using System.Globalization
+@using TradeControl.Web.Data
+@inject NodeContext NodeContext
+@inject TimeProvider TimeProvider
+
+<div class="bg-white border rounded p-3 h-100 overflow-auto">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+        <div>
+            <div class="fw-semibold">Subject balances</div>
+            <div class="text-muted small">@GetDescription()</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Subject balance report">
+            <button type="button" class="btn @GetViewButtonClass(BalanceReportView.AgedDebt)"
+                    @onclick="() => SetViewAsync(BalanceReportView.AgedDebt)">
+                Aged debt
+            </button>
+            <button type="button" class="btn @GetViewButtonClass(BalanceReportView.AgedLiabilities)"
+                    @onclick="() => SetViewAsync(BalanceReportView.AgedLiabilities)">
+                Aged liabilities
+            </button>
+            <button type="button" class="btn @GetViewButtonClass(BalanceReportView.Historical)"
+                    @onclick="() => SetViewAsync(BalanceReportView.Historical)">
+                Historical
+            </button>
+        </div>
+        @if (OnClose.HasDelegate)
+        {
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="OnClose">
+                Back to browser
+            </button>
+        }
+        </div>
+    </div>
+
+    @if (_view == BalanceReportView.Historical)
+    {
+        <div class="d-flex flex-wrap align-items-end gap-3 bg-light border rounded p-3 mb-3">
+            <div>
+                <label class="form-label small mb-1" for="subject-balance-date">Balance date</label>
+                <input id="subject-balance-date" type="date" class="form-control form-control-sm"
+                       value="@_asOfDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+                       max="@_today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+                       @onchange="HandleDateChangedAsync" />
+            </div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Historical balance position">
+                <button type="button" class="btn @GetPositionButtonClass(SubjectBalancePosition.OwedToUs)"
+                        @onclick="() => SetHistoricalPositionAsync(SubjectBalancePosition.OwedToUs)">
+                    Debtors
+                </button>
+                <button type="button" class="btn @GetPositionButtonClass(SubjectBalancePosition.OwedByUs)"
+                        @onclick="() => SetHistoricalPositionAsync(SubjectBalancePosition.OwedByUs)">
+                    Creditors
+                </button>
+            </div>
+            <div class="small text-muted">Statement balances at the selected date; these are not aged invoices.</div>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="text-muted small py-3" role="status">Loading balances…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger py-2" role="alert">@_errorMessage</div>
+        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="LoadAsync">Try again</button>
+    }
+    else if (_view == BalanceReportView.Historical)
+    {
+        @RenderHistoricalReport()
+    }
+    else
+    {
+        @RenderCurrentReport()
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnOpenSubject { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool StartHistorical { get; set; }
+    [Parameter] public DateOnly? InitialAsOfDate { get; set; }
+
+    private const int PageSize = 25;
+    private readonly CultureInfo _currencyCulture = CultureInfo.GetCultureInfo("en-GB");
+    private BalanceReportView _view = BalanceReportView.AgedDebt;
+    private SubjectBalancePosition _historicalPosition = SubjectBalancePosition.OwedToUs;
+    private DateOnly _today;
+    private DateOnly _asOfDate;
+    private int _pageNumber = 1;
+    private bool _isLoading;
+    private string? _errorMessage;
+    private SubjectCurrentAgedInvoicePage? _currentPage;
+    private SubjectDatedBalancePage? _historicalPage;
+    private SubjectCurrentAgedInvoiceDetail? _currentDetail;
+
+    private enum BalanceReportView
+    {
+        AgedDebt,
+        AgedLiabilities,
+        Historical
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        _view = StartHistorical ? BalanceReportView.Historical : BalanceReportView.AgedDebt;
+        _asOfDate = InitialAsOfDate is { } initialDate && initialDate <= _today
+            ? initialDate
+            : _today;
+        await LoadAsync();
+    }
+
+    private async Task SetViewAsync(BalanceReportView view)
+    {
+        if (_view == view)
+            return;
+
+        _view = view;
+        _pageNumber = 1;
+        _currentDetail = null;
+        await LoadAsync();
+    }
+
+    private async Task SetHistoricalPositionAsync(SubjectBalancePosition position)
+    {
+        if (_historicalPosition == position)
+            return;
+
+        _historicalPosition = position;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task HandleDateChangedAsync(ChangeEventArgs args)
+    {
+        if (DateOnly.TryParseExact(args.Value?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var selectedDate))
+        {
+            _asOfDate = selectedDate > _today ? _today : selectedDate;
+            _pageNumber = 1;
+            await LoadAsync();
+        }
+    }
+
+    private async Task GoToPageAsync(int pageNumber)
+    {
+        if (pageNumber < 1)
+            return;
+
+        _pageNumber = pageNumber;
+        _currentDetail = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var subjects = new Subjects(NodeContext);
+            if (_view == BalanceReportView.Historical)
+            {
+                _historicalPage = await subjects.DatedBalancesAsync(
+                    _asOfDate, _historicalPosition, _pageNumber, PageSize);
+                _currentPage = null;
+            }
+            else
+            {
+                var position = CurrentPosition();
+                _currentPage = await subjects.CurrentAgedInvoicesAsync(
+                    _today, position, _pageNumber, PageSize);
+                _historicalPage = null;
+            }
+        }
+        catch (Exception exception)
+        {
+            await NodeContext.ErrorLog(exception);
+            _errorMessage = "Unable to load the Subject balances.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadDetailAsync(string subjectCode)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var subjects = new Subjects(NodeContext, subjectCode);
+            _currentDetail = await subjects.CurrentAgedInvoiceDetailAsync(_today);
+        }
+        catch (Exception exception)
+        {
+            await NodeContext.ErrorLog(exception);
+            _errorMessage = "Unable to load the unpaid invoices for this Subject.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private RenderFragment RenderCurrentReport() => @<text>
+        @if (_currentDetail is not null)
+        {
+            @RenderCurrentDetail()
+        }
+        else if (_currentPage is null || _currentPage.Items.Count == 0)
+        {
+            <div class="text-muted small py-3">No current unpaid invoices were found.</div>
+        }
+        else
+        {
+            <div class="row g-2 mb-3">
+                @RenderTotalCard(GetPositionHeading(), _currentPage.Totals.HumanBalance)
+                @RenderTotalCard("Current", _currentPage.Totals.CurrentAmount)
+                @RenderTotalCard("1–30 days", _currentPage.Totals.Days1To30Amount)
+                @RenderTotalCard("31–60 days", _currentPage.Totals.Days31To60Amount)
+                @RenderTotalCard("61–90 days", _currentPage.Totals.Days61To90Amount)
+                @RenderTotalCard("Over 90 days", _currentPage.Totals.Over90Amount)
+            </div>
+
+            @if (Math.Abs(_currentPage.Totals.ReconciliationResidual) >= 0.00001m)
+            {
+                <div class="alert alert-info py-2 small" role="status">
+                    The current statement is @_currentPage.Totals.StatementEquivalent.ToString("C", _currencyCulture).
+                    The difference of @_currentPage.Totals.ReconciliationResidual.ToString("C", _currencyCulture)
+                    is opening balance or other non-invoice movement and is not aged.
+                </div>
+            }
+
+            <div class="d-lg-none d-flex flex-column gap-2">
+                @foreach (var row in _currentPage.Items)
+                {
+                    <article class="border rounded p-3">
+                        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                            <div style="min-width:0;">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-start fw-semibold"
+                                        @onclick="() => LoadDetailAsync(row.SubjectCode)">
+                                    @row.SubjectName
+                                </button>
+                                <div class="small text-muted text-break"><code>@row.SubjectCode</code></div>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <div class="small text-muted">Balance</div>
+                                <div class="fs-5 fw-semibold">@FormatMoney(row.HumanBalance)</div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            @RenderMobileAgeCell("Current", row.CurrentAmount)
+                            @RenderMobileAgeCell("1–30 days", row.Days1To30Amount)
+                            @RenderMobileAgeCell("31–60 days", row.Days31To60Amount)
+                            @RenderMobileAgeCell("61–90 days", row.Days61To90Amount)
+                            @RenderMobileAgeCell("Over 90 days", row.Over90Amount)
+                        </div>
+                    </article>
+                }
+            </div>
+
+            <div class="table-responsive d-none d-lg-block">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Subject</th>
+                            <th scope="col" class="text-end">Balance</th>
+                            <th scope="col" class="text-end">Current</th>
+                            <th scope="col" class="text-end">1–30</th>
+                            <th scope="col" class="text-end">31–60</th>
+                            <th scope="col" class="text-end">61–90</th>
+                            <th scope="col" class="text-end">Over 90</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _currentPage.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-start"
+                                            @onclick="() => LoadDetailAsync(row.SubjectCode)">
+                                        @row.SubjectName
+                                    </button>
+                                    <div class="small text-muted"><code>@row.SubjectCode</code></div>
+                                </td>
+                                <td class="text-end fw-semibold">@FormatMoney(row.HumanBalance)</td>
+                                <td class="text-end">@FormatMoney(row.CurrentAmount)</td>
+                                <td class="text-end">@FormatMoney(row.Days1To30Amount)</td>
+                                <td class="text-end">@FormatMoney(row.Days31To60Amount)</td>
+                                <td class="text-end">@FormatMoney(row.Days61To90Amount)</td>
+                                <td class="text-end">@FormatMoney(row.Over90Amount)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @RenderPager(_currentPage.PageNumber, _currentPage.TotalCount, _currentPage.HasMorePages)
+        }
+    </text>;
+
+    private RenderFragment RenderCurrentDetail() => @<text>
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+            <div>
+                <button type="button" class="btn btn-link btn-sm p-0 mb-2" @onclick="CloseDetail">← Back to schedule</button>
+                <div class="fw-semibold">@_currentDetail!.Summary.SubjectName</div>
+                <div class="small text-muted"><code>@_currentDetail.Summary.SubjectCode</code></div>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm"
+                    @onclick="() => OnOpenSubject.InvokeAsync(_currentDetail.Summary.SubjectCode)">
+                Open Subject
+            </button>
+        </div>
+
+        <div class="d-flex flex-wrap gap-3 bg-light border rounded p-3 mb-3 small">
+            <span><span class="text-muted">Open invoices:</span> <strong>@FormatMoney(_currentDetail.Summary.HumanBalance)</strong></span>
+            <span><span class="text-muted">Statement:</span> <strong>@FormatMoney(Math.Abs(_currentDetail.Summary.StatementBusinessBalance))</strong></span>
+            <span><span class="text-muted">Not aged:</span> <strong>@FormatMoney(Math.Abs(_currentDetail.Summary.ReconciliationResidual))</strong></span>
+        </div>
+
+        <div class="d-lg-none d-flex flex-column gap-2">
+            @foreach (var item in _currentDetail.Items)
+            {
+                <article class="border rounded p-3">
+                    <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+                        <div>
+                            <div class="small text-muted">Invoice</div>
+                            <div class="fw-semibold"><code>@item.InvoiceNumber</code></div>
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted">Unpaid</div>
+                            <div class="fw-semibold">@FormatMoney(DisplayItemAmount(item.BusinessAmount))</div>
+                        </div>
+                    </div>
+                    <div class="small mb-2">@item.InvoiceType</div>
+                    <div class="row g-2 small">
+                        <div class="col-6"><span class="text-muted">Invoiced</span><br />@item.InvoicedOn.ToString("d MMM yyyy", _currencyCulture)</div>
+                        <div class="col-6"><span class="text-muted">Due</span><br />@item.DueOn.ToString("d MMM yyyy", _currencyCulture)</div>
+                        <div class="col-12"><span class="badge text-bg-light border">@GetAgeBandLabel(item.Band)</span></div>
+                    </div>
+                </article>
+            }
+        </div>
+
+        <div class="table-responsive d-none d-lg-block">
+            <table class="table table-sm table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Invoice</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Invoiced</th>
+                        <th scope="col">Due</th>
+                        <th scope="col">Age</th>
+                        <th scope="col" class="text-end">Unpaid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _currentDetail.Items)
+                    {
+                        <tr>
+                            <td><code>@item.InvoiceNumber</code></td>
+                            <td>@item.InvoiceType</td>
+                            <td>@item.InvoicedOn.ToString("d MMM yyyy", _currencyCulture)</td>
+                            <td>@item.DueOn.ToString("d MMM yyyy", _currencyCulture)</td>
+                            <td>@GetAgeBandLabel(item.Band)</td>
+                            <td class="text-end">@FormatMoney(DisplayItemAmount(item.BusinessAmount))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (_currentDetail.HasMoreItems)
+        {
+            <div class="small text-muted">Showing @_currentDetail.Items.Count of @_currentDetail.TotalItemCount invoices.</div>
+        }
+    </text>;
+
+    private RenderFragment RenderHistoricalReport() => @<text>
+        @if (_historicalPage is null || _historicalPage.Items.Count == 0)
+        {
+            <div class="text-muted small py-3">No non-zero balances were found at this date.</div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 bg-light border rounded p-3 mb-3">
+                <div>
+                    <div class="small text-muted">@(_historicalPosition == SubjectBalancePosition.OwedToUs ? "Debtors" : "Creditors") at @_asOfDate.ToString("d MMMM yyyy", _currencyCulture)</div>
+                    <div class="fs-5 fw-semibold">@FormatMoney(_historicalPage.TotalHumanBalance)</div>
+                </div>
+                <div class="small text-muted">@_historicalPage.TotalCount subject@(_historicalPage.TotalCount == 1 ? string.Empty : "s")</div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead><tr><th scope="col">Subject</th><th scope="col" class="text-end">Balance</th></tr></thead>
+                    <tbody>
+                        @foreach (var row in _historicalPage.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-start"
+                                            @onclick="() => OnOpenSubject.InvokeAsync(row.SubjectCode)">@row.SubjectName</button>
+                                    <div class="small text-muted"><code>@row.SubjectCode</code></div>
+                                </td>
+                                <td class="text-end fw-semibold">@FormatMoney(row.HumanBalance)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @RenderPager(_historicalPage.PageNumber, _historicalPage.TotalCount, _historicalPage.HasMorePages)
+        }
+    </text>;
+
+    private RenderFragment RenderTotalCard(string label, decimal value) => @<div class="col-6 col-md-4 col-xl-2">
+        <div class="bg-light border rounded p-2 h-100">
+            <div class="small text-muted">@label</div>
+            <div class="fw-semibold">@FormatMoney(value)</div>
+        </div>
+    </div>;
+
+    private RenderFragment RenderMobileAgeCell(string label, decimal value) => @<div class="col-6">
+        <div class="bg-light rounded px-2 py-1 h-100">
+            <div class="small text-muted">@label</div>
+            <div class="fw-semibold">@FormatMoney(value)</div>
+        </div>
+    </div>;
+
+    private RenderFragment RenderPager(int pageNumber, int totalCount, bool hasMorePages) => @<div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@(pageNumber <= 1)"
+                @onclick="() => GoToPageAsync(pageNumber - 1)">Previous</button>
+        <div class="small text-muted">Page @pageNumber · @totalCount subject@(totalCount == 1 ? string.Empty : "s")</div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@(!hasMorePages)"
+                @onclick="() => GoToPageAsync(pageNumber + 1)">Next</button>
+    </div>;
+
+    private void CloseDetail() => _currentDetail = null;
+    private SubjectBalancePosition CurrentPosition() =>
+        _view == BalanceReportView.AgedLiabilities ? SubjectBalancePosition.OwedByUs : SubjectBalancePosition.OwedToUs;
+    private string GetPositionHeading() => _view == BalanceReportView.AgedLiabilities ? "We owe" : "Owed to us";
+    private decimal DisplayItemAmount(decimal amount) => CurrentPosition() == SubjectBalancePosition.OwedByUs ? -amount : amount;
+    private string FormatMoney(decimal value) => value.ToString("C", _currencyCulture);
+    private string GetViewButtonClass(BalanceReportView view) => _view == view ? "btn-primary" : "btn-outline-primary";
+    private string GetPositionButtonClass(SubjectBalancePosition position) => _historicalPosition == position ? "btn-primary" : "btn-outline-primary";
+    private string GetDescription() => _view switch
+    {
+        BalanceReportView.AgedDebt => $"Current unpaid sales invoices aged at {_today:d MMMM yyyy}.",
+        BalanceReportView.AgedLiabilities => $"Current unpaid purchase invoices aged at {_today:d MMMM yyyy}.",
+        _ => "Dated statement balances in business polarity."
+    };
+    private static string GetAgeBandLabel(SubjectAgeBand band) => band switch
+    {
+        SubjectAgeBand.Current => "Current",
+        SubjectAgeBand.Days1To30 => "1–30 days",
+        SubjectAgeBand.Days31To60 => "31–60 days",
+        SubjectAgeBand.Days61To90 => "61–90 days",
+        SubjectAgeBand.Over90 => "Over 90 days",
+        _ => "Unknown"
+    };
+}

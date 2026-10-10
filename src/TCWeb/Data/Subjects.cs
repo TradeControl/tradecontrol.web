@@ -1,9 +1,11 @@
 using System;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Data
@@ -633,6 +635,239 @@ namespace TradeControl.Web.Data
 
         public Task<SubjectActionResult> DeleteAsync()
             => DeleteAsync(string.Empty);
+        #endregion
+
+        #region Balance Reports
+
+        private const int MaximumBalancePageSize = 100;
+        private const int MaximumAgedInvoiceItems = 500;
+
+        public async Task<SubjectCurrentAgedInvoicePage> CurrentAgedInvoicesAsync(
+            DateOnly agedOn,
+            SubjectBalancePosition position,
+            int pageNumber = 1,
+            int pageSize = 25,
+            CancellationToken cancellationToken = default)
+        {
+            pageNumber = Math.Max(pageNumber, 1);
+            pageSize = Math.Clamp(pageSize, 1, MaximumBalancePageSize);
+            var query = _context
+                .SubjectCurrentAgedInvoices(agedOn.ToDateTime(TimeOnly.MinValue))
+                .AsNoTracking()
+                .Where(row => row.PositionCode == (short)position);
+
+            var aggregate = await query
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    TotalCount = group.Count(),
+                    HumanBalance = group.Sum(row => Math.Abs(row.BusinessBalance)),
+                    CurrentAmount = group.Sum(row => row.CurrentAmount),
+                    Days1To30Amount = group.Sum(row => row.Days1To30Amount),
+                    Days31To60Amount = group.Sum(row => row.Days31To60Amount),
+                    Days61To90Amount = group.Sum(row => row.Days61To90Amount),
+                    Over90Amount = group.Sum(row => row.Over90Amount),
+                    StatementEquivalent = group.Sum(row => row.StatementBusinessBalance * (row.PositionCode == 0 ? 1 : -1)),
+                    ReconciliationResidual = group.Sum(row => row.ReconciliationResidual * (row.PositionCode == 0 ? 1 : -1))
+                })
+                .SingleOrDefaultAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(row => Math.Abs(row.BusinessBalance))
+                .ThenBy(row => row.SubjectName)
+                .ThenBy(row => row.SubjectCode)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(row => new SubjectCurrentAgedInvoiceRow(
+                    row.SubjectCode,
+                    row.SubjectName,
+                    DateOnly.FromDateTime(row.AgedOn),
+                    row.BusinessBalance,
+                    (SubjectBalancePosition)row.PositionCode,
+                    row.CurrentAmount,
+                    row.Days1To30Amount,
+                    row.Days31To60Amount,
+                    row.Days61To90Amount,
+                    row.Over90Amount,
+                    row.StatementBusinessBalance,
+                    row.ReconciliationResidual))
+                .ToListAsync(cancellationToken);
+
+            var totals = aggregate is null
+                ? new SubjectCurrentAgedInvoiceTotals(0, 0, 0, 0, 0, 0, 0, 0)
+                : new SubjectCurrentAgedInvoiceTotals(
+                    aggregate.HumanBalance,
+                    aggregate.CurrentAmount,
+                    aggregate.Days1To30Amount,
+                    aggregate.Days31To60Amount,
+                    aggregate.Days61To90Amount,
+                    aggregate.Over90Amount,
+                    aggregate.StatementEquivalent,
+                    aggregate.ReconciliationResidual);
+
+            return new SubjectCurrentAgedInvoicePage
+            {
+                AgedOn = agedOn,
+                Position = position,
+                Items = items,
+                Totals = totals,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = aggregate?.TotalCount ?? 0
+            };
+        }
+
+        public async Task<SubjectCurrentAgedInvoiceDetail?> CurrentAgedInvoiceDetailAsync(
+            DateOnly agedOn,
+            string? subjectCode = null,
+            int maxItems = 250,
+            CancellationToken cancellationToken = default)
+        {
+            var resolvedSubjectCode = string.IsNullOrWhiteSpace(subjectCode) ? SubjectCode : subjectCode.Trim();
+            if (string.IsNullOrWhiteSpace(resolvedSubjectCode))
+                throw new ArgumentException("A Subject code is required.", nameof(subjectCode));
+
+            maxItems = Math.Clamp(maxItems, 1, MaximumAgedInvoiceItems);
+
+            var agedOnDateTime = agedOn.ToDateTime(TimeOnly.MinValue);
+            var summaryData = await _context
+                .SubjectCurrentAgedInvoices(agedOnDateTime)
+                .AsNoTracking()
+                .SingleOrDefaultAsync(row => row.SubjectCode == resolvedSubjectCode, cancellationToken);
+
+            if (summaryData is null)
+                return null;
+
+            var itemQuery = _context
+                .SubjectCurrentAgedInvoiceItems(agedOnDateTime)
+                .AsNoTracking()
+                .Where(row => row.SubjectCode == resolvedSubjectCode);
+
+            var totalItemCount = await itemQuery.CountAsync(cancellationToken);
+            var items = await itemQuery
+                .OrderBy(row => row.DueOn)
+                .ThenBy(row => row.InvoiceNumber)
+                .Take(maxItems)
+                .Select(row => new SubjectCurrentAgedInvoiceItem(
+                    row.InvoiceNumber,
+                    row.InvoiceTypeCode,
+                    row.InvoiceType,
+                    DateOnly.FromDateTime(row.InvoicedOn),
+                    DateOnly.FromDateTime(row.DueOn),
+                    row.DaysOverdue,
+                    (SubjectAgeBand)row.AgeBandCode,
+                    row.BusinessAmount))
+                .ToListAsync(cancellationToken);
+
+            var summary = new SubjectCurrentAgedInvoiceRow(
+                summaryData.SubjectCode,
+                summaryData.SubjectName,
+                DateOnly.FromDateTime(summaryData.AgedOn),
+                summaryData.BusinessBalance,
+                (SubjectBalancePosition)summaryData.PositionCode,
+                summaryData.CurrentAmount,
+                summaryData.Days1To30Amount,
+                summaryData.Days31To60Amount,
+                summaryData.Days61To90Amount,
+                summaryData.Over90Amount,
+                summaryData.StatementBusinessBalance,
+                summaryData.ReconciliationResidual);
+
+            return new SubjectCurrentAgedInvoiceDetail
+            {
+                Summary = summary,
+                Items = items,
+                TotalItemCount = totalItemCount
+            };
+        }
+
+        public async Task<SubjectDatedBalancePage> DatedBalancesAsync(
+            DateOnly asOfDate,
+            SubjectBalancePosition position,
+            int pageNumber = 1,
+            int pageSize = 25,
+            CancellationToken cancellationToken = default)
+        {
+            pageNumber = Math.Max(pageNumber, 1);
+            pageSize = Math.Clamp(pageSize, 1, MaximumBalancePageSize);
+
+            var query = _context
+                .SubjectDatedBalances(asOfDate.ToDateTime(TimeOnly.MinValue))
+                .AsNoTracking()
+                .Where(row => row.PositionCode == (short)position);
+
+            var aggregate = await query
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    TotalCount = group.Count(),
+                    TotalHumanBalance = group.Sum(row => row.HumanBalance)
+                })
+                .SingleOrDefaultAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(row => row.HumanBalance)
+                .ThenBy(row => row.SubjectName)
+                .ThenBy(row => row.SubjectCode)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(row => new SubjectDatedBalanceRow(
+                    row.SubjectCode,
+                    row.SubjectName,
+                    DateOnly.FromDateTime(row.AsOfDate),
+                    row.NativeStatementBalance,
+                    row.BusinessBalance,
+                    (SubjectBalancePosition)row.PositionCode,
+                    row.HumanBalance))
+                .ToListAsync(cancellationToken);
+
+            return new SubjectDatedBalancePage
+            {
+                AsOfDate = asOfDate,
+                Position = position,
+                Items = items,
+                TotalHumanBalance = aggregate?.TotalHumanBalance ?? 0,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = aggregate?.TotalCount ?? 0
+            };
+        }
+
+        public async Task<SubjectBalanceEvidenceSnapshot> YearEndBalanceSnapshotAsync(
+            DateOnly effectiveDate,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context
+                .SubjectDatedBalances(effectiveDate.ToDateTime(TimeOnly.MinValue))
+                .AsNoTracking();
+
+            var source = await query
+                .GroupBy(_ => 1)
+                .Select(group => new SubjectBalanceEvidenceSourceSummary(
+                    group.Count(row => row.PositionCode == (short)SubjectBalancePosition.OwedToUs),
+                    group.Count(row => row.PositionCode == (short)SubjectBalancePosition.OwedByUs),
+                    group.Where(row => row.PositionCode == (short)SubjectBalancePosition.OwedToUs)
+                        .Sum(row => row.HumanBalance),
+                    group.Where(row => row.PositionCode == (short)SubjectBalancePosition.OwedByUs)
+                        .Sum(row => row.HumanBalance)))
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? new SubjectBalanceEvidenceSourceSummary(0, 0, 0m, 0m);
+
+            var items = await query
+                .OrderBy(row => row.SubjectCode)
+                .Select(row => new SubjectBalanceEvidenceItem(
+                    row.SubjectCode,
+                    row.SubjectName,
+                    row.NativeStatementBalance,
+                    row.BusinessBalance,
+                    row.PositionCode == (short)SubjectBalancePosition.OwedToUs
+                        ? SubjectBalanceEvidencePosition.Debtor
+                        : SubjectBalanceEvidencePosition.Creditor))
+                .ToListAsync(cancellationToken);
+
+            return SubjectBalanceEvidenceSnapshot.Create(effectiveDate, items, source);
+        }
+
         #endregion
 
         #region Payment Related Methods

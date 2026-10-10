@@ -1,4 +1,5 @@
 @using System.Linq
+@using System.Globalization
 @using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.JSInterop
 @using System.Threading
@@ -66,7 +67,7 @@ else if (_isMobile)
                                OnFilterCommitted="HandleFilterCommittedAsync" />
         </div>
 
-        <div class="btn-group mb-3" role="group" aria-label="Browser mode">
+        <div class="btn-group mb-3 tc-subject-browser-modes" role="group" aria-label="Browser mode">
             <button type="button"
                     class="btn @GetModeButtonClass(SubjectBrowserMode.Enquiry)"
                     @onclick="() => SetModeAsync(SubjectBrowserMode.Enquiry)">
@@ -82,8 +83,23 @@ else if (_isMobile)
                     @onclick="() => SetModeAsync(SubjectBrowserMode.Subject)">
                 Subject
             </button>
+            <button type="button"
+                    class="btn @GetModeButtonClass(SubjectBrowserMode.Balances)"
+                    @onclick="() => SetModeAsync(SubjectBrowserMode.Balances)">
+                Balances
+            </button>
         </div>
 
+        @if (_mode == SubjectBrowserMode.Balances)
+        {
+            <div class="flex-grow-1" style="min-height:0; overflow:auto;">
+                <SubjectBalanceReports OnOpenSubject="OpenSubjectFromBalancesAsync"
+                                       StartHistorical="@_balanceReportHistorical"
+                                       InitialAsOfDate="@_balanceReportAsOfDate" />
+            </div>
+        }
+        else
+        {
         <div class="small text-muted mb-2"
              @onpointerdown="HandleRootMenuPointerDown"
              @onpointerup="HandleRootMenuPointerUp"
@@ -123,10 +139,6 @@ else if (_isMobile)
             }
         </div>
 
-        @{
-            var mobileActions = GetMobileShortcutActions();
-        }
-
         <div class="tc-mobile-actionbar tc-visible" role="toolbar" aria-label="Subject browser actions">
             <div class="tc-mobile-action-summary me-2">
                 <div class="tc-mobile-action-title">@GetMobileActionTitle()</div>
@@ -141,7 +153,7 @@ else if (_isMobile)
                 <span>Details</span>
             </button>
 
-            @foreach (var action in mobileActions)
+            @foreach (var action in GetMobileShortcutActions())
             {
                 <button type="button"
                         class="btn-action"
@@ -152,6 +164,7 @@ else if (_isMobile)
                 </button>
             }
         </div>
+        }
     </div>
 }
 else
@@ -164,6 +177,15 @@ else
         }
 
         <div class="flex-grow-1 d-flex flex-column" style="min-height:0; overflow:hidden;">
+            @if (_mode == SubjectBrowserMode.Balances)
+            {
+                <SubjectBalanceReports OnOpenSubject="OpenSubjectFromBalancesAsync"
+                                       StartHistorical="@_balanceReportHistorical"
+                                       InitialAsOfDate="@_balanceReportAsOfDate"
+                                       OnClose="CloseBalancesAsync" />
+            }
+            else
+            {
             <TreeShell IsMobile="@_isMobile">
                 <LeftPane>
                     <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
@@ -177,7 +199,7 @@ else
                                                OnFilterCommitted="HandleFilterCommittedAsync" />
                         </div>
 
-                        <div class="btn-group mb-3" role="group" aria-label="Browser mode">
+                        <div class="btn-group mb-3 tc-subject-browser-modes" role="group" aria-label="Browser mode">
                             <button type="button"
                                     class="btn @GetModeButtonClass(SubjectBrowserMode.Enquiry)"
                                     @onclick="() => SetModeAsync(SubjectBrowserMode.Enquiry)">
@@ -192,6 +214,11 @@ else
                                     class="btn @GetModeButtonClass(SubjectBrowserMode.Subject)"
                                     @onclick="() => SetModeAsync(SubjectBrowserMode.Subject)">
                                 Subject
+                            </button>
+                            <button type="button"
+                                    class="btn @GetModeButtonClass(SubjectBrowserMode.Balances)"
+                                    @onclick="() => SetModeAsync(SubjectBrowserMode.Balances)">
+                                Balances
                             </button>
                         </div>
 
@@ -229,7 +256,7 @@ else
                 <RightPane>
                     <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
                         <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="fw-semibold">Subject Detail</div>
+                            <div class="fw-semibold">@(_mode == SubjectBrowserMode.Balances ? "Subject Balances" : "Subject Detail")</div>
                             <div class="small text-muted">@_mode</div>
                         </div>
 
@@ -237,6 +264,7 @@ else
                     </div>
                 </RightPane>
             </TreeShell>
+            }
         </div>
     </div>
 }
@@ -256,7 +284,8 @@ else
     {
         Enquiry,
         Namespace,
-        Subject
+        Subject,
+        Balances
     }
 
     private sealed record SubjectBrowserAction(
@@ -277,6 +306,8 @@ else
     private string? _returnNodeKey;
     private string? _initialSelectKey;
     private SubjectBrowserMode _mode = SubjectBrowserMode.Enquiry;
+    private bool _balanceReportHistorical;
+    private DateOnly? _balanceReportAsOfDate;
     private SubjectBrowserDetailModel? _selectedDetail;
     private string? _errorMessage;
     private string? _actionMessage;
@@ -349,6 +380,9 @@ else
             return;
         }
 
+        if (_mode == SubjectBrowserMode.Balances)
+            return;
+
         await RefreshNamespaceSuggestionsAsync();
         await LoadRootsAsync();
 
@@ -360,7 +394,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_isMobile && !_isEmbedded)
+        if (firstRender && !_isMobile && !_isEmbedded && _mode != SubjectBrowserMode.Balances)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("subjectBrowser.initEditorMessaging", _dotNetRef);
@@ -372,7 +406,7 @@ else
     {
         try
         {
-            if (!_isMobile && !_isEmbedded)
+            if (!_isMobile && !_isEmbedded && _mode != SubjectBrowserMode.Balances)
                 await JSRuntime.InvokeVoidAsync("subjectBrowser.disposeEditorMessaging");
         }
         catch
@@ -411,6 +445,17 @@ else
             && TryParseEnquiryView(enquiryValue.ToString(), out var enquiryView))
         {
             _activeEnquiryView = enquiryView;
+        }
+
+        _balanceReportHistorical = _mode == SubjectBrowserMode.Balances
+            && query.TryGetValue("balanceView", out var balanceView)
+            && string.Equals(balanceView.ToString(), "Historical", StringComparison.OrdinalIgnoreCase);
+        if (_balanceReportHistorical
+            && query.TryGetValue("asOf", out var asOfValue)
+            && DateOnly.TryParseExact(asOfValue.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var asOfDate))
+        {
+            _balanceReportAsOfDate = asOfDate;
         }
 
         if (query.TryGetValue("create", out var createValue)
@@ -622,6 +667,12 @@ else
             ClearRemovalPreview();
             ClearMoveState();
             ClearAddExistingState();
+        }
+
+        if (mode != SubjectBrowserMode.Balances && _rootNodes.Count == 0)
+        {
+            await RefreshNamespaceSuggestionsAsync();
+            await LoadRootsAsync();
         }
 
         UpdateBrowserUrl();
@@ -2961,6 +3012,11 @@ else
 
     private RenderFragment RenderDetailPaneContent()
     {
+        if (_mode == SubjectBrowserMode.Balances)
+            return @<SubjectBalanceReports OnOpenSubject="OpenSubjectFromBalancesAsync"
+                                            StartHistorical="@_balanceReportHistorical"
+                                            InitialAsOfDate="@_balanceReportAsOfDate" />;
+
         if (ShouldRenderEditSubjectPanel())
             return RenderEditSubjectPanel();
 
@@ -2993,6 +3049,31 @@ else
 
         return RenderSelectedDetailPane();
     }
+
+    private async Task OpenSubjectFromBalancesAsync(string subjectCode)
+    {
+        if (string.IsNullOrWhiteSpace(subjectCode))
+            return;
+
+        _mode = SubjectBrowserMode.Enquiry;
+        _activeEnquiryView = SubjectEnquiryView.Statement;
+        _selectedBranchKey = subjectCode;
+        _expandToKey = subjectCode;
+        await LoadDetailFromKeyAsync(subjectCode);
+        UpdateBrowserUrl();
+
+        if (_isMobile && !_isEmbedded)
+        {
+            NavigationManager.NavigateTo(
+                BuildUrl(
+                    embedded: true,
+                    selectKey: subjectCode,
+                    returnNodeKey: subjectCode),
+                forceLoad: true);
+        }
+    }
+
+    private Task CloseBalancesAsync() => SetModeAsync(SubjectBrowserMode.Enquiry);
 
     private bool ShouldRenderDeleteSubjectPanel()
     {

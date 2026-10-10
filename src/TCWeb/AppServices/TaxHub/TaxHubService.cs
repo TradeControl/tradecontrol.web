@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -731,6 +732,28 @@ namespace TradeControl.Web.AppServices.TaxHub
             var equityReconciliation = await GetEquityReconciliationRowsAsync();
             var validationSummary = BuildAccountsValidationSummary(equityReconciliation);
             var companiesHouse = await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod);
+            TaxHubSubjectBalanceEvidence? subjectBalanceEvidence = null;
+
+            if (isYearEndBalanceSheet)
+            {
+                var effectiveDate = new DateOnly(
+                    selectedPeriod.Year,
+                    selectedPeriod.Month,
+                    DateTime.DaysInMonth(selectedPeriod.Year, selectedPeriod.Month));
+                var snapshot = await new Subjects(_nodeContext).YearEndBalanceSnapshotAsync(effectiveDate);
+                subjectBalanceEvidence = new TaxHubSubjectBalanceEvidence
+                {
+                    EffectiveDate = snapshot.EffectiveDate,
+                    DebtorTotal = snapshot.DebtorTotal,
+                    CreditorTotal = snapshot.CreditorTotal,
+                    DebtorCount = snapshot.DebtorCount,
+                    CreditorCount = snapshot.CreditorCount,
+                    IsReconciled = snapshot.Reconciliation.IsReconciled,
+                    IsClosedPeriod = companiesHouse.IsYearClosed,
+                    SnapshotToken = snapshot.SnapshotToken,
+                    SubjectBrowserUrl = $"/Subject/Browser/Index?mode=Balances&balanceView=Historical&asOf={Uri.EscapeDataString(effectiveDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))}"
+                };
+            }
 
             return new TaxHubAccountsWorkspaceModel
             {
@@ -746,6 +769,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 AnnualDetails = annualDetails,
                 MonthlyDetails = monthlyDetails,
                 BalanceSheet = balanceSheet,
+                SubjectBalanceEvidence = subjectBalanceEvidence,
                 ValidationSummary = validationSummary,
                 EquityReconciliation = equityReconciliation,
                 CompaniesHouse = companiesHouse
