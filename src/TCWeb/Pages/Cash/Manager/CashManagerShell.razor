@@ -217,6 +217,8 @@ else
 @code {
     [Parameter] public string? InitialAccountCode { get; set; }
     [Parameter] public string? InitialPaymentCode { get; set; }
+    [Parameter] public short? InitialYearNumber { get; set; }
+    [Parameter] public string? InitialSection { get; set; }
 
     private IReadOnlyList<CashManagerSelectOption> _cashCodeOptions = Array.Empty<CashManagerSelectOption>();
     private const int NamespaceSuggestionPageSize = 12;
@@ -288,13 +290,24 @@ else
         }
 
         await RefreshAccountsAsync(preferredAccountCode);
+        if (Enum.TryParse<CashManagerSection>(InitialSection, true, out var requestedSection))
+        {
+            _selectedSection = requestedSection;
+            NormalizeSection();
+        }
         _years = await CashManagerService.GetYearsAsync();
 
         var defaultPeriod = await CashManagerService.GetDefaultPeriodAsync();
-        _selectedYearNumber = defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
-        _selectedPeriodStartOn = defaultPeriod?.StartOn;
+        var hasRequestedYear = InitialYearNumber.HasValue
+            && _years.Any(year => year.YearNumber == InitialYearNumber.Value);
+        _selectedYearNumber = hasRequestedYear
+            ? InitialYearNumber
+            : defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
+        _selectedPeriodStartOn = hasRequestedYear ? null : defaultPeriod?.StartOn;
 
         await LoadPeriodsAsync(_selectedYearNumber);
+        if (hasRequestedYear)
+            _selectedPeriodStartOn = null;
         await ReloadStatementAsync();
     }
 

@@ -1,5 +1,19 @@
 # Tax Hub Findings
 
+## 10 October 2026 — Guided review consumes native accounting evidence
+
+- The completed Subjects project resolves the debtor/creditor prerequisite without giving Tax Hub a second population query or operational report. The wizard consumes counts, gross totals, reconciliation and a deterministic digest only.
+- Historical debtor/creditor evidence and current aged invoices are different products. The year-end wizard uses the former and links to the Subject Browser at the same effective date; it never labels the closed-period population as aged debt.
+- Bank and cash evidence can be derived without new allocations: each native cash account's last dated statement balance uses the existing current/reserve classification and must reconcile to the balance sheet's CASH and BANK rows. The STD 30 September 2026 evidence reconciles exactly: £27,880.00 current plus £425,769.05 reserve, with zero difference.
+- `AccountTypeCode = Asset` is too broad for the fixed-assets review because it also includes share capital and long-term liabilities. The reviewed Category Tree mappings already define the supported statutory population; reusing `CA-ASSET` and `CA-DEPREC` keeps the evidence list aligned with the filing projection without free-form allocations.
+- Posted asset-account directions support a faithful movement review—opening carrying value, increases, reductions and closing carrying value—but a reduction is not intrinsically labelled as depreciation, disposal or another adjustment. The wizard therefore calls these **reductions / write-downs** and links to the native transaction history rather than asserting unsupported semantics.
+- Asset accounts share the native `Cash.tbPayment` lifecycle used by bank accounts. The existing asset-reversal procedure already creates future Unposted reductions, so the wizard can post an instalment due by the reviewed year end without creating a parallel depreciation ledger or accepting a filing-only value.
+- “Pending” in this workflow means the existing **Unposted** payment status; no new payment status was introduced. Future schedule entries remain Unposted, and the posting action goes through the normal Cash asset path so every downstream accounting view sees the same transaction.
+- A text reference is the present reversal-series discriminator (`Write off…`). The wizard consumes that established convention and revalidates each selected row at posting time. It does not invent a schedule where none exists; richer machine-readable acquisition/schedule provenance remains a possible Cash-project refinement rather than a Companies House filing field.
+- An account-only Cash Manager deep link is insufficient for year-end evidence: Cash Manager otherwise applies its active month, which can legitimately show no rows for a prior filing year. **Review statement** now carries the reviewed year and deliberately selects **All months in year**; the distinct **Manage schedule** action opens the account's native Assets workspace rather than conflating historical review with Unposted schedule maintenance.
+- The complete evidence gate binds the three source digests into `year-end-evidence-review/v1`. Only its deliberate completion event unlocks filing inputs; changed evidence resets and relocks the journey.
+- **Year-end review** is an internal control concept, not the user's primary task. A separate tab caused a reviewer to select Companies House and encounter a lock with no obvious continuation. The navigation now names the user's action—**File Your Accounts**—and carries the user through the evidence review and subsequent filing stages without requiring them to infer the internal workflow structure.
+
 ## 9 October 2026 — Accounting evidence precedes authority filing
 
 - The Equity Bridge proves mathematical reconciliation but does not by itself establish that individual debtor, creditor, bank or asset positions have been reviewed by the people responsible for them.

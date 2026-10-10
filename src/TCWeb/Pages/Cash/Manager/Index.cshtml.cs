@@ -16,6 +16,12 @@ namespace TradeControl.Web.Pages.Cash.Manager
         [BindProperty(SupportsGet = true)]
         public string? PaymentCode { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public short? YearNumber { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public string? Section { get; set; }
+
         public async Task OnGetAsync()
         {
             await SetViewData();

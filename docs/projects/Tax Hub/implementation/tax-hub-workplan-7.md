@@ -40,12 +40,12 @@ This register is the authoritative statement of progress. Implementation evidenc
 | 7.3 — Reviewed filing inputs | **PASSED** | Human review accepted the corrected source-derived balance-sheet boundary, Accounts Mode eligibility treatment and clarified director-note schedule on 9 October 2026. | 7.4 authorised. |
 | 7.4 — Exact-document preparation | **PASSED** | Human review accepted the corrected retained XHTML, source-derived employees, filing classifications and the paged `DRAFT — NOT FILED` PDF derivative on 9 October 2026. | 7.5 authorised. |
 | 7.5 — Immutable approval | **PASSED** | Human review exercised the Azure preparation-to-approval journey and accepted its attributable, digest-bound `Approved — not filed` state on 9 October 2026. | The approval mechanism is accepted; submission is not yet authorised. |
-| Pre-submission accounting-evidence dependency | **DEFERRED TO SUBJECTS PROJECT** | The approved [polarity-based aged-balances work plan](../../Subjects/subject-aged-balances-workplan.md) must first provide coherent dated debtor/creditor evidence, after which the guided year-end review can be completed. | Phase 7.6 remains unopened; product dispatch stays disabled. |
+| Pre-submission accounting-evidence dependency | **READY FOR HUMAN REVIEW** | Wizard increments 1–4 now cover `subject-balances/v1`, reconciled native current/reserve accounts through `bank-cash/v1`, mapped asset carrying values and due native write-offs through `fixed-assets/v2`, and a combined digest-bound completion gate. | Human review must accept the complete journey before Phase 7.6 can open; product dispatch stays disabled. |
 | 7.6 — Submission and status | **NOT STARTED** | Requires the accepted Subjects evidence contract and guided year-end review in addition to Phase 7.5. | Product dispatch remains disabled. |
 | 7.7 — History and recovery | **NOT STARTED** | Requires Phase 7.6 gate acceptance. | No product filing history/recovery workflow exists. |
 | 7.8 — Live activation | **EXTERNALLY BLOCKED / NOT STARTED** | Protected live package reference received 9 October 2026; separate live credentials, completed workflow gates and explicit authority for a real filing are still required. Live-service testing is prohibited. | No live exchange is authorised. |
 
-**Current position:** Phase 7.5 is accepted, but Phase 7.6 is deliberately not authorised. Implement and review the polarity-based Subjects ageing framework, then return here to complete the guided year-end evidence review before submission/status work begins.
+**Current position:** Phase 7.5 is accepted, but Phase 7.6 is deliberately not authorised. The complete guided year-end evidence journey is implemented and ready for human review: Subjects, bank/cash, mapped fixed assets and combined completion. Filing inputs unlock only after that review is completed. Phase 7.6 submission/status work must not begin until this human gate passes.
 
 Status meanings:
 
@@ -345,6 +345,44 @@ Once that plan supplies an accepted year-end evidence snapshot, this workflow wi
 5. continues clearly into statutory filing inputs and document preparation without accepting free-entry accounting values.
 
 This is an internal product-quality gate, not a Companies House contract requirement and not part of the XML transport. Phase 7.6 remains `NOT STARTED` until the Subjects framework and the resulting guided review have passed human review.
+
+### Guided review increment 1 — scope and Subject balances, 10 October 2026
+
+The accepted Subjects project now supplies an authority-neutral, deterministic `subject-balances/v1` snapshot for the selected accounting year end. Human usability review rejected a separate **Year-end review** tab because it exposed an internal control concept as a competing destination: a user naturally selected **Companies House** and then could not see how to continue. The Accounts workspace navigation now presents the action **File Your Accounts**, rather than requiring the user to infer the journey from an authority name. It opens one destination headed **File your accounts**, with an explicit **Start filing journey** action. That continuous journey begins with the wizard-shaped evidence sequence—scope, debtors/creditors, bank/cash, fixed assets and completion—then unlocks filing inputs, exact-document review and approval in place.
+
+The first increment implements the scope and debtor/creditor steps. It shows the gross year-end populations and reconciliation status, identifies the exact snapshot digest, states explicitly that the evidence is a historical balance rather than reconstructed aged debt, and opens the Subject Browser's Historical view at the same effective date in a separate tab. The wizard consumes only the bounded summary; operational constituent detail remains in the Subject Browser.
+
+Confirmation is bound in the component to the selected effective date and snapshot token and resets when either changes. The overall review therefore cannot complete, and the Companies House filing-input/preparation component now fails closed behind the incomplete review. Existing dispatch remains `SendDisabled`; this increment creates no preparation, approval, submission or external request.
+
+### Guided review increment 2 — native bank and cash evidence, 10 October 2026
+
+The second increment reads the last native statement balance for every open cash account at the selected year end. It applies the accounting system's established classification—an account with a cash code is **Current**, while an account without one is **Reserve**—rather than introducing filing allocations or user-entered values. Each account is shown with a Cash Manager drill-through.
+
+The ordered account population, dated balances, current/reserve totals and corresponding native balance-sheet totals are bound into a deterministic `bank-cash/v1` SHA-256 digest. Confirmation is enabled only when the individual account total exactly reconciles to the `CASH + BANK` balance-sheet total and the earlier Subject step has been confirmed. On the STD sandbox at 30 September 2026, current £27,880.00 plus reserve £425,769.05 reconciled to the balance sheet with a £0.00000 difference.
+
+The evidence confirmation resets if either the Subject or bank/cash digest changes. Fixed assets and final digest-bound completion remain visibly pending, so filing inputs, preparation and approval remain inaccessible and no external request can be made.
+
+### Guided review increment 3 — mapped fixed assets and completion, 10 October 2026
+
+The third increment uses the same reviewed Category Tree roots as the statutory accounts projection (`CA-ASSET` and `CA-DEPREC`) to select fixed-asset accounts. It does not infer fixed assets from `AccountTypeCode` alone because that native account type also contains capital and long-term-liability accounts. For every mapped asset it presents opening carrying value, posted increases, posted reductions/write-downs and closing carrying value, with a Cash Manager drill-through for transaction-level review.
+
+The closing asset population reconciles to the native mapped balance-sheet accounts and was initially bound into `fixed-assets/v1`. On the STD sandbox at 30 September 2026, the mapped asset accounts and balance sheet both total £6,800.00; the Companies House `BalanceSheet.FixedAssets` projection independently returns £6,800.00. The evidence UI explicitly states that a reduction may be a write-down, disposal or another reviewed adjustment and requires the user to inspect the underlying account rather than inventing a classification.
+
+The final review page lists all three reviewed evidence contracts and binds their source digests, company display identity and period into `year-end-evidence-review/v1`. A deliberate final confirmation raises the completion event that unlocks the existing filing-input, exact-document and immutable-approval journey below. Any source digest or selected period change resets every confirmation and relocks the journey. This review completion is transient workflow state; the later accepted immutable accounts approval remains the durable authority for the prepared document and package.
+
+No external submission is enabled or made. The complete guided review is **READY FOR HUMAN REVIEW**; Phase 7.6 remains unopened.
+
+### Guided review increment 4 — scheduled asset write-offs, 10 October 2026
+
+Trade Control asset accounts use the same native `Cash.tbPayment` mechanics as bank accounts. The existing `Cash.proc_AssetReversal` workflow already expresses a depreciation/write-off plan as dated Unposted reductions; posting an instalment changes its native status and lets the ordinary accounting views, Equity Bridge and statutory projection consume it. The filing journey therefore does not introduce a depreciation ledger or a browser-entered balance-sheet adjustment.
+
+The fixed-assets step now reads recognised Unposted `Write off…` reductions from the same mapped asset accounts and presents the existing schedule alongside the posted carrying-value evidence. Instalments after the selected accounting date remain visibly Unposted. An instalment due on or before that date can be selected and posted only after an explicit confirmation that identifies its payment code, date and amount.
+
+The server action revalidates the transaction at use time: it must still be Unposted, reduction-only, due by the selected accounting date, use the established write-off reference convention and belong to a native asset account. Existing ownership rules apply, with Manager/Administrator privilege matching Cash Manager. The action uses the existing asset-posting path rather than a direct balance override.
+
+Any due scheduled write-off keeps fixed-asset confirmation disabled. After posting, the whole Accounts workspace is reloaded; the revised native balances, Equity Bridge, statutory projection and evidence digest are recomputed, while the changed `fixed-assets/v2` snapshot invalidates the fixed-asset and final confirmations. Earlier Subject and bank/cash confirmations survive only when their own evidence digests are unchanged.
+
+This increment deliberately consumes a pre-existing schedule; it does not create or infer useful lives, methods or residual values inside the filing journey. Schedule creation and maintenance remain Cash asset-account responsibilities. No Companies House request is enabled or made, and Phase 7.6 remains unopened pending human acceptance of the complete journey.
 
 ## Phase 7.6 — Controlled submission and status conversation
 

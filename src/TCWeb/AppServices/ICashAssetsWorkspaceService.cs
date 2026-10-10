@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,6 +60,13 @@ namespace TradeControl.Web.AppServices
 
         Task PostAsync(
             string paymentCode,
+            string aspNetUserId,
+            bool isPrivileged,
+            CancellationToken cancellationToken = default);
+
+        Task PostScheduledWriteOffAsync(
+            string paymentCode,
+            DateOnly accountingDate,
             string aspNetUserId,
             bool isPrivileged,
             CancellationToken cancellationToken = default);

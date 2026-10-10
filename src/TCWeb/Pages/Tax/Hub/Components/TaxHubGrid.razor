@@ -31,7 +31,9 @@
                 break;
 
             case TaxHubWorkspace.Accounts:
-                <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace" IsMobile="@IsMobile" />
+                <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace"
+                                        IsMobile="@IsMobile"
+                                        OnWorkspaceRefreshRequested="OnAccountsWorkspaceRefreshRequested" />
                 break;
 
             default:
@@ -51,6 +53,7 @@
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback OnAccountsWorkspaceRefreshRequested { get; set; }
 
     private string LoadingText => Workspace switch
     {

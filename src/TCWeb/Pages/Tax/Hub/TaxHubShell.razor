@@ -104,7 +104,8 @@
                                             VatFilingEnabled="@ShowHmrcConnection"
                                             IsMobile="@_isMobile"
                                             IsLoading="@_isWorkspaceLoading"
-                                            Error="@_workspaceError" />
+                                            Error="@_workspaceError"
+                                            OnAccountsWorkspaceRefreshRequested="RefreshWorkspaceAsync" />
                             </div>
                         </div>
                     </div>
@@ -201,7 +202,8 @@ else
                                         VatFilingEnabled="@ShowHmrcConnection"
                                         IsMobile="@_isMobile"
                                         IsLoading="@_isWorkspaceLoading"
-                                        Error="@_workspaceError" />
+                                    Error="@_workspaceError"
+                                    OnAccountsWorkspaceRefreshRequested="RefreshWorkspaceAsync" />
                         </div>
                     </section>
                 </div>

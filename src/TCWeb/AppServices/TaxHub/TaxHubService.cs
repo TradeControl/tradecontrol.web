@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +18,7 @@ namespace TradeControl.Web.AppServices.TaxHub
     public sealed class TaxHubService : ITaxHubService
     {
         private const string CapitalCode = "CAPITAL";
+        private const string AccountsTaxSourceCode = "UK-CO-ACCTS-2026";
         private const decimal ValidationTolerance = 0.10m;
 
         private readonly NodeContext _nodeContext;
@@ -733,6 +736,8 @@ namespace TradeControl.Web.AppServices.TaxHub
             var validationSummary = BuildAccountsValidationSummary(equityReconciliation);
             var companiesHouse = await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod);
             TaxHubSubjectBalanceEvidence? subjectBalanceEvidence = null;
+            TaxHubBankCashEvidence? bankCashEvidence = null;
+            TaxHubFixedAssetEvidence? fixedAssetEvidence = null;
 
             if (isYearEndBalanceSheet)
             {
@@ -753,6 +758,12 @@ namespace TradeControl.Web.AppServices.TaxHub
                     SnapshotToken = snapshot.SnapshotToken,
                     SubjectBrowserUrl = $"/Subject/Browser/Index?mode=Balances&balanceView=Historical&asOf={Uri.EscapeDataString(effectiveDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))}"
                 };
+                bankCashEvidence = await BuildBankCashEvidenceAsync(selectedPeriodInfo!.YearNumber, selectedPeriod, effectiveDate);
+                var yearStart = await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(period => period.YearNumber == selectedPeriodInfo!.YearNumber)
+                    .MinAsync(period => period.StartOn);
+                fixedAssetEvidence = await BuildFixedAssetEvidenceAsync(selectedPeriodInfo.YearNumber, yearStart, selectedPeriod, effectiveDate);
             }
 
             return new TaxHubAccountsWorkspaceModel
@@ -770,9 +781,337 @@ namespace TradeControl.Web.AppServices.TaxHub
                 MonthlyDetails = monthlyDetails,
                 BalanceSheet = balanceSheet,
                 SubjectBalanceEvidence = subjectBalanceEvidence,
+                BankCashEvidence = bankCashEvidence,
+                FixedAssetEvidence = fixedAssetEvidence,
                 ValidationSummary = validationSummary,
                 EquityReconciliation = equityReconciliation,
                 CompaniesHouse = companiesHouse
+            };
+        }
+
+        private async Task<TaxHubBankCashEvidence> BuildBankCashEvidenceAsync(
+            short yearNumber,
+            DateTime selectedPeriod,
+            DateOnly effectiveDate)
+        {
+            var accounts = new List<TaxHubBankCashEvidenceItem>();
+            var connection = _nodeContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+                await connection.OpenAsync();
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    WITH account_balances AS
+                    (
+                        SELECT
+                            account.AccountCode,
+                            account.AccountName,
+                            CASE WHEN account.CashCode IS NULL THEN N'Reserve' ELSE N'Current' END AS AccountKind,
+                            COALESCE(statement.PaidBalance, account.OpeningBalance, 0) AS Balance,
+                            ROW_NUMBER() OVER
+                            (
+                                PARTITION BY account.AccountCode
+                                ORDER BY statement.StartOn DESC, statement.EntryNumber DESC
+                            ) AS BalanceRank
+                        FROM Subject.tbAccount AS account
+                        LEFT JOIN Cash.vwAccountStatement AS statement
+                            ON statement.AccountCode = account.AccountCode
+                            AND statement.StartOn <= @SelectedPeriod
+                        WHERE account.AccountTypeCode = 0
+                          AND account.AccountClosed = 0
+                    )
+                    SELECT AccountCode, AccountName, AccountKind, Balance
+                    FROM account_balances
+                    WHERE BalanceRank = 1
+                    ORDER BY AccountKind, AccountCode;";
+
+                var periodParameter = command.CreateParameter();
+                periodParameter.ParameterName = "@SelectedPeriod";
+                periodParameter.DbType = DbType.DateTime;
+                periodParameter.Value = selectedPeriod;
+                command.Parameters.Add(periodParameter);
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var accountCode = reader.GetString(0);
+                    accounts.Add(new TaxHubBankCashEvidenceItem
+                    {
+                        AccountCode = accountCode,
+                        AccountName = reader.GetString(1),
+                        AccountKind = reader.GetString(2),
+                        Balance = reader.GetDecimal(3),
+                        CashManagerUrl = $"/Cash/Manager/Index?AccountCode={Uri.EscapeDataString(accountCode)}&YearNumber={yearNumber.ToString(CultureInfo.InvariantCulture)}"
+                    });
+                }
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            var balanceSheetAccounts = await _nodeContext.Cash_BalanceSheet
+                .AsNoTracking()
+                .Where(row => row.StartOn == selectedPeriod && (row.AssetName == "CASH" || row.AssetName == "BANK"))
+                .Select(row => new { row.AssetName, row.Balance })
+                .ToListAsync();
+
+            var currentTotal = accounts.Where(account => account.AccountKind == "Current").Sum(account => account.Balance);
+            var reserveTotal = accounts.Where(account => account.AccountKind == "Reserve").Sum(account => account.Balance);
+            var balanceSheetCashTotal = balanceSheetAccounts.Where(row => row.AssetName == "CASH").Sum(row => row.Balance);
+            var balanceSheetBankTotal = balanceSheetAccounts.Where(row => row.AssetName == "BANK").Sum(row => row.Balance);
+            var difference = (currentTotal + reserveTotal) - (balanceSheetCashTotal + balanceSheetBankTotal);
+
+            var canonical = new StringBuilder()
+                .Append("bank-cash/v1\n")
+                .Append(effectiveDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append('\n')
+                .Append(currentTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(reserveTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(balanceSheetCashTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(balanceSheetBankTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('\n');
+
+            foreach (var account in accounts.OrderBy(account => account.AccountCode, StringComparer.Ordinal))
+            {
+                canonical.Append(account.AccountCode).Append('|')
+                    .Append(account.AccountName).Append('|')
+                    .Append(account.AccountKind).Append('|')
+                    .Append(account.Balance.ToString("0.00000", CultureInfo.InvariantCulture)).Append('\n');
+            }
+
+            return new TaxHubBankCashEvidence
+            {
+                EffectiveDate = effectiveDate,
+                Accounts = accounts,
+                CurrentAccountTotal = currentTotal,
+                ReserveAccountTotal = reserveTotal,
+                BalanceSheetCashTotal = balanceSheetCashTotal,
+                BalanceSheetBankTotal = balanceSheetBankTotal,
+                ReconciliationDifference = difference,
+                IsReconciled = Math.Abs(difference) < 0.00001m,
+                SnapshotToken = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())))
+            };
+        }
+
+        private async Task<TaxHubFixedAssetEvidence> BuildFixedAssetEvidenceAsync(
+            short yearNumber,
+            DateTime yearStart,
+            DateTime selectedPeriod,
+            DateOnly effectiveDate)
+        {
+            var assets = new List<TaxHubFixedAssetEvidenceItem>();
+            var connection = _nodeContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+                await connection.OpenAsync();
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT
+                        account.AccountCode,
+                        account.AccountName,
+                        COALESCE(closing_balance.PaidBalance, account.OpeningBalance, 0) AS ClosingCarryingValue,
+                        COALESCE(movements.Increases, 0) AS Increases,
+                        COALESCE(movements.Reductions, 0) AS Reductions
+                    FROM Subject.tbAccount AS account
+                    OUTER APPLY
+                    (
+                        SELECT TOP (1) statement.PaidBalance
+                        FROM Cash.vwAccountStatement AS statement
+                        WHERE statement.AccountCode = account.AccountCode
+                          AND statement.StartOn <= @SelectedPeriod
+                        ORDER BY statement.StartOn DESC, statement.EntryNumber DESC
+                    ) AS closing_balance
+                    OUTER APPLY
+                    (
+                        SELECT
+                            SUM(payment.PaidInValue) AS Increases,
+                            SUM(payment.PaidOutValue) AS Reductions
+                        FROM Cash.tbPayment AS payment
+                        WHERE payment.AccountCode = account.AccountCode
+                          AND payment.PaymentStatusCode = 1
+                          AND payment.PaidOn >= @YearStart
+                          AND payment.PaidOn < DATEADD(DAY, 1, @EffectiveDate)
+                    ) AS movements
+                    WHERE account.AccountTypeCode = 2
+                      AND account.AccountClosed = 0
+                      AND EXISTS
+                      (
+                          SELECT 1
+                          FROM Cash.vwTaxTagCashCode AS mapping
+                          WHERE mapping.TaxSourceCode = @TaxSourceCode
+                            AND mapping.CashCode = account.CashCode
+                            AND mapping.MappingRoot IN (N'CA-ASSET', N'CA-DEPREC')
+                      )
+                    ORDER BY account.AccountCode;";
+
+                command.CommandText += @"
+
+                    SELECT
+                        payment.AccountCode,
+                        payment.PaymentCode,
+                        payment.PaidOn,
+                        COALESCE(payment.PaymentReference, N''),
+                        payment.PaidOutValue
+                    FROM Cash.tbPayment AS payment
+                    INNER JOIN Subject.tbAccount AS account
+                        ON account.AccountCode = payment.AccountCode
+                    WHERE account.AccountTypeCode = 2
+                      AND account.AccountClosed = 0
+                      AND payment.PaymentStatusCode = 0
+                      AND payment.PaidInValue = 0
+                      AND payment.PaidOutValue > 0
+                      AND UPPER(LTRIM(COALESCE(payment.PaymentReference, N''))) LIKE N'WRITE OFF%'
+                      AND EXISTS
+                      (
+                          SELECT 1
+                          FROM Cash.vwTaxTagCashCode AS mapping
+                          WHERE mapping.TaxSourceCode = @TaxSourceCode
+                            AND mapping.CashCode = account.CashCode
+                            AND mapping.MappingRoot IN (N'CA-ASSET', N'CA-DEPREC')
+                      )
+                    ORDER BY payment.AccountCode, payment.PaidOn, payment.PaymentCode;";
+
+                var selectedPeriodParameter = command.CreateParameter();
+                selectedPeriodParameter.ParameterName = "@SelectedPeriod";
+                selectedPeriodParameter.DbType = DbType.DateTime;
+                selectedPeriodParameter.Value = selectedPeriod;
+                command.Parameters.Add(selectedPeriodParameter);
+
+                var yearStartParameter = command.CreateParameter();
+                yearStartParameter.ParameterName = "@YearStart";
+                yearStartParameter.DbType = DbType.DateTime;
+                yearStartParameter.Value = yearStart;
+                command.Parameters.Add(yearStartParameter);
+
+                var effectiveDateParameter = command.CreateParameter();
+                effectiveDateParameter.ParameterName = "@EffectiveDate";
+                effectiveDateParameter.DbType = DbType.Date;
+                effectiveDateParameter.Value = effectiveDate.ToDateTime(TimeOnly.MinValue);
+                command.Parameters.Add(effectiveDateParameter);
+
+                var taxSourceParameter = command.CreateParameter();
+                taxSourceParameter.ParameterName = "@TaxSourceCode";
+                taxSourceParameter.DbType = DbType.String;
+                taxSourceParameter.Value = AccountsTaxSourceCode;
+                command.Parameters.Add(taxSourceParameter);
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var accountCode = reader.GetString(0);
+                    var closing = reader.GetDecimal(2);
+                    var increases = reader.GetDecimal(3);
+                    var reductions = reader.GetDecimal(4);
+                    assets.Add(new TaxHubFixedAssetEvidenceItem
+                    {
+                        AccountCode = accountCode,
+                        AssetName = reader.GetString(1),
+                        OpeningCarryingValue = closing - increases + reductions,
+                        Increases = increases,
+                        Reductions = reductions,
+                        ClosingCarryingValue = closing,
+                        CashManagerUrl = $"/Cash/Manager/Index?AccountCode={Uri.EscapeDataString(accountCode)}&YearNumber={yearNumber.ToString(CultureInfo.InvariantCulture)}",
+                        ScheduleManagerUrl = $"/Cash/Manager/Index?AccountCode={Uri.EscapeDataString(accountCode)}&Section=Assets"
+                    });
+                }
+
+                if (await reader.NextResultAsync())
+                {
+                    var assetsByCode = assets.ToDictionary(asset => asset.AccountCode, StringComparer.OrdinalIgnoreCase);
+                    while (await reader.ReadAsync())
+                    {
+                        var accountCode = reader.GetString(0);
+                        if (!assetsByCode.TryGetValue(accountCode, out var asset))
+                            continue;
+
+                        var dueOn = DateOnly.FromDateTime(reader.GetDateTime(2));
+                        asset.ScheduledWriteOffs.Add(new TaxHubScheduledAssetWriteOff
+                        {
+                            PaymentCode = reader.GetString(1),
+                            DueOn = dueOn,
+                            Reference = reader.GetString(3),
+                            Amount = reader.GetDecimal(4),
+                            IsDue = dueOn <= effectiveDate
+                        });
+                    }
+                }
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            var assetCodes = assets.Select(asset => asset.AccountCode).ToList();
+            var balanceSheetTotal = assetCodes.Count == 0
+                ? 0m
+                : await _nodeContext.Cash_BalanceSheet
+                    .AsNoTracking()
+                    .Where(row => row.StartOn == selectedPeriod && assetCodes.Contains(row.AssetCode))
+                    .SumAsync(row => row.Balance);
+            var opening = assets.Sum(asset => asset.OpeningCarryingValue);
+            var increasesTotal = assets.Sum(asset => asset.Increases);
+            var reductionsTotal = assets.Sum(asset => asset.Reductions);
+            var closingTotal = assets.Sum(asset => asset.ClosingCarryingValue);
+            var difference = closingTotal - balanceSheetTotal;
+            var dueWriteOffs = assets
+                .SelectMany(asset => asset.ScheduledWriteOffs)
+                .Where(writeOff => writeOff.IsDue)
+                .ToList();
+
+            var canonical = new StringBuilder()
+                .Append("fixed-assets/v2\n")
+                .Append(yearStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append('|')
+                .Append(effectiveDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append('\n')
+                .Append(opening.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(increasesTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(reductionsTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(closingTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                .Append(balanceSheetTotal.ToString("0.00000", CultureInfo.InvariantCulture)).Append('\n');
+
+            foreach (var asset in assets.OrderBy(asset => asset.AccountCode, StringComparer.Ordinal))
+            {
+                canonical.Append(asset.AccountCode).Append('|')
+                    .Append(asset.AssetName).Append('|')
+                    .Append(asset.OpeningCarryingValue.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                    .Append(asset.Increases.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                    .Append(asset.Reductions.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                    .Append(asset.ClosingCarryingValue.ToString("0.00000", CultureInfo.InvariantCulture)).Append('\n');
+
+                foreach (var writeOff in asset.ScheduledWriteOffs
+                    .OrderBy(writeOff => writeOff.DueOn)
+                    .ThenBy(writeOff => writeOff.PaymentCode, StringComparer.Ordinal))
+                {
+                    canonical.Append(writeOff.PaymentCode).Append('|')
+                        .Append(writeOff.DueOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append('|')
+                        .Append(writeOff.Amount.ToString("0.00000", CultureInfo.InvariantCulture)).Append('|')
+                        .Append(writeOff.Reference).Append('\n');
+                }
+            }
+
+            return new TaxHubFixedAssetEvidence
+            {
+                PeriodStart = DateOnly.FromDateTime(yearStart),
+                EffectiveDate = effectiveDate,
+                Assets = assets,
+                OpeningCarryingValue = opening,
+                Increases = increasesTotal,
+                Reductions = reductionsTotal,
+                ClosingCarryingValue = closingTotal,
+                BalanceSheetTotal = balanceSheetTotal,
+                ReconciliationDifference = difference,
+                IsReconciled = Math.Abs(difference) < 0.00001m,
+                DueWriteOffCount = dueWriteOffs.Count,
+                DueWriteOffTotal = dueWriteOffs.Sum(writeOff => writeOff.Amount),
+                SnapshotToken = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())))
             };
         }
 

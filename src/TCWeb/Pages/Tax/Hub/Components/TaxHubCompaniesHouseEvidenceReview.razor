@@ -1,0 +1,796 @@
+@using TradeControl.Web.Pages.Tax.Hub.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using TradeControl.Web.AppServices
+@using TradeControl.Web.Areas.Identity.Data
+@using TradeControl.Web.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<TradeControlWebUser> UserManager
+@inject ICashAssetsWorkspaceService CashAssetsWorkspaceService
+
+<section class="d-flex flex-column gap-3" aria-labelledby="year-end-review-title">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <h2 id="year-end-review-title" class="h5 mb-1">Guided year-end evidence review</h2>
+            <div class="text-muted small">
+                Review the accounting evidence before preparing statutory filing inputs or accounts.
+            </div>
+        </div>
+        <span class="badge bg-warning text-dark">In progress — not approved for filing</span>
+    </div>
+
+    <ol class="list-group list-group-numbered" aria-label="Year-end review steps">
+        @ReviewStep("Scope", ReviewPage.Scope, CanReview)
+        @ReviewStep("Debtors and creditors", ReviewPage.SubjectBalances, _subjectBalancesConfirmed)
+        @ReviewStep("Bank and cash", ReviewPage.BankAndCash, _bankCashConfirmed)
+        @ReviewStep("Fixed assets", ReviewPage.FixedAssets, _fixedAssetsConfirmed)
+        @ReviewStep("Complete review", ReviewPage.Complete, _reviewCompleted)
+    </ol>
+
+    @if (Evidence is null)
+    {
+        <div class="alert alert-secondary mb-0">
+            Select the final period of a completed accounting year before beginning the evidence review.
+        </div>
+    }
+    else
+    {
+        @switch (_page)
+        {
+            case ReviewPage.Scope:
+                <section class="card shadow-sm" aria-labelledby="review-scope-title">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div>
+                            <h3 id="review-scope-title" class="h6 mb-1">1. Review scope</h3>
+                            <div class="text-muted small">The selected company and year remain server-derived.</div>
+                        </div>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Accounting period</dt>
+                            <dd class="col-sm-8">@DisplayOrDash(Readiness.PeriodDisplay)</dd>
+                            <dt class="col-sm-4">Equity Bridge</dt>
+                            <dd class="col-sm-8">@DisplayOrDash(Readiness.EquityBridgeStatus)</dd>
+                            <dt class="col-sm-4">Subject evidence date</dt>
+                            <dd class="col-sm-8 mb-0">@Evidence.EffectiveDate.ToString("d MMMM yyyy")</dd>
+                        </dl>
+                        @if (!CanReview)
+                        {
+                            <div class="alert alert-danger mb-0" role="alert">
+                                The year-end review cannot start until filing readiness, the closed-period check and the Subject evidence reconciliation all pass.
+                            </div>
+                        }
+                        <div>
+                            <button type="button" class="btn btn-primary" disabled="@(!CanReview)"
+                                    @onclick="() => _page = ReviewPage.SubjectBalances">
+                                Begin evidence review
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                break;
+
+            case ReviewPage.SubjectBalances:
+                <section class="card shadow-sm" aria-labelledby="review-subject-balances-title">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                            <div>
+                                <h3 id="review-subject-balances-title" class="h6 mb-1">2. Debtors and creditors</h3>
+                                <div class="text-muted small">
+                                    Historical Subject statement balances at @Evidence.EffectiveDate.ToString("d MMMM yyyy").
+                                    These are year-end balances, not an aged-debt reconstruction.
+                                </div>
+                            </div>
+                            <span class="badge @(Evidence.IsReconciled ? "bg-success" : "bg-danger")">
+                                @(Evidence.IsReconciled ? "Reconciled" : "Review required")
+                            </span>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12 col-sm-6">
+                                <div class="border rounded bg-light p-3 h-100">
+                                    <div class="small text-muted">Debtors — owed to us · @Evidence.DebtorCount Subject@(Evidence.DebtorCount == 1 ? string.Empty : "s")</div>
+                                    <div class="fw-semibold">@Evidence.DebtorTotal.ToString("C")</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="border rounded bg-light p-3 h-100">
+                                    <div class="small text-muted">Creditors — amounts we owe · @Evidence.CreditorCount Subject@(Evidence.CreditorCount == 1 ? string.Empty : "s")</div>
+                                    <div class="fw-semibold">@Evidence.CreditorTotal.ToString("C")</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="small text-muted text-break" title="@Evidence.SnapshotToken">
+                                Evidence contract <code>subject-balances/v1</code> · SHA-256 <code>@ShortDigest(Evidence.SnapshotToken)</code>
+                            </div>
+                            <a class="btn btn-outline-primary btn-sm" href="@Evidence.SubjectBrowserUrl"
+                               target="_blank" rel="noopener">
+                                Review historical balances
+                            </a>
+                        </div>
+
+                        <div class="form-check">
+                            <input id="confirm-subject-balances" class="form-check-input" type="checkbox"
+                                   checked="@_subjectBalancesConfirmed" disabled="@(!CanReview)"
+                                   @onchange="SetSubjectBalancesConfirmedAsync" />
+                            <label class="form-check-label" for="confirm-subject-balances">
+                                I have reviewed the debtor and creditor populations for this year end and the totals above are consistent with the accounting records.
+                            </label>
+                        </div>
+
+                        @if (_subjectBalancesConfirmed)
+                        {
+                            <div class="alert alert-success mb-0" role="status">
+                                Debtor and creditor evidence reviewed for this exact snapshot. Bank and cash is the next required step.
+                            </div>
+                        }
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => _page = ReviewPage.Scope">Back</button>
+                            <button type="button" class="btn btn-primary" disabled="@(!_subjectBalancesConfirmed)"
+                                    @onclick="() => _page = ReviewPage.BankAndCash">
+                                Continue to bank and cash
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                break;
+
+            case ReviewPage.BankAndCash:
+                <section class="card shadow-sm" aria-labelledby="review-bank-cash-title">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                            <div>
+                                <h3 id="review-bank-cash-title" class="h6 mb-1">3. Bank and cash</h3>
+                                <div class="text-muted small">
+                                    Native cash-account statement balances at @Evidence.EffectiveDate.ToString("d MMMM yyyy"), grouped using the existing current and reserve account classification.
+                                </div>
+                            </div>
+                            @if (BankCashEvidence is not null)
+                            {
+                                <span class="badge @(BankCashEvidence.IsReconciled ? "bg-success" : "bg-danger")">
+                                    @(BankCashEvidence.IsReconciled ? "Reconciled" : "Review required")
+                                </span>
+                            }
+                        </div>
+
+                        @if (BankCashEvidence is null)
+                        {
+                            <div class="alert alert-danger mb-0" role="alert">
+                                Dated bank and cash evidence is unavailable. The review cannot continue.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Account</th>
+                                            <th scope="col">Type</th>
+                                            <th scope="col" class="text-end">Year-end balance</th>
+                                            <th scope="col"><span class="visually-hidden">Review</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var account in BankCashEvidence.Accounts)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div class="fw-semibold">@account.AccountName</div>
+                                                    <div class="small text-muted">@account.AccountCode</div>
+                                                </td>
+                                                <td>@account.AccountKind</td>
+                                                <td class="text-end">@FormatMoney(account.Balance)</td>
+                                                <td class="text-end">
+                                                    <a class="btn btn-outline-primary btn-sm" href="@account.CashManagerUrl"
+                                                       target="_blank" rel="noopener">Review account</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th scope="row" colspan="2">Current accounts</th>
+                                            <th class="text-end">@FormatMoney(BankCashEvidence.CurrentAccountTotal)</th>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row" colspan="2">Reserve accounts</th>
+                                            <th class="text-end">@FormatMoney(BankCashEvidence.ReserveAccountTotal)</th>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <dl class="row small mb-0">
+                                <dt class="col-sm-5">Account-statement total</dt>
+                                <dd class="col-sm-7">@FormatMoney(BankCashEvidence.CurrentAccountTotal + BankCashEvidence.ReserveAccountTotal)</dd>
+                                <dt class="col-sm-5">Balance-sheet CASH + BANK</dt>
+                                <dd class="col-sm-7">@FormatMoney(BankCashEvidence.BalanceSheetCashTotal + BankCashEvidence.BalanceSheetBankTotal)</dd>
+                                <dt class="col-sm-5">Difference</dt>
+                                <dd class="col-sm-7 mb-0">@FormatMoney(BankCashEvidence.ReconciliationDifference)</dd>
+                            </dl>
+
+                            <div class="small text-muted text-break" title="@BankCashEvidence.SnapshotToken">
+                                Evidence contract <code>bank-cash/v1</code> · SHA-256 <code>@ShortDigest(BankCashEvidence.SnapshotToken)</code>
+                            </div>
+
+                            @if (!BankCashEvidence.IsReconciled)
+                            {
+                                <div class="alert alert-danger mb-0" role="alert">
+                                    The individual account balances do not reconcile to the native CASH and BANK balance-sheet totals. Confirmation remains disabled.
+                                </div>
+                            }
+
+                            <div class="form-check">
+                                <input id="confirm-bank-cash" class="form-check-input" type="checkbox"
+                                       checked="@_bankCashConfirmed" disabled="@(!CanReviewBankCash)"
+                                       @onchange="SetBankCashConfirmedAsync" />
+                                <label class="form-check-label" for="confirm-bank-cash">
+                                    I have reviewed the current and reserve account balances for this year end and they agree with the underlying accounting records.
+                                </label>
+                            </div>
+
+                            @if (_bankCashConfirmed)
+                            {
+                                <div class="alert alert-success mb-0" role="status">
+                                    Bank and cash evidence reviewed for this exact snapshot. Fixed assets is the next required step.
+                                </div>
+                            }
+                        }
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => _page = ReviewPage.SubjectBalances">Back</button>
+                            <button type="button" class="btn btn-primary" disabled="@(!_bankCashConfirmed)"
+                                    @onclick="() => _page = ReviewPage.FixedAssets">
+                                Continue to fixed assets
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                break;
+
+            case ReviewPage.FixedAssets:
+                <section class="card shadow-sm" aria-labelledby="review-fixed-assets-title">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                            <div>
+                                <h3 id="review-fixed-assets-title" class="h6 mb-1">4. Fixed assets</h3>
+                                <div class="text-muted small">
+                                    Native asset-account carrying values and posted movements from @FixedAssetEvidence?.PeriodStart.ToString("d MMMM yyyy") to @Evidence.EffectiveDate.ToString("d MMMM yyyy").
+                                </div>
+                            </div>
+                            @if (FixedAssetEvidence is not null)
+                            {
+                                <span class="badge @(FixedAssetEvidence.IsReadyForConfirmation ? "bg-success" : "bg-danger")">
+                                    @(FixedAssetEvidence.IsReadyForConfirmation ? "Reconciled" : "Action required")
+                                </span>
+                            }
+                        </div>
+
+                        @if (FixedAssetEvidence is null)
+                        {
+                            <div class="alert alert-danger mb-0" role="alert">
+                                Dated fixed-asset evidence is unavailable. The review cannot continue.
+                            </div>
+                        }
+                        else
+                        {
+                            @if (FixedAssetEvidence.Assets.Count == 0)
+                            {
+                                <div class="alert alert-secondary mb-0">No open fixed-asset accounts exist for this accounting period.</div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Asset</th>
+                                                <th scope="col" class="text-end">Opening value</th>
+                                                <th scope="col" class="text-end">Increases</th>
+                                                <th scope="col" class="text-end">Reductions / write-downs</th>
+                                                <th scope="col" class="text-end">Closing value</th>
+                                                <th scope="col"><span class="visually-hidden">Review and manage</span></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var asset in FixedAssetEvidence.Assets)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <div class="fw-semibold">@asset.AssetName</div>
+                                                        <div class="small text-muted">@asset.AccountCode</div>
+                                                    </td>
+                                                    <td class="text-end">@FormatMoney(asset.OpeningCarryingValue)</td>
+                                                    <td class="text-end">@FormatMoney(asset.Increases)</td>
+                                                    <td class="text-end">@FormatMoney(asset.Reductions)</td>
+                                                    <td class="text-end">@FormatMoney(asset.ClosingCarryingValue)</td>
+                                                    <td class="text-end">
+                                                        <div class="d-flex flex-wrap justify-content-end gap-1">
+                                                            <a class="btn btn-outline-primary btn-sm" href="@asset.CashManagerUrl"
+                                                               target="_blank" rel="noopener">Review statement</a>
+                                                            <a class="btn btn-outline-secondary btn-sm" href="@asset.ScheduleManagerUrl"
+                                                               target="_blank" rel="noopener">Manage schedule</a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th scope="row">Total</th>
+                                                <th class="text-end">@FormatMoney(FixedAssetEvidence.OpeningCarryingValue)</th>
+                                                <th class="text-end">@FormatMoney(FixedAssetEvidence.Increases)</th>
+                                                <th class="text-end">@FormatMoney(FixedAssetEvidence.Reductions)</th>
+                                                <th class="text-end">@FormatMoney(FixedAssetEvidence.ClosingCarryingValue)</th>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                var scheduledWriteOffs = FixedAssetEvidence.Assets
+                                    .SelectMany(asset => asset.ScheduledWriteOffs.Select(writeOff => (asset, writeOff)))
+                                    .OrderBy(item => item.writeOff.DueOn)
+                                    .ThenBy(item => item.writeOff.PaymentCode, StringComparer.Ordinal)
+                                    .ToList();
+
+                                <div class="border rounded p-3 d-flex flex-column gap-3">
+                                    <div>
+                                        <h4 class="h6 mb-1">Depreciation schedule</h4>
+                                        <div class="small text-muted">
+                                            These are pre-existing Unposted write-offs from the native asset accounts. Only instalments due by this year end can be posted here.
+                                        </div>
+                                    </div>
+
+                                    @if (scheduledWriteOffs.Count == 0)
+                                    {
+                                        <div class="text-muted small">
+                                            No Unposted write-off schedule entries were found. Use <strong>Manage schedule</strong> for the relevant asset above if a reversal series must be created or corrected in Cash Manager.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col">Asset</th>
+                                                        <th scope="col">Due date</th>
+                                                        <th scope="col">Reference</th>
+                                                        <th scope="col" class="text-end">Write-off</th>
+                                                        <th scope="col" class="text-end">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var item in scheduledWriteOffs)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <div>@item.asset.AssetName</div>
+                                                                <div class="small text-muted"><code>@item.writeOff.PaymentCode</code></div>
+                                                            </td>
+                                                            <td>@item.writeOff.DueOn.ToString("d MMMM yyyy")</td>
+                                                            <td>@DisplayOrDash(item.writeOff.Reference)</td>
+                                                            <td class="text-end">@FormatMoney(item.writeOff.Amount)</td>
+                                                            <td class="text-end">
+                                                                @if (item.writeOff.IsDue)
+                                                                {
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm"
+                                                                            disabled="@_isPostingWriteOff"
+                                                                            @onclick="() => SelectWriteOff(item.writeOff)">
+                                                                        Post due write-off
+                                                                    </button>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-secondary">Future — remains Unposted</span>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (_selectedWriteOff is not null)
+                            {
+                                <div class="alert alert-warning mb-0" role="alert">
+                                    <div class="fw-semibold">Post this scheduled write-off?</div>
+                                    <div class="small mt-1">
+                                        <code>@_selectedWriteOff.PaymentCode</code> will post
+                                        <strong>@FormatMoney(_selectedWriteOff.Amount)</strong> dated
+                                        @_selectedWriteOff.DueOn.ToString("d MMMM yyyy"). It will become part of the accounts and will no longer be editable as an Unposted entry.
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 mt-3">
+                                        <button type="button" class="btn btn-primary btn-sm"
+                                                disabled="@_isPostingWriteOff" @onclick="PostSelectedWriteOffAsync">
+                                            @(_isPostingWriteOff ? "Posting…" : "Confirm and post")
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                disabled="@_isPostingWriteOff" @onclick="CancelWriteOff">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(_assetActionMessage))
+                            {
+                                <div class="alert alert-success mb-0" role="status">@_assetActionMessage</div>
+                            }
+
+                            @if (!string.IsNullOrWhiteSpace(_assetActionError))
+                            {
+                                <div class="alert alert-danger mb-0" role="alert">@_assetActionError</div>
+                            }
+
+                            <div class="small text-muted">
+                                Reductions include all posted decreases in an asset account. Use the asset drill-through to inspect whether each movement is a write-down, disposal or other reviewed adjustment.
+                            </div>
+
+                            <dl class="row small mb-0">
+                                <dt class="col-sm-5">Asset-account closing value</dt>
+                                <dd class="col-sm-7">@FormatMoney(FixedAssetEvidence.ClosingCarryingValue)</dd>
+                                <dt class="col-sm-5">Balance-sheet fixed assets</dt>
+                                <dd class="col-sm-7">@FormatMoney(FixedAssetEvidence.BalanceSheetTotal)</dd>
+                                <dt class="col-sm-5">Difference</dt>
+                                <dd class="col-sm-7 mb-0">@FormatMoney(FixedAssetEvidence.ReconciliationDifference)</dd>
+                            </dl>
+
+                            <div class="small text-muted text-break" title="@FixedAssetEvidence.SnapshotToken">
+                                Evidence contract <code>fixed-assets/v2</code> · SHA-256 <code>@ShortDigest(FixedAssetEvidence.SnapshotToken)</code>
+                            </div>
+
+                            @if (!FixedAssetEvidence.IsReconciled)
+                            {
+                                <div class="alert alert-danger mb-0" role="alert">
+                                    The individual asset carrying values do not reconcile to the native fixed-assets balance-sheet total. Confirmation remains disabled.
+                                </div>
+                            }
+
+                            @if (FixedAssetEvidence.DueWriteOffCount > 0)
+                            {
+                                <div class="alert alert-warning mb-0" role="alert">
+                                    @FixedAssetEvidence.DueWriteOffCount scheduled write-off@(FixedAssetEvidence.DueWriteOffCount == 1 ? " is" : "s are") due by this year end,
+                                    totalling @FormatMoney(FixedAssetEvidence.DueWriteOffTotal). Post or review these entries before confirming fixed assets.
+                                </div>
+                            }
+
+                            <div class="form-check">
+                                <input id="confirm-fixed-assets" class="form-check-input" type="checkbox"
+                                       checked="@_fixedAssetsConfirmed" disabled="@(!CanReviewFixedAssets)"
+                                       @onchange="SetFixedAssetsConfirmedAsync" />
+                                <label class="form-check-label" for="confirm-fixed-assets">
+                                    I have reviewed the asset carrying values and this year's increases and reductions, including any write-downs or disposals.
+                                </label>
+                            </div>
+
+                            @if (_fixedAssetsConfirmed)
+                            {
+                                <div class="alert alert-success mb-0" role="status">
+                                    Fixed-asset evidence reviewed for this exact snapshot. The evidence review can now be completed.
+                                </div>
+                            }
+                        }
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => _page = ReviewPage.BankAndCash">Back</button>
+                            <button type="button" class="btn btn-primary" disabled="@(!_fixedAssetsConfirmed)"
+                                    @onclick="() => _page = ReviewPage.Complete">
+                                Continue to review summary
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                break;
+
+            default:
+                <section class="card shadow-sm" aria-labelledby="review-complete-title">
+                    <div class="card-body d-flex flex-column gap-3">
+                        <div>
+                            <h3 id="review-complete-title" class="h6 mb-1">5. Complete evidence review</h3>
+                            <div class="text-muted small">Confirm the three dated evidence snapshots before continuing to filing details.</div>
+                        </div>
+
+                        <div class="list-group">
+                            @EvidenceSummary("Debtors and creditors", "subject-balances/v1", Evidence.SnapshotToken, _subjectBalancesConfirmed)
+                            @EvidenceSummary("Bank and cash", "bank-cash/v1", BankCashEvidence?.SnapshotToken, _bankCashConfirmed)
+                            @EvidenceSummary("Fixed assets", "fixed-assets/v2", FixedAssetEvidence?.SnapshotToken, _fixedAssetsConfirmed)
+                        </div>
+
+                        <div class="border rounded bg-light p-3">
+                            <div class="small text-muted">Combined evidence-review SHA-256</div>
+                            <code class="text-break" title="@ReviewDigest">@ReviewDigest</code>
+                        </div>
+
+                        <div class="form-check">
+                            <input id="confirm-complete-review" class="form-check-input" type="checkbox"
+                                   checked="@_completionDeclarationAccepted" disabled="@(!CanCompleteReview || _reviewCompleted)"
+                                   @onchange="SetCompletionDeclarationAsync" />
+                            <label class="form-check-label" for="confirm-complete-review">
+                                I confirm that I have reviewed the debtor and creditor, bank and cash, and fixed-asset evidence for this accounting year.
+                            </label>
+                        </div>
+
+                        @if (_reviewCompleted)
+                        {
+                            <div class="alert alert-success mb-0" role="status">
+                                Evidence review complete. Continue below to review the filing details and prepare the exact accounts document.
+                            </div>
+                        }
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-secondary" disabled="@_reviewCompleted"
+                                    @onclick="() => _page = ReviewPage.FixedAssets">Back</button>
+                            <button type="button" class="btn btn-primary"
+                                    disabled="@(!_completionDeclarationAccepted || !CanCompleteReview || _reviewCompleted)"
+                                    @onclick="CompleteReviewAsync">
+                                Complete evidence review
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                break;
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public TaxHubSubjectBalanceEvidence? Evidence { get; set; }
+    [Parameter] public TaxHubBankCashEvidence? BankCashEvidence { get; set; }
+    [Parameter] public TaxHubFixedAssetEvidence? FixedAssetEvidence { get; set; }
+    [Parameter, EditorRequired] public TaxHubCompaniesHouseReadiness Readiness { get; set; } = new();
+    [Parameter] public EventCallback EvidenceChanged { get; set; }
+    [Parameter] public EventCallback<bool> CompletionChanged { get; set; }
+
+    private ReviewPage _page = ReviewPage.Scope;
+    private bool _subjectBalancesConfirmed;
+    private bool _bankCashConfirmed;
+    private bool _fixedAssetsConfirmed;
+    private bool _completionDeclarationAccepted;
+    private bool _reviewCompleted;
+    private bool _isPostingWriteOff;
+    private TaxHubScheduledAssetWriteOff? _selectedWriteOff;
+    private string? _assetActionMessage;
+    private string? _assetActionError;
+    private string? _reviewKey;
+    private string? _subjectEvidenceToken;
+    private string? _bankCashEvidenceToken;
+    private string? _fixedAssetEvidenceToken;
+
+    private bool CanReview => Evidence is not null
+        && Evidence.IsClosedPeriod
+        && Evidence.IsReconciled
+        && Readiness.IsEligible;
+    private bool CanReviewBankCash => CanReview
+        && _subjectBalancesConfirmed
+        && BankCashEvidence is not null
+        && BankCashEvidence.EffectiveDate == Evidence!.EffectiveDate
+        && BankCashEvidence.IsReconciled;
+    private bool CanReviewFixedAssets => CanReviewBankCash
+        && _bankCashConfirmed
+        && FixedAssetEvidence is not null
+        && FixedAssetEvidence.EffectiveDate == Evidence!.EffectiveDate
+        && FixedAssetEvidence.IsReadyForConfirmation;
+    private bool CanCompleteReview => CanReviewFixedAssets
+        && _fixedAssetsConfirmed;
+    private string ReviewDigest => ComputeReviewDigest();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = Evidence is null
+            ? null
+            : $"{Evidence.EffectiveDate:yyyy-MM-dd}:{Evidence.SnapshotToken}:{BankCashEvidence?.SnapshotToken}:{FixedAssetEvidence?.SnapshotToken}";
+        if (string.Equals(key, _reviewKey, StringComparison.Ordinal)) return;
+
+        var subjectChanged = !string.Equals(_subjectEvidenceToken, Evidence?.SnapshotToken, StringComparison.Ordinal);
+        var bankChanged = !string.Equals(_bankCashEvidenceToken, BankCashEvidence?.SnapshotToken, StringComparison.Ordinal);
+        var fixedAssetsChanged = !string.Equals(_fixedAssetEvidenceToken, FixedAssetEvidence?.SnapshotToken, StringComparison.Ordinal);
+
+        _reviewKey = key;
+        _subjectEvidenceToken = Evidence?.SnapshotToken;
+        _bankCashEvidenceToken = BankCashEvidence?.SnapshotToken;
+        _fixedAssetEvidenceToken = FixedAssetEvidence?.SnapshotToken;
+
+        if (subjectChanged)
+        {
+            _page = ReviewPage.Scope;
+            _subjectBalancesConfirmed = false;
+            _bankCashConfirmed = false;
+            _fixedAssetsConfirmed = false;
+        }
+        else if (bankChanged)
+        {
+            _page = ReviewPage.BankAndCash;
+            _bankCashConfirmed = false;
+            _fixedAssetsConfirmed = false;
+        }
+        else if (fixedAssetsChanged)
+        {
+            _page = ReviewPage.FixedAssets;
+            _fixedAssetsConfirmed = false;
+        }
+
+        _completionDeclarationAccepted = false;
+        _reviewCompleted = false;
+        await CompletionChanged.InvokeAsync(false);
+    }
+
+    private void SelectWriteOff(TaxHubScheduledAssetWriteOff writeOff)
+    {
+        _selectedWriteOff = writeOff;
+        _assetActionMessage = null;
+        _assetActionError = null;
+    }
+
+    private void CancelWriteOff() => _selectedWriteOff = null;
+
+    private async Task PostSelectedWriteOffAsync()
+    {
+        if (_selectedWriteOff is null || Evidence is null || !_selectedWriteOff.IsDue)
+            return;
+
+        var selected = _selectedWriteOff;
+        _isPostingWriteOff = true;
+        _assetActionMessage = null;
+        _assetActionError = null;
+
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var aspNetUserId = UserManager.GetUserId(authState.User);
+            if (string.IsNullOrWhiteSpace(aspNetUserId))
+                throw new InvalidOperationException("The signed-in user could not be identified.");
+
+            var isPrivileged = authState.User.IsInRole(Constants.ManagersRole)
+                || authState.User.IsInRole(Constants.AdministratorsRole);
+
+            await CashAssetsWorkspaceService.PostScheduledWriteOffAsync(
+                selected.PaymentCode,
+                Evidence.EffectiveDate,
+                aspNetUserId,
+                isPrivileged);
+
+            _selectedWriteOff = null;
+            _fixedAssetsConfirmed = false;
+            ResetCompletion();
+            await CompletionChanged.InvokeAsync(false);
+            await EvidenceChanged.InvokeAsync();
+            _page = ReviewPage.FixedAssets;
+            _assetActionMessage = $"Scheduled write-off {selected.PaymentCode} was posted. The fixed-asset evidence has been recalculated.";
+        }
+        catch (Exception exception)
+        {
+            _assetActionError = exception.Message;
+        }
+        finally
+        {
+            _isPostingWriteOff = false;
+        }
+    }
+
+    private async Task SetSubjectBalancesConfirmedAsync(ChangeEventArgs args)
+    {
+        _subjectBalancesConfirmed = CanReview && args.Value is bool value && value;
+        if (!_subjectBalancesConfirmed)
+        {
+            _bankCashConfirmed = false;
+            _fixedAssetsConfirmed = false;
+            ResetCompletion();
+        }
+        await CompletionChanged.InvokeAsync(false);
+    }
+
+    private async Task SetBankCashConfirmedAsync(ChangeEventArgs args)
+    {
+        _bankCashConfirmed = CanReviewBankCash && args.Value is bool value && value;
+        if (!_bankCashConfirmed)
+        {
+            _fixedAssetsConfirmed = false;
+            ResetCompletion();
+        }
+        await CompletionChanged.InvokeAsync(false);
+    }
+
+    private async Task SetFixedAssetsConfirmedAsync(ChangeEventArgs args)
+    {
+        _fixedAssetsConfirmed = CanReviewFixedAssets && args.Value is bool value && value;
+        if (!_fixedAssetsConfirmed)
+            ResetCompletion();
+        await CompletionChanged.InvokeAsync(false);
+    }
+
+    private async Task SetCompletionDeclarationAsync(ChangeEventArgs args)
+    {
+        _completionDeclarationAccepted = CanCompleteReview && args.Value is bool value && value;
+        if (!_completionDeclarationAccepted)
+            _reviewCompleted = false;
+        await CompletionChanged.InvokeAsync(false);
+    }
+
+    private async Task CompleteReviewAsync()
+    {
+        _reviewCompleted = CanCompleteReview && _completionDeclarationAccepted;
+        await CompletionChanged.InvokeAsync(_reviewCompleted);
+    }
+
+    private void ResetCompletion()
+    {
+        _completionDeclarationAccepted = false;
+        _reviewCompleted = false;
+    }
+
+    private RenderFragment ReviewStep(string label, ReviewPage page, bool complete, bool pending = false) => @<li
+        class="list-group-item d-flex align-items-center justify-content-between gap-2 @(page == _page ? "list-group-item-primary" : string.Empty)">
+        <span>@label</span>
+        @if (complete)
+        {
+            <span class="badge bg-success">Complete</span>
+        }
+        else if (pending)
+        {
+            <span class="badge bg-secondary">Pending</span>
+        }
+        else
+        {
+            <span class="badge bg-primary">Current</span>
+        }
+    </li>;
+
+    private RenderFragment PendingStep(string title, string message, ReviewPage back) => @<section class="card shadow-sm">
+        <div class="card-body d-flex flex-column gap-3">
+            <div>
+                <h3 class="h6 mb-1">@title</h3>
+                <div class="text-muted small">@message</div>
+            </div>
+            <div class="alert alert-info mb-0">
+                This evidence step is not implemented yet. The overall review remains incomplete and the filing workflow stays locked.
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => _page = back">Back</button>
+            </div>
+        </div>
+    </section>;
+
+    private RenderFragment EvidenceSummary(string label, string contract, string? digest, bool confirmed) => @<div
+        class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <div class="fw-semibold">@label</div>
+            <div class="small text-muted"><code>@contract</code> · <code>@ShortDigest(digest ?? string.Empty)</code></div>
+        </div>
+        <span class="badge @(confirmed ? "bg-success" : "bg-danger")">@(confirmed ? "Reviewed" : "Incomplete")</span>
+    </div>;
+
+    private static string DisplayOrDash(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string FormatMoney(decimal value) => value.ToString("£#,##0.00;(£#,##0.00);£0.00");
+    private static string ShortDigest(string value) => value.Length <= 12 ? value : $"{value[..12]}…";
+
+    private string ComputeReviewDigest()
+    {
+        var canonical = string.Join("\n",
+            "year-end-evidence-review/v1",
+            Readiness.CompanyNumberDisplay,
+            Readiness.PeriodDisplay,
+            Evidence?.EffectiveDate.ToString("yyyy-MM-dd") ?? string.Empty,
+            Evidence?.SnapshotToken ?? string.Empty,
+            BankCashEvidence?.SnapshotToken ?? string.Empty,
+            FixedAssetEvidence?.SnapshotToken ?? string.Empty);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    private enum ReviewPage
+    {
+        Scope,
+        SubjectBalances,
+        BankAndCash,
+        FixedAssets,
+        Complete
+    }
+}

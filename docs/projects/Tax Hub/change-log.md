@@ -1,5 +1,22 @@
 # Tax Hub Change Log
 
+## 10 October 2026 — Guided year-end review increments 1–4
+
+- Added a visible five-step guided evidence sequence inside a single **File Your Accounts** journey. An initial separate **Year-end review** tab was removed after usability review showed that it competed with the user's natural filing destination.
+- Replaced the authority-labelled navigation tab with the user action **File Your Accounts**, added an explicit **Start filing journey** action, and kept later filing inputs in the same continuous flow.
+- Consumed the accepted authority-neutral `subject-balances/v1` snapshot for the debtor/creditor step, including gross totals, reconciliation, digest and a same-date Subject Browser Historical deep link.
+- Kept operational Subject detail out of Tax Hub and distinguished historical balances from current aged debt.
+- Added dated native current and reserve account balances with Cash Manager drill-throughs and reconciled them exactly to the balance sheet's CASH and BANK rows.
+- Bound the ordered bank/cash population and reconciliation totals into a deterministic `bank-cash/v1` SHA-256 digest.
+- Added mapped fixed-asset opening values, increases, reductions/write-downs and closing carrying values with Cash Manager drill-throughs; these reconcile to both the native balance sheet and the £6,800.00 statutory projection in STD.
+- Extended the fixed-asset evidence to `fixed-assets/v2`: recognised pre-existing native Unposted `Write off…` schedule entries are shown by asset, date and amount; future instalments remain Unposted and due instalments block confirmation.
+- Added an explicit two-stage action for posting one due scheduled write-off through the existing Cash asset-posting path. The server revalidates status, direction, due date, write-off convention, asset account and user authority before mutation.
+- Reload the complete Accounts workspace after posting so native balances, Equity Bridge, statutory projection and evidence digest are recomputed. The fixed-asset/final confirmations reset while unchanged Subject and bank/cash confirmations are preserved.
+- Corrected the Cash Manager evidence drill-throughs to carry the reviewed accounting year and open the selected account statement across all months in that year. They no longer inherit the current active month and incorrectly appear empty for a prior filing year. Split the former ambiguous **Review asset** action into **Review statement** and **Manage schedule**, with the latter opening the native Assets workspace directly.
+- Added deterministic `fixed-assets/v2` and combined `year-end-evidence-review/v1` digests.
+- Reset confirmations when the selected period or any evidence digest changes. Filing inputs and accounts preparation stay fail-closed until the complete evidence review succeeds.
+- Made no Companies House request and left product dispatch disabled.
+
 ## 9 October 2026 — Year-end evidence review separated from authority workflows
 
 - Accepted the Phase 7.5 immutable approval mechanism after the deployed Azure journey produced an attributable, digest-bound **Approved — not filed** result.

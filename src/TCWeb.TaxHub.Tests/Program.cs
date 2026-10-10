@@ -826,8 +826,20 @@ using (var translationContext = new NodeContext(new DbContextOptionsBuilder<Node
 }
 var accountsWorkspaceView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubAccountsWorkspace.razor"));
+var yearEndReviewView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCompaniesHouseEvidenceReview.razor"));
+var filingInputsView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCompaniesHouseFilingInputs.razor"));
 var taxHubServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub",
     "TaxHubService.cs"));
+var cashAssetsServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "CashAssetsWorkspaceService.cs"));
+var cashManagerPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Manager",
+    "Index.cshtml"));
+var cashManagerPageModel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Manager",
+    "Index.cshtml.cs"));
+var cashManagerShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Manager",
+    "CashManagerShell.razor"));
 var subjectBrowserShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
     "SubjectBrowserShell.razor"));
 var subjectBrowserPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
@@ -844,6 +856,67 @@ Assert(accountsWorkspaceView.Contains("Year-end debtors and creditors", StringCo
     && subjectBrowserPage.IndexOf("window.subjectBrowser =", StringComparison.Ordinal)
        < subjectBrowserPage.IndexOf("/_framework/blazor.server.js", StringComparison.Ordinal),
     "Tax Hub no longer presents the bounded accounting-period evidence summary or deep-links to historical Subject balances.");
+Assert(accountsWorkspaceView.Contains("File Your Accounts", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("File your accounts", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("Start filing journey", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("one continuous journey", StringComparison.Ordinal)
+    && !accountsWorkspaceView.Contains("MudTabPanel Text=\"@(IsMobile ? \"Review\" : \"Year-end review\")\"", StringComparison.Ordinal)
+    && accountsWorkspaceView.IndexOf("Start filing journey", StringComparison.Ordinal)
+       < accountsWorkspaceView.IndexOf("TaxHubCompaniesHouseEvidenceReview", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("CompletionChanged", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("if (_evidenceReviewComplete)", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("subject-balances/v1", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("These are year-end balances, not an aged-debt reconstruction", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Review historical balances", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("bank-cash/v1", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Current accounts", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Reserve accounts", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Balance-sheet CASH + BANK", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Continue to fixed assets", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("ROW_NUMBER() OVER", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("account.CashCode IS NULL THEN N'Reserve'", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("SnapshotToken = Convert.ToHexString(SHA256.HashData", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("fixed-assets/v2", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Reductions / write-downs", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Post due write-off", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("PostScheduledWriteOffAsync", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Future — remains Unposted", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("PaymentStatusCode = 0", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("LIKE N'WRITE OFF%'", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("DueWriteOffCount = dueWriteOffs.Count", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("mapping.MappingRoot IN (N'CA-ASSET', N'CA-DEPREC')", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("year-end-evidence-review/v1", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Complete evidence review", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("CompletionChanged.InvokeAsync(_reviewCompleted)", StringComparison.Ordinal)
+    && !yearEndReviewView.Contains("Evidence.Subjects", StringComparison.Ordinal)
+    && filingInputsView.Contains("EvidenceReviewSatisfied", StringComparison.Ordinal)
+    && filingInputsView.Contains("Complete the guided year-end evidence review", StringComparison.Ordinal),
+    "The Companies House journey is not continuous, duplicates Subject detail, or does not fail closed before filing preparation.");
+Assert(cashAssetsServiceSource.Contains("PostScheduledWriteOffAsync", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("PaymentStatus.Unposted", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("PaidInValue != 0m", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("PaidOutValue <= 0m", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("StartsWith(\"Write off\"", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("Future scheduled write-offs cannot be posted", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("CashAccountType.Asset", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("outside the mapped statutory fixed-asset population", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("You can only post your own scheduled asset write-offs", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Confirm and post", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("EvidenceChanged.InvokeAsync", StringComparison.Ordinal),
+    "The year-end wizard scheduled-write-off action is missing a required accounting, timing, authority or refresh guard.");
+Assert(taxHubServiceSource.Contains("&YearNumber=", StringComparison.Ordinal)
+    && cashManagerPageModel.Contains("public short? YearNumber", StringComparison.Ordinal)
+    && cashManagerPageModel.Contains("public string? Section", StringComparison.Ordinal)
+    && cashManagerPage.Contains("param-InitialYearNumber=\"Model.YearNumber\"", StringComparison.Ordinal)
+    && cashManagerPage.Contains("param-InitialSection=\"Model.Section\"", StringComparison.Ordinal)
+    && cashManagerShell.Contains("[Parameter] public short? InitialYearNumber", StringComparison.Ordinal)
+    && cashManagerShell.Contains("Enum.TryParse<CashManagerSection>(InitialSection", StringComparison.Ordinal)
+    && cashManagerShell.Contains("_selectedPeriodStartOn = null;", StringComparison.Ordinal)
+    && cashManagerShell.Contains("if (hasRequestedYear)", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Review statement", StringComparison.Ordinal)
+    && yearEndReviewView.Contains("Manage schedule", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("&Section=Assets", StringComparison.Ordinal),
+    "Tax Hub accounting-evidence drill-throughs do not preserve the reviewed accounting year and all-month statement scope.");
 var navigationView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared", "_Navigation.cshtml"));
 var legacyCompanyPages = Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Company");
 Assert((!Directory.Exists(legacyCompanyPages) || !Directory.EnumerateFiles(legacyCompanyPages).Any())

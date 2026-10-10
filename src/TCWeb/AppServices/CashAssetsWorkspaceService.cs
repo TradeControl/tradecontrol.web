@@ -13,6 +13,7 @@ namespace TradeControl.Web.AppServices
 {
     public sealed class CashAssetsWorkspaceService : ICashAssetsWorkspaceService
     {
+        private const string CompaniesHouseAccountsTaxSourceCode = "UK-CO-ACCTS-2026";
         private readonly IServiceScopeFactory _scopeFactory;
 
         public CashAssetsWorkspaceService(IServiceScopeFactory scopeFactory)
@@ -478,6 +479,98 @@ namespace TradeControl.Web.AppServices
             {
                 throw new InvalidOperationException($"Asset post failed for payment '{paymentCode}'.");
             }
+
+            await nodeContext.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task PostScheduledWriteOffAsync(
+            string paymentCode,
+            DateOnly accountingDate,
+            string aspNetUserId,
+            bool isPrivileged,
+            CancellationToken cancellationToken = default)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            paymentCode = NormalizeCode(paymentCode);
+            if (string.IsNullOrWhiteSpace(paymentCode))
+                throw new InvalidOperationException("A scheduled write-off payment code is required.");
+
+            var payment = await nodeContext.Cash_tbPayments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.PaymentCode == paymentCode, cancellationToken);
+
+            if (payment is null
+                || payment.PaymentStatusCode != (short)NodeEnum.PaymentStatus.Unposted)
+            {
+                throw new InvalidOperationException("The scheduled write-off is no longer available to post.");
+            }
+
+            if (payment.PaidInValue != 0m
+                || payment.PaidOutValue <= 0m
+                || string.IsNullOrWhiteSpace(payment.PaymentReference)
+                || !payment.PaymentReference.TrimStart().StartsWith("Write off", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("The selected transaction is not a recognised scheduled asset write-off.");
+            }
+
+            if (DateOnly.FromDateTime(payment.PaidOn) > accountingDate)
+                throw new InvalidOperationException("Future scheduled write-offs cannot be posted from this year-end review.");
+
+            var assetAccount = await nodeContext.Subject_tbAccounts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(account => account.AccountCode == payment.AccountCode, cancellationToken);
+
+            if (assetAccount is null
+                || assetAccount.AccountTypeCode != (short)NodeEnum.CashAccountType.Asset)
+                throw new InvalidOperationException("The scheduled transaction does not belong to an asset account.");
+
+            var connection = nodeContext.Database.GetDbConnection();
+            var shouldClose = connection.State != System.Data.ConnectionState.Open;
+            if (shouldClose)
+                await connection.OpenAsync(cancellationToken);
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    SELECT COUNT_BIG(1)
+                    FROM Cash.vwTaxTagCashCode AS mapping
+                    WHERE mapping.TaxSourceCode = @TaxSourceCode
+                      AND mapping.CashCode = @CashCode
+                      AND mapping.MappingRoot IN (N'CA-ASSET', N'CA-DEPREC');";
+
+                var taxSource = command.CreateParameter();
+                taxSource.ParameterName = "@TaxSourceCode";
+                taxSource.Value = CompaniesHouseAccountsTaxSourceCode;
+                command.Parameters.Add(taxSource);
+
+                var cashCode = command.CreateParameter();
+                cashCode.ParameterName = "@CashCode";
+                cashCode.Value = (object?)assetAccount.CashCode ?? DBNull.Value;
+                command.Parameters.Add(cashCode);
+
+                var mappedCount = Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
+                if (mappedCount == 0)
+                    throw new InvalidOperationException("The scheduled transaction is outside the mapped statutory fixed-asset population.");
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            if (!isPrivileged)
+            {
+                var userId = await GetUserIdAsync(nodeContext, aspNetUserId);
+                if (!string.Equals(payment.UserId, userId, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("You can only post your own scheduled asset write-offs.");
+            }
+
+            var cashAccounts = new CashAccounts(nodeContext);
+            if (!await cashAccounts.PostAsset(paymentCode))
+                throw new InvalidOperationException($"Scheduled write-off '{paymentCode}' could not be posted.");
 
             await nodeContext.SaveChangesAsync(cancellationToken);
         }

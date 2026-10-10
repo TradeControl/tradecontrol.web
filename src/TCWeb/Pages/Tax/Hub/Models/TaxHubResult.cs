@@ -245,6 +245,8 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public IReadOnlyList<TaxHubProfitAndLossDetailSection> MonthlyDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
         public IReadOnlyList<TaxHubBalanceSheetRow> BalanceSheet { get; init; } = Array.Empty<TaxHubBalanceSheetRow>();
         public TaxHubSubjectBalanceEvidence? SubjectBalanceEvidence { get; init; }
+        public TaxHubBankCashEvidence? BankCashEvidence { get; init; }
+        public TaxHubFixedAssetEvidence? FixedAssetEvidence { get; init; }
         public TaxHubAccountsValidationSummary ValidationSummary { get; init; } = new();
         public IReadOnlyList<TaxHubEquityReconciliationRow> EquityReconciliation { get; init; } = Array.Empty<TaxHubEquityReconciliationRow>();
         public TaxHubCompaniesHouseReadiness CompaniesHouse { get; init; } = new();
@@ -261,6 +263,68 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public bool IsClosedPeriod { get; init; }
         public string SnapshotToken { get; init; } = string.Empty;
         public string SubjectBrowserUrl { get; init; } = string.Empty;
+    }
+
+    public sealed class TaxHubBankCashEvidence
+    {
+        public DateOnly EffectiveDate { get; init; }
+        public IReadOnlyList<TaxHubBankCashEvidenceItem> Accounts { get; init; } = Array.Empty<TaxHubBankCashEvidenceItem>();
+        public decimal CurrentAccountTotal { get; init; }
+        public decimal ReserveAccountTotal { get; init; }
+        public decimal BalanceSheetCashTotal { get; init; }
+        public decimal BalanceSheetBankTotal { get; init; }
+        public decimal ReconciliationDifference { get; init; }
+        public bool IsReconciled { get; init; }
+        public string SnapshotToken { get; init; } = string.Empty;
+    }
+
+    public sealed class TaxHubBankCashEvidenceItem
+    {
+        public string AccountCode { get; init; } = string.Empty;
+        public string AccountName { get; init; } = string.Empty;
+        public string AccountKind { get; init; } = string.Empty;
+        public decimal Balance { get; init; }
+        public string CashManagerUrl { get; init; } = string.Empty;
+    }
+
+    public sealed class TaxHubFixedAssetEvidence
+    {
+        public DateOnly PeriodStart { get; init; }
+        public DateOnly EffectiveDate { get; init; }
+        public IReadOnlyList<TaxHubFixedAssetEvidenceItem> Assets { get; init; } = Array.Empty<TaxHubFixedAssetEvidenceItem>();
+        public decimal OpeningCarryingValue { get; init; }
+        public decimal Increases { get; init; }
+        public decimal Reductions { get; init; }
+        public decimal ClosingCarryingValue { get; init; }
+        public decimal BalanceSheetTotal { get; init; }
+        public decimal ReconciliationDifference { get; init; }
+        public bool IsReconciled { get; init; }
+        public int DueWriteOffCount { get; init; }
+        public decimal DueWriteOffTotal { get; init; }
+        public bool IsReadyForConfirmation => IsReconciled && DueWriteOffCount == 0;
+        public string SnapshotToken { get; init; } = string.Empty;
+    }
+
+    public sealed class TaxHubFixedAssetEvidenceItem
+    {
+        public string AccountCode { get; init; } = string.Empty;
+        public string AssetName { get; init; } = string.Empty;
+        public decimal OpeningCarryingValue { get; init; }
+        public decimal Increases { get; init; }
+        public decimal Reductions { get; init; }
+        public decimal ClosingCarryingValue { get; init; }
+        public List<TaxHubScheduledAssetWriteOff> ScheduledWriteOffs { get; init; } = [];
+        public string CashManagerUrl { get; init; } = string.Empty;
+        public string ScheduleManagerUrl { get; init; } = string.Empty;
+    }
+
+    public sealed class TaxHubScheduledAssetWriteOff
+    {
+        public string PaymentCode { get; init; } = string.Empty;
+        public DateOnly DueOn { get; init; }
+        public string Reference { get; init; } = string.Empty;
+        public decimal Amount { get; init; }
+        public bool IsDue { get; init; }
     }
 
     public sealed class TaxHubCompaniesHouseReadiness

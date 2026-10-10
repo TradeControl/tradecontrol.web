@@ -14,7 +14,7 @@ For ongoing development and updates, visit: [tradecontrol.github.io](https://tra
 
 ## Current Project
 
-[Tax Hub](./docs/specs/tax-hub-spec-programme.md)
+[Tax Hub](./docs/projects/Tax%20Hub/specs/tax-hub-spec-programme.md)
 
 ## 🚧 Status
 

@@ -9,6 +9,12 @@
 {
     <div class="alert alert-secondary mb-0">Resolve the readiness findings before reviewing filing inputs.</div>
 }
+else if (!EvidenceReviewSatisfied)
+{
+    <div class="alert alert-warning mb-0" role="status">
+        Complete the guided year-end evidence review before reviewing filing inputs or preparing accounts.
+    </div>
+}
 else if (_draft is not null && _editContext is not null)
 {
     <EditForm EditContext="_editContext" OnValidSubmit="ReviewInputs">
@@ -227,6 +233,7 @@ else if (_draft is not null && _editContext is not null)
     [Parameter, EditorRequired] public TaxHubCompaniesHouseReadiness Readiness { get; set; } = new();
     [Parameter] public short? YearNumber { get; set; }
     [Parameter] public DateTime? SelectedPeriodStart { get; set; }
+    [Parameter] public bool EvidenceReviewSatisfied { get; set; }
 
     private TaxHubCompaniesHouseFilingInputDraft? _draft;
     private EditContext? _editContext;

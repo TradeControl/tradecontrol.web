@@ -153,12 +153,12 @@ else
                 </section>
             </MudTabPanel>
 
-            <MudTabPanel Text="Companies House">
+            <MudTabPanel Text="@(IsMobile ? "File" : "File Your Accounts")">
                 <section class="d-flex flex-column gap-3 pt-2">
                     <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
                         <div>
-                            <h2 class="h5 mb-1">Filing readiness</h2>
-                            <div class="text-muted small">Server-derived review for the selected accounting year</div>
+                            <h2 class="h5 mb-1">File your accounts</h2>
+                            <div class="text-muted small">Review, prepare and approve the selected accounting year in one continuous journey</div>
                         </div>
                         <span class="badge @(Workspace.CompaniesHouse.IsEligible ? "bg-success" : "bg-warning text-dark")">
                             @Workspace.CompaniesHouse.Status
@@ -197,9 +197,49 @@ else
                         </div>
                     }
 
-                    <TaxHubCompaniesHouseFilingInputs Readiness="Workspace.CompaniesHouse"
-                                                          YearNumber="Workspace.SelectedYearNumber"
-                                                          SelectedPeriodStart="Workspace.SelectedPeriodStartOn" />
+                    @if (!_filingJourneyStarted)
+                    {
+                        <div class="card border-primary shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h3 class="h6 mb-1">Ready to begin?</h3>
+                                    <div class="text-muted small">
+                                        You will first review the year-end accounting evidence, then the filing information and exact accounts document before approving anything.
+                                    </div>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-primary"
+                                            disabled="@(!Workspace.CompaniesHouse.IsEligible || Workspace.SubjectBalanceEvidence is null)"
+                                            @onclick="StartFilingJourney">
+                                        Start filing journey
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <button type="button" class="btn btn-link px-0" @onclick="ReturnToFilingOverview">
+                                ← Back to filing overview
+                            </button>
+                        </div>
+
+                        <TaxHubCompaniesHouseEvidenceReview Evidence="Workspace.SubjectBalanceEvidence"
+                                                             BankCashEvidence="Workspace.BankCashEvidence"
+                                                             FixedAssetEvidence="Workspace.FixedAssetEvidence"
+                                                             Readiness="Workspace.CompaniesHouse"
+                                                             EvidenceChanged="OnWorkspaceRefreshRequested"
+                                                             CompletionChanged="HandleEvidenceReviewCompletion" />
+
+                        @if (_evidenceReviewComplete)
+                        {
+                            <TaxHubCompaniesHouseFilingInputs Readiness="Workspace.CompaniesHouse"
+                                                                YearNumber="Workspace.SelectedYearNumber"
+                                                                SelectedPeriodStart="Workspace.SelectedPeriodStartOn"
+                                                                EvidenceReviewSatisfied="true" />
+                        }
+                    }
 
                     <div class="alert alert-info mb-0" role="status">
                         Preparation and immutable approval only — no request is made to Companies House. Submission remains disabled.
@@ -213,6 +253,37 @@ else
 @code {
     [Parameter] public TaxHubAccountsWorkspaceModel? Workspace { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback OnWorkspaceRefreshRequested { get; set; }
+
+    private bool _evidenceReviewComplete;
+    private bool _filingJourneyStarted;
+    private string? _filingJourneyKey;
+
+    protected override void OnParametersSet()
+    {
+        var key = Workspace is null
+            ? null
+            : $"{Workspace.SelectedYearNumber}:{Workspace.SelectedPeriodStartOn:yyyy-MM-dd}:{Workspace.SubjectBalanceEvidence?.SnapshotToken}";
+        if (string.Equals(key, _filingJourneyKey, StringComparison.Ordinal)) return;
+
+        _filingJourneyKey = key;
+        _filingJourneyStarted = false;
+        _evidenceReviewComplete = false;
+    }
+
+    private void StartFilingJourney()
+    {
+        _filingJourneyStarted = true;
+        _evidenceReviewComplete = false;
+    }
+
+    private void ReturnToFilingOverview()
+    {
+        _filingJourneyStarted = false;
+        _evidenceReviewComplete = false;
+    }
+
+    private void HandleEvidenceReviewCompletion(bool isComplete) => _evidenceReviewComplete = isComplete;
 
     private static string DisplayOrDash(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }
