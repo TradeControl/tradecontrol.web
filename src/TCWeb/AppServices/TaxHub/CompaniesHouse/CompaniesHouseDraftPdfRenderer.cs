@@ -12,6 +12,8 @@ namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 public interface ICompaniesHouseDraftPdfRenderer
 {
     byte[] Render(byte[] retainedIxbrl, string sourceSha256);
+    byte[] RenderOfficialTestSubmission(byte[] retainedIxbrl, string sourceSha256,
+        string submissionNumber, DateTimeOffset submittedAtUtc);
 }
 
 public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRenderer
@@ -21,6 +23,19 @@ public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRend
     private static bool _fontConfigured;
 
     public byte[] Render(byte[] retainedIxbrl, string sourceSha256)
+        => Render(retainedIxbrl, sourceSha256, null, null);
+
+    public byte[] RenderOfficialTestSubmission(byte[] retainedIxbrl, string sourceSha256,
+        string submissionNumber, DateTimeOffset submittedAtUtc)
+    {
+        if (string.IsNullOrWhiteSpace(submissionNumber) || submissionNumber.Length != 6)
+            throw new ArgumentException("A valid official-test submission number is required.",
+                nameof(submissionNumber));
+        return Render(retainedIxbrl, sourceSha256, submissionNumber, submittedAtUtc);
+    }
+
+    private static byte[] Render(byte[] retainedIxbrl, string sourceSha256,
+        string? submissionNumber, DateTimeOffset? submittedAtUtc)
     {
         ArgumentNullException.ThrowIfNull(retainedIxbrl);
         if (retainedIxbrl.Length == 0)
@@ -35,12 +50,18 @@ public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRend
             ?? throw new InvalidOperationException("The retained document does not contain the statutory accounts presentation.");
 
         using var document = new PdfDocument();
-        document.Info.Title = "Companies House accounts draft";
-        document.Info.Subject = $"DRAFT - NOT FILED. Source iXBRL SHA-256 {sourceSha256.ToUpperInvariant()}";
+        var officialTest = submissionNumber is not null;
+        document.Info.Title = officialTest
+            ? $"Companies House official-test accounts {submissionNumber}"
+            : "Companies House accounts draft";
+        document.Info.Subject = officialTest
+            ? $"OFFICIAL TEST - NOT LIVE FILED. Submission {submissionNumber}. Source iXBRL SHA-256 {sourceSha256.ToUpperInvariant()}"
+            : $"DRAFT - NOT FILED. Source iXBRL SHA-256 {sourceSha256.ToUpperInvariant()}";
         document.Info.Author = "Trade Control";
         document.Info.Creator = "Trade Control Tax Hub";
 
-        var writer = new DraftWriter(document, sourceSha256.ToUpperInvariant());
+        var writer = new DraftWriter(document, sourceSha256.ToUpperInvariant(),
+            submissionNumber, submittedAtUtc);
         writer.Render(accounts);
         writer.Complete();
 
@@ -70,6 +91,8 @@ public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRend
         private const double FooterHeight = 32;
         private readonly PdfDocument _document;
         private readonly string _sourceSha256;
+        private readonly string? _submissionNumber;
+        private readonly DateTimeOffset? _submittedAtUtc;
         private readonly XFont _body = new("TradeControl Sans", 9.5, XFontStyleEx.Regular);
         private readonly XFont _bodyBold = new("TradeControl Sans", 9.5, XFontStyleEx.Bold);
         private readonly XFont _h1 = new("TradeControl Sans", 18, XFontStyleEx.Bold);
@@ -79,10 +102,13 @@ public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRend
         private PdfPage? _page;
         private double _y;
 
-        public DraftWriter(PdfDocument document, string sourceSha256)
+        public DraftWriter(PdfDocument document, string sourceSha256,
+            string? submissionNumber, DateTimeOffset? submittedAtUtc)
         {
             _document = document;
             _sourceSha256 = sourceSha256;
+            _submissionNumber = submissionNumber;
+            _submittedAtUtc = submittedAtUtc;
             NewPage();
         }
 
@@ -215,7 +241,7 @@ public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRend
             _page.Size = PdfSharp.PageSize.A4;
             _graphics = XGraphics.FromPdfPage(_page);
             _y = Margin;
-            DrawWatermark();
+            if (_submissionNumber is null) DrawWatermark();
             DrawFooter(_document.PageCount);
         }
 
@@ -235,10 +261,16 @@ public sealed class CompaniesHouseDraftPdfRenderer : ICompaniesHouseDraftPdfRend
         {
             var y = _page!.Height.Point - Margin + 4;
             _graphics!.DrawLine(XPens.LightGray, Margin, y - 7, Margin + ContentWidth, y - 7);
-            _graphics.DrawString($"DRAFT - NOT FILED | Source iXBRL SHA-256 {_sourceSha256}",
+            var evidenceLabel = _submissionNumber is null
+                ? "DRAFT - NOT FILED"
+                : $"OFFICIAL TEST - NOT LIVE FILED | Submission {_submissionNumber} | " +
+                  $"{_submittedAtUtc!.Value.UtcDateTime:yyyy-MM-dd HH:mm} UTC";
+            _graphics.DrawString(evidenceLabel,
                 _small, XBrushes.DimGray, new XRect(Margin, y, ContentWidth - 45, 18), XStringFormats.TopLeft);
             _graphics.DrawString($"Page {pageNumber}", _small, XBrushes.DimGray,
                 new XRect(Margin + ContentWidth - 45, y, 45, 18), XStringFormats.TopRight);
+            _graphics.DrawString($"Source iXBRL SHA-256 {_sourceSha256}", _small, XBrushes.DimGray,
+                new XRect(Margin, y + 9, ContentWidth, 18), XStringFormats.TopLeft);
         }
 
         private double ContentWidth => _page!.Width.Point - (2 * Margin);

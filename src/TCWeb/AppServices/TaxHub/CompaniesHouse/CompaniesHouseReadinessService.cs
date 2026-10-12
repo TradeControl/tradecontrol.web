@@ -116,6 +116,7 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, Time
             ExternalRequestMade = false,
             FilingInputs = new()
             {
+                PeriodStart = DateOnly.FromDateTime(firstPeriod),
                 PeriodEnd = periodEnd,
                 IsFirstAccountsPeriod = !priorClosedYearExists,
                 PrincipalActivity = accountsDefaults?.PrincipalActivity.Value ?? string.Empty,

@@ -346,6 +346,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
 
     public sealed class TaxHubCompaniesHouseFilingInputDraft
     {
+        public DateOnly PeriodStart { get; set; }
         public DateOnly PeriodEnd { get; set; }
         public bool IsFirstAccountsPeriod { get; set; }
         public DateTime? ApprovedOn { get; set; }

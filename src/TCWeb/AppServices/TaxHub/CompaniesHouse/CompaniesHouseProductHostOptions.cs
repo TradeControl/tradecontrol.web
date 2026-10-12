@@ -22,7 +22,8 @@ public enum CompaniesHousePersistenceMode
 
 public enum CompaniesHouseDispatchMode
 {
-    SendDisabled
+    SendDisabled,
+    OfficialTestSingleSend
 }
 
 /// <summary>
@@ -46,6 +47,7 @@ public sealed class CompaniesHouseProductHostOptions
     public string? WorkflowConnectionName { get; set; }
     public string? EvidenceBlobServiceUri { get; set; }
     public string EvidenceContainerName { get; set; } = "companies-house-evidence";
+    public int OfficialTestSubmissionSequenceFloor { get; set; } = 1;
 }
 
 public sealed class CompaniesHouseProductHostOptionsValidator(IHostEnvironment hostEnvironment)
@@ -60,8 +62,19 @@ public sealed class CompaniesHouseProductHostOptionsValidator(IHostEnvironment h
         var failures = new List<string>();
         if (!Guid.TryParse(options.TenantReference, out _))
             failures.Add("TenantReference must be an opaque GUID assigned to this Trade Control node.");
-        if (options.DispatchMode != CompaniesHouseDispatchMode.SendDisabled)
-            failures.Add("Companies House dispatch remains send-disabled until a later reviewed phase composes it.");
+        if (options.DispatchMode == CompaniesHouseDispatchMode.OfficialTestSingleSend)
+        {
+            if (options.AuthorityEnvironment != CompaniesHouseAuthorityEnvironment.OfficialTest)
+                failures.Add("OfficialTestSingleSend is permitted only for the Companies House official-test environment.");
+            if (options.PersistenceMode != CompaniesHousePersistenceMode.AzureManaged)
+                failures.Add("OfficialTestSingleSend requires durable Azure-managed persistence.");
+            if (options.OfficialTestSubmissionSequenceFloor is < 1 or > 99999)
+                failures.Add("The official-test submission sequence floor must be between 1 and 99999.");
+        }
+        else if (options.AuthorityEnvironment == CompaniesHouseAuthorityEnvironment.Production)
+        {
+            // Production deliberately remains send-disabled until a separately reviewed live phase.
+        }
 
         switch (options.PersistenceMode)
         {

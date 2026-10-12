@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
@@ -21,7 +24,7 @@ public sealed record CompaniesHouseApprovalReference(string Value, string Prepar
     string DeclarationVersion, DateTimeOffset ApprovedAtUtc);
 public sealed record CompaniesHouseFilingStatus(string ConversationReference, string? SubmissionNumber,
     CompaniesHouseConversationState State, bool RecoveryRequired, DateTimeOffset UpdatedAtUtc,
-    string? SupportReference = null);
+    string? SupportReference = null, IReadOnlyList<CompaniesHouseError>? Errors = null);
 public sealed record CompaniesHouseFilingHistoryItem(string ConversationReference, DateOnly PeriodEnd,
     string FilingProfile, string? SubmissionNumber, CompaniesHouseConversationState State,
     string DocumentSha256, string PackageSha256, DateTimeOffset UpdatedAtUtc,
@@ -57,6 +60,20 @@ internal static class CompaniesHouseProductPolicy
     // operational evidence policy, not a representation of Companies Act accounting-record limits.
     internal static DateOnly RetainUntil(DateTimeOffset lastEventAtUtc) =>
         DateOnly.FromDateTime(lastEventAtUtc.UtcDateTime).AddYears(7);
+}
+
+internal static class CompaniesHouseFilingIdentity
+{
+    internal static string Company(string tenantReference, string companyNumber) =>
+        Sha256($"{tenantReference}|{companyNumber.Trim().ToUpperInvariant()}");
+
+    internal static string Logical(string tenantReference, string companyIdentitySha256,
+        DateOnly periodStart, DateOnly periodEnd, string filingProfile) =>
+        Sha256($"{tenantReference}|{companyIdentitySha256}|{periodStart:yyyy-MM-dd}|" +
+               $"{periodEnd:yyyy-MM-dd}|{filingProfile}");
+
+    private static string Sha256(string value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }
 
 internal sealed record CompaniesHousePreparationRecord(
@@ -104,6 +121,32 @@ internal sealed record CompaniesHouseApprovalRecord(
     bool DeclarationsConfirmed,
     DateTimeOffset ApprovedAtUtc);
 
+internal enum CompaniesHouseStatusCheckState
+{
+    Dispatching,
+    Completed,
+    GatewayError,
+    RecoveryRequired
+}
+
+internal sealed record CompaniesHouseStatusCheckRecord(
+    string Reference,
+    string AuthorityTransactionId,
+    CompaniesHouseStatusCheckState CheckState,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset? CompletedAtUtc,
+    string RequestSha256,
+    string ProtectedRequestReference,
+    string? ResponseSha256,
+    string? ProtectedResponseReference,
+    CompaniesHouseConversationState? ReportedState,
+    string? CompanyNumber,
+    string? CustomerReference,
+    string? ExaminerTelephone,
+    string? ExaminerComment,
+    string? SupportReference,
+    IReadOnlyList<CompaniesHouseError>? Errors = null);
+
 internal sealed record CompaniesHouseConversationRecord(
     string Reference,
     string ApprovalReference,
@@ -125,7 +168,10 @@ internal sealed record CompaniesHouseConversationRecord(
     string? SupportReference,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc,
-    DateOnly RetainUntil);
+    DateOnly RetainUntil,
+    IReadOnlyList<CompaniesHouseError>? Errors = null,
+    IReadOnlyList<CompaniesHouseStatusCheckRecord>? StatusChecks = null,
+    DateTimeOffset? AcknowledgedAtUtc = null);
 
 /// <summary>
 /// Durable persistence port. Implementations must make each mutation atomic, scope every lookup
@@ -146,6 +192,12 @@ internal interface ICompaniesHouseWorkflowStore
         string preparationReference, CancellationToken cancellationToken = default);
     Task<CompaniesHouseConversationRecord?> GetActiveConversationAsync(string tenantReference,
         string logicalFilingIdentity, CancellationToken cancellationToken = default);
+    Task<CompaniesHouseConversationRecord?> GetConversationAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default);
+    Task<bool> TryBeginDispatchAsync(CompaniesHouseConversationRecord conversation,
+        CancellationToken cancellationToken = default);
+    Task<bool> TryBeginStatusCheckAsync(CompaniesHouseConversationRecord conversation,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default);
     Task UpsertConversationAsync(CompaniesHouseConversationRecord conversation,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CompaniesHouseConversationRecord>> ListConversationsAsync(string tenantReference,

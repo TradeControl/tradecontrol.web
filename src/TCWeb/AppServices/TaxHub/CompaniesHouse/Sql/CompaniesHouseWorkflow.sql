@@ -81,6 +81,20 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'TaxHub.Co
         WHERE IsActive = 1;
 GO
 
+IF OBJECT_ID(N'TaxHub.CompaniesHouseAuthoritySequence', N'U') IS NULL
+BEGIN
+    CREATE TABLE TaxHub.CompaniesHouseAuthoritySequence
+    (
+        AuthorityEnvironment nvarchar(32) NOT NULL,
+        LastAllocated int NOT NULL,
+        UpdatedAtUtc datetime2(7) NOT NULL,
+        CONSTRAINT PK_CompaniesHouseAuthoritySequence PRIMARY KEY (AuthorityEnvironment),
+        CONSTRAINT CK_CompaniesHouseAuthoritySequence_Range
+            CHECK (LastAllocated BETWEEN 1 AND 99999)
+    );
+END;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'TaxHub.CompaniesHouseConversation')
     AND name = N'IX_CompaniesHouseConversation_History')
     CREATE INDEX IX_CompaniesHouseConversation_History

@@ -1,7 +1,10 @@
 using System.Xml.Linq;
 using System.Text;
+using System.Collections.Immutable;
+using System.Security.Cryptography;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 using TradeControl.Web.Authorization;
@@ -14,6 +17,8 @@ using TradeControl.Web.Controllers;
 using TradeControl.Web.Data;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Application.DataProvision;
+using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 
 var assertions = 0;
 void Assert(bool condition, string message)
@@ -94,7 +99,7 @@ var companiesHouseDevelopment = ValidCompaniesHouseDevelopmentOptions();
 Assert(companiesHouseDevelopmentValidator.Validate(null, companiesHouseDevelopment).Succeeded,
     "A send-disabled Companies House host with an absolute development store should validate in Development.");
 Assert(companiesHouseDevelopment.DispatchMode == CompaniesHouseDispatchMode.SendDisabled,
-    "Phase 7.0 must not expose a send-enabled Companies House composition.");
+    "Companies House development defaults must remain send-disabled.");
 Assert(companiesHouseProductionValidator.Validate(null, companiesHouseDevelopment).Failed,
     "A Companies House development file store was accepted outside Development.");
 companiesHouseDevelopment.DevelopmentStoreRoot = ".local/tax-hub/companies-house";
@@ -113,6 +118,23 @@ var companiesHouseProduction = new CompaniesHouseProductHostOptions
 };
 Assert(companiesHouseProductionValidator.Validate(null, companiesHouseProduction).Succeeded,
     "The reviewed Azure-managed Companies House persistence boundary was rejected.");
+var companiesHouseOfficialTest = new CompaniesHouseProductHostOptions
+{
+    Enabled = true,
+    AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.OfficialTest,
+    PersistenceMode = CompaniesHousePersistenceMode.AzureManaged,
+    DispatchMode = CompaniesHouseDispatchMode.OfficialTestSingleSend,
+    TenantReference = Guid.NewGuid().ToString(),
+    KeyVaultUri = new Uri("https://example.vault.azure.net/"),
+    WorkflowConnectionName = "TaxHubWorkflow",
+    EvidenceBlobServiceUri = "https://example.blob.core.windows.net/",
+    OfficialTestSubmissionSequenceFloor = 17
+};
+Assert(companiesHouseProductionValidator.Validate(null, companiesHouseOfficialTest).Succeeded,
+    "The reviewed official-test-only single-send composition was rejected.");
+companiesHouseOfficialTest.AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.Production;
+Assert(companiesHouseProductionValidator.Validate(null, companiesHouseOfficialTest).Failed,
+    "Official-test dispatch was accepted against the production authority environment.");
 companiesHouseProduction.EvidenceContainerName = "Invalid_Container";
 Assert(companiesHouseProductionValidator.Validate(null, companiesHouseProduction).Failed,
     "An invalid Companies House evidence-container name was accepted.");
@@ -133,6 +155,181 @@ Assert(companiesHouseDefaults.DevelopmentStoreRoot is not null
 Assert(CompaniesHouseProductPolicy.RetainUntil(new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero))
         == new DateOnly(2033, 10, 8),
     "The reviewed Companies House evidence-retention rule changed.");
+var companyIdentity = CompaniesHouseFilingIdentity.Company("tenant-a", " 01234567 ");
+var logicalFilingIdentity = CompaniesHouseFilingIdentity.Logical("tenant-a", companyIdentity,
+    new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
+    CompaniesHouseProductPolicy.SupportedFilingProfile);
+Assert(companyIdentity == CompaniesHouseFilingIdentity.Company("tenant-a", "01234567")
+       && logicalFilingIdentity == CompaniesHouseFilingIdentity.Logical("tenant-a", companyIdentity,
+           new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
+           CompaniesHouseProductPolicy.SupportedFilingProfile)
+       && logicalFilingIdentity != CompaniesHouseFilingIdentity.Logical("tenant-a", companyIdentity,
+           new DateOnly(2026, 10, 1), new DateOnly(2027, 9, 30),
+           CompaniesHouseProductPolicy.SupportedFilingProfile),
+    "Companies House company/period filing identities are not deterministic and period-specific.");
+var stagingTenant = Guid.NewGuid().ToString();
+var stagingDocumentSha = new string('A', 64);
+var stagingPackageSha = new string('B', 64);
+var stagingPreparation = new CompaniesHousePreparationRecord(
+    "chp1-stage", stagingTenant, "HOME", "SA", new string('C', 64), "••••4567",
+    new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
+    CompaniesHouseProductPolicy.SupportedFilingProfile, "TradeControl", "UK-CO-ACCTS-2026",
+    "snapshot", stagingDocumentSha, stagingPackageSha, "document", "package",
+    DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1));
+var stagingApproval = new CompaniesHouseApprovalRecord(
+    "cha1-stage", stagingPreparation.Reference, stagingTenant, "subject", "SA",
+    new string('D', 64), stagingPreparation.CompanyIdentitySha256,
+    stagingPreparation.PeriodStart, stagingPreparation.PeriodEnd, stagingPreparation.FilingProfile,
+    CompaniesHouseApprovalDeclaration.Version, CompaniesHouseApprovalDeclaration.Sha256,
+    stagingPreparation.SourceSystem, stagingPreparation.DatasetKey, stagingPreparation.SnapshotToken,
+    stagingDocumentSha, stagingPackageSha, true, DateTimeOffset.UtcNow);
+var stagingStore = new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval);
+var stagingContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<string, byte[]>
+{
+    ["document"] = Encoding.UTF8.GetBytes("document"),
+    ["package"] = Encoding.UTF8.GetBytes("package")
+});
+var stagingHttp = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
+stagingHttp.HttpContext.User = Principal(Constants.AdministratorsRole);
+var stagingService = new CompaniesHouseSubmissionStagingService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    stagingStore, stagingContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        Enabled = true,
+        DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+    }), TimeProvider.System);
+var stagedFirst = await stagingService.StageApprovedAsync(stagingApproval.Reference);
+var stagedAgain = await stagingService.StageApprovedAsync(stagingApproval.Reference);
+var recordingExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0001");
+var dispatchService = new CompaniesHouseSubmissionDispatchService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    stagingStore, stagingContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    new StubCompaniesHouseAuthorityIdentifierSource(new("R00001", "RECORDED0001")),
+    new StubCompaniesHouseSubmissionMaterializer(), recordingExchange, TimeProvider.System);
+var dispatched = await dispatchService.DispatchAsync(stagedFirst.ConversationReference);
+var dispatchedAgain = await dispatchService.DispatchAsync(stagedFirst.ConversationReference);
+stagingStore.SetState(CompaniesHouseConversationState.Accepted);
+var stagedAfterTerminal = await stagingService.StageApprovedAsync(stagingApproval.Reference);
+Assert(stagedFirst.State == CompaniesHouseConversationState.Prepared
+       && stagedFirst.ConversationReference == stagedAgain.ConversationReference
+       && dispatched.State == CompaniesHouseConversationState.Acknowledged
+       && dispatchedAgain.State == CompaniesHouseConversationState.Acknowledged
+       && dispatched.SubmissionNumber == "R00001"
+       && recordingExchange.ExchangeCount == 1
+       && stagedAfterTerminal.State == CompaniesHouseConversationState.Accepted
+       && stagedAfterTerminal.ConversationReference == stagedFirst.ConversationReference
+       && stagingStore.UpsertCount == 2
+       && stagingStore.TryBeginDispatchCount == 1
+       && stagingContent.ReadCount == 4
+       && stagingContent.WriteCount == 2
+       && stagingStore.ActiveConversation?.AuthorityTransactionId == "RECORDED0001",
+    "The recording lifecycle did not retain exact evidence, claim once, separate acknowledgement, or prevent replay.");
+
+var recoveryPreparation = stagingPreparation with
+{
+    Reference = "chp1-recovery",
+    CompanyIdentitySha256 = new string('E', 64),
+    ProtectedDocumentReference = "recovery-document",
+    ProtectedPackageReference = "recovery-package"
+};
+var recoveryApproval = stagingApproval with
+{
+    Reference = "cha1-recovery",
+    PreparationReference = recoveryPreparation.Reference,
+    CompanyIdentitySha256 = recoveryPreparation.CompanyIdentitySha256,
+    LogicalFilingIdentity = new string('F', 64)
+};
+var recoveryStore = new StubCompaniesHouseWorkflowStore(recoveryPreparation, recoveryApproval);
+var recoveryContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<string, byte[]>
+{
+    ["recovery-document"] = Encoding.UTF8.GetBytes("recovery-document"),
+    ["recovery-package"] = Encoding.UTF8.GetBytes("recovery-package")
+});
+var recoveryStaging = new CompaniesHouseSubmissionStagingService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    recoveryStore, recoveryContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        Enabled = true,
+        DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+    }), TimeProvider.System);
+var recoveryConversation = await recoveryStaging.StageApprovedAsync(recoveryApproval.Reference);
+var ambiguousExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0002", fail: true);
+var recoveryDispatch = new CompaniesHouseSubmissionDispatchService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    recoveryStore, recoveryContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    new StubCompaniesHouseAuthorityIdentifierSource(new("R00002", "RECORDED0002")),
+    new StubCompaniesHouseSubmissionMaterializer(), ambiguousExchange, TimeProvider.System);
+var uncertain = await recoveryDispatch.DispatchAsync(recoveryConversation.ConversationReference);
+var uncertainAgain = await recoveryDispatch.DispatchAsync(recoveryConversation.ConversationReference);
+Assert(uncertain.State == CompaniesHouseConversationState.Dispatching
+       && uncertain.RecoveryRequired && uncertain.SupportReference is not null
+       && uncertainAgain.ConversationReference == uncertain.ConversationReference
+       && ambiguousExchange.ExchangeCount == 1
+       && recoveryStore.TryBeginDispatchCount == 1,
+    "An ambiguous Companies House exchange was not retained as recovery-required or was replayed.");
+
+var statusPreparation = stagingPreparation with
+{
+    Reference = "chp1-status",
+    CompanyIdentitySha256 = new string('1', 64),
+    ProtectedDocumentReference = "status-document",
+    ProtectedPackageReference = "status-package"
+};
+var statusApproval = stagingApproval with
+{
+    Reference = "cha1-status",
+    PreparationReference = statusPreparation.Reference,
+    CompanyIdentitySha256 = statusPreparation.CompanyIdentitySha256,
+    LogicalFilingIdentity = new string('2', 64)
+};
+var statusStore = new StubCompaniesHouseWorkflowStore(statusPreparation, statusApproval);
+var statusContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<string, byte[]>
+{
+    ["status-document"] = Encoding.UTF8.GetBytes("status-document"),
+    ["status-package"] = Encoding.UTF8.GetBytes("status-package")
+});
+var statusStaging = new CompaniesHouseSubmissionStagingService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        Enabled = true,
+        DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+    }), TimeProvider.System);
+var statusConversation = await statusStaging.StageApprovedAsync(statusApproval.Reference);
+var statusDispatch = new CompaniesHouseSubmissionDispatchService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    new StubCompaniesHouseAuthorityIdentifierSource(new("R00003", "RECORDED0003")),
+    new StubCompaniesHouseSubmissionMaterializer(),
+    new StubCompaniesHouseSubmissionExchange("RECORDED0003"), TimeProvider.System);
+var statusAcknowledgement = await statusDispatch.DispatchAsync(statusConversation.ConversationReference);
+var originalRequestSha = statusStore.ActiveConversation!.LastRequestSha256;
+var statusExchange = new StubCompaniesHouseStatusExchange("R00003",
+    CompaniesHouseSubmissionStatusCode.Pending, CompaniesHouseSubmissionStatusCode.Accept);
+var statusService = new CompaniesHouseSubmissionStatusService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    new StubCompaniesHouseStatusTransactionIdSource("STATUS0001", "STATUS0002"),
+    new StubCompaniesHouseStatusRequestMaterializer(), statusExchange, TimeProvider.System);
+var pendingStatus = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
+var acceptedStatus = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
+var acceptedAgain = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
+Assert(pendingStatus.State == CompaniesHouseConversationState.Pending
+       && acceptedStatus.State == CompaniesHouseConversationState.Accepted
+       && acceptedAgain.State == CompaniesHouseConversationState.Accepted
+       && statusExchange.ExchangeCount == 2
+       && statusStore.TryBeginStatusCheckCount == 2
+       && statusStore.ActiveConversation?.StatusChecks?.Count == 2
+       && statusStore.ActiveConversation.StatusChecks.All(check =>
+           check.CheckState == CompaniesHouseStatusCheckState.Completed
+           && check.ResponseSha256 is not null && check.ProtectedResponseReference is not null)
+       && statusStore.ActiveConversation.LastRequestSha256 == originalRequestSha
+       && !statusStore.ActiveConversation.StatusAcknowledgementRequired
+       && !statusStore.ActiveConversation.StatusAcknowledged,
+    "Specific Companies House status checks did not preserve the filing exchange, progress Pending to Accepted, or stop after the terminal result.");
 Assert(CompaniesHouseReadinessService.MaskCompanyNumber("01234567") == "••••4567",
     "Companies House readiness did not bound the company number shown in the browser model.");
 Assert(CompaniesHouseReadinessService.MaskCompanyNumber("  SC123456  ") == "••••3456",
@@ -233,6 +430,8 @@ Assert(filingInputComponent.Contains("Prepare exact accounts", StringComparison.
        && filingInputComponent.Contains("Prepared — not approved or filed", StringComparison.Ordinal)
        && filingInputComponent.Contains("Download filing XHTML", StringComparison.Ordinal)
        && filingInputComponent.Contains("Download draft PDF", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Download official-test submitted PDF", StringComparison.Ordinal)
+       && filingInputComponent.Contains("OFFICIAL TEST — NOT LIVE FILED", StringComparison.Ordinal)
        && filingInputComponent.Contains("Approve accounts — does not file", StringComparison.Ordinal)
        && filingInputComponent.Contains("Approved — not filed", StringComparison.Ordinal)
        && !filingInputComponent.Contains(">Submit<", StringComparison.Ordinal),
@@ -281,6 +480,16 @@ Assert(pdfDownloadResult is not null
        && pdfDownloadResult.FileDownloadName == "companies-house-accounts-draft.pdf"
        && downloadController.Response.Headers["X-Source-Document-SHA256"] == "TEST-DIGEST",
     "The draft-PDF route does not bind its derivative to the retained source document.");
+var submittedPdfDownloadResult = await downloadController.OfficialTestSubmissionPdf(
+        "chp1-test", CancellationToken.None) as FileContentResult;
+Assert(submittedPdfDownloadResult is not null
+       && submittedPdfDownloadResult.FileContents.SequenceEqual(retainedPdfBytes)
+       && submittedPdfDownloadResult.ContentType == "application/pdf"
+       && submittedPdfDownloadResult.FileDownloadName ==
+          "companies-house-accounts-official-test-S00017.pdf"
+       && downloadController.Response.Headers["X-Companies-House-Evidence-Class"] ==
+          "OFFICIAL TEST - NOT LIVE FILED",
+    "The post-dispatch PDF route is not constrained to clearly labelled official-test evidence.");
 var pdfFixture = """
 <?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"><body><div class="accounts-document">
@@ -297,6 +506,12 @@ var renderedPdf = new CompaniesHouseDraftPdfRenderer().Render(
     Encoding.UTF8.GetBytes(pdfFixture), new string('A', 64));
 Assert(renderedPdf.Length > 1000 && Encoding.ASCII.GetString(renderedPdf, 0, 5) == "%PDF-",
     "The draft-PDF renderer did not produce a substantive PDF document.");
+var renderedSubmittedPdf = new CompaniesHouseDraftPdfRenderer().RenderOfficialTestSubmission(
+    Encoding.UTF8.GetBytes(pdfFixture), new string('A', 64), "S00017",
+    new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.Zero));
+Assert(renderedSubmittedPdf.Length > 1000
+       && Encoding.ASCII.GetString(renderedSubmittedPdf, 0, 5) == "%PDF-",
+    "The official-test submitted-copy renderer did not produce a substantive PDF document.");
 var pdfOutputArgument = args.FirstOrDefault(value => value.StartsWith("--pdf-output=", StringComparison.Ordinal));
 if (pdfOutputArgument is not null)
 {
@@ -311,7 +526,13 @@ if (pdfOutputArgument is not null)
     {
         var sourceBytes = File.ReadAllBytes(Path.GetFullPath(pdfSourceArgument["--pdf-source=".Length..]));
         var sourceDigest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(sourceBytes));
-        File.WriteAllBytes(pdfOutputPath, new CompaniesHouseDraftPdfRenderer().Render(sourceBytes, sourceDigest));
+        var submittedNumberArgument = args.FirstOrDefault(value =>
+            value.StartsWith("--official-test-submission=", StringComparison.Ordinal));
+        var pdfBytes = submittedNumberArgument is null
+            ? new CompaniesHouseDraftPdfRenderer().Render(sourceBytes, sourceDigest)
+            : new CompaniesHouseDraftPdfRenderer().RenderOfficialTestSubmission(sourceBytes, sourceDigest,
+                submittedNumberArgument["--official-test-submission=".Length..], DateTimeOffset.UtcNow);
+        File.WriteAllBytes(pdfOutputPath, pdfBytes);
     }
 }
 var taxHubShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
@@ -327,6 +548,10 @@ Assert(taxHubService.Contains("t.YearNumber == selectedYear && t.StartOn == peri
     "The Accounts service accepts a period from a different financial year.");
 var companiesHouseReviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CompaniesHouse", "CompaniesHousePreparationReviewService.cs"));
+var companiesHouseContinuationService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CompaniesHouse", "CompaniesHouseFilingContinuationService.cs"));
+var appServiceRegistration = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "ServiceCollectionExtensions.cs"));
 Assert(companiesHouseReviewService.Contains("text/html; charset=utf-8", StringComparison.Ordinal),
     "The exact retained Companies House document is not exposed through a browser-renderable review media type.");
 Assert(companiesHouseReviewService.Contains("CanApproveAccounts", StringComparison.Ordinal)
@@ -335,6 +560,19 @@ Assert(companiesHouseReviewService.Contains("CanApproveAccounts", StringComparis
        && companiesHouseReviewService.Contains("identity.AspNetSubjectReference", StringComparison.Ordinal)
        && companiesHouseReviewService.Contains("CompaniesHouseApprovalDeclaration.Sha256", StringComparison.Ordinal),
     "Companies House immutable approval lost role, principal, retained-input, stale-source or declaration binding.");
+Assert(companiesHouseReviewService.Contains("Continue that filing instead of preparing another submission",
+           StringComparison.Ordinal)
+       && companiesHouseContinuationService.Contains("ListConversationsAsync", StringComparison.Ordinal)
+       && companiesHouseContinuationService.Contains("conversation.DocumentSha256", StringComparison.Ordinal)
+       && companiesHouseContinuationService.Contains("conversation.PackageSha256", StringComparison.Ordinal),
+    "Companies House preparation no longer blocks duplicate period filings or rehydrates digest-bound continuation state.");
+Assert(appServiceRegistration.Contains("ICompaniesHouseSubmissionStagingService", StringComparison.Ordinal)
+       && appServiceRegistration.Contains("CompaniesHouseDispatchMode.OfficialTestSingleSend", StringComparison.Ordinal)
+       && appServiceRegistration.Contains("ICompaniesHouseSubmissionDispatchService", StringComparison.Ordinal)
+       && appServiceRegistration.Contains("ICompaniesHouseFilingContinuationService", StringComparison.Ordinal)
+       && appServiceRegistration.Contains("ICompaniesHouseSubmissionStatusService", StringComparison.Ordinal)
+       && appServiceRegistration.Contains("CompaniesHouseOfficialTestStatusRequestMaterializer", StringComparison.Ordinal),
+    "The reviewed staging, official-test dispatcher or specific-submission status composition is unavailable.");
 var companiesHousePreparer = File.ReadAllText(Path.Combine(root, "src", "tax-hub", "src",
     "TradeControl.Tax.UK.Application", "Preparation", "CompaniesHouseAccountsPreparer.cs"));
 Assert(companiesHousePreparer.Contains("CH-TRANSPORT-MATERIALISATION-REQUIRED", StringComparison.Ordinal)
@@ -347,7 +585,8 @@ Assert(typeof(AzureCompaniesHousePersistence).GetInterfaces().Contains(typeof(IC
 var companiesHouseDdl = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub",
     "CompaniesHouse", "Sql", "CompaniesHouseWorkflow.sql"));
 Assert(companiesHouseDdl.Contains("PRIMARY KEY (TenantReference, Reference)", StringComparison.Ordinal)
-       && companiesHouseDdl.Contains("WHERE IsActive = 1", StringComparison.Ordinal),
+       && companiesHouseDdl.Contains("WHERE IsActive = 1", StringComparison.Ordinal)
+       && companiesHouseDdl.Contains("CompaniesHouseAuthoritySequence", StringComparison.Ordinal),
     "Companies House workflow SQL lost tenant partitioning or one-active-filing enforcement.");
 Assert(companiesHouseDdl.Contains("FOREIGN KEY (TenantReference, PreparationReference)",
            StringComparison.Ordinal)
@@ -590,6 +829,10 @@ Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringCom
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
     "Business Tax or Accounts no longer provides compact mobile tab labels.");
+Assert(accountsWorkspaceComponent.Contains("OFFICIAL TEST — NOT A LIVE FILING", StringComparison.Ordinal)
+       && accountsWorkspaceComponent.Contains("live package reference is not configured", StringComparison.Ordinal)
+       && filingInputComponent.Contains("OFFICIAL TEST — NOT LIVE", StringComparison.Ordinal),
+    "The filing journey no longer makes its official-test-only environment unmistakable.");
 var dashboardObligationsGrid = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubObligationsGrid.razor"));
 var dashboardComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
@@ -865,6 +1108,11 @@ Assert(accountsWorkspaceView.Contains("File Your Accounts", StringComparison.Ord
        < accountsWorkspaceView.IndexOf("TaxHubCompaniesHouseEvidenceReview", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("CompletionChanged", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("if (_evidenceReviewComplete)", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("EXISTING FILING — DO NOT RESUBMIT", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("Continue the existing Companies House filing", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("CompaniesHouseContinuation.FindAsync", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("Check Companies House status", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("CompaniesHouseStatus.CheckAsync", StringComparison.Ordinal)
     && yearEndReviewView.Contains("subject-balances/v1", StringComparison.Ordinal)
     && yearEndReviewView.Contains("These are year-end balances, not an aged-debt reconstruction", StringComparison.Ordinal)
     && yearEndReviewView.Contains("Review historical balances", StringComparison.Ordinal)
@@ -995,6 +1243,11 @@ file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
         CancellationToken cancellationToken = default) =>
         Task.FromResult(new CompaniesHouseReviewDocument("text/html; charset=utf-8", bytes, "TEST-DIGEST"));
 
+    public Task<CompaniesHouseOfficialTestSubmittedDocument> ReadOfficialTestSubmittedDocumentAsync(
+        string preparationReference, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new CompaniesHouseOfficialTestSubmittedDocument(bytes, "TEST-DIGEST", "S00017",
+            new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.Zero)));
+
     public Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
         string declarationVersion, bool declarationsConfirmed,
         CancellationToken cancellationToken = default) =>
@@ -1004,4 +1257,237 @@ file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
 file sealed class StubCompaniesHouseDraftPdfRenderer(byte[] bytes) : ICompaniesHouseDraftPdfRenderer
 {
     public byte[] Render(byte[] retainedIxbrl, string sourceSha256) => bytes;
+    public byte[] RenderOfficialTestSubmission(byte[] retainedIxbrl, string sourceSha256,
+        string submissionNumber, DateTimeOffset submittedAtUtc) => bytes;
+}
+
+file sealed class StubCompaniesHouseWorkflowIdentityAccessor(CompaniesHouseWorkflowIdentity identity)
+    : ICompaniesHouseWorkflowIdentityAccessor
+{
+    public Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(
+        CancellationToken cancellationToken = default) => Task.FromResult(identity);
+}
+
+file sealed class StubCompaniesHouseWorkflowStore(
+    CompaniesHousePreparationRecord preparation,
+    CompaniesHouseApprovalRecord approval) : ICompaniesHouseWorkflowStore
+{
+    public CompaniesHouseConversationRecord? ActiveConversation { get; private set; }
+    public int UpsertCount { get; private set; }
+    public int TryBeginDispatchCount { get; private set; }
+    public int TryBeginStatusCheckCount { get; private set; }
+
+    public void SetState(CompaniesHouseConversationState state)
+    {
+        if (ActiveConversation is null) throw new InvalidOperationException();
+        ActiveConversation = ActiveConversation with { State = state, UpdatedAtUtc = DateTimeOffset.UtcNow };
+    }
+
+    public Task AddPreparationAsync(CompaniesHousePreparationRecord value,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<CompaniesHousePreparationRecord?> GetPreparationAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default) =>
+        Task.FromResult<CompaniesHousePreparationRecord?>(
+            tenantReference == preparation.TenantReference && reference == preparation.Reference
+                ? preparation : null);
+
+    public Task AddApprovalAsync(CompaniesHouseApprovalRecord value,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<CompaniesHouseApprovalRecord?> GetApprovalAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default) =>
+        Task.FromResult<CompaniesHouseApprovalRecord?>(
+            tenantReference == approval.TenantReference && reference == approval.Reference
+                ? approval : null);
+
+    public Task<CompaniesHouseApprovalRecord?> GetApprovalForPreparationAsync(string tenantReference,
+        string preparationReference, CancellationToken cancellationToken = default) =>
+        Task.FromResult<CompaniesHouseApprovalRecord?>(approval);
+
+    public Task<CompaniesHouseConversationRecord?> GetActiveConversationAsync(string tenantReference,
+        string logicalFilingIdentity, CancellationToken cancellationToken = default) =>
+        Task.FromResult(ActiveConversation is not null
+                        && ActiveConversation.TenantReference == tenantReference
+                        && ActiveConversation.LogicalFilingIdentity == logicalFilingIdentity
+                        && ActiveConversation.State is not (CompaniesHouseConversationState.Accepted
+                            or CompaniesHouseConversationState.Rejected
+                            or CompaniesHouseConversationState.GatewayRejected
+                            or CompaniesHouseConversationState.InternalFailure)
+            ? ActiveConversation : null);
+
+    public Task UpsertConversationAsync(CompaniesHouseConversationRecord conversation,
+        CancellationToken cancellationToken = default)
+    {
+        UpsertCount++;
+        ActiveConversation = conversation;
+        return Task.CompletedTask;
+    }
+
+    public Task<CompaniesHouseConversationRecord?> GetConversationAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default) =>
+        Task.FromResult(ActiveConversation is not null
+                        && ActiveConversation.TenantReference == tenantReference
+                        && ActiveConversation.Reference == reference
+            ? ActiveConversation : null);
+
+    public Task<bool> TryBeginDispatchAsync(CompaniesHouseConversationRecord conversation,
+        CancellationToken cancellationToken = default)
+    {
+        TryBeginDispatchCount++;
+        if (ActiveConversation is null
+            || ActiveConversation.State != CompaniesHouseConversationState.Prepared)
+            return Task.FromResult(false);
+        ActiveConversation = conversation;
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> TryBeginStatusCheckAsync(CompaniesHouseConversationRecord conversation,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+    {
+        TryBeginStatusCheckCount++;
+        if (ActiveConversation is null
+            || ActiveConversation.UpdatedAtUtc != expectedUpdatedAtUtc
+            || ActiveConversation.State is not (CompaniesHouseConversationState.Acknowledged
+                or CompaniesHouseConversationState.Pending or CompaniesHouseConversationState.Parked)
+            || conversation.StatusChecks?.LastOrDefault()?.CheckState
+                != CompaniesHouseStatusCheckState.Dispatching)
+            return Task.FromResult(false);
+        ActiveConversation = conversation;
+        return Task.FromResult(true);
+    }
+
+    public Task<IReadOnlyList<CompaniesHouseConversationRecord>> ListConversationsAsync(
+        string tenantReference, string companyIdentitySha256,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<CompaniesHouseConversationRecord>>(
+            ActiveConversation is null ? [] : [ActiveConversation]);
+}
+
+file sealed class StubCompaniesHouseProtectedContentStore(IReadOnlyDictionary<string, byte[]> content)
+    : ICompaniesHouseProtectedContentStore
+{
+    private readonly Dictionary<string, byte[]> _content = new(content);
+    public int ReadCount { get; private set; }
+    public int WriteCount { get; private set; }
+
+    public Task<CompaniesHouseProtectedContent> WriteAsync(string tenantReference, string contentKind,
+        ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
+    {
+        WriteCount++;
+        var reference = $"written-{WriteCount}";
+        var value = bytes.ToArray();
+        _content[reference] = value;
+        return Task.FromResult(new CompaniesHouseProtectedContent(reference,
+            Convert.ToHexString(SHA256.HashData(value)), value.LongLength, value));
+    }
+
+    public Task<CompaniesHouseProtectedContent> ReadAsync(string tenantReference, string reference,
+        string expectedSha256, CancellationToken cancellationToken = default)
+    {
+        ReadCount++;
+        var bytes = _content[reference];
+        return Task.FromResult(new CompaniesHouseProtectedContent(reference, expectedSha256,
+            bytes.LongLength, bytes));
+    }
+}
+
+file sealed class StubCompaniesHouseAuthorityIdentifierSource(CompaniesHouseAuthorityIdentifiers identifiers)
+    : ICompaniesHouseAuthorityIdentifierSource
+{
+    public Task<CompaniesHouseAuthorityIdentifiers> AllocateAsync(
+        CancellationToken cancellationToken = default) => Task.FromResult(identifiers);
+}
+
+file sealed class StubCompaniesHouseSubmissionMaterializer : ICompaniesHouseSubmissionMaterializer
+{
+    public Task<CompaniesHouseMaterializedSubmission> MaterializeAsync(
+        CompaniesHouseAuthorityIdentifiers identifiers, CompaniesHouseProtectedContent packagePreview,
+        CompaniesHouseProtectedContent accountsDocument, CancellationToken cancellationToken = default)
+    {
+        var bytes = Encoding.UTF8.GetBytes($"<recording submission='{identifiers.SubmissionNumber}' transaction='{identifiers.TransactionId}' />");
+        return Task.FromResult(new CompaniesHouseMaterializedSubmission(ImmutableArray.CreateRange(bytes),
+            Convert.ToHexString(SHA256.HashData(bytes))));
+    }
+}
+
+file sealed class StubCompaniesHouseSubmissionExchange(string transactionId, bool fail = false)
+    : ICompaniesHouseSubmissionExchange
+{
+    public int ExchangeCount { get; private set; }
+
+    public Task<CompaniesHouseGatewayResponse> ExchangeAsync(CompaniesHouseMaterializedSubmission request,
+        CancellationToken cancellationToken = default)
+    {
+        ExchangeCount++;
+        if (fail) throw new IOException("Injected ambiguous recording failure.");
+        var bytes = Encoding.UTF8.GetBytes($$"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <GovTalkMessage xmlns="http://www.govtalk.gov.uk/CM/envelope">
+              <EnvelopeVersion>1.0</EnvelopeVersion>
+              <Header><MessageDetails><Class>Accounts</Class><Qualifier>acknowledgement</Qualifier><Function>submit</Function><TransactionID>{{transactionId}}</TransactionID><GatewayTimestamp>2026-10-12T12:00:00+00:00</GatewayTimestamp></MessageDetails></Header>
+              <GovTalkDetails/><Body/>
+            </GovTalkMessage>
+            """);
+        return Task.FromResult(new CompaniesHouseGatewayResponse(
+            CompaniesHouseGatewayResponseKind.Acknowledgement, ImmutableArray.CreateRange(bytes),
+            request.Sha256, Convert.ToHexString(SHA256.HashData(bytes)), "RECORDED — NOT SENT"));
+    }
+}
+
+file sealed class StubCompaniesHouseStatusTransactionIdSource(params string[] transactionIds)
+    : ICompaniesHouseStatusTransactionIdSource
+{
+    private readonly Queue<string> _transactionIds = new(transactionIds);
+
+    public string Allocate() => _transactionIds.Dequeue();
+}
+
+file sealed class StubCompaniesHouseStatusRequestMaterializer : ICompaniesHouseStatusRequestMaterializer
+{
+    public Task<CompaniesHouseMaterializedSubmission> MaterializeAsync(string submissionNumber,
+        string transactionId, CancellationToken cancellationToken = default)
+    {
+        var bytes = Encoding.UTF8.GetBytes(
+            $"<status submission='{submissionNumber}' transaction='{transactionId}' />");
+        return Task.FromResult(new CompaniesHouseMaterializedSubmission(ImmutableArray.CreateRange(bytes),
+            Convert.ToHexString(SHA256.HashData(bytes))));
+    }
+}
+
+file sealed class StubCompaniesHouseStatusExchange(
+    string submissionNumber, params CompaniesHouseSubmissionStatusCode[] statuses)
+    : ICompaniesHouseStatusExchange
+{
+    private readonly Queue<CompaniesHouseSubmissionStatusCode> _statuses = new(statuses);
+    public int ExchangeCount { get; private set; }
+
+    public Task<CompaniesHouseGatewayResponse> ExchangeAsync(CompaniesHouseMaterializedSubmission request,
+        CancellationToken cancellationToken = default)
+    {
+        ExchangeCount++;
+        var status = _statuses.Dequeue();
+        var bytes = Encoding.UTF8.GetBytes($$"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <GovTalkMessage xmlns="http://www.govtalk.gov.uk/CM/envelope">
+              <EnvelopeVersion>1.0</EnvelopeVersion>
+              <Header><MessageDetails><Class>GetSubmissionStatus</Class><Qualifier>response</Qualifier><TransactionID>STATUS000{{ExchangeCount}}</TransactionID><GatewayTimestamp>2026-10-12T13:00:00+00:00</GatewayTimestamp></MessageDetails></Header>
+              <GovTalkDetails/>
+              <Body><GetSubmissionStatus xmlns="http://xmlgw.companieshouse.gov.uk"><Status><SubmissionNumber>{{submissionNumber}}</SubmissionNumber><StatusCode>{{StatusCode(status)}}</StatusCode></Status></GetSubmissionStatus></Body>
+            </GovTalkMessage>
+            """);
+        return Task.FromResult(new CompaniesHouseGatewayResponse(
+            CompaniesHouseGatewayResponseKind.SubmissionStatus, ImmutableArray.CreateRange(bytes),
+            request.Sha256, Convert.ToHexString(SHA256.HashData(bytes)), "RECORDED — NOT SENT"));
+    }
+
+    private static string StatusCode(CompaniesHouseSubmissionStatusCode status) => status switch
+    {
+        CompaniesHouseSubmissionStatusCode.Accept => "ACCEPT",
+        CompaniesHouseSubmissionStatusCode.Reject => "REJECT",
+        CompaniesHouseSubmissionStatusCode.Pending => "PENDING",
+        CompaniesHouseSubmissionStatusCode.Parked => "PARKED",
+        CompaniesHouseSubmissionStatusCode.InternalFailure => "INTERNAL_FAILURE",
+        _ => throw new InvalidOperationException()
+    };
 }

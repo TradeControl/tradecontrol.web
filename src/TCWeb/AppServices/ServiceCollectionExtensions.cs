@@ -56,10 +56,46 @@ namespace TradeControl.Web.AppServices
                     provider.GetRequiredService<AzureCompaniesHousePersistence>());
                 services.AddScoped<ICompaniesHousePreparationReviewService,
                     CompaniesHousePreparationReviewService>();
+                services.AddScoped<ICompaniesHouseSubmissionStagingService,
+                    CompaniesHouseSubmissionStagingService>();
+                services.AddScoped<ICompaniesHouseFilingContinuationService,
+                    CompaniesHouseFilingContinuationService>();
+                if (configuration.GetValue<CompaniesHouseDispatchMode>(
+                        $"{CompaniesHouseProductHostOptions.SectionName}:DispatchMode")
+                    == CompaniesHouseDispatchMode.OfficialTestSingleSend)
+                {
+                    services.AddScoped<ICompaniesHouseAuthorityIdentifierSource,
+                        AzureCompaniesHouseAuthorityIdentifierSource>();
+                    services.AddSingleton<ICompaniesHouseSubmissionMaterializer,
+                        CompaniesHouseOfficialTestSubmissionMaterializer>();
+                    services.AddSingleton<ICompaniesHouseSubmissionExchange,
+                        CompaniesHouseOfficialTestSubmissionExchange>();
+                    services.AddScoped<ICompaniesHouseSubmissionDispatchService,
+                        CompaniesHouseSubmissionDispatchService>();
+                    services.AddSingleton<ICompaniesHouseStatusTransactionIdSource,
+                        CompaniesHouseStatusTransactionIdSource>();
+                    services.AddSingleton<ICompaniesHouseStatusRequestMaterializer,
+                        CompaniesHouseOfficialTestStatusRequestMaterializer>();
+                    services.AddSingleton<ICompaniesHouseStatusExchange,
+                        CompaniesHouseOfficialTestStatusExchange>();
+                    services.AddScoped<ICompaniesHouseSubmissionStatusService,
+                        CompaniesHouseSubmissionStatusService>();
+                }
+                else
+                {
+                    services.AddScoped<ICompaniesHouseSubmissionStatusService,
+                        DisabledCompaniesHouseSubmissionStatusService>();
+                }
             }
             else
+            {
                 services.AddScoped<ICompaniesHousePreparationReviewService,
                     DisabledCompaniesHousePreparationReviewService>();
+                services.AddScoped<ICompaniesHouseFilingContinuationService,
+                    DisabledCompaniesHouseFilingContinuationService>();
+                services.AddScoped<ICompaniesHouseSubmissionStatusService,
+                    DisabledCompaniesHouseSubmissionStatusService>();
+            }
             services.AddHttpContextAccessor();
             services.AddScoped<IVatWorkflowIdentityAccessor, VatWorkflowIdentityAccessor>();
             services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();

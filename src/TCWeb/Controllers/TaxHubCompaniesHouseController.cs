@@ -77,4 +77,31 @@ public sealed class TaxHubCompaniesHouseController(
             return StatusCode(409, new ProblemDetails { Title = exception.Message, Status = 409 });
         }
     }
+
+    [HttpGet("Preparation/{reference}/OfficialTestSubmission.pdf")]
+    public async Task<IActionResult> OfficialTestSubmissionPdf(string reference,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var submitted = await preparationService.ReadOfficialTestSubmittedDocumentAsync(
+                reference, cancellationToken);
+            var pdf = pdfRenderer.RenderOfficialTestSubmission(submitted.Bytes, submitted.Sha256,
+                submitted.SubmissionNumber, submitted.SubmittedAtUtc);
+            Response.Headers.CacheControl = "no-store, max-age=0";
+            Response.Headers.Pragma = "no-cache";
+            Response.Headers.XContentTypeOptions = "nosniff";
+            Response.Headers["X-Source-Document-SHA256"] = submitted.Sha256;
+            Response.Headers["X-Companies-House-Evidence-Class"] = "OFFICIAL TEST - NOT LIVE FILED";
+            return File(pdf, "application/pdf",
+                $"companies-house-accounts-official-test-{submitted.SubmissionNumber}.pdf");
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (ArgumentException) { return BadRequest(); }
+        catch (InvalidOperationException exception)
+        {
+            return StatusCode(409, new ProblemDetails { Title = exception.Message, Status = 409 });
+        }
+    }
 }

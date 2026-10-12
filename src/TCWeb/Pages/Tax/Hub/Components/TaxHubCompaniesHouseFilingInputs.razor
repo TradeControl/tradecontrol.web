@@ -1,9 +1,14 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
 @using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
+@using TradeControl.Tax.UK.Application.Preparation
 @implements IDisposable
 @inject TimeProvider TimeProvider
 @inject ICompaniesHousePreparationReviewService PreparationService
+@inject IServiceProvider Services
+@inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
 
 @if (!Readiness.IsEligible)
 {
@@ -210,6 +215,75 @@ else if (_draft is not null && _editContext is not null)
                                     <dd class="col-md-9 mb-0 font-monospace">@_approval.Reference</dd>
                                 </dl>
                             </div>
+
+                            @if (CompaniesHouseHost.Value.DispatchMode == CompaniesHouseDispatchMode.OfficialTestSingleSend)
+                            {
+                                <section class="card border-danger border-2" aria-labelledby="ch-test-submit-title">
+                                    <div class="card-body">
+                                        <div class="badge bg-danger mb-2">OFFICIAL TEST — NOT LIVE</div>
+                                        <h4 id="ch-test-submit-title" class="h6">Companies House official test service</h4>
+                                        <p class="small">
+                                            This sends the exact approved package above to the Companies House test gateway once.
+                                            It is <strong>not a live filing</strong>. The submission cannot be automatically retried after dispatch begins.
+                                        </p>
+                                        @if (_filingStatus is null)
+                                        {
+                                            <div class="form-check mb-3">
+                                                <input id="ch-test-submit-confirmed" type="checkbox" class="form-check-input"
+                                                       @bind="_testSubmissionConfirmed" />
+                                                <label class="form-check-label" for="ch-test-submit-confirmed">
+                                                    Submit this exact approved document to the official test service.
+                                                </label>
+                                            </div>
+                                            <button type="button" class="btn btn-danger"
+                                                    disabled="@(!_testSubmissionConfirmed || _submitting)"
+                                                    @onclick="SubmitOfficialTest">
+                                                @(_submitting ? "Sending once…" : "Submit once — official test only")
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert @FilingStatusClass mb-0" role="status">
+                                                <strong>@FilingStatusTitle</strong>
+                                                <dl class="row small mt-2 mb-0">
+                                                    <dt class="col-md-3">Submission number</dt>
+                                                    <dd class="col-md-9 font-monospace">@(_filingStatus.SubmissionNumber ?? "Not allocated")</dd>
+                                                    <dt class="col-md-3">State</dt>
+                                                    <dd class="col-md-9">@_filingStatus.State</dd>
+                                                    @if (_filingStatus.SupportReference is not null)
+                                                    {
+                                                        <dt class="col-md-3">Support reference</dt>
+                                                        <dd class="col-md-9 font-monospace">@_filingStatus.SupportReference</dd>
+                                                    }
+                                                </dl>
+                                                @if (_filingStatus.Errors is { Count: > 0 })
+                                                {
+                                                    <ul class="small mb-0">
+                                                        @foreach (var error in _filingStatus.Errors)
+                                                        {
+                                                            <li>@error.Code — @error.Message</li>
+                                                        }
+                                                    </ul>
+                                                }
+                                                @if (_filingStatus.State == CompaniesHouseConversationState.Acknowledged
+                                                     && _prepared is not null)
+                                                {
+                                                    <div class="mt-3">
+                                                        <a class="btn btn-outline-success"
+                                                           href="@($"/TaxHub/CompaniesHouse/Preparation/{_prepared.Reference}/OfficialTestSubmission.pdf")">
+                                                            Download official-test submitted PDF
+                                                        </a>
+                                                        <div class="small text-muted mt-2">
+                                                            This copy has no draft watermark. Its footer identifies the acknowledged
+                                                            submission as OFFICIAL TEST — NOT LIVE FILED.
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </section>
+                            }
                         }
                     </div>
                 </section>
@@ -245,6 +319,25 @@ else if (_draft is not null && _editContext is not null)
     private bool _approving;
     private CompaniesHousePreparedReview? _prepared;
     private CompaniesHouseApprovalReview? _approval;
+    private CompaniesHouseFilingStatus? _filingStatus;
+    private bool _testSubmissionConfirmed;
+    private bool _submitting;
+
+    private string FilingStatusClass => _filingStatus?.State switch
+    {
+        CompaniesHouseConversationState.Acknowledged => "alert-success",
+        CompaniesHouseConversationState.GatewayRejected => "alert-danger",
+        _ when _filingStatus?.RecoveryRequired == true => "alert-danger",
+        _ => "alert-info"
+    };
+
+    private string FilingStatusTitle => _filingStatus?.State switch
+    {
+        CompaniesHouseConversationState.Acknowledged => "Acknowledged by the Companies House official test gateway — not live filed.",
+        CompaniesHouseConversationState.GatewayRejected => "The Companies House official test gateway rejected the request.",
+        _ when _filingStatus?.RecoveryRequired == true => "The exchange requires recovery review and will not be retried automatically.",
+        _ => "Official-test submission recorded."
+    };
 
     protected override void OnParametersSet()
     {
@@ -260,6 +353,8 @@ else if (_draft is not null && _editContext is not null)
         _prepared = null;
         _approval = null;
         _approvalConfirmed = false;
+        _filingStatus = null;
+        _testSubmissionConfirmed = false;
     }
 
     private void ReviewInputs()
@@ -325,6 +420,29 @@ else if (_draft is not null && _editContext is not null)
         }
     }
 
+    private async Task SubmitOfficialTest()
+    {
+        if (_approval is null || !_testSubmissionConfirmed || _submitting || _filingStatus is not null) return;
+        _submitting = true;
+        _errors = Array.Empty<string>();
+        try
+        {
+            var staging = Services.GetRequiredService<ICompaniesHouseSubmissionStagingService>();
+            var dispatch = Services.GetRequiredService<ICompaniesHouseSubmissionDispatchService>();
+            var staged = await staging.StageApprovedAsync(_approval.Reference);
+            _filingStatus = await dispatch.DispatchAsync(staged.ConversationReference);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _errors = [exception.Message];
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
     private void AddDirectorAdvance()
     {
         _draft!.DirectorAdvances.Add(new());
@@ -343,6 +461,8 @@ else if (_draft is not null && _editContext is not null)
         _prepared = null;
         _approval = null;
         _approvalConfirmed = false;
+        _filingStatus = null;
+        _testSubmissionConfirmed = false;
         _errors = Array.Empty<string>();
     }
 

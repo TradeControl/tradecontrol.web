@@ -48,6 +48,8 @@ public sealed record CompaniesHousePreparedReview(
     string PdfPath);
 
 public sealed record CompaniesHouseReviewDocument(string MediaType, byte[] Bytes, string Sha256);
+public sealed record CompaniesHouseOfficialTestSubmittedDocument(byte[] Bytes, string Sha256,
+    string SubmissionNumber, DateTimeOffset SubmittedAtUtc);
 
 public sealed record CompaniesHouseApprovalReview(
     string Reference,
@@ -77,6 +79,8 @@ public interface ICompaniesHousePreparationReviewService
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default);
     Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseOfficialTestSubmittedDocument> ReadOfficialTestSubmittedDocumentAsync(
+        string preparationReference, CancellationToken cancellationToken = default);
     Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
         string declarationVersion, bool declarationsConfirmed,
         CancellationToken cancellationToken = default);
@@ -102,7 +106,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
-        if (!hostOptions.Value.Enabled || hostOptions.Value.DispatchMode != CompaniesHouseDispatchMode.SendDisabled)
+        if (!hostOptions.Value.Enabled)
             throw new InvalidOperationException("Companies House exact-document preparation is unavailable.");
 
         var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
@@ -132,6 +136,22 @@ internal sealed class CompaniesHousePreparationReviewService(
             context.Identity.CompanyNumber);
         if (companyNumber.Length != 8 || !companyNumber.All(char.IsAsciiLetterOrDigit))
             throw new InvalidOperationException("The server-derived Companies House registration cannot be normalised to the required eight-character form.");
+
+        var companyIdentitySha256 = CompaniesHouseFilingIdentity.Company(
+            identity.TenantReference, companyNumber);
+        var logicalFilingIdentity = CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
+            companyIdentitySha256, period.Current.Start, period.Current.End,
+            CompaniesHouseProductPolicy.SupportedFilingProfile);
+        var existingConversation = await workflowStore.GetActiveConversationAsync(
+            identity.TenantReference, logicalFilingIdentity, cancellationToken);
+        var priorConversation = existingConversation ??
+            (await workflowStore.ListConversationsAsync(identity.TenantReference,
+                companyIdentitySha256, cancellationToken))
+            .FirstOrDefault(item => string.Equals(item.LogicalFilingIdentity,
+                logicalFilingIdentity, StringComparison.Ordinal));
+        if (priorConversation is not null)
+            throw new InvalidOperationException(
+                "A Companies House filing conversation already exists for this company and accounting period. Continue that filing instead of preparing another submission.");
 
         var request = new CompanyProjectionRequest(
             asOfDate,
@@ -186,7 +206,7 @@ internal sealed class CompaniesHousePreparationReviewService(
             identity.TenantReference,
             identity.ReportingSubjectReference,
             identity.ActorReference,
-            Sha256($"{identity.TenantReference}|{companyNumber.Trim().ToUpperInvariant()}"),
+            companyIdentitySha256,
             CompaniesHouseReadinessService.MaskCompanyNumber(companyNumber),
             period.Current.Start,
             period.Current.End,
@@ -233,6 +253,48 @@ internal sealed class CompaniesHousePreparationReviewService(
         // sandboxed browser review surface as HTML. Chromium treats application/xhtml+xml as a
         // downloadable/blocked resource in this authenticated iframe configuration.
         return new("text/html; charset=utf-8", document.Bytes, document.Sha256);
+    }
+
+    public async Task<CompaniesHouseOfficialTestSubmittedDocument> ReadOfficialTestSubmittedDocumentAsync(
+        string preparationReference, CancellationToken cancellationToken = default)
+    {
+        if (hostOptions.Value.DispatchMode != CompaniesHouseDispatchMode.OfficialTestSingleSend)
+            throw new InvalidOperationException("An official-test submitted copy is unavailable in this environment.");
+        if (string.IsNullOrWhiteSpace(preparationReference) || preparationReference.Length > 64)
+            throw new ArgumentException("A valid preparation reference is required.", nameof(preparationReference));
+
+        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var preparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
+            preparationReference, cancellationToken)
+            ?? throw new KeyNotFoundException("The Companies House preparation was not found.");
+        if (!string.Equals(preparation.PrincipalReference, identity.ReportingSubjectReference,
+                StringComparison.Ordinal))
+            throw new UnauthorizedAccessException("The Companies House preparation belongs to another reporting subject.");
+        var approval = await workflowStore.GetApprovalForPreparationAsync(identity.TenantReference,
+            preparation.Reference, cancellationToken)
+            ?? throw new InvalidOperationException("The exact accounts have not been approved.");
+        var conversation = (await workflowStore.ListConversationsAsync(identity.TenantReference,
+                preparation.CompanyIdentitySha256, cancellationToken))
+            .FirstOrDefault(value => string.Equals(value.ApprovalReference, approval.Reference,
+                StringComparison.Ordinal))
+            ?? throw new InvalidOperationException("No Companies House submission exists for these accounts.");
+        if (!string.Equals(conversation.ApprovalReference, approval.Reference, StringComparison.Ordinal)
+            || conversation.State is not (CompaniesHouseConversationState.Acknowledged
+                or CompaniesHouseConversationState.Pending or CompaniesHouseConversationState.Parked
+                or CompaniesHouseConversationState.Accepted)
+            || string.IsNullOrWhiteSpace(conversation.SubmissionNumber)
+            || string.IsNullOrWhiteSpace(conversation.LastRequestSha256)
+            || string.IsNullOrWhiteSpace(conversation.LastResponseSha256))
+            throw new InvalidOperationException(
+                "The official-test submission has not received a safely classified acknowledgement.");
+        if (!string.Equals(conversation.DocumentSha256, preparation.DocumentSha256, StringComparison.Ordinal)
+            || !string.Equals(conversation.PackageSha256, preparation.PackageSha256, StringComparison.Ordinal))
+            throw new InvalidOperationException("The acknowledged submission no longer matches the retained accounts.");
+
+        var document = await contentStore.ReadAsync(identity.TenantReference,
+            preparation.ProtectedDocumentReference, preparation.DocumentSha256, cancellationToken);
+        return new(document.Bytes, document.Sha256, conversation.SubmissionNumber,
+            conversation.AcknowledgedAtUtc ?? conversation.UpdatedAtUtc);
     }
 
     public async Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
@@ -299,9 +361,9 @@ internal sealed class CompaniesHousePreparationReviewService(
             identity.TenantReference,
             identity.AspNetSubjectReference,
             identity.ActorReference,
-            Sha256($"{identity.TenantReference}|{preparation.CompanyIdentitySha256}|" +
-                $"{preparation.PeriodStart:yyyy-MM-dd}|{preparation.PeriodEnd:yyyy-MM-dd}|" +
-                preparation.FilingProfile),
+            CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
+                preparation.CompanyIdentitySha256, preparation.PeriodStart,
+                preparation.PeriodEnd, preparation.FilingProfile),
             preparation.CompanyIdentitySha256,
             preparation.PeriodStart,
             preparation.PeriodEnd,
@@ -342,8 +404,8 @@ internal sealed class CompaniesHousePreparationReviewService(
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
             .ReadAsync(asOfDate, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(context.Identity.CompanyNumber);
-        var currentCompanyIdentity = Sha256(
-            $"{identity.TenantReference}|{companyNumber.Trim().ToUpperInvariant()}");
+        var currentCompanyIdentity = CompaniesHouseFilingIdentity.Company(
+            identity.TenantReference, companyNumber);
         if (!string.Equals(currentCompanyIdentity, preparation.CompanyIdentitySha256, StringComparison.Ordinal))
             throw new InvalidOperationException("The Companies House identity changed after preparation.");
 
@@ -477,6 +539,10 @@ internal sealed class DisabledCompaniesHousePreparationReviewService
     public Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House exact-document review is unavailable in this host.");
+
+    public Task<CompaniesHouseOfficialTestSubmittedDocument> ReadOfficialTestSubmittedDocumentAsync(
+        string preparationReference, CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House official-test evidence is unavailable in this host.");
 
     public Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
         string declarationVersion, bool declarationsConfirmed,

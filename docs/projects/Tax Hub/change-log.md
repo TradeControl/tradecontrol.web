@@ -1,5 +1,47 @@
 # Tax Hub Change Log
 
+## 12 October 2026 — Programme-level multi-tenant boundary
+
+- Strengthened the durable programme specification so the isolated single-business Companies House deployment is evidence of workflow behaviour, not evidence of production multi-tenant isolation.
+- Defined server-derived tenant authority, tenant-scoped persistence and protected content, company-versus-presenter credential boundaries, background-worker context, safe operations and adversarial cross-tenant tests as prerequisites to live multi-tenant activation.
+- Kept deployment topology open: physical isolation may be selected where appropriate, while any shared layer must provide explicit, independently evidenced logical isolation.
+
+## 12 October 2026 — Official-test status continuation
+
+- Added a durable, manual `GetSubmissionStatus` continuation for acknowledged, pending and parked Companies House conversations; the existing filing request and acknowledgement remain immutable and independently evidenced.
+- Restricted the authority request to the published specific-submission form for retained `S00017`, so this path cannot require `StatusAck`; the conditional all-submissions acknowledgement contract remains covered by deterministic adapter/simulator evidence.
+- Added an atomic status-check claim, protected request/response retention, strict correlation and company-identity checks, bounded examiner/error evidence, terminal-state handling and a fail-closed recovery outcome for ambiguous responses.
+- Deployed the single **Check Companies House status** action beneath **EXISTING FILING — DO NOT RESUBMIT**. Browser verification confirmed it against the rehydrated 2025–26 `S00017` conversation without pressing it or making an external request.
+- The TCWeb boundary suite passes 159 assertions, Submission adapter tests 137 and Company contracts 92. Azure deployment `a50e7179-2b17-40a5-995f-f36dabe90804` is runtime-successful and both health endpoints return HTTP `200`.
+
+## 12 October 2026 — Existing Companies House filing continuation
+
+- Connected duplicate-filing prevention to a bounded Phase 7.7 read/resume foundation while Phase 7.6 status work remains open.
+- Rehydrated the selected company/period's durable filing conversation into the filing workspace and replaced the repeat journey with an explicit continuation state.
+- Added a server-side logical company/period/profile guard so bypassing the UI cannot create a second preparation.
+- Kept full filing history, recovery decisions, live dispatch and any automatic resubmission disabled.
+- The TCWeb boundary suite passes 158 assertions; final Azure deployment `c03174d2-30ce-4f03-9683-e5ae38b33002` is healthy and an authenticated restart check rehydrated `S00017` without a fresh filing control.
+
+## 12 October 2026 — Guided evidence journey accepted
+
+- Recorded human acceptance of the complete Companies House pre-submission evidence wizard after the reviewer stepped through the full journey and successfully opened its accounting-detail drill-throughs.
+- Passed the pre-submission accounting-evidence dependency and opened Phase 7.6 for bounded implementation.
+- Added Phase 7.6's first transport-free increment: an authorised immutable approval is digest-verified and staged as exactly one durable active filing conversation, with repeat activation returning the same conversation.
+- Kept authority submission and transaction identifiers absent at this stage; the 149-assertion boundary suite confirms that staging remains separate from dispatch.
+- Added an internal persist-before-dispatch coordinator with injected identity, materialisation and recording-exchange ports. The request is protected and atomically claimed before exchange; acknowledgement remains distinct from acceptance.
+- Proved that an injected ambiguous exchange becomes recovery-required and cannot be replayed, while malformed or unclassified response evidence is retained where available. The expanded suite passes 151 assertions and confirms that the dispatcher is not registered.
+- Added the separately named `OfficialTestSingleSend` composition, valid only for the fixed official-test endpoint with durable Azure persistence; production/live remains send-disabled.
+- Added durable presenter-scope submission/transaction identity allocation beginning at `S00017`, exact retained-preview/document digest verification, transport-time test credential injection and an explicit post-approval UI gate.
+- Stored only the five official-test values in Key Vault and verified all App Service references as resolved. No live presenter/package value was configured.
+- Deployed the warning-free release to `tcweb-payg-db96115e`; liveness/readiness return HTTP `200`, the TCWeb suite passes 154 assertions, Submission adapter tests 137, Company contracts 92 and Block A 31.
+- Added persistent red `OFFICIAL TEST — NOT A LIVE FILING` identification to the filing overview and final send surface, including an explicit statement that the live package reference is not configured.
+- Aligned the synthetic Candidate 4 Azure database with the completed Subjects DACPAC after the first authenticated check safely exposed the missing `Subject.fnDatedBalances`; the Accounts workspace and closed-year journey now load.
+- Made no Companies House request during deployment. The next step is one observed official-test submission of a newly reviewed and approved exact document.
+- Completed that observed exchange after the reviewer downloaded and accepted the exact draft: `S00017` was acknowledged by the official test gateway on the first and only send at 12:32 UTC. Acknowledgement records gateway receipt only; it is not terminal acceptance.
+- Bound the durable evidence to document SHA-256 `B8F9F592BEFE3789E72BA93493EC506F42FCE37D07290796D103E109E5D43461`, package SHA-256 `D976E6284232B2D530C0493FDF0394362CE496496DED06AEA51E2ECA255155F1`, request SHA-256 `412AA80F8FE537363A408E89A6DC7F727A73038C94F48DC7ECAEFBA01E8DB354` and response SHA-256 `C93EF3CF2458D7436FBCC6FF7622C4B22F693299B6804AB784D4B14B9219C024`.
+- Added a fail-closed submitted-copy PDF available only for an acknowledged official-test conversation whose approval, preparation, document/package digests and retained request/response evidence agree. It removes the diagonal draft watermark but carries `OFFICIAL TEST — NOT LIVE FILED`, the submission number, acknowledgement timestamp and source-document digest in a two-line footer.
+- Visually inspected both A4 pages after PNG rendering and corrected an initial long-footer/page-number collision. The TCWeb suite now passes 156 assertions. Final Azure deployment `cb6fe8b7-f913-4d11-8770-d2f2cc62eea1` is runtime-successful and both health endpoints return HTTP `200`.
+
 ## 10 October 2026 — Guided year-end review increments 1–4
 
 - Added a visible five-step guided evidence sequence inside a single **File Your Accounts** journey. An initial separate **Year-end review** tab was removed after usability review showed that it competed with the user's natural filing destination.

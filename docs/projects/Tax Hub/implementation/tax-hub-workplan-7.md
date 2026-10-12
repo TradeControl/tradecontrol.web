@@ -40,12 +40,12 @@ This register is the authoritative statement of progress. Implementation evidenc
 | 7.3 — Reviewed filing inputs | **PASSED** | Human review accepted the corrected source-derived balance-sheet boundary, Accounts Mode eligibility treatment and clarified director-note schedule on 9 October 2026. | 7.4 authorised. |
 | 7.4 — Exact-document preparation | **PASSED** | Human review accepted the corrected retained XHTML, source-derived employees, filing classifications and the paged `DRAFT — NOT FILED` PDF derivative on 9 October 2026. | 7.5 authorised. |
 | 7.5 — Immutable approval | **PASSED** | Human review exercised the Azure preparation-to-approval journey and accepted its attributable, digest-bound `Approved — not filed` state on 9 October 2026. | The approval mechanism is accepted; submission is not yet authorised. |
-| Pre-submission accounting-evidence dependency | **READY FOR HUMAN REVIEW** | Wizard increments 1–4 now cover `subject-balances/v1`, reconciled native current/reserve accounts through `bank-cash/v1`, mapped asset carrying values and due native write-offs through `fixed-assets/v2`, and a combined digest-bound completion gate. | Human review must accept the complete journey before Phase 7.6 can open; product dispatch stays disabled. |
-| 7.6 — Submission and status | **NOT STARTED** | Requires the accepted Subjects evidence contract and guided year-end review in addition to Phase 7.5. | Product dispatch remains disabled. |
-| 7.7 — History and recovery | **NOT STARTED** | Requires Phase 7.6 gate acceptance. | No product filing history/recovery workflow exists. |
-| 7.8 — Live activation | **EXTERNALLY BLOCKED / NOT STARTED** | Protected live package reference received 9 October 2026; separate live credentials, completed workflow gates and explicit authority for a real filing are still required. Live-service testing is prohibited. | No live exchange is authorised. |
+| Pre-submission accounting-evidence dependency | **PASSED** | Human review on 12 October 2026 exercised the entire wizard, including all accounting-evidence drill-throughs, and accepted the continuous journey. | Phase 7.6 authorised; this internal gate does not itself enable dispatch. |
+| 7.6 — Submission and status | **IMPLEMENTED — AWAITING HUMAN REVIEW** | Official-test submission `S00017` was acknowledged on its first and only send. A specific-submission `GetSubmissionStatus` continuation is now deployed against that same durable conversation; no status enquiry has yet been made. | The reviewer may use the single status action for `S00017` and inspect the retained authority result. No second filing is permitted. Production/live remains disabled. |
+| 7.7 — History and recovery | **IN PROGRESS — INCREMENT 0 COMPLETE** | Restart continuation and duplicate prevention were exercised against acknowledged, non-terminal `S00017`. | Complete company filing history, safe recovery actions, Event Log evidence and the 7.7 human gate after 7.6 passes. |
+| 7.8 — Live activation | **DEFERRED** | The protected live package reference has been received, but there is no live multi-tenant product instance on which to establish the production isolation and operational evidence required by this phase. Live-service testing is prohibited. | Retain the live material as protected configuration. Do not install, probe or use it until a live multi-tenant deployment and explicit filing authority exist. |
 
-**Current position:** Phase 7.5 is accepted, but Phase 7.6 is deliberately not authorised. The complete guided year-end evidence journey is implemented and ready for human review: Subjects, bank/cash, mapped fixed assets and combined completion. Filing inputs unlock only after that review is completed. Phase 7.6 submission/status work must not begin until this human gate passes.
+**Current position:** Phase 7.5 and the complete guided year-end evidence journey are accepted. Human review exercised the complete wizard and its accounting-detail drill-throughs on 12 October 2026. Phase 7.6's official-test-only path produced first-send acknowledgement `S00017`; that acknowledged but non-terminal conversation is already the required half-completed/restart case. A manual, specific-submission `GetSubmissionStatus` continuation is deployed for that same conversation and awaits its first human-observed use. A specific-submission query cannot require `StatusAck`; the conditional acknowledgement branch remains proven by the published-contract adapter and deterministic simulator rather than being manufactured against Companies House. Phase 7.7 Increment 0 prevents `S00017` being presented as a fresh filing journey after restart; the remaining history/recovery work follows the Phase 7.6 gate. Phase 7.8 is deferred until a live multi-tenant product deployment exists.
 
 Status meanings:
 
@@ -55,6 +55,7 @@ Status meanings:
 - **CORRECTED — AWAITING HUMAN RE-REVIEW** — a gate finding has been corrected, but the corrected product evidence has not yet been accepted.
 - **PASSED** — the human review gate has been explicitly accepted and the next phase may begin.
 - **EXTERNALLY BLOCKED** — required authority material or permission is unavailable; internal work must not be represented as resolving it.
+- **DEFERRED** — the phase is deliberately postponed because its intended deployment context does not yet exist; it is neither failed nor implicitly authorised.
 
 ### Governing records
 
@@ -113,7 +114,7 @@ The accepted test programme proved first accounts, genuine comparatives, success
 | 7.7 | Filing history, recovery and evidence presentation | Audit/retention/access review |
 | 7.8 | Live-package activation and controlled first live filing | External package and explicit live-enable gates |
 
-Phases are implemented in order. Receipt of the protected live package reference does not alter 7.0–7.7 or authorise a live call. Those phases continue using published contracts, accepted official test evidence and send-disabled production composition. Phase 7.8 remains blocked by the remaining workflow, credential and explicit filing-authority gates; the live service must never be used for testing.
+Phases are implemented in order. The only completed overlap is Phase 7.7 Increment 0: read-only conversation rehydration and duplicate prevention were necessary to continue Phase 7.6's acknowledged submission safely after a browser restart. That safety dependency does not open filing history, recovery decisions or the Phase 7.7 review gate. Receipt of the protected live package reference does not authorise a live call. Work continues using published contracts, accepted official-test evidence and send-disabled production composition. Phase 7.8 is deliberately deferred until a live multi-tenant product deployment exists; the live service must never be used for testing.
 
 ## Phase 7.0 — Integration boundary and persistence
 
@@ -136,6 +137,14 @@ Define the TCWeb composition, durable workflow records and protected configurati
 
 Human review accepts the storage/configuration design and verifies that no browser or UI model can obtain credentials, raw protected envelopes or unrestricted authority responses. Stop before Phase 7.1.
 
+### Accepted implementation evidence — 8 October 2026
+
+The human architecture/security gate accepted the product contract, durable record shapes, tenant/company-scoped persistence port, atomic mutation and restart-recovery requirements. TCWeb Companies House options contain no credentials, company authentication or gateway URL. `SendDisabled` is the production default; the separately named `OfficialTestSingleSend` mode is restricted to the official-test authority and Azure-managed persistence. Development files remain restricted to the Development host, and presenter/live-package values remain transport-time inputs.
+
+The reviewer accepted the seven-year operational-evidence policy, Azure-managed product persistence and the stable tenant GUID/tenant-partitioning boundary. `TaxHub.slnx` and `TCWeb.csproj` built without warnings, and the TCWeb Tax Hub suite passed 106 boundary assertions. Phase 7.0 added no UI or external request.
+
+The separate Candidate 4 Azure accounting source was then generated and validated without altering the MIN/VAT databases. TCWeb was rebound through Key Vault, all three health checks passed, and an authenticated workload established that Basic was inadequate while Standard S2 supported interactive development. The diagnostic WebHarness was stopped. The reproducible environment record is retained in [Appendix A](#appendix-a--azure-reference-environment-replication-runbook).
+
 ## Phase 7.1 — Accounts filing readiness
 
 **Phase status: PASSED — human gate accepted 8 October 2026.**
@@ -155,6 +164,14 @@ Establish whether the selected accounting year is eligible to enter the Companie
 ### Review gate
 
 The reviewer confirms the selected year, statutory identity, supported profile and Equity Bridge are server-derived and that no exact document or external request exists. Stop before Phase 7.2.
+
+### Accepted implementation evidence — 8 October 2026
+
+The Companies House tab derives the bounded company number, exact accounting-period bounds, supported unaudited filleted FRS 105 profile, first/subsequent status, statutory-context findings and Equity Bridge result from the server. Missing or error-bearing source evidence fails closed; no exact document or external request exists at this stage.
+
+Azure review corrected a pre-existing calendar assumption: financial-year bounds and year-end selection now follow ordered native `StartOn` dates rather than calendar month order. It also established that accounting figures are bound to the selected period end while current statutory identity/profile eligibility is evaluated at preparation time.
+
+The STD candidate selected `2025-26 SEP` and reported **Ready to prepare document** for company `••3456`, period 1 October 2025 to 30 September 2026, subsequent accounts with comparatives, and an Equity Bridge variance of `0.08`. The initial TCWeb suite passed 112 assertions; the product host remained healthy, WebHarness remained stopped and no Companies House request was made.
 
 ## Phase 7.2 — Azure workflow and evidence persistence
 
@@ -176,6 +193,12 @@ Provide durable tenant-partitioned metadata and protected exact-content storage 
 
 Human review confirms isolation, role scope, protected configuration, additive schema deployment, empty initial state and healthy fail-closed composition. Stop before Phase 7.3.
 
+### Accepted implementation evidence — 8 October 2026
+
+The isolated `tcTaxHubWorkflow` database holds tenant-partitioned preparation, approval and conversation metadata with tenant-scoped evidence-chain keys and one active conversation per logical filing. Exact statutory and gateway bytes use opaque tenant-scoped references in the private `companies-house-evidence` Blob container. Public/shared-key access is disabled, writes refuse replacement, and reads verify SHA-256 plus retained tenant/digest metadata.
+
+The metadata connection is supplied by a versionless Key Vault reference and Blob access uses TCWeb managed identity. Readiness probes the accounting database, workflow schema and Blob container. At the gate the three workflow tables were empty, the TCWeb Tax Hub suite passed 117 assertions and dispatch remained `SendDisabled`; no filing input, document, approval, conversation or Companies House request existed.
+
 ## Phase 7.3 — Reviewed filing inputs
 
 **Phase status: PASSED — corrected human gate accepted 9 October 2026.**
@@ -193,6 +216,16 @@ Collect only facts that cannot be derived reliably from the selected Trade Contr
 5. Validate dates, bounded text, director-advance amounts, repeating disclosures and the first-release eligibility declaration server-side. Do not accept company number, accounting periods, source balances, balance-sheet allocations, commitment/contingency schedules, credentials or transport identifiers from the browser.
 6. Keep prepayments/accrued income, provisions and accruals/deferred income within the native source-derived balance-sheet presentation. The present four-bucket SQL projection already includes their accounting effect; until a source-backed bridge-neutral decomposition is introduced, their additional statutory presentation lines are system-derived zero. A future non-zero split must subtract the same amount from its containing native bucket so total assets, liabilities and the Equity Bridge remain unchanged.
 7. Produce a reviewable filing-input draft only. Do not generate iXBRL or create a preparation record.
+
+### Accepted implementation evidence — 9 October 2026
+
+Human review rejected the initial free-entry fields for prepayments, provisions and accruals/deferred income because they duplicated native accounting measurements and could invalidate the Equity Bridge. The corrected implementation removed them from the browser and core contract. Legacy diagnostic members remain zero-only for fixture compatibility and validation rejects every non-zero override.
+
+The browser now collects only non-ledger facts that cannot be derived reliably: approval date, signing director, principal activity, accounting policies, average employees and separately reviewable director-advance movement schedules. Accounts Mode does not expose the wider MIS commitments/contingencies model in the first release; no, yes/unsure and unanswered are handled explicitly and fail closed where appropriate.
+
+The source projection retains its four native balance-sheet buckets. Additional statutory presentation lines remain system-derived zero until a source-backed, bridge-neutral decomposition exists. Companies House readiness is scoped to Companies House evidence, so a non-VAT-registered company is not blocked by absent VAT registration or unrelated VAT/Corporation Tax review state.
+
+The company-contract suite passed 87 assertions, WebHarness hardening 73 and the TCWeb Tax Hub suite 126. Azure deployment `320a90bd-d323-4cab-9a3c-7903dfbe7e12` was healthy. This phase created no document, durable preparation, approval, conversation or external request.
 
 ### Review gate
 
@@ -382,11 +415,13 @@ The server action revalidates the transaction at use time: it must still be Unpo
 
 Any due scheduled write-off keeps fixed-asset confirmation disabled. After posting, the whole Accounts workspace is reloaded; the revised native balances, Equity Bridge, statutory projection and evidence digest are recomputed, while the changed `fixed-assets/v2` snapshot invalidates the fixed-asset and final confirmations. Earlier Subject and bank/cash confirmations survive only when their own evidence digests are unchanged.
 
-This increment deliberately consumes a pre-existing schedule; it does not create or infer useful lives, methods or residual values inside the filing journey. Schedule creation and maintenance remain Cash asset-account responsibilities. No Companies House request is enabled or made, and Phase 7.6 remains unopened pending human acceptance of the complete journey.
+This increment deliberately consumes a pre-existing schedule; it does not create or infer useful lives, methods or residual values inside the filing journey. Schedule creation and maintenance remain Cash asset-account responsibilities. No Companies House request is enabled or made.
+
+Human review on 12 October 2026 stepped through the entire wizard and successfully used its review-detail drill-throughs. The reviewer accepted the continuous evidence journey. This passes the pre-submission accounting-evidence dependency and authorises Phase 7.6; it does not constitute filing approval, enable transport or make a Companies House request.
 
 ## Phase 7.6 — Controlled submission and status conversation
 
-**Phase status: NOT STARTED. Product dispatch remains disabled.**
+**Phase status: IMPLEMENTED — AWAITING HUMAN REVIEW. Official-test-only status continuation deployed; production/live dispatch remains disabled.**
 
 ### Purpose
 
@@ -402,17 +437,65 @@ Submit one approved package safely and continue its Companies House conversation
 6. Treat lost/ambiguous replies as recovery-required and prohibit ordinary resubmission.
 7. Exercise the lifecycle first through recording handlers, Block A failure scenarios and the official test environment where still available. Production remains send-disabled.
 
+### Increment 1 — durable approved-filing staging
+
+Implemented on 12 October 2026. An authorised Administrator or Manager can now pass an immutable approval into a server-only staging boundary. The boundary reloads the tenant-scoped approval and preparation, verifies both protected document and package digests, and persists one active `Prepared` conversation for the logical company/period/profile filing. Repeating the action resolves the same durable conversation; the database's filtered unique index remains the final concurrent-activation guard.
+
+This increment is deliberately not exposed as a filing action. It allocates neither a Companies House submission number nor a gateway transaction identity, has no gateway dependency and cannot make a network request. The TCWeb boundary suite passes 149 assertions. The next increment must compose authority identities and a recording gateway around this already-persisted conversation, then demonstrate acknowledgement and ambiguous-send behavior before any external dispatch can be considered.
+
+### Increment 2 — persist-before-dispatch recording lifecycle
+
+Implemented on 12 October 2026. An internal, deliberately unregistered coordinator now continues the staged conversation through a transport-shaped recording boundary. It reloads the exact approval chain, verifies the protected preview and accounts document, materialises and retains the exact proposed request, then atomically changes `Prepared` to `Dispatching` before invoking the exchange. Only the winning state transition may exchange; repeat or concurrent activation resolves the durable conversation without replay.
+
+A classified acknowledgement is retained separately and advances the conversation to `Acknowledged`, not `Accepted`. Gateway errors advance to `GatewayRejected` with bounded typed error evidence. An exception, mismatched response, malformed response or unclassified response retains all safely available bytes and leaves the original conversation `Dispatching` with `RecoveryRequired = true` and a safe support reference. It never resets to `Prepared` and cannot be ordinarily resubmitted.
+
+The recording tests prove one acknowledgement and one deliberately ambiguous exchange, including repeat activation after each outcome. The suite passes 151 assertions, including an explicit composition check that the dispatcher is not registered. Authority-identity allocation, materialisation and exchange remain injected ports; the product host registers none of them, exposes no submit control and remains `SendDisabled`. Consequently this increment makes no external request and cannot reach either the official-test or protected live endpoint.
+
+### Increment 3 — deployed official-test-only single send
+
+Implemented and deployed on 12 October 2026. A distinct `OfficialTestSingleSend` composition is valid only with the `OfficialTest` authority environment and durable Azure-managed persistence. Production has no send-enabled mode. The UI exposes its action only after immutable approval, labels it **official test only — not a live filing**, requires an explicit confirmation and disables ordinary replay after the conversation leaves `Prepared`.
+
+The isolated workflow database now owns a presenter-scope authority sequence. Allocation occurs immediately before materialisation and begins at `S00017`, following the retained WebHarness test series `S00001`–`S00016`. The final materialiser digest-verifies the retained credential-free GovTalk preview and iXBRL document, replaces only the `000000` review marker with the allocated submission number, injects the transaction identity and five protected test values, then verifies that the embedded accounts bytes still match the approved document digest. The exact request is retained before the atomic `Prepared` → `Dispatching` claim.
+
+The five official-test values are held in the existing Key Vault and exposed to the adapter only through resolved App Service references. No live presenter or package value is configured. The endpoint is fixed in code to the published Companies House test gateway, with no redirects or automatic HTTP retry. The filing journey carries a persistent red **OFFICIAL TEST — NOT A LIVE FILING** banner from its overview through approval, states that the live package reference is absent, and repeats the label beside the one-send control. The TCWeb suite passes 154 assertions, the Submission adapter suite 137 assertions, the Company contract suite 92 assertions and Block A 31 assertions. Azure liveness and readiness both return HTTP `200` after deployment, and all five test references report `Resolved`.
+
+The first authenticated deployment check also detected that the Candidate 4 database predated the completed Subjects project and lacked `Subject.fnDatedBalances`. No filing action was possible in that state. A reviewed DACPAC deployment report identified the four new Subject reporting functions, one same-name check-constraint refresh and the current template procedure refreshes. The current sqlnode DACPAC was then published to the synthetic S2 database with data-loss blocking and source-external object deletion disabled. The Accounts workspace and the closed 2025–26 filing journey subsequently loaded successfully. This schema alignment made no Companies House request.
+
+After the reviewer inspected the generated draft PDF, the authenticated journey approved and submitted that exact package once. The official test gateway acknowledged `S00017` at `2026-10-12T12:32:13Z` with no gateway errors. The durable record binds document SHA-256 `B8F9F592BEFE3789E72BA93493EC506F42FCE37D07290796D103E109E5D43461`, package SHA-256 `D976E6284232B2D530C0493FDF0394362CE496496DED06AEA51E2ECA255155F1`, request SHA-256 `412AA80F8FE537363A408E89A6DC7F727A73038C94F48DC7ECAEFBA01E8DB354` and response SHA-256 `C93EF3CF2458D7436FBCC6FF7622C4B22F693299B6804AB784D4B14B9219C024`. No retry occurred or is permitted.
+
+An authenticated submitted-copy PDF is now derived from the same retained document only after the server reopens the preparation, approval and active conversation and verifies an acknowledged official-test state, matching document/package digests and retained request/response hashes. It has no diagonal draft watermark, but its metadata and every-page footer identify `OFFICIAL TEST — NOT LIVE FILED`, `S00017`, the acknowledgement time and source-document digest. It is human evidence only and does not replace the exact retained iXBRL. Both A4 pages were rendered to PNG and visually inspected; the TCWeb suite passes 156 assertions. Azure deployment `cb6fe8b7-f913-4d11-8770-d2f2cc62eea1` is runtime-successful with liveness/readiness HTTP `200`.
+
+### Increment 4 — durable official-test status continuation
+
+Implemented and deployed on 12 October 2026. The acknowledged `S00017` conversation now exposes one explicit **Check Companies House status** action. It constructs the published specific-submission `GetSubmissionStatus` request from the retained submission number, injects only the protected official-test presenter credentials at transport time, retains the exact request before an atomic status-check claim, performs one non-retrying exchange against the fixed official-test gateway, and retains the exact response before classification. Status evidence is appended separately from the original filing request and acknowledgement, so polling can neither overwrite filing provenance nor make the filing replayable.
+
+The continuation accepts only one correlated status result for `S00017`, masks and validates any returned company identity, bounds examiner and error text, and maps the authority outcome to `Pending`, `Parked`, `Accepted`, `Rejected` or `InternalFailure`. Malformed, ambiguous or uncorrelated evidence becomes a status-check recovery condition without changing the original filing into a resubmittable state. Terminal conversations no longer expose the action. Because this is the published **specific-submission** request, TIS 6.0 does not require a `StatusAck`; that acknowledgement is conditional only on an all-submissions response and remains covered by the adapter contract and deterministic simulator.
+
+The deployed Accounts journey rehydrates `S00017`, identifies it as **EXISTING FILING — DO NOT RESUBMIT**, provides its official-test submitted PDF and shows the status action beneath the durable acknowledgement. The TCWeb boundary suite passes 159 assertions, the Submission adapter suite 137 assertions and the Company contract suite 92 assertions. Azure deployment `a50e7179-2b17-40a5-995f-f36dabe90804` is runtime-successful and both health endpoints return HTTP `200`. Browser verification confirmed the control against the 2025–26 `S00017` conversation. No status request was made during implementation, deployment or verification; its first use remains the human review event.
+
+`S00017` is already the half-completed submission case: it was acknowledged without a terminal decision, then recovered after an application restart without presenting a second filing path. No additional official submission is needed merely to reproduce that state.
+
 ### Review gate
 
-The reviewer observes acknowledgement, pending, terminal acceptance/rejection and recovery behavior with no duplicate external request. Stop before Phase 7.7.
+The reviewer observes `S00017` continue from acknowledgement through the actual Companies House status sequence, including conditional `StatusAck` only if the authority requests it, with no duplicate submission request. Deterministic contract/Block A tests continue to prove rejection, parked, malformed/ambiguous response and recovery-required paths; the official service need not be manipulated into every failure state. Phase 7.7 Increment 0 already proves restart continuation of the unresolved conversation. Broader filing history and operational recovery stop until Phase 7.6 is accepted.
 
 ## Phase 7.7 — Filing history and operational recovery
 
-**Phase status: NOT STARTED.**
+**Phase status: IN PROGRESS — Increment 0 implemented and exercised; remaining work follows the Phase 7.6 gate.**
 
 ### Purpose
 
 Make completed and unresolved Companies House work usable after the original session.
+
+### Increment 0 — existing-conversation continuation guard
+
+Implemented as a narrow Phase 7.6 safety dependency on 12 October 2026. It is recorded here, under the phase whose history/restart responsibility it fulfils. When the filing workspace opens, the server derives the authenticated tenant and reporting subject, resolves the statutory company number, and searches durable company-scoped conversation metadata for the selected period and supported filing profile. Matching preparation and conversation document/package digests must agree before anything is shown.
+
+An existing conversation replaces the fresh **Start filing journey** presentation with an explicit **EXISTING FILING — DO NOT RESUBMIT** continuation card containing its safe state, submission number, update time and evidence digests. The preparation boundary independently rejects creation of another preparation for the same logical company/period/profile even if the UI is bypassed. Any inability to verify continuation state disables the new journey. Terminal or failed conversations remain visible and blocked from silent replacement; a later, explicit recovery policy must decide whether a corrected successor is permitted.
+
+This increment does not provide a general history list, status polling, resubmission, rejection correction or operator recovery. It exists so Phase 7.6 can continue `S00017` after restart without presenting a duplicate-filing path.
+
+The TCWeb boundary suite passes 158 assertions. Final Azure deployment `c03174d2-30ce-4f03-9683-e5ae38b33002` completed `RuntimeSuccessful`; after the Basic-tier warm-up, liveness and database readiness both returned HTTP `200`. An authenticated restart check selected the 2025–26 period and confirmed that the workspace rehydrated `S00017` as `Acknowledged`, displayed the retained document and package SHA-256 values, offered the submitted-copy PDF and did not present the fresh filing journey.
 
 ### Implementation
 
@@ -429,11 +512,11 @@ Human review confirms tenant/company isolation, retention, restart recovery, sta
 
 ## Phase 7.8 — Live-package activation and first controlled filing
 
-**Phase status: EXTERNALLY BLOCKED / NOT STARTED — protected package reference received, but no live exchange is authorised and live-service testing is prohibited.**
+**Phase status: DEFERRED — protected package reference received, but the live multi-tenant product deployment does not yet exist. No live exchange is authorised and live-service testing is prohibited.**
 
 ### Purpose
 
-Materialise the protected live package reference only at transport time and prove one explicitly authorised genuine filing without broadening product scope. A test, probe or rehearsal against the live service is forbidden.
+When a live multi-tenant product instance exists, materialise the protected live package reference only at transport time and prove one explicitly authorised genuine filing without broadening product scope. A test, probe or rehearsal against the live service is forbidden.
 
 ### External and human gates
 
@@ -445,7 +528,7 @@ Materialise the protected live package reference only at transport time and prov
 6. Obtain explicit contemporaneous human authority for the company, document and one live submission.
 7. Submit once, retain the acknowledgement/status evidence and reconcile the terminal result.
 
-No live submission is authorised by this work plan alone. A successful first filing does not add another accounts regime or remove the separate per-company approval requirement.
+No live submission is authorised by this work plan alone. These gates are intentionally deferred rather than simulated against the present single-instance development deployment. A successful first filing does not add another accounts regime or remove the separate per-company approval requirement.
 
 ## Test and regression strategy
 
@@ -464,27 +547,11 @@ Record implementation evidence in this plan, durable external decisions in `find
 
 This Companies House Objective 5 slice is complete when an authorised user can review, approve, file and follow one supported accounts submission through a durable terminal outcome in TCWeb, with recovery/history and production evidence accepted. Administrative live-package approval alone does not satisfy that product completion condition.
 
-## Phase 7.0 status — 8 October 2026
-
-Phase 7.0 is implemented and accepted at its human review gate. The TCWeb product contract accepts only safe workflow references and a period selection; durable preparation, approval and XML-conversation record shapes preserve exact digests and opaque protected-content handles. A tenant/company-scoped persistence port defines atomic mutation, one-active-conversation and restart-recovery requirements.
-
-TCWeb Companies House options contain no credentials, company authentication or gateway URL. Their only dispatch mode is `SendDisabled`; development files are restricted to the Development host, and the selected Azure-managed composition remains fail-closed until implemented. Presenter/live-package secret references and the company-specific dispatch-time authentication resolver exist only in the Submission adapter.
-
-The reviewer accepted the seven-year operational-evidence policy and selected Azure-managed persistence as the Phase 7.2 implementation; development files remain an isolated test facility rather than a product stepping stone. The initially single-node deployment retains a stable tenant GUID and tenant-partitioned records, content and tests so the design does not collapse into single-tenant global state.
-
-The detailed decision record is `phase-7.0-companies-house-integration-boundary.md`. `TaxHub.slnx` and `TCWeb.csproj` build without warnings, and the TCWeb Tax Hub suite passes 106 boundary assertions. No UI, external request or Phase 7.1 preparation service was added by Phase 7.0.
-
-### Azure accounting-source checkpoint — 8 October 2026
-
-Following Phase 7.0 acceptance, the separate Candidate 4 development database `tcNodeDb4-COSIPFVT1-COSTD26` was created on the existing Azure SQL server while the MIN/VAT databases and deployed bindings remained untouched. The current DACPAC and corrected synthetic generator produced the three-year STD company with the October financial month and `2026-10-07` test anchor. The completed-year regression and Year 3 additive rollback rehearsal passed before the additive change was committed; the final regression also passed. The database was returned from temporary S3 to Basic after validation.
-
-After validation, TCWeb was rebound through a dedicated Key Vault reference to the STD database and restarted; its root, liveness and database-backed readiness checks returned HTTP `200`. The unused Swagger/WebHarness App Service was stopped. An authenticated Dashboard request then proved Basic inadequate for the interactive Tax Hub workload: DTU and CPU both reached 100% for two consecutive minutes before the command timed out. The database is temporarily at Standard S2 for Azure development and must be reviewed/downscaled when that interval ends. This established the Azure accounting source and product host for Phase 7.1. It did not itself implement workflow/evidence stores, enable dispatch or authorise a Companies House submission.
-
-### Azure reference environment replication runbook
+## Appendix A — Azure reference environment replication runbook
 
 This is a non-production reference environment for Objective 5 development. Its purpose is to reproduce the product-hosting and accounting-source conditions under which the Companies House workflow is developed; it is not a template that grants live-filing authority. Resource names below identify the present reference deployment. A replica may use different names, but must preserve the boundaries and checks.
 
-#### Reference topology
+### Reference topology
 
 | Role | Reference resource | Required property |
 |---|---|---|
@@ -501,7 +568,7 @@ This is a non-production reference environment for Objective 5 development. Its 
 
 The current STD database is temporarily Standard S2 for interactive development. Basic was measured, not guessed, to be inadequate for the authenticated Tax Hub Dashboard. Synthetic regeneration used temporary S3 capacity and was downscaled after completion. These are operational settings, not product requirements: measure a replica and select the cheapest tier that completes the workload reliably.
 
-#### Protected prerequisites
+### Protected prerequisites
 
 Before replication, obtain through the deployment environment rather than Git:
 
@@ -512,7 +579,7 @@ Before replication, obtain through the deployment environment rather than Git:
 
 Do not print or paste connection strings, SQL credentials, Key Vault values, presenter credentials or company authentication into commands captured as evidence. Secret names and versionless Key Vault references may be recorded; secret values may not.
 
-#### Reproduction sequence
+### Reproduction sequence
 
 1. **Inventory before mutation.** Select the intended Azure subscription and record the resource group, SQL database names/service objectives, App Service plan, current TCWeb database-setting reference, Key Vault name and application running states. Confirm the source node and VAT database are not the target.
 2. **Create an isolated target.** Use an Azure SQL server-side database copy of the configured MIN source node to create the explicitly named STD target. Do not manually manufacture application-user or node-identity rows. Wait for the copy to become `Online`, then verify source and target names again before deployment.
@@ -537,61 +604,10 @@ Do not print or paste connection strings, SQL credentials, Key Vault values, pre
 10. **Restart and verify the product host.** Restart TCWeb and require HTTP `200` from the application root, `/health/live` and the database-backed `/health/ready`. Sign in through the normal application identity path, open the Tax Hub Dashboard and Accounts workspace, and confirm the business is the STD synthetic company with the expected September year ends. A liveness response alone is not sufficient.
 11. **Control auxiliary services and capacity.** Stop `taxhub-payg-db96115e` unless a separately authorised diagnostic exercise requires it. During interactive development monitor Azure SQL DTU, CPU, reads and log writes. The reference Basic trial reached 100% DTU and CPU for two consecutive minutes and timed out; S2 restored an acceptable interactive response. At the end of the development interval, stop unused hosts and review/downscale the database rather than leaving temporary capacity in place.
 
-#### Recovery and non-filing controls
+### Recovery and non-filing controls
 
 - The configured source node, VAT database and previous Key Vault secret remain intact. Rollback is a TCWeb rebind to the previously reviewed versionless secret reference followed by restart and all three health checks; never recover by copying a secret value into tracked configuration.
 - A failed or partial regeneration is discarded or repeated only in the explicitly identified isolated target. Resolve and verify the absolute database name before deletion or replacement.
 - Database backup/restore and deployment evidence are operational records. Application logs may contain safe resource names and digests, but not secret material or unrestricted statutory documents.
 - The accounting source and product host are reproduced here. Phase 7.2 separately governs the Azure workflow/evidence facilities and their access controls.
 - Companies House dispatch remains `SendDisabled`. Reproducing this environment, generating an accounts document or passing readiness checks makes no external request and grants no filing authority.
-
-## Phase 7.1 status — accounts filing readiness
-
-Phase 7.1 is implemented. It adds a Companies House tab to the existing Accounts workspace without adding a prepare, approve or submit control. For the selected accounting year the server derives and displays:
-
-- the bounded company-number display and exact accounting-period bounds;
-- the supported unaudited filleted FRS 105 micro-entity profile;
-- first-accounts or subsequent-accounts/comparatives status;
-- closed-year and year-end selection eligibility;
-- reviewed statutory-context/reporting-profile findings; and
-- the selected year's Equity Bridge result against the accepted `0.10` tolerance.
-
-The assessment obtains statutory context through the existing Trade Control adapter and accepts no company identity, statutory values, iXBRL, XML or credentials from the browser. Any missing period, company identity, reporting profile, source context or Equity Bridge evidence blocks readiness. The browser model explicitly reports that no exact document has been prepared and no external request has occurred.
-
-The first Azure product check exposed and corrected a pre-existing calendar assumption in the Accounts workspace: an October-start financial year cannot derive its bounds or year-end marker from calendar `MonthNumber` order or `MonthNumber == 12`. Both now use the actual ordered `StartOn` dates. This prevents a September year end from being presented as December and is a prerequisite to binding an immutable filing candidate to the correct period.
-
-The Azure check also established the necessary temporal distinction between the accounting evidence and operational configuration: accounts figures are bound to the selected period end, whereas statutory identity/reporting-profile eligibility is evaluated at the current preparation date. Evaluating a profile at the historical year end incorrectly hides a profile reviewed after that year end but before filing. Both dates must be retained when the exact candidate is introduced.
-
-The live Azure review of the STD candidate selected `2025-26 SEP` and reported **Ready to prepare document** for company `••3456`, period `1 October 2025` to `30 September 2026`, the supported unaudited filleted FRS 105 micro-entity profile, subsequent accounts with comparatives, and an Equity Bridge pass with variance `0.08`. The screen also stated that no statutory document had been retained, no Companies House request had occurred and submission remained disabled.
-
-The phase builds without warnings, its initial TCWeb Tax Hub suite passed 112 assertions, and the deployed product host remained healthy. The diagnostic WebHarness remained stopped. No Companies House network request was made.
-
-## Phase 7.2 status — Azure workflow and evidence persistence
-
-Phase 7.2 is implemented and deployed without collecting filing-only inputs or generating a statutory artifact. The isolated Basic database `tcTaxHubWorkflow` holds tenant-partitioned preparation, approval and conversation metadata. Its tracked additive DDL enforces composite tenant/reference keys, tenant-scoped evidence-chain foreign keys and one active conversation per logical filing. The three tables contain zero rows at this checkpoint.
-
-Exact statutory and gateway bytes are assigned opaque tenant-scoped references in the private `companies-house-evidence` container of storage account `tctaxhubdb96115e`. Blob public access and shared-key access are disabled, TLS 1.2 is the minimum, and TCWeb's system-assigned managed identity has `Storage Blob Data Contributor` at that storage-account scope. Writes refuse replacement; reads recompute and compare the expected SHA-256 and validate retained tenant/digest metadata.
-
-The metadata connection is a versionless Key Vault reference named by `ConnectionStrings:TaxHubWorkflow`; its value is absent from source, tracked settings and diagnostics. The deployed host uses `AzureManaged`, an opaque stable tenant GUID, the private container and `SendDisabled`. Readiness now probes the accounting database, workflow schema and Blob container and returns HTTP `200` only when all required facilities are reachable.
-
-The deployment builds without warnings and the expanded TCWeb Tax Hub suite passes 117 assertions. Phase 7.3 now defines and reviews the minimal filing-only input model before Phase 7.4 connects it to exact preparation. No document, Blob evidence object, approval, conversation or Companies House request was created.
-
-## Phase 7.3 status — reviewed filing inputs
-
-Phase 7.3 was initially implemented and deployed as a review-only product step, but human review correctly rejected its free-entry fields for current/comparative prepayments, provisions and accruals/deferred income. Those fields confused statutory presentation with accounting measurement: the native balance sheet already includes those accounting effects, and adding independently typed values would double count them and invalidate the Equity Bridge.
-
-The corrected implementation removes all six fields from the browser draft and core reviewed-input contract. The Accounts workspace now collects only non-ledger filing facts that cannot be derived reliably from the accounting source: accounts-approval date, signing director, principal activity, accounting policies, average employees, and the separately reviewable director-advance schedule. Legacy diagnostic DTOs retain zero-valued balance-sheet members for compatibility with accepted test fixtures, but validation rejects every non-zero override and the source reader does not consume them.
-
-Commitments and contingencies are present in the wider MIS schema but are not accessible to Accounts Mode in the first release. The product therefore does not expose a blank disclosure editor or treat an empty list as evidence of absence. Its plain-language eligibility question defaults to none for the ordinary supported case; that answer becomes attributable only when the user reviews the form. Yes, unsure or no answer blocks the automated filing route. The authority-neutral structured disclosure remains available for a later MIS-backed implementation.
-
-Each director-advance row now identifies one director and one accounting-period movement schedule. The four labelled amounts are opening balance, advances or credits during the period, repayments during the period and closing balance; they must satisfy opening plus advances/credits less repayments equals closing. “Add director” creates another director schedule, not another advance, and the statutory summary does not ask for individual transaction dates.
-
-The current SQL balance-sheet projection provides four mutually exclusive native buckets: non-current assets, current assets, current liabilities and non-current liabilities. Prepayments, accruals and provisions are already accounted for within those balances. The present supported filing therefore emits zero for the *additional* statutory presentation lines and leaves the native buckets untouched. This is a bridge-preserving presentation decision, not an assertion that the underlying accounting items do not exist. Any later requirement to show a non-zero separate line needs a source-backed decomposition which removes the identical amount from its containing bucket; it must never be an operator override.
-
-The review is fail-closed. It requires a closed year-end that has passed Phase 7.1 readiness; validates approval date, required text, employee and director-advance bounds, disclosure cardinality, director-advance arithmetic and the Accounts Mode eligibility declaration; and invalidates the review when the period or an input changes. Fixed supported-profile facts and every balance-sheet value remain read-only. The browser receives no presenter credential, company authentication, transport setting or authority endpoint.
-
-Companies House readiness is now scoped to Companies House evidence. A company that is not VAT registered is not blocked merely because no VAT registration exists, and unrelated unreviewed VAT or Corporation Tax settings do not contaminate this filing gate. Required company identity, address, jurisdiction, currency, provenance and the reviewed Companies House profile remain mandatory.
-
-This phase deliberately retains no draft or reviewed inputs in the workflow database and creates no statutory document or Blob object. A successful review means only that the in-memory inputs are internally coherent; exact-document preparation and durable candidate creation begin in Phase 7.4. Dispatch remains `SendDisabled`.
-
-The corrected implementation builds without warnings. The company-contract suite passes 87 assertions, WebHarness hardening passes 73 assertions, and the TCWeb Tax Hub suite passes 126 assertions. Azure deployment `320a90bd-d323-4cab-9a3c-7903dfbe7e12` includes the director labelling and eligibility-default correction; liveness and readiness return HTTP `200`. The corrected form still requires authenticated human review before this gate can pass. No Companies House request was made.

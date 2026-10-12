@@ -1,5 +1,39 @@
 # Tax Hub Findings
 
+## 12 October 2026 — Status is a continuation, not another filing journey
+
+- A gateway acknowledgement proves receipt but not Companies House acceptance. The user therefore needs an explicit continuation of the retained conversation rather than another preparation or submission control.
+- `GetSubmissionStatus` evidence must append to the conversation without replacing its original request/acknowledgement evidence. Each attempt has its own transaction identity, protected request/response references, hashes and classified result.
+- A specific-submission query is the narrowest and safest product action for `S00017`. Under TIS 6.0, `StatusAck` applies conditionally to an all-submissions response, not this specific-submission response; invoking it here would manufacture a protocol step Companies House did not request.
+- A manual action is appropriate for the present single-instance development deployment. Scheduled polling belongs with the later live multi-tenant operational design, where tenant isolation, cadence, throttling and worker recovery can be established together.
+- Status ambiguity must not reopen dispatch. A failed or unclassifiable status check is independently recoverable, while the original submission remains consumed and duplicate filing remains blocked.
+
+## 12 October 2026 — Restart-safe filing continuation is shared by Phases 7.6 and 7.7
+
+- Acknowledgement is durable but the Accounts workspace previously returned to the start of the filing wizard after restart, creating a misleading repeat-filing journey.
+- The cheapest safe correction is the read-only foundation of Phase 7.7: resolve the existing company/period/profile conversation, verify its retained digest bindings and present it instead of a new journey.
+- The same rule is enforced at the preparation boundary. This is duplicate prevention, not a recovery policy: terminal and failed filings cannot yet be replaced without an explicit later decision.
+- Phase 7.6 remains open for `GetSubmissionStatus` and conditional `StatusAck`; general history and recovery remain gated behind its acceptance.
+
+## 12 October 2026 — Complete guided evidence journey accepted
+
+- Human review exercised the complete year-end evidence wizard and confirmed that its accounting-detail drill-throughs worked as intended.
+- The accepted wizard makes native accounting review part of one continuous filing journey without converting operational accounting evidence into browser-entered Companies House values.
+- This acceptance closes the internal evidence dependency and authorises Phase 7.6. It does not authorise an external test or live submission; product dispatch remains disabled until the controlled submission/status lifecycle has its own accepted gate.
+- Phase 7.6 can begin without transport: staging the exact approval first gives the later dispatcher a durable conversation to continue and makes repeat activation idempotent across browser actions and restarts.
+- Companies House submission numbers and transaction identities belong immediately before authority materialisation/dispatch, not to internal staging. Leaving them null now avoids manufacturing an authority identity while the product is send-disabled.
+- Duplicate prevention needs an atomic `Prepared` → `Dispatching` claim rather than button disabling or a read-then-write check. The durable claim is made only after exact request retention and before the exchange; losing callers recover the stored conversation and do not send.
+- A synchronous acknowledgement proves gateway receipt only. The recording lifecycle therefore persists `Acknowledged` separately and reserves `Accepted`/`Rejected` for later `GetSubmissionStatus` evidence.
+- Any uncertainty after the claim is a recovery state, including cancellation, malformed XML, correlation mismatch and an unclassified response. Returning to `Prepared` would make an unsafe second filing appear ordinary.
+- Official-test activation can remain structurally separate from live activation: a dedicated dispatch enum is rejected unless the authority is `OfficialTest` and persistence is Azure-managed, while production exposes no send-enabled mode.
+- Submission identity is presenter-scoped rather than tenant-scoped. A small isolated workflow sequence prevents two tenants sharing a presenter from allocating the same submission number; the floor of 17 continues the retained WebHarness series without claiming that internal staging allocated an authority identity.
+- The approved preview can remain credential-free and immutable. The transport materialiser changes only the six-character review submission marker and transport-owned fields, then re-verifies both preview/document digests and the embedded iXBRL bytes before the exact request is retained and claimed.
+- Key Vault reference resolution can be verified without reading secret values. The deployed test composition reports all five official-test references as `Resolved`; no live presenter or package reference is present.
+- Technical endpoint isolation is not enough once a live package reference exists elsewhere. The active authority environment must be visually unmistakable throughout the human journey; the official-test deployment now carries a persistent red banner and repeats the warning at the irreversible control.
+- Application and accounting-database releases must be treated as one deployable compatibility set. The first authenticated check caught the missing Subjects reporting function before approval or submission; an additive, data-loss-blocked DACPAC alignment restored the journey without weakening any filing gate.
+- Official-test submission `S00017` proved the product-host hop from native accounting evidence through exact review, immutable approval, protected transport-time materialisation and a one-send gateway acknowledgement. The `Acknowledged` state remains deliberately non-terminal until `GetSubmissionStatus` supplies authority evidence.
+- A post-dispatch human copy is useful, but removing `DRAFT — NOT FILED` must not erase environment truth. The submitted derivative is therefore available only after a digest-matched acknowledged official-test exchange and is permanently footered `OFFICIAL TEST — NOT LIVE FILED`; the exact retained iXBRL remains the filed artifact.
+
 ## 10 October 2026 — Guided review consumes native accounting evidence
 
 - The completed Subjects project resolves the debtor/creditor prerequisite without giving Tax Hub a second population query or operational report. The wizard consumes counts, gross totals, reconciliation and a deterministic digest only.

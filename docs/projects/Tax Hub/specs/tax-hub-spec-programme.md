@@ -220,6 +220,24 @@ Accounting, UI, statutory projection, HMRC contract definition, transport, and w
 
 All filing behaviour executes on behalf of the current tenant.
 
+The Objective 5 Companies House journey has initially been proved in an isolated, single-business Azure development deployment. That evidence establishes the accounting, approval, document, dispatch and authority-conversation behaviour; it does **not** establish production multi-tenant isolation. A test or live result from that deployment must never be cited as proof that one hosted business cannot reach another business's data or filing authority.
+
+A production multi-tenant implementation shall maintain an absolute business-instance boundary across accounting sources, reporting subjects, authority identities, approvals, filings and retained evidence. In particular:
+
+- tenant, reporting-subject and authenticated-actor identity shall be derived by the server from the active business instance and authenticated session, never accepted as browser authority;
+- every preparation, approval, conversation, status check, download, event and recovery action shall be authorised against that derived tenant before any record or protected object is read or changed;
+- shared workflow storage shall make tenant identity part of every lookup, uniqueness rule and atomic state transition; an unguessable reference is not itself authorisation;
+- protected documents, packages and authority exchanges shall be tenant-partitioned and inaccessible through another tenant's references, logs, support tools or backup/restore operations;
+- company authentication and other company-specific authority material shall resolve only within the intended tenant/company context and shall never be exposed to another tenant, the browser or ordinary diagnostics;
+- platform-level presenter credentials and presenter-wide submission sequencing may be shared only at the transport boundary, without making tenant filings enumerable or visible across business instances;
+- scheduled status polling and other background work shall carry an explicit tenant context, use tenant-scoped leases/idempotency and restore that context before accessing accounting or filing evidence;
+- live enablement shall be environment-, tenant- and authority-scoped rather than a single global switch; and
+- telemetry, event logging and support references shall remain safe when records from many tenants share operational infrastructure.
+
+Before any live multi-tenant activation, the selected deployment topology and trust boundaries shall be documented and reviewed. Automated negative tests must demonstrate that Tenant A cannot prepare, approve, submit, poll, download, enumerate or recover Tenant B's filing, including where an otherwise valid Tenant B reference is supplied deliberately. Backup, retention, deletion, incident response and operator-support procedures must preserve the same separation.
+
+Physical isolation may be selected for accounting databases, protected stores, secrets or other layers where it provides the appropriate assurance. Where infrastructure is shared, logical isolation must be explicit, enforced at every boundary and evidenced independently; convenience or current single-instance behaviour is not an acceptable substitute.
+
 ### Operational First
 
 The Cash Statement remains the primary fiscal interface.

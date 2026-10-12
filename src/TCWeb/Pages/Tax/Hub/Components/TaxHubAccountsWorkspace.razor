@@ -1,5 +1,13 @@
 @using MudBlazor
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Options
+@using TradeControl.Tax.UK.Application.Preparation
+@using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
+@inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
+@inject ICompaniesHouseFilingContinuationService CompaniesHouseContinuation
+@inject ICompaniesHouseSubmissionStatusService CompaniesHouseStatus
+@inject ILogger<TaxHubAccountsWorkspace> Logger
 
 @if (Workspace is null)
 {
@@ -165,6 +173,17 @@ else
                         </span>
                     </div>
 
+                    @if (CompaniesHouseHost.Value.DispatchMode == CompaniesHouseDispatchMode.OfficialTestSingleSend)
+                    {
+                        <div class="alert alert-danger border-2 mb-0" role="status">
+                            <strong>OFFICIAL TEST — NOT A LIVE FILING</strong>
+                            <div class="small mt-1">
+                                This development deployment is pinned to the Companies House official test gateway and uses test credentials only.
+                                The live package reference is not configured here, so this journey cannot file live accounts.
+                            </div>
+                        </div>
+                    }
+
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <dl class="row mb-0">
@@ -197,7 +216,120 @@ else
                         </div>
                     }
 
-                    @if (!_filingJourneyStarted)
+                    @if (_filingContinuationLoading)
+                    {
+                        <div class="alert alert-secondary mb-0" role="status">
+                            Checking for an existing filing conversation…
+                        </div>
+                    }
+                    else if (_filingContinuationError is not null)
+                    {
+                        <div class="alert alert-danger mb-0" role="alert">
+                            <strong>Filing continuation could not be verified.</strong>
+                            <div class="small mt-1">@_filingContinuationError</div>
+                            <div class="small mt-1">A new filing journey is disabled until this check succeeds.</div>
+                        </div>
+                    }
+                    else if (_existingFiling is not null)
+                    {
+                        <div class="card border-primary shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <div class="badge bg-primary mb-2">EXISTING FILING — DO NOT RESUBMIT</div>
+                                    <h3 class="h6 mb-1">Continue the existing Companies House filing</h3>
+                                    <div class="text-muted small">
+                                        This company, accounting period and filing profile already have a durable filing conversation.
+                                        A new preparation and submission are blocked.
+                                    </div>
+                                </div>
+                                <dl class="row small mb-0">
+                                    <dt class="col-md-3">Submission number</dt>
+                                    <dd class="col-md-9 font-monospace">@(_existingFiling.SubmissionNumber ?? "Not allocated")</dd>
+                                    <dt class="col-md-3">State</dt>
+                                    <dd class="col-md-9">@_existingFiling.State</dd>
+                                    <dt class="col-md-3">Last updated</dt>
+                                    <dd class="col-md-9">@_existingFiling.UpdatedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</dd>
+                                    @if (_existingFiling.LastStatusCheckedAtUtc.HasValue)
+                                    {
+                                        <dt class="col-md-3">Status checked</dt>
+                                        <dd class="col-md-9">@_existingFiling.LastStatusCheckedAtUtc.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")</dd>
+                                    }
+                                    <dt class="col-md-3">Document SHA-256</dt>
+                                    <dd class="col-md-9 text-break font-monospace">@_existingFiling.DocumentSha256</dd>
+                                    <dt class="col-md-3">Package SHA-256</dt>
+                                    <dd class="col-md-9 text-break font-monospace">@_existingFiling.PackageSha256</dd>
+                                    @if (_existingFiling.SupportReference is not null)
+                                    {
+                                        <dt class="col-md-3">Support reference</dt>
+                                        <dd class="col-md-9 font-monospace">@_existingFiling.SupportReference</dd>
+                                    }
+                                </dl>
+                                @if (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
+                                    or CompaniesHouseConversationState.Pending
+                                    or CompaniesHouseConversationState.Parked
+                                    or CompaniesHouseConversationState.Accepted)
+                                {
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a class="btn btn-outline-primary"
+                                           href="@($"/TaxHub/CompaniesHouse/Preparation/{_existingFiling.PreparationReference}/OfficialTestSubmission.pdf")">
+                                            Download official-test submitted PDF
+                                        </a>
+                                        @if (CompaniesHouseHost.Value.DispatchMode == CompaniesHouseDispatchMode.OfficialTestSingleSend
+                                            && (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
+                                                or CompaniesHouseConversationState.Pending
+                                                or CompaniesHouseConversationState.Parked))
+                                        {
+                                            <button type="button" class="btn btn-primary"
+                                                    disabled="@(_checkingFilingStatus || _existingFiling.StatusCheckInProgress)"
+                                                    @onclick="CheckFilingStatus">
+                                                @(_checkingFilingStatus || _existingFiling.StatusCheckInProgress
+                                                    ? "Checking status…" : "Check Companies House status")
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                @if (_statusCheckError is not null)
+                                {
+                                    <div class="alert alert-danger mb-0 small" role="alert">@_statusCheckError</div>
+                                }
+                                @if (_existingFiling.LastStatusCheckOutcome is not null)
+                                {
+                                    <div class="border rounded p-3 small">
+                                        <strong>Latest status enquiry: @_existingFiling.LastStatusCheckOutcome</strong>
+                                        <dl class="row mt-2 mb-0">
+                                            <dt class="col-md-3">Transaction ID</dt>
+                                            <dd class="col-md-9 font-monospace">@_existingFiling.LastStatusTransactionId</dd>
+                                            <dt class="col-md-3">Request SHA-256</dt>
+                                            <dd class="col-md-9 text-break font-monospace">@_existingFiling.LastStatusRequestSha256</dd>
+                                            <dt class="col-md-3">Response SHA-256</dt>
+                                            <dd class="col-md-9 text-break font-monospace">@(_existingFiling.LastStatusResponseSha256 ?? "No safely classified response")</dd>
+                                        </dl>
+                                        @if (!string.IsNullOrWhiteSpace(_existingFiling.ExaminerComment))
+                                        {
+                                            <div class="mt-1">Companies House comment: @_existingFiling.ExaminerComment</div>
+                                        }
+                                        @if (_existingFiling.StatusCheckErrors.Count > 0)
+                                        {
+                                            <ul class="mb-0 mt-2">
+                                                @foreach (var error in _existingFiling.StatusCheckErrors)
+                                                {
+                                                    <li>@error.Code — @error.Message</li>
+                                                }
+                                            </ul>
+                                        }
+                                        @if (_existingFiling.StatusCheckSupportReference is not null)
+                                        {
+                                            <div class="mt-1">Support reference: <span class="font-monospace">@_existingFiling.StatusCheckSupportReference</span></div>
+                                        }
+                                    </div>
+                                }
+                                <div class="alert @ExistingFilingMessageClass mb-0 small">
+                                    @ExistingFilingMessage
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (!_filingJourneyStarted)
                     {
                         <div class="card border-primary shadow-sm">
                             <div class="card-body d-flex flex-column gap-3">
@@ -241,9 +373,19 @@ else
                         }
                     }
 
-                    <div class="alert alert-info mb-0" role="status">
-                        Preparation and immutable approval only — no request is made to Companies House. Submission remains disabled.
-                    </div>
+                    @if (CompaniesHouseHost.Value.DispatchMode == CompaniesHouseDispatchMode.OfficialTestSingleSend)
+                    {
+                        <div class="alert alert-warning mb-0" role="status">
+                            Preparation and immutable approval make no external request. After approval, a separate explicit one-send
+                            control can submit to the official test gateway only. Live filing remains disabled.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mb-0" role="status">
+                            Preparation and immutable approval only — no request is made to Companies House. Submission remains disabled.
+                        </div>
+                    }
                 </section>
             </MudTabPanel>
         </MudTabs>
@@ -258,8 +400,35 @@ else
     private bool _evidenceReviewComplete;
     private bool _filingJourneyStarted;
     private string? _filingJourneyKey;
+    private CompaniesHouseFilingContinuation? _existingFiling;
+    private bool _filingContinuationLoading;
+    private string? _filingContinuationError;
+    private bool _checkingFilingStatus;
+    private string? _statusCheckError;
 
-    protected override void OnParametersSet()
+    private string ExistingFilingMessageClass => _existingFiling?.State switch
+    {
+        CompaniesHouseConversationState.Accepted => "alert-success",
+        CompaniesHouseConversationState.Rejected or CompaniesHouseConversationState.InternalFailure
+            or CompaniesHouseConversationState.GatewayRejected => "alert-danger",
+        _ => "alert-info"
+    };
+
+    private string ExistingFilingMessage => _existingFiling?.State switch
+    {
+        CompaniesHouseConversationState.Accepted =>
+            "Companies House reports this official-test submission as accepted. It remains test evidence, not a live filing.",
+        CompaniesHouseConversationState.Rejected =>
+            "Companies House rejected this submission. The same approved package cannot be resubmitted.",
+        CompaniesHouseConversationState.Pending =>
+            "Companies House reports this submission as pending. Keep this conversation and check again later.",
+        CompaniesHouseConversationState.Parked =>
+            "Companies House has parked this submission. Keep this conversation and follow the recovery guidance.",
+        _ =>
+            "Gateway acknowledgement is not terminal acceptance. Check this conversation's Companies House status; it must never be replaced by another submission."
+    };
+
+    protected override async Task OnParametersSetAsync()
     {
         var key = Workspace is null
             ? null
@@ -269,6 +438,36 @@ else
         _filingJourneyKey = key;
         _filingJourneyStarted = false;
         _evidenceReviewComplete = false;
+        _existingFiling = null;
+        _filingContinuationError = null;
+        _filingContinuationLoading = false;
+        _checkingFilingStatus = false;
+        _statusCheckError = null;
+        if (Workspace is null || !Workspace.CompaniesHouse.IsEligible) return;
+
+        _filingContinuationLoading = true;
+        try
+        {
+            _existingFiling = await CompaniesHouseContinuation.FindAsync(
+                Workspace.CompaniesHouse.FilingInputs.PeriodStart,
+                Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception,
+                "Companies House filing continuation could not be verified for period ending {PeriodEnd}.",
+                Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
+            _filingContinuationError =
+                "The durable Companies House filing record could not be checked safely.";
+        }
+        finally
+        {
+            _filingContinuationLoading = false;
+        }
     }
 
     private void StartFilingJourney()
@@ -284,6 +483,33 @@ else
     }
 
     private void HandleEvidenceReviewCompletion(bool isComplete) => _evidenceReviewComplete = isComplete;
+
+    private async Task CheckFilingStatus()
+    {
+        if (_existingFiling is null || _checkingFilingStatus || _existingFiling.StatusCheckInProgress)
+            return;
+        _checkingFilingStatus = true;
+        _statusCheckError = null;
+        try
+        {
+            await CompaniesHouseStatus.CheckAsync(_existingFiling.ConversationReference);
+            _existingFiling = await CompaniesHouseContinuation.FindAsync(
+                Workspace!.CompaniesHouse.FilingInputs.PeriodStart,
+                Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            Logger.LogWarning(exception,
+                "Companies House filing status could not be checked for conversation {ConversationReference}.",
+                _existingFiling.ConversationReference);
+            _statusCheckError = exception.Message;
+        }
+        finally
+        {
+            _checkingFilingStatus = false;
+        }
+    }
 
     private static string DisplayOrDash(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }

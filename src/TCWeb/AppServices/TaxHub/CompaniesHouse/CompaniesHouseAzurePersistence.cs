@@ -116,6 +116,71 @@ internal sealed class AzureCompaniesHousePersistence(
         return Deserialize<CompaniesHouseConversationRecord>(await command.ExecuteScalarAsync(cancellationToken));
     }
 
+    public Task<CompaniesHouseConversationRecord?> GetConversationAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default) =>
+        ReadConversationAsync(tenantReference, reference, cancellationToken);
+
+    public async Task<bool> TryBeginDispatchAsync(CompaniesHouseConversationRecord conversation,
+        CancellationToken cancellationToken = default)
+    {
+        if (conversation.State != TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Dispatching
+            || string.IsNullOrWhiteSpace(conversation.SubmissionNumber)
+            || string.IsNullOrWhiteSpace(conversation.AuthorityTransactionId)
+            || string.IsNullOrWhiteSpace(conversation.LastRequestSha256)
+            || string.IsNullOrWhiteSpace(conversation.ProtectedRequestReference))
+            throw new ArgumentException("A complete dispatching conversation is required.", nameof(conversation));
+
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        await using var command = new SqlCommand("""
+            UPDATE TaxHub.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
+               SET State = @dispatching, IsActive = 1, UpdatedAtUtc = @updated, PayloadJson = @payload
+             WHERE TenantReference = @tenant AND Reference = @reference AND State = @prepared;
+            """, connection, transaction);
+        Add(command, "tenant", Guid.Parse(conversation.TenantReference));
+        Add(command, "reference", conversation.Reference);
+        Add(command, "prepared", (int)TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Prepared);
+        Add(command, "dispatching", (int)conversation.State);
+        Add(command, "updated", conversation.UpdatedAtUtc.UtcDateTime);
+        Add(command, "payload", JsonSerializer.Serialize(conversation, Json));
+        var claimed = await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+        await transaction.CommitAsync(cancellationToken);
+        return claimed;
+    }
+
+    public async Task<bool> TryBeginStatusCheckAsync(CompaniesHouseConversationRecord conversation,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+    {
+        var check = conversation.StatusChecks?.LastOrDefault();
+        if (check is null || check.CheckState != CompaniesHouseStatusCheckState.Dispatching
+            || string.IsNullOrWhiteSpace(check.RequestSha256)
+            || string.IsNullOrWhiteSpace(check.ProtectedRequestReference))
+            throw new ArgumentException("A complete dispatching status check is required.", nameof(conversation));
+
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        await using var command = new SqlCommand("""
+            UPDATE TaxHub.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
+               SET UpdatedAtUtc = @updated, PayloadJson = @payload
+             WHERE TenantReference = @tenant AND Reference = @reference
+               AND UpdatedAtUtc = @expected
+               AND State IN (@acknowledged, @pending, @parked);
+            """, connection, transaction);
+        Add(command, "tenant", Guid.Parse(conversation.TenantReference));
+        Add(command, "reference", conversation.Reference);
+        Add(command, "expected", expectedUpdatedAtUtc.UtcDateTime);
+        Add(command, "updated", conversation.UpdatedAtUtc.UtcDateTime);
+        Add(command, "acknowledged", (int)TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Acknowledged);
+        Add(command, "pending", (int)TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Pending);
+        Add(command, "parked", (int)TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Parked);
+        Add(command, "payload", JsonSerializer.Serialize(conversation, Json));
+        var claimed = await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+        await transaction.CommitAsync(cancellationToken);
+        return claimed;
+    }
+
     public async Task UpsertConversationAsync(CompaniesHouseConversationRecord conversation,
         CancellationToken cancellationToken = default)
     {
@@ -232,6 +297,18 @@ internal sealed class AzureCompaniesHousePersistence(
         return Deserialize<T>(await command.ExecuteScalarAsync(cancellationToken));
     }
 
+    private async Task<CompaniesHouseConversationRecord?> ReadConversationAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = new SqlCommand(
+            "SELECT PayloadJson FROM TaxHub.CompaniesHouseConversation WHERE TenantReference = @tenant AND Reference = @reference;",
+            connection);
+        Add(command, "tenant", Guid.Parse(tenantReference));
+        Add(command, "reference", reference);
+        return Deserialize<CompaniesHouseConversationRecord>(await command.ExecuteScalarAsync(cancellationToken));
+    }
+
     private async Task<SqlConnection> OpenAsync(CancellationToken cancellationToken)
     {
         var name = _options.WorkflowConnectionName;
@@ -254,7 +331,8 @@ internal sealed class AzureCompaniesHousePersistence(
     private static bool IsActive(TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState state) =>
         state is not (TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Accepted
             or TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.Rejected
-            or TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.GatewayRejected);
+            or TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.GatewayRejected
+            or TradeControl.Tax.UK.Application.Preparation.CompaniesHouseConversationState.InternalFailure);
 
     private static bool IsReference(string value) => value.Length == 37
         && value.StartsWith("chb1-", StringComparison.Ordinal)
