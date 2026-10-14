@@ -1,5 +1,17 @@
 # Tax Hub Change Log
 
+## 14 October 2026 — VAT production-credentials application deferred
+
+- Recorded the owner's decision to defer the Developer Hub production-credentials application until the intended multi-tenant Azure hosting environment is implemented and independently reviewed.
+- Preserved the accepted Phase 6.6 single-tenant technical evidence and kept the Objective 3 VAT contracts closed; the deferral is a production topology and assurance gate, not a technical VAT failure.
+- Reordered Phase 6.7 so tenant isolation, managed persistence, security, operations, recovery, monitoring and final fraud-prevention topology evidence precede the application. Added refreshed HMRC sandbox evidence and confirmation of any additional HMRC hosting-change review as explicit pre-application gates.
+
+## 14 October 2026 — VAT production-credentials application inspection
+
+- Recorded HMRC's procedural response directing the technically tested VAT product to the Developer Hub production-credentials flow. Kept production approval, credential creation, live filing and compatible-software listing explicitly unclaimed.
+- Inspected the live application only through its first unanswered branching question and captured the public 25-question evidence inventory in the protected local VAT folder. No answer was selected or saved, no protected identifier was entered and no application was submitted.
+- Added the owner evidence-review gate for the free/open-source distribution classification, responsible individual and registration evidence, policy URLs, incident management, accessibility, penetration testing/security audit, server/data locations, fraud-header warnings and the single-tenant versus future multi-tenant scope boundary.
+
 ## 14 October 2026 — Corporation Tax External Test Service local boundary
 
 - Sent HMRC Software Developers Support Team the first-person request for the Corporation Tax new

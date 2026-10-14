@@ -515,7 +515,7 @@ Requires accepted 6.0–6.5 in an internet-reachable HTTPS deployment whose topo
 
 Human review may mark **VAT product technically approval-ready**. This status does not mean HMRC approved, production access granted, a live return filed or the product listed.
 
-**Status (2 October 2026): accepted — VAT product technically approval-ready.** The fresh-organisation ordinary filing journey, exact readback, fraud validator and accessibility review passed. A genuine post-acceptance App Service interruption preserved the HTTP 201 receipt while preventing immediate readback; the restarted product warned against resubmission, exposed one controlled Filing History reconciliation action and then proved an exact nine-value HMRC match. Release builds and applicable offline regression suites are green, and redacted ordinary/recovery screenshots are assembled in the user-guide repository. This acceptance does not mean HMRC approved, production access was granted, a live return was filed or the product was listed. Phase 6.7 remains closed pending explicit owner approval for the external HMRC process.
+**Status (2 October 2026): accepted — VAT product technically approval-ready.** The fresh-organisation ordinary filing journey, exact readback, fraud validator and accessibility review passed. A genuine post-acceptance App Service interruption preserved the HTTP 201 receipt while preventing immediate readback; the restarted product warned against resubmission, exposed one controlled Filing History reconciliation action and then proved an exact nine-value HMRC match. Release builds and applicable offline regression suites are green, and redacted ordinary/recovery screenshots are assembled in the user-guide repository. This acceptance does not mean HMRC approved, production access was granted, a live return was filed or the product was listed. The 14 October 2026 decision to defer the production-credentials application preserves this accepted technical evidence; it does not reopen Phase 6.6 or the accepted statutory contracts.
 
 ## Phase 6.7 — HMRC approval, production activation and compatible-software listing
 
@@ -525,25 +525,28 @@ Complete the external VAT production process while retaining explicit human cont
 
 ### External sequence
 
-1. Within HMRC's current two-week window after completing API testing, contact the Software Developers Support Team and supply the redacted test references needed for log inspection. State that the evidence covers the tested single-tenant Azure deployment, that Trade Control is free software with a public source repository and user guide, and that a shared multi-tenant Azure delivery is planned before wider commercial rollout.
-2. Complete HMRC's requested questionnaires and accept the current terms of use through the authorised human process. Supporting material may prepare answers and evidence but cannot accept legal terms.
-3. Resolve HMRC findings from fraud-header and VAT API testing. Code or journey changes return to the relevant earlier phase and repeat its regression/sandbox evidence.
-4. After HMRC grants production access, provision production application credentials and keys through the approved secret facility. Keep sandbox and production applications, redirect URIs, stores and hosts isolated.
-5. Perform a production smoke test that does not file a return, where the authority permits it, then obtain separate human approval for one controlled live VAT submission by an eligible Trade Control business.
-6. Retain the live attempt, approval, receipt and HMRC reconciliation evidence under the approved production policy. Never copy customer identifiers into tracked project documentation.
-7. Request compatible-software listing and provide the live-submission VRN directly to HMRC through the approved channel. Record the listing only after HMRC confirms it.
-8. Before shared multi-tenant or wider commercial rollout, complete the approved Azure-managed persistence and tenant-resolution facilities, disclose the final hosting and network topology to HMRC, repeat the topology-sensitive fraud-header and isolation evidence, and complete any change review or retesting HMRC requires. Production rollout then requires explicit approval of support, monitoring and an immediate kill switch that blocks new submissions without corrupting history or revoking grants unnecessarily.
+1. Retain the completed 2 October 2026 single-tenant sandbox and Phase 6.6 evidence as an accepted technical baseline; do not reinterpret the hosting deferral as a VAT implementation or contract failure.
+2. Implement the intended shared multi-tenant Azure hosting environment, including the approved managed persistence, server-derived tenant identity, tenant-scoped authority state, monitoring, rate control, retention/recovery and submission kill switch.
+3. Complete an independent review of tenant isolation, security, operations and the final ingress/TLS/public-egress fraud-prevention topology. Negative evidence must show that one tenant cannot prepare, approve, submit, poll, download, enumerate or recover another tenant's filing.
+4. Ask HMRC whether the hosting and topology changes require additional review, a refreshed production-access application, selected endpoint retesting or other evidence. Do not assume that the prior single-tenant evidence transfers to the new topology.
+5. Before applying for production credentials, repeat the HMRC sandbox obligations, submission, view-return and fraud-header tests required to provide current evidence from the actual intended production topology. Resolve every error and document truthful warnings without inventing multi-factor or licence values.
+6. Complete the Developer Hub production-credentials application and any follow-up questionnaires, evidence requests and terms through the authorised human process. Supporting material may prepare answers and evidence but cannot accept legal terms.
+7. After HMRC grants production access, provision production application credentials and keys through the approved secret facility. Keep sandbox and production applications, redirect URIs, stores and hosts isolated.
+8. Perform a production smoke test that does not file a return, where the authority permits it, then obtain separate human approval for one controlled live VAT submission by an eligible Trade Control business.
+9. Retain the live attempt, approval, receipt and HMRC reconciliation evidence under the approved production policy. Never copy customer identifiers into tracked project documentation.
+10. Request compatible-software listing and provide the live-submission VRN directly to HMRC through the approved channel. Record the listing only after HMRC confirms it.
 
 ### Dependencies and exclusions
 
-Requires 6.6 technical approval-readiness, HMRC cooperation, production credentials, an eligible real business and explicit owner approval. Sandbox users and synthetic returns cannot satisfy the live-submission/listing requirement.
+Requires preserved 6.6 technical approval-readiness, an implemented and independently reviewed intended multi-tenant production topology, current topology-matched HMRC sandbox/fraud evidence, clarification of any additional HMRC review, HMRC cooperation, production credentials, an eligible real business and explicit owner approval. Sandbox users and synthetic returns cannot satisfy the live-submission/listing requirement.
 
 Legal and externally consequential actions—including accepting terms, disclosing a customer's VRN, creating production credentials, submitting a live VAT return, contacting HMRC and publishing a compatibility claim—require explicit contemporaneous human authorisation. Automated preparation of answers or evidence does not confer authority to perform those actions.
 
 ### Tests and acceptance
 
 - Record separately: HMRC test review, fraud-header review, questionnaire/terms status, production access, production credentials, controlled live outcome and compatible-software listing.
-- Verify production host allow-list, redirect URI, secret provider, encryption keys, audit persistence, monitoring, rate limit and kill switch before live enablement.
+- Verify production host allow-list, redirect URI, secret provider, encryption keys, audit persistence, tenant isolation, monitoring, rate limit, recovery and kill switch before the credentials application and again before live enablement.
+- Repeat the required HMRC sandbox and fraud-header evidence against the intended production topology, and record HMRC's decision on whether the hosting change requires additional review.
 - Reconcile the controlled live return to its approved Trade Control source and HMRC view-return response where available.
 - Repeat relevant regression and security checks after every HMRC-requested change.
 
@@ -556,9 +559,9 @@ The human owner records one of these truthful statuses:
 - **Live VAT proven** — the separately approved live submission succeeded and reconciled.
 - **Compatible software listed** — HMRC has confirmed the public listing.
 
-Objective 5's VAT-continuity slice is complete when HMRC has confirmed the compatible-software listing and the implemented workflow remains operational. If HMRC action is pending, retain the technical milestone and leave external completion open. Later multi-tenant activation remains a separate disclosed hosting-change gate even if the tested single-tenant product has already received production approval or listing.
+Objective 5's VAT-continuity slice is complete when HMRC has confirmed the compatible-software listing and the implemented workflow remains operational. If HMRC action is pending, retain the technical milestone and leave external completion open. Under the 14 October 2026 decision, the intended multi-tenant hosting and its independent evidence are prerequisites to the production-credentials application rather than a later rollout gate.
 
-**Status (2 October 2026): in progress — HMRC response pending.** The truthful approval basis, public supporting material, Phase 6.6 evidence summary, multi-tenant disclosure and external action register are recorded in `phase-6.7-hmrc-production-approval.md`. The initial production-access request was sent to the Software Developers Support Team at 15:17 BST on 2 October 2026; production approval, questionnaires, credentials, live filing and listing remain pending.
+**Status (14 October 2026): deferred — multi-tenant production-hosting prerequisites.** Phase 6.6 remains accepted and its technical evidence is preserved. Following HMRC's procedural reply and inspection of the Developer Hub questions, the owner deferred the production-credentials application until the intended multi-tenant Azure environment is implemented and independently reviewed. Tenant-isolation, security, operational and fraud-prevention evidence must be completed against the actual topology; required HMRC sandbox evidence must then be refreshed and HMRC asked whether the hosting change requires additional review. Production approval, credentials, live filing and listing remain pending.
 
 ## Test strategy and regression protection
 

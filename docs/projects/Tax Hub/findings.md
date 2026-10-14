@@ -1,5 +1,21 @@
 # Tax Hub Findings
 
+## 14 October 2026 — VAT production application deferred to the intended multi-tenant topology
+
+- The owner has deferred the VAT production-credentials application until the intended shared multi-tenant Azure environment is implemented and independently reviewed. The live Developer Hub form remains unanswered.
+- This is a deployment-assurance decision, not a VAT technical failure. The accepted Phase 6.6 obligations, HTTP 201 submission, exact nine-box readback, fraud-validator and recovery evidence remain valid as the tested single-tenant baseline, and the accepted statutory contracts are not reopened.
+- Production-application evidence must be generated against the topology being proposed for production. Required work includes server-derived tenant authority, adversarial cross-tenant tests, managed Azure secret/persistence boundaries, integrity and coordinated recovery, least-privilege operations, redacted monitoring/rate control/retention, incident handling, kill-switch behaviour and final fraud-header network facts.
+- Once the topology is stable, the programme must ask HMRC whether the hosting change requires additional review or selected retesting and repeat the required obligations, submission, view-return and fraud-header sandbox evidence so the application is supported by current results.
+
+## 14 October 2026 — VAT production-credentials application is an evidence gate
+
+- HMRC Software Developers Support replied that a fully tested product should apply through **Developer Hub → Applications → Get production credentials**. The control is visible for `Trade Control Tax Hub`; HMRC says it is suppressed when the sandbox application includes APIs unavailable in production. This is a procedural eligibility signal, not production approval.
+- HMRC's reply did not answer the disclosed empty multi-factor and vendor-licence fraud-header questions. The Phase 6.6 zero-error result and truthful warnings remain the evidence; neither value may be fabricated.
+- The live application was inspected only to its first unanswered branching question, **“Do you sell, resell or distribute your software?”** No answer was selected or saved and no request was submitted. Its interpretation for free/open-source distribution requires owner review.
+- HMRC's public preview lists 25 further questions spanning the responsible individual and registration evidence, marketing claims, development/error/accessibility practice, incident reporting, UK GDPR/encryption/customer isolation/access control/data portability, OAuth credential handling, SaaS penetration testing and security audit, fraud-prevention validation, server location, privacy policy and terms.
+- The questionnaire makes deployment scope material. Present isolated single-tenant Azure evidence cannot establish customer separation for a future shared multi-tenant service; any such answer needs the programme's independent topology, persistence and adversarial isolation evidence.
+- The application says review can take at least 10 working days, may require a demonstration or follow-up questions and must be completed within six months once started. Answers and evidence must be reviewed before protected identifiers are entered or any answer is saved.
+
 ## 12 October 2026 — Status is a continuation, not another filing journey
 
 - A gateway acknowledgement proves receipt but not Companies House acceptance. The user therefore needs an explicit continuation of the retained conversation rather than another preparation or submission control.
