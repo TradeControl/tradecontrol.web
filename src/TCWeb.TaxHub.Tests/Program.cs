@@ -27,6 +27,21 @@ void Assert(bool condition, string message)
     if (!condition) throw new InvalidOperationException(message);
 }
 
+async Task AssertThrowsAsync<TException>(Func<Task> action, string message)
+    where TException : Exception
+{
+    assertions++;
+    try
+    {
+        await action();
+    }
+    catch (TException)
+    {
+        return;
+    }
+    throw new InvalidOperationException(message);
+}
+
 var root = FindRoot(AppContext.BaseDirectory);
 var webProject = Path.Combine(root, "src", "TCWeb", "TCWeb.csproj");
 var webReferences = ProjectReferences(webProject);
@@ -170,24 +185,37 @@ Assert(companyIdentity == CompaniesHouseFilingIdentity.Company("tenant-a", "0123
 var stagingTenant = Guid.NewGuid().ToString();
 var stagingDocumentSha = new string('A', 64);
 var stagingPackageSha = new string('B', 64);
+var stagingFullAccounts = Encoding.UTF8.GetBytes("full-accounts");
+var stagingFullAccountsSha = Convert.ToHexString(SHA256.HashData(stagingFullAccounts));
+var stagingReviewedInputSha = new string('E', 64);
+var stagingAccountsSnapshotSha = CompaniesHouseAccountsSnapshot.Create(
+    new string('C', 64), new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
+    CompaniesHouseProductPolicy.SupportedFilingProfile, "snapshot", stagingReviewedInputSha,
+    stagingDocumentSha, stagingFullAccountsSha);
 var stagingPreparation = new CompaniesHousePreparationRecord(
     "chp1-stage", stagingTenant, "HOME", "SA", new string('C', 64), "••••4567",
     new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
     CompaniesHouseProductPolicy.SupportedFilingProfile, "TradeControl", "UK-CO-ACCTS-2026",
     "snapshot", stagingDocumentSha, stagingPackageSha, "document", "package",
-    DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1));
+    DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1),
+    ReviewedInputSha256: stagingReviewedInputSha,
+    FullAccountsSha256: stagingFullAccountsSha,
+    ProtectedFullAccountsReference: "full-accounts",
+    AccountsSnapshotSha256: stagingAccountsSnapshotSha);
 var stagingApproval = new CompaniesHouseApprovalRecord(
     "cha1-stage", stagingPreparation.Reference, stagingTenant, "subject", "SA",
     new string('D', 64), stagingPreparation.CompanyIdentitySha256,
     stagingPreparation.PeriodStart, stagingPreparation.PeriodEnd, stagingPreparation.FilingProfile,
     CompaniesHouseApprovalDeclaration.Version, CompaniesHouseApprovalDeclaration.Sha256,
     stagingPreparation.SourceSystem, stagingPreparation.DatasetKey, stagingPreparation.SnapshotToken,
-    stagingDocumentSha, stagingPackageSha, true, DateTimeOffset.UtcNow);
+    stagingDocumentSha, stagingPackageSha, true, DateTimeOffset.UtcNow,
+    stagingFullAccountsSha, stagingAccountsSnapshotSha);
 var stagingStore = new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval);
 var stagingContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<string, byte[]>
 {
     ["document"] = Encoding.UTF8.GetBytes("document"),
-    ["package"] = Encoding.UTF8.GetBytes("package")
+    ["package"] = Encoding.UTF8.GetBytes("package"),
+    ["full-accounts"] = stagingFullAccounts
 });
 var stagingHttp = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
 stagingHttp.HttpContext.User = Principal(Constants.AdministratorsRole);
@@ -199,8 +227,42 @@ var stagingService = new CompaniesHouseSubmissionStagingService(
         Enabled = true,
         DispatchMode = CompaniesHouseDispatchMode.SendDisabled
     }), TimeProvider.System);
+var accountsSnapshotService = new CompaniesHouseAccountsSnapshotService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    stagingStore, stagingContent);
+var approvedAccountsSnapshot = await accountsSnapshotService.ReadApprovedAsync(stagingApproval.Reference);
+Assert(approvedAccountsSnapshot.AccountsSnapshotSha256 == stagingAccountsSnapshotSha
+       && approvedAccountsSnapshot.FullAccountsSha256 == stagingFullAccountsSha
+       && approvedAccountsSnapshot.FullAccountsBytes.SequenceEqual(stagingFullAccounts),
+    "The approved Companies House snapshot did not return the exact cryptographically paired full accounts.");
+var legacySnapshotService = new CompaniesHouseAccountsSnapshotService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    new StubCompaniesHouseWorkflowStore(
+        stagingPreparation with
+        {
+            FullAccountsSha256 = null,
+            ProtectedFullAccountsReference = null,
+            AccountsSnapshotSha256 = null
+        },
+        stagingApproval with { FullAccountsSha256 = null, AccountsSnapshotSha256 = null }),
+    stagingContent);
+await AssertThrowsAsync<InvalidOperationException>(
+    () => legacySnapshotService.ReadApprovedAsync(stagingApproval.Reference),
+    "A legacy Companies House approval without paired CH/CT evidence was accepted.");
+var tamperedSnapshotService = new CompaniesHouseAccountsSnapshotService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    new StubCompaniesHouseWorkflowStore(
+        stagingPreparation with { AccountsSnapshotSha256 = new string('F', 64) },
+        stagingApproval with { AccountsSnapshotSha256 = new string('F', 64) }),
+    stagingContent);
+await AssertThrowsAsync<InvalidOperationException>(
+    () => tamperedSnapshotService.ReadApprovedAsync(stagingApproval.Reference),
+    "A tampered CH/CT accounts snapshot proof was accepted.");
 var stagedFirst = await stagingService.StageApprovedAsync(stagingApproval.Reference);
 var stagedAgain = await stagingService.StageApprovedAsync(stagingApproval.Reference);
+await AssertThrowsAsync<InvalidOperationException>(
+    () => accountsSnapshotService.ReadAcceptedForCorporationTaxAsync(stagingApproval.Reference),
+    "A prepared but unaccepted Companies House conversation released the CT accounts hand-off.");
 var recordingExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0001");
 var dispatchService = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
@@ -210,18 +272,22 @@ var dispatchService = new CompaniesHouseSubmissionDispatchService(
 var dispatched = await dispatchService.DispatchAsync(stagedFirst.ConversationReference);
 var dispatchedAgain = await dispatchService.DispatchAsync(stagedFirst.ConversationReference);
 stagingStore.SetState(CompaniesHouseConversationState.Accepted);
+var acceptedAccountsSnapshot = await accountsSnapshotService
+    .ReadAcceptedForCorporationTaxAsync(stagingApproval.Reference);
 var stagedAfterTerminal = await stagingService.StageApprovedAsync(stagingApproval.Reference);
 Assert(stagedFirst.State == CompaniesHouseConversationState.Prepared
        && stagedFirst.ConversationReference == stagedAgain.ConversationReference
        && dispatched.State == CompaniesHouseConversationState.Acknowledged
        && dispatchedAgain.State == CompaniesHouseConversationState.Acknowledged
        && dispatched.SubmissionNumber == "R00001"
+       && acceptedAccountsSnapshot.ConversationReference == stagedFirst.ConversationReference
+       && acceptedAccountsSnapshot.Accounts.AccountsSnapshotSha256 == stagingAccountsSnapshotSha
        && recordingExchange.ExchangeCount == 1
        && stagedAfterTerminal.State == CompaniesHouseConversationState.Accepted
        && stagedAfterTerminal.ConversationReference == stagedFirst.ConversationReference
        && stagingStore.UpsertCount == 2
        && stagingStore.TryBeginDispatchCount == 1
-       && stagingContent.ReadCount == 4
+       && stagingContent.ReadCount == 6
        && stagingContent.WriteCount == 2
        && stagingStore.ActiveConversation?.AuthorityTransactionId == "RECORDED0001",
     "The recording lifecycle did not retain exact evidence, claim once, separate acknowledgement, or prevent replay.");

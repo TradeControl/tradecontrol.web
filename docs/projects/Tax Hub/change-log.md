@@ -1,5 +1,41 @@
 # Tax Hub Change Log
 
+## 14 October 2026 — Corporation Tax External Test Service local boundary
+
+- Sent HMRC Software Developers Support Team the first-person request for the Corporation Tax new
+  applicant's pack, quoting the issued four-digit Vendor ID. The application pack and assigned
+  recognition scenarios are now an external dependency; no recognition outcome is claimed.
+- Split approved-accounts access from the accepted-for-CT hand-off. CT review can use the frozen
+  paired snapshot in advance, but the server-side hand-off refuses CT submission eligibility until
+  the matching Companies House conversation is terminal `Accepted`. Release TCWeb builds without
+  warnings and its Tax Hub boundary suite passes 164 assertions.
+- Recorded the Companies House XML team's explicit confirmation that test submission `S00018` was
+  accepted. This is authoritative evidence for the integrated product transition from a terminal CH
+  acceptance into CT review, but it is not retrospectively treated as a paired CH/CT accounts
+  snapshot. The first end-to-end CT attachment hand-off must use a fresh preparation carrying the
+  `CH-CT-ACCOUNTS-SNAPSHOT-1` proof.
+- Added a versioned `CH-CT-ACCOUNTS-SNAPSHOT-1` proof which binds company, accounting period,
+  filing profile, accounting-source snapshot, reviewed inputs, Companies House filleted iXBRL and
+  HMRC full-accounts iXBRL by SHA-256. Both documents are now generated from one populated accounts
+  contract and retained as exact protected bytes during Companies House preparation.
+- Added a fail-closed approved-accounts reader for future CT orchestration. It returns only the exact
+  retained full accounts after verifying the preparation, approval, optional CH conversation and
+  snapshot proof. Legacy CH preparations remain valid CH evidence but cannot be inferred to possess
+  this CT link; a fresh preparation and approval is required.
+- Added a protected parser for the Vendor ID, Sender ID, test UTR and selected password supplied directly by HMRC SDST; credential values are not returned by diagnostics or written to repository configuration.
+- Replaced the Phase 5.9 channel placeholder with the protected four-digit Vendor ID and pinned the CT external-test profile to `HMRC-CT-CT600`, `GatewayTest=1` and HMRC's published test Transaction Engine endpoint.
+- Added an authenticated, development-only WebHarness preflight which reuses the immutable Objective 3 package and reports service, attachment, IRmark and final-wire digests without exposing the credential-bearing request.
+- Added a bounded one-attempt HTTP boundary with redirects, retries and automatic decompression disabled. It is deliberately unregistered: the preflight reports external send disabled and no HMRC request was made.
+- Kept every CT artifact at `Preview`, `SubmissionReady=false` and the Phase 5.7 production family gate closed. Submission Adapter tests pass 169 assertions; the broader verification record is in the Phase 5.10 implementation note.
+
+## 14 October 2026 — Corporation Tax Transaction Engine fixture
+
+- Human review accepted Phase 5.9 and authorised local Phase 5.10 implementation; no external HMRC send was authorised.
+- Added the internal, unregistered Phase 5.9 GovTalk/IRmark fixture around the immutable CT service root; it reproduces HMRC's published IRmark and retains source, attachment and final-wire SHA-256 evidence without another statutory serializer.
+- Added strict bounded response parsing, exact HTTPS polling-host validation, gateway-versus-business error classification and authenticated `DATA_REQUEST` recovery tied to a persisted client `TransactionID`.
+- Added an atomic restart-safe conversation store that marks submission uncertain before exchange, prevents duplicate sends, enforces HMRC's poll interval, persists terminal response/receipt before delete and retains the filing outcome across delete failure.
+- Release `TaxHub.slnx` builds with zero warnings/errors; Submission Adapter and Architecture tests pass 166 and 25 assertions and all other supported offline suites pass. No HMRC request was made, no host route/client was registered and the CT family gate remains closed pending review.
+
 ## 13 October 2026 — Accounts master/detail presentation
 
 - Replaced the separate stack of annual and monthly cash-code datasets with MudBlazor hierarchy rows in the profit-and-loss master grid.

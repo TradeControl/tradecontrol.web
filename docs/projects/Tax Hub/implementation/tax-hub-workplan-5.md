@@ -422,6 +422,10 @@ Attach asset versions/checksums, validation findings and the IRmark slot/attachm
 
 **Asset received; work remains sequenced (8 October 2026):** HMRC Software Developers Support Team supplied `CT2025-v1.0.0.zip` directly and confirmed that CT Computational 2025 is available in both test and live environments, can be used immediately, and applies to accounting periods starting on or after 1 April 2015. HMRC explained that technical changes prevent taxonomy hyperlinks on the accepted-taxonomies page and that future computation releases will be distributed through registered-developer communications. The authoritative email is retained locally at `.local/hmrc/corporation-tax/emails/Corporation Tax computational 2025 taxonomy package.txt`; the original attachment is `.local/hmrc/corporation-tax/CT2025-v1.0.0.zip`, its extracted review copy is `.local/hmrc/corporation-tax/CT2025-v1.0.0`, and the locally calculated archive SHA-256 is `6A4E33434C3E546D664B7344B4490B87B95D854A41ED232F894D274E1FA8C604`. Package metadata identifies version `1.0.0`, formal version date `2025-01-01`, release date `2024-12-19`, publisher HM Revenue & Customs and entry point `http://www.hmrc.gov.uk/schemas/ct/comp/2025-01-01/ct-comp-2025.xsd`. This resolves the acquisition blocker only. Phase 5.8 remains deliberately paused while Companies House Objective 5 is active, and the CT family gate remains closed until the planned provisioning, validation, service-root construction, LTS/TPVS evidence and human review are complete.
 
+**Implementation resumed; local assurance complete (13 October 2026):** The authoritative CT2025 concepts, mandatory facts and dimensional contexts now drive the computation iXBRL. A distinct CT600 V3 RIM 1.994 service-root serializer emits the supported CT600/CT600A fixture, one empty generic IRmark slot and embedded computation-then-accounts XHTML; the old serializer remains diagnostic-only. The frozen service-root SHA-256 is `3B3470341AFB68C2958FB8E0F8861BBC173781FF51C9B1C0A8918A5DDE01A92F`. The official RIM XSD and executable ruleset pass with zero findings, and Arelle 2.46.0 validates the computation offline against HMRC's supplied `CT2025-v1.0.0.zip` with no XBRL or dimensional findings. Company Contract Tests pass 107 assertions; Application, Architecture and Submission Adapter tests pass 75, 22 and 137 assertions; and the Release solution build succeeds with zero errors. Accounts and Companies House bytes remain unchanged. LTS/TPVS evidence and human review remain outstanding, so `SubmissionReady=false`, all artifacts remain `Preview`, and the Phase 5.7 family gate remains closed. Phase 5.9 has not begun. See [the Phase 5.8 assurance record](phase-5.8-corporation-tax-service-artifact-assurance.md).
+
+**LTS/TPVS correction evidence ready for human review (13 October 2026):** The approved correction uses HMRC-supported Transformation Registry 2 (`http://www.xbrl.org/inlineXBRL/transformation/2011-07-31`, `ixt:numdotdecimal`) and removes only the prohibited `xml:lang` attributes from CT2025 `CompanyName` and `TaxReference`. Accounting values, extracted numeric values, contexts, units and statutory meaning are unchanged. Local RIM XSD/rules and offline CT2025 Arelle validation pass. Genuine TPVS now reports none of the former 34 transformation or two computation schema findings; its sole application finding is `2022 IRmark not found`, matching LTS and marking the deliberately excluded Phase 5.9 boundary. The corrected service root is `A3F3729F7236B342FC8C6D10C423104EA9B6F7C86CE86C396D78B2D586A77F2F`. `SubmissionReady=false`, every artifact remains `Preview`, and the Phase 5.7 family gate remains closed pending human review and the separately authorised Phase 5.9 work. See [the Phase 5.8 assurance record](phase-5.8-corporation-tax-service-artifact-assurance.md).
+
 ## Phase 5.9 — Transaction Engine protocol, fixture only
 
 ### Purpose
@@ -454,6 +458,8 @@ Requires 5.7 and the configuration/attempt foundation in 5.1. Phase 5.8 is not r
 
 Record fixture provenance and state-machine evidence. Human review confirms class, credential and receipt assumptions before HMRC test-service connection.
 
+**Accepted by human review (14 October 2026):** The internal, unregistered `Adapters.Submission/TransactionEngine` fixture wraps the immutable Objective 3 service root, changes only its reserved generic IRmark, retains service/attachment/final-wire SHA-256 evidence, strictly parses acknowledgements and terminal messages, constrains returned HTTPS polling hosts and persists restart-safe submit/poll/terminal/receipt/delete state. It reproduces HMRC's exact published IRmark example, rejects DTD/entity and oversized XML, marks a send uncertain before exchange, prevents duplicate new submission after restart, and reconciles a lost acknowledgement only through a unique persisted `TransactionID` match in `DATA_RESPONSE`. Exact payloads, responses and receipts remain protected; deletion cannot begin before terminal evidence is durable and does not alter the business outcome. Release `TaxHub.slnx` builds with 0 warnings/errors; Submission Adapter and Architecture suites pass 166 and 25 assertions, and all other supported offline suites pass. No HTTP client or WebHarness route is registered, no HMRC request was made, all CT artifacts remain `Preview`, `SubmissionReady=false`, and the Phase 5.7 gate remains closed. The current CT class, authentication/enrolment level, test-host set, channel values, receipt verification and recognition scenarios remain Phase 5.10 confirmation items. Local Phase 5.10 implementation may proceed, but an external HMRC send requires separate explicit approval. See [the Phase 5.9 fixture record](phase-5.9-transaction-engine-fixture.md).
+
 ## Phase 5.10 — CT test-service recognition and production-readiness milestone
 
 ### Purpose
@@ -467,6 +473,35 @@ Use synthetic CT credentials and the configured HMRC external test path. Exercis
 With current HMRC guidance or its Software Developers Support Team, confirm the service contract/version, class, endpoint, credentials, recognition scenarios, software recognition/listing route and attachment encoding. Complete applicable recognition/application and production-access evidence before Company Accounts delivery starts.
 
 A real package is eligible only when Objective 3 submission readiness and Objective 4 protocol readiness are recorded, every constituent artifact is `SubmissionReady`, findings are clear and an authorised filing/approval reference exists.
+
+**Local implementation ready for human review (14 October 2026):** The development WebHarness now has an authenticated `official-test-preflight` operation which reuses the Objective 3 package, resolves the SDST-issued Vendor ID, Sender ID, test UTR and selected supplied password from the protected local files, and materialises the exact `HMRC-CT-CT600` GovTalk request for HMRC's published External Test Service submission endpoint. The Vendor ID now occupies the official `<ChannelRouting><Channel><URI>` field; the former fixture placeholder is gone. The result reports only service, attachment, IRmark and final-wire SHA-256 evidence, the class and intended endpoint. It never returns credential-bearing XML.
+
+The dedicated HTTP boundary is one-attempt, POST-only, bounded, rejects redirects, performs no retry and is not registered in the WebHarness. Polling/recovery/delete remain governed by the durable Phase 5.9 state machine. The WebHarness preflight always reports `ExternalSendEnabled=false` and the explicit blockers `CT-ETS-EXTERNAL-SEND-DISABLED`, `CT-RECOGNITION-EVIDENCE-PENDING` and `CT-PRODUCTION-SUBMISSION-GATE-CLOSED`. No HMRC request was made. The Phase 5.7 family gate and all `Preview`/`SubmissionReady=false` states remain unchanged. See [the Phase 5.10 local implementation record](phase-5.10-ct-external-test-local.md).
+
+**CH/CT accounts identity decision (14 October 2026):** A versioned SHA-256 manifest now binds the
+single approved statutory-accounts snapshot to both the Companies House filleted iXBRL and HMRC full
+iXBRL projections, which are generated together and retained as exact protected bytes. CT
+orchestration must obtain the full attachment through the approved-snapshot reader and must not
+rebuild it from the live ledger. Legacy CH preparations without this proof fail closed for CT use;
+they are not retrospectively associated. Later ledger edits do not change the frozen filing lineage.
+
+**Integrated journey decision and S00018 evidence (14 October 2026):** The product journey will
+present Companies House accounts filing followed by Corporation Tax as one continuous annual-filing
+experience, while retaining separate approvals, credentials, transports and authority outcomes. CT
+review may be prepared in advance, but CT dispatch remains locked until the linked Companies House
+conversation reaches terminal `Accepted`. The Companies House XML team has explicitly confirmed by
+email that test submission `S00018` was accepted in the test environment, so that case may prove the
+acceptance-to-CT orchestration transition. Because `S00018` predates the paired snapshot manifest, it
+must not be used as the statutory accounts attachment or be retrospectively linked to a CT filing; a
+fresh paired preparation is required for the first complete cryptographic end-to-end case.
+
+The server boundary now expresses that sequencing directly. An approved paired snapshot may be read
+for advance CT review, while a distinct accepted-for-CT hand-off is produced only when the matching
+Companies House conversation is terminal `Accepted`. This prevents a browser or future UI from
+unlocking submission merely because accounts exist or were acknowledged. Release TCWeb builds with
+zero warnings and its Tax Hub boundary suite passes 164 assertions. The Corporation Tax new
+applicant's pack was requested from HMRC Software Developers Support Team on 14 October 2026 using
+the issued Vendor ID; its checklist and assigned scenarios remain external dependencies.
 
 ### Dependencies and exclusions
 

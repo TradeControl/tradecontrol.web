@@ -168,13 +168,21 @@ internal sealed class CompaniesHousePreparationReviewService(
         var source = await new TcCompanyStatutorySourceReader(new ConnectionFactory(), connectionString)
             .ReadAsync(request, cancellationToken);
         var accounts = new CompanyAccountsPopulator().Populate(source, new(true, true));
-        var preparedAccounts = new CompanyAccountsPreparer().Prepare(accounts, true,
+        var accountsPreparer = new CompanyAccountsPreparer();
+        var preparedAccounts = accountsPreparer.Prepare(accounts, true,
             $"{source.Identity.SubjectName} statutory accounts",
             $"{source.Identity.SubjectCode}-filleted-accounts.xhtml", source.Versions);
         if (preparedAccounts.Artifact.HasErrors)
             throw new InvalidOperationException(BlockingFindings(
                 "The exact statutory accounts document contains blocking findings",
                 preparedAccounts.Artifact.Findings));
+        var fullAccounts = accountsPreparer.Prepare(accounts, false,
+            $"{source.Identity.SubjectName} statutory accounts",
+            $"{source.Identity.SubjectCode}-full-accounts.xhtml", source.Versions);
+        if (fullAccounts.Artifact.HasErrors)
+            throw new InvalidOperationException(BlockingFindings(
+                "The exact full statutory accounts document contains blocking findings",
+                fullAccounts.Artifact.Findings));
 
         var package = new CompaniesHouseAccountsPreparer().Prepare(accounts, preparedAccounts,
             ReviewSubmissionNumber, new(true, true, true), "TIS-6.0",
@@ -190,10 +198,14 @@ internal sealed class CompaniesHousePreparationReviewService(
             "accounts-document", document.Content.ToArray(), cancellationToken);
         var retainedPackage = await contentStore.WriteAsync(identity.TenantReference,
             "accounts-package-preview", package.Transmission.Content.ToArray(), cancellationToken);
+        var retainedFullAccounts = await contentStore.WriteAsync(identity.TenantReference,
+            "full-accounts-document", fullAccounts.Artifact.Content.ToArray(), cancellationToken);
         var retainedInput = await contentStore.WriteAsync(identity.TenantReference,
             "reviewed-input", reviewedInputBytes, cancellationToken);
         if (!string.Equals(retainedDocument.Sha256, document.Sha256, StringComparison.Ordinal)
             || !string.Equals(retainedPackage.Sha256, package.Transmission.Sha256, StringComparison.Ordinal)
+            || !string.Equals(retainedFullAccounts.Sha256, fullAccounts.Artifact.Sha256,
+                StringComparison.Ordinal)
             || !string.Equals(retainedInput.Sha256,
                 Convert.ToHexString(SHA256.HashData(reviewedInputBytes)), StringComparison.Ordinal))
             throw new InvalidOperationException("Protected Companies House evidence changed during retention.");
@@ -201,6 +213,10 @@ internal sealed class CompaniesHousePreparationReviewService(
         var now = timeProvider.GetUtcNow();
         var reference = $"chp1-{Guid.NewGuid():N}";
         var snapshot = Snapshot(source.Versions);
+        var accountsSnapshotSha256 = CompaniesHouseAccountsSnapshot.Create(
+            companyIdentitySha256, period.Current.Start, period.Current.End,
+            CompaniesHouseProductPolicy.SupportedFilingProfile, snapshot,
+            retainedInput.Sha256, document.Sha256, fullAccounts.Artifact.Sha256);
         await workflowStore.AddPreparationAsync(new(
             reference,
             identity.TenantReference,
@@ -223,7 +239,10 @@ internal sealed class CompaniesHousePreparationReviewService(
             yearNumber,
             DateOnly.FromDateTime(selectedPeriodStart),
             retainedInput.Sha256,
-            retainedInput.Reference), cancellationToken);
+            retainedInput.Reference,
+            fullAccounts.Artifact.Sha256,
+            retainedFullAccounts.Reference,
+            accountsSnapshotSha256), cancellationToken);
 
         return new(reference, document.Sha256, package.Transmission.Sha256,
             now.Add(CompaniesHouseProductPolicy.PreparationLifetime),
@@ -332,6 +351,10 @@ internal sealed class CompaniesHousePreparationReviewService(
                 || !string.Equals(existing.DocumentSha256, preparation.DocumentSha256,
                     StringComparison.Ordinal)
                 || !string.Equals(existing.PackageSha256, preparation.PackageSha256,
+                    StringComparison.Ordinal)
+                || !string.Equals(existing.FullAccountsSha256, preparation.FullAccountsSha256,
+                    StringComparison.Ordinal)
+                || !string.Equals(existing.AccountsSnapshotSha256, preparation.AccountsSnapshotSha256,
                     StringComparison.Ordinal))
                 throw new InvalidOperationException(
                     "The existing approval does not match the current declaration or retained evidence.");
@@ -340,9 +363,12 @@ internal sealed class CompaniesHousePreparationReviewService(
 
         if (!preparation.YearNumber.HasValue || !preparation.SelectedPeriodStart.HasValue
             || string.IsNullOrWhiteSpace(preparation.ReviewedInputSha256)
-            || string.IsNullOrWhiteSpace(preparation.ProtectedInputReference))
+            || string.IsNullOrWhiteSpace(preparation.ProtectedInputReference)
+            || string.IsNullOrWhiteSpace(preparation.FullAccountsSha256)
+            || string.IsNullOrWhiteSpace(preparation.ProtectedFullAccountsReference)
+            || string.IsNullOrWhiteSpace(preparation.AccountsSnapshotSha256))
             throw new InvalidOperationException(
-                "This preparation predates immutable approval evidence. Prepare and review the accounts again.");
+                "This preparation predates the immutable CH/CT accounts snapshot. Prepare and review the accounts again.");
 
         var retainedInput = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedInputReference, preparation.ReviewedInputSha256, cancellationToken);
@@ -350,6 +376,15 @@ internal sealed class CompaniesHousePreparationReviewService(
             preparation.ProtectedDocumentReference, preparation.DocumentSha256, cancellationToken);
         _ = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedPackageReference, preparation.PackageSha256, cancellationToken);
+        _ = await contentStore.ReadAsync(identity.TenantReference,
+            preparation.ProtectedFullAccountsReference, preparation.FullAccountsSha256, cancellationToken);
+        var expectedAccountsSnapshot = CompaniesHouseAccountsSnapshot.Create(
+            preparation.CompanyIdentitySha256, preparation.PeriodStart, preparation.PeriodEnd,
+            preparation.FilingProfile, preparation.SnapshotToken, preparation.ReviewedInputSha256,
+            preparation.DocumentSha256, preparation.FullAccountsSha256);
+        if (!string.Equals(expectedAccountsSnapshot, preparation.AccountsSnapshotSha256,
+                StringComparison.Ordinal))
+            throw new InvalidOperationException("The retained CH/CT accounts snapshot proof is invalid.");
         var input = JsonSerializer.Deserialize<CompaniesHousePreparationInput>(retainedInput.Bytes, ReviewJson)
             ?? throw new InvalidOperationException("The retained reviewed filing inputs are invalid.");
         await VerifyCurrentCandidateAsync(preparation, input, identity, cancellationToken);
@@ -376,7 +411,9 @@ internal sealed class CompaniesHousePreparationReviewService(
             preparation.DocumentSha256,
             preparation.PackageSha256,
             true,
-            now);
+            now,
+            preparation.FullAccountsSha256,
+            preparation.AccountsSnapshotSha256);
         await workflowStore.AddApprovalAsync(approval, cancellationToken);
         return ToApprovalReview(approval);
     }
@@ -423,12 +460,25 @@ internal sealed class CompaniesHousePreparationReviewService(
         var source = await new TcCompanyStatutorySourceReader(new ConnectionFactory(), connectionString)
             .ReadAsync(request, cancellationToken);
         var accounts = new CompanyAccountsPopulator().Populate(source, new(true, true));
-        var currentDocument = new CompanyAccountsPreparer().Prepare(accounts, true,
+        var accountsPreparer = new CompanyAccountsPreparer();
+        var currentDocument = accountsPreparer.Prepare(accounts, true,
             $"{source.Identity.SubjectName} statutory accounts",
             $"{source.Identity.SubjectCode}-filleted-accounts.xhtml", source.Versions);
+        var currentFullAccounts = accountsPreparer.Prepare(accounts, false,
+            $"{source.Identity.SubjectName} statutory accounts",
+            $"{source.Identity.SubjectCode}-full-accounts.xhtml", source.Versions);
+        var currentAccountsSnapshot = CompaniesHouseAccountsSnapshot.Create(
+            preparation.CompanyIdentitySha256, preparation.PeriodStart, preparation.PeriodEnd,
+            preparation.FilingProfile, Snapshot(source.Versions), preparation.ReviewedInputSha256!,
+            currentDocument.Artifact.Sha256, currentFullAccounts.Artifact.Sha256);
         if (currentDocument.Artifact.HasErrors
+            || currentFullAccounts.Artifact.HasErrors
             || !string.Equals(Snapshot(source.Versions), preparation.SnapshotToken, StringComparison.Ordinal)
             || !string.Equals(currentDocument.Artifact.Sha256, preparation.DocumentSha256,
+                StringComparison.Ordinal)
+            || !string.Equals(currentFullAccounts.Artifact.Sha256, preparation.FullAccountsSha256,
+                StringComparison.Ordinal)
+            || !string.Equals(currentAccountsSnapshot, preparation.AccountsSnapshotSha256,
                 StringComparison.Ordinal))
             throw new InvalidOperationException(
                 "The accounting source or reviewed inputs changed after preparation. Prepare and review new accounts.");

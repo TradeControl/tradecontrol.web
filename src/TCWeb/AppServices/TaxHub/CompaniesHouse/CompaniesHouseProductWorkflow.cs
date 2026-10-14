@@ -76,6 +76,28 @@ internal static class CompaniesHouseFilingIdentity
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }
 
+internal static class CompaniesHouseAccountsSnapshot
+{
+    private const string Version = "CH-CT-ACCOUNTS-SNAPSHOT-1";
+
+    internal static string Create(string companyIdentitySha256, DateOnly periodStart,
+        DateOnly periodEnd, string filingProfile, string sourceSnapshotToken, string reviewedInputSha256,
+        string filletedAccountsSha256, string fullAccountsSha256)
+    {
+        var manifest = string.Join('\n',
+            Version,
+            companyIdentitySha256,
+            periodStart.ToString("yyyy-MM-dd"),
+            periodEnd.ToString("yyyy-MM-dd"),
+            filingProfile,
+            sourceSnapshotToken,
+            reviewedInputSha256,
+            filletedAccountsSha256,
+            fullAccountsSha256);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(manifest)));
+    }
+}
+
 internal sealed record CompaniesHousePreparationRecord(
     string Reference,
     string TenantReference,
@@ -98,7 +120,10 @@ internal sealed record CompaniesHousePreparationRecord(
     short? YearNumber = null,
     DateOnly? SelectedPeriodStart = null,
     string? ReviewedInputSha256 = null,
-    string? ProtectedInputReference = null);
+    string? ProtectedInputReference = null,
+    string? FullAccountsSha256 = null,
+    string? ProtectedFullAccountsReference = null,
+    string? AccountsSnapshotSha256 = null);
 
 internal sealed record CompaniesHouseApprovalRecord(
     string Reference,
@@ -119,7 +144,9 @@ internal sealed record CompaniesHouseApprovalRecord(
     string DocumentSha256,
     string PackageSha256,
     bool DeclarationsConfirmed,
-    DateTimeOffset ApprovedAtUtc);
+    DateTimeOffset ApprovedAtUtc,
+    string? FullAccountsSha256 = null,
+    string? AccountsSnapshotSha256 = null);
 
 internal enum CompaniesHouseStatusCheckState
 {

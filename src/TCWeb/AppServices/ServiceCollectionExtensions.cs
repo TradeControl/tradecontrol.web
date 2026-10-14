@@ -56,6 +56,8 @@ namespace TradeControl.Web.AppServices
                     provider.GetRequiredService<AzureCompaniesHousePersistence>());
                 services.AddScoped<ICompaniesHousePreparationReviewService,
                     CompaniesHousePreparationReviewService>();
+                services.AddScoped<ICompaniesHouseAccountsSnapshotService,
+                    CompaniesHouseAccountsSnapshotService>();
                 services.AddScoped<ICompaniesHouseSubmissionStagingService,
                     CompaniesHouseSubmissionStagingService>();
                 services.AddScoped<ICompaniesHouseFilingContinuationService,
