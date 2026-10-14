@@ -2,6 +2,8 @@
 
 14 October 2026
 
+**Implementation status:** applied as a documentation-only migration on 14 October 2026. Counts and path observations below describe the pre-migration tree and are retained as the review record.
+
 ## Purpose and scope
 
 This proposal reorganises the Tax Hub documentation so that a developer can find the current programme position and the governing material within a minute or two.

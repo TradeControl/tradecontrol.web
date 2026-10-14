@@ -359,8 +359,8 @@ Protected correspondence, presenter credentials, company authentication values a
 
 ## Related project records
 
-- [Tax Hub Work Plan 5](../implementation/tax-hub-workplan-5.md)
-- [Company statutory contract design](../implementation/company-statutory-contract-design.md)
-- [Companies House development simulator work plan](../implementation/companies-house-development-simulator-workplan.md)
-- [Tax Hub findings](../findings.md)
-- [Tax Hub change log](../change-log.md)
+- [Tax Hub Work Plan 5](../../../platform/tax-hub-workplan-5.md)
+- [Company statutory contract design](../../shared/company-statutory-contract-design.md)
+- [Companies House development simulator work plan](../companies-house-development-simulator-workplan.md)
+- [Tax Hub findings](../../../findings.md)
+- [Tax Hub change log](../../../change-log.md)

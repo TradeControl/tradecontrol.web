@@ -59,11 +59,11 @@ Status meanings:
 
 ### Governing records
 
-1. `docs/projects/Tax Hub/specs/tax-hub-spec-programme.md`.
+1. `docs/projects/Tax Hub/programme/tax-hub-spec-programme.md`.
 2. `tax-hub-workplan-5.md`, especially Phases 5.11–5.14.
 3. `company-statutory-contract-design.md` and the accepted Objective 3 statutory-accounts boundary.
 4. `phase-5.11-companies-house-prerequisite-assurance.md`.
-5. `../companies-house-approval/companies-house-test-submission-evidence.md`.
+5. `approval/companies-house-test-submission-evidence.md`.
 6. Current Companies House TIS 6.0, Filing TIS schemas, developer guidance and the protected XML-team correspondence.
 7. The implemented source under `src/TCWeb` and `src/tax-hub`.
 
@@ -367,7 +367,7 @@ Human review confirms the declaration text, permissions, accessibility and diges
 
 The review identified a valuable control that is broader than Companies House: before approving statutory accounts, a user should review the economic evidence behind material balances rather than beginning with secondary filing facts. The resulting **guided year-end review** will cover dated debtor/creditor positions, bank/cash balances and fixed assets/write-downs before statutory input review and exact-document approval.
 
-Detailed debtor/creditor work does not belong in this filing plan. Trade Control has no permanent customer/supplier identity; it has dated Subject-statement polarity. The separate [Subjects aged-balances work plan](../../Subjects/subject-aged-balances-workplan.md) therefore owns one dated calculation and two human operational perspectives: Credit Control for negative positions owed to the business, and Buying/debit control for positive positions owed by the business.
+Detailed debtor/creditor work does not belong in this filing plan. Trade Control has no permanent customer/supplier identity; it has dated Subject-statement polarity. The separate [Subjects aged-balances work plan](../../../Subjects/subject-aged-balances-workplan.md) therefore owns one dated calculation and two human operational perspectives: Credit Control for negative positions owed to the business, and Buying/debit control for positive positions owed by the business.
 
 Once that plan supplies an accepted year-end evidence snapshot, this workflow will add a resumable guided review that:
 

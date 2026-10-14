@@ -41,7 +41,7 @@ Part I is deliberately not named or modelled as an HMRC subsystem. The initial c
 
 Implementation must follow:
 
-- `docs/projects/Tax Hub/implementation/tax-hub-implementation-3.md`;
+- `docs/projects/Tax Hub/platform/tax-hub-implementation-3.md`;
 - the endpoint descriptors and request types in `TradeControl.Tax.UK.Hmrc.Vat.Contracts`;
 - the endpoint descriptors and request types in `TradeControl.Tax.UK.Hmrc.MtdIncomeTax.Contracts`;
 - the existing VAT and MTD Income Tax contract tests and fixtures;
