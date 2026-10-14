@@ -824,11 +824,25 @@ var businessTaxWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "
     "Components", "TaxHubBusinessTaxWorkspace.razor"));
 var accountsWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubAccountsWorkspace.razor"));
+var profitAndLossGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubProfitAndLossGrid.razor"));
 Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("IsMobile ? \"HMRC\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
     "Business Tax or Accounts no longer provides compact mobile tab labels.");
+Assert(profitAndLossGridComponent.Contains("<HierarchyColumn", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("<ChildRowContent>", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("Collapse cash-code detail", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("ToggleDetailAsync(context.Item, context.Open)", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("CollapseAllHierarchy", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("ToggleHierarchyVisibilityAsync(item)", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("@onclick:stopPropagation=\"true\"", StringComparison.Ordinal)
+       && profitAndLossGridComponent.Contains("ButtonDisabledFunc=\"@HasNoDetail\"", StringComparison.Ordinal)
+       && accountsWorkspaceComponent.Contains("Sections=\"@Workspace.AnnualDetails\"", StringComparison.Ordinal)
+       && accountsWorkspaceComponent.Contains("Sections=\"@Workspace.MonthlyDetails\"", StringComparison.Ordinal)
+       && !accountsWorkspaceComponent.Contains("<h2 class=\"h5 mb-1\">Cash Code Details</h2>", StringComparison.Ordinal),
+    "Accounts no longer presents annual and monthly cash-code details as one-row-at-a-time hierarchy children.");
 Assert(accountsWorkspaceComponent.Contains("OFFICIAL TEST — NOT A LIVE FILING", StringComparison.Ordinal)
        && accountsWorkspaceComponent.Contains("live package reference is not configured", StringComparison.Ordinal)
        && filingInputComponent.Contains("OFFICIAL TEST — NOT LIVE", StringComparison.Ordinal),

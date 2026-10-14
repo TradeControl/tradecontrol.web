@@ -308,6 +308,56 @@
     flex: 0 0 auto;
 }
 
+/* Profit and loss is a compact master/detail register. The collapsed master
+   must size to all of its rows and keep its pager directly beneath them; only
+   the one deliberately expanded cash-code detail is added inline. */
+.tc-tax-hub .tc-tax-hub-profit-and-loss-grid > .tc-grid-host,
+.tc-tax-hub .tc-tax-hub-detail-grid-host {
+    height: auto;
+    overflow: visible;
+}
+
+.tc-tax-hub .tc-tax-hub-profit-and-loss-grid > .tc-grid-host > .mud-table.tc-tax-hub-datagrid,
+.tc-tax-hub .tc-tax-hub-detail-grid-host > .mud-table.tc-tax-hub-datagrid {
+    display: block;
+    overflow: visible;
+}
+
+.tc-tax-hub .tc-tax-hub-profit-and-loss-grid > .tc-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-container,
+.tc-tax-hub .tc-tax-hub-detail-grid-host > .mud-table.tc-tax-hub-datagrid > .mud-table-container {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.tc-tax-hub-profit-and-loss-detail-grid {
+    background: var(--tc-table-head-bg, #f8f9fa);
+    border-block: 1px solid var(--tc-border-colour, #dee2e6);
+}
+
+.tc-tax-hub-hierarchy-toggle {
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--tc-border-colour, #ced4da);
+    border-radius: 0.25rem;
+    background: #fff;
+    color: var(--tc-heading-colour, #212529);
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.tc-tax-hub-hierarchy-toggle:hover:not(:disabled),
+.tc-tax-hub-hierarchy-toggle:focus-visible {
+    border-color: var(--bs-primary, #0d6efd);
+    color: var(--bs-primary, #0d6efd);
+}
+
+.tc-tax-hub-hierarchy-toggle:disabled {
+    opacity: 0.45;
+}
+
 /* Dashboard obligations are a short summary, not a bounded register. Let the
    rows determine its height and avoid an empty scroll region below the data. */
 .tc-tax-hub-obligations-grid .tc-grid-host {

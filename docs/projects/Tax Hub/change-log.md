@@ -1,5 +1,12 @@
 # Tax Hub Change Log
 
+## 13 October 2026 — Accounts master/detail presentation
+
+- Replaced the separate stack of annual and monthly cash-code datasets with MudBlazor hierarchy rows in the profit-and-loss master grid.
+- Added a conventional plus/minus control beside each category, used an application-controlled toggle to allow zero or one expanded category at a time and placed its compact cash-code detail immediately beneath the selected account row.
+- Removed nested detail pagers and filter bars, allowed the collapsed accounts register to size to all ten rows and kept its navigation footer directly beneath the master records.
+- The TCWeb build completes with no compilation errors and the Tax Hub boundary suite passes 160 assertions. NuGet emitted only its existing vulnerability-feed availability warning during the final verification.
+
 ## 12 October 2026 — Programme-level multi-tenant boundary
 
 - Strengthened the durable programme specification so the isolated single-business Companies House deployment is evidence of workflow behaviour, not evidence of production multi-tenant isolation.

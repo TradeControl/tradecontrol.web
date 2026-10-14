@@ -18,7 +18,7 @@ else
     <div class="tc-tax-hub-accounts d-flex flex-column gap-4">
         <MudTabs Rounded="true">
             <MudTabPanel Text="@(IsMobile ? "Annual" : "Annual P&L")" Class="pt-3">
-                <section class="d-flex flex-column gap-4">
+                <section class="d-flex flex-column gap-3">
                     <div>
                         <div class="text-muted small">@Workspace.SelectedYearName</div>
                     </div>
@@ -28,24 +28,15 @@ else
                             <h2 class="h5 mb-1">Accounts</h2>
                         </div>
                         <TaxHubProfitAndLossGrid Items="@Workspace.AnnualProfitAndLoss"
+                                                 Sections="@Workspace.AnnualDetails"
                                                  CurrentHeading="@Workspace.SelectedYearName"
                                                  PreviousHeading="@Workspace.SelectedPreviousYearName" />
-                    </div>
-
-                    <div>
-                        <div class="mb-2">
-                            <h2 class="h5 mb-1">Cash Code Details</h2>
-                            <div class="text-muted small">Detailed annual breakdown by cash code</div>
-                        </div>
-                        <TaxHubProfitAndLossDetailGrid Sections="@Workspace.AnnualDetails"
-                                                       CurrentHeading="@Workspace.SelectedYearName"
-                                                       PreviousHeading="@Workspace.SelectedPreviousYearName" />
                     </div>
                 </section>
             </MudTabPanel>
 
             <MudTabPanel Text="@(IsMobile ? "Monthly" : "Monthly P&L")" Class="pt-3">
-                <section class="d-flex flex-column gap-4">
+                <section class="d-flex flex-column gap-3">
                     <div>
                         <div class="text-muted small">@Workspace.SelectedPeriodName</div>
                     </div>
@@ -55,18 +46,9 @@ else
                             <h2 class="h5 mb-1">Accounts</h2>
                         </div>
                         <TaxHubProfitAndLossGrid Items="@Workspace.MonthlyProfitAndLoss"
+                                                 Sections="@Workspace.MonthlyDetails"
                                                  CurrentHeading="@Workspace.SelectedPeriodName"
                                                  PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
-                    </div>
-
-                    <div>
-                        <div class="mb-2">
-                            <h2 class="h5 mb-1">Cash Code Details</h2>
-                            <div class="text-muted small">Detailed monthly breakdown by cash code</div>
-                        </div>
-                        <TaxHubProfitAndLossDetailGrid Sections="@Workspace.MonthlyDetails"
-                                                       CurrentHeading="@Workspace.SelectedPeriodName"
-                                                       PreviousHeading="@Workspace.SelectedPreviousPeriodName" />
                     </div>
                 </section>
             </MudTabPanel>

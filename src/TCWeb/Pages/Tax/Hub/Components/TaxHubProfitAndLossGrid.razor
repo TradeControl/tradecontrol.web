@@ -26,6 +26,22 @@
                      FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
                      FilterChanged="OnFilterChanged">
             <Columns>
+                <HierarchyColumn T="TaxHubProfitAndLossRow"
+                                 EnableHeaderToggle="false"
+                                 ButtonDisabledFunc="@HasNoDetail"
+                                 HeaderStyle="width: 3rem;">
+                    <CellTemplate>
+                        <button type="button"
+                                class="tc-tax-hub-hierarchy-toggle"
+                                disabled="@HasNoDetail(context.Item)"
+                                title="@(context.Open ? "Hide cash-code detail" : "Show cash-code detail")"
+                                aria-label="@(context.Open ? "Collapse cash-code detail" : "Expand cash-code detail")"
+                                @onclick:stopPropagation="true"
+                                @onclick="() => ToggleDetailAsync(context.Item, context.Open)">
+                            <span aria-hidden="true">@(context.Open ? "−" : "+")</span>
+                        </button>
+                    </CellTemplate>
+                </HierarchyColumn>
                 <PropertyColumn Property="x => x.CategoryCode" Title="Code" />
                 <PropertyColumn Property="x => x.Category" Title="Category" />
                 <PropertyColumn Property="x => x.CurrentValue" Title="@CurrentHeading" Format="#,##0.00;(#,##0.00);-">
@@ -49,6 +65,14 @@
                     </FooterTemplate>
                 </PropertyColumn>
             </Columns>
+            <ChildRowContent>
+                @if (FindDetail(context.Item.CategoryCode) is { } detailSection)
+                {
+                    <TaxHubProfitAndLossDetailGrid Section="@detailSection"
+                                                   CurrentHeading="@CurrentHeading"
+                                                   PreviousHeading="@PreviousHeading" />
+                }
+            </ChildRowContent>
             <PagerContent>
                 <MudDataGridPager />
             </PagerContent>
@@ -58,8 +82,11 @@
 
 @code {
     private MudDataGrid<TaxHubProfitAndLossRow>? _grid;
+    private IReadOnlyDictionary<string, TaxHubProfitAndLossDetailSection> _details =
+        new Dictionary<string, TaxHubProfitAndLossDetailSection>(StringComparer.OrdinalIgnoreCase);
 
     [Parameter] public IReadOnlyList<TaxHubProfitAndLossRow> Items { get; set; } = Array.Empty<TaxHubProfitAndLossRow>();
+    [Parameter] public IReadOnlyList<TaxHubProfitAndLossDetailSection> Sections { get; set; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
     [Parameter] public string CurrentHeading { get; set; } = "Current";
     [Parameter] public string PreviousHeading { get; set; } = "Previous";
 
@@ -71,7 +98,28 @@
     protected override void OnParametersSet()
     {
         VisibleItems = Items.ToList();
+        _details = Sections.ToDictionary(section => section.CategoryCode, StringComparer.OrdinalIgnoreCase);
         RecalculateTotals();
+    }
+
+    private bool HasNoDetail(TaxHubProfitAndLossRow item) => FindDetail(item.CategoryCode) is null;
+
+    private TaxHubProfitAndLossDetailSection? FindDetail(string categoryCode) =>
+        _details.TryGetValue(categoryCode, out var detail) && detail.Rows.Count > 0 ? detail : null;
+
+    private async Task ToggleDetailAsync(TaxHubProfitAndLossRow item, bool isOpen)
+    {
+        if (_grid is null)
+        {
+            return;
+        }
+
+        if (!isOpen)
+        {
+            await _grid.CollapseAllHierarchy();
+        }
+
+        await _grid.ToggleHierarchyVisibilityAsync(item);
     }
 
     private void OnFilterChanged(IReadOnlyCollection<IFilterDefinition<TaxHubProfitAndLossRow>> _)
