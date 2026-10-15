@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
+using TCExports.Generator.CashStatement;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
@@ -26,7 +27,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [BindProperty, Required, Display(Name = "Cash Type")]
         public short? CashTypeCode { get; set; }
 
-        [BindProperty, Required, StringLength(256), Display(Name = "Expression")]
+        [BindProperty, Required, StringLength(CashStatementExpressionTranslator.MaximumExpressionLength), Display(Name = "Expression")]
         public string Expression { get; set; } = string.Empty;
 
         [BindProperty, StringLength(100), Display(Name = "Format")]
@@ -39,12 +40,26 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public IEnumerable<SelectListItem> SyntaxTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
         public IList<string> ExistingFormats { get; private set; } = new List<string>();
         public IEnumerable<SelectListItem> FormatTemplateItems { get; private set; } = Enumerable.Empty<SelectListItem>();
+        public IReadOnlyList<ExpressionReferenceItemVm> ExpressionReferenceItems { get; private set; } = Array.Empty<ExpressionReferenceItemVm>();
 
         public bool IsError { get; private set; }
         public string? ErrorMessage { get; private set; }
         public bool SaveSucceeded { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(string key)
+        {
+            try
+            {
+                return await LoadAsync(key);
+            }
+            catch (Exception ex)
+            {
+                await NodeContext.ErrorLog(ex);
+                throw;
+            }
+        }
+
+        private async Task<IActionResult> LoadAsync(string key)
         {
             var catCode = NormalizeCategoryCode(key);
 
@@ -63,11 +78,18 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             CategoryCode = cat.CategoryCode;
             Category = cat.Category;
             CashTypeCode = cat.CashTypeCode;
-            Expression = exp?.Expression ?? string.Empty;
+            var storedExpression = exp?.Expression ?? string.Empty;
+            var displayTranslation = CashStatementExpressionTranslator.ForDisplay(
+                storedExpression,
+                await LoadCategoryReferencesAsync());
+            Expression = displayTranslation.Expression;
             Format = exp?.Format ?? string.Empty;
             SyntaxTypeCode = exp?.SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both;
-            IsError = exp?.IsError ?? false;
-            ErrorMessage = string.IsNullOrWhiteSpace(exp?.ErrorMessage) ? null : exp!.ErrorMessage;
+            IsError = (exp?.IsError ?? false) || !displayTranslation.IsValid;
+            var messages = displayTranslation.Diagnostics.Select(diagnostic => diagnostic.Message).ToList();
+            if (!string.IsNullOrWhiteSpace(exp?.ErrorMessage))
+                messages.Insert(0, exp!.ErrorMessage!);
+            ErrorMessage = messages.Count == 0 ? null : string.Join("; ", messages);
 
             await LoadLookupsAsync();
 
@@ -137,10 +159,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
                 // Excel: Format is free text, validated by Excel at render time.
 
+                var references = (await LoadCategoryReferencesAsync())
+                    .Where(reference =>
+                        reference.Kind != CashStatementReferenceKind.Category ||
+                        !reference.CategoryCode.Equals(catCode, StringComparison.OrdinalIgnoreCase))
+                    .Append(new CashStatementCategoryReference(catCode, Category));
+                var storageTranslation = CashStatementExpressionTranslator.ForStorage(Expression, references);
+                if (!storageTranslation.IsValid)
+                {
+                    foreach (var diagnostic in storageTranslation.Diagnostics)
+                        ModelState.AddModelError(nameof(Expression), diagnostic.Message);
+                    return Page();
+                }
+
                 cat.Category = Category;
                 cat.CashTypeCode = CashTypeCode ?? cat.CashTypeCode;
 
-                exp.Expression = Expression;
+                exp.Expression = storageTranslation.Expression;
                 exp.Format = Format ?? string.Empty;
                 exp.SyntaxTypeCode = SyntaxTypeCode.Value;
 
@@ -232,6 +267,29 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             );
 
             ViewData["FormatTemplateMap"] = JsonSerializer.Serialize(templateMap);
+
+            ExpressionReferenceItems = CreateExpressionModel.BuildExpressionReferenceItems(
+                await LoadCategoryReferencesAsync(),
+                CategoryCode);
+        }
+
+        private async Task<IReadOnlyList<CashStatementCategoryReference>> LoadCategoryReferencesAsync()
+        {
+            var categories = await NodeContext.Cash_tbCategories
+                .AsNoTracking()
+                .Select(category => new CashStatementCategoryReference(
+                    category.CategoryCode,
+                    category.Category,
+                    CashStatementReferenceKind.Category))
+                .ToListAsync();
+            var cashCodes = await NodeContext.Cash_tbCodes
+                .AsNoTracking()
+                .Select(code => new CashStatementCategoryReference(
+                    code.CashCode,
+                    code.CashDescription,
+                    CashStatementReferenceKind.CashCode))
+                .ToListAsync();
+            return categories.Concat(cashCodes).ToList();
         }
     }
 }

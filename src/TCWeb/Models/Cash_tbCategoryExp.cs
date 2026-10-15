@@ -27,7 +27,7 @@ namespace TradeControl.Web.Models
 
         // full error message (null or empty when IsError = false)
         [Column(TypeName = "nvarchar(max)")]
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
 
         // RowVer retained (ignored in application logic; legacy concurrency)
         //public byte[] RowVer { get; set; }

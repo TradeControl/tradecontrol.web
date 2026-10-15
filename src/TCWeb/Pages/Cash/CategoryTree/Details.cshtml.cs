@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TCExports.Generator.CashStatement;
 using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -126,22 +128,47 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     var categoryCode = key.Substring(CategoryTreeModel.ExpressionKeyPrefix.Length);
 
-                    var exp = await (from e in NodeContext.Cash_tbCategoryExps
-                                     join c in NodeContext.Cash_tbCategories on e.CategoryCode equals c.CategoryCode
-                                     join s in NodeContext.Cash_tbCategoryExpSyntax on e.SyntaxTypeCode equals s.SyntaxTypeCode
-                                     where e.CategoryCode == categoryCode
-                                     select new ExpressionDetailsVm {
-                                         CategoryCode = e.CategoryCode,
-                                         Category = c.Category,
-                                         Expression = e.Expression,
-                                         Format = e.Format,
-                                         IsError = e.IsError,
-                                         ErrorMessage = e.ErrorMessage,
-                                         SyntaxType = s.SyntaxType
+                    // Anchor the details lookup on the category because the tree deliberately
+                    // includes Expression categories even when their optional detail row is absent.
+                    var row = await (from c in NodeContext.Cash_tbCategories.AsNoTracking()
+                                     join e in NodeContext.Cash_tbCategoryExps.AsNoTracking()
+                                         on c.CategoryCode equals e.CategoryCode into expressionRows
+                                     from e in expressionRows.DefaultIfEmpty()
+                                     join s in NodeContext.Cash_tbCategoryExpSyntax.AsNoTracking()
+                                         on e.SyntaxTypeCode equals s.SyntaxTypeCode into syntaxRows
+                                     from s in syntaxRows.DefaultIfEmpty()
+                                     where c.CategoryCode == categoryCode
+                                           && c.CategoryTypeCode == (short)NodeEnum.CategoryType.Expression
+                                     select new {
+                                         c.CategoryCode,
+                                         c.Category,
+                                         ExpressionRow = e,
+                                         SyntaxType = s == null ? null : s.SyntaxType
                                      }).FirstOrDefaultAsync();
 
-                    if (exp == null)
+                    if (row == null)
                         return NotFound();
+
+                    // Build the view model after materialisation. In particular, ErrorMessage is
+                    // nullable in SQL; projecting it through a CASE expression made SqlClient call
+                    // GetString on NULL before C# could supply an empty value.
+                    var exp = new ExpressionDetailsVm {
+                        CategoryCode = row.CategoryCode,
+                        Category = row.Category,
+                        Expression = row.ExpressionRow?.Expression ?? string.Empty,
+                        Format = row.ExpressionRow?.Format ?? string.Empty,
+                        IsError = row.ExpressionRow?.IsError ?? false,
+                        ErrorMessage = row.ExpressionRow?.ErrorMessage ?? string.Empty,
+                        SyntaxType = row.SyntaxType ?? "Not specified"
+                    };
+
+                    if (!string.IsNullOrWhiteSpace(exp.Expression))
+                    {
+                        var displayTranslation = CashStatementExpressionTranslator.ForDisplay(
+                            exp.Expression,
+                            await LoadExpressionReferencesAsync());
+                        exp.Expression = displayTranslation.Expression;
+                    }
 
                     NodeType = "expression";
                     Expression = exp;
@@ -233,6 +260,25 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 await NodeContext.ErrorLog(e);
                 throw;
             }
+        }
+
+        private async Task<IReadOnlyList<CashStatementCategoryReference>> LoadExpressionReferencesAsync()
+        {
+            var categories = await NodeContext.Cash_tbCategories
+                .AsNoTracking()
+                .Select(category => new CashStatementCategoryReference(
+                    category.CategoryCode,
+                    category.Category,
+                    CashStatementReferenceKind.Category))
+                .ToListAsync();
+            var cashCodes = await NodeContext.Cash_tbCodes
+                .AsNoTracking()
+                .Select(code => new CashStatementCategoryReference(
+                    code.CashCode,
+                    code.CashDescription,
+                    CashStatementReferenceKind.CashCode))
+                .ToListAsync();
+            return categories.Concat(cashCodes).ToList();
         }
     }
 }

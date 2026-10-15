@@ -1,0 +1,41 @@
+@model IReadOnlyList<TradeControl.Web.Pages.Cash.CategoryTree.ExpressionReferenceItemVm>
+
+<div class="card bg-light mb-3" data-expression-reference-picker data-expression-target="Expression">
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <div>
+                <div class="fw-semibold small">Available references</div>
+                <div class="text-muted small">Double-click a reference to insert it at the formula cursor.</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-reference-insert disabled>
+                Insert reference
+            </button>
+        </div>
+
+        <input type="search"
+               class="form-control form-control-sm mb-2"
+               placeholder="Filter categories and cash codes"
+               aria-label="Filter expression references"
+               data-reference-filter />
+
+        <select class="form-select form-select-sm"
+                size="8"
+                aria-label="Available expression references"
+                data-reference-list>
+            @foreach (var group in Model.GroupBy(item => item.Kind))
+            {
+                <optgroup label="@group.Key">
+                    @foreach (var item in group)
+                    {
+                        <option value="@item.Token"
+                                data-search="@($"{item.Description} {item.Code} {item.Kind}")">
+                            @item.Description (@item.Code)@(item.UsesCode ? " — duplicate name; code will be inserted" : "")
+                        </option>
+                    }
+                </optgroup>
+            }
+        </select>
+    </div>
+</div>
+
+<script src="~/js/categoryTree.expressionEditor.js" asp-append-version="true"></script>

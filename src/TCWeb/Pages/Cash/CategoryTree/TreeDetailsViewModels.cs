@@ -58,6 +58,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string ErrorMessage { get; set; } = string.Empty;
     }
 
+    public class ExpressionReferenceItemVm
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public string Kind { get; set; } = string.Empty;
+        public bool UsesCode { get; set; }
+    }
+
     public class CashCodeListItemVm
     {
         public string CashCode { get; set; } = string.Empty;

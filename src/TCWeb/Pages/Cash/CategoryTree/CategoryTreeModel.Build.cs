@@ -152,19 +152,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             return rows.Select(r =>
             {
-                var expression = r.Exp?.Expression ?? "";
                 var format = r.Exp?.Format ?? "";
                 var isError = (r.Exp?.IsError ?? false) ? 1 : 0;
-
-                string exprForTitle = expression;
-                if (exprForTitle.Length > 60)
-                    exprForTitle = exprForTitle.Substring(0, 57) + "...";
 
                 var title =
                     "<span class='bi bi-calculator me-1'></span>"
                     + WebUtility.HtmlEncode(r.Category)
-                    + " (" + WebUtility.HtmlEncode(r.CategoryCode) + ") "
-                    + "<span class='tc-exp-formula'>= " + WebUtility.HtmlEncode(exprForTitle) + "</span>";
+                    + " (" + WebUtility.HtmlEncode(r.CategoryCode) + ")";
 
                 return (object)new {
                     key = MakeExpressionKey(r.CategoryCode),
@@ -179,7 +173,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         category = r.Category,
                         displayOrder = r.DisplayOrder,
                         cashTypeCode = r.CashTypeCode,
-                        expression = expression,
                         format = format,
                         isError = isError,
                         isEnabled = r.IsEnabled == 0 ? 0 : 1

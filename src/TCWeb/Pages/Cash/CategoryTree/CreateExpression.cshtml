@@ -49,13 +49,15 @@
 
             <div class="mb-3">
                 <label asp-for="Expression" class="form-label"></label>
-                <textarea asp-for="Expression" class="form-control" rows="3" maxlength="256"></textarea>
+                <textarea asp-for="Expression" class="form-control" rows="4" maxlength="4000"></textarea>
                 <span asp-validation-for="Expression" class="text-danger small"></span>
                 <div class="form-text small">
                     Spreadsheet formula (for example IF([Sales]=0,0,[Gross Profit]/[Sales])).
-                    Use category codes in square brackets.
+                    Use category or cash-code descriptions in square brackets. Stable codes are stored automatically.
                 </div>
             </div>
+
+            <partial name="_ExpressionReferencePicker" model="Model.ExpressionReferenceItems" />
 
             <div class="mb-3">
                 <label asp-for="SyntaxTypeCode" class="form-label"></label>

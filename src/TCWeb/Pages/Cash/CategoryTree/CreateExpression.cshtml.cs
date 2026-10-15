@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
+using TCExports.Generator.CashStatement;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
@@ -36,7 +36,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
         [BindProperty]
         [Required]
-        [StringLength(256)]
+        [StringLength(CashStatementExpressionTranslator.MaximumExpressionLength)]
         [Display(Name = "Expression")]
         public string Expression { get; set; } = string.Empty;
 
@@ -54,6 +54,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public IEnumerable<SelectListItem> SyntaxTypeItems { get; private set; } = Enumerable.Empty<SelectListItem>();
         public IList<string> ExistingFormats { get; private set; } = new List<string>();
         public IEnumerable<SelectListItem> FormatTemplateItems { get; private set; } = Enumerable.Empty<SelectListItem>();
+        public IReadOnlyList<ExpressionReferenceItemVm> ExpressionReferenceItems { get; private set; } = Array.Empty<ExpressionReferenceItemVm>();
 
         public bool OperationSucceeded { get; private set; }
 
@@ -138,6 +139,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
                 // Excel: Format is free text and optional.
 
+                var storageTranslation = CashStatementExpressionTranslator.ForStorage(
+                    Expression,
+                    await LoadCategoryReferencesAsync());
+                if (!storageTranslation.IsValid)
+                {
+                    foreach (var diagnostic in storageTranslation.Diagnostics)
+                        ModelState.AddModelError(nameof(Expression), diagnostic.Message);
+                    return Page();
+                }
+
                 await using var tx = await NodeContext.Database.BeginTransactionAsync();
 
                 var newCategory = new Cash_tbCategory {
@@ -155,7 +166,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 var expression = new Cash_tbCategoryExp {
                     CategoryCode = CategoryCode,
-                    Expression = Expression,
+                    Expression = storageTranslation.Expression,
                     Format = Format ?? string.Empty,
                     IsError = false,
                     ErrorMessage = null,
@@ -180,15 +191,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     });
                 }
 
-                string exprPreview = Expression ?? string.Empty;
-                if (exprPreview.Length > 60)
-                    exprPreview = exprPreview[..57] + "...";
-
                 var title =
                     "<span class='bi bi-calculator me-1'></span>" +
-                    WebUtility.HtmlEncode(Category) +
-                    " (" + WebUtility.HtmlEncode(CategoryCode) + ") " +
-                    "<span class='tc-exp-formula'>= " + WebUtility.HtmlEncode(exprPreview) + "</span>";
+                    System.Net.WebUtility.HtmlEncode(Category) +
+                    " (" + System.Net.WebUtility.HtmlEncode(CategoryCode) + ")";
 
                 var nodeSpec = new {
                     key = exprKey,
@@ -270,6 +276,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             );
 
             ViewData["FormatTemplateMap"] = JsonSerializer.Serialize(templateMap);
+
+            ExpressionReferenceItems = BuildExpressionReferenceItems(
+                await LoadCategoryReferencesAsync());
         }
 
         private async Task<short> NextExpressionDisplayOrderAsync()
@@ -280,6 +289,57 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .MaxAsync() ?? 0;
 
             return (short)(max + 1);
+        }
+
+        private async Task<IReadOnlyList<CashStatementCategoryReference>> LoadCategoryReferencesAsync()
+        {
+            var categories = await NodeContext.Cash_tbCategories
+                .AsNoTracking()
+                .Select(category => new CashStatementCategoryReference(
+                    category.CategoryCode,
+                    category.Category,
+                    CashStatementReferenceKind.Category))
+                .ToListAsync();
+            var cashCodes = await NodeContext.Cash_tbCodes
+                .AsNoTracking()
+                .Select(code => new CashStatementCategoryReference(
+                    code.CashCode,
+                    code.CashDescription,
+                    CashStatementReferenceKind.CashCode))
+                .ToListAsync();
+            return categories.Concat(cashCodes).ToList();
+        }
+
+        internal static IReadOnlyList<ExpressionReferenceItemVm> BuildExpressionReferenceItems(
+            IEnumerable<CashStatementCategoryReference> references,
+            string? excludedCategoryCode = null)
+        {
+            var available = references
+                .Where(reference =>
+                    !string.IsNullOrWhiteSpace(reference.CategoryCode) &&
+                    !string.IsNullOrWhiteSpace(reference.Category) &&
+                    (reference.Kind != CashStatementReferenceKind.Category ||
+                     !reference.CategoryCode.Equals(excludedCategoryCode, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            var descriptionCounts = available
+                .GroupBy(reference => reference.Category, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+            return available
+                .Select(reference => {
+                    var usesCode = descriptionCounts[reference.Category] > 1;
+                    return new ExpressionReferenceItemVm {
+                        Code = reference.CategoryCode,
+                        Description = reference.Category,
+                        Token = usesCode ? reference.CategoryCode : reference.Category,
+                        Kind = reference.Kind == CashStatementReferenceKind.CashCode ? "Cash codes" : "Categories",
+                        UsesCode = usesCode
+                    };
+                })
+                .OrderBy(item => item.Kind == "Categories" ? 0 : 1)
+                .ThenBy(item => item.Description, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Code, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
     }
 }
