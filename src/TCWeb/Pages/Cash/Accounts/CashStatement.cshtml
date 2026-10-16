@@ -1,27 +1,159 @@
 @page
 @model TradeControl.Web.Pages.Cash.Accounts.CashStatementModel
 @{
-    ViewData["Title"] = "Cash Statement (Excel)";
+    ViewData["Title"] = "Cash Statement";
 }
-<h1>@ViewData["Title"]</h1>
 
-<form method="post" class="mb-3">
-    <div class="row g-2">
-        <div class="col-auto">
-            <label class="form-label">Command Timeout (secs)</label>
-            <input asp-for="CommandTimeout" class="form-control" />
+<link href="~/css/modules/cashStatement.css" rel="stylesheet" asp-append-version="true" />
+
+<div class="cash-statement-page py-3 py-lg-4">
+    <header class="cash-statement-hero mb-4">
+        <div>
+            <span class="cash-statement-kicker">Finance</span>
+            <h1 class="mb-2">Cash Statement</h1>
+            <p class="mb-0">
+                Create the same trusted statement for Microsoft Excel or LibreOffice Calc.
+                Your selected format is remembered for this business.
+            </p>
         </div>
-        <div class="col-12 mt-2">
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeActivePeriods" /><label class="form-check-label" asp-for="IncludeActivePeriods">Include Active Periods</label></div>
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeOrderBook" /><label class="form-check-label" asp-for="IncludeOrderBook">Include Order Book</label></div>
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeTaxAccruals" /><label class="form-check-label" asp-for="IncludeTaxAccruals">Include Tax Accruals</label></div>
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeVatDetails" /><label class="form-check-label" asp-for="IncludeVatDetails">Include VAT Details</label></div>
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeBankBalances" /><label class="form-check-label" asp-for="IncludeBankBalances">Include Bank Balances</label></div>
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeBalanceSheet" /><label class="form-check-label" asp-for="IncludeBalanceSheet">Include Balance Sheet</label></div>
-            <div class="form-check"><input class="form-check-input" asp-for="IncludeReconciliation" /><label class="form-check-label" asp-for="IncludeReconciliation">Include Reconciliation</label></div>
+        <a class="btn btn-outline-primary cash-statement-guide"
+           href="https://tradecontrol.github.io/cash/cash-statement-overview/"
+           target="_blank"
+           rel="noopener noreferrer">
+            <i class="bi bi-book me-2" aria-hidden="true"></i>User guide
+            <span class="visually-hidden"> (opens in a new tab)</span>
+        </a>
+    </header>
+
+    <form method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>@Model.ErrorMessage
+            </div>
+        }
+
+        <section class="card cash-statement-card mb-4">
+            <div class="card-body p-3 p-lg-4">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">File format</h2>
+                        <p class="text-muted mb-0">Choose the application in which you will use the statement.</p>
+                    </div>
+                    <span class="badge text-bg-light border">Remembered</span>
+                </div>
+
+                <div class="row g-3" role="radiogroup" aria-label="Cash Statement file format">
+                    <div class="col-md-6">
+                        <input class="btn-check" asp-for="Format" type="radio" value="excel" id="formatExcel" />
+                        <label class="cash-format-option" for="formatExcel">
+                            <span class="cash-format-icon cash-format-icon-excel"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i></span>
+                            <span>
+                                <strong>Microsoft Excel</strong>
+                                <small>Open XML workbook (.xlsx)</small>
+                            </span>
+                            <i class="bi bi-check-circle-fill cash-format-check" aria-hidden="true"></i>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <input class="btn-check" asp-for="Format" type="radio" value="libre" id="formatLibre" />
+                        <label class="cash-format-option" for="formatLibre">
+                            <span class="cash-format-icon cash-format-icon-libre"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i></span>
+                            <span>
+                                <strong>LibreOffice Calc</strong>
+                                <small>OpenDocument spreadsheet (.ods)</small>
+                            </span>
+                            <i class="bi bi-check-circle-fill cash-format-check" aria-hidden="true"></i>
+                        </label>
+                    </div>
+                </div>
+                <span asp-validation-for="Format" class="text-danger small"></span>
+            </div>
+        </section>
+
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <section class="card cash-statement-card h-100">
+                    <div class="card-body p-3 p-lg-4">
+                        <h2 class="h5 mb-1">Statement content</h2>
+                        <p class="text-muted mb-4">Include the detail needed for this reporting purpose.</p>
+
+                        <div class="row g-3 cash-option-grid">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeActivePeriods" />
+                                    <label class="form-check-label" asp-for="IncludeActivePeriods">Active periods</label>
+                                    <small>Include values from periods that are still open.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeOrderBook" />
+                                    <label class="form-check-label" asp-for="IncludeOrderBook">Order book</label>
+                                    <small>Add uninvoiced values from open projects.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeTaxAccruals" />
+                                    <label class="form-check-label" asp-for="IncludeTaxAccruals">Tax accruals</label>
+                                    <small>Include forecast tax adjustments.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeVatDetails" />
+                                    <label class="form-check-label" asp-for="IncludeVatDetails">VAT details</label>
+                                    <small>Add VAT recurrence and period totals.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeBankBalances" />
+                                    <label class="form-check-label" asp-for="IncludeBankBalances">Bank balances</label>
+                                    <small>Add closing balances by account.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeBalanceSheet" />
+                                    <label class="form-check-label" asp-for="IncludeBalanceSheet">Balance sheet</label>
+                                    <small>Add asset balances and capital.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" asp-for="IncludeReconciliation" />
+                                    <label class="form-check-label" asp-for="IncludeReconciliation">Reconciliation</label>
+                                    <small>Add the annual equity bridge and status checks.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-xl-4">
+                <section class="card cash-statement-card h-100">
+                    <div class="card-body p-3 p-lg-4 d-flex flex-column">
+                        <h2 class="h5 mb-1">Generation</h2>
+                        <p class="text-muted mb-3">Allow more time for larger businesses or longer histories.</p>
+
+                        <label asp-for="CommandTimeout" class="form-label"></label>
+                        <div class="input-group mb-1">
+                            <input asp-for="CommandTimeout" class="form-control" inputmode="numeric" />
+                            <span class="input-group-text">seconds</span>
+                        </div>
+                        <span asp-validation-for="CommandTimeout" class="text-danger small"></span>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mt-auto cash-statement-generate">
+                            <i class="bi bi-download me-2" aria-hidden="true"></i>Generate statement
+                        </button>
+                    </div>
+                </section>
+            </div>
         </div>
-        <div class="col-12 mt-3">
-            <button type="submit" class="btn btn-primary">Generate Excel</button>
-        </div>
-    </div>
-</form>
+    </form>
+</div>

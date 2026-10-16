@@ -503,6 +503,16 @@ zero warnings and its Tax Hub boundary suite passes 164 assertions. The Corporat
 applicant's pack was requested from HMRC Software Developers Support Team on 14 October 2026 using
 the issued Vendor ID; its checklist and assigned scenarios remain external dependencies.
 
+**Draft-release update (16 October 2026):** HMRC SDST circulated draft April 2027 CT600 and CT600L
+version 0.1 forms and CT600/CT600E guidance changes, requesting feedback by 30 November 2026. This
+is not the requested new-applicant pack: it contains no recognition checklist or assigned scenarios,
+so the Phase 5.10 dependency above remains open. The drafts flag new 40% first-year-allowance boxes
+696 and 739, revised electric charge-point and zero-emission-car allowance guidance, CT600E legacy
+wording and an expanded CT600L surface. No matching RIM/XSD/Schematron/calculator was supplied.
+The pinned RIM 1.994 artifact, its digests, readiness status and all submission gates therefore remain
+unchanged. Review the final April 2027 executable release when HMRC publishes it; do not infer a
+RIM contract from the draft forms or guidance.
+
 ### Dependencies and exclusions
 
 Requires 5.8 and 5.9. A passing local fixture does not permit live filing. This phase does not implement Companies House transport or the Objective 5 UI. The preview gate must not be relaxed to pass a test journey.

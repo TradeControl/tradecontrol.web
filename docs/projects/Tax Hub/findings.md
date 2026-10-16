@@ -1,5 +1,34 @@
 # Tax Hub Findings
 
+## 16 October 2026 — Draft CT600 2027 material is a change signal, not the recognition pack
+
+- HMRC Software Developers Support Team circulated draft April 2027 forms `CT600 04-27 v0.1` and
+  `CT600L 04-27 v0.1`, with CT600 and CT600E guidance-change schedules. The email asks developers
+  to send feedback to `softwaredevelopersupport@service.hmrc.gov.uk` by 30 November 2026.
+- This is a general developer circular and does not answer the 14 October new-applicant-pack
+  request. It contains no recognition checklist, assigned test submissions, test acceptance route,
+  approval or production-access decision. Phase 5.10 therefore remains dependent on HMRC's
+  applicant pack and scenarios.
+- The main CT600 draft adds box 696 for the 40% first-year allowance included in trading
+  profits/losses and box 739 for the corresponding allowance outside that calculation. HMRC's
+  guidance schedule says the allowance applies to qualifying expenditure incurred on or after
+  1 January 2026.
+- The CT600 guidance draft moves the stated end date for electric vehicle charge-point allowances
+  (boxes 713 and 737) and zero-emission-car allowances (boxes 726 and 751) from 1 April 2026 to
+  1 April 2027. Its comments say the associated validation is to be removed and reintroduced only
+  once the annually extended allowance has definitely ended. Future validation must therefore be
+  taken from the released executable rules, not reconstructed from the prose.
+- The CT600E draft makes individual legacy details optional in its wording and makes box E88's
+  reference to total box E200 conditional on completing that section. The draft CT600L also exposes
+  an expanded R&D credit surface, including pre-step-1 restriction fields and related discharge
+  totals. Neither supplementary page is populated by the current ordinary-company CT600/CT600A
+  fixture.
+- All four attachments are expressly draft material; the forms are version 0.1 and no matching
+  RIM, schema, Schematron or calculator was supplied. They are authoritative evidence of HMRC's
+  intended direction and a prompt for feedback, but not authority to replace the pinned CT600 V3
+  RIM 1.994 contract. Reassess the target-period capital-allowance facts and migrate only when HMRC
+  publishes the final April 2027 executable release and its effective selection rules.
+
 ## 14 October 2026 — VAT production application deferred to the intended multi-tenant topology
 
 - The owner has deferred the VAT production-credentials application until the intended shared multi-tenant Azure environment is implemented and independently reviewed. The live Developer Hub form remains unanswered.

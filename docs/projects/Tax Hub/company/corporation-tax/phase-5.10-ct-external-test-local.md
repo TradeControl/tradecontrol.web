@@ -104,3 +104,32 @@ The new-applicant-pack request was sent to HMRC Software Developers Support Team
 with the issued Vendor ID. Until HMRC supplies its current checklist and recognition scenarios, local
 implementation and offline verification may continue, but no application completion or recognition
 claim can be made.
+
+## Draft April 2027 material received
+
+On 16 October 2026 HMRC SDST circulated draft `CT600 04-27 v0.1` and `CT600L 04-27 v0.1` forms,
+together with CT600 and CT600E guidance-change schedules. Developer feedback is requested by
+30 November 2026. This circular is separate from, and does not satisfy, the outstanding request for
+the new-applicant pack and assigned recognition scenarios.
+
+The retained source identities are:
+
+| Evidence | SHA-256 |
+| --- | --- |
+| `CT600 (2027) - Draft forms and guidance.txt` | `9124259FAE35F655B4DB805CBB56C73D711A14501878C3729A33D2C1DF602B0F` |
+| `CT600 04-27 v0.1.pdf` | `F2A6A05F7BC5D4472CFB9A2B3C77C79C34C35C01E7981DAA6C69C12073EE69D1` |
+| `CT600L 04-27 v0.1.pdf` | `A1AC45AA6CC6E42D376A5D6F5F60FC76DDC023F6AE2F01F05603225791B5435A` |
+| `CT600 Guidance Changes 2027.docx` | `CC93648B85DE6BD727443538948EEB75725287DB6C4CC45D59BFDE661E2C3A2C` |
+| `CT600E Guidance Changes 2027.docx` | `7F3696464CB7996392EF1588A670AD0DFCD69AEE8F87942CB3200A2840D6A9EB` |
+
+The draft evidence identifies future contract-review items: 40% first-year-allowance boxes 696 and
+739 for qualifying expenditure from 1 January 2026; changed end-date and validation treatment for
+electric charge-point and zero-emission-car allowances; optionalised CT600E legacy-detail wording;
+and an expanded CT600L R&D-credit surface. The current supported fixture does not populate CT600E or
+CT600L, but the capital-allowance change can be relevant to an accounting period containing
+qualifying expenditure and must be assessed when final executable artifacts are available.
+
+HMRC supplied no April 2027 RIM, XSD, Schematron, calculator or effective contract-selection
+instruction with this draft. Accordingly it is consultation/change-watch evidence only. RIM 1.994,
+the immutable Objective 3 artifact and all Phase 5.10 submission/recognition gates remain unchanged;
+no schema fields or validation rules may be inferred from these documents.

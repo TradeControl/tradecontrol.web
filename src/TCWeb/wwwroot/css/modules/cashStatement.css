@@ -1,0 +1,156 @@
+.cash-statement-page {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.cash-statement-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.75rem 2rem;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(244, 248, 252, .95));
+    box-shadow: 0 .4rem 1.4rem rgba(32, 49, 66, .08);
+}
+
+.cash-statement-hero h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.cash-statement-hero p {
+    max-width: 720px;
+    color: #5d6873;
+}
+
+.cash-statement-kicker {
+    display: block;
+    margin-bottom: .35rem;
+    color: var(--bs-primary);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.cash-statement-guide {
+    flex: 0 0 auto;
+}
+
+.cash-statement-card {
+    border: 1px solid rgba(0, 0, 0, .09);
+    border-radius: 1rem;
+    box-shadow: 0 .35rem 1.1rem rgba(32, 49, 66, .06);
+}
+
+.cash-format-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 92px;
+    padding: 1rem 3rem 1rem 1rem;
+    border: 2px solid #dce2e8;
+    border-radius: .85rem;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.cash-format-option:hover {
+    border-color: rgba(var(--bs-primary-rgb), .55);
+    transform: translateY(-1px);
+}
+
+.btn-check:focus-visible + .cash-format-option {
+    outline: 3px solid rgba(var(--bs-primary-rgb), .25);
+    outline-offset: 2px;
+}
+
+.btn-check:checked + .cash-format-option {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb), .12);
+}
+
+.cash-format-option strong,
+.cash-format-option small {
+    display: block;
+}
+
+.cash-format-option small {
+    margin-top: .2rem;
+    color: #6c757d;
+}
+
+.cash-format-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: .75rem;
+    color: #fff;
+    font-size: 1.5rem;
+}
+
+.cash-format-icon-excel {
+    background: #217346;
+}
+
+.cash-format-icon-libre {
+    background: #18a303;
+}
+
+.cash-format-check {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    color: var(--bs-primary);
+    opacity: 0;
+    transform: translateY(-50%);
+}
+
+.btn-check:checked + .cash-format-option .cash-format-check {
+    opacity: 1;
+}
+
+.cash-option-grid .form-check {
+    min-height: 78px;
+    padding: .85rem .85rem .85rem 3.25rem;
+    border: 1px solid #e2e6ea;
+    border-radius: .75rem;
+    background: #fbfcfd;
+}
+
+.cash-option-grid .form-check-input {
+    margin-left: -2.35rem;
+}
+
+.cash-option-grid .form-check-label {
+    display: block;
+    font-weight: 600;
+}
+
+.cash-option-grid small {
+    display: block;
+    margin-top: .2rem;
+    color: #6c757d;
+    line-height: 1.35;
+}
+
+.cash-statement-generate {
+    margin-top: 2rem !important;
+}
+
+@media (max-width: 767.98px) {
+    .cash-statement-hero {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 1.25rem;
+    }
+
+    .cash-statement-guide {
+        width: 100%;
+    }
+}

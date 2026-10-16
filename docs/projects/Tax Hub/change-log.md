@@ -1,5 +1,20 @@
 # Tax Hub Change Log
 
+## 16 October 2026 — HMRC draft CT600 2027 pack recorded
+
+- Recorded HMRC Software Developers Support Team's draft April 2027 CT600 circulation, comprising
+  CT600 and CT600L version 0.1 forms plus CT600 and CT600E guidance-change schedules. Feedback is
+  invited by 30 November 2026.
+- Distinguished the circular from the requested Corporation Tax new-applicant pack: it supplies no
+  recognition checklist, assigned test scenarios, approval or production credentials, so the Phase
+  5.10 external dependency remains open.
+- Added the evidenced April 2027 watch items: new 40% first-year-allowance boxes 696 and 739,
+  extension/removal-of-validation treatment for electric charge-point and zero-emission-car
+  allowances, the revised CT600E legacy-detail wording and the expanded CT600L surface.
+- Kept CT600 V3 RIM 1.994 and the current immutable Objective 3 artifact unchanged. The supplied
+  PDFs and Word schedules are drafts, not an executable RIM/XSD/Schematron release, and do not
+  authorise a contract migration or submission.
+
 ## 14 October 2026 — VAT production-credentials application deferred
 
 - Recorded the owner's decision to defer the Developer Hub production-credentials application until the intended multi-tenant Azure hosting environment is implemented and independently reviewed.

@@ -571,7 +571,9 @@ These matters were not sufficiently final at the research cut-off and must be re
 3. the remaining standardised HMRC tax-computation sections beyond accounts adjustments and capital allowances, which HMRC says are to follow;
 4. the taxonomy release and entry point accepted on the actual filing date, including mandatory-tag and calculation rules;
 5. the effect of FRS 105's adapted-format amendments for periods beginning on or after 1 January 2027 on the chosen accounts presentation;
-6. CT600/RIM changes announced for April 2027, including the 40% first-year allowance; and
+6. final CT600/RIM executable changes for April 2027. HMRC's 16 October 2026 version 0.1 draft adds
+   40% first-year-allowance boxes 696 and 739, changes allowance end-date guidance and expands the
+   CT600L surface, but supplies no matching RIM/XSD/Schematron release; and
 7. Companies House presenter identity-verification requirements and implementation timetable, currently planned no earlier than November 2027.
 
 No dependable timetable was found for replacing the Companies House XML Gateway accounts service with a REST/JSON accounts-filing API. Treat such a replacement as an unconfirmed future possibility, not a design assumption.
@@ -604,3 +606,8 @@ Sources were checked against the law, standards and filing material available by
 - **S22 — HMRC generic validations:** [Corporation Tax generic technical specifications](https://www.gov.uk/government/publications/corporation-tax-generic-technical-specifications), HMRC.
 - **S23 — HMRC test tooling:** [Local Test Service and update manager](https://www.gov.uk/government/publications/local-test-service-and-lts-update-manager), HMRC, release 8.3.
 - **S24 — FRC machine Names and taxonomy hierarchy:** [2026 FRC Taxonomy Suite presentation sheets](https://www.frc.org.uk/documents/8900/Presentation_Sheets_for_2026_Taxonomies.zip), Financial Reporting Council, v1.0.0, published 18 November 2025. The published `Prefix`, `Name`, `Type`, `Period Type`, `Balance`, hypercube and dimension-member columns were used for the reference bindings in this document.
+- **S25 — Draft April 2027 CT600 material:** HMRC Software Developers Support Team email of
+  16 October 2026 and its `CT600 04-27 v0.1`, `CT600L 04-27 v0.1`, CT600 guidance-change and
+  CT600E guidance-change attachments, retained under
+  `.local/hmrc/corporation-tax/CT600 guidance`. Draft consultation evidence only; feedback deadline
+  30 November 2026 and no executable RIM release supplied.

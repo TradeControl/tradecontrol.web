@@ -1,7 +1,9 @@
 # Cash Statement workplan
 
-**Status:** Active — Phases 0, 0A, 1, and 2 accepted; Phase 3 underway  
-**Date:** 15 October 2026  
+**Status:** Active — Phases 0–6 accepted; Phase 6A underway
+
+**Date:** 16 October 2026
+
 **Objective:** Deliver one authoritative C# Cash Statement pipeline with production-quality XLSX and ODS renderers, without an unapproved change to the systems-critical Excel statement.
 
 ## 1. Outcome
@@ -68,10 +70,11 @@ The hard problem is the combination of requirements, not merely creating a ZIP p
 | 4 | Migrate XLSX to the shared model | Phase 3 | XLSX equivalence accepted |
 | 5 | Harden the selected ODS writer against the shared model | Phases 0A and 3 | ODS writer integration accepted |
 | 6 | Implement the ODS Cash Statement renderer | Phases 4–5 | ODS functional parity accepted |
-| 7 | Qualify service and multi-tenant behaviour | Phase 6 | Production readiness accepted |
+| 6A | Integrate the formats into the product and prove the single-tenant path | Phase 6 | Product integration accepted |
+| 7 | Qualify service and multi-tenant behaviour | Phase 6A | Production readiness accepted |
 | 8 | Cut over, observe, and retire Python | Phase 7 | Project closure accepted |
 
-After Phase 0, Phase 0A and Phase 1 may proceed independently. The implementation critical path is `0 → 0A go decision → 2 → 3 → 4 → 5 → 6 → 7 → 8`, with Phase 1 also required before Phase 2. Failure at Phase 0A stops ODS-led refactoring before substantial production code is disturbed.
+After Phase 0, Phase 0A and Phase 1 may proceed independently. The implementation critical path is `0 → 0A go decision → 2 → 3 → 4 → 5 → 6 → 6A → 7 → 8`, with Phase 1 also required before Phase 2. Failure at Phase 0A stops ODS-led refactoring before substantial production code is disturbed.
 
 ## 5. Phase 0 — freeze and capture the reference truth
 
@@ -353,15 +356,39 @@ Replace duplicated calculation/data logic in the Excel handler while preserving 
 
 ### Tasks
 
-- [ ] Implement a C# XLSX renderer over the shared model.
-- [ ] Preserve workbook structure, formulas, cached/displayed values, styles, protection, widths, hidden markers, freeze panes, settings, reconciliation, and printing behaviour.
-- [ ] Generate old and new outputs from the same frozen inputs in the controlled harness.
-- [ ] Run semantic, structural, style, and canonical package comparisons for every baseline case.
-- [ ] Recalculate/save/reopen replacement workbooks and compare them again.
-- [ ] Review representative screen, print-preview, and PDF outputs.
-- [ ] Load-test generation and record time, allocation, and output-size changes.
-- [ ] Classify every observed difference under the non-regression rule.
-- [ ] Exercise deployment rollback to the last accepted Excel implementation.
+- [x] Implement a C# XLSX renderer over the shared model.
+- [x] Preserve workbook structure, formulas, cached/displayed values, styles, protection, widths, hidden markers, freeze panes, safe settings, reconciliation, and printing behaviour, except for the classified security and expression corrections.
+- [x] Generate old and new outputs from the same frozen inputs in the controlled harness.
+- [x] Run the first semantic, structural, style, and canonical package comparison for every baseline case.
+- [x] Recalculate/save/reopen replacement workbooks and compare them again.
+- [x] Review representative screen and LibreOffice print/PDF outputs.
+- [x] Load-test generation and record time, allocation, and output-size changes.
+- [x] Classify every observed difference under the non-regression rule.
+- [ ] Exercise deployment rollback to the last accepted Excel implementation (deferred to the Phase 8 controlled rollout, when a replacement deployment exists to roll back from).
+
+### Progress at 16 October 2026
+
+The first shared-model XLSX renderer is implemented without changing or selecting the production Excel handler. It allocates the complete Cash Flow and Reconciliation layouts before formula translation, renders the safe Settings sheet without a connection string, and covers the header, periods, categories, summaries, calculated totals, management expressions, bank balances, VAT, balance sheet, protection, widths, hidden marker column, and frozen panes. The focused layout, formula, failure-path, and package-skeleton suite passes 6/6.
+
+All four frozen Phase 0 businesses generate successfully through the integration harness. The raw replacement workbooks and comparisons are retained in `.local/cash-statement/phase-4/initial-renderer/`; the recalculated workbooks and final comparison reports are in `.local/cash-statement/phase-4/libreoffice-recalculated/` and `.local/cash-statement/phase-4/libreoffice-recalculated-comparisons/`. Both sole-trader workbooks are semantically equivalent to their recalculated Phase 0 references. The remaining company semantic differences are confined to the deliberately exposed invalid expressions `CE-CO` and `CE-LM`; the valid corrected expressions `CE-MM` and `CE-SDR` recalculate to accepted results.
+
+The initial parity work also removed a ClosedXML operation-order defect that serialized missing balance-sheet periods as styled blank cells. The replacement now preserves the legacy absence of those cells. Remaining reports contain presentation/style, shared-string/package, Settings/Reconciliation structure, formula-cache, and approved-expression candidates; these counts are triage evidence, not an equivalence decision.
+
+The solid red expression row was deliberate error presentation rather than an arbitrary style. It occurred only for `CE-CO` in company-minimal (`[Direct Purchases]` is unmapped) and `CE-LM` in company-standard (`[Wages & Salaries]`, `[Employer NI]`, and `[Employer Pension]` do not match current cash-code descriptions). The sole-trader outputs contained no red expression row. Phase 3 deliberately made these legacy mapping failures explicit instead of allowing a silent zero or invalid reference, but the full-width fill did not explain the problem clearly and was replaced during Phase 4 review.
+
+The reviewed diagnostic now places the stored expression error in the first period cell, column D, using red text. It does not fill the period row red or repeat the message across every period. The renderer test protects this behaviour.
+
+LibreOffice 26.2.6 recalculated, saved, and reopened all four replacement workbooks. Both sole-trader cases are semantically equivalent to their recalculated Phase 0 references. The company differences are confined to the explicit `CE-CO` and `CE-LM` invalid-expression decisions. Representative PDF review confirmed the accepted Cash Flow and Reconciliation presentation. Removing the credential and obsolete `includeBankTypes` setting makes the safe Settings sheet one printed page shorter. The difference disposition and repeat-generation evidence are retained under `.local/cash-statement/phase-4/`.
+
+### Why the rollback exercise remains
+
+File equivalence does not prove that a deployed endpoint can be recovered safely. The shared-model renderer will eventually replace a systems-critical handler inside a multi-tenant service. A routing, configuration, dependency, memory, or packaging failure may appear only after deployment. The rollback exercise proves that the operator can restore the last accepted Excel implementation quickly, without changing tenant databases or improvising under pressure.
+
+The exercise means identifying the accepted legacy source revision and deployable artefact, switching an isolated deployment to the replacement handler, completing a known all-options smoke request, then restoring the legacy artefact or handler selection and repeating the same request. The restored response must match the accepted baseline semantics, and the elapsed recovery steps must be recorded. Database rollback is neither required nor permitted because both implementations read the same contract and the export operation is non-mutating.
+
+This task stays unchecked until the production handler-selection change exists. At present the legacy Excel handler remains active and untouched, so there is no replacement deployment to roll back from; merely rebuilding the current application would not test the operational recovery path.
+
+The Phase 4 XLSX implementation and its classified differences were reviewed and accepted on 16 October 2026. Phase 5 may proceed; the deferred rollback rehearsal remains a release obligation rather than being recorded as a test that could not yet be performed.
 
 ### Deliverables
 
@@ -388,13 +415,23 @@ Integrate the mechanism accepted by Phase 0A with the real shared model and hard
 
 ### Tasks
 
-- [ ] Retain the Phase 0A hostile fixture as a permanent regression suite.
-- [ ] Connect the selected writer to real shared-model primitives without report-specific financial logic.
-- [ ] Validate package ordering, `mimetype`, manifest, namespaces, styles, settings, and OpenFormula syntax.
-- [ ] Open, recalculate, save, reopen, print, and export the fixture to PDF in the supported LibreOffice version.
-- [ ] Check deterministic output after accounting for declared metadata.
-- [ ] Complete the selected implementation's licence, maintenance, dependency, security, streaming, and cancellation review.
-- [ ] Enforce output limits and deterministic disposal.
+- [x] Retain the Phase 0A hostile fixture as a permanent regression suite.
+- [x] Connect the selected writer to real shared-model primitives without report-specific financial logic.
+- [x] Validate package ordering, `mimetype`, manifest, namespaces, styles, settings, and OpenFormula syntax.
+- [x] Open, recalculate, save, reopen, print, and export the fixture to PDF in the supported LibreOffice version.
+- [x] Check deterministic output after accounting for declared metadata.
+- [x] Complete the selected implementation's licence, maintenance, dependency, security, streaming, and cancellation review.
+- [x] Enforce output limits and deterministic disposal.
+
+### Progress at 16 October 2026
+
+The accepted Phase 0A mechanism is now a production-shaped internal C# package writer with no new package, Python, native, or server-side office dependency. Its physical worksheet cells carry the real renderer-neutral statement value, numeric, presentation, semantic-address, and formula types; row allocation and all financial decisions remain outside the writer for Phase 6.
+
+The permanent hostile suite passes five focused test groups covering 20 formula cells, deterministic packages, required ZIP/XML contracts, five corrupt-package cases, output limits, cancellation, disposal, and unresolved dependencies. LibreOffice 26.2.6.3 recalculated and saved the package twice while preserving every formula-cell cached value without an error token. Its three-page A4 PDF was rendered and visually reviewed.
+
+The native round trip found and closed one integration defect: the first production-shaped package omitted the `xmlns:of` declaration, causing Calc to save formulas with a doubled `of:=` prefix and display `Err:510`. The corrected namespace is now an explicit regression assertion. Detailed evidence is retained in `.local/cash-statement/phase-5/`; the implementation assessment is `docs/cash-statement-ods-writer-assessment.md` in TCExports.
+
+All Phase 5 tasks are complete. The internal writer integration was accepted on 16 October 2026; the exit gate is passed and Phase 6 may begin.
 
 ### Deliverables
 
@@ -420,15 +457,31 @@ Serialize the accepted shared Cash Statement model as a native, financially reli
 
 ### Tasks
 
-- [ ] Allocate all physical rows and columns before translating formula dependencies.
-- [ ] Emit authoritative cached values and native OpenFormula expressions.
-- [ ] Implement header, period grid, category, summary, total, expression, bank, VAT, balance-sheet, and reconciliation sections.
-- [ ] Port relevant presentation behaviour from the Python reference without porting its data access or calculations.
-- [ ] Implement semantic number formats, negative presentation, annual borders, widths, hidden markers, active sheet, protection, and frozen panes.
-- [ ] Add package-structure and XML-level tests.
-- [ ] Compare every ODS semantic value directly with the shared model.
-- [ ] Recalculate/save/reopen in LibreOffice and compare again.
-- [ ] Test printing and PDF output for all representative layouts.
+- [x] Allocate all physical rows and columns before translating formula dependencies.
+- [x] Emit authoritative cached values where applicable and native OpenFormula expressions; leave supported management-expression formulas cacheless so Calc evaluates them on first open.
+- [x] Implement header, period grid, category, summary, total, expression, bank, VAT, balance-sheet, and reconciliation sections.
+- [x] Port relevant presentation behaviour from the Python reference without porting its data access or calculations.
+- [x] Implement semantic number formats, negative presentation, annual borders, widths, hidden markers, active sheet, protection, and frozen panes.
+- [x] Add package-structure and XML-level tests.
+- [x] Compare every ODS semantic value directly with the shared model.
+- [x] Recalculate/save/reopen in LibreOffice and compare again.
+- [x] Test printing and PDF output for all representative layouts.
+
+### Progress at 16 October 2026
+
+The native C# ODS renderer now allocates the complete workbook before formula translation and renders Cash Flow, safe Settings, and optional Reconciliation worksheets from the accepted shared model. It covers every Phase 6 section and the accepted financial presentation rules: semantic number formats, red parenthesized negatives, section and total styles, active-period highlighting, annual borders, widths, hidden markers, protection, active sheet, and frozen panes. No Python, external ODS package, native library, or server-side office process is part of generation.
+
+The permanent hostile suite passes all five test groups. It checks package ordering and required parts, namespaces, OpenFormula, type-specific cached values, deterministic bytes, styles, protection, hidden markers, frozen panes, mutations, limits, cancellation, disposal, and unresolved dependencies. The integration harness generated all four frozen Phase 0 businesses with every supported request option enabled and directly compared 26,606 allocated semantic cells and 13,888 formulas against the shared model before serialization.
+
+LibreOffice 26.2.6.3 opened, recalculated, saved, and reopened all four ODS files. Formula locations and semantics remained intact across every worksheet, all non-expression caches matched, and Calc produced numeric results for the 2,028 valid management-expression cells deliberately emitted without caches. This cacheless representation is necessary because a diagnostic string cache prevents Calc from evaluating the formula. Invalid expressions instead retain their stored explanation as red text in the first period cell. No Calc error token was present.
+
+The four recalculated workbooks exported to 29-page minimal and 45-page standard PDFs using Calc's standard A4 pagination. Automated inspection found every page non-empty and no placeholder or spreadsheet error text. Representative Cash Flow, analysis, VAT, balance-sheet, Settings, and Reconciliation pages from all four variants were rendered and visually reviewed; presentation is legible and no unaccepted defect was found. Detailed local evidence is retained under `.local/cash-statement/phase-6/`.
+
+The initial freeze-pane assertion was correctly rejected during human review because split coordinates alone did not activate panes in Calc. The writer now emits the complete Phase 0A view-state envelope and declares the `ooo` namespace required by `ooo:view-settings`. An ordinary visible Calc controller check reports Cash Flow frozen at `D5` and Reconciliation frozen at `C5`; the package and integration tests protect the complete settings contract rather than coordinates alone.
+
+The final exhaustive acceptance run rendered XLSX and ODS pairs from the same immutable model instance, recalculated both formats in LibreOffice, and compared them directly with the accepted Phase 0 XLSX files. Across all four businesses, 26,489 semantic cells agree in all three formats; 117 cells are the explicitly approved `CE-CO` and `CE-LM` invalid-expression diagnostics. All 26,606 New XLSX/New ODS cells, 24,461 present or intentionally missing model values, and 2,028 valid management-expression results agree with zero unexplained differences. This deeper check found and closed two formula-parity gaps hidden by matching cached values: future-period capital formulas are now emitted in ODS, and the overall reconciliation status formula now belongs to the shared model rather than the XLSX renderer alone. Evidence is retained in `.local/cash-statement/phase-6/tri-format-acceptance-final/`.
+
+All implementation and evidence tasks are complete. The functional review accepted the exhaustive tri-format report and its absolute tolerance on 16 October 2026. The Phase 6 exit gate is passed; the renderer remains outside the production handler selection until the later cutover phase.
 
 ### Deliverables
 
@@ -447,7 +500,51 @@ Phase 6 passes with no missing/duplicate semantic rows, unresolved references, c
 
 ODS remains feature-disabled. A failed ODS renderer cannot affect the accepted XLSX path.
 
-## 13. Phase 7 — service and multi-tenant qualification
+## 13. Phase 6A — product integration and single-tenant acceptance
+
+### Purpose
+
+Put the accepted shared-model renderers behind the real Cash Statement page, complete the associated database and user-documentation changes, and prove the ordinary single-tenant workflow before adding Azure and multi-tenant variables.
+
+### Tasks
+
+- [x] Route both Excel and LibreOffice requests through the accepted shared model and native C# renderers.
+- [x] Accept and strictly validate both supported formats at the export boundary.
+- [x] Add an accessible format selector to the Cash Statement page and persist the business default through `App.tbOptions.DefaultPrintMode`.
+- [x] Modernise the generation page while retaining every supported request option and add a direct link to the Cash Statement User Guide.
+- [x] Update the User Guide with supported formats and a current generation-page screenshot.
+- [x] Increment the SQL schema build for the accepted expression-schema changes and verify the database project builds.
+- [x] Build the complete application and run focused export contract tests.
+- [ ] Exercise the real single-tenant UI for both formats, verify the persisted selection, and inspect both downloaded statements.
+
+### Progress at 16 October 2026
+
+The production Cash Statement handler now parses the typed request once, builds one immutable shared document and selects only the accepted native XLSX or ODS renderer. The export boundary accepts both supported formats, rejects invalid formats and options, and includes the reconciliation option in normalization. A defect in the generic validator dispatch that previously discarded invalid document-specific results was also corrected and is covered by the focused suite.
+
+The Cash Statement page now provides accessible Excel and LibreOffice format cards, clearer grouped content switches, validated timeout entry, in-page generation errors and a direct User Guide link. The chosen format persists through the existing `App.tbOptions.DefaultPrintMode` business setting. The User Guide documents both formats and includes the refreshed page screenshot.
+
+The previously omitted schema increment is now build `4.1.14` in both post-deployment and node initialization paths. TCExports and TCWeb build with zero errors, the focused Cash Statement suite passes 27/27, and the SQL project builds a DLL and DACPAC successfully.
+
+A local all-options UI exercise generated both formats, proved selection persistence after reload, exported both downloads through LibreOffice, found no spreadsheet error tokens and passed representative visual review. This automated browser used a temporary page-local anonymous annotation because it had no development login; that annotation was removed before the final build. One authenticated download remains for the formal Phase 6A exit gate. Evidence is retained under `.local/cash-statement/phase-6a/`.
+
+### Deliverables
+
+- production handler routing to the shared builder and native renderers;
+- format-aware, persistent Cash Statement page;
+- updated User Guide and screenshot;
+- SQL build increment and successful database build evidence;
+- single-tenant UI download evidence for XLSX and ODS; and
+- signed product-integration acceptance.
+
+### Exit gate
+
+Phase 6A passes only when both formats download successfully through the authenticated product UI, the selected business default survives a new request, every supported option reaches the export boundary, and the outputs retain the accepted Phase 6 financial/document behaviour.
+
+### Rollback
+
+Revert the product-routing and UI integration checkpoint together. The accepted Phase 6 renderer code and evidence remain intact, while the previously deployed Excel-only application remains the operational fallback.
+
+## 14. Phase 7 — service and multi-tenant qualification
 
 ### Purpose
 
@@ -483,7 +580,7 @@ Phase 7 passes only when financial/document acceptance remains intact and the se
 
 Keep ODS disabled and retain the accepted XLSX release. Failed operational qualification does not reopen the financial acceptance unless evidence shows a correctness impact.
 
-## 14. Phase 8 — cutover, observe, and retire Python
+## 15. Phase 8 — cutover, observe, and retire Python
 
 ### Purpose
 
@@ -514,7 +611,7 @@ Introduce the new paths deliberately, preserve rollback, and remove the obsolete
 
 The project closes only when both formats are accepted, the observation periods complete without an unresolved critical issue, rollback remains documented, and the Python production dependency is demonstrably absent.
 
-## 15. Cross-phase test matrix
+## 16. Cross-phase test matrix
 
 Every applicable phase uses the same scenario/profile identities and adds the following dimensions as they become available:
 
@@ -529,7 +626,7 @@ Every applicable phase uses the same scenario/profile identities and adds the fo
 | Service | Cancellation, timeout, size bounds, concurrency, redaction |
 | Tenancy | Correct source binding and negative cross-tenant access tests |
 
-## 16. Decision and defect control
+## 17. Decision and defect control
 
 Maintain three registers throughout delivery:
 
@@ -539,13 +636,13 @@ Maintain three registers throughout delivery:
 
 An intentional Excel correction must have its own failing test against the old behaviour, expected corrected result, accounting rationale, reviewer, and acceptance. It must not be smuggled into structural refactoring.
 
-## 17. Immediate next actions
+## 18. Immediate next actions
 
-Phases 0, 0A, 1, and 2 are accepted. Neither production statement route has been modified.
+Phases 0 through 6 are accepted. Complete Phase 6A before Azure service and multi-tenant qualification:
 
-1. implement and test typed option parsing at the request boundary;
-2. implement the financial-period grid, including non-January years and annual columns;
-3. implement full category dependency validation and deterministic evaluation;
-4. begin building authoritative flow values beside the untouched Excel handler; and
-5. retain the Phase 0A and Phase 1 fixtures as permanent regression evidence.
+1. review the native production routing and format-persistence implementation;
+2. verify the application and SQL database builds;
+3. capture the modernised page for the User Guide;
+4. exercise XLSX and ODS downloads through the local authenticated UI; and
+5. retain the Phase 6A implementation and single-tenant evidence for acceptance.
 
