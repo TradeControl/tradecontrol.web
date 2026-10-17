@@ -1,16 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using TCExports.Generator;
-using TCExports.Generator.Contracts;
+using Microsoft.Extensions.Options;
+using TradeControl.Web.AppServices;
 using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages.Cash.Accounts;
@@ -19,13 +16,18 @@ public class CashStatementModel : PageModel
 {
     private const short LibrePrintMode = 1;
     private const short ExcelPrintMode = 2;
-    private readonly IConfiguration _config;
     private readonly NodeContext _nodeContext;
+    private readonly ICashStatementGenerationService _generationService;
+    private readonly CashStatementGenerationOptions _generationOptions;
 
-    public CashStatementModel(IConfiguration config, NodeContext nodeContext)
+    public CashStatementModel(
+        NodeContext nodeContext,
+        ICashStatementGenerationService generationService,
+        IOptions<CashStatementGenerationOptions> generationOptions)
     {
-        _config = config;
         _nodeContext = nodeContext;
+        _generationService = generationService;
+        _generationOptions = generationOptions.Value;
     }
 
     [BindProperty, Required]
@@ -43,6 +45,7 @@ public class CashStatementModel : PageModel
     [BindProperty] public bool IncludeReconciliation { get; set; }
 
     public string? ErrorMessage { get; private set; }
+    public bool OdsEnabled => _generationOptions.OdsEnabled;
 
     public async Task OnGetAsync(CancellationToken ct)
     {
@@ -52,13 +55,16 @@ public class CashStatementModel : PageModel
             .Select(option => (short?)option.DefaultPrintMode)
             .FirstOrDefaultAsync(ct);
 
-        Format = printMode == LibrePrintMode ? "libre" : "excel";
+        Format = printMode == LibrePrintMode && OdsEnabled ? "libre" : "excel";
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
         if (!TryGetPrintMode(Format, out var printMode))
             ModelState.AddModelError(nameof(Format), "Choose Microsoft Excel or LibreOffice Calc.");
+        else if (printMode == LibrePrintMode && !OdsEnabled)
+            ModelState.AddModelError(nameof(Format),
+                "LibreOffice generation is temporarily unavailable. Microsoft Excel remains available.");
 
         if (!ModelState.IsValid)
             return Page();
@@ -72,40 +78,25 @@ public class CashStatementModel : PageModel
             await _nodeContext.SaveChangesAsync(ct);
         }
 
-        var payload = new ExportPayload
+        var result = await _generationService.GenerateAsync(
+            new CashStatementGenerationRequest(
+                Format,
+                CommandTimeout,
+                IncludeActivePeriods,
+                IncludeBalanceSheet,
+                IncludeBankBalances,
+                IncludeOrderBook,
+                IncludeTaxAccruals,
+                IncludeVatDetails,
+                IncludeReconciliation),
+            ct);
+        if (!result.IsSuccess)
         {
-            SqlConnection = _config.GetConnectionString("TCNodeContext") ?? string.Empty,
-            UserName = User.Identity?.Name ?? "anonymous",
-            DocumentType = "cashflow",
-            Format = Format,
-            Params = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["commandTimeout"] = CommandTimeout.ToString(CultureInfo.InvariantCulture),
-                ["includeActivePeriods"] = BooleanText(IncludeActivePeriods),
-                ["includeBalanceSheet"] = BooleanText(IncludeBalanceSheet),
-                ["includeBankBalances"] = BooleanText(IncludeBankBalances),
-                ["includeOrderBook"] = BooleanText(IncludeOrderBook),
-                ["includeTaxAccruals"] = BooleanText(IncludeTaxAccruals),
-                ["includeVatDetails"] = BooleanText(IncludeVatDetails),
-                ["includeReconciliation"] = BooleanText(IncludeReconciliation)
-            }
-        };
-
-        var result = await ExportRunner.ExportDataAsync(payload);
-        if (!string.Equals(result.Status, "success", StringComparison.OrdinalIgnoreCase))
-        {
-            ErrorMessage = BuildErrorMessage(result);
+            ErrorMessage = result.Message;
             return Page();
         }
 
-        var bytes = Convert.FromBase64String(result.FileContent!);
-        var isLibre = string.Equals(Format, "libre", StringComparison.OrdinalIgnoreCase);
-        var fallbackName = isLibre ? "cash-statement.ods" : "cash-statement.xlsx";
-        var contentType = isLibre
-            ? "application/vnd.oasis.opendocument.spreadsheet"
-            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-        var fileName = string.IsNullOrWhiteSpace(result.FileName) ? fallbackName : result.FileName;
-        return File(bytes, contentType, fileName);
+        return File(result.Content!, result.ContentType!, result.FileName!);
     }
 
     private static bool TryGetPrintMode(string? format, out short printMode)
@@ -126,17 +117,4 @@ public class CashStatementModel : PageModel
         return false;
     }
 
-    private static string BooleanText(bool value) => value ? "true" : "false";
-
-    private static string BuildErrorMessage(ExportResult result)
-    {
-        var details = result.Details?
-            .SelectMany(item => item.Value)
-            .Where(message => !string.IsNullOrWhiteSpace(message))
-            .ToArray() ?? Array.Empty<string>();
-        var message = string.IsNullOrWhiteSpace(result.Message)
-            ? "The Cash Statement could not be generated."
-            : result.Message;
-        return details.Length == 0 ? message : $"{message} {string.Join(" ", details)}";
-    }
 }

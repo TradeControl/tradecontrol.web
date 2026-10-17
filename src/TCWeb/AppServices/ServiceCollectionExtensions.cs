@@ -133,6 +133,15 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ICashNamespaceResolver, CashNamespaceResolver>();
             services.AddScoped<ICashStatementQueryService, CashStatementQueryService>();
             services.AddScoped<ICashStatementPaymentMaintenanceService, CashStatementPaymentMaintenanceService>();
+            services.AddOptions<CashStatementGenerationOptions>()
+                .Bind(configuration.GetSection(CashStatementGenerationOptions.SectionName))
+                .ValidateOnStart();
+            services.AddSingleton<IValidateOptions<CashStatementGenerationOptions>,
+                CashStatementGenerationOptionsValidator>();
+            services.AddSingleton<CashStatementGenerationGate>();
+            services.AddScoped<ICashStatementSourceResolver, ConfiguredCashStatementSourceResolver>();
+            services.AddScoped<ICashStatementExporter, CashStatementExporter>();
+            services.AddScoped<ICashStatementGenerationService, CashStatementGenerationService>();
             services.AddScoped<ICashPaymentsWorkspaceService, CashPaymentsWorkspaceService>();
             services.AddScoped<ICashAssetsWorkspaceService, CashAssetsWorkspaceService>();
             services.AddScoped<ICashTransfersWorkspaceService, CashTransfersWorkspaceService>();

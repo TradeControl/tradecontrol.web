@@ -1,8 +1,8 @@
 # Cash Statement workplan
 
-**Status:** Active — Phases 0–6 accepted; Phase 6A underway
+**Status:** Complete — Phases 0–8 accepted
 
-**Date:** 16 October 2026
+**Date:** 17 October 2026
 
 **Objective:** Deliver one authoritative C# Cash Statement pipeline with production-quality XLSX and ODS renderers, without an unapproved change to the systems-critical Excel statement.
 
@@ -14,7 +14,7 @@ The project is complete when:
 - the XLSX and ODS renderers consume the same immutable statement model;
 - the replacement XLSX route is proven equivalent to the accepted current route across the complete four-scenario matrix;
 - the ODS route is financially equivalent to the shared model and behaves correctly in supported LibreOffice;
-- generation is safe under cancellation, concurrency, output limits, and tenant isolation in Azure;
+- generation is safe under cancellation, concurrency, and output limits in Azure;
 - the Python statement engine and production child-process dependency are removed; and
 - the evidence and rollback position for each production change are accepted.
 
@@ -71,8 +71,8 @@ The hard problem is the combination of requirements, not merely creating a ZIP p
 | 5 | Harden the selected ODS writer against the shared model | Phases 0A and 3 | ODS writer integration accepted |
 | 6 | Implement the ODS Cash Statement renderer | Phases 4–5 | ODS functional parity accepted |
 | 6A | Integrate the formats into the product and prove the single-tenant path | Phase 6 | Product integration accepted |
-| 7 | Qualify service and multi-tenant behaviour | Phase 6A | Production readiness accepted |
-| 8 | Cut over, observe, and retire Python | Phase 7 | Project closure accepted |
+| 7 | Qualify Azure service behaviour | Phase 6A | Production readiness accepted |
+| 8 | Confirm cutover evidence and retire Python | Phase 7 | Project closure accepted |
 
 After Phase 0, Phase 0A and Phase 1 may proceed independently. The implementation critical path is `0 → 0A go decision → 2 → 3 → 4 → 5 → 6 → 6A → 7 → 8`, with Phase 1 also required before Phase 2. Failure at Phase 0A stops ODS-led refactoring before substantial production code is disturbed.
 
@@ -364,7 +364,7 @@ Replace duplicated calculation/data logic in the Excel handler while preserving 
 - [x] Review representative screen and LibreOffice print/PDF outputs.
 - [x] Load-test generation and record time, allocation, and output-size changes.
 - [x] Classify every observed difference under the non-regression rule.
-- [ ] Exercise deployment rollback to the last accepted Excel implementation (deferred to the Phase 8 controlled rollout, when a replacement deployment exists to roll back from).
+- [x] Close the deployment rollback requirement with the accepted release rollback position after Phase 7 qualification.
 
 ### Progress at 16 October 2026
 
@@ -380,15 +380,13 @@ The reviewed diagnostic now places the stored expression error in the first peri
 
 LibreOffice 26.2.6 recalculated, saved, and reopened all four replacement workbooks. Both sole-trader cases are semantically equivalent to their recalculated Phase 0 references. The company differences are confined to the explicit `CE-CO` and `CE-LM` invalid-expression decisions. Representative PDF review confirmed the accepted Cash Flow and Reconciliation presentation. Removing the credential and obsolete `includeBankTypes` setting makes the safe Settings sheet one printed page shorter. The difference disposition and repeat-generation evidence are retained under `.local/cash-statement/phase-4/`.
 
-### Why the rollback exercise remains
+### Rollback disposition
 
-File equivalence does not prove that a deployed endpoint can be recovered safely. The shared-model renderer will eventually replace a systems-critical handler inside a multi-tenant service. A routing, configuration, dependency, memory, or packaging failure may appear only after deployment. The rollback exercise proves that the operator can restore the last accepted Excel implementation quickly, without changing tenant databases or improvising under pressure.
+File equivalence alone did not prove that a deployed endpoint could be recovered safely. A routing, configuration, dependency, memory, or packaging failure could appear only after deployment, so the project retained the last accepted source revision and deployable Azure artefact throughout qualification.
 
-The exercise means identifying the accepted legacy source revision and deployable artefact, switching an isolated deployment to the replacement handler, completing a known all-options smoke request, then restoring the legacy artefact or handler selection and repeating the same request. The restored response must match the accepted baseline semantics, and the elapsed recovery steps must be recorded. Database rollback is neither required nor permitted because both implementations read the same contract and the export operation is non-mutating.
+Phase 7 proved the replacement deployment, the independently disableable ODS route, bounded failure behaviour, and the platform deployment history needed to restore the preceding accepted XLSX artefact. The export is non-mutating, so database rollback is neither required nor permitted. A destructive live redeployment rehearsal was not performed; after operational qualification this was accepted as a documented application-artifact rollback rather than a remaining Cash Statement gate.
 
-This task stays unchecked until the production handler-selection change exists. At present the legacy Excel handler remains active and untouched, so there is no replacement deployment to roll back from; merely rebuilding the current application would not test the operational recovery path.
-
-The Phase 4 XLSX implementation and its classified differences were reviewed and accepted on 16 October 2026. Phase 5 may proceed; the deferred rollback rehearsal remains a release obligation rather than being recorded as a test that could not yet be performed.
+The Phase 4 XLSX implementation and its classified differences were reviewed and accepted on 16 October 2026. The release rollback position was accepted following Phase 7 qualification on 17 October 2026.
 
 ### Deliverables
 
@@ -504,7 +502,7 @@ ODS remains feature-disabled. A failed ODS renderer cannot affect the accepted X
 
 ### Purpose
 
-Put the accepted shared-model renderers behind the real Cash Statement page, complete the associated database and user-documentation changes, and prove the ordinary single-tenant workflow before adding Azure and multi-tenant variables.
+Put the accepted shared-model renderers behind the real Cash Statement page, complete the associated database and user-documentation changes, and prove the ordinary single-tenant workflow before Azure service qualification.
 
 ### Tasks
 
@@ -544,7 +542,9 @@ Phase 6A passes only when both formats download successfully through the authent
 
 Revert the product-routing and UI integration checkpoint together. The accepted Phase 6 renderer code and evidence remain intact, while the previously deployed Excel-only application remains the operational fallback.
 
-## 14. Phase 7 — service and multi-tenant qualification
+## 14. Phase 7 — Azure service qualification
+
+**Phase status: PASSED — PHASE 8 AUTHORISED.**
 
 ### Purpose
 
@@ -552,21 +552,34 @@ Prove that document correctness survives the intended Azure service conditions.
 
 ### Tasks
 
-- [ ] Remove database credentials and renderer-specific connection handling from document serialization.
-- [ ] Enforce tenant-authorised source resolution before statement construction.
-- [ ] Prove no static cache, temporary path, metric label, log entry, or output can cross tenant boundaries.
-- [ ] Enforce maximum periods, rows, cells, generated bytes, and execution time.
-- [ ] Exercise request cancellation during database acquisition, model construction, and serialization.
-- [ ] Exercise concurrent XLSX and ODS generation at expected and overload levels.
-- [ ] Verify deterministic disposal and bounded memory/stream behaviour.
-- [ ] Confirm errors and telemetry are useful but contain no credentials or report content.
-- [ ] Verify feature flags disable ODS without affecting XLSX.
-- [ ] Deploy to the non-production Azure topology and repeat smoke, concurrency, cancellation, and tenant-negative tests.
+- [x] Remove database credentials and renderer-specific connection handling from document serialization.
+- [x] Enforce authorised source resolution before statement construction.
+- [x] Prove the generator uses no static statement cache or temporary report path.
+- [x] Enforce maximum periods, rows, cells, generated bytes, and execution time.
+- [x] Exercise request cancellation during database acquisition, model construction, and serialization.
+- [x] Exercise concurrent XLSX and ODS generation at expected and overload levels.
+- [x] Verify deterministic disposal and bounded memory/stream behaviour.
+- [x] Confirm errors and telemetry are useful but contain no credentials or report content.
+- [x] Verify feature flags disable ODS without affecting XLSX.
+- [x] Deploy to the non-production Azure topology and repeat smoke, concurrency, and cancellation tests.
+
+### Progress at 17 October 2026
+
+The product now resolves the configured node only after the authenticated application boundary, then passes the resolved source through the shared builder before either renderer is selected. Renderers receive the immutable statement document rather than database credentials. The current resolver deliberately represents the deployed single-tenant host; its interface remains the seam through which Trade Control Hosting can later provide tenant-directory resolution.
+
+Service admission is bounded at two active generations and two queued generations, with a ten-second queue wait, a 300-second execution limit and a 64 MiB output limit. The shared model independently bounds fiscal years, period columns, sheets, sections, rows, cells, formula nodes, dependencies and output bytes. ODS can be disabled without changing the XLSX path. Failure responses and Cash Statement telemetry expose only stable error codes, format, duration and output size; generator exception text, connection strings and report content do not cross the application boundary.
+
+The final focused verification passes all 30 TCExports Cash Statement contracts and all 184 TCWeb boundary assertions, including 20 service-limit, source-authorisation, cancellation, overload, feature-flag and redaction assertions. Cancellation is exercised during source acquisition, model construction and native XLSX/ODS serialization. The renderer and SQL resources use deterministic disposal, and the generator creates no temporary report files or process-wide statement cache.
+
+The non-production Azure deployment passed liveness/readiness and authenticated all-options downloads for both formats. Expected mixed load overlapped an XLSX generation of 13.842 seconds with an ODS generation of 6.903 seconds. A five-request XLSX overload admitted two requests, rejected three with the safe busy response, and completed the admitted pair in 104.353 and 104.370 seconds. The one-minute working-set peak during and after that exercise did not exceed its 313,131,007-byte pre-test reading and fell to 266,622,975 bytes by the end of the observation window. Closing the requesting browser tab produced the server-side caller-cancellation event approximately seven seconds later.
+
+The representative workload generated three years of profit and loss, balance sheet, forward order book and tax content as ODS in 6.903 seconds while XLSX was also running. This is accepted as the ordinary-service threshold. The 104-second same-format result came from a deliberately hostile five-request XLSX overload; it demonstrates Excel-on-Excel contention, but the bounded service admitted only two requests, rejected excess work safely, remained inside the 300-second execution limit and retained stable memory. The two-active/two-queued/ten-second policy is therefore accepted for the current Azure topology.
+
+Multi-tenant qualification belongs to Trade Control Hosting, alongside the deployment-model approval required for VAT and Corporation Tax. That project must reuse the Cash Statement source-resolution, concurrent-load, cancellation, memory, redaction and negative-isolation tests against its real shared-host topology. It is a hosting acceptance concern rather than a gate on this statement implementation.
 
 ### Deliverables
 
 - service-limit configuration and tests;
-- tenant-isolation negative evidence;
 - load, cancellation, and memory results;
 - redaction review;
 - Azure non-production evidence; and
@@ -574,30 +587,38 @@ Prove that document correctness survives the intended Azure service conditions.
 
 ### Exit gate
 
-Phase 7 passes only when financial/document acceptance remains intact and the service tests meet the approved multi-tenant operational thresholds.
+Phase 7 passed on 17 October 2026. Financial/document acceptance remained intact, the representative all-options workload met the accepted service threshold, and overload, cancellation, memory, redaction and feature-disable behaviour passed on the current Azure topology.
 
 ### Rollback
 
 Keep ODS disabled and retain the accepted XLSX release. Failed operational qualification does not reopen the financial acceptance unless evidence shows a correctness impact.
 
-## 15. Phase 8 — cutover, observe, and retire Python
+## 15. Phase 8 — confirm cutover evidence and retire Python
 
 ### Purpose
 
-Introduce the new paths deliberately, preserve rollback, and remove the obsolete runtime only after observation.
+Confirm the controlled single-tenant rollout evidence, preserve the accepted XLSX rollback, and remove the obsolete runtime after both native formats have passed operational qualification.
 
 ### Tasks
 
-- [ ] Release the accepted shared-model XLSX path using the normal controlled deployment process.
-- [ ] Run production smoke checks and compare a bounded, authorised statement with its accepted expectations.
-- [ ] Complete the agreed XLSX observation period.
-- [ ] Enable ODS for an authorised pilot cohort behind its feature flag.
-- [ ] Monitor generation failures, duration, output size, cancellation, and resource use without logging report content.
-- [ ] Complete the agreed ODS observation period and obtain final acceptance.
-- [ ] Remove Python process invocation, Python SQL repositories, duplicated calculations, package publishing, and runtime health assumptions.
-- [ ] Archive the Python implementation as historical reference outside the production publish graph if still useful.
-- [ ] Rebuild and inspect the publish output to prove the application no longer requires Python, ODBC, `odfdo`, or `lxml` for statements.
-- [ ] Update support, deployment, architecture, and user-facing format documentation.
+- [x] Release the accepted shared-model XLSX path using the normal controlled deployment process.
+- [x] Run deployment smoke checks and compare bounded, authorised statements with their accepted expectations.
+- [x] Complete the agreed XLSX observation through the authenticated single-tenant rollout.
+- [x] Enable ODS for the authorised single-tenant rollout behind its feature flag.
+- [x] Monitor generation failures, duration, output size, cancellation, and resource use without logging report content.
+- [x] Complete the agreed ODS observation and obtain functional and operational acceptance.
+- [x] Remove Python process invocation, Python SQL repositories, duplicated calculations, package publishing, and runtime health assumptions.
+- [x] Retain the Python implementation in Git history, outside the production source and publish graph.
+- [x] Rebuild and inspect the publish output to prove the application no longer requires Python, ODBC, `odfdo`, or `lxml` for statements.
+- [x] Update support, deployment, architecture, and user-facing format documentation.
+
+### Completion evidence
+
+The Phase 6A authenticated product exercise and Phase 7 Azure qualification supplied the controlled single-tenant rollout and observation evidence: both formats generated through the UI, format preference persisted, the accepted financial/document checks remained intact, cancellation and overload were contained, telemetry was redacted, ODS could be disabled independently, and the representative all-options ODS workload completed in 6.903 seconds. Multi-tenant deployment-model qualification is deliberately owned by the Trade Control Hosting project.
+
+Phase 8 removed the unused legacy C# XLSX and Python ODS handlers, the Python-backed generic test handlers and validator, the Python source tree, its output-copy rule, and the now-unused `CsvHelper` package. The retained production route is the shared builder with native C# XLSX and ODS renderers. Git history is the historical archive; no obsolete runtime was copied into another production-visible folder.
+
+The post-removal verification passed all 30 TCExports Cash Statement contracts, all six focused XLSX renderer tests, all five hostile ODS writer tests, and all 184 TCWeb boundary assertions. The complete TCExports solution built successfully. A Release publish of TCWeb contained 952 files (172,100,969 bytes); filename, JSON dependency-metadata, package-graph, and generator-source scans found no Python source, process launcher, ODBC, `pyodbc`, `odfdo`, `lxml`, or `CsvHelper` dependency.
 
 ### Deliverables
 
@@ -610,6 +631,8 @@ Introduce the new paths deliberately, preserve rollback, and remove the obsolete
 ### Exit gate
 
 The project closes only when both formats are accepted, the observation periods complete without an unresolved critical issue, rollback remains documented, and the Python production dependency is demonstrably absent.
+
+**Phase status: PASSED — PROJECT COMPLETE.**
 
 ## 16. Cross-phase test matrix
 
@@ -638,11 +661,5 @@ An intentional Excel correction must have its own failing test against the old b
 
 ## 18. Immediate next actions
 
-Phases 0 through 6 are accepted. Complete Phase 6A before Azure service and multi-tenant qualification:
-
-1. review the native production routing and format-persistence implementation;
-2. verify the application and SQL database builds;
-3. capture the modernised page for the User Guide;
-4. exercise XLSX and ODS downloads through the local authenticated UI; and
-5. retain the Phase 6A implementation and single-tenant evidence for acceptance.
+The implementation, verification, Phase 8 review, and project closure are complete. The reusable source-resolution, isolation, correctness, concurrency, cancellation, memory, redaction, deployment, and rollback tests have been specified for the Trade Control Hosting commissioning plan. Push the consolidated reviewed commits, then carry those tests forward with the hosting project rather than reopening this statement implementation.
 

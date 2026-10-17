@@ -53,6 +53,7 @@ Assert(webReferences.Any(reference => reference.Contains("Adapters.Submission", 
     "TCWeb does not reference the Submission adapter.");
 Assert(webReferences.All(reference => !reference.Contains("WebHarness", StringComparison.OrdinalIgnoreCase)),
     "TCWeb must not reference the diagnostic WebHarness.");
+assertions += await CashStatementServiceTests.RunAsync();
 
 var workflowContract = typeof(IVatProductWorkflow);
 var prohibitedContractNamespaces = new[]
