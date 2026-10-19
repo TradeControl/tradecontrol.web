@@ -98,12 +98,19 @@ public sealed class VatReturnSubmissionService(
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unexpected failure during approved VAT submission.");
+            logger.LogError("Unexpected failure during approved VAT submission ({FailureType}).",
+                exception.GetBaseException().GetType().Name);
             string? reference = null;
-            try { reference = await nodeContext.ErrorLog(exception); }
+            try
+            {
+                reference = await nodeContext.ErrorLog(new InvalidOperationException(
+                    $"VAT submission failed ({exception.GetBaseException().GetType().Name})."));
+            }
             catch (Exception logException)
             {
-                logger.LogError(logException, "Failed to write a VAT submission failure to the node Event Log.");
+                logger.LogError(
+                    "Failed to write a VAT submission failure to the node Event Log ({FailureType}).",
+                    logException.GetBaseException().GetType().Name);
             }
             return new(VatSubmissionResultState.NotSent, "VAT-SUBMISSION-UNAVAILABLE", null, null,
                 SupportReference: reference);

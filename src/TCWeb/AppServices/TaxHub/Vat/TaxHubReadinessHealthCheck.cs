@@ -57,9 +57,9 @@ public sealed class TaxHubReadinessHealthCheck(
         {
             throw;
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            return HealthCheckResult.Unhealthy("A required local dependency is unavailable.", exception);
+            return HealthCheckResult.Unhealthy("A required local dependency is unavailable.");
         }
     }
 }

@@ -2,7 +2,7 @@
 
 ## Current position
 
-Work Plan 7 is the authoritative progress record. Phase 7.6 is implemented and awaiting human review, Phase 7.7 has only its restart-safety increment complete, and Phase 7.8 live activation is deferred. Production/live dispatch remains disabled.
+The Companies House XML team has approved the unaudited filleted FRS 105 micro-entity submission scope and created its live package reference. The application still uses the protected test presenter identity and production/live dispatch remains disabled. Work Plan 7 remains the authoritative implementation and test history.
 
 ## Governing and working documents
 
@@ -14,4 +14,4 @@ Work Plan 7 is the authoritative progress record. Phase 7.6 is implemented and a
 - [Approval and test evidence](approval/README.md)
 - [Shared company statutory material](../shared/)
 
-The next permitted action is the existing Phase 7.6 status continuation and human review. No second filing is permitted, live-service testing is prohibited and later history/recovery work remains behind that gate.
+The remaining activation step is to replace the test presenter identity with the protected production identity in the production-shaped environment, revalidate the effective configuration, and explicitly authorise the first controlled filing. Live-service testing is prohibited.

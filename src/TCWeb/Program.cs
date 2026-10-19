@@ -9,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
+using Microsoft.Extensions.Options;
 
 
 namespace TradeControl.Web
@@ -19,18 +21,27 @@ namespace TradeControl.Web
         {
             var host = CreateHostBuilder(args).Build();
 
-            using (var scope = host.Services.CreateScope())
+            var tenantOptions = host.Services.GetRequiredService<IOptions<TenantHostingOptions>>().Value;
+            if (tenantOptions.SeedOnStartup)
             {
-                var services = scope.ServiceProvider;
-
-                try
+                if (tenantOptions.SharedHostEnabled)
+                    throw new InvalidOperationException(
+                        "Automatic startup seeding is prohibited in shared-host mode.");
+                foreach (var tenant in host.Services.GetRequiredService<ITenantDirectory>().ListEnabled())
                 {
-                    SeedData.Initialize(services).Wait();
-                }
-                catch (Exception ex)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred seeding the DB.");
+                    using var scope = host.Services.CreateScope();
+                    var services = scope.ServiceProvider;
+                    services.GetRequiredService<ITenantContext>().Bind(tenant);
+                    try
+                    {
+                        SeedData.Initialize(services).Wait();
+                    }
+                    catch (Exception ex)
+                    {
+                        var logger = services.GetRequiredService<ILogger<Program>>();
+                        logger.LogError("Tenant database seeding failed with {FailureType}.",
+                            ex.GetBaseException().GetType().Name);
+                    }
                 }
             }
 

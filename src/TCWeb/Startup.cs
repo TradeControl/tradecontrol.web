@@ -28,6 +28,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 using Wangkanai.Detection.Models;
 using TradeControl.Web.Data;
@@ -36,6 +37,7 @@ using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.AppServices;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub.Vat;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web
 {
@@ -54,6 +56,8 @@ namespace TradeControl.Web
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddLogging(logging =>
+                logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None));
             services.AddRazorPages();
 
             // Blazor Server (for Admin/Manager tree host)
@@ -132,6 +136,8 @@ namespace TradeControl.Web
             app.UseStaticFiles();
 
             app.UseDetection();
+
+            app.UseMiddleware<TenantResolutionMiddleware>();
 
             app.UseRouting();
 

@@ -9,6 +9,7 @@ using TradeControl.Web.AppServices.InvoiceRegister;
 using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub.Vat;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices
 {
@@ -21,6 +22,10 @@ namespace TradeControl.Web.AppServices
         public static IServiceCollection AddAppServices(this IServiceCollection services,
             IConfiguration configuration)
         {
+            services.Configure<TenantHostingOptions>(configuration.GetSection(TenantHostingOptions.SectionName));
+            services.AddSingleton<ITenantDirectory, ConfiguredTenantDirectory>();
+            services.AddSingleton<TenantAmbientContext>();
+            services.AddScoped<ITenantContext, TenantContext>();
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<ITemplateInvoicesService, TemplateInvoicesService>();
             services.AddScoped<ITemplateSystemService, TemplateSystemService>();
@@ -152,7 +157,8 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IInvoiceRegisterService, InvoiceRegisterService>();
             services.AddScoped<IInvoiceRegisterWorkflowService, InvoiceRegisterWorkflowService>();
 
-            services.AddSingleton<IExecutionRuntimeState, ExecutionRuntimeState>();
+            services.AddSingleton<ExecutionRuntimeStore>();
+            services.AddScoped<IExecutionRuntimeState, ExecutionRuntimeState>();
             services.AddScoped<IExecutionQueue, ExecutionQueue>();
             services.AddScoped<IExecutionHandler, SyntheticDatasetExecutionHandler>();
             services.AddHostedService<ExecutionWorker>();

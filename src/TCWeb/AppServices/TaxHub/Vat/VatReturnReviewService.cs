@@ -553,17 +553,20 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     private async Task<string?> RecordUnexpectedFailureAsync(Exception exception, string operation,
         CancellationToken cancellationToken)
     {
-        _logger.LogError(exception, "Unexpected failure during VAT return {Operation}.", operation);
+        _logger.LogError("Unexpected failure during VAT return {Operation} ({FailureType}).",
+            operation, exception.GetBaseException().GetType().Name);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await _nodeContext.ErrorLog(exception);
+            return await _nodeContext.ErrorLog(new InvalidOperationException(
+                $"VAT return {operation} failed ({exception.GetBaseException().GetType().Name})."));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception logException)
         {
-            _logger.LogError(logException,
-                "Failed to write a VAT return {Operation} failure to the node Event Log.", operation);
+            _logger.LogError(
+                "Failed to write a VAT return {Operation} failure to the node Event Log ({FailureType}).",
+                operation, logException.GetBaseException().GetType().Name);
             return null;
         }
     }

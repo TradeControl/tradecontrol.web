@@ -16,7 +16,7 @@ namespace TradeControl.Web.AppServices.Execution
         bool TryGetActiveDatabaseMaintenance(out ExecutionRuntimeSnapshot execution);
     }
 
-    public sealed class ExecutionRuntimeState : IExecutionRuntimeState
+    internal sealed class ExecutionRuntimePartition
     {
         readonly object SyncRoot = new();
         readonly Dictionary<string, ExecutionRuntimeSnapshot> Executions = new(StringComparer.OrdinalIgnoreCase);
@@ -166,6 +166,48 @@ namespace TradeControl.Web.AppServices.Execution
         }
 
         static string GetStatusText(NodeEnum.ExecutionStatus status) => status.ToString();
+    }
+
+    internal sealed class ExecutionRuntimeStore
+    {
+        readonly object SyncRoot = new();
+        readonly Dictionary<Guid, ExecutionRuntimePartition> Partitions = new();
+
+        public ExecutionRuntimePartition For(Guid tenantId)
+        {
+            lock (SyncRoot)
+            {
+                if (!Partitions.TryGetValue(tenantId, out var partition))
+                {
+                    partition = new ExecutionRuntimePartition();
+                    Partitions.Add(tenantId, partition);
+                }
+                return partition;
+            }
+        }
+    }
+
+    internal sealed class ExecutionRuntimeState(
+        Tenancy.ITenantContext tenantContext,
+        ExecutionRuntimeStore store) : IExecutionRuntimeState
+    {
+        ExecutionRuntimePartition Partition => store.For(tenantContext.RequiredTenant.TenantId);
+
+        public void SetQueued(string executionCode, NodeEnum.ExecutionType executionType, DateTime queuedOn,
+            string progressMessage) => Partition.SetQueued(executionCode, executionType, queuedOn, progressMessage);
+        public void SetRunning(string executionCode, NodeEnum.ExecutionType executionType, DateTime queuedOn,
+            DateTime startedOn, string progressMessage) =>
+            Partition.SetRunning(executionCode, executionType, queuedOn, startedOn, progressMessage);
+        public void UpdateProgress(string executionCode, string progressMessage) =>
+            Partition.UpdateProgress(executionCode, progressMessage);
+        public void SetSucceeded(string executionCode, string progressMessage, DateTime completedOn) =>
+            Partition.SetSucceeded(executionCode, progressMessage, completedOn);
+        public void SetFailed(string executionCode, string progressMessage, string errorMessage,
+            DateTime completedOn) => Partition.SetFailed(executionCode, progressMessage, errorMessage, completedOn);
+        public bool TryGet(string executionCode, out ExecutionRuntimeSnapshot execution) =>
+            Partition.TryGet(executionCode, out execution);
+        public bool TryGetActiveDatabaseMaintenance(out ExecutionRuntimeSnapshot execution) =>
+            Partition.TryGetActiveDatabaseMaintenance(out execution);
     }
 
     public sealed class ExecutionRuntimeSnapshot

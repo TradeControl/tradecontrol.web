@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.Execution
 {
@@ -15,24 +16,61 @@ namespace TradeControl.Web.AppServices.Execution
     {
         readonly IServiceScopeFactory ScopeFactory;
         readonly ILogger<ExecutionWorker> Logger;
-        readonly IExecutionRuntimeState ExecutionRuntimeState;
+        readonly ITenantDirectory TenantDirectory;
+        readonly HashSet<Guid> UnavailableTenants = new();
 
-        public ExecutionWorker(IServiceScopeFactory scopeFactory, ILogger<ExecutionWorker> logger, IExecutionRuntimeState executionRuntimeState)
+        public ExecutionWorker(IServiceScopeFactory scopeFactory, ILogger<ExecutionWorker> logger,
+            ITenantDirectory tenantDirectory)
         {
             ScopeFactory = scopeFactory;
             Logger = logger;
-            ExecutionRuntimeState = executionRuntimeState;
+            TenantDirectory = tenantDirectory;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await RecoverInterruptedExecutionsAsync(stoppingToken);
+            foreach (var tenant in TenantDirectory.ListEnabled())
+            {
+                try
+                {
+                    await RecoverInterruptedExecutionsAsync(tenant, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception e)
+                {
+                    LogTenantUnavailable(tenant, "recovery", e);
+                }
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    var executed = await ProcessNextExecutionAsync(stoppingToken);
+                    var executed = false;
+                    foreach (var tenant in TenantDirectory.ListEnabled())
+                    {
+                        try
+                        {
+                            var executionProcessed = await ProcessNextExecutionAsync(tenant, stoppingToken);
+                            LogTenantRecovered(tenant);
+
+                            if (!executionProcessed)
+                                continue;
+                            executed = true;
+                            break;
+                        }
+                        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                        {
+                            return;
+                        }
+                        catch (Exception e)
+                        {
+                            LogTenantUnavailable(tenant, "polling", e);
+                        }
+                    }
 
                     if (!executed)
                         await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
@@ -43,16 +81,35 @@ namespace TradeControl.Web.AppServices.Execution
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError(e, "Execution worker failure.");
+                    Logger.LogError("Execution worker failure ({FailureType}).",
+                        e.GetBaseException().GetType().Name);
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
             }
         }
 
-        async Task RecoverInterruptedExecutionsAsync(CancellationToken cancellationToken)
+        void LogTenantUnavailable(TenantDescriptor tenant, string operation, Exception exception)
+        {
+            if (!UnavailableTenants.Add(tenant.TenantId))
+                return;
+
+            Logger.LogError(
+                "Execution {Operation} failed for tenant {Tenant} ({FailureType}); further failures are suppressed until recovery.",
+                operation, tenant.TenantId, exception.GetBaseException().GetType().Name);
+        }
+
+        void LogTenantRecovered(TenantDescriptor tenant)
+        {
+            if (!UnavailableTenants.Remove(tenant.TenantId))
+                return;
+
+            Logger.LogInformation("Execution polling recovered for tenant {Tenant}.", tenant.TenantId);
+        }
+
+        async Task RecoverInterruptedExecutionsAsync(TenantDescriptor tenant, CancellationToken cancellationToken)
         {
             using var scope = ScopeFactory.CreateScope();
-
+            scope.ServiceProvider.GetRequiredService<ITenantContext>().Bind(tenant);
             var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
             var runningExecutions = await nodeContext.App_tbExecutions
                 .Where(e => e.ExecutionStatusCode == (short)NodeEnum.ExecutionStatus.Running)
@@ -73,14 +130,16 @@ namespace TradeControl.Web.AppServices.Execution
 
             await nodeContext.SaveChangesAsync(cancellationToken);
 
-            Logger.LogWarning("Recovered {ExecutionCount} interrupted execution(s).", runningExecutions.Count);
+            Logger.LogWarning("Recovered {ExecutionCount} interrupted execution(s) for tenant {Tenant}.",
+                runningExecutions.Count, tenant.TenantId);
         }
 
-        async Task<bool> ProcessNextExecutionAsync(CancellationToken cancellationToken)
+        async Task<bool> ProcessNextExecutionAsync(TenantDescriptor tenant, CancellationToken cancellationToken)
         {
             using var scope = ScopeFactory.CreateScope();
-
+            scope.ServiceProvider.GetRequiredService<ITenantContext>().Bind(tenant);
             var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var executionRuntimeState = scope.ServiceProvider.GetRequiredService<IExecutionRuntimeState>();
             var handlers = scope.ServiceProvider.GetServices<IExecutionHandler>()
                 .ToDictionary(h => h.ExecutionType);
 
@@ -103,7 +162,7 @@ namespace TradeControl.Web.AppServices.Execution
             execution.ProgressMessage = "Starting execution...";
             await nodeContext.SaveChangesAsync(cancellationToken);
 
-            ExecutionRuntimeState.SetRunning(
+            executionRuntimeState.SetRunning(
                 execution.ExecutionCode,
                 runtimeExecutionType,
                 execution.QueuedOn,
@@ -126,7 +185,7 @@ namespace TradeControl.Web.AppServices.Execution
                 if (string.IsNullOrWhiteSpace(execution.ProgressMessage))
                     execution.ProgressMessage = "Execution completed.";
 
-                ExecutionRuntimeState.SetSucceeded(
+                executionRuntimeState.SetSucceeded(
                     execution.ExecutionCode,
                     execution.ProgressMessage,
                     execution.CompletedOn.Value);
@@ -135,16 +194,19 @@ namespace TradeControl.Web.AppServices.Execution
             {
                 execution.ExecutionStatusCode = (short)NodeEnum.ExecutionStatus.Failed;
                 execution.CompletedOn = DateTime.Now;
-                execution.ErrorMessage = e.GetBaseException().Message;
+                var failureType = e.GetBaseException().GetType().Name;
+                execution.ErrorMessage = $"Execution failed ({failureType}).";
                 execution.ProgressMessage = "Execution failed.";
 
-                ExecutionRuntimeState.SetFailed(
+                executionRuntimeState.SetFailed(
                     execution.ExecutionCode,
                     execution.ProgressMessage,
                     execution.ErrorMessage,
                     execution.CompletedOn.Value);
 
-                Logger.LogError(e, "Execution {ExecutionCode} failed.", execution.ExecutionCode);
+                Logger.LogError(
+                    "Execution {ExecutionCode} failed for tenant {Tenant} ({FailureType}).",
+                    execution.ExecutionCode, tenant.TenantId, failureType);
             }
 
             await nodeContext.SaveChangesAsync(cancellationToken);

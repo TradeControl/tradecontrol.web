@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
@@ -24,7 +25,7 @@ internal interface ICompaniesHouseWorkflowIdentityAccessor
 internal sealed class CompaniesHouseWorkflowIdentityAccessor(
     IHttpContextAccessor httpContextAccessor,
     NodeContext nodeContext,
-    IOptions<CompaniesHouseProductHostOptions> hostOptions) : ICompaniesHouseWorkflowIdentityAccessor
+    ITenantContext tenantContext) : ICompaniesHouseWorkflowIdentityAccessor
 {
     public async Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(
         CancellationToken cancellationToken = default)
@@ -35,9 +36,9 @@ internal sealed class CompaniesHouseWorkflowIdentityAccessor(
         if (principal.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(aspNetSubject))
             throw new UnauthorizedAccessException("An authenticated Trade Control subject is required.");
 
-        var tenant = hostOptions.Value.TenantReference;
-        if (!Guid.TryParse(tenant, out _))
+        if (!tenantContext.IsResolved)
             throw new InvalidOperationException("The Companies House workflow tenant is not configured.");
+        var tenant = tenantContext.RequiredTenant.TenantId.ToString("D");
 
         var actor = await nodeContext.GetUserId(aspNetSubject);
         var reportingSubject = await nodeContext.App_tbOptions.AsNoTracking()

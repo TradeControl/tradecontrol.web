@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using TCExports.Generator.Contracts;
 using TradeControl.Web.AppServices;
+using TradeControl.Web.Tenancy;
 
 internal static class CashStatementServiceTests
 {
@@ -47,21 +47,17 @@ internal static class CashStatementServiceTests
         }).Failed, "Unbounded or unusable Cash Statement service limits were accepted.");
 
         var authenticatedContext = AuthenticatedContext();
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(
-            new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:TCNodeContext"] = "Server=(tenant);Database=(authorised)"
-            }).Build();
+        var tenantContext = new TenantContext();
+        tenantContext.Bind(new TenantDescriptor(Guid.NewGuid(), "tenant.test", "TenantA",
+            "Server=(tenant);Database=(authorised)"));
         var configuredResolver = new ConfiguredCashStatementSourceResolver(
-            configuration,
-            new HttpContextAccessor { HttpContext = authenticatedContext });
+            new HttpContextAccessor { HttpContext = authenticatedContext }, tenantContext);
         var source = await configuredResolver.ResolveAsync();
         Assert(source.ConnectionString.Contains("Database=(authorised)", StringComparison.Ordinal),
             "The configured single-tenant source was not resolved after authentication.");
 
         var unauthenticatedResolver = new ConfiguredCashStatementSourceResolver(
-            configuration,
-            new HttpContextAccessor { HttpContext = new DefaultHttpContext() });
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext() }, tenantContext);
         await AssertThrowsAsync<UnauthorizedAccessException>(
             () => unauthenticatedResolver.ResolveAsync().AsTask(),
             "An unauthenticated request resolved a Cash Statement source.");

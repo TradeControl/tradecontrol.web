@@ -15,8 +15,6 @@ namespace TradeControl.Web.Data
 {
     public partial class NodeContext : IdentityDbContext<TradeControlWebUser>
     {
-        public static string NodeVersion { get; }  = "3.34.2";
-
         public NodeContext(DbContextOptions<NodeContext> options) : base(options) { }
 
         #region Tables

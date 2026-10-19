@@ -153,9 +153,10 @@ public sealed class VatObligationWorkspaceService(
         }
         catch (VatAuthorityRequestException exception)
         {
-            logger.LogWarning(exception,
-                "HMRC VAT obligations failed with code {SafeCode} and support reference {SupportReference}.",
-                exception.SafeCode, exception.SupportReference);
+            logger.LogWarning(
+                "HMRC VAT obligations failed with code {SafeCode} and support reference {SupportReference} ({FailureType}).",
+                exception.SafeCode, exception.SupportReference,
+                exception.GetBaseException().GetType().Name);
             await RecordAuthorityFailureAsync(exception, cancellationToken);
             var reauthorisation = exception.SafeCode.StartsWith("OAUTH-REAUTHORISATION-", StringComparison.Ordinal);
             var unavailable = exception.SafeCode is "VAT-HOST-DISABLED" or "VAT-AUTHORITY-TOPOLOGY-UNAVAILABLE";
@@ -173,7 +174,9 @@ public sealed class VatObligationWorkspaceService(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Unexpected failure while loading the HMRC VAT obligations workspace.");
+            logger.LogError(
+                "Unexpected failure while loading the HMRC VAT obligations workspace ({FailureType}).",
+                exception.GetBaseException().GetType().Name);
             var supportReference = await RecordUnexpectedFailureAsync(exception, cancellationToken);
             return new(VatObligationWorkspaceState.AuthorityError, [],
                 "HMRC VAT obligations could not be refreshed. Try again later.", supportReference);
@@ -229,7 +232,9 @@ ORDER BY ValidFrom DESC;
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception logException)
         {
-            logger.LogError(logException, "Failed to write an HMRC VAT obligations failure to the node Event Log.");
+            logger.LogError(
+                "Failed to write an HMRC VAT obligations failure to the node Event Log ({FailureType}).",
+                logException.GetBaseException().GetType().Name);
         }
     }
 
@@ -239,12 +244,15 @@ ORDER BY ValidFrom DESC;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await nodeContext.ErrorLog(exception);
+            return await nodeContext.ErrorLog(new InvalidOperationException(
+                $"VAT obligations workspace failed ({exception.GetBaseException().GetType().Name})."));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception logException)
         {
-            logger.LogError(logException, "Failed to write an unexpected VAT workspace failure to the node Event Log.");
+            logger.LogError(
+                "Failed to write an unexpected VAT workspace failure to the node Event Log ({FailureType}).",
+                logException.GetBaseException().GetType().Name);
             return null;
         }
     }

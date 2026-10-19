@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TradeControl.Web.Tenancy;
 using TCExports.Generator;
 using TCExports.Generator.Contracts;
 
@@ -64,15 +65,15 @@ public interface ICashStatementSourceResolver
 /// </summary>
 public sealed class ConfiguredCashStatementSourceResolver : ICashStatementSourceResolver
 {
-    private readonly IConfiguration _configuration;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ITenantContext _tenantContext;
 
     public ConfiguredCashStatementSourceResolver(
-        IConfiguration configuration,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ITenantContext tenantContext)
     {
-        _configuration = configuration;
         _httpContextAccessor = httpContextAccessor;
+        _tenantContext = tenantContext;
     }
 
     public ValueTask<CashStatementSource> ResolveAsync(CancellationToken cancellationToken = default)
@@ -81,11 +82,10 @@ public sealed class ConfiguredCashStatementSourceResolver : ICashStatementSource
         if (_httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated != true)
             throw new UnauthorizedAccessException("An authenticated node user is required.");
 
-        var connectionString = _configuration.GetConnectionString("TCNodeContext");
-        if (string.IsNullOrWhiteSpace(connectionString))
+        if (!_tenantContext.IsResolved)
             throw new InvalidOperationException("The Trade Control node source is not configured.");
 
-        return ValueTask.FromResult(new CashStatementSource(connectionString));
+        return ValueTask.FromResult(new CashStatementSource(_tenantContext.RequiredTenant.ConnectionString));
     }
 }
 

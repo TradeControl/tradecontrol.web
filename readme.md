@@ -18,9 +18,11 @@ For ongoing development and updates, visit: [tradecontrol.github.io](https://tra
 
 ## 🚧 Status
 
-- Working release available (Accounts Mode, July 2021)  
-- Current branch in **active redevelopment**: Accounts + MIS integration  
-- ⚠️ Not production‑ready on the new schema — features and APIs may change without notice
+- Working release available (Accounts Mode, July 2021)
+- The current Accounts Mode functional baseline, including the Cash Statement, is complete
+- Work has entered the deployment phase: multi-tenant hosting and statutory-service integration are now in progress
+- Detailed hosting plans and commissioning evidence are maintained separately in the private hosting repository
+- ⚠️ The hosted service is not yet production-ready
 
 ## Versioning
 

@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 
+using Azure.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -22,6 +23,7 @@ using TradeControl.Web.Areas.Identity.Data;
 using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Mail;
+using TradeControl.Web.Tenancy;
 
 [assembly: HostingStartup(typeof(TradeControl.Web.Areas.Identity.IdentityHostingStartup))]
 namespace TradeControl.Web.Areas.Identity
@@ -42,15 +44,38 @@ namespace TradeControl.Web.Areas.Identity
                         .ProtectKeysWithDpapi()
                         .SetApplicationName("TradeControl.Web");
                 }
+                else
+                {
+                    var blobUri = context.Configuration["DataProtection:BlobUri"];
+                    var keyIdentifier = context.Configuration["DataProtection:KeyIdentifier"];
+                    if (!string.IsNullOrWhiteSpace(blobUri) && !string.IsNullOrWhiteSpace(keyIdentifier))
+                    {
+                        var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                        {
+                            ExcludeInteractiveBrowserCredential = true
+                        });
+                        services.AddDataProtection()
+                            .SetApplicationName("TradeControl.Web")
+                            .PersistKeysToAzureBlobStorage(new Uri(blobUri), credential)
+                            .ProtectKeysWithAzureKeyVault(new Uri(keyIdentifier), credential);
+                    }
+                    else if (context.Configuration.GetValue<bool>("Tenancy:SharedHostEnabled"))
+                    {
+                        throw new InvalidOperationException(
+                            "Shared-host deployments require external Data Protection storage and key protection.");
+                    }
+                }
 
-                services.AddDbContext<NodeContext>(options =>
-                    options.UseSqlServer(
-                        context.Configuration.GetConnectionString("TCNodeContext")));
+                services.AddDbContext<NodeContext>((provider, options) =>
+                    options.UseSqlServer(provider.GetRequiredService<ITenantContext>()
+                        .RequiredTenant.ConnectionString));
 
                 services.AddDefaultIdentity<TradeControlWebUser>(options => 
                     options.SignIn.RequireConfirmedAccount = true)
                     .AddRoles<IdentityRole>()
                     .AddEntityFrameworkStores<NodeContext>();
+                services.AddScoped<IUserClaimsPrincipalFactory<TradeControlWebUser>,
+                    TenantUserClaimsPrincipalFactory>();
 
                 services.AddTransient<IEmailSender, IdentityEmailSender>();
 
@@ -88,6 +113,7 @@ namespace TradeControl.Web.Areas.Identity
                 services.ConfigureApplicationCookie(options =>
                 {
                     options.Cookie.Name = ".TradeControl.Identity";
+                    options.Cookie.Domain = null;
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.Cookie.SameSite = SameSiteMode.Lax;
@@ -96,6 +122,7 @@ namespace TradeControl.Web.Areas.Identity
                     options.LoginPath = "/Identity/Account/Login";
                     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
                     options.SlidingExpiration = true;
+                    options.Events.OnValidatePrincipal = TenantIdentity.ValidateCookieAsync;
                 });
 
                 services.Configure<SecurityStampValidatorOptions>(options =>

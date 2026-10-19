@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -41,7 +42,7 @@ public interface IVatWorkflowIdentityAccessor
 public sealed class VatWorkflowIdentityAccessor(
     IHttpContextAccessor httpContextAccessor,
     NodeContext nodeContext,
-    IOptions<VatProductHostOptions> hostOptions) : IVatWorkflowIdentityAccessor
+    ITenantContext tenantContext) : IVatWorkflowIdentityAccessor
 {
     public async Task<VatWorkflowIdentity> GetRequiredAsync(CancellationToken cancellationToken = default)
     {
@@ -58,9 +59,9 @@ public sealed class VatWorkflowIdentityAccessor(
         if (principal.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(aspNetSubject))
             throw new UnauthorizedAccessException("An authenticated Trade Control subject is required.");
 
-        var tenant = hostOptions.Value.TenantReference;
-        if (string.IsNullOrWhiteSpace(tenant))
+        if (!tenantContext.IsResolved)
             throw new InvalidOperationException("The VAT workflow tenant is not configured.");
+        var tenant = tenantContext.RequiredTenant.TenantId.ToString("D");
 
         var actor = await nodeContext.GetUserId(aspNetSubject);
         var reportingSubject = await nodeContext.App_tbOptions
