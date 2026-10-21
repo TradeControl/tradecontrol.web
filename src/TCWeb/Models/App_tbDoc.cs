@@ -24,7 +24,7 @@ namespace TradeControl.Web.Models
         public byte[] RowVer { get; set; }
 
         [ForeignKey(nameof(OpenMode))]
-        [InverseProperty(nameof(Usr_tbMenuOpenMode.TbDocs))]
-        public virtual Usr_tbMenuOpenMode OpenModeNavigation { get; set; }
+        [InverseProperty(nameof(App_tbDocOpenMode.TbDocs))]
+        public virtual App_tbDocOpenMode OpenModeNavigation { get; set; }
     }
 }

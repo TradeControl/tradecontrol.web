@@ -237,6 +237,41 @@ body {
     margin-bottom: var(--tc-footer-height);
 }
 
+body.tc-header-hidden > header,
+body.tc-footer-hidden > footer {
+    display: none !important;
+}
+
+body.tc-footer-hidden {
+    --tc-footer-height: 0px;
+    margin-bottom: 0;
+}
+
+body.tc-footer-unavailable {
+    --tc-footer-height: 0px;
+    margin-bottom: 0;
+}
+
+.tc-display-controls {
+    position: fixed;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 1100;
+}
+
+.tc-display-controls > .btn {
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+body:not(.tc-footer-hidden) .tc-display-controls {
+    bottom: calc(var(--tc-footer-height) + 0.5rem);
+}
+
+body.tc-footer-unavailable .tc-display-controls {
+    bottom: 0.5rem;
+}
+
 footer, .footer, .tc-footer {
     background: var(--tc-footer-bg);
     color: var(--tc-footer-text);

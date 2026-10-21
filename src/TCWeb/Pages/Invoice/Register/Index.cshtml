@@ -5,7 +5,7 @@
 }
 
 <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-<link href="~/css/modules/invoiceRegister.css" rel="stylesheet" />
+<link href="~/css/modules/invoiceRegister.css" rel="stylesheet" asp-append-version="true" />
 
 <div class="tc-register-workspace">
     <component type="typeof(TradeControl.Web.Pages.Invoice.Register.InvoiceRegisterShell)"
@@ -14,9 +14,20 @@
 
 <style>
     .tc-register-workspace {
-        min-height: 100vh;
         display: flex;
         flex-direction: column;
+        min-height: 0;
+    }
+
+    @@media (min-width: 992px) {
+        .tc-register-workspace {
+            position: absolute;
+            top: var(--tc-header-offset, 0px);
+            right: 0;
+            bottom: var(--tc-footer-height, 60px);
+            left: 0;
+            overflow: hidden;
+        }
     }
 </style>
 
@@ -24,4 +35,19 @@
 {
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_framework/blazor.server.js"></script>
+    <script>
+        (() => {
+            const updateHeaderOffset = () => {
+                const header = document.querySelector('header');
+                const bottom = header ? header.getBoundingClientRect().bottom : 0;
+                document.documentElement.style.setProperty('--tc-header-offset', bottom + 'px');
+            };
+
+            updateHeaderOffset();
+            window.addEventListener('load', updateHeaderOffset);
+            window.addEventListener('resize', updateHeaderOffset);
+            window.addEventListener('orientationchange', updateHeaderOffset);
+            window.addEventListener('tc:chromechange', updateHeaderOffset);
+        })();
+    </script>
 }

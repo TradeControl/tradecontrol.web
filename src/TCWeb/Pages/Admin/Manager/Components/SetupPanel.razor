@@ -4,13 +4,16 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.Data.SqlClient
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.FileProviders
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.Data
+@using TradeControl.Web.Mail
 
 @inject NodeContext NodeContext
 @inject UserManager<TradeControlWebUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@inject IFileProvider FileProvider
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_errorMessage))
@@ -816,6 +819,9 @@
                 ra_AccountNumber: _editor.RAAccountNumber,
                 isVatRegistered: _editor.IsVatRegistered,
                 expectedAnnualProfit: SelectedTemplateIsCompany ? null : _editor.ExpectedAnnualProfit);
+
+            var templateManager = new TemplateManager(NodeContext, FileProvider);
+            await templateManager.InitialiseBootstrap();
 
             NavigationManager.NavigateTo(
                 IsInitialSetup ? "/" : "/Identity/Account/SignOutAndRegister",

@@ -42,7 +42,12 @@ public sealed class TenantContext : ITenantContext, IDisposable
     {
         ArgumentNullException.ThrowIfNull(tenant);
         if (_tenant is not null)
+        {
+            if (_tenant.TenantId == tenant.TenantId)
+                return;
+
             throw new InvalidOperationException("The tenant is immutable for the lifetime of a scope.");
+        }
         _tenant = tenant;
         _ambient.Current = tenant;
         _ownsAmbientBinding = true;

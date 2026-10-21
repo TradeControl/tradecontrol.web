@@ -99,6 +99,22 @@ internal static class TenantIsolationTests
         Assert(!reachedApplication && rejectedHttp.Response.StatusCode == StatusCodes.Status404NotFound,
             "Unknown-host middleware did not fail closed.");
 
+        reachedApplication = false;
+        var livenessHttp = new DefaultHttpContext();
+        livenessHttp.Request.Host = new HostString("platform-probe.example.test");
+        livenessHttp.Request.Path = "/health/live";
+        await middleware.InvokeAsync(livenessHttp, directory, new TenantContext());
+        Assert(!reachedApplication && livenessHttp.Response.StatusCode == StatusCodes.Status404NotFound,
+            "Tenant middleware allowed a platform liveness request to bypass host isolation.");
+
+        reachedApplication = false;
+        var readinessHttp = new DefaultHttpContext();
+        readinessHttp.Request.Host = new HostString("platform-probe.example.test");
+        readinessHttp.Request.Path = "/health/ready";
+        await middleware.InvokeAsync(readinessHttp, directory, new TenantContext());
+        Assert(!reachedApplication && readinessHttp.Response.StatusCode == StatusCodes.Status404NotFound,
+            "The dependency-readiness probe bypassed tenant resolution.");
+
         return assertions;
     }
 

@@ -4,18 +4,13 @@
 @using TradeControl.Web.Data
 
 <div class="tc-register-grid">
-    <MudStack Class="mb-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
-        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
-            Rows: @VisibleInvoices.Count
-        </MudChip>
-    </MudStack>
-
     <div class="tc-grid-host">
         <MudDataGrid T="Invoice_vwRegister"
                      Class="tc-register-datagrid"
                      @ref="_grid"
                      Items="Invoices"
                      RowClassFunc="GetRowClass"
+                     Height="100%"
                      FixedHeader="true"
                      FixedFooter="true"
                      RowsPerPage="@RowsPerPage"
@@ -32,18 +27,23 @@
                      FilterChanged="OnFilterChanged">
 
             <Columns>
-                <TemplateColumn Title="">
+                <TemplateColumn Title="Type">
                     <CellTemplate>
                         <MudTooltip Text="@GetTypeText(context.Item.InvoiceTypeCode)">
-                            @GetTypeIcon(context.Item.InvoiceTypeCode)
+                            <span class="tc-invoice-classification">
+                                @GetTypeIcon(context.Item.InvoiceTypeCode)
+                                <span>@context.Item.InvoiceType</span>
+                            </span>
                         </MudTooltip>
                     </CellTemplate>
                 </TemplateColumn>
 
-                <TemplateColumn Title="">
+                <TemplateColumn Title="Status">
                     <CellTemplate>
                         <MudTooltip Text="@GetStatusText(context.Item.InvoiceStatusCode)">
-                            @GetStatusIcon(context.Item.InvoiceStatusCode)
+                            <span class="@GetStatusClass(context.Item.InvoiceStatusCode)">
+                                @context.Item.InvoiceStatus
+                            </span>
                         </MudTooltip>
                     </CellTemplate>
                 </TemplateColumn>
@@ -67,16 +67,17 @@
                     </CellTemplate>
                 </PropertyColumn>
 
-                <PropertyColumn Property="x => x.InvoicedOn" Title="Date" Format="dd/MM/yyyy" />
+                <PropertyColumn Property="x => x.SubjectCode" Title="Ac/Code" />
+                <PropertyColumn Property="x => x.InvoicedOn" Title="Invoiced" Format="dd/MM/yyyy" />
                 <PropertyColumn Property="x => x.SubjectName" Title="Subject" />
 
-                <PropertyColumn Property="x => x.InvoiceValue" Title="Amount" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.InvoiceValue" Title="Invoice Value" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
                         <b>@TotalInvoiceValue.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
                 </PropertyColumn>
 
-                <PropertyColumn Property="x => x.TaxValue" Title="Tax" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.TaxValue" Title="Invoice VAT" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
                         <b>@TotalTaxValue.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
@@ -88,7 +89,7 @@
                     </FooterTemplate>
                 </PropertyColumn>
 
-                <PropertyColumn Property="x => x.PaidValue" Title="Paid" Format="#,##0.00;(#,##0.00);-">
+                <PropertyColumn Property="x => x.PaidValue" Title="Paid Value" Format="#,##0.00;(#,##0.00);-">
                     <FooterTemplate>
                         <b>@TotalPaidValue.ToString("#,##0.00;(#,##0.00);-")</b>
                     </FooterTemplate>
@@ -210,6 +211,15 @@
             _ => "Unknown invoice status"
         };
     }
+
+    private static string GetStatusClass(int statusCode) => (NodeEnum.InvoiceStatus)statusCode switch
+    {
+        NodeEnum.InvoiceStatus.Pending => "tc-invoice-status tc-invoice-status-pending",
+        NodeEnum.InvoiceStatus.Invoiced => "tc-invoice-status tc-invoice-status-invoiced",
+        NodeEnum.InvoiceStatus.PartiallyPaid => "tc-invoice-status tc-invoice-status-part-paid",
+        NodeEnum.InvoiceStatus.Paid => "tc-invoice-status tc-invoice-status-paid",
+        _ => "tc-invoice-status"
+    };
 
     RenderFragment GetStatusIcon(int statusCode) => builder =>
     {

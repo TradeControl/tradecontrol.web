@@ -364,6 +364,7 @@
         catch (Exception ex)
         {
             _errorMessage = "Unable to synchronise the file system.";
+            NodeContext.ChangeTracker.Clear();
             await NodeContext.ErrorLog(ex);
         }
     }
@@ -484,7 +485,7 @@
 
         var fileName = Uri.EscapeDataString(_selectedItem.Name);
         var contentType = Uri.EscapeDataString(_selectedItem.ContentType);
-        NavigationManager.NavigateTo($"/Admin/FileTransfer/Index?handler=Download&contentType={contentType}&fileName={fileName}", forceLoad: true);
+        NavigationManager.NavigateTo($"/tenant-assets/download?contentType={contentType}&fileName={fileName}", forceLoad: true);
     }
 
     private static string NormalizeContentType(string? contentType)
@@ -505,7 +506,7 @@
     {
         return contentType switch
         {
-            NodeEnum.ContentType.Images => [".jpg", ".png", ".gif"],
+            NodeEnum.ContentType.Images => [".jpg", ".png", ".gif", ".svg"],
             NodeEnum.ContentType.Documents => [".pdf"],
             NodeEnum.ContentType.Templates => [".html"],
             _ => []

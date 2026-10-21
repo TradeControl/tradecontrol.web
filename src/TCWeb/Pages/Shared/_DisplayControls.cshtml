@@ -1,0 +1,32 @@
+<div class="dropdown dropup tc-display-controls">
+    <button class="btn btn-light btn-sm dropdown-toggle"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            aria-label="Display options"
+            title="Display options">
+        <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i>
+        <span class="visually-hidden">Display options</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <button class="dropdown-item" type="button" data-tc-toggle-chrome="header">
+                <i class="bi bi-layout-text-window-reverse me-2" aria-hidden="true"></i>
+                <span data-tc-label="header">Hide header</span>
+            </button>
+        </li>
+        <li data-tc-footer-option>
+            <button class="dropdown-item" type="button" data-tc-toggle-chrome="footer">
+                <i class="bi bi-layout-text-window me-2" aria-hidden="true"></i>
+                <span data-tc-label="footer">Hide footer</span>
+            </button>
+        </li>
+        <li><hr class="dropdown-divider" /></li>
+        <li>
+            <button class="dropdown-item" type="button" data-tc-show-chrome>
+                <i class="bi bi-aspect-ratio me-2" aria-hidden="true"></i>
+                Show header and footer
+            </button>
+        </li>
+    </ul>
+</div>

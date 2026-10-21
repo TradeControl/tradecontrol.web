@@ -55,6 +55,10 @@ Assert(webReferences.All(reference => !reference.Contains("WebHarness", StringCo
     "TCWeb must not reference the diagnostic WebHarness.");
 assertions += await CashStatementServiceTests.RunAsync();
 assertions += await TenantIsolationTests.RunAsync();
+assertions += TenantFileProviderTests.Run();
+assertions += await FileUploadValidationTests.RunAsync();
+assertions += TenantAssetDownloadTests.Run();
+assertions += TemplateBootstrapTests.Run(root);
 
 var workflowContract = typeof(IVatProductWorkflow);
 var prohibitedContractNamespaces = new[]
@@ -1256,10 +1260,16 @@ Assert((!Directory.Exists(legacyCompanyPages) || !Directory.EnumerateFiles(legac
     && !navigationView.Contains("/Subject/Reports/DebtorsAndCreditors", StringComparison.OrdinalIgnoreCase),
     "A retired Business Tax or Debtors and Creditors Razor Page remains reachable from the application.");
 var startupSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Startup.cs"));
-Assert(startupSource.Contains("/health/live", StringComparison.Ordinal)
-    && startupSource.Contains("/health/ready", StringComparison.Ordinal)
-    && startupSource.Split(".AllowAnonymous();", StringSplitOptions.None).Length >= 3,
-    "The App Service liveness/readiness probes are missing or protected by interactive authentication.");
+var livenessMiddlewareIndex = startupSource.IndexOf("app.UseHealthChecks(\"/health/live\"", StringComparison.Ordinal);
+var tenantMiddlewareIndex = startupSource.IndexOf("app.UseMiddleware<TenantResolutionMiddleware>()", StringComparison.Ordinal);
+var authenticationMiddlewareIndex = startupSource.IndexOf("app.UseAuthentication()", StringComparison.Ordinal);
+Assert(livenessMiddlewareIndex >= 0
+    && tenantMiddlewareIndex > livenessMiddlewareIndex
+    && authenticationMiddlewareIndex > livenessMiddlewareIndex,
+    "The App Service liveness probe is missing or can construct tenant-scoped authentication services.");
+Assert(startupSource.Contains("endpoints.MapHealthChecks(\"/health/ready\"", StringComparison.Ordinal)
+    && startupSource.Contains("}).AllowAnonymous();", StringComparison.Ordinal),
+    "The tenant-bound App Service readiness probe is missing or protected by interactive authentication.");
 
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 

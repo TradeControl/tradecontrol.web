@@ -21,7 +21,6 @@ namespace TradeControl.Web.Models
             TbCostSets = new HashSet<Project_tbCostSet>();
             TbEntries = new HashSet<Invoice_tbEntry>();
             TbInvoices = new HashSet<Invoice_tbInvoice>();
-            TbMenuUsers = new HashSet<Usr_tbMenuUser>();
             TbOps = new HashSet<Project_tbOp>();
             TbPayments = new HashSet<Cash_tbPayment>();
             TbProjectActionBys = new HashSet<Project_tbProject>();
@@ -38,7 +37,7 @@ namespace TradeControl.Web.Models
         [Display(Name = "User Name")]
         public string UserName { get; set; }
         [Required]
-        [StringLength(50)]
+        [StringLength(128)]
         [Display(Name = "Local Login")]
         public string LogonName { get; set; }
         [StringLength(10)]
@@ -65,7 +64,6 @@ namespace TradeControl.Web.Models
         [Display(Name = "Enabled?")]
         public short IsEnabled { get; set; }
         public int NextProjectNumber { get; set; }
-        public short MenuViewCode { get; set; }
         public string ThemeCode { get; set; }
 
         public virtual Usr_tbTheme ThemeCodeNavigation { get; set; }
@@ -88,17 +86,12 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(CalendarCode))]
         [InverseProperty(nameof(App_tbCalendar.TbUsers))]
         public virtual App_tbCalendar CalendarCodeNavigation { get; set; }
-        [ForeignKey(nameof(MenuViewCode))]
-        [InverseProperty(nameof(Usr_tbMenuView.TbUsers))]
-        public virtual Usr_tbMenuView MenuViewCodeNavigation { get; set; }
         [InverseProperty(nameof(Project_tbCostSet.User))]
         public virtual ICollection<Project_tbCostSet> TbCostSets { get; set; }
         [InverseProperty(nameof(Invoice_tbEntry.User))]
         public virtual ICollection<Invoice_tbEntry> TbEntries { get; set; }
         [InverseProperty(nameof(Invoice_tbInvoice.User))]
         public virtual ICollection<Invoice_tbInvoice> TbInvoices { get; set; }
-        [InverseProperty(nameof(Usr_tbMenuUser.User))]
-        public virtual ICollection<Usr_tbMenuUser> TbMenuUsers { get; set; }
         [InverseProperty(nameof(Project_tbOp.User))]
         public virtual ICollection<Project_tbOp> TbOps { get; set; }
         [InverseProperty(nameof(Cash_tbPayment.User))]

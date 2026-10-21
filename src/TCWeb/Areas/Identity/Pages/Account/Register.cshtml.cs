@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Areas.Identity.Data;
@@ -26,22 +27,28 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
     {
         private readonly SignInManager<TradeControlWebUser> _signInManager;
         private readonly UserManager<TradeControlWebUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
         private readonly NodeContext _nodeContext;
+        private readonly IConfiguration _configuration;
 
         public RegisterModel(
             UserManager<TradeControlWebUser> userManager,
             SignInManager<TradeControlWebUser> signInManager,
+            RoleManager<IdentityRole> roleManager,
             ILogger<RegisterModel> logger,
             IEmailSender emailSender,
-            NodeContext nodeContext)
+            NodeContext nodeContext,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
             _logger = logger;
             _emailSender = emailSender;
             _nodeContext = nodeContext;
+            _configuration = configuration;
         }
 
         [BindProperty]
@@ -92,6 +99,41 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
 
                 var nodeSettings = new NodeSettings(_nodeContext);
                 var isBootstrap = nodeSettings.IsFirstUse;
+
+                if (isBootstrap)
+                {
+                    var bootstrapAdministratorEmail =
+                        _configuration["Hosting:BootstrapAdministratorEmail"]?.Trim();
+
+                    if (!string.IsNullOrWhiteSpace(bootstrapAdministratorEmail)
+                        && !string.Equals(email, bootstrapAdministratorEmail,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        ModelState.AddModelError(string.Empty,
+                            "This tenant is not available for public registration.");
+                        return Page();
+                    }
+
+                    foreach (var roleName in new[]
+                             {
+                                 Constants.AdministratorsRole,
+                                 Constants.ManagersRole
+                             })
+                    {
+                        if (await _roleManager.RoleExistsAsync(roleName))
+                            continue;
+
+                        var roleResult = await _roleManager.CreateAsync(
+                            new IdentityRole(roleName));
+                        if (roleResult.Succeeded)
+                            continue;
+
+                        foreach (var error in roleResult.Errors)
+                            ModelState.AddModelError(string.Empty, error.Description);
+
+                        return Page();
+                    }
+                }
 
                 if (!isBootstrap)
                 {

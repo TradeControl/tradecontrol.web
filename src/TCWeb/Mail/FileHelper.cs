@@ -6,6 +6,8 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.WebUtilities;
@@ -96,6 +98,9 @@ namespace TradeControl.Web.Mail
 
             using (var reader = new BinaryReader(data))
             {
+                if (ext.Equals(".svg"))
+                    return IsSafeSvg(data);
+
                 if (ext.Equals(".txt") || ext.Equals(".html"))
                 {
                     if (_allowedChars.Length == 0)
@@ -123,6 +128,63 @@ namespace TradeControl.Web.Mail
                 var headerBytes = reader.ReadBytes(signatures.Max(m => m.Length));
 
                 return signatures.Any(signature => headerBytes.Take(signature.Length).SequenceEqual(signature));
+            }
+        }
+
+        private static bool IsSafeSvg(Stream data)
+        {
+            try
+            {
+                data.Position = 0;
+                var settings = new XmlReaderSettings
+                {
+                    DtdProcessing = DtdProcessing.Prohibit,
+                    XmlResolver = null,
+                    MaxCharactersInDocument = 1_048_576
+                };
+
+                using var reader = XmlReader.Create(data, settings);
+                var document = XDocument.Load(reader, LoadOptions.None);
+                var root = document.Root;
+                if (root is null
+                    || !root.Name.LocalName.Equals("svg", StringComparison.OrdinalIgnoreCase)
+                    || (root.Name.NamespaceName.Length > 0
+                        && !root.Name.NamespaceName.Equals("http://www.w3.org/2000/svg", StringComparison.Ordinal)))
+                {
+                    return false;
+                }
+
+                var prohibitedElements = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "script", "foreignObject", "iframe", "object", "embed", "audio", "video", "style"
+                };
+
+                foreach (var element in document.Descendants())
+                {
+                    if (prohibitedElements.Contains(element.Name.LocalName))
+                        return false;
+
+                    foreach (var attribute in element.Attributes())
+                    {
+                        if (attribute.IsNamespaceDeclaration)
+                            continue;
+
+                        var name = attribute.Name.LocalName;
+                        if (name.StartsWith("on", StringComparison.OrdinalIgnoreCase)
+                            || name.Equals("href", StringComparison.OrdinalIgnoreCase)
+                            || name.Equals("src", StringComparison.OrdinalIgnoreCase)
+                            || name.Equals("style", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+            catch (XmlException)
+            {
+                return false;
             }
         }
     }

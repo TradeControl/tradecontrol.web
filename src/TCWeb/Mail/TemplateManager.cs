@@ -151,6 +151,123 @@ namespace TradeControl.Web.Mail
 
         }
 
+        public async Task InitialiseBootstrap()
+        {
+            await Initialise();
+            await InitialiseBootstrapDefaults();
+        }
+
+        private async Task InitialiseBootstrapDefaults()
+        {
+            const string incomeTemplateFileName = "invoice_income_standard.html";
+            const string expenseTemplateFileName = "invoice_expense_standard.html";
+            const string supportTemplateFileName = "support_request.html";
+            const string userRegistrationTemplateFileName = "user_registration.html";
+            const string userRegistrationConfirmTemplateFileName = "user_registration_confirm.html";
+            const string userRegistrationAdminNotifyTemplateFileName = "user_registration_admin_notify.html";
+            const string logoFileName = "company_logo.png";
+            const string logoTag = "LOGO";
+
+            string[] requiredTemplateFileNames =
+            [
+                incomeTemplateFileName,
+                expenseTemplateFileName,
+                supportTemplateFileName,
+                userRegistrationTemplateFileName,
+                userRegistrationConfirmTemplateFileName,
+                userRegistrationAdminNotifyTemplateFileName
+            ];
+
+            var templates = await NodeContext.Web_tbTemplates
+                .Where(template => requiredTemplateFileNames.Contains(template.TemplateFileName))
+                .ToDictionaryAsync(template => template.TemplateFileName);
+
+            var missingTemplateFileNames = requiredTemplateFileNames
+                .Where(fileName => !templates.ContainsKey(fileName))
+                .ToArray();
+
+            if (missingTemplateFileNames.Length > 0)
+                throw new InvalidOperationException(
+                    $"Bootstrap template files are unavailable: {string.Join(", ", missingTemplateFileNames)}.");
+
+            var invoiceDefaults = new[]
+            {
+                (NodeEnum.InvoiceType.SalesInvoice, incomeTemplateFileName),
+                (NodeEnum.InvoiceType.CreditNote, expenseTemplateFileName),
+                (NodeEnum.InvoiceType.PurchaseInvoice, expenseTemplateFileName),
+                (NodeEnum.InvoiceType.DebitNote, incomeTemplateFileName)
+            };
+
+            foreach (var (invoiceType, templateFileName) in invoiceDefaults)
+            {
+                short invoiceTypeCode = (short)invoiceType;
+                int templateId = templates[templateFileName].TemplateId;
+
+                if (!await NodeContext.Web_tbTemplateInvoices.AnyAsync(item =>
+                        item.InvoiceTypeCode == invoiceTypeCode))
+                {
+                    NodeContext.Web_tbTemplateInvoices.Add(new Web_tbTemplateInvoice
+                    {
+                        InvoiceTypeCode = invoiceTypeCode,
+                        TemplateId = templateId
+                    });
+                }
+            }
+
+            var options = await NodeContext.App_tbOptions.SingleOrDefaultAsync()
+                ?? throw new InvalidOperationException("App.tbOptions is unavailable during template bootstrap.");
+
+            options.SupportRequestTemplateId ??= templates[supportTemplateFileName].TemplateId;
+            options.UserRegistrationTemplateId ??= templates[userRegistrationTemplateFileName].TemplateId;
+            options.UserRegistrationConfirmTemplateId ??= templates[userRegistrationConfirmTemplateFileName].TemplateId;
+            options.UserRegistrationAdminNotifyTemplateId ??= templates[userRegistrationAdminNotifyTemplateFileName].TemplateId;
+
+            var companyLogo = await NodeContext.Web_tbImages
+                .AsNoTracking()
+                .SingleOrDefaultAsync(image => image.ImageFileName == logoFileName)
+                ?? throw new InvalidOperationException($"Bootstrap image file is unavailable: {logoFileName}.");
+
+            if (!string.Equals(companyLogo.ImageTag, logoTag, StringComparison.Ordinal))
+            {
+                if (await NodeContext.Web_tbImages.AnyAsync(image => image.ImageTag == logoTag))
+                    throw new InvalidOperationException(
+                        $"The bootstrap image tag '{logoTag}' is already assigned to another image.");
+
+                await ImageTag(companyLogo.ImageTag, logoTag);
+
+                if (!await NodeContext.Web_tbImages.AsNoTracking().AnyAsync(image =>
+                        image.ImageTag == logoTag && image.ImageFileName == logoFileName))
+                {
+                    throw new InvalidOperationException(
+                        $"Unable to assign the bootstrap image tag '{logoTag}' to {logoFileName}.");
+                }
+            }
+
+            string[] logoTemplateFileNames =
+            [
+                incomeTemplateFileName,
+                expenseTemplateFileName,
+                supportTemplateFileName
+            ];
+
+            foreach (var templateFileName in logoTemplateFileNames)
+            {
+                int templateId = templates[templateFileName].TemplateId;
+
+                if (!await NodeContext.Web_tbTemplateImages.AnyAsync(item =>
+                        item.TemplateId == templateId && item.ImageTag == logoTag))
+                {
+                    NodeContext.Web_tbTemplateImages.Add(new Web_tbTemplateImage
+                    {
+                        TemplateId = templateId,
+                        ImageTag = logoTag
+                    });
+                }
+            }
+
+            await NodeContext.SaveChangesAsync();
+        }
+
         async Task<string> DefaultImageTag()
         {
             await NodeContext.SaveChangesAsync();
@@ -165,9 +282,9 @@ namespace TradeControl.Web.Mail
         #endregion
 
         #region get files
-        public static string ImagesSubFolder { get; } = @"content\\images";
-        public static string TemplatesSubFolder { get; } = @"content\\templates";
-        public static string DocumentsSubFolder { get; } = @"content\\documents";
+        public static string ImagesSubFolder { get; } = "content/images";
+        public static string TemplatesSubFolder { get; } = "content/templates";
+        public static string DocumentsSubFolder { get; } = "content/documents";
 
         IList<IFileInfo> GetTemplates()
         {
@@ -206,6 +323,9 @@ namespace TradeControl.Web.Mail
         IList<IFileInfo> GetFiles(string folderName)
         {
             IDirectoryContents files = FileProvider.GetDirectoryContents(folderName);
+
+            if (!files.Exists)
+                throw new DirectoryNotFoundException($"Content directory '{folderName}' is unavailable.");
 
             return files.OrderBy(f => f.Name).ToList();
         }
@@ -531,16 +651,25 @@ namespace TradeControl.Web.Mail
             switch (contentType)
             {
                 case NodeEnum.ContentType.Templates:
-                    Web_tbTemplate tbTemplate = new() { TemplateFileName = fileName };
-                    NodeContext.Web_tbTemplates.Add(tbTemplate);
+                    if (!await NodeContext.Web_tbTemplates.AnyAsync(t => t.TemplateFileName == fileName))
+                    {
+                        Web_tbTemplate tbTemplate = new() { TemplateFileName = fileName };
+                        NodeContext.Web_tbTemplates.Add(tbTemplate);
+                    }
                     break;
                 case NodeEnum.ContentType.Documents:
-                    Web_tbAttachment tbAttachment = new() { AttachmentFileName = fileName };
-                    NodeContext.Web_tbAttachments.Add(tbAttachment);
+                    if (!await NodeContext.Web_tbAttachments.AnyAsync(t => t.AttachmentFileName == fileName))
+                    {
+                        Web_tbAttachment tbAttachment = new() { AttachmentFileName = fileName };
+                        NodeContext.Web_tbAttachments.Add(tbAttachment);
+                    }
                     break;
                 case NodeEnum.ContentType.Images:
-                    Web_tbImage tbImage = new() { ImageTag = await DefaultImageTag(), ImageFileName = fileName };
-                    NodeContext.Add(tbImage);
+                    if (!await NodeContext.Web_tbImages.AnyAsync(t => t.ImageFileName == fileName))
+                    {
+                        Web_tbImage tbImage = new() { ImageTag = await DefaultImageTag(), ImageFileName = fileName };
+                        NodeContext.Add(tbImage);
+                    }
                     break;
             }
 

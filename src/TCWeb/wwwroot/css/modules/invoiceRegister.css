@@ -1,5 +1,6 @@
 .tc-register {
-    min-height: 100vh;
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
 }
@@ -28,12 +29,41 @@
     flex-direction: column;
 }
 
+.tc-register-grid {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
     .tc-grid-host .tc-register-datagrid,
-    .tc-grid-host .tc-register-details-datagrid {
+    .tc-grid-host .tc-register-details-datagrid,
+    .tc-grid-host .tc-register-cashcode-datagrid {
         flex: 1 1 auto;
         min-height: 0;
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
+
+        .tc-grid-host .mud-table > .mud-table-container {
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
+        }
+
+        .tc-grid-host .mud-table > .mud-table-pagination {
+            flex: 0 0 auto;
+            border-top: 1px solid var(--bs-border-color);
+            background: var(--bs-body-bg);
+        }
+
+        .tc-grid-host .mud-table-pagination-toolbar {
+            padding-right: 4.5rem;
+        }
 
 .tc-grid-workspace {
     min-height: 0;
@@ -43,9 +73,49 @@
     overflow: hidden;
 }
 
-.tc-register-details-grid {
+.tc-register-details-grid,
+.tc-register-cashcode-grid {
     min-height: 0;
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
+}
+
+.tc-invoice-classification {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.tc-invoice-status {
+    display: inline-flex;
+    align-items: center;
+    min-width: 6.5rem;
+    justify-content: center;
+    border-radius: 0.25rem;
+    padding: 0.18rem 0.45rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--bs-secondary-bg);
+}
+
+.tc-invoice-status-pending {
+    background: #ffe2a8;
+    color: #684600;
+}
+
+.tc-invoice-status-invoiced {
+    background: #ffd166;
+    color: #332500;
+}
+
+.tc-invoice-status-part-paid {
+    background: #b7e4c7;
+    color: #123d22;
+}
+
+.tc-invoice-status-paid {
+    background: #95d5b2;
+    color: #0b351b;
 }

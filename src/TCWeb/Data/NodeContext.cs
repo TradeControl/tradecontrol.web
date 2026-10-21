@@ -91,16 +91,10 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Object_tbFlow> Object_tbFlows { get; set; }
         public virtual DbSet<Project_tbFlow> Project_tbFlows { get; set; }
         public virtual DbSet<App_tbInstall> App_tbInstalls { get; set; }
-        public virtual DbSet<Usr_tbInterface> Usr_tbInterfaces { get; set; }
         public virtual DbSet<Invoice_tbInvoice> Invoice_tbInvoices { get; set; }
         public virtual DbSet<Invoice_tbItem> Invoice_tbItems { get; set; }
         public virtual DbSet<Usr_tbTheme> Usr_tbThemes { get; set; }
-        public virtual DbSet<Usr_tbMenu> Usr_tbMenus { get; set; }
-        public virtual DbSet<Usr_tbMenuCommand> Usr_tbMenuCommands { get; set; }
-        public virtual DbSet<Usr_tbMenuEntry> Usr_tbMenuEntries { get; set; }
-        public virtual DbSet<Usr_tbMenuOpenMode> Usr_tbMenuOpenModes { get; set; }
-        public virtual DbSet<Usr_tbMenuUser> Usr_tbMenuUsers { get; set; }
-        public virtual DbSet<Usr_tbMenuView> Usr_tbMenuViews { get; set; }
+        public virtual DbSet<App_tbDocOpenMode> App_tbDocOpenModes { get; set; }
         public virtual DbSet<Object_tbMirror> Object_tbMirrors { get; set; }
         public virtual DbSet<Cash_tbMirror> Cash_tbMirrors { get; set; }
         public virtual DbSet<Invoice_tbMirror> Invoice_tbMirrors { get; set; }
@@ -326,8 +320,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Subject_vwTypeLookup> Subject_TypeLookup { get; set; }
         public virtual DbSet<Object_vwUnMirrored> Object_UnMirrored { get; set; }
         public virtual DbSet<Cash_vwUnMirrored> Cash_UnMirrored { get; set; }
-        public virtual DbSet<Usr_vwUserMenu> Usr_UserMenus { get; set; }
-        public virtual DbSet<Usr_vwUserMenuList> Usr_UserMenuLists { get; set; }
         public virtual DbSet<Cash_vwVatcode> Cash_Vatcodes { get; set; }
         public virtual DbSet<App_vwVersion> App_Version { get; set; }
         public virtual DbSet<App_vwHomeAccount> App_HomeAccount { get; set; }
@@ -1139,7 +1131,7 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbDocs)
                     .HasForeignKey(d => d.OpenMode)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_App_tbDoc_Usr_tbMenuOpenMode");
+                    .HasConstraintName("FK_App_tbDoc_App_tbDocOpenMode");
             });
 
             modelBuilder.Entity<Subject_tbDoc>(entity =>
@@ -1439,14 +1431,6 @@ namespace TradeControl.Web.Data
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
             });
 
-            modelBuilder.Entity<Usr_tbInterface>(entity =>
-            {
-                entity.HasKey(e => e.InterfaceCode)
-                    .HasName("PK_Usr_tbInterface");
-
-                entity.Property(e => e.InterfaceCode).ValueGeneratedNever();
-            });
-
             modelBuilder.Entity<Invoice_tbInvoice>(entity =>
             {
                 entity.HasKey(e => e.InvoiceNumber)
@@ -1514,110 +1498,12 @@ namespace TradeControl.Web.Data
                     .HasConstraintName("FK_Invoice_tbItem_App_tbTaxCode");
             });
 
-            modelBuilder.Entity<Usr_tbMenu>(entity =>
-            {
-                entity.HasKey(e => e.MenuId)
-                    .HasName("PK_Usr_tbMenu");
-
-                entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
-                entity.HasOne(d => d.InterfaceCodeNavigation)
-                    .WithMany(p => p.TbMenus)
-                    .HasForeignKey(d => d.InterfaceCode)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Usr_tbMenu_Usr_tbInterface");
-            });
-
-            modelBuilder.Entity<Usr_tbMenuCommand>(entity =>
-            {
-                entity.HasKey(e => e.Command)
-                    .HasName("PK_Usr_tbMenuCommand");
-
-                entity.Property(e => e.Command).ValueGeneratedNever();
-            });
-
-            modelBuilder.Entity<Usr_tbMenuEntry>(entity =>
-            {
-                entity.HasKey(e => new { e.MenuId, e.EntryId })
-                    .HasName("PK_Usr_tbMenuEntry");
-
-                entity.HasIndex(e => e.Command, "IX_Usr_tbMenuEntry_Command")
-                    .HasFillFactor((byte)90);
-
-                entity.HasIndex(e => e.OpenMode, "IX_Usr_tbMenuEntry_OpenMode")
-                    .HasFillFactor((byte)90);
-
-                entity.Property(e => e.EntryId).ValueGeneratedOnAdd();
-
-                entity.Property(e => e.Command).HasDefaultValueSql("((0))");
-
-                entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
-
-                entity.Property(e => e.OpenMode).HasDefaultValueSql("((1))");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
-                entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
-
-                entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
-
-                entity.HasOne(d => d.CommandNavigation)
-                    .WithMany(p => p.TbMenuEntries)
-                    .HasForeignKey(d => d.Command)
-                    .HasConstraintName("Usr_tbMenuEntry_FK01");
-
-                entity.HasOne(d => d.Menu)
-                    .WithMany(p => p.TbMenuEntries)
-                    .HasForeignKey(d => d.MenuId)
-                    .HasConstraintName("FK_Usr_tbMenuEntry_Usr_tbMenu");
-
-                entity.HasOne(d => d.OpenModeNavigation)
-                    .WithMany(p => p.TbMenuEntries)
-                    .HasForeignKey(d => d.OpenMode)
-                    .HasConstraintName("Usr_tbMenuEntry_FK02");
-            });
-
-            modelBuilder.Entity<Usr_tbMenuOpenMode>(entity =>
+            modelBuilder.Entity<App_tbDocOpenMode>(entity =>
             {
                 entity.HasKey(e => e.OpenMode)
-                    .HasName("PK_Usr_tbMenuOpenMode");
+                    .HasName("PK_App_tbDocOpenMode");
 
                 entity.Property(e => e.OpenMode).ValueGeneratedNever();
-            });
-
-            modelBuilder.Entity<Usr_tbMenuUser>(entity =>
-            {
-                entity.HasKey(e => new { e.UserId, e.MenuId })
-                    .HasName("PK_Usr_tbMenuUser");
-
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
-                entity.HasOne(d => d.Menu)
-                    .WithMany(p => p.TbMenuUsers)
-                    .HasForeignKey(d => d.MenuId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Usr_tbMenu_Usr_tbMenu");
-
-                entity.HasOne(d => d.User)
-                    .WithMany(p => p.TbMenuUsers)
-                    .HasForeignKey(d => d.UserId)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Usr_tbMenu_Usr_tb");
-            });
-
-            modelBuilder.Entity<Usr_tbMenuView>(entity =>
-            {
-                entity.Property(e => e.MenuViewCode).ValueGeneratedNever();
             });
 
             modelBuilder.Entity<Object_tbMirror>(entity =>
@@ -2756,12 +2642,6 @@ namespace TradeControl.Web.Data
                     .HasForeignKey(d => d.CalendarCode)
                     .HasConstraintName("FK_Usr_tb_App_tbCalendar");
 
-                entity.HasOne(d => d.MenuViewCodeNavigation)
-                    .WithMany(p => p.TbUsers)
-                    .HasForeignKey(d => d.MenuViewCode)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Usr_tbMenu_Usr_tbUser");
-
                 entity.HasOne(d => d.ThemeCodeNavigation)
                     .WithMany(p => p.Usr_tbUsers)
                     .HasForeignKey(d => d.ThemeCode)
@@ -3785,16 +3665,6 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwUnMirrored>(entity =>
             {
                 entity.ToView("vwUnMirrored", "Cash");
-            });
-
-            modelBuilder.Entity<Usr_vwUserMenu>(entity =>
-            {
-                entity.ToView("vwUserMenus", "Usr");
-            });
-
-            modelBuilder.Entity<Usr_vwUserMenuList>(entity =>
-            {
-                entity.ToView("vwUserMenuList", "Usr");
             });
 
             modelBuilder.Entity<Cash_vwVatcode>(entity =>

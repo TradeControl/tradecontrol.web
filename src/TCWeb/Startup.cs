@@ -33,6 +33,7 @@ using Microsoft.Extensions.Logging;
 using Wangkanai.Detection.Models;
 using TradeControl.Web.Data;
 using System.Globalization;
+using System.IO;
 using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.AppServices;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
@@ -74,7 +75,24 @@ namespace TradeControl.Web
                 options.Cookie.SameSite = SameSiteMode.Lax;
             });
 
-            services.AddSingleton<IFileProvider>(new PhysicalFileProvider(_env.WebRootPath));
+            services.AddScoped<IFileProvider>(provider =>
+            {
+                var tenant = provider.GetRequiredService<ITenantContext>().RequiredTenant;
+                var configuredRoot = Configuration["TenantFiles:RootPath"];
+
+                if (string.IsNullOrWhiteSpace(configuredRoot) && !_env.IsDevelopment())
+                    throw new InvalidOperationException(
+                        "TenantFiles:RootPath is required outside Development.");
+
+                var storageRoot = string.IsNullOrWhiteSpace(configuredRoot)
+                    ? Path.Combine(_env.ContentRootPath, ".local", "tenant-files")
+                    : configuredRoot;
+
+                if (!Path.IsPathRooted(storageRoot))
+                    storageRoot = Path.Combine(_env.ContentRootPath, storageRoot);
+
+                return new TenantFileProvider(storageRoot, _env.WebRootPath, tenant.TenantId);
+            });
             services.AddOptions<VatProductHostOptions>()
                 .Bind(Configuration.GetSection(VatProductHostOptions.SectionName))
                 .ValidateOnStart();
@@ -135,6 +153,13 @@ namespace TradeControl.Web
 
             app.UseStaticFiles();
 
+            // Platform liveness must not resolve a tenant or construct tenant-scoped
+            // authentication services. Dependency readiness remains tenant-bound below.
+            app.UseHealthChecks("/health/live", new HealthCheckOptions
+            {
+                Predicate = registration => registration.Tags.Contains("live")
+            });
+
             app.UseDetection();
 
             app.UseMiddleware<TenantResolutionMiddleware>();
@@ -157,10 +182,6 @@ namespace TradeControl.Web
 
                 endpoints.MapRazorPages();
 
-                endpoints.MapHealthChecks("/health/live", new HealthCheckOptions
-                {
-                    Predicate = registration => registration.Tags.Contains("live")
-                }).AllowAnonymous();
                 endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions
                 {
                     Predicate = registration => registration.Tags.Contains("ready")

@@ -2,7 +2,9 @@ using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.Data;
+using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.AppServices.Execution
@@ -11,11 +13,15 @@ namespace TradeControl.Web.AppServices.Execution
     {
         readonly NodeContext NodeContext;
         readonly IExecutionRuntimeState ExecutionRuntimeState;
+        readonly IFileProvider FileProvider;
 
-        public SyntheticDatasetExecutionHandler(NodeContext nodeContext, IExecutionRuntimeState executionRuntimeState)
+        public SyntheticDatasetExecutionHandler(NodeContext nodeContext,
+            IExecutionRuntimeState executionRuntimeState,
+            IFileProvider fileProvider)
         {
             NodeContext = nodeContext;
             ExecutionRuntimeState = executionRuntimeState;
+            FileProvider = fileProvider;
         }
 
         public NodeEnum.ExecutionType ExecutionType => NodeEnum.ExecutionType.SyntheticDataset;
@@ -40,6 +46,9 @@ namespace TradeControl.Web.AppServices.Execution
                 priceRatio: arguments.PriceRatio,
                 quantityRatio: arguments.QuantityRatio,
                 floatRatio: arguments.FloatRatio);
+
+            var templateManager = new TemplateManager(NodeContext, FileProvider);
+            await templateManager.InitialiseBootstrap();
 
             execution.ProgressMessage = "Synthetic dataset installed.";
             ExecutionRuntimeState.UpdateProgress(execution.ExecutionCode, execution.ProgressMessage);

@@ -74,7 +74,7 @@
     }
     else if (_view == DemoDataView.Config)
     {
-        <div class="overflow-auto" style="min-height:0;">
+        <div class="tc-demo-data-scroll flex-grow-1 overflow-y-auto overflow-x-hidden" style="min-width:0; min-height:0;">
             <div class="container-fluid px-0">
                 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
                     <div>
@@ -92,7 +92,7 @@
                     <DataAnnotationsValidator />
                     <ValidationSummary />
 
-                    <div class="row g-3">
+                    <div class="row g-3 mx-0">
                         <div class="col-12 col-xl-7 d-flex">
                             <div class="card shadow-sm h-100 w-100">
                                 <div class="card-header bg-white">
@@ -183,7 +183,9 @@
 
                         <div class="col-12">
                             <div class="d-flex gap-2 flex-wrap">
-                                <button type="submit" class="btn btn-primary">Queue synthetic dataset</button>
+                                <button type="submit" class="btn btn-primary" disabled="@_isQueueing">
+                                    @(_isQueueing ? "Queueing..." : "Queue synthetic dataset")
+                                </button>
                                 <button type="button" class="btn btn-outline-secondary" @onclick="ResetWarningAsync">Cancel</button>
                             </div>
                         </div>
@@ -194,9 +196,9 @@
     }
     else if (_execution is not null)
     {
-        <div class="overflow-auto" style="min-height:0;">
+        <div class="tc-demo-data-scroll flex-grow-1 overflow-y-auto overflow-x-hidden" style="min-width:0; min-height:0;">
             <div class="container-fluid px-0">
-                <div class="row g-3">
+                <div class="row g-3 mx-0">
                     <div class="col-12 col-xl-8 d-flex">
                         <div class="card shadow-sm h-100 w-100">
                             <div class="card-header bg-white">
@@ -329,6 +331,7 @@
     private ExecutionStatusInfo? _execution;
     private string? _executionCode;
     private bool _confirmWipe;
+    private bool _isQueueing;
     private string? _errorMessage;
     private CancellationTokenSource? _pollCts;
 
@@ -481,6 +484,11 @@
 
     private async Task QueueExecutionAsync()
     {
+        if (_isQueueing)
+            return;
+
+        _isQueueing = true;
+
         try
         {
             _errorMessage = null;
@@ -548,6 +556,10 @@
         {
             _errorMessage = "Unable to queue the synthetic dataset installation.";
             await NodeContext.ErrorLog(ex);
+        }
+        finally
+        {
+            _isQueueing = false;
         }
     }
 

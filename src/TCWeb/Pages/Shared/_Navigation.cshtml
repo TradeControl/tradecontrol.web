@@ -1,6 +1,12 @@
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @using Wangkanai.Detection.Models
 
+@{
+    var companyIcon = User?.Identity?.IsAuthenticated == true
+        ? Url.Content("~/tenant-assets/icon.svg")
+        : Url.Content("~/content/images/icon.svg");
+}
+
 <header>
     @{
         // If the device is a mobile device, don't add the "navbar-expand-*" class
@@ -10,7 +16,7 @@
     <nav class="navbar @expandClass navbar-light bg-white box-shadow mb-3">
         <div class="container-fluid">
             <a asp-area="" asp-page="/Index" class="navbar-brand">
-                <img src="~/content/images/icon.svg" alt="Company Logo" class="tc-logo me-2" />
+                <img src="@companyIcon" alt="Company Logo" class="tc-logo me-2" />
             </a>
             <a class="navbar-brand tc-brand" asp-area="" asp-page="/Index">@ViewData["CompanyName"]</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar"

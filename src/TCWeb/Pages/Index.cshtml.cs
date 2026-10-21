@@ -62,7 +62,16 @@ namespace TradeControl.Web.Pages
                     NodeSettings nodeSettings = new NodeSettings(NodeContext);
 
                     if (nodeSettings.IsFirstUse)
+                    {
+                        if (!string.IsNullOrWhiteSpace(
+                            Configuration["Hosting:BootstrapAdministratorEmail"]))
+                        {
+                            return RedirectToPage("/Account/Register",
+                                new { area = "Identity" });
+                        }
+
                         await NodeContext.InitializeNode();
+                    }
 
                     if (!nodeSettings.IsInitialised)
                         return RedirectToPage("/Admin/Manager/Index");

@@ -8,7 +8,6 @@
 :root {
     --tc-header-offset: 0px; /* set by Admin/Manager/Index.cshtml JS */
     --tc-workspace-gap: 12px; /* fixed margin around the workspace */
-    --tc-tree-manager-footer: var(--tc-footer-height, 60px);
     --tc-tree-font-size: 0.95rem;
     --tc-tree-row-pad-y: 0.25rem;
     --tc-tree-row-pad-x: 0.5rem;
@@ -39,7 +38,7 @@ body {
     left: var(--tc-workspace-gap);
     right: var(--tc-workspace-gap);
     top: calc(var(--tc-header-offset) + var(--tc-workspace-gap) + var(--tc-safe-top));
-    height: calc(var(--tc-viewport-height) - var(--tc-header-offset) - var(--tc-tree-manager-footer) - (var(--tc-workspace-gap) * 2) - var(--tc-safe-top) - var(--tc-safe-bottom));
+    height: calc(var(--tc-viewport-height) - var(--tc-header-offset) - var(--tc-footer-height, 60px) - (var(--tc-workspace-gap) * 2) - var(--tc-safe-top) - var(--tc-safe-bottom));
     overflow: hidden;
     z-index: 1;
     display: flex;
@@ -285,10 +284,6 @@ body {
 /* -------------------------------------------------------------------------- */
 
 @media (max-width: 991.98px) {
-    :root {
-        --tc-tree-manager-footer: 0px;
-    }
-
     .tc-tree-workspace {
         z-index: auto;
     }
@@ -444,6 +439,14 @@ body {
         position: relative;
         z-index: 3000;
     }
+}
+
+.tc-demo-data-scroll {
+    scrollbar-width: none;
+}
+
+.tc-demo-data-scroll::-webkit-scrollbar {
+    display: none;
 }
 
 /* -------------------------------------------------------------------------- */
