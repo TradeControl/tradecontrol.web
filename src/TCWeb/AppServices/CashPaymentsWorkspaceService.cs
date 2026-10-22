@@ -7,16 +7,19 @@ using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Cash.Manager.Components;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices
 {
     public sealed class CashPaymentsWorkspaceService : ICashPaymentsWorkspaceService
     {
         private readonly NodeContext _nodeContext;
+        private readonly IBusinessClock _businessClock;
 
-        public CashPaymentsWorkspaceService(NodeContext nodeContext)
+        public CashPaymentsWorkspaceService(NodeContext nodeContext, IBusinessClock businessClock)
         {
             _nodeContext = nodeContext;
+            _businessClock = businessClock;
         }
 
         public async Task<CashManagerPaymentsWorkspaceState> GetWorkspaceAsync(
@@ -79,12 +82,13 @@ namespace TradeControl.Web.AppServices
                 rows.Sum(item => item.PaidInValue - item.PaidOutValue),
                 rows.Count);
 
+            var today = _businessClock.TodayDateTime;
             var draft = new CashManagerPaymentLineModel {
                 UserId = !string.IsNullOrWhiteSpace(userId)
                     ? userId
                     : users.FirstOrDefault()?.Value ?? string.Empty,
-                PaidOn = DateTime.Today,
-                PeriodStatus = await GetPeriodStatusAsync(DateTime.Today, cancellationToken)
+                PaidOn = today,
+                PeriodStatus = await GetPeriodStatusAsync(today, cancellationToken)
             };
 
             return new CashManagerPaymentsWorkspaceState(

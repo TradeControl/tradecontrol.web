@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -108,7 +109,7 @@ public sealed class VatObligationWorkspaceService(
     IVatAuthorityObligationSource authority,
     IVatAuthorityReturnReadbackSource readback,
     VatObligationReconciler reconciler,
-    TimeProvider timeProvider,
+    IBusinessClock businessClock,
     IOptions<VatProductHostOptions> hostOptions,
     ILogger<VatObligationWorkspaceService> logger) : IVatObligationWorkspaceService
 {
@@ -120,7 +121,7 @@ public sealed class VatObligationWorkspaceService(
     public async Task<VatObligationWorkspaceResult> GetAsync(CancellationToken cancellationToken = default)
     {
         var identity = await identities.GetRequiredAsync(cancellationToken);
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = businessClock.Today;
         var activeStatusCodes = await nodeContext.App_tbStatutoryStatuses.AsNoTracking()
             .Where(item => item.IsActive).Select(item => item.StatusCode).ToArrayAsync(cancellationToken);
         var profile = await ReadVatIdentityAsync(identity.ReportingSubjectReference, today, cancellationToken);

@@ -1,5 +1,17 @@
 # Tax Hub Change Log
 
+## 22 October 2026 — Corporation Tax recognition sequence clarified
+
+- Recorded HMRC SDST's 21 October confirmation that Corporation Tax software recognition is
+  optional and must follow comprehensive product testing, including the External Test Service, and
+  a commercially mature product ready for release.
+- Removed the applicant pack and recognition scenarios as prerequisites to Phase 5.10 ETS testing.
+  CT Recognition 2025 is closed; HMRC is preparing the 2026 recognition instructions, which may be
+  considered after ETS and product-readiness evidence exist.
+- Recorded the owner's sequencing decision to pause the first controlled CT ETS attempt until the
+  production-ready multi-tenant environment is implemented and reviewed. VAT Phase 6.7 remains
+  deferred to the same hosting milestone. Neither deferral enables production submission.
+
 ## 16 October 2026 — HMRC draft CT600 2027 pack recorded
 
 - Recorded HMRC Software Developers Support Team's draft April 2027 CT600 circulation, comprising

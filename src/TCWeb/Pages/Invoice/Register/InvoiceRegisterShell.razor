@@ -273,6 +273,7 @@ else
 
     private bool _isMobile;
     private bool _isSidebarCollapsed;
+    private bool _isLoadingInvoiceDetail;
     private bool _isLoadingNamespaceSuggestions;
     private bool _isLoadingRaiseNamespaceSuggestions;
     private string _namespaceFilter = string.Empty;
@@ -502,7 +503,17 @@ else
         Workspace.SelectedKey = invoiceNumber;
         Workspace.Mode = WorkspaceMode.DetailPanel;
         Filter.SelectedInvoiceNumber = invoiceNumber;
-        await LoadRegisterAsync();
+        _isLoadingInvoiceDetail = true;
+        StateHasChanged();
+
+        try
+        {
+            await LoadRegisterAsync();
+        }
+        finally
+        {
+            _isLoadingInvoiceDetail = false;
+        }
 
         if (_isMobile)
         {
@@ -904,6 +915,7 @@ else
         builder.OpenElement(seq++, "div");
         builder.AddAttribute(seq++, "class", "tc-register-main-body");
         builder.OpenComponent<InvoiceDetailPanel>(seq++);
+        builder.AddAttribute(seq++, "IsLoading", _isLoadingInvoiceDetail);
         builder.AddAttribute(seq++, "Header", RegisterResult.SelectedHeader);
         builder.AddAttribute(seq++, "DetailItems", RegisterResult.Details);
         builder.AddAttribute(seq++, "ChangeLogItems", RegisterResult.ChangeLog);

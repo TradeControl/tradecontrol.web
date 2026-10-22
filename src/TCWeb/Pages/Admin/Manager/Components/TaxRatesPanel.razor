@@ -5,9 +5,11 @@
 @using TradeControl.Web.Authorization
 @using TradeControl.Web.Data
 @using TradeControl.Web.Models
+@using TradeControl.Web.Tenancy
 
 @inject NodeContext NodeContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IBusinessClock BusinessClock
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_actionMessage))
@@ -88,7 +90,7 @@
         public bool IsFuture { get; init; }
     }
 
-    private sealed class PeriodEditorModel
+    private sealed class PeriodEditorModel : IValidatableObject
     {
         public DateTime StartOn { get; set; }
         public short? YearNumber { get; set; }
@@ -97,9 +99,15 @@
         [Display(Name = "VAT Adjustment")]
         public decimal VatAdjustment { get; set; }
 
+        [Display(Name = "VAT Adjustment Explanation")]
+        public string VatAdjustmentNote { get; set; } = string.Empty;
+
         [DataType(DataType.Currency)]
         [Display(Name = "Business Tax Adjustment")]
         public decimal BusinessTaxAdjustment { get; set; }
+
+        [Display(Name = "Business Tax Adjustment Explanation")]
+        public string BusinessTaxAdjustmentNote { get; set; } = string.Empty;
 
         [Display(Name = "Business Tax Rate (%)")]
         public decimal MonthlyBusinessTaxRatePercent { get; set; }
@@ -114,6 +122,23 @@
 
         [Display(Name = "Business Tax Rate (%)")]
         public decimal RangeBusinessTaxRatePercent { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (VatAdjustment != 0 && string.IsNullOrWhiteSpace(VatAdjustmentNote))
+            {
+                yield return new ValidationResult(
+                    "Please explain the VAT adjustment.",
+                    [nameof(VatAdjustmentNote)]);
+            }
+
+            if (BusinessTaxAdjustment != 0 && string.IsNullOrWhiteSpace(BusinessTaxAdjustmentNote))
+            {
+                yield return new ValidationResult(
+                    "Please explain the business tax adjustment.",
+                    [nameof(BusinessTaxAdjustmentNote)]);
+            }
+        }
     }
 
     private readonly List<YearOption> _yearOptions = [];
@@ -151,7 +176,7 @@
         try
         {
             var selectedStartOn = preserveSelection ? _selectedPeriod?.StartOn : null;
-            var today = DateTime.Today;
+            var today = BusinessClock.TodayDateTime;
 
             var years = await NodeContext.App_tbYears
                 .AsNoTracking()
@@ -311,13 +336,17 @@
 
         var bizTaxType = await nodeSettings.BizTaxType();
         var monthEnd = new DateTime(startOn.Year, startOn.Month, 1).AddMonths(1).AddDays(-1);
+        var vatAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.VAT);
+        var businessTaxAdjustment = await NodeContext.TaxAdjustmentGet(startOn, bizTaxType);
 
         _editor = new PeriodEditorModel
         {
             StartOn = startOn,
             YearNumber = yearNumber,
-            VatAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.VAT),
-            BusinessTaxAdjustment = await NodeContext.TaxAdjustmentGet(startOn, bizTaxType),
+            VatAdjustment = vatAdjustment.Adjustment,
+            VatAdjustmentNote = vatAdjustment.Note,
+            BusinessTaxAdjustment = businessTaxAdjustment.Adjustment,
+            BusinessTaxAdjustmentNote = businessTaxAdjustment.Note,
             MonthlyBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m,
             RangeStartOn = startOn,
             RangeEndOn = monthEnd,
@@ -338,11 +367,19 @@
         {
             var periods = new FinancialPeriods(NodeContext);
 
-            await periods.AdjustTax(_editor.StartOn, NodeEnum.TaxType.VAT, (double)_editor.VatAdjustment);
+            await periods.AdjustTax(
+                _editor.StartOn,
+                NodeEnum.TaxType.VAT,
+                _editor.VatAdjustment,
+                _editor.VatAdjustmentNote);
 
             NodeSettings nodeSettings = new NodeSettings(NodeContext);
             var bizTaxType = await nodeSettings.BizTaxType();
-            await periods.AdjustTax(_editor.StartOn, bizTaxType, (double)_editor.BusinessTaxAdjustment);
+            await periods.AdjustTax(
+                _editor.StartOn,
+                bizTaxType,
+                _editor.BusinessTaxAdjustment,
+                _editor.BusinessTaxAdjustmentNote);
 
             _actionTone = "success";
             _actionMessage = "Adjustments saved.";
@@ -559,6 +596,12 @@
                                         <InputNumber id="vatAdjustment"
                                                      @bind-Value="_editor.VatAdjustment"
                                                      class="form-control" />
+                                        <label class="form-label mt-2" for="vatAdjustmentNote">Explanation</label>
+                                        <InputTextArea id="vatAdjustmentNote"
+                                                       @bind-Value="_editor.VatAdjustmentNote"
+                                                       class="form-control"
+                                                       rows="3" />
+                                        <ValidationMessage For="@(() => _editor.VatAdjustmentNote)" />
                                     </div>
 
                                     <div class="col-12 col-md-6 mb-3">
@@ -566,6 +609,12 @@
                                         <InputNumber id="businessTaxAdjustment"
                                                      @bind-Value="_editor.BusinessTaxAdjustment"
                                                      class="form-control" />
+                                        <label class="form-label mt-2" for="businessTaxAdjustmentNote">Explanation</label>
+                                        <InputTextArea id="businessTaxAdjustmentNote"
+                                                       @bind-Value="_editor.BusinessTaxAdjustmentNote"
+                                                       class="form-control"
+                                                       rows="3" />
+                                        <ValidationMessage For="@(() => _editor.BusinessTaxAdjustmentNote)" />
                                     </div>
                                 </div>
 
@@ -574,7 +623,7 @@
                                 </div>
 
                                 <div class="form-text text-muted mt-2">
-                                    Adjustments are applied per tax period window. Setting an adjustment here replaces any existing adjustment in the same due-date window.
+                                    Adjustments are applied per tax period window. A non-zero adjustment requires an explanation. Saving replaces any existing adjustment and explanation in the same due-date window.
                                 </div>
                             </EditForm>
                         </div>

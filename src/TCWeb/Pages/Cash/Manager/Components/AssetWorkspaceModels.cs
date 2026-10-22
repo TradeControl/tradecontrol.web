@@ -47,7 +47,7 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         public string SubjectName { get; set; } = string.Empty;
 
         [DataType(DataType.Date)]
-        public DateTime PaidOn { get; set; } = DateTime.Today;
+        public DateTime PaidOn { get; set; }
 
         [StringLength(50)]
         public string CashCode { get; set; } = string.Empty;
@@ -69,7 +69,7 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         public int ReversalIntervalMonths { get; set; } = 12;
 
         [DataType(DataType.Date)]
-        public DateTime ReversalStartOn { get; set; } = DateTime.Today;
+        public DateTime ReversalStartOn { get; set; }
     }
 
     public sealed record CashManagerAssetRow(

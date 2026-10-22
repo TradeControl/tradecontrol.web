@@ -21,7 +21,7 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         public string UserId { get; set; } = string.Empty;
 
         [DataType(DataType.Date)]
-        public DateTime PaidOn { get; set; } = DateTime.Today;
+        public DateTime PaidOn { get; set; }
 
         [StringLength(50)]
         public string SubjectCode { get; set; } = string.Empty;

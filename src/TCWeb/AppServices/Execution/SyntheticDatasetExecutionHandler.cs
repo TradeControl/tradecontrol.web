@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using TradeControl.Web.Data;
 using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.Execution
 {
@@ -14,14 +15,17 @@ namespace TradeControl.Web.AppServices.Execution
         readonly NodeContext NodeContext;
         readonly IExecutionRuntimeState ExecutionRuntimeState;
         readonly IFileProvider FileProvider;
+        readonly IBusinessClock BusinessClock;
 
         public SyntheticDatasetExecutionHandler(NodeContext nodeContext,
             IExecutionRuntimeState executionRuntimeState,
-            IFileProvider fileProvider)
+            IFileProvider fileProvider,
+            IBusinessClock businessClock)
         {
             NodeContext = nodeContext;
             ExecutionRuntimeState = executionRuntimeState;
             FileProvider = fileProvider;
+            BusinessClock = businessClock;
         }
 
         public NodeEnum.ExecutionType ExecutionType => NodeEnum.ExecutionType.SyntheticDataset;
@@ -45,7 +49,8 @@ namespace TradeControl.Web.AppServices.Execution
                 monthsForward: arguments.MonthsForward,
                 priceRatio: arguments.PriceRatio,
                 quantityRatio: arguments.QuantityRatio,
-                floatRatio: arguments.FloatRatio);
+                floatRatio: arguments.FloatRatio,
+                asOfDate: BusinessClock.TodayDateTime);
 
             var templateManager = new TemplateManager(NodeContext, FileProvider);
             await templateManager.InitialiseBootstrap();

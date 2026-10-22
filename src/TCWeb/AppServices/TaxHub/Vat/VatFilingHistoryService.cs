@@ -41,6 +41,18 @@ public interface IVatFilingHistoryService
         CancellationToken cancellationToken = default);
 }
 
+public sealed class DisabledVatFilingHistoryService : IVatFilingHistoryService
+{
+    public Task<IReadOnlyList<VatFilingHistoryRecord>> GetAsync(DateOnly? periodFrom = null,
+        DateOnly? periodTo = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<VatFilingHistoryRecord>>([]);
+
+    public Task<SubmissionReconciliationEvidence> ReconcileAsync(string attemptReference,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException<SubmissionReconciliationEvidence>(new VatReturnReviewException(
+            "VAT filing reconciliation is unavailable because hosted VAT filing is disabled."));
+}
+
 public sealed class VatFilingHistoryService(
     IVatWorkflowIdentityAccessor identities,
     IVatApprovalEvidenceSource approvals,

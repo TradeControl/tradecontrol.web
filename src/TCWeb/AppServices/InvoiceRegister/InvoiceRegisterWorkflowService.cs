@@ -12,6 +12,7 @@ using TradeControl.Web.Mail;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Invoice.Register.Models;
 using TradeControl.Web.Pages.Subject.Controls;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.InvoiceRegister
 {
@@ -19,11 +20,15 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IPlatformEmailSender _platformEmailSender;
 
-        public InvoiceRegisterWorkflowService(IServiceScopeFactory scopeFactory, IHttpContextAccessor httpContextAccessor)
+        public InvoiceRegisterWorkflowService(IServiceScopeFactory scopeFactory,
+            IHttpContextAccessor httpContextAccessor,
+            IPlatformEmailSender platformEmailSender)
         {
             _scopeFactory = scopeFactory;
             _httpContextAccessor = httpContextAccessor;
+            _platformEmailSender = platformEmailSender;
         }
 
         public async Task<InvoiceRaiseListResult> GetRaiseListAsync(short? invoiceTypeCode)
@@ -53,6 +58,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
         {
             using var scope = _scopeFactory.CreateScope();
             var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var today = scope.ServiceProvider.GetRequiredService<IBusinessClock>().TodayDateTime;
 
             var profile = new Profile(nodeContext);
 
@@ -89,7 +95,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
                 CashDescription = cashCodeLookup?.CashDescription ?? string.Empty,
                 TaxCode = taxCode,
                 InvoiceTypeCode = invoiceType,
-                InvoicedOn = DateTime.Today,
+                InvoicedOn = today,
                 CashCodeOptions = await GetCashCodeOptionsAsync(nodeContext),
                 TaxCodeOptions = await GetTaxCodeOptionsAsync(nodeContext),
                 InvoiceTypeOptions = await GetInvoiceTypeOptionsAsync(nodeContext)
@@ -766,13 +772,13 @@ WHERE EntryId = {model.OriginalEntryId}");
 
             var readiness = new InvoiceSubmitReadinessModel
             {
-                HasMailHost = nodeSettings.HasMailHost,
+                HasDeliveryService = nodeSettings.HasMailHost || _platformEmailSender.IsConfigured,
                 HasTemplates = templateOptions.Count > 0,
                 HasRecipients = recipients.Count > 0
             };
 
-            if (!readiness.HasMailHost)
-                readiness.Messages.Add("Mail host is not configured.");
+            if (!readiness.HasDeliveryService)
+                readiness.Messages.Add("Email delivery is not configured. Preview remains available.");
 
             if (!readiness.HasTemplates)
                 readiness.Messages.Add("No template is assigned to this invoice type.");
@@ -824,7 +830,7 @@ WHERE EntryId = {model.OriginalEntryId}");
                 .FirstAsync();
 
             MailDocument doc = await templateManager.GetInvoice((NodeEnum.InvoiceType)invoice.InvoiceTypeCode, templateId);
-            MailInvoice mailInvoice = new(nodeContext, doc, model.InvoiceNumber);
+            MailInvoice mailInvoice = new(nodeContext, doc, model.InvoiceNumber, _platformEmailSender);
 
             var htmlBody = await mailInvoice.PreviewInvoice();
             await templateManager.RegisterTemplateUsage(templateId, (NodeEnum.InvoiceType)invoice.InvoiceTypeCode);
@@ -867,7 +873,7 @@ WHERE EntryId = {model.OriginalEntryId}");
                 .FirstAsync();
 
             MailDocument doc = await templateManager.GetInvoice((NodeEnum.InvoiceType)invoice.InvoiceTypeCode, templateId);
-            MailInvoice mailInvoice = new(nodeContext, doc, model.InvoiceNumber);
+            MailInvoice mailInvoice = new(nodeContext, doc, model.InvoiceNumber, _platformEmailSender);
 
             await mailInvoice.Send(model.SelectedEmailAddress);
             await templateManager.RegisterTemplateUsage(templateId, (NodeEnum.InvoiceType)invoice.InvoiceTypeCode);

@@ -28,8 +28,8 @@ internal static class TenantIsolationTests
             SharedHostEnabled = true,
             Tenants =
             [
-                new() { TenantReference = tenantA.ToString(), Host = "Alpha.Example.Test.", ConnectionStringName = "TenantA" },
-                new() { TenantReference = tenantB.ToString(), Host = "beta.example.test", ConnectionStringName = "TenantB" }
+                new() { TenantReference = tenantA.ToString(), Host = "Alpha.Example.Test.", ConnectionStringName = "TenantA", BusinessTimeZoneId = "Europe/London" },
+                new() { TenantReference = tenantB.ToString(), Host = "beta.example.test", ConnectionStringName = "TenantB", BusinessTimeZoneId = "Australia/Sydney" }
             ]
         });
         var directory = new ConfiguredTenantDirectory(options, configuration);
@@ -38,6 +38,8 @@ internal static class TenantIsolationTests
             "Canonical host resolution did not select tenant A.");
         Assert(directory.ResolveHost("beta.example.test")?.ConnectionStringName == "TenantB",
             "Canonical host resolution did not select tenant B.");
+        Assert(directory.ResolveHost("beta.example.test")?.BusinessTimeZoneId == "Australia/Sydney",
+            "Tenant resolution did not retain the business time-zone assignment.");
         Assert(!directory.ResolveHost("beta.example.test")!.ToString().Contains("Server=", StringComparison.Ordinal),
             "A tenant descriptor rendered its protected connection locator.");
         Assert(directory.ResolveHost("unknown.example.test") is null,
@@ -114,6 +116,31 @@ internal static class TenantIsolationTests
         await middleware.InvokeAsync(readinessHttp, directory, new TenantContext());
         Assert(!reachedApplication && readinessHttp.Response.StatusCode == StatusCodes.Status404NotFound,
             "The dependency-readiness probe bypassed tenant resolution.");
+
+        var invalidTimeZoneRejected = false;
+        try
+        {
+            _ = new ConfiguredTenantDirectory(Options.Create(new TenantHostingOptions
+            {
+                SharedHostEnabled = true,
+                Tenants =
+                [
+                    new()
+                    {
+                        TenantReference = Guid.NewGuid().ToString(),
+                        Host = "invalid-zone.example.test",
+                        ConnectionStringName = "TenantA",
+                        BusinessTimeZoneId = "GMT Standard Time"
+                    }
+                ]
+            }), configuration);
+        }
+        catch (InvalidOperationException)
+        {
+            invalidTimeZoneRejected = true;
+        }
+        Assert(invalidTimeZoneRejected,
+            "A platform-specific time-zone identifier was accepted instead of an IANA identifier.");
 
         return assertions;
     }

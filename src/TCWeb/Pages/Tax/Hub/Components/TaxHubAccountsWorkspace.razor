@@ -2,11 +2,13 @@
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
 @using TradeControl.Tax.UK.Application.Preparation
+@using TradeControl.Web.AppServices.TaxHub
 @using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
 @inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
 @inject ICompaniesHouseFilingContinuationService CompaniesHouseContinuation
 @inject ICompaniesHouseSubmissionStatusService CompaniesHouseStatus
+@inject ITaxHubService TaxHubService
 @inject ILogger<TaxHubAccountsWorkspace> Logger
 
 @if (Workspace is null)
@@ -16,7 +18,21 @@
 else
 {
     <div class="tc-tax-hub-accounts d-flex flex-column gap-4">
-        <MudTabs Rounded="true">
+        @if (_loadingSection.HasValue)
+        {
+            <div class="alert alert-secondary py-2 mb-0" role="status">
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Loading @SectionName(_loadingSection.Value)…
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(_sectionError))
+        {
+            <div class="alert alert-danger py-2 mb-0" role="alert">@_sectionError</div>
+        }
+
+        <MudTabs Rounded="true"
+                 ActivePanelIndex="@_activePanelIndex"
+                 ActivePanelIndexChanged="LoadSectionAsync">
             <MudTabPanel Text="@(IsMobile ? "Annual" : "Annual P&L")" Class="pt-3">
                 <section class="d-flex flex-column gap-3">
                     <div>
@@ -387,6 +403,11 @@ else
     private string? _filingContinuationError;
     private bool _checkingFilingStatus;
     private string? _statusCheckError;
+    private int _activePanelIndex;
+    private string? _workspaceKey;
+    private readonly HashSet<TaxHubAccountsWorkspaceSection> _loadedSections = [];
+    private TaxHubAccountsWorkspaceSection? _loadingSection;
+    private string? _sectionError;
 
     private string ExistingFilingMessageClass => _existingFiling?.State switch
     {
@@ -412,9 +433,28 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        var workspaceKey = Workspace is null
+            ? null
+            : $"{Workspace.SelectedYearNumber}:{Workspace.SelectedPeriodStartOn:yyyy-MM-dd}";
+        if (!string.Equals(workspaceKey, _workspaceKey, StringComparison.Ordinal))
+        {
+            _workspaceKey = workspaceKey;
+            _activePanelIndex = 0;
+            _loadedSections.Clear();
+            if (Workspace is not null)
+                _loadedSections.Add(TaxHubAccountsWorkspaceSection.Annual);
+            _loadingSection = null;
+            _sectionError = null;
+        }
+
+        await InitializeFilingJourneyAsync();
+    }
+
+    private async Task InitializeFilingJourneyAsync()
+    {
         var key = Workspace is null
             ? null
-            : $"{Workspace.SelectedYearNumber}:{Workspace.SelectedPeriodStartOn:yyyy-MM-dd}:{Workspace.SubjectBalanceEvidence?.SnapshotToken}";
+            : $"{Workspace.SelectedYearNumber}:{Workspace.SelectedPeriodStartOn:yyyy-MM-dd}:{Workspace.CompaniesHouse.Status}:{Workspace.SubjectBalanceEvidence?.SnapshotToken}";
         if (string.Equals(key, _filingJourneyKey, StringComparison.Ordinal)) return;
 
         _filingJourneyKey = key;
@@ -451,6 +491,76 @@ else
             _filingContinuationLoading = false;
         }
     }
+
+    private async Task LoadSectionAsync(int panelIndex)
+    {
+        _activePanelIndex = panelIndex;
+        if (Workspace is null || !Enum.IsDefined(typeof(TaxHubAccountsWorkspaceSection), panelIndex))
+            return;
+
+        var section = (TaxHubAccountsWorkspaceSection)panelIndex;
+        if (_loadedSections.Contains(section) || _loadingSection.HasValue)
+            return;
+
+        _loadingSection = section;
+        _sectionError = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var result = await TaxHubService.GetAccountsWorkspaceAsync(
+                Workspace.SelectedYearNumber,
+                Workspace.SelectedPeriodStartOn,
+                section);
+
+            switch (section)
+            {
+                case TaxHubAccountsWorkspaceSection.Monthly:
+                    Workspace.MonthlyProfitAndLoss = result.MonthlyProfitAndLoss;
+                    Workspace.MonthlyDetails = result.MonthlyDetails;
+                    break;
+                case TaxHubAccountsWorkspaceSection.BalanceSheet:
+                    Workspace.BalanceSheet = result.BalanceSheet;
+                    Workspace.SubjectBalanceEvidence = result.SubjectBalanceEvidence;
+                    break;
+                case TaxHubAccountsWorkspaceSection.Validation:
+                    Workspace.ValidationSummary = result.ValidationSummary;
+                    Workspace.EquityReconciliation = result.EquityReconciliation;
+                    break;
+                case TaxHubAccountsWorkspaceSection.Filing:
+                    Workspace.ValidationSummary = result.ValidationSummary;
+                    Workspace.EquityReconciliation = result.EquityReconciliation;
+                    Workspace.CompaniesHouse = result.CompaniesHouse;
+                    Workspace.SubjectBalanceEvidence = result.SubjectBalanceEvidence;
+                    Workspace.BankCashEvidence = result.BankCashEvidence;
+                    Workspace.FixedAssetEvidence = result.FixedAssetEvidence;
+                    await InitializeFilingJourneyAsync();
+                    break;
+            }
+
+            _loadedSections.Add(section);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Accounts workspace section {Section} could not be loaded.", section);
+            _sectionError = $"Unable to load {SectionName(section)}. {exception.Message}";
+        }
+        finally
+        {
+            _loadingSection = null;
+        }
+
+        if (_activePanelIndex != panelIndex)
+            await LoadSectionAsync(_activePanelIndex);
+    }
+
+    private static string SectionName(TaxHubAccountsWorkspaceSection section) => section switch
+    {
+        TaxHubAccountsWorkspaceSection.Monthly => "monthly profit and loss",
+        TaxHubAccountsWorkspaceSection.BalanceSheet => "the balance sheet",
+        TaxHubAccountsWorkspaceSection.Validation => "accounts validation",
+        TaxHubAccountsWorkspaceSection.Filing => "the filing workspace",
+        _ => "annual profit and loss"
+    };
 
     private void StartFilingJourney()
     {

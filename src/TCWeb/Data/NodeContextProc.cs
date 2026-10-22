@@ -1782,7 +1782,7 @@ namespace TradeControl.Web.Data
             catch (Exception e)
             {
                 await ErrorLog(e);
-                return (short)DateTime.Today.Year;
+                return 0;
             }
         }
 
@@ -2793,7 +2793,8 @@ namespace TradeControl.Web.Data
                                         string ra_SortCode,
                                         string ra_AccountNumber,
                                         bool isVatRegistered,
-                                        decimal? expectedAnnualProfit)
+                                        decimal? expectedAnnualProfit,
+                                        DateTime asOfDate)
         {
             try
             {
@@ -2898,6 +2899,12 @@ namespace TradeControl.Web.Data
                     p13.Value = expectedAnnualProfit.HasValue ? expectedAnnualProfit.Value : DBNull.Value;
                     command.Parameters.Add(p13);
 
+                    SqlParameter p14 = command.CreateParameter();
+                    p14.DbType = DbType.Date;
+                    p14.ParameterName = "@AsOfDate";
+                    p14.Value = asOfDate.Date;
+                    command.Parameters.Add(p14);
+
                     await command.ExecuteNonQueryAsync();
                 }
                 _connection.Close();
@@ -2918,7 +2925,8 @@ namespace TradeControl.Web.Data
             int monthsForward = 3,
             decimal priceRatio = 1.0000000m,
             decimal quantityRatio = 1.0000000m,
-            decimal floatRatio = 0.25m            
+            decimal floatRatio = 0.25m,
+            DateTime? asOfDate = null
         )
         {
             try
@@ -3058,6 +3066,12 @@ namespace TradeControl.Web.Data
                     p18.Value = useStdCompanyTemplate;
                     command.Parameters.Add(p18);
 
+                    SqlParameter p19 = command.CreateParameter();
+                    p19.DbType = DbType.Date;
+                    p19.ParameterName = "@AsOfDate";
+                    p19.Value = asOfDate.HasValue ? asOfDate.Value.Date : DBNull.Value;
+                    command.Parameters.Add(p19);
+
                     await command.ExecuteNonQueryAsync();
                 }
 
@@ -3149,7 +3163,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, double taxAdjustment)
+        public async Task<bool> AdjustTax(DateTime startOn, NodeEnum.TaxType taxType, decimal taxAdjustment, string taxAdjustmentNote)
         {
             try
             {
@@ -3174,6 +3188,14 @@ namespace TradeControl.Web.Data
                     Value = taxAdjustment
                 };
 
+                var _taxAdjustmentNote = new SqlParameter() {
+                    ParameterName = "@TaxAdjustmentNote",
+                    SqlDbType = System.Data.SqlDbType.NVarChar,
+                    Direction = System.Data.ParameterDirection.Input,
+                    Size = -1,
+                    Value = string.IsNullOrWhiteSpace(taxAdjustmentNote) ? DBNull.Value : taxAdjustmentNote.Trim()
+                };
+
                 using (SqlConnection _connection = new(Database.GetConnectionString()))
                 {
                     _connection.Open();
@@ -3184,6 +3206,7 @@ namespace TradeControl.Web.Data
                         _command.Parameters.Add(_startOn);
                         _command.Parameters.Add(_taxTypeCode);
                         _command.Parameters.Add(_taxAdjustment);
+                        _command.Parameters.Add(_taxAdjustmentNote);
 
                         await _command.ExecuteNonQueryAsync();
                     }
@@ -3296,7 +3319,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<decimal> TaxAdjustmentGet(DateTime startOn, NodeEnum.TaxType taxType)
+        public async Task<(decimal Adjustment, string Note)> TaxAdjustmentGet(DateTime startOn, NodeEnum.TaxType taxType)
         {
             try
             {
@@ -3322,6 +3345,13 @@ namespace TradeControl.Web.Data
                     Scale = 5
                 };
 
+                var _taxAdjustmentNote = new SqlParameter() {
+                    ParameterName = "@TaxAdjustmentNote",
+                    SqlDbType = SqlDbType.NVarChar,
+                    Direction = ParameterDirection.Output,
+                    Size = -1
+                };
+
                 using (SqlConnection _connection = new(Database.GetConnectionString()))
                 {
                     _connection.Open();
@@ -3332,22 +3362,25 @@ namespace TradeControl.Web.Data
                         _command.Parameters.Add(_startOn);
                         _command.Parameters.Add(_taxTypeCode);
                         _command.Parameters.Add(_taxAdjustment);
+                        _command.Parameters.Add(_taxAdjustmentNote);
 
                         await _command.ExecuteNonQueryAsync();
                     }
                     _connection.Close();
                 }
 
-                return _taxAdjustment.Value == DBNull.Value ? 0m : (decimal)_taxAdjustment.Value;
+                return (
+                    _taxAdjustment.Value == DBNull.Value ? 0m : (decimal)_taxAdjustment.Value,
+                    _taxAdjustmentNote.Value == DBNull.Value ? string.Empty : (string)_taxAdjustmentNote.Value);
             }
             catch (Exception e)
             {
                 await ErrorLog(e);
-                return 0m;
+                return (0m, string.Empty);
             }
         }
 
-        public async Task<TaxHubProjectedTaxDue> GetProjectedTaxDueAsync()
+        public async Task<TaxHubProjectedTaxDue> GetProjectedTaxDueAsync(DateTime asOfDate)
         {
             try
             {
@@ -3360,6 +3393,10 @@ namespace TradeControl.Web.Data
                 {
                     command.CommandType = CommandType.StoredProcedure;
                     command.CommandText = "Cash.proc_TaxObligations";
+                    command.Parameters.Add(new SqlParameter("@AsOfDate", SqlDbType.Date)
+                    {
+                        Value = asOfDate.Date
+                    });
 
                     using var reader = await command.ExecuteReaderAsync();
 

@@ -34,7 +34,9 @@ public sealed class ConfiguredTenantDirectory : ITenantDirectory
             var connectionString = configuration.GetConnectionString(connectionName);
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException($"Tenant connection '{connectionName}' is not configured.");
-            tenants.Add(new TenantDescriptor(tenantId, host, connectionName, connectionString));
+            var (timeZoneId, timeZone) = RequiredBusinessTimeZone(registration.BusinessTimeZoneId);
+            tenants.Add(new TenantDescriptor(tenantId, host, connectionName, connectionString,
+                timeZoneId, timeZone));
         }
 
         _byHost = tenants.ToDictionary(item => item.CanonicalHost, StringComparer.OrdinalIgnoreCase);
@@ -54,8 +56,11 @@ public sealed class ConfiguredTenantDirectory : ITenantDirectory
         var defaultConnection = configuration.GetConnectionString(settings.DefaultConnectionStringName);
         if (string.IsNullOrWhiteSpace(defaultConnection))
             throw new InvalidOperationException("The default tenant connection is not configured.");
+        var (defaultTimeZoneId, defaultTimeZone) =
+            RequiredBusinessTimeZone(settings.DefaultBusinessTimeZoneId);
         _singleTenant = new TenantDescriptor(defaultTenantId, "single-tenant",
-            settings.DefaultConnectionStringName, defaultConnection);
+            settings.DefaultConnectionStringName, defaultConnection,
+            defaultTimeZoneId, defaultTimeZone);
         _tenants = [_singleTenant];
     }
 
@@ -83,4 +88,29 @@ public sealed class ConfiguredTenantDirectory : ITenantDirectory
     private static string Required(string? value, string message) => string.IsNullOrWhiteSpace(value)
         ? throw new InvalidOperationException(message)
         : value.Trim();
+
+    private static (string Id, TimeZoneInfo Zone) RequiredBusinessTimeZone(string? value)
+    {
+        var id = Required(value,
+            "Each enabled tenant requires an IANA business time-zone identifier.");
+
+        if (!TimeZoneInfo.TryConvertIanaIdToWindowsId(id, out _))
+            throw new InvalidOperationException(
+                $"Business time zone '{id}' is not a supported IANA identifier.");
+
+        try
+        {
+            return (id, TimeZoneInfo.FindSystemTimeZoneById(id));
+        }
+        catch (TimeZoneNotFoundException exception)
+        {
+            throw new InvalidOperationException(
+                $"Business time zone '{id}' is not installed on this host.", exception);
+        }
+        catch (InvalidTimeZoneException exception)
+        {
+            throw new InvalidOperationException(
+                $"Business time zone '{id}' is invalid on this host.", exception);
+        }
+    }
 }

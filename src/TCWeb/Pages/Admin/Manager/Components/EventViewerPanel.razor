@@ -6,11 +6,14 @@
 @using TradeControl.Web.Data
 @using TradeControl.Web.Mail
 @using TradeControl.Web.Models
+@using TradeControl.Web.Tenancy
 
 @inject NodeContext NodeContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IConfiguration Configuration
 @inject IFileProvider FileProvider
+@inject IPlatformEmailSender PlatformEmailSender
+@inject IBusinessClock BusinessClock
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_actionMessage))
@@ -113,7 +116,7 @@
                                     <div class="flex-grow-1 text-start">
                                         <div class="d-flex justify-content-between align-items-start gap-2">
                                             <div class="fw-semibold">@GetTypeLabel(item.EventTypeCode)</div>
-                                            <div class="small text-muted">@item.LoggedOn.ToString("g")</div>
+                                            <div class="small text-muted">@FormatLoggedOn(item.LoggedOn)</div>
                                         </div>
 
                                         <div class="small mb-1">@GetSummary(item.EventMessage)</div>
@@ -163,7 +166,7 @@
                                         <div class="flex-grow-1 text-start">
                                             <div class="d-flex justify-content-between align-items-start gap-2">
                                                 <div class="fw-semibold">@GetTypeLabel(item.EventTypeCode)</div>
-                                                <div class="small text-muted">@item.LoggedOn.ToString("g")</div>
+                                                <div class="small text-muted">@FormatLoggedOn(item.LoggedOn)</div>
                                             </div>
 
                                             <div class="small mb-1">@GetSummary(item.EventMessage)</div>
@@ -252,7 +255,7 @@
         _supportEmailAddress = Configuration.GetSection("Settings")["SupportEmailAddress"] ?? string.Empty;
 
         var nodeSettings = new NodeSettings(NodeContext);
-        _hasSupportTarget = await nodeSettings.MailHost() is not null
+        _hasSupportTarget = (PlatformEmailSender.IsConfigured || await nodeSettings.MailHost() is not null)
             && !string.IsNullOrWhiteSpace(_supportEmailAddress);
     }
 
@@ -401,7 +404,7 @@
                 return;
             }
 
-            SetActionMessage($"Archived entries logged on or before {SelectedEntry.LoggedOn:g}.", "success");
+            SetActionMessage($"Archived entries logged on or before {FormatLoggedOn(SelectedEntry.LoggedOn)}.", "success");
             _showArchiveConfirm = false;
             _mobileDetailOpen = false;
 
@@ -423,7 +426,7 @@
         {
             var templateManager = new TemplateManager(NodeContext, FileProvider);
             var document = await templateManager.GetSupportRequest();
-            var support = new MailSupport(NodeContext, document, SelectedEntry.LogCode);
+            var support = new MailSupport(NodeContext, document, SelectedEntry.LogCode, PlatformEmailSender);
 
             if (string.IsNullOrWhiteSpace(_supportNote))
                 await support.Send(_supportEmailAddress);
@@ -474,6 +477,12 @@
             : $"{flattened[..maxLength].TrimEnd()}…";
     }
 
+    private string FormatLoggedOn(DateTime loggedOn)
+    {
+        var local = BusinessClock.ToLocal(loggedOn);
+        return $"{local:dd/MM/yyyy HH:mm:ss} {BusinessClock.GetZoneLabel(local)}";
+    }
+
     private static string GetTypeLabel(short eventTypeCode) => eventTypeCode switch
     {
         (short)NodeEnum.EventType.IsError => "Error",
@@ -521,7 +530,7 @@
 
                         <div>
                             <div class="fw-semibold">@GetTypeLabel(SelectedEntry.EventTypeCode)</div>
-                            <div class="small text-muted">@SelectedEntry.LoggedOn.ToString("g")</div>
+                            <div class="small text-muted">@FormatLoggedOn(SelectedEntry.LoggedOn)</div>
                         </div>
                     </div>
 
@@ -533,7 +542,7 @@
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <div class="small text-muted mb-1">Logged</div>
-                        <div>@SelectedEntry.LoggedOn.ToString("g")</div>
+                        <div>@FormatLoggedOn(SelectedEntry.LoggedOn)</div>
                     </div>
 
                     <div class="col-md-6">
@@ -587,7 +596,7 @@
                 @if (_showArchiveConfirm && CanArchiveSelected)
                 {
                     <div class="alert alert-warning mt-3 mb-0">
-                        Entries logged on or before <strong>@SelectedEntry.LoggedOn.ToString("g")</strong> will be archived.
+                        Entries logged on or before <strong>@FormatLoggedOn(SelectedEntry.LoggedOn)</strong> will be archived.
                         <div class="mt-2">
                             <button type="button"
                                     class="btn btn-danger btn-sm me-2"

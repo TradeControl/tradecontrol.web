@@ -30,6 +30,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly IPlatformEmailSender _platformEmailSender;
         private readonly NodeContext _nodeContext;
         private readonly IConfiguration _configuration;
 
@@ -39,6 +40,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
             RoleManager<IdentityRole> roleManager,
             ILogger<RegisterModel> logger,
             IEmailSender emailSender,
+            IPlatformEmailSender platformEmailSender,
             NodeContext nodeContext,
             IConfiguration configuration)
         {
@@ -47,6 +49,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
             _roleManager = roleManager;
             _logger = logger;
             _emailSender = emailSender;
+            _platformEmailSender = platformEmailSender;
             _nodeContext = nodeContext;
             _configuration = configuration;
         }
@@ -137,7 +140,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
 
                 if (!isBootstrap)
                 {
-                    if (!nodeSettings.HasMailHost)
+                    if (!nodeSettings.HasMailHost && !_platformEmailSender.IsConfigured)
                     {
                         ModelState.AddModelError(string.Empty, "Email service is not configured. Please contact an administrator.");
                         return Page();

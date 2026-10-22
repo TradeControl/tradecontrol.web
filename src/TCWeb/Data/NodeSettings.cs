@@ -92,22 +92,6 @@ namespace TradeControl.Web.Data
             }
         });
 
-        public Task<bool> IsPeriodEnd => Task.Run(() =>
-        {
-            try
-            {
-                if (!_context.App_ActivePeriods.Any())
-                    return false;
-                else
-                    return _context.App_ActivePeriods.First().EndOn < DateTime.Today;
-            }
-            catch (Exception e)
-            {
-                _ = _context.ErrorLog(e);
-                return false;
-            }
-        });
-
         public Task<NodeEnum.CoinType> CoinType => Task.Run(() =>
         {
             try

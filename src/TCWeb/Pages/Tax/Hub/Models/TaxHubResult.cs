@@ -230,6 +230,15 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public decimal PeriodInvoiceValue { get; init; }
     }
 
+    public enum TaxHubAccountsWorkspaceSection
+    {
+        Annual = 0,
+        Monthly = 1,
+        BalanceSheet = 2,
+        Validation = 3,
+        Filing = 4
+    }
+
     public sealed class TaxHubAccountsWorkspaceModel
     {
         public short? SelectedYearNumber { get; init; }
@@ -239,17 +248,17 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public string SelectedPeriodName { get; init; } = string.Empty;
         public string SelectedPreviousPeriodName { get; init; } = string.Empty;
         public bool IsYearEndBalanceSheet { get; init; }
-        public IReadOnlyList<TaxHubProfitAndLossRow> AnnualProfitAndLoss { get; init; } = Array.Empty<TaxHubProfitAndLossRow>();
-        public IReadOnlyList<TaxHubProfitAndLossRow> MonthlyProfitAndLoss { get; init; } = Array.Empty<TaxHubProfitAndLossRow>();
-        public IReadOnlyList<TaxHubProfitAndLossDetailSection> AnnualDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
-        public IReadOnlyList<TaxHubProfitAndLossDetailSection> MonthlyDetails { get; init; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
-        public IReadOnlyList<TaxHubBalanceSheetRow> BalanceSheet { get; init; } = Array.Empty<TaxHubBalanceSheetRow>();
-        public TaxHubSubjectBalanceEvidence? SubjectBalanceEvidence { get; init; }
-        public TaxHubBankCashEvidence? BankCashEvidence { get; init; }
-        public TaxHubFixedAssetEvidence? FixedAssetEvidence { get; init; }
-        public TaxHubAccountsValidationSummary ValidationSummary { get; init; } = new();
-        public IReadOnlyList<TaxHubEquityReconciliationRow> EquityReconciliation { get; init; } = Array.Empty<TaxHubEquityReconciliationRow>();
-        public TaxHubCompaniesHouseReadiness CompaniesHouse { get; init; } = new();
+        public IReadOnlyList<TaxHubProfitAndLossRow> AnnualProfitAndLoss { get; set; } = Array.Empty<TaxHubProfitAndLossRow>();
+        public IReadOnlyList<TaxHubProfitAndLossRow> MonthlyProfitAndLoss { get; set; } = Array.Empty<TaxHubProfitAndLossRow>();
+        public IReadOnlyList<TaxHubProfitAndLossDetailSection> AnnualDetails { get; set; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
+        public IReadOnlyList<TaxHubProfitAndLossDetailSection> MonthlyDetails { get; set; } = Array.Empty<TaxHubProfitAndLossDetailSection>();
+        public IReadOnlyList<TaxHubBalanceSheetRow> BalanceSheet { get; set; } = Array.Empty<TaxHubBalanceSheetRow>();
+        public TaxHubSubjectBalanceEvidence? SubjectBalanceEvidence { get; set; }
+        public TaxHubBankCashEvidence? BankCashEvidence { get; set; }
+        public TaxHubFixedAssetEvidence? FixedAssetEvidence { get; set; }
+        public TaxHubAccountsValidationSummary ValidationSummary { get; set; } = new();
+        public IReadOnlyList<TaxHubEquityReconciliationRow> EquityReconciliation { get; set; } = Array.Empty<TaxHubEquityReconciliationRow>();
+        public TaxHubCompaniesHouseReadiness CompaniesHouse { get; set; } = new();
     }
 
     public sealed class TaxHubSubjectBalanceEvidence

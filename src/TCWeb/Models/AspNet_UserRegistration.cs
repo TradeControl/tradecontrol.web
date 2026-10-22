@@ -14,10 +14,10 @@ namespace TradeControl.Web.Models
         public string Id { get; set; }
         [StringLength(256)]
         [Display(Name = "Email")]
-        public string EmailAddress { get; set; }
+        public string? EmailAddress { get; set; }
         [StringLength(50)]
         [Display(Name = "User Name")]
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
         [Display(Name = "Confirmed?")]
         public bool IsConfirmed { get; set; }
         [Display(Name = "Registered?")]

@@ -54,7 +54,8 @@ namespace TradeControl.Web.Mail
         NodeContext NodeContext { get; }
         MailDocument Document { get; }
 
-        public MailInvoice(NodeContext nodeContext, MailDocument mailDocument, string invoiceNumber) : base()
+        public MailInvoice(NodeContext nodeContext, MailDocument mailDocument, string invoiceNumber,
+            IPlatformEmailSender platformEmailSender = null) : base(platformEmailSender)
         {
             NodeContext = nodeContext;
             InvoiceNumber = invoiceNumber;
@@ -66,6 +67,20 @@ namespace TradeControl.Web.Mail
         {
             try
             {
+                if (Document.Settings == null)
+                {
+                    NodeSettings nodeSettings = new(NodeContext);
+                    if (nodeSettings.HasMailHost)
+                    {
+                        Document.Settings = await nodeSettings.MailHost()
+                            ?? throw new Exception("Mail host settings not available.");
+                    }
+                    else if (!PlatformEmailConfigured)
+                    {
+                        throw new Exception("No email delivery service is configured.");
+                    }
+                }
+
                 string accountCode = await NodeContext.Invoice_tbInvoices
                                         .Where(i => i.InvoiceNumber == InvoiceNumber)
                                         .Select(i => i.SubjectCode)
@@ -100,6 +115,7 @@ namespace TradeControl.Web.Mail
                 throw;
             }
         }
+
 
         private async Task SendInvoice()
         {
@@ -171,6 +187,8 @@ namespace TradeControl.Web.Mail
             Document.Arguments.Add("CompanyName", company.CompanyName);
             Document.Arguments.Add("CompanyAddress", company.CompanyAddress);
             Document.Arguments.Add("CompanyEmailAddress", company.CompanyEmailAddress);
+            if (PlatformEmailOptions.IsValidEmailAddress(company.CompanyEmailAddress))
+                Document.ReplyTo = company.CompanyEmailAddress;
             Document.Arguments.Add("CompanyWebsite", company.CompanyWebsite);
             Document.Arguments.Add("CompanyPhoneNumber", company.CompanyPhoneNumber);
             Document.Arguments.Add("CompanyNumber", company.CompanyNumber);

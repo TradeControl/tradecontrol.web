@@ -8,12 +8,14 @@
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.Data
 @using TradeControl.Web.Mail
+@using TradeControl.Web.Tenancy
 
 @inject NodeContext NodeContext
 @inject UserManager<TradeControlWebUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IFileProvider FileProvider
+@inject IBusinessClock BusinessClock
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_errorMessage))
@@ -153,6 +155,15 @@
                                                     <option value="@item">@item</option>
                                                 }
                                             </InputSelect>
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="businessTimeZone">Business Time Zone</label>
+                                            <input id="businessTimeZone"
+                                                   class="form-control"
+                                                   value="@BusinessClock.TimeZoneId"
+                                                   readonly />
+                                            <div class="form-text">Selected when the business is registered; it controls accounting dates and scheduling.</div>
                                         </div>
 
                                         <div class="col-12 col-md-6">
@@ -818,7 +829,8 @@
                 ra_SortCode: _editor.RASortCode,
                 ra_AccountNumber: _editor.RAAccountNumber,
                 isVatRegistered: _editor.IsVatRegistered,
-                expectedAnnualProfit: SelectedTemplateIsCompany ? null : _editor.ExpectedAnnualProfit);
+                expectedAnnualProfit: SelectedTemplateIsCompany ? null : _editor.ExpectedAnnualProfit,
+                asOfDate: BusinessClock.TodayDateTime);
 
             var templateManager = new TemplateManager(NodeContext, FileProvider);
             await templateManager.InitialiseBootstrap();

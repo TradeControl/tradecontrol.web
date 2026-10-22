@@ -17,6 +17,7 @@ using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Tax.Hub.Models;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
@@ -95,6 +96,7 @@ internal sealed class CompaniesHousePreparationReviewService(
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
     IHttpContextAccessor httpContextAccessor,
     IOptions<CompaniesHouseProductHostOptions> hostOptions,
+    IBusinessClock businessClock,
     TimeProvider timeProvider) : ICompaniesHousePreparationReviewService
 {
     private const string DatasetKey = "UK-CO-ACCTS-2026";
@@ -116,7 +118,7 @@ internal sealed class CompaniesHousePreparationReviewService(
 
         var draft = ToDraft(input);
         var errors = CompaniesHouseFilingInputReview.Validate(draft,
-            DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime));
+            businessClock.Today);
         if (errors.Count != 0)
             throw new InvalidOperationException(string.Join(" ", errors));
 
@@ -129,7 +131,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
 
-        var asOfDate = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var asOfDate = businessClock.Today;
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
             .ReadAsync(asOfDate, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(
@@ -186,7 +188,7 @@ internal sealed class CompaniesHousePreparationReviewService(
 
         var package = new CompaniesHouseAccountsPreparer().Prepare(accounts, preparedAccounts,
             ReviewSubmissionNumber, new(true, true, true), "TIS-6.0",
-            DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime), false, source.Versions);
+            businessClock.Today, false, source.Versions);
         if (package.Transmission.HasErrors)
             throw new InvalidOperationException(BlockingFindings(
                 "The credential-free Companies House review package contains blocking findings",
@@ -423,7 +425,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         CancellationToken cancellationToken)
     {
         var errors = CompaniesHouseFilingInputReview.Validate(ToDraft(input),
-            DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime));
+            businessClock.Today);
         if (errors.Count != 0)
             throw new InvalidOperationException("The reviewed filing inputs are no longer valid. Prepare the accounts again.");
 
@@ -437,7 +439,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         var connectionString = nodeContext.Database.GetConnectionString();
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
-        var asOfDate = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var asOfDate = businessClock.Today;
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
             .ReadAsync(asOfDate, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(context.Identity.CompanyNumber);

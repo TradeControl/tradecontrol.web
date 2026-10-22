@@ -20,6 +20,7 @@ namespace TradeControl.Web.Mail
         public MailSettings Settings { get; set; }
         public string Name { get; set; }
         public string EmailTo { get; set; }
+        public string ReplyTo { get; set; }
         public string Subject { get; set; }
         public List<string> Attachments { get; set; } = new List<string>();
     }
@@ -55,6 +56,15 @@ namespace TradeControl.Web.Mail
 
     public abstract class MailService
     {
+        private readonly IPlatformEmailSender _platformEmailSender;
+
+        protected MailService(IPlatformEmailSender platformEmailSender = null)
+        {
+            _platformEmailSender = platformEmailSender;
+        }
+
+        protected bool PlatformEmailConfigured => _platformEmailSender?.IsConfigured == true;
+
         protected async Task SendDocument(MailDocument mailDocument)
         {
             BodyBuilder bodyBuilder = new();
@@ -119,7 +129,7 @@ namespace TradeControl.Web.Mail
             await Send(mailText.Settings, bodyBuilder, mailText);
         }
 
-        static async Task Send(MailSettings settings, BodyBuilder bodyBuilder, MailHeader mailHeader)
+        private async Task Send(MailSettings settings, BodyBuilder bodyBuilder, MailHeader mailHeader)
         {
             foreach (var attachment in mailHeader.Attachments)
             {
@@ -140,6 +150,15 @@ namespace TradeControl.Web.Mail
 
                     bodyBuilder.Attachments.Add(fileInfo.Name, memoryStream.ToArray(), ContentType.Parse(formFile.ContentType));
                 }
+            }
+
+            if (settings == null)
+            {
+                if (_platformEmailSender?.IsConfigured != true)
+                    throw new InvalidOperationException("No email delivery service is configured.");
+
+                await _platformEmailSender.SendAsync(mailHeader, bodyBuilder);
+                return;
             }
 
             MimeMessage message = new();

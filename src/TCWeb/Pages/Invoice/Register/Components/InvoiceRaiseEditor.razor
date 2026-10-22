@@ -1,6 +1,8 @@
 @using MudBlazor
 @using TradeControl.Web.Pages.Invoice.Register.Models
 @using TradeControl.Web.Pages.Subject.Controls
+@using TradeControl.Web.Tenancy
+@inject IBusinessClock BusinessClock
 
 <MudPaper Class="pa-4">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
@@ -190,7 +192,7 @@
         Model.CashDescription = cashLabel;
         Model.TaxCode = _taxCode;
         Model.InvoiceTypeCode = _invoiceTypeCode;
-        Model.InvoicedOn = _invoicedOn ?? DateTime.Today;
+        Model.InvoicedOn = _invoicedOn ?? BusinessClock.TodayDateTime;
         Model.TotalValue = _totalValue;
         Model.InvoiceValue = _invoiceValue;
         Model.ItemReference = _itemReference;

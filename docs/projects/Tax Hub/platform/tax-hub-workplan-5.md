@@ -464,13 +464,19 @@ Record fixture provenance and state-machine evidence. Human review confirms clas
 
 ### Purpose
 
-Combine the approved CT service artifact with the tested protocol handler, then complete the applicable HMRC test and recognition route.
+Combine the approved CT service artifact with the tested protocol handler, complete the applicable
+HMRC External Test Service route and retain evidence suitable for a later optional recognition
+application.
 
 ### Implementation
 
 Use synthetic CT credentials and the configured HMRC external test path. Exercise submission, correlation and polling, terminal response, signed receipt handling and deletion. Retain an auditable end-to-end attempt.
 
-With current HMRC guidance or its Software Developers Support Team, confirm the service contract/version, class, endpoint, credentials, recognition scenarios, software recognition/listing route and attachment encoding. Complete applicable recognition/application and production-access evidence before Company Accounts delivery starts.
+With current HMRC guidance or its Software Developers Support Team, confirm the service
+contract/version, class, endpoint, credentials, response/receipt behaviour and attachment encoding.
+After comprehensive ETS and product testing, reassess the then-current optional software
+recognition/listing route. Recognition is not a prerequisite to ETS and is not coupled to production
+submission enablement.
 
 A real package is eligible only when Objective 3 submission readiness and Objective 4 protocol readiness are recorded, every constituent artifact is `SubmissionReady`, findings are clear and an authorised filing/approval reference exists.
 
@@ -513,20 +519,34 @@ The pinned RIM 1.994 artifact, its digests, readiness status and all submission 
 unchanged. Review the final April 2027 executable release when HMRC publishes it; do not infer a
 RIM contract from the draft forms or guidance.
 
+**Recognition sequencing and programme pause (22 October 2026):** HMRC SDST confirmed that CT
+recognition is optional and that developers must complete comprehensive product testing, explicitly
+including extensive ETS use, before applying. CT Recognition 2025 is closed and HMRC is preparing
+the 2026 instructions. The new-applicant pack and recognition scenarios are therefore removed as
+Phase 5.10 ETS prerequisites. The owner has chosen to pause the first controlled ETS attempt until
+the production-ready multi-tenant environment is implemented and independently reviewed, aligning
+the resumed CT and VAT evidence with the intended topology. This is an owner sequencing decision,
+not an HMRC test-service condition. When resumed, Phase 5.10 begins with a separately authorised ETS
+attempt and retains the complete Transaction Engine conversation. Optional recognition is considered
+after ETS and product maturity; the CT production gate remains closed throughout.
+
 ### Dependencies and exclusions
 
 Requires 5.8 and 5.9. A passing local fixture does not permit live filing. This phase does not implement Companies House transport or the Objective 5 UI. The preview gate must not be relaxed to pass a test journey.
 
 ### Tests and acceptance
 
-- Pass official local/test validation and approved recognition scenarios.
+- Pass official local validation and the controlled ETS journey; retain evidence that can support
+  any later recognition scenarios without making those scenarios an ETS prerequisite.
 - Recording tests show that only IRmark insertion changes the CT service root; underlying iXBRL bytes remain identical.
 - Reject an unapproved response endpoint. Exercise lost-reply recovery, receipt verification, terminal-before-delete ordering and `DATA_REQUEST` reconciliation.
 - Confirm the current diagnostic preview still causes zero outbound calls.
 
 ### Review gate
 
-Keep redacted ETS/recognition evidence, HMRC application/recognition status and signed-receipt references in history. Human review distinguishes technical readiness from pending external approval. Live CT enablement needs separate human approval before the milestone is accepted.
+Keep redacted ETS evidence, any later HMRC recognition status and signed-receipt references in
+history. Human review distinguishes technical readiness, optional recognition and production
+enablement. Live CT enablement needs separate human approval before the milestone is accepted.
 
 ## Phase 5.11 — Companies House official artifact and eligibility assurance
 

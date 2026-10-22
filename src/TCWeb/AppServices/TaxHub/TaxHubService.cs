@@ -12,6 +12,7 @@ using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Tax.Hub.Models;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub
 {
@@ -23,11 +24,14 @@ namespace TradeControl.Web.AppServices.TaxHub
 
         private readonly NodeContext _nodeContext;
         private readonly ICompaniesHouseReadinessService _companiesHouseReadiness;
+        private readonly IBusinessClock _businessClock;
 
-        public TaxHubService(NodeContext nodeContext, ICompaniesHouseReadinessService companiesHouseReadiness)
+        public TaxHubService(NodeContext nodeContext, ICompaniesHouseReadinessService companiesHouseReadiness,
+            IBusinessClock businessClock)
         {
             _nodeContext = nodeContext;
             _companiesHouseReadiness = companiesHouseReadiness;
+            _businessClock = businessClock;
         }
 
         public Task<TaxHubResult> GetShellStateAsync()
@@ -90,11 +94,11 @@ namespace TradeControl.Web.AppServices.TaxHub
 
             var businessTaxTotals = await _nodeContext.Cash_TaxBizTotals
                 .AsNoTracking()
-                .Where(t => t.StartOn <= DateTime.Today)
+                .Where(t => t.StartOn <= _businessClock.TodayDateTime)
                 .OrderByDescending(t => t.StartOn)
                 .FirstOrDefaultAsync();
 
-            var projectedDue = await _nodeContext.GetProjectedTaxDueAsync();
+            var projectedDue = await _nodeContext.GetProjectedTaxDueAsync(_businessClock.TodayDateTime);
 
             var businessType = await _nodeContext.Cash_tbTaxTypes
                 .AsNoTracking()
@@ -201,7 +205,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                     {
                         Value = string.IsNullOrWhiteSpace(profile.TaxSourceCode) ? DBNull.Value : profile.TaxSourceCode
                     });
-                    command.Parameters.Add(new SqlParameter("@AsOfDate", SqlDbType.Date) { Value = DateTime.Today });
+                    command.Parameters.Add(new SqlParameter("@AsOfDate", SqlDbType.Date) { Value = _businessClock.TodayDateTime });
 
                     await using var reader = await command.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
@@ -392,7 +396,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .ToListAsync();
 
             var activeStatementStartOn = statement
-                .Where(t => t.StartOn.Date >= DateTime.Today)
+                .Where(t => t.StartOn.Date >= _businessClock.TodayDateTime)
                 .OrderBy(t => t.StartOn)
                 .Select(t => (DateTime?)t.StartOn)
                 .FirstOrDefault();
@@ -416,7 +420,7 @@ namespace TradeControl.Web.AppServices.TaxHub
         {
             var totalsQuery = _nodeContext.Cash_TaxBizTotals
                 .AsNoTracking()
-                .Where(t => t.StartOn <= DateTime.Today)
+                .Where(t => t.StartOn <= _businessClock.TodayDateTime)
                 .AsQueryable();
 
             if (yearNumber.HasValue)
@@ -614,7 +618,8 @@ namespace TradeControl.Web.AppServices.TaxHub
             };
         }
 
-        public async Task<TaxHubAccountsWorkspaceModel> GetAccountsWorkspaceAsync(short? yearNumber, DateTime? periodStartOn)
+        public async Task<TaxHubAccountsWorkspaceModel> GetAccountsWorkspaceAsync(short? yearNumber, DateTime? periodStartOn,
+            TaxHubAccountsWorkspaceSection section = TaxHubAccountsWorkspaceSection.Annual)
         {
             var financialPeriods = new FinancialPeriods(_nodeContext);
             var selectedYear = yearNumber ?? financialPeriods.ActiveYear;
@@ -653,20 +658,27 @@ namespace TradeControl.Web.AppServices.TaxHub
                     .FirstOrDefaultAsync() ?? string.Empty
                 : string.Empty;
 
-            var annualTrade = await _nodeContext.Cash_ProfitAndLossByYear
-                .AsNoTracking()
-                .Where(t => t.CashTypeCode == (short)NodeEnum.CashType.Trade)
-                .OrderByDescending(t => t.YearNumber)
-                .ThenBy(t => t.DisplayOrder)
-                .ToListAsync();
+            IReadOnlyList<TaxHubProfitAndLossRow> annualProfitAndLoss = [];
+            IReadOnlyList<TaxHubProfitAndLossDetailSection> annualDetails = [];
+            if (section == TaxHubAccountsWorkspaceSection.Annual)
+            {
+                var annualTrade = await _nodeContext.Cash_ProfitAndLossByYear
+                    .AsNoTracking()
+                    .Where(t => t.CashTypeCode == (short)NodeEnum.CashType.Trade
+                        && (t.YearNumber == selectedYear
+                            || selectedPreviousYearNumber.HasValue && t.YearNumber == selectedPreviousYearNumber.Value))
+                    .OrderByDescending(t => t.YearNumber)
+                    .ThenBy(t => t.DisplayOrder)
+                    .ToListAsync();
 
-            var annualProfitAndLoss = BuildProfitAndLossRows(
-                annualTrade.Where(t => t.YearNumber == selectedYear),
-                selectedPreviousYearNumber.HasValue
-                    ? annualTrade.Where(t => t.YearNumber == selectedPreviousYearNumber.Value)
-                    : Enumerable.Empty<Cash_vwProfitAndLossByYear>());
+                annualProfitAndLoss = BuildProfitAndLossRows(
+                    annualTrade.Where(t => t.YearNumber == selectedYear),
+                    selectedPreviousYearNumber.HasValue
+                        ? annualTrade.Where(t => t.YearNumber == selectedPreviousYearNumber.Value)
+                        : Enumerable.Empty<Cash_vwProfitAndLossByYear>());
 
-            var annualDetails = await BuildAnnualProfitAndLossDetailsAsync(selectedYear, selectedPreviousYearNumber);
+                annualDetails = await BuildAnnualProfitAndLossDetailsAsync(selectedYear, selectedPreviousYearNumber);
+            }
 
             var selectedPeriodName = await _nodeContext.App_Periods
                 .AsNoTracking()
@@ -694,33 +706,35 @@ namespace TradeControl.Web.AppServices.TaxHub
                 }
             }
 
-            var monthlyTrade = selectedPeriodInfo is null
-                ? new List<Cash_vwProfitAndLossByPeriod>()
-                : await _nodeContext.Cash_ProfitAndLossByMonth
+            IReadOnlyList<TaxHubProfitAndLossRow> monthlyProfitAndLoss = [];
+            IReadOnlyList<TaxHubProfitAndLossDetailSection> monthlyDetails = [];
+            if (section == TaxHubAccountsWorkspaceSection.Monthly)
+            {
+                var monthlyTrade = await _nodeContext.Cash_ProfitAndLossByMonth
                     .AsNoTracking()
                     .Where(t =>
                         t.MonthNumber == selectedPeriodInfo.MonthNumber &&
                         t.StartOn <= selectedPeriod &&
-                        t.CashTypeCode == (short)NodeEnum.CashType.Trade)
+                        t.CashTypeCode == (short)NodeEnum.CashType.Trade &&
+                        (t.YearNumber == selectedPeriodInfo.YearNumber
+                            || selectedPreviousPeriodYear.HasValue && t.YearNumber == selectedPreviousPeriodYear.Value))
                     .OrderByDescending(t => t.YearNumber)
                     .ThenBy(t => t.DisplayOrder)
                     .ToListAsync();
 
-            var monthlyProfitAndLoss = selectedPeriodInfo is null
-                ? Array.Empty<TaxHubProfitAndLossRow>()
-                : BuildProfitAndLossRows(
+                monthlyProfitAndLoss = BuildProfitAndLossRows(
                     monthlyTrade.Where(t => t.YearNumber == selectedPeriodInfo.YearNumber),
                     selectedPreviousPeriodYear.HasValue
                         ? monthlyTrade.Where(t => t.YearNumber == selectedPreviousPeriodYear.Value)
                         : Enumerable.Empty<Cash_vwProfitAndLossByPeriod>());
 
-            var monthlyDetails = selectedPeriodInfo is null
-                ? Array.Empty<TaxHubProfitAndLossDetailSection>()
-                : await BuildMonthlyProfitAndLossDetailsAsync(selectedPeriod, selectedPeriodInfo.YearNumber, selectedPreviousPeriodYear, selectedPeriodInfo.MonthNumber);
+                monthlyDetails = await BuildMonthlyProfitAndLossDetailsAsync(selectedPeriod,
+                    selectedPeriodInfo.YearNumber, selectedPreviousPeriodYear, selectedPeriodInfo.MonthNumber);
+            }
 
-            var balanceSheet = selectedPeriodInfo is null
-                ? Array.Empty<TaxHubBalanceSheetRow>()
-                : await BuildBalanceSheetAsync(selectedPeriod, selectedPeriodInfo);
+            var balanceSheet = section == TaxHubAccountsWorkspaceSection.BalanceSheet
+                ? await BuildBalanceSheetAsync(selectedPeriod, selectedPeriodInfo)
+                : Array.Empty<TaxHubBalanceSheetRow>();
 
             var selectedYearEndStartOn = selectedPeriodInfo is null
                 ? null
@@ -732,14 +746,21 @@ namespace TradeControl.Web.AppServices.TaxHub
                 && selectedYearEndStartOn.HasValue
                 && selectedPeriodInfo.StartOn.Date == selectedYearEndStartOn.Value.Date;
 
-            var equityReconciliation = await GetEquityReconciliationRowsAsync();
+            var requiresValidation = section is TaxHubAccountsWorkspaceSection.Validation
+                or TaxHubAccountsWorkspaceSection.Filing;
+            var equityReconciliation = requiresValidation
+                ? await GetEquityReconciliationRowsAsync()
+                : Array.Empty<TaxHubEquityReconciliationRow>();
             var validationSummary = BuildAccountsValidationSummary(equityReconciliation);
-            var companiesHouse = await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod);
+            var companiesHouse = section == TaxHubAccountsWorkspaceSection.Filing
+                ? await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod)
+                : new TaxHubCompaniesHouseReadiness();
             TaxHubSubjectBalanceEvidence? subjectBalanceEvidence = null;
             TaxHubBankCashEvidence? bankCashEvidence = null;
             TaxHubFixedAssetEvidence? fixedAssetEvidence = null;
 
-            if (isYearEndBalanceSheet)
+            if (isYearEndBalanceSheet && section is TaxHubAccountsWorkspaceSection.BalanceSheet
+                or TaxHubAccountsWorkspaceSection.Filing)
             {
                 var effectiveDate = new DateOnly(
                     selectedPeriod.Year,
@@ -758,12 +779,15 @@ namespace TradeControl.Web.AppServices.TaxHub
                     SnapshotToken = snapshot.SnapshotToken,
                     SubjectBrowserUrl = $"/Subject/Browser/Index?mode=Balances&balanceView=Historical&asOf={Uri.EscapeDataString(effectiveDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))}"
                 };
-                bankCashEvidence = await BuildBankCashEvidenceAsync(selectedPeriodInfo!.YearNumber, selectedPeriod, effectiveDate);
-                var yearStart = await _nodeContext.App_tbYearPeriods
-                    .AsNoTracking()
-                    .Where(period => period.YearNumber == selectedPeriodInfo!.YearNumber)
-                    .MinAsync(period => period.StartOn);
-                fixedAssetEvidence = await BuildFixedAssetEvidenceAsync(selectedPeriodInfo.YearNumber, yearStart, selectedPeriod, effectiveDate);
+                if (section == TaxHubAccountsWorkspaceSection.Filing)
+                {
+                    bankCashEvidence = await BuildBankCashEvidenceAsync(selectedPeriodInfo!.YearNumber, selectedPeriod, effectiveDate);
+                    var yearStart = await _nodeContext.App_tbYearPeriods
+                        .AsNoTracking()
+                        .Where(period => period.YearNumber == selectedPeriodInfo!.YearNumber)
+                        .MinAsync(period => period.StartOn);
+                    fixedAssetEvidence = await BuildFixedAssetEvidenceAsync(selectedPeriodInfo.YearNumber, yearStart, selectedPeriod, effectiveDate);
+                }
             }
 
             return new TaxHubAccountsWorkspaceModel
@@ -1598,7 +1622,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                     await connection.CloseAsync();
             }
 
-            var today = DateTime.Today;
+            var today = _businessClock.TodayDateTime;
 
             return dueDates
                 .Where(d => d.PayOn.Date >= today)

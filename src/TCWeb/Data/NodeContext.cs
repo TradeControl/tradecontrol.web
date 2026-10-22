@@ -348,6 +348,8 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<AspNet_UserRegistration>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.EmailAddress).IsRequired(false);
+                entity.Property(e => e.UserName).IsRequired(false);
                 //entity.ToView("AspNetUserRegistrations");
             });
             #endregion

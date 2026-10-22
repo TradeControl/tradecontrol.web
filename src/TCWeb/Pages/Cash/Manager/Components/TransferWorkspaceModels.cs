@@ -24,7 +24,7 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         public string DestinationAccountCode { get; set; } = string.Empty;
 
         [DataType(DataType.Date)]
-        public DateTime PaidOn { get; set; } = DateTime.Today;
+        public DateTime PaidOn { get; set; }
 
         [StringLength(255)]
         public string PaymentReference { get; set; } = string.Empty;

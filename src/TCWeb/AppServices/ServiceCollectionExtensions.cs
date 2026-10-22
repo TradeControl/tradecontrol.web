@@ -10,6 +10,7 @@ using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 using TradeControl.Web.Tenancy;
+using TradeControl.Web.Mail;
 
 namespace TradeControl.Web.AppServices
 {
@@ -23,9 +24,16 @@ namespace TradeControl.Web.AppServices
             IConfiguration configuration)
         {
             services.Configure<TenantHostingOptions>(configuration.GetSection(TenantHostingOptions.SectionName));
+            services.AddOptions<PlatformEmailOptions>()
+                .Bind(configuration.GetSection(PlatformEmailOptions.SectionName))
+                .Validate(options => !options.Enabled || options.IsValid(),
+                    "Enabled platform email requires an authenticated SMTP host, credentials, sender and mandatory TLS mode.")
+                .ValidateOnStart();
+            services.AddSingleton<IPlatformEmailSender, PlatformSmtpEmailSender>();
             services.AddSingleton<ITenantDirectory, ConfiguredTenantDirectory>();
             services.AddSingleton<TenantAmbientContext>();
             services.AddScoped<ITenantContext, TenantContext>();
+            services.AddScoped<IBusinessClock, BusinessClock>();
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<ITemplateInvoicesService, TemplateInvoicesService>();
             services.AddScoped<ITemplateSystemService, TemplateSystemService>();
@@ -127,7 +135,10 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IVatApprovalEvidenceSource>(provider =>
                 provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovalEvidenceSource
                 ?? throw new InvalidOperationException("The VAT approval evidence source is unavailable."));
-            services.AddScoped<IVatFilingHistoryService, VatFilingHistoryService>();
+            if (configuration.GetValue<bool>($"{VatProductHostOptions.SectionName}:Enabled"))
+                services.AddScoped<IVatFilingHistoryService, VatFilingHistoryService>();
+            else
+                services.AddScoped<IVatFilingHistoryService, DisabledVatFilingHistoryService>();
             services.AddScoped<IVatAuthorityReturnSubmission>(provider =>
                 provider.GetRequiredService<VatHmrcConnectionService>());
             services.AddScoped<IVatReturnSubmissionService, VatReturnSubmissionService>();

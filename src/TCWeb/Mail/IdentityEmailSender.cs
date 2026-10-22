@@ -13,11 +13,14 @@ namespace TradeControl.Web.Mail
     {
         private readonly NodeContext _nodeContext;
         private readonly IFileProvider _fileProvider;
+        private readonly IPlatformEmailSender _platformEmailSender;
 
-        public IdentityEmailSender(NodeContext nodeContext, IFileProvider fileProvider)
+        public IdentityEmailSender(NodeContext nodeContext, IFileProvider fileProvider,
+            IPlatformEmailSender platformEmailSender)
         {
             _nodeContext = nodeContext;
             _fileProvider = fileProvider;
+            _platformEmailSender = platformEmailSender;
         }
 
         public async Task SendEmailAsync(string email, string subject, string htmlMessage)
@@ -26,14 +29,15 @@ namespace TradeControl.Web.Mail
             {
                 NodeSettings nodeSettings = new(_nodeContext);
 
-                if (!nodeSettings.HasMailHost)
-                    throw new Exception("Mail host needs configuring.");
+                var settings = _platformEmailSender.IsConfigured
+                    ? null
+                    : nodeSettings.HasMailHost
+                        ? await nodeSettings.MailHost()
+                        : null;
+                if (settings == null && !_platformEmailSender.IsConfigured)
+                    throw new Exception("No email delivery service is configured.");
 
-                var settings = await nodeSettings.MailHost();
-                if (settings == null)
-                    throw new Exception("Mail host settings not available.");
-
-                var sender = new IdentityMailSender();
+                var sender = new IdentityMailSender(_platformEmailSender);
                 await sender.SendAsync(new MailText
                 {
                     Settings = settings,
@@ -57,6 +61,8 @@ namespace TradeControl.Web.Mail
             {
                 TemplateManager templateManager = new(_nodeContext, _fileProvider);
                 var doc = await templateManager.GetUserRegistrationConfirm();
+                if (_platformEmailSender.IsConfigured)
+                    doc.Settings = null;
 
                 var companyName = await _nodeContext.CompanyName();
 
@@ -68,7 +74,7 @@ namespace TradeControl.Web.Mail
                 doc.Arguments.Add("EmailAddress", WebUtility.HtmlEncode(emailAddress));
                 doc.Arguments.Add("ConfirmUrl", confirmUrl);
 
-                var sender = new IdentityDocumentSender(_nodeContext, doc);
+                var sender = new IdentityDocumentSender(_nodeContext, doc, _platformEmailSender);
                 await sender.SendAsync();
             }
             catch (Exception e)
@@ -93,6 +99,8 @@ namespace TradeControl.Web.Mail
 
                 TemplateManager templateManager = new(_nodeContext, _fileProvider);
                 var doc = await templateManager.GetUserRegistrationAdminNotify();
+                if (_platformEmailSender.IsConfigured)
+                    doc.Settings = null;
 
                 var companyName = await _nodeContext.CompanyName();
 
@@ -106,9 +114,9 @@ namespace TradeControl.Web.Mail
 
                     perRecipient.Arguments.Add("CompanyName", WebUtility.HtmlEncode(companyName ?? string.Empty));
                     perRecipient.Arguments.Add("EmailAddress", WebUtility.HtmlEncode(registrantEmailAddress));
-                    perRecipient.Arguments.Add("UsersUrl", usersUrl);
+                    perRecipient.Arguments.Add("UsersUrl", WebUtility.HtmlEncode(usersUrl));
 
-                    var sender = new IdentityDocumentSender(_nodeContext, perRecipient);
+                    var sender = new IdentityDocumentSender(_nodeContext, perRecipient, _platformEmailSender);
                     await sender.SendAsync();
                 }
             }
@@ -130,6 +138,9 @@ namespace TradeControl.Web.Mail
 
         private sealed class IdentityMailSender : MailService
         {
+            public IdentityMailSender(IPlatformEmailSender platformEmailSender)
+                : base(platformEmailSender) { }
+
             public Task SendAsync(MailText mailText) => SendText(mailText);
         }
 
@@ -138,7 +149,8 @@ namespace TradeControl.Web.Mail
             private readonly NodeContext _nodeContext;
             private readonly MailDocument _document;
 
-            public IdentityDocumentSender(NodeContext nodeContext, MailDocument document)
+            public IdentityDocumentSender(NodeContext nodeContext, MailDocument document,
+                IPlatformEmailSender platformEmailSender) : base(platformEmailSender)
             {
                 _nodeContext = nodeContext;
                 _document = document;

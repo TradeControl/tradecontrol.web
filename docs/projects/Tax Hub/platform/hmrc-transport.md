@@ -601,7 +601,7 @@ The WebHarness legacy runner should remain visibly separate until removed by a l
 
 - Obtain/pin official computation taxonomy and current CT validation assets.
 - Produce a submission-ready service payload and golden official-validation fixtures.
-- Confirm current Transaction Engine class, credentials, endpoints, receipt schema and recognition scenarios with HMRC/SDST.
+- Confirm current Transaction Engine class, credentials, endpoints and receipt schema with HMRC/SDST.
 
 **Acceptance:** all artifacts are explicitly `SubmissionReady`; diagnostic serializer output cannot enter the live gateway; official local/test validation succeeds. This phase may require a separately controlled Objective 3 contract-assurance change, but no tax values may be altered by transport.
 
@@ -611,14 +611,14 @@ The WebHarness legacy runner should remain visibly separate until removed by a l
 - Implement submit/acknowledge/poll/terminal/delete/recovery.
 - Persist and verify receipts.
 
-**Acceptance:** HMRC published IRmark examples match exactly; XML schema/protocol fixtures pass; polling honours returned interval; restart recovery uses correlation ID; terminal responses are retrieved before deletion; exact Objective 3 attachment bytes survive unchanged; ETS/TIL scenarios and recognition evidence pass.
+**Acceptance:** HMRC published IRmark examples match exactly; XML schema/protocol fixtures pass; polling honours returned interval; restart recovery uses correlation ID; terminal responses are retrieved before deletion; exact Objective 3 attachment bytes survive unchanged; and the controlled ETS/TIL journey passes. Any optional recognition evidence is collected later against HMRC's then-current instructions.
 
 ### Phase 4.7 — Production hardening and handoff to Objective 5
 
 - Capacity/rate-limit tests, observability, security/privacy review, key rotation and runbooks.
 - Expose safe application outcomes for later UI workflow integration.
 
-**Acceptance:** production enablement requires approved credentials/recognition and explicit configuration; operational drills cover token revocation, `429`, HMRC maintenance, ambiguous POST and pending Transaction Engine correlation IDs.
+**Acceptance:** production enablement requires the applicable production credentials/authority and explicit configuration; operational drills cover token revocation, `429`, HMRC maintenance, ambiguous POST and pending Transaction Engine correlation IDs. Optional Corporation Tax recognition is tracked separately and is not inferred to be a production-transport requirement.
 
 ## 12. Acceptance and test strategy
 
@@ -649,7 +649,7 @@ Inject faults before connect, during upload, after upload/before response, after
 - VAT: authorisation, obligations, exact prepared return, `201` response, receipt identifiers and post-submit obligation reconciliation.
 - MTD Income Tax: business/obligation discovery, exact cumulative `PUT`, retrieve/verify where supported and approved test scenarios.
 - Fraud headers: validator `validate` during development and `validation-feedback` after real sandbox calls.
-- Corporation Tax: local/official validation assets, ETS submit/poll/delete, TIL where applicable, HMRC recognition scenarios and retained receipts.
+- Corporation Tax: local/official validation assets, ETS submit/poll/delete, TIL where applicable and retained receipts. Optional recognition scenarios follow comprehensive testing and product maturity.
 
 Sandbox tests must use newly created synthetic users and secret configuration. Test identifiers, credentials and full fraud-header output must not be committed.
 
@@ -791,6 +791,6 @@ These are the minimum **boundary** corrections. OAuth, fraud headers, durable st
 
 **4.0 boundary correction:** pin supported VAT statuses; propagate REST metadata and eligibility; add dispatch context and typed REST outcome; correct CT conversation marker and CT-specific outcome shape; hard-reject preview/error packages. Verify existing JSON/iXBRL goldens unchanged. The CT service-root serializer is explicitly *not* part of this small phase.
 
-**4.1 REST foundation:** configure allowed hosts, principal-scoped OAuth tokens, fraud capture/header validation and the minimal audit/attempt store. **4.2 enquiries:** send only approved bodyless VAT/MTD requests and interpret pinned outcomes. **4.3 writes:** add exact-byte VAT `POST` and MTD `PUT`, receipts and ambiguity handling. **Parallel CT contract assurance:** obtain official taxonomy/RIM/validation evidence, produce the real service root and establish the IRmark slot; only then promote readiness. **CT transport:** implement GovTalk/IRmark and Transaction Engine conversation with synthetic fixtures first, then official test/recognition and enabled submissions after both readiness gates pass. Production hardening and Objective 5 workflow follow. Thus REST implementation has a small, necessary boundary-correction predecessor; CT artifact assurance is a separate controlled Objective 3 change.
+**4.1 REST foundation:** configure allowed hosts, principal-scoped OAuth tokens, fraud capture/header validation and the minimal audit/attempt store. **4.2 enquiries:** send only approved bodyless VAT/MTD requests and interpret pinned outcomes. **4.3 writes:** add exact-byte VAT `POST` and MTD `PUT`, receipts and ambiguity handling. **Parallel CT contract assurance:** obtain official taxonomy/RIM/validation evidence, produce the real service root and establish the IRmark slot; only then promote readiness. **CT transport:** implement GovTalk/IRmark and Transaction Engine conversation with synthetic fixtures first, then complete the official test journey after the artifact and protocol readiness gates pass. Optional recognition follows comprehensive testing and product maturity; it does not gate ETS. Production hardening and Objective 5 workflow follow. Thus REST implementation has a small, necessary boundary-correction predecessor; CT artifact assurance is a separate controlled Objective 3 change.
 
-Human approval is needed for three concrete choices before the corresponding implementation/enabling step: (1) the tenant/principal and approval-reference model, including agent authority; (2) the deployment connection method, proxy topology and protected fraud/audit retention policy; (3) promotion of a specifically validated CT service-root/IRmark-slot design and later CT test/live enablement after official artefacts and recognition evidence. The first REST boundary correction itself is described here for review, not silently authorised by this reference document.
+Human approval is needed for three concrete choices before the corresponding implementation/enabling step: (1) the tenant/principal and approval-reference model, including agent authority; (2) the deployment connection method, proxy topology and protected fraud/audit retention policy; (3) promotion of a specifically validated CT service-root/IRmark-slot design and later CT test/live enablement after official artifacts and ETS evidence. Optional recognition is a subsequent product decision. The first REST boundary correction itself is described here for review, not silently authorised by this reference document.

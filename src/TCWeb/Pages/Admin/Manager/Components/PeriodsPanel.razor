@@ -7,10 +7,12 @@
 @using TradeControl.Web.Authorization
 @using TradeControl.Web.Data
 @using TradeControl.Web.Models
+@using TradeControl.Web.Tenancy
 
 @inject NodeContext NodeContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<TradeControlWebUser> UserManager
+@inject IBusinessClock BusinessClock
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_actionMessage))
@@ -345,7 +347,7 @@
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
             short startMonth = 1;
-            short yearNumber = (short)DateTime.Now.Year;
+            short yearNumber = (short)BusinessClock.Today.Year;
             var yearDesc = string.Empty;
 
             if (await NodeContext.App_tbYears.AnyAsync())

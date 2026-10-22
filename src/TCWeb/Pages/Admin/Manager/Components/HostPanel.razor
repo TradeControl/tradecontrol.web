@@ -8,10 +8,13 @@
 @using TradeControl.Web.Data
 @using TradeControl.Web.Mail
 @using TradeControl.Web.Models
+@using TradeControl.Web.Tenancy
 
 @inject NodeContext NodeContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<TradeControlWebUser> UserManager
+@inject IPlatformEmailSender PlatformEmailSender
+@inject IBusinessClock BusinessClock
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_actionMessage))
@@ -28,13 +31,27 @@
         </div>
     }
 
+    @if (PlatformEmailSender.IsConfigured)
+    {
+        <div class="alert alert-info py-2 mb-3" role="status">
+            <div class="fw-semibold">System-managed email is active</div>
+            <div class="small">
+                Trade Control supplies the default sending service. Add a tenant host only when this business needs its own sender.
+            </div>
+        </div>
+    }
+
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
         <div class="border rounded bg-white px-3 py-2">
-            <div class="small text-muted">Active Host</div>
-            <div class="fw-semibold">@(_activeHost?.HostDescription ?? "None configured")</div>
+            <div class="small text-muted">Active Email Route</div>
+            <div class="fw-semibold">@ActiveRouteName</div>
             @if (_activeHost is not null)
             {
                 <div class="small text-muted">@_activeHost.EmailAddress · @_activeHost.HostName:@_activeHost.HostPort</div>
+            }
+            else if (PlatformEmailSender.IsConfigured)
+            {
+                <div class="small text-muted">Platform default</div>
             }
         </div>
 
@@ -42,7 +59,7 @@
             <button type="button"
                     class="btn btn-outline-primary btn-sm"
                     @onclick="BeginCreateAsync">
-                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Host
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Override
             </button>
 
             <button type="button"
@@ -53,6 +70,8 @@
 
             <button type="button"
                     class="btn btn-outline-danger btn-sm"
+                    disabled="@(_hosts.Count == 0)"
+                    title="Rotate encryption keys for tenant-host passwords"
                     @onclick="BeginRotateKeys">
                 Rotate Keys
             </button>
@@ -124,6 +143,9 @@
     private string? _errorMessage;
     private bool _isLoading;
     private int? _activeHostId;
+
+    private string ActiveRouteName => _activeHost?.HostDescription
+        ?? (PlatformEmailSender.IsConfigured ? "System managed" : "None configured");
 
     protected override async Task OnInitializedAsync()
     {
@@ -481,22 +503,22 @@
             var settings = new NodeSettings(NodeContext);
             var mailSettings = await settings.MailHost();
 
-            if (mailSettings is null)
+            if (mailSettings is null && !PlatformEmailSender.IsConfigured)
             {
                 await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
-                    "Test email NOT sent: no active mail host is configured.");
+                    "Test email NOT sent: no email delivery route is configured.");
 
                 _actionTone = "danger";
                 _actionMessage = "Test email not sent. Check Event Viewer for details.";
                 return;
             }
 
-            var from = mailSettings.UserName;
+            var route = mailSettings is null ? "System managed" : mailSettings.HostName;
             var subject = "Trade Control - Test Email";
-            var body = $"Test email sent at {DateTime.Now:G}.";
+            var body = $"Test email sent at {BusinessClock.LocalNow:G} ({BusinessClock.TimeZoneId}).";
 
             await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
-                $"Test email requested. From='{from}', To='{to}', Subject='{subject}', Body='{body}'.");
+                $"Test email requested. Route='{route}', To='{to}', Subject='{subject}', Body='{body}'.");
 
             var mail = new MailText
             {
@@ -508,11 +530,11 @@
                 IsHtml = false
             };
 
-            var sender = new TestMailSender();
+            var sender = new TestMailSender(PlatformEmailSender);
             await sender.SendAsync(mail);
 
             await NodeContext.EventLog(NodeEnum.EventType.IsInformation,
-                $"Test email sent successfully. From='{from}', To='{to}', Subject='{subject}'.");
+                $"Test email sent successfully. Route='{route}', To='{to}', Subject='{subject}'.");
 
             _actionTone = "success";
             _actionMessage = "Email sent. Check Event Viewer for details.";
@@ -590,7 +612,7 @@
 
     private RenderFragment RenderHostListPane() => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
     <div class="px-3 py-2 border-bottom bg-light small text-muted">
-        @_hosts.Count host@(_hosts.Count == 1 ? string.Empty : "s")
+        @_hosts.Count tenant override@(_hosts.Count == 1 ? string.Empty : "s")
     </div>
 
 @if (_isLoading && _hosts.Count == 0)
@@ -599,7 +621,11 @@
     }
     else if (_hosts.Count == 0)
     {
-    <div class="p-3 text-muted">No mail hosts configured.</div>
+    <div class="p-3 text-muted">
+        @(PlatformEmailSender.IsConfigured
+            ? "No tenant override is configured. System-managed email remains active."
+            : "No email delivery route is configured.")
+    </div>
     }
     else
     {
@@ -631,7 +657,9 @@
 @if (_selectedHost is null)
 {
         <div class="d-flex align-items-center justify-content-center flex-grow-1 text-muted p-3">
-            Select a host to view its details.
+            @(PlatformEmailSender.IsConfigured
+                ? "System-managed email is supplying the default route."
+                : "Select a host to view its details.")
         </div>
 }
 else

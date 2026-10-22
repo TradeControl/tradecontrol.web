@@ -10,6 +10,7 @@ using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Tax.UK.Application.Preparation;
 using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
@@ -46,7 +47,7 @@ internal sealed class CompaniesHouseFilingContinuationService(
     NodeContext nodeContext,
     ICompaniesHouseWorkflowIdentityAccessor identityAccessor,
     ICompaniesHouseWorkflowStore workflowStore,
-    TimeProvider timeProvider) : ICompaniesHouseFilingContinuationService
+    IBusinessClock businessClock) : ICompaniesHouseFilingContinuationService
 {
     public async Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
         CancellationToken cancellationToken = default)
@@ -57,7 +58,7 @@ internal sealed class CompaniesHouseFilingContinuationService(
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
 
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
-            .ReadAsync(DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime), cancellationToken);
+            .ReadAsync(businessClock.Today, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(
             context.Identity.CompanyNumber);
         if (companyNumber.Length != 8 || !companyNumber.All(char.IsAsciiLetterOrDigit))

@@ -8,6 +8,10 @@ This is an eligibility and process signal, not production approval. The response
 
 **Decision (14 October 2026): production-credentials application deferred.** The owner has chosen not to apply against the temporary isolated single-tenant deployment. The application will remain unanswered until the intended shared multi-tenant Azure hosting environment has been implemented and independently reviewed. This is a deployment-assurance gate, not a technical VAT failure, and it does not reopen the accepted Objective 3 statutory contracts or Phase 6.6 evidence.
 
+**Sequencing reaffirmed (22 October 2026):** the multi-tenant environment is now active programme
+work. Resume this VAT phase only after that environment is ready and reviewed, alongside the resumed
+CT Phase 5.10 evidence work. The streams retain separate HMRC credentials, tests and approval gates.
+
 The initial contact satisfied HMRC's two-week log-availability window following the completed sandbox tests on 2 October 2026. Any evidence later supplied with the deferred application must be current and topology-matched; the programme will repeat the required sandbox calls rather than rely on HMRC retaining the October logs indefinitely.
 
 ## Preserved technical baseline

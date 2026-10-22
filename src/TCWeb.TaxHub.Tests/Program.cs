@@ -55,10 +55,12 @@ Assert(webReferences.All(reference => !reference.Contains("WebHarness", StringCo
     "TCWeb must not reference the diagnostic WebHarness.");
 assertions += await CashStatementServiceTests.RunAsync();
 assertions += await TenantIsolationTests.RunAsync();
+assertions += BusinessClockTests.Run();
 assertions += TenantFileProviderTests.Run();
 assertions += await FileUploadValidationTests.RunAsync();
 assertions += TenantAssetDownloadTests.Run();
 assertions += TemplateBootstrapTests.Run(root);
+assertions += PlatformEmailTests.Run(root);
 
 var workflowContract = typeof(IVatProductWorkflow);
 var prohibitedContractNamespaces = new[]
@@ -673,6 +675,12 @@ Assert(!companiesHouseDdl.Contains("DROP TABLE", StringComparison.OrdinalIgnoreC
 
 Assert(developmentValidator.Validate(null, new VatProductHostOptions()).Succeeded,
     "The disabled product boundary must permit an unconfigured host.");
+var disabledVatHistory = new DisabledVatFilingHistoryService();
+Assert((await disabledVatHistory.GetAsync()).Count == 0,
+    "A disabled VAT host must expose an empty filing history without constructing a persistence store.");
+await AssertThrowsAsync<VatReturnReviewException>(
+    () => disabledVatHistory.ReconcileAsync("attempt"),
+    "A disabled VAT host must fail reconciliation closed with a safe product error.");
 
 var sandbox = ValidDevelopmentOptions();
 Assert(developmentValidator.Validate(null, sandbox).Succeeded,
@@ -903,6 +911,10 @@ Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringCom
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
     "Business Tax or Accounts no longer provides compact mobile tab labels.");
+Assert(accountsWorkspaceComponent.Contains("ActivePanelIndexChanged=\"LoadSectionAsync\"", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("_loadedSections.Contains(section)", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("TaxHubAccountsWorkspaceSection.Filing", StringComparison.Ordinal),
+    "Accounts no longer loads and caches its expensive report sections on demand.");
 Assert(profitAndLossGridComponent.Contains("<HierarchyColumn", StringComparison.Ordinal)
        && profitAndLossGridComponent.Contains("<ChildRowContent>", StringComparison.Ordinal)
        && profitAndLossGridComponent.Contains("Collapse cash-code detail", StringComparison.Ordinal)

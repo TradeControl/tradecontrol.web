@@ -423,18 +423,12 @@ namespace TradeControl.Web.Mail
         #region get mail document and settings
         public async Task<MailDocument> GetInvoice(NodeEnum.InvoiceType invoiceType, int templateId)
         {
-            NodeSettings nodeSettings = new(NodeContext);
-
-            if (!nodeSettings.HasMailHost)
-                throw new Exception("Mail host needs configuring");
-            else if (FileProvider == null)
+            if (FileProvider == null)
                 throw new Exception("FileProvider not specified");
 
             var templateFile = await GetTemplateFromId(templateId);
 
             MailDocument mailDocument = new() { TemplateFileName = templateFile.PhysicalPath };
-
-            mailDocument.Settings = await nodeSettings.MailHost();
 
             var attachments = await NodeContext.Web_tbAttachmentInvoices
                                     .Where(t => t.InvoiceTypeCode == (short)invoiceType)
@@ -464,17 +458,12 @@ namespace TradeControl.Web.Mail
 
         public async Task<MailText> GetText(string name, string emailTo, string subject, string body)
         {
-            NodeSettings nodeSettings = new(NodeContext);
-
-            if (!nodeSettings.HasMailHost)
-                return null;
-
             MailText mailText = new() {
                 Name = name,
                 EmailTo = emailTo,
                 Subject = subject,
                 Body = body,
-                Settings = await nodeSettings.MailHost()
+                Settings = await GetTenantMailSettings()
             };
 
             return mailText;
@@ -484,11 +473,7 @@ namespace TradeControl.Web.Mail
         {
             try
             {
-                NodeSettings nodeSettings = new(NodeContext);
-
-                if (!nodeSettings.HasMailHost)
-                    throw new Exception("Mail host needs configuring");
-                else if (FileProvider == null)
+                if (FileProvider == null)
                     throw new Exception("FileProvider not specified");
 
                 var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
@@ -497,7 +482,7 @@ namespace TradeControl.Web.Mail
 
                 var fileInfo = await GetTemplateFromId(options.SupportRequestTemplateId.Value);
                 MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
-                mailDocument.Settings = await nodeSettings.MailHost();
+                mailDocument.Settings = await GetTenantMailSettings();
                 return mailDocument;
             }
             catch (Exception e)
@@ -511,11 +496,7 @@ namespace TradeControl.Web.Mail
         {
             try
             {
-                NodeSettings nodeSettings = new(NodeContext);
-
-                if (!nodeSettings.HasMailHost)
-                    throw new Exception("Mail host needs configuring");
-                else if (FileProvider == null)
+                if (FileProvider == null)
                     throw new Exception("FileProvider not specified");
 
                 var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
@@ -524,7 +505,7 @@ namespace TradeControl.Web.Mail
 
                 var fileInfo = await GetTemplateFromId(options.UserRegistrationTemplateId.Value);
                 MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
-                mailDocument.Settings = await nodeSettings.MailHost();
+                mailDocument.Settings = await GetTenantMailSettings();
                 return mailDocument;
             }
             catch (Exception e)
@@ -538,11 +519,7 @@ namespace TradeControl.Web.Mail
         {
             try
             {
-                NodeSettings nodeSettings = new(NodeContext);
-
-                if (!nodeSettings.HasMailHost)
-                    throw new Exception("Mail host needs configuring");
-                else if (FileProvider == null)
+                if (FileProvider == null)
                     throw new Exception("FileProvider not specified");
 
                 var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
@@ -551,7 +528,7 @@ namespace TradeControl.Web.Mail
 
                 var fileInfo = await GetTemplateFromId(options.UserRegistrationConfirmTemplateId.Value);
                 MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
-                mailDocument.Settings = await nodeSettings.MailHost();
+                mailDocument.Settings = await GetTenantMailSettings();
                 return mailDocument;
             }
             catch (Exception e)
@@ -565,11 +542,7 @@ namespace TradeControl.Web.Mail
         {
             try
             {
-                NodeSettings nodeSettings = new(NodeContext);
-
-                if (!nodeSettings.HasMailHost)
-                    throw new Exception("Mail host needs configuring");
-                else if (FileProvider == null)
+                if (FileProvider == null)
                     throw new Exception("FileProvider not specified");
 
                 var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
@@ -578,7 +551,7 @@ namespace TradeControl.Web.Mail
 
                 var fileInfo = await GetTemplateFromId(options.UserRegistrationAdminNotifyTemplateId.Value);
                 MailDocument mailDocument = new() { TemplateFileName = fileInfo.PhysicalPath };
-                mailDocument.Settings = await nodeSettings.MailHost();
+                mailDocument.Settings = await GetTenantMailSettings();
                 return mailDocument;
             }
             catch (Exception e)
@@ -586,6 +559,14 @@ namespace TradeControl.Web.Mail
                 await NodeContext.ErrorLog(e);
                 throw;
             }
+        }
+
+        private async Task<MailSettings> GetTenantMailSettings()
+        {
+            NodeSettings nodeSettings = new(NodeContext);
+            return nodeSettings.HasMailHost
+                ? await nodeSettings.MailHost()
+                : null;
         }
 
         #endregion

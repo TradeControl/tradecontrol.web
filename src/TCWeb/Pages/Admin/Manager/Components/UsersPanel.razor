@@ -6,11 +6,13 @@
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.Authorization
 @using TradeControl.Web.Data
+@using TradeControl.Web.Mail
 @using TradeControl.Web.Models
 
 @inject NodeContext NodeContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<TradeControlWebUser> UserManager
+@inject IPlatformEmailSender PlatformEmailSender
 
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_actionMessage))
@@ -65,8 +67,8 @@
                 <div class="small text-uppercase text-muted mb-2" style="letter-spacing:0.06em;">Registration Readiness</div>
                 <div class="d-flex flex-column gap-2 small">
                     <div class="d-flex justify-content-between gap-2">
-                        <span>Active mail host configured</span>
-                        <span class="badge @(GetReadinessBadge(_hasMailHost))">@GetReadinessText(_hasMailHost)</span>
+                        <span>Active email route configured</span>
+                        <span class="badge @(GetReadinessBadge(_hasEmailDelivery))">@GetReadinessText(_hasEmailDelivery)</span>
                     </div>
                     <div class="d-flex justify-content-between gap-2">
                         <span>Registration confirm template configured</span>
@@ -207,7 +209,7 @@
     private UserProfileEditorModel _editor = new();
     private UsersPanelMode _mode = UsersPanelMode.List;
     private string _stageFilter = string.Empty;
-    private bool _hasMailHost;
+    private bool _hasEmailDelivery;
     private bool _hasRegistrationConfirmTemplate;
     private bool _hasRegistrationAdminNotifyTemplate;
     private bool _registrationReady;
@@ -254,12 +256,12 @@
     private async Task LoadReadinessAsync()
     {
         var settings = new NodeSettings(NodeContext);
-        _hasMailHost = settings.HasMailHost;
+        _hasEmailDelivery = settings.HasMailHost || PlatformEmailSender.IsConfigured;
 
         var options = await NodeContext.App_tbOptions.AsNoTracking().FirstOrDefaultAsync();
         _hasRegistrationConfirmTemplate = options?.UserRegistrationConfirmTemplateId != null;
         _hasRegistrationAdminNotifyTemplate = options?.UserRegistrationAdminNotifyTemplateId != null;
-        _registrationReady = _hasMailHost && _hasRegistrationConfirmTemplate && _hasRegistrationAdminNotifyTemplate;
+        _registrationReady = _hasEmailDelivery && _hasRegistrationConfirmTemplate && _hasRegistrationAdminNotifyTemplate;
     }
 
     private async Task LoadRegistrationsAsync(bool preserveSelection)
@@ -273,9 +275,6 @@
 
             var rows = await NodeContext.AspNet_UserRegistrations
                 .AsNoTracking()
-                .ToListAsync();
-
-            var mapped = rows
                 .Select(item => new RegistrationRow
                 {
                     Id = item.Id,
@@ -285,8 +284,17 @@
                     IsRegistered = item.IsRegistered,
                     IsAdministrator = item.IsAdministrator,
                     IsManager = item.IsManager,
-                    Stage = GetStage(item.IsConfirmed, item.IsRegistered)
+                    Stage = !item.IsConfirmed && !item.IsRegistered
+                        ? RegistrationStage.AwaitingEmailConfirmation
+                        : item.IsConfirmed && !item.IsRegistered
+                            ? RegistrationStage.ReadyForProfile
+                            : item.IsConfirmed && item.IsRegistered
+                                ? RegistrationStage.Registered
+                                : RegistrationStage.NeedsAttention
                 })
+                .ToListAsync();
+
+            var mapped = rows
                 .OrderBy(item => item.Stage)
                 .ThenBy(item => item.EmailAddress)
                 .ToList();
@@ -324,14 +332,6 @@
         }
     }
 
-    private static RegistrationStage GetStage(bool isConfirmed, bool isRegistered) => (isConfirmed, isRegistered) switch
-    {
-        (false, false) => RegistrationStage.AwaitingEmailConfirmation,
-        (true, false) => RegistrationStage.ReadyForProfile,
-        (true, true) => RegistrationStage.Registered,
-        _ => RegistrationStage.NeedsAttention
-    };
-
     private async Task HandleStageFilterChangedAsync(ChangeEventArgs args)
     {
         _stageFilter = args.Value?.ToString() ?? string.Empty;
@@ -359,7 +359,25 @@
         {
             var registration = await NodeContext.AspNet_UserRegistrations
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.Id == id);
+                .Where(item => item.Id == id)
+                .Select(item => new RegistrationRow
+                {
+                    Id = item.Id,
+                    EmailAddress = item.EmailAddress ?? string.Empty,
+                    UserName = item.UserName ?? string.Empty,
+                    IsConfirmed = item.IsConfirmed,
+                    IsRegistered = item.IsRegistered,
+                    IsAdministrator = item.IsAdministrator,
+                    IsManager = item.IsManager,
+                    Stage = !item.IsConfirmed && !item.IsRegistered
+                        ? RegistrationStage.AwaitingEmailConfirmation
+                        : item.IsConfirmed && !item.IsRegistered
+                            ? RegistrationStage.ReadyForProfile
+                            : item.IsConfirmed && item.IsRegistered
+                                ? RegistrationStage.Registered
+                                : RegistrationStage.NeedsAttention
+                })
+                .FirstOrDefaultAsync();
 
             if (registration is null)
             {
@@ -513,7 +531,12 @@
 
             var registration = await NodeContext.AspNet_UserRegistrations
                 .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.Id == _editor.RegistrationId);
+                .Where(item => item.Id == _editor.RegistrationId)
+                .Select(item => new
+                {
+                    EmailAddress = item.EmailAddress ?? string.Empty
+                })
+                .FirstOrDefaultAsync();
 
             if (registration is null)
             {

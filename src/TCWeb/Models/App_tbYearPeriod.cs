@@ -42,9 +42,15 @@ namespace TradeControl.Web.Models
         [Display(Name = "Business Tax Adj.")]
         [Column(TypeName = "decimal(18, 5)")]
         public decimal BusinessTaxAdjustment { get; set; }
+        [Display(Name = "Business Tax Adjustment Note")]
+        [Column(TypeName = "nvarchar(max)")]
+        public string BusinessTaxAdjustmentNote { get; set; }
         [Display(Name = "Vat Tax Adj.")]
         [Column(TypeName = "decimal(18, 5)")]
         public decimal VatAdjustment { get; set; }
+        [Display(Name = "VAT Adjustment Note")]
+        [Column(TypeName = "nvarchar(max)")]
+        public string VatAdjustmentNote { get; set; }
 
         [ForeignKey(nameof(CashStatusCode))]
         [InverseProperty(nameof(Cash_tbStatus.TbYearPeriods))]

@@ -57,7 +57,7 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .ToList();
 
-                    var usersUrl = $"{Request.Scheme}://{Request.Host}/Admin/Users/Index";
+                    var usersUrl = $"{Request.Scheme}://{Request.Host}/Admin/Manager/Index?node=Users";
 
                     if (_emailSender is IdentityEmailSender tcSender)
                     {

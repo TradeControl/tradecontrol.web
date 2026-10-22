@@ -30,7 +30,19 @@
             }
         </MudStack>
 
-        @if (Header is not null)
+        @if (IsLoading)
+        {
+            <div role="status" aria-live="polite">
+                <MudStack AlignItems="AlignItems.Center"
+                          Justify="Justify.Center"
+                          Spacing="2"
+                          Class="py-8">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                    <MudText Typo="Typo.body1">Loading invoice…</MudText>
+                </MudStack>
+            </div>
+        }
+        else if (Header is not null)
         {
             <MudStack Spacing="3">
                 <div>
@@ -320,6 +332,7 @@
 </style>
 
 @code {
+    [Parameter] public bool IsLoading { get; set; }
     [Parameter] public Invoice_vwRegister? Header { get; set; }
     [Parameter] public List<Invoice_vwRegisterDetail> DetailItems { get; set; } = [];
     [Parameter] public List<Invoice_vwChangeLog> ChangeLogItems { get; set; } = [];

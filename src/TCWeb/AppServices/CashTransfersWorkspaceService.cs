@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Cash.Manager.Components;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices
 {
@@ -37,6 +38,7 @@ namespace TradeControl.Web.AppServices
 
             using var scope = _scopeFactory.CreateScope();
             var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var today = scope.ServiceProvider.GetRequiredService<IBusinessClock>().TodayDateTime;
 
             var userId = await new Profile(nodeContext).UserId(aspNetUserId);
             var currentBalance = await nodeContext.Subject_CashAccounts
@@ -91,7 +93,7 @@ namespace TradeControl.Web.AppServices
                 .ToList();
 
             var draft = new CashManagerTransferDraftModel {
-                PaidOn = DateTime.Today,
+                PaidOn = today,
                 PaidOutCashCode = paidOutTransferCodes.FirstOrDefault()?.CashCode ?? string.Empty,
                 PaidInCashCode = paidInTransferCodes.FirstOrDefault()?.CashCode ?? string.Empty
             };

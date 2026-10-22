@@ -1,14 +1,33 @@
 # Tax Hub Findings
 
+## 22 October 2026 — ETS precedes optional Corporation Tax recognition
+
+- HMRC SDST confirmed on 21 October that Corporation Tax software recognition is optional. A
+  developer must not apply until technical/customer obligations have been researched, comprehensive
+  product testing—including extensive External Test Service use—has been completed, and the
+  commercial product is mature and ready for release.
+- The requested applicant pack and assigned recognition scenarios are therefore not prerequisites
+  to Phase 5.10 ETS testing. The earlier assumption that Phase 5.10 had to await them is superseded.
+  Recognition remains relevant only if Trade Control elects to seek HMRC recognition/listing after
+  the product and its ETS evidence are ready.
+- HMRC says CT Recognition 2025 is closed and it is preparing CT Recognition 2026 instructions.
+  The recognition year must not be confused with the CT2025 computation taxonomy: the authoritative
+  CT2025 package and pinned CT600 2026 RIM 1.994 remain the current technical assets for this work.
+- The owner has nevertheless chosen to resume both CT Phase 5.10 and the VAT production-access
+  journey only after the production-ready multi-tenant environment is implemented and reviewed.
+  This is a programme sequencing and topology-evidence decision, not an HMRC ETS prerequisite.
+- When CT resumes, the next external step is one explicitly authorised ETS attempt with exact
+  submit, acknowledgement, polling, terminal response, receipt and deletion evidence. Optional
+  recognition follows later; production CT submission remains separately fail-closed.
+
 ## 16 October 2026 — Draft CT600 2027 material is a change signal, not the recognition pack
 
 - HMRC Software Developers Support Team circulated draft April 2027 forms `CT600 04-27 v0.1` and
   `CT600L 04-27 v0.1`, with CT600 and CT600E guidance-change schedules. The email asks developers
   to send feedback to `softwaredevelopersupport@service.hmrc.gov.uk` by 30 November 2026.
-- This is a general developer circular and does not answer the 14 October new-applicant-pack
-  request. It contains no recognition checklist, assigned test submissions, test acceptance route,
-  approval or production-access decision. Phase 5.10 therefore remains dependent on HMRC's
-  applicant pack and scenarios.
+- This is a general developer circular and did not answer the 14 October new-applicant-pack
+  request. HMRC's later 21 October reply established that such recognition material is not a
+  prerequisite to Phase 5.10 ETS testing; see the superseding finding above.
 - The main CT600 draft adds box 696 for the 40% first-year allowance included in trading
   profits/losses and box 739 for the corresponding allowance outside that calculation. HMRC's
   guidance schedule says the allowance applies to qualifying expenditure incurred on or after

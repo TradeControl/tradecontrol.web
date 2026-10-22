@@ -563,6 +563,12 @@ Objective 5's VAT-continuity slice is complete when HMRC has confirmed the compa
 
 **Status (14 October 2026): deferred — multi-tenant production-hosting prerequisites.** Phase 6.6 remains accepted and its technical evidence is preserved. Following HMRC's procedural reply and inspection of the Developer Hub questions, the owner deferred the production-credentials application until the intended multi-tenant Azure environment is implemented and independently reviewed. Tenant-isolation, security, operational and fraud-prevention evidence must be completed against the actual topology; required HMRC sandbox evidence must then be refreshed and HMRC asked whether the hosting change requires additional review. Production approval, credentials, live filing and listing remain pending.
 
+**Sequencing reaffirmed (22 October 2026):** implementation of the production-ready multi-tenant
+environment is the current programme priority. Resume Phase 6.7 after that environment is ready and
+reviewed; refresh topology-matched VAT evidence before answering or submitting the production-
+credentials application. The parallel decision to resume CT Phase 5.10 at the same milestone does
+not combine the two authority workflows or their evidence.
+
 ## Test strategy and regression protection
 
 ### Test layers

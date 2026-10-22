@@ -4,6 +4,13 @@
 
 Local implementation is ready for human review as at 14 October 2026. It cannot send to HMRC in its current composition. No External Test Service request was made, the Phase 5.7 Corporation Tax family gate remains closed, and all CT artifacts remain `Preview` with `SubmissionReady=false`.
 
+**Programme status (22 October 2026): paused for the multi-tenant environment.** HMRC has confirmed
+that recognition is optional and that ETS testing precedes any recognition application. The owner
+has nevertheless chosen to defer the first controlled ETS attempt until the production-ready
+multi-tenant environment is implemented and reviewed, so that CT and VAT resume against the
+intended topology. This pause is not an HMRC prerequisite and does not reopen the accepted CT2025,
+RIM 1.994, service-artifact or Phase 5.9 protocol decisions.
+
 ## Confirmed official route
 
 HMRC's [basic guide for XML software developers](https://www.gov.uk/guidance/basic-guide-for-xml-software-developers) identifies the External Test Service Transaction Engine endpoints and explains that the service checks the GovTalk header and test credentials before routing the body to the Third Party Validation Service. For CT the local profile is pinned to:
@@ -38,6 +45,11 @@ It uses the existing CT payload plus one durable upper-case hexadecimal `officia
 - `CT-ETS-EXTERNAL-SEND-DISABLED`;
 - `CT-RECOGNITION-EVIDENCE-PENDING`; and
 - `CT-PRODUCTION-SUBMISSION-GATE-CLOSED`.
+
+HMRC's later sequencing clarification means `CT-RECOGNITION-EVIDENCE-PENDING` is not a valid reason
+to block an ETS test. It remains in the current send-disabled implementation only as historical
+local evidence and must be replaced with the reviewed environment/readiness and explicit-attempt
+authorisation gates when Phase 5.10 resumes. It must not simply be removed to expose a send path.
 
 ### Statutory-accounts identity boundary
 
@@ -98,19 +110,28 @@ Current verification:
 
 ## Remaining review and execution gate
 
-Human review should confirm this protected configuration and send-disabled preflight before any credentialed external-test attempt. A later explicitly authorised test execution must register the one-attempt transport, retain the exact request/response evidence, observe submit → acknowledgement → poll → terminal → receipt → delete, and record the HMRC recognition result. That authorisation would apply to the named external-test attempt only; it would not enable live filing or relax the production family gate.
+After the multi-tenant environment is implemented and independently reviewed, human review should
+reconfirm this protected configuration and send-disabled preflight before any credentialed
+external-test attempt. A separately authorised test execution must register the one-attempt
+transport, retain the exact request/response evidence and observe submit → acknowledgement → poll →
+terminal → receipt → delete. That authorisation applies only to the named ETS attempt; it does not
+enable live filing, relax the production family gate or constitute a recognition application.
 
 The new-applicant-pack request was sent to HMRC Software Developers Support Team on 14 October 2026
-with the issued Vendor ID. Until HMRC supplies its current checklist and recognition scenarios, local
-implementation and offline verification may continue, but no application completion or recognition
-claim can be made.
+with the issued Vendor ID. HMRC replied on 21 October that recognition is optional and must follow
+research, comprehensive testing including extensive ETS use, and a commercially mature product
+ready for release. CT Recognition 2025 is closed; HMRC is preparing the 2026 instructions. The
+retained reply has SHA-256
+`AC045975953F60F473B7CEDECEC1BFE184A6410714CB477F77ED58CAF34ACE37`.
+Accordingly, an applicant pack is no longer a Phase 5.10 dependency. Recognition may be considered
+after ETS and product-readiness evidence exists; no recognition or production status is claimed.
 
 ## Draft April 2027 material received
 
 On 16 October 2026 HMRC SDST circulated draft `CT600 04-27 v0.1` and `CT600L 04-27 v0.1` forms,
 together with CT600 and CT600E guidance-change schedules. Developer feedback is requested by
-30 November 2026. This circular is separate from, and does not satisfy, the outstanding request for
-the new-applicant pack and assigned recognition scenarios.
+30 November 2026. This circular is separate from HMRC's later recognition-sequencing reply and has
+no bearing on whether Phase 5.10 may perform ETS testing.
 
 The retained source identities are:
 

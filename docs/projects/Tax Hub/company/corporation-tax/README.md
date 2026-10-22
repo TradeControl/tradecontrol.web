@@ -2,7 +2,7 @@
 
 ## Current position
 
-Local service-artifact, Transaction Engine and External Test Service work exists, but the Corporation Tax family gate remains closed. All CT artifacts remain preview-only and production submission is disabled. The current work requires the recorded human review and HMRC external testing/recognition evidence.
+Local service-artifact, Transaction Engine and External Test Service work exists, but the Corporation Tax family gate remains closed. All CT artifacts remain preview-only and production submission is disabled. Phase 5.10 is deliberately paused while the production-ready multi-tenant environment is completed; it resumes with controlled External Test Service evidence. HMRC recognition is optional and follows comprehensive testing/product maturity rather than gating ETS.
 
 ## Governing and working documents
 
@@ -13,4 +13,6 @@ Local service-artifact, Transaction Engine and External Test Service work exists
 - [Phase 5.10 External Test Service implementation](phase-5.10-ct-external-test-local.md)
 - [Shared company statutory material](../shared/)
 
-Do not infer production readiness from local validation. Complete the existing review and external gates without reopening accepted company-accounting decisions.
+Do not infer production readiness from local validation. Complete the multi-tenant environment and
+existing review/ETS gates without reopening accepted company-accounting decisions. Consider the
+HMRC 2026 recognition process separately when the product is mature and release-ready.

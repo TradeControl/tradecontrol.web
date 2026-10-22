@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Pages.Cash.Manager.Components;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices
 {
@@ -36,6 +37,7 @@ namespace TradeControl.Web.AppServices
 
             using var scope = _scopeFactory.CreateScope();
             var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+            var today = scope.ServiceProvider.GetRequiredService<IBusinessClock>().TodayDateTime;
 
             var userId = await GetUserIdAsync(nodeContext, aspNetUserId);
             var homeAccount = await nodeContext.App_HomeAccount
@@ -84,8 +86,8 @@ namespace TradeControl.Web.AppServices
                 NamespaceFilter = homeAccount?.SubjectCode ?? string.Empty,
                 SubjectCode = homeAccount?.SubjectCode ?? string.Empty,
                 SubjectName = homeAccount?.SubjectName ?? string.Empty,
-                PaidOn = DateTime.Today,
-                ReversalStartOn = DateTime.Today
+                PaidOn = today,
+                ReversalStartOn = today
             };
 
             return new CashManagerAssetsWorkspaceState(

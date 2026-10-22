@@ -3,9 +3,10 @@
 @using Microsoft.Extensions.Options
 @using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
+@using TradeControl.Web.Tenancy
 @using TradeControl.Tax.UK.Application.Preparation
 @implements IDisposable
-@inject TimeProvider TimeProvider
+@inject IBusinessClock BusinessClock
 @inject ICompaniesHousePreparationReviewService PreparationService
 @inject IServiceProvider Services
 @inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
@@ -359,8 +360,7 @@ else if (_draft is not null && _editContext is not null)
 
     private void ReviewInputs()
     {
-        _errors = CompaniesHouseFilingInputReview.Validate(_draft!,
-            DateOnly.FromDateTime(TimeProvider.GetUtcNow().UtcDateTime));
+        _errors = CompaniesHouseFilingInputReview.Validate(_draft!, BusinessClock.Today);
         _reviewed = _errors.Count == 0;
     }
 

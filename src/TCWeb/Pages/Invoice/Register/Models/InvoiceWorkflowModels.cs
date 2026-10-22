@@ -75,7 +75,7 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
         public string CashDescription { get; set; } = string.Empty;
         public string TaxCode { get; set; } = string.Empty;
         public short InvoiceTypeCode { get; set; }
-        public DateTime InvoicedOn { get; set; } = DateTime.Today;
+        public DateTime InvoicedOn { get; set; }
         public decimal TotalValue { get; set; }
         public decimal InvoiceValue { get; set; }
         public string ItemReference { get; set; } = string.Empty;
@@ -125,10 +125,11 @@ namespace TradeControl.Web.Pages.Invoice.Register.Models
 
     public sealed class InvoiceSubmitReadinessModel
     {
-        public bool HasMailHost { get; set; }
+        public bool HasDeliveryService { get; set; }
         public bool HasTemplates { get; set; }
         public bool HasRecipients { get; set; }
-        public bool CanSubmit => HasMailHost && HasTemplates && HasRecipients;
+        public bool CanPreview => HasTemplates;
+        public bool CanSubmit => HasDeliveryService && HasTemplates && HasRecipients;
         public List<string> Messages { get; set; } = [];
     }
 

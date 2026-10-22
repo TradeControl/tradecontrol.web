@@ -9,6 +9,7 @@ using TradeControl.Tax.UK.Adapters.TradeControl.Readers;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Web.Data;
 using TradeControl.Web.Pages.Tax.Hub.Models;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
@@ -18,7 +19,7 @@ public interface ICompaniesHouseReadinessService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, TimeProvider timeProvider)
+public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, IBusinessClock businessClock)
     : ICompaniesHouseReadinessService
 {
     private const decimal EquityBridgeTolerance = 0.10m;
@@ -59,7 +60,7 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, Time
             if (string.IsNullOrWhiteSpace(connectionString))
                 return Unavailable("CH-SOURCE-CONNECTION-MISSING",
                     "The statutory accounting source is not configured.");
-            var contextAsOfDate = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+            var contextAsOfDate = businessClock.Today;
             context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
                 .ReadAsync(contextAsOfDate, cancellationToken);
         }

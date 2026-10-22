@@ -16,7 +16,8 @@ namespace TradeControl.Web.Mail
         MailDocument Document { get; }
         NodeContext NodeContext { get; }
       
-        public MailSupport(NodeContext nodeContext, MailDocument mailDocument, string logCode) : base()
+        public MailSupport(NodeContext nodeContext, MailDocument mailDocument, string logCode,
+            IPlatformEmailSender platformEmailSender = null) : base(platformEmailSender)
         {
             NodeContext = nodeContext;
             LogCode = logCode;
@@ -58,6 +59,8 @@ namespace TradeControl.Web.Mail
             Document.Arguments.Add("CompanyName", company.CompanyName);
             Document.Arguments.Add("CompanyAddress", company.CompanyAddress);
             Document.Arguments.Add("CompanyEmailAddress", company.CompanyEmailAddress);
+            if (PlatformEmailOptions.IsValidEmailAddress(company.CompanyEmailAddress))
+                Document.ReplyTo = company.CompanyEmailAddress;
             Document.Arguments.Add("CompanyWebsite", company.CompanyWebsite);
             Document.Arguments.Add("CompanyPhoneNumber", company.CompanyPhoneNumber);
             Document.Arguments.Add("CompanyNumber", company.CompanyNumber);

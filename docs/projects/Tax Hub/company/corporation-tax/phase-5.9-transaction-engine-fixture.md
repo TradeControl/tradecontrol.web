@@ -66,10 +66,10 @@ Verification results:
 
 ## Assumptions reserved for Phase 5.10
 
-The fixture uses `HMRC-CT-CT600`, the class already observed in the official CT validation material and genuine TPVS response. Before any External Test Service call, Phase 5.10 must confirm that class, the current CT authentication/enrolment level, synthetic credential route, test response-host set, product/channel values, receipt-signature validation rules and recognition scenarios against current HMRC CT service guidance or Software Developers Support.
+The fixture uses `HMRC-CT-CT600`, the class already observed in the official CT validation material and genuine TPVS response. Before any External Test Service call, Phase 5.10 must confirm that class, the current CT authentication/enrolment level, synthetic credential route, test response-host set, product/channel values and receipt-signature validation rules against current HMRC CT service guidance or Software Developers Support. HMRC confirmed on 21 October 2026 that recognition is optional and follows comprehensive testing, including ETS, so recognition scenarios are not an ETS prerequisite.
 
 An IRmark match and a green offline state machine prove protocol mechanics only. They do not make the Objective 3 artifact submission-ready. `HmrcComputationTaxonomy2025.SubmissionReady` remains false, every CT artifact remains `Preview`, and `CorporationTaxSubmissionGateway` still rejects before outbound I/O.
 
 ## Review gate
 
-Human review accepted the fixture provenance, IRmark boundary, uncertain-send recovery policy and terminal-before-delete ordering on 14 October 2026. The class, credential, channel, receipt and recognition assumptions remain Phase 5.10 confirmation work. This acceptance permits local Phase 5.10 implementation but does not authorise an external HMRC send.
+Human review accepted the fixture provenance, IRmark boundary, uncertain-send recovery policy and terminal-before-delete ordering on 14 October 2026. The class, credential, channel and receipt assumptions remain Phase 5.10 confirmation work. Optional recognition is a later product-readiness decision. This acceptance permits local Phase 5.10 implementation but does not authorise an external HMRC send.
