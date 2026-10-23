@@ -116,6 +116,25 @@ namespace TradeControl.Web.AppServices
             services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();
             services.AddSingleton<TimeProvider>(TimeProvider.System);
             services.AddSingleton<IVatFraudContextReferenceStore, VatFraudContextReferenceStore>();
+            if (configuration.GetValue<VatPersistenceMode>(
+                    $"{VatProductHostOptions.SectionName}:PersistenceMode") == VatPersistenceMode.AzureManaged)
+            {
+                services.AddScoped(provider =>
+                {
+                    var options = provider.GetRequiredService<IOptions<VatProductHostOptions>>().Value;
+                    var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                    {
+                        ExcludeInteractiveBrowserCredential = true
+                    });
+                    var service = new BlobServiceClient(new Uri(options.EvidenceBlobServiceUri!), credential);
+                    var container = service.GetBlobContainerClient(options.EvidenceContainerName);
+                    return new AzureVatPersistence(container,
+                        provider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(),
+                        provider.GetRequiredService<TimeProvider>());
+                });
+                services.AddScoped<IVatPersistenceProbe>(provider =>
+                    provider.GetRequiredService<AzureVatPersistence>());
+            }
             services.AddScoped<VatHmrcConnectionService>();
             services.AddScoped<IVatHmrcConnectionService>(provider =>
                 provider.GetRequiredService<VatHmrcConnectionService>());
@@ -135,7 +154,9 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IVatApprovalEvidenceSource>(provider =>
                 provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovalEvidenceSource
                 ?? throw new InvalidOperationException("The VAT approval evidence source is unavailable."));
-            if (configuration.GetValue<bool>($"{VatProductHostOptions.SectionName}:Enabled"))
+            if (configuration.GetValue<bool>($"{VatProductHostOptions.SectionName}:Enabled")
+                && configuration.GetValue<VatPersistenceMode>(
+                    $"{VatProductHostOptions.SectionName}:PersistenceMode") == VatPersistenceMode.DevelopmentFiles)
                 services.AddScoped<IVatFilingHistoryService, VatFilingHistoryService>();
             else
                 services.AddScoped<IVatFilingHistoryService, DisabledVatFilingHistoryService>();

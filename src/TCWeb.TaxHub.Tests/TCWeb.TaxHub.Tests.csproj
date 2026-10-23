@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TCWeb\TCWeb.csproj" />
+    <ProjectReference Include="..\TCWeb.OAuthBroker\TCWeb.OAuthBroker.csproj" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,9 @@
 @using TradeControl.Web.AppServices.TaxHub.Vat
 @using TradeControl.Web.Data
+@using Microsoft.Extensions.Options
 @using Microsoft.JSInterop
 @inject IVatObligationWorkspaceService Obligations
+@inject IOptions<VatProductHostOptions> VatHost
 @inject IJSRuntime JavaScript
 @inject NodeContext NodeContext
 
@@ -61,10 +63,14 @@
                             <td data-label="Received">@Date(item.Received)</td>
                             <td data-label="Status"><span class="badge @Badge(item.MatchState)">@Label(item.MatchState)</span></td>
                             <td class="text-end tc-vat-obligation-action">
-                                @if (item.CanReview)
+                                @if (item.CanReview && VatHost.Value.SubmissionEnabled)
                                 {
                                     <button type="button" class="btn btn-sm btn-primary"
                                             @onclick="() => SelectForReview(item)">Review return</button>
+                                }
+                                else if (item.CanReview)
+                                {
+                                    <span class="small text-muted">Review and submission are currently locked</span>
                                 }
                                 else if (item.MatchState == VatObligationMatchState.Fulfilled)
                                 {
@@ -80,7 +86,7 @@
                     </tbody>
                 </table>
             </div>
-            @if (_selected is not null)
+            @if (_selected is not null && VatHost.Value.SubmissionEnabled)
             {
                 <TaxHubVatReturnReview PeriodKey="@(_selected.PeriodKey ?? string.Empty)" />
             }

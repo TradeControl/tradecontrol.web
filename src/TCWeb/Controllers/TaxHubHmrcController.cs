@@ -41,8 +41,27 @@ public sealed class TaxHubHmrcController(
         {
             var status = await connection.CompleteCallbackAsync(User, state, code, error, cancellationToken);
             return status.State == VatConnectionState.Connected
-                ? Redirect("/Tax/Hub")
-                : Redirect("/Tax/Hub?hmrc=reauthorisation-required");
+                ? LocalRedirect("/Tax/Hub")
+                : LocalRedirect("/Tax/Hub?hmrc=reauthorisation-required");
+        }
+        catch (OAuthCallbackValidationException)
+        {
+            return BadRequest(new ProblemDetails { Title = "The HMRC callback is invalid or expired.", Status = 400 });
+        }
+    }
+
+    [HttpGet("/TaxHub/HmrcBrokerComplete")]
+    public async Task<IActionResult> BrokerCallback(string? ticket, CancellationToken cancellationToken)
+    {
+        if (!policy.CanManageHmrcConnection(User)) return Forbid();
+        if (string.IsNullOrWhiteSpace(ticket))
+            return BadRequest(new ProblemDetails { Title = "The HMRC callback is invalid.", Status = 400 });
+        try
+        {
+            var status = await connection.CompleteBrokerCallbackAsync(User, ticket, cancellationToken);
+            return status.State == VatConnectionState.Connected
+                ? LocalRedirect("/Tax/Hub")
+                : LocalRedirect("/Tax/Hub?hmrc=reauthorisation-required");
         }
         catch (OAuthCallbackValidationException)
         {

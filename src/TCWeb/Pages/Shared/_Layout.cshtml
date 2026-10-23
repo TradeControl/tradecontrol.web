@@ -1,28 +1,24 @@
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.Extensions.DependencyInjection
 @using TradeControl.Web.Areas.Identity.Data
 @using TradeControl.Web.Data
+@using TradeControl.Web.Tenancy
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject ITenantContext TenantContext
+@inject UserManager<TradeControlWebUser> UserManager
+@inject NodeContext NodeContext
 
 @{
     var requestVerificationToken = Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken;
     var themeCssFile = "theme-blue.css";
 
-    if (User?.Identity?.IsAuthenticated == true)
+    if (User?.Identity?.IsAuthenticated == true && TenantContext.IsResolved)
     {
-        using var scope = Context.RequestServices.CreateScope();
-        var userManager = scope.ServiceProvider.GetService<UserManager<TradeControlWebUser>>();
-        var nodeContext = scope.ServiceProvider.GetService<NodeContext>();
-
-        if (userManager != null && nodeContext != null)
+        var user = await UserManager.GetUserAsync(User);
+        if (user != null)
         {
-            var user = await userManager.GetUserAsync(User);
-            if (user != null)
-            {
-                var profile = new Profile(nodeContext);
-                themeCssFile = await profile.GetUserThemeCssFile(user.Id);
-            }
+            var profile = new Profile(NodeContext);
+            themeCssFile = await profile.GetUserThemeCssFile(user.Id);
         }
     }
 }

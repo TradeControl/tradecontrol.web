@@ -61,6 +61,7 @@ assertions += await FileUploadValidationTests.RunAsync();
 assertions += TenantAssetDownloadTests.Run();
 assertions += TemplateBootstrapTests.Run(root);
 assertions += PlatformEmailTests.Run(root);
+assertions += await OAuthBrokerTests.RunAsync();
 
 var workflowContract = typeof(IVatProductWorkflow);
 var prohibitedContractNamespaces = new[]
@@ -753,12 +754,29 @@ var azure = new VatProductHostOptions
     PersistenceMode = VatPersistenceMode.AzureManaged,
     TenantReference = Guid.NewGuid().ToString(),
     PublicOrigin = new Uri("https://tcweb.example.test/"),
+    SandboxSecretSource = VatSandboxSecretSource.EnvironmentVariables,
+    FraudPublicTlsAddresses = ["198.51.100.10"],
     KeyVaultUri = new Uri("https://example.vault.azure.net/"),
     WorkflowConnectionName = "TaxHubWorkflow",
     EvidenceBlobServiceUri = "https://example.blob.core.windows.net/"
 };
+Assert(productionValidator.Validate(null, azure).Succeeded,
+    "The Azure-managed sandbox connection and read-only journey was rejected.");
+azure.AllowIncompleteSandboxFraudHeaders = true;
+Assert(productionValidator.Validate(null, azure).Succeeded,
+    "The reviewed Azure-managed sandbox warning mode was rejected.");
+azure.OAuthCallbackMode = VatOAuthCallbackMode.Brokered;
+azure.OAuthBrokerStartUri = new Uri("https://auth.tradecontrol.co.uk/oauth/start");
+azure.OAuthBrokerCallbackUri = new Uri("https://auth.tradecontrol.co.uk/TaxHub/HmrcCallback");
+Assert(productionValidator.Validate(null, azure).Succeeded,
+    "A fixed-host brokered OAuth configuration was rejected.");
+azure.OAuthBrokerCallbackUri = new Uri("https://attacker.example/TaxHub/HmrcCallback");
 Assert(productionValidator.Validate(null, azure).Failed,
-    "Selected Azure facilities must remain disabled until their implementations exist.");
+    "Broker start and callback endpoints on different hosts were accepted.");
+azure.OAuthBrokerCallbackUri = new Uri("https://auth.tradecontrol.co.uk/TaxHub/HmrcCallback");
+azure.SubmissionEnabled = true;
+Assert(productionValidator.Validate(null, azure).Failed,
+    "The hosted VAT submission gate was opened before explicit accreditation approval.");
 
 var tenant = Guid.NewGuid().ToString();
 var identity = new VatWorkflowIdentity(tenant, "aspnet-subject", "internal-actor", "HOME");
@@ -988,9 +1006,50 @@ Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.
     && alignmentSql.Contains("UPDATE Subject.tbVirtual", StringComparison.Ordinal)
     && alignmentSql.Contains("@SandboxVrn = N'999000001'", StringComparison.Ordinal),
     "The disposable VAT alignment guard or authoritative calculation/configuration boundary changed.");
+var syntheticBootstrapSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Stored Procedures", "proc_DatasetSyntheticMIS_Bootstrap.sql"));
+var restoreDomainUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO Usr.tbUser", StringComparison.Ordinal);
+var restoreIdentityUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO dbo.AspNetUsers", StringComparison.Ordinal);
+Assert(syntheticBootstrapSql.Contains("SELECT * INTO #Keep_AspNetUsers FROM dbo.AspNetUsers;", StringComparison.Ordinal)
+    && !syntheticBootstrapSql.Contains("#Keep_AspNetUsers FROM dbo.AspNetUsers WHERE", StringComparison.Ordinal)
+    && syntheticBootstrapSql.Contains("#Keep_UsrUsers", StringComparison.Ordinal)
+    && syntheticBootstrapSql.Contains("#Keep_AspNetUserRoles", StringComparison.Ordinal)
+    && syntheticBootstrapSql.Contains("#Keep_AspNetUserClaims", StringComparison.Ordinal)
+    && syntheticBootstrapSql.Contains("#Keep_AspNetUserLogins", StringComparison.Ordinal)
+    && syntheticBootstrapSql.Contains("#Keep_AspNetUserTokens", StringComparison.Ordinal)
+    && restoreDomainUsersAt >= 0
+    && restoreIdentityUsersAt > restoreDomainUsersAt
+    && syntheticBootstrapSql.Contains("PhoneNumberConfirmed = source.PhoneNumberConfirmed", StringComparison.Ordinal)
+    && syntheticBootstrapSql.Contains("tenant user directory was not restored exactly", StringComparison.Ordinal),
+    "Synthetic recommissioning no longer preserves and verifies the complete tenant user directory before restoring Identity.");
+var syntheticMonthConsumers = new[]
+{
+    "proc_DatasetSyntheticMIS_ProjectPay.sql",
+    "proc_DatasetSyntheticMIS_PayMisc.sql",
+    "proc_DatasetSyntheticMIS_PayWages.sql",
+    "proc_DatasetSyntheticMIS_Expenses.sql"
+};
+Assert(syntheticMonthConsumers.All(fileName => File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src",
+        "tcNodeDb4", "App", "Stored Procedures", fileName))
+    .Contains("OPTION (MAXRECURSION 0)", StringComparison.Ordinal)),
+    "A synthetic month-expansion consumer can still fail beyond SQL Server's default 100 recursion levels.");
 
 var returnReview = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubVatReturnReview.razor"));
+var obligationsPanel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubVatObligations.razor"));
+Assert(obligationsPanel.Contains("item.CanReview && VatHost.Value.SubmissionEnabled", StringComparison.Ordinal)
+    && obligationsPanel.Contains("_selected is not null && VatHost.Value.SubmissionEnabled", StringComparison.Ordinal)
+    && obligationsPanel.Contains("Review and submission are currently locked", StringComparison.Ordinal),
+    "The Azure-hosted VAT obligations panel can activate the development-only review store while submission is locked.");
+Assert(appServiceRegistration.Contains("PersistenceMode\") == VatPersistenceMode.DevelopmentFiles", StringComparison.Ordinal)
+    && appServiceRegistration.Contains("IVatFilingHistoryService, DisabledVatFilingHistoryService", StringComparison.Ordinal),
+    "Azure-managed composition can activate filing history backed by the development-only approval store.");
+var sharedLayout = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared", "_Layout.cshtml"));
+Assert(sharedLayout.Contains("@inject UserManager<TradeControlWebUser> UserManager", StringComparison.Ordinal)
+    && sharedLayout.Contains("@inject NodeContext NodeContext", StringComparison.Ordinal)
+    && !sharedLayout.Contains("CreateScope()", StringComparison.Ordinal),
+    "The shared layout creates a detached dependency scope that can lose the resolved tenant during Tax Hub prerendering.");
 Assert(returnReview.Contains("The values below are read from the immutable prepared request", StringComparison.Ordinal)
     && returnReview.Contains("following day as the exclusive period boundary", StringComparison.Ordinal)
     && returnReview.Contains("Approve return — does not submit", StringComparison.Ordinal)
@@ -1042,6 +1101,24 @@ Assert(exactBoxes.Select(box => box.Number).SequenceEqual(Enumerable.Range(1, 9)
     && exactBoxes.Select(box => box.Value).SequenceEqual(
         ["101.23", "2.34", "103.57", "40.12", "63.45", "1001", "402", "3", "4"]),
     "The review projection does not reproduce all nine prepared VAT values exactly and invariantly.");
+var evidence = new VatSourceEvidenceSnapshot("database-a", "HOME", 42, "4.1.16", new string('A', 64),
+    [new(new DateOnly(2026, 6, 1), 0.05m, "Supplier rounding evidence")]);
+Assert(evidence.SameBoundaryAndContent(evidence with { }),
+    "An unchanged VAT evidence boundary was treated as concurrent mutation.");
+Assert(!evidence.SameBoundaryAndContent(evidence with { AccountingEventId = 43 })
+    && !evidence.SameBoundaryAndContent(evidence with { SourceInventorySha256 = new string('B', 64) })
+    && !evidence.SameBoundaryAndContent(evidence with
+        { Adjustments = [new(new DateOnly(2026, 6, 1), 0.05m, "Changed explanation")] }),
+    "VAT preparation does not fail closed for event, source, or adjustment mutation.");
+var evidenceReader = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "VatSourceEvidenceReader.cs"));
+Assert(evidenceReader.Contains("App.proc_VatSourceEvidence", StringComparison.Ordinal)
+    && reviewService.Contains("evidenceBefore.SameBoundaryAndContent(evidenceAfter)", StringComparison.Ordinal)
+    && reviewService.Contains("VatStatutorySeal.Verify", StringComparison.Ordinal)
+    && reviewService.Contains("DatabaseInstanceReference != candidate.DatabaseInstanceReference", StringComparison.Ordinal)
+    && reviewService.Contains("AccountingEventId != candidate.AccountingEventId", StringComparison.Ordinal)
+    && reviewService.Contains("SourceInventorySha256 != candidate.SourceInventorySha256", StringComparison.Ordinal),
+    "VAT preparation lost its durable database identity, concurrent-change guard, or retained seal verification.");
 Assert(returnReview.Contains("Submit VAT return to HMRC", StringComparison.Ordinal)
     && returnReview.Contains("@bind=\"_submitConfirmed\"", StringComparison.Ordinal)
     && returnReview.Contains("taxHubHmrc.captureClientFacts", StringComparison.Ordinal)
@@ -1068,6 +1145,12 @@ Assert(connectionService.Contains("_gateway.SendAsync(approved.Request", StringC
     && connectionService.Contains("ParseAuthorityErrors", StringComparison.Ordinal)
     && connectionService.Contains("FRAUD-CONTEXT-REQUIRED", StringComparison.Ordinal),
     "Approved dispatch lost duplicate prevention, exact readback reconciliation or fresh fraud evidence.");
+var azureVatPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "AzureVatPersistence.cs"));
+Assert(azureVatPersistence.Contains("var isWrite = method is not \"GET\" and not \"HEAD\"", StringComparison.Ordinal)
+    && azureVatPersistence.Contains("var blocking = isWrite ?", StringComparison.Ordinal)
+    && azureVatPersistence.Contains("item.IsWrite && item.BlocksReplay", StringComparison.Ordinal),
+    "Azure VAT persistence incorrectly applies submission replay protection to read-only HMRC enquiries.");
 Assert(reviewService.Contains("WithVerifiedBody(bytes)", StringComparison.Ordinal)
     && reviewService.Contains("GetApprovalAsync", StringComparison.Ordinal)
     && reviewService.Contains("approval.PreparedSha256 != candidate.PreparedSha256", StringComparison.Ordinal),

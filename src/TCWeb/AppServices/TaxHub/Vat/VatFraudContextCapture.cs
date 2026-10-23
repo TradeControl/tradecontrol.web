@@ -65,7 +65,8 @@ public sealed class VatFraudContextCapture : IVatFraudContextCapture, IDisposabl
     private readonly IVatFraudContextReferenceStore _references;
 
     public VatFraudContextCapture(IVatWorkflowIdentityAccessor identities,
-        IOptions<VatProductHostOptions> options, IVatFraudContextReferenceStore references)
+        IOptions<VatProductHostOptions> options, IVatFraudContextReferenceStore references,
+        AzureVatPersistence? azurePersistence = null)
     {
         _identities = identities;
         _references = references;
@@ -81,14 +82,24 @@ public sealed class VatFraudContextCapture : IVatFraudContextCapture, IDisposabl
         var topology = _trustedPeers.Count == 0
             ? FraudDeploymentTopology.Direct("tcweb-direct", hops.Single())
             : FraudDeploymentTopology.TrustedProxyChain("tcweb-trusted-proxy", _trustedPeers, hops);
+        var vendor = new FraudVendorConfiguration("Trade Control",
+            new Dictionary<string, string>
+            {
+                ["tcweb-client"] = "2.0.2",
+                ["tcweb-server"] = "2.0.2"
+            },
+            new Dictionary<string, string>());
+        if (_host.PersistenceMode == VatPersistenceMode.AzureManaged)
+        {
+            _fraud = FraudHeaderService.Create(topology, vendor,
+                azurePersistence ?? throw new InvalidOperationException("Azure VAT persistence is unavailable."));
+            return;
+        }
         var root = Path.Combine(Path.GetFullPath(_host.DevelopmentStoreRoot!), "fraud-contexts");
         var key = LoadOrCreateKey(Path.Combine(Path.GetFullPath(_host.DevelopmentStoreRoot!), "fraud-store.key"));
         try
         {
-            _fraud = FraudHeaderService.CreateFileBacked(root, key, topology,
-                new FraudVendorConfiguration("Trade Control",
-                    new Dictionary<string, string> { ["tcweb"] = "2.0.2" },
-                    new Dictionary<string, string>()));
+            _fraud = FraudHeaderService.CreateFileBacked(root, key, topology, vendor);
         }
         finally { CryptographicOperations.ZeroMemory(key); }
     }

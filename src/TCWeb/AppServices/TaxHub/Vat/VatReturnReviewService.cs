@@ -16,6 +16,7 @@ using TradeControl.Tax.Data;
 using TradeControl.Tax.UK.Adapters.Submission.Audit;
 using TradeControl.Tax.UK.Adapters.TradeControl.Data;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.Application.StatutoryEvidence;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Hmrc.Vat;
 using TradeControl.Web.Data;
@@ -163,13 +164,18 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
 
         var reference = Guid.NewGuid().ToString("N");
         var now = _time.GetUtcNow();
+        var seal = CreateSeal(identity, prepared, body.ToArray());
         var contentReference = await _content.StoreAsync(identity.TenantReference,
             identity.AspNetSubjectReference, SubmissionContentKind.Payload, body.ToArray(), cancellationToken);
+        var sealContentReference = await _content.StoreAsync(identity.TenantReference,
+            identity.AspNetSubjectReference, SubmissionContentKind.Payload, seal.CanonicalBytes, cancellationToken);
         var source = prepared.Request.SourceEvidence.Single();
         var candidate = new CandidateRecord(reference, identity.TenantReference,
             identity.AspNetSubjectReference, identity.ActorReference, prepared.Obligation.PeriodKey,
             prepared.Obligation.Start, prepared.Obligation.End, prepared.MaskedVrn,
-            prepared.VrnSha256, prepared.Request.BodySha256!, contentReference,
+            prepared.VrnSha256, prepared.Request.BodySha256!, contentReference, sealContentReference, seal.Sha256,
+            prepared.Evidence.DatabaseInstanceReference, prepared.Evidence.AccountingEventId,
+            prepared.Evidence.SourceInventorySha256, prepared.Evidence.SqlNodeVersion,
             source.SourceSystem, source.DatasetKey, source.SnapshotToken,
             prepared.Request.Findings.Select(FindingRecord.From).ToArray(), now, now.Add(CandidateLifetime));
         await AddCandidateAsync(candidate, cancellationToken);
@@ -215,14 +221,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             throw new VatReturnReviewException("Review and acknowledge the preparation warnings before approval.");
 
         var current = await PrepareCurrentAsync(identity, candidate.PeriodKey, cancellationToken);
-        var source = current.Request.SourceEvidence.SingleOrDefault();
-        if (current.Request.HasErrors || current.Request.BodySha256 != candidate.PreparedSha256
-            || current.VrnSha256 != candidate.VrnSha256
-            || source is null || source.DatasetKey != candidate.DatasetKey
-            || source.SnapshotToken != candidate.SnapshotToken
-            || current.Obligation.Start != candidate.PeriodStart || current.Obligation.End != candidate.PeriodEnd)
-            throw new VatReturnReviewException(
-                "The VAT source or obligation changed after review. Prepare and review a new return.");
+        EnsureCurrent(candidate, current);
 
         var approval = await AddApprovalAsync(candidate, identity, warningsAcknowledged, cancellationToken);
         return await ReadModelAsync(candidate, approval.Reference, cancellationToken);
@@ -381,6 +380,8 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
 
         var connectionString = _nodeContext.Database.GetConnectionString()
             ?? throw new InvalidOperationException("The Trade Control source is unavailable.");
+        var evidenceReader = new VatSourceEvidenceReader(connectionString);
+        var evidenceBefore = await evidenceReader.ReadAsync(obligation.Start, obligation.End, cancellationToken);
         var sourceKey = new SourceKey("tcweb-node");
         var connections = new ConnectionFactory();
         var resolver = new SourceConnectionResolver([new(sourceKey, connectionString)]);
@@ -392,10 +393,38 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             $"VAT-{obligation.End:yyyy-MM-dd}");
         var request = await preparer.PrepareAsync(new(sourceKey, period, obligation.PeriodKey!, true),
             cancellationToken);
+        var evidenceAfter = await evidenceReader.ReadAsync(obligation.Start, obligation.End, cancellationToken);
+        if (!evidenceBefore.SameBoundaryAndContent(evidenceAfter))
+            throw new VatReturnReviewException(
+                "The VAT source changed while the return was being prepared. Prepare it again.");
         var vrn = ExtractVrn(request.RelativePath);
         if (vrn.Length != 9 || vrn.Any(character => !char.IsDigit(character)))
             throw new VatReturnReviewException("The prepared VAT registration identity is invalid.");
-        return new(request, obligation, $"*****{vrn[^4..]}", Sha256(Encoding.UTF8.GetBytes(vrn)));
+        return new(request, obligation, $"*****{vrn[^4..]}", Sha256(Encoding.UTF8.GetBytes(vrn)), vrn,
+            evidenceAfter);
+    }
+
+    private StatutorySealCandidate CreateSeal(VatWorkflowIdentity identity, PreparedCurrent prepared,
+        ReadOnlyMemory<byte> bodyBytes)
+    {
+        var body = JsonSerializer.Deserialize<VatReturnRequest>(bodyBytes.Span)
+            ?? throw new InvalidDataException("The prepared VAT return body is invalid.");
+        var versions = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["sqlnode"] = prepared.Evidence.SqlNodeVersion,
+            ["tax-hub"] = typeof(VatStatutorySeal).Assembly.GetName().Version?.ToString() ?? "unknown",
+            ["tcweb"] = typeof(VatReturnReviewService).Assembly.GetName().Version?.ToString() ?? "unknown"
+        };
+        return VatStatutorySeal.Create(new(identity.TenantReference,
+            prepared.Evidence.DatabaseInstanceReference, prepared.Evidence.ReportingSubjectReference,
+            prepared.Vrn, prepared.Obligation.PeriodKey, prepared.Obligation.Start, prepared.Obligation.End,
+            _host.AuthorityEnvironment.ToString(), prepared.Evidence.AccountingEventId,
+            prepared.Evidence.SourceInventorySha256, prepared.Request.BodySha256!, bodyBytes.Length,
+            prepared.Evidence.Adjustments,
+            new(body.VatDueSales, body.VatDueAcquisitions, body.TotalVatDue,
+                body.VatReclaimedCurrPeriod, body.NetVatDue, body.TotalValueSalesExVat,
+                body.TotalValuePurchasesExVat, body.TotalValueGoodsSuppliedExVat,
+                body.TotalAcquisitionsExVat, body.Finalised), versions));
     }
 
     private static string ExtractVrn(string relativePath)
@@ -415,6 +444,10 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             || current.VrnSha256 != candidate.VrnSha256
             || source is null || source.DatasetKey != candidate.DatasetKey
             || source.SnapshotToken != candidate.SnapshotToken
+            || current.Evidence.DatabaseInstanceReference != candidate.DatabaseInstanceReference
+            || current.Evidence.AccountingEventId != candidate.AccountingEventId
+            || current.Evidence.SourceInventorySha256 != candidate.SourceInventorySha256
+            || current.Evidence.SqlNodeVersion != candidate.SqlNodeVersion
             || current.Obligation.Start != candidate.PeriodStart || current.Obligation.End != candidate.PeriodEnd)
             throw new VatReturnReviewException(
                 "The VAT source or obligation changed after approval. Prepare and review a new return.");
@@ -426,6 +459,11 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
             candidate.ContentReference, cancellationToken)
             ?? throw new VatReturnReviewException("The exact prepared VAT return is unavailable.");
+        var sealBytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
+            candidate.SealContentReference, cancellationToken)
+            ?? throw new VatReturnReviewException("The prepared VAT statutory seal is unavailable.");
+        if (!VatStatutorySeal.Verify(sealBytes, candidate.SealSha256))
+            throw new InvalidDataException("The prepared VAT statutory seal failed digest verification.");
         if (!Sha256(bytes).Equals(candidate.PreparedSha256, StringComparison.Ordinal))
             throw new InvalidDataException("The exact prepared VAT return failed digest verification.");
         var body = JsonSerializer.Deserialize<VatReturnRequest>(bytes,
@@ -572,10 +610,12 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     }
 
     private sealed record PreparedCurrent(PreparedApiRequest Request, VatObligationWorkspaceRow Obligation,
-        string MaskedVrn, string VrnSha256);
+        string MaskedVrn, string VrnSha256, string Vrn, VatSourceEvidenceSnapshot Evidence);
     private sealed record CandidateRecord(string Reference, string TenantReference, string PrincipalReference,
         string ActorReference, string PeriodKey, DateOnly PeriodStart, DateOnly PeriodEnd, string MaskedVrn,
-        string VrnSha256, string PreparedSha256, string ContentReference, string SourceSystem,
+        string VrnSha256, string PreparedSha256, string ContentReference,
+        string SealContentReference, string SealSha256, string DatabaseInstanceReference,
+        long AccountingEventId, string SourceInventorySha256, string SqlNodeVersion, string SourceSystem,
         string DatasetKey, string SnapshotToken, IReadOnlyList<FindingRecord> Findings,
         DateTimeOffset CreatedAtUtc, DateTimeOffset ExpiresAtUtc);
     private sealed record ApprovalRecord(string Reference, string PreparationReference, string TenantReference,

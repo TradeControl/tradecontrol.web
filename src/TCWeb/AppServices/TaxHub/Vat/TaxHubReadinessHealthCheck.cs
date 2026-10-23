@@ -35,6 +35,13 @@ public sealed class TaxHubReadinessHealthCheck(
                 && (string.IsNullOrWhiteSpace(options.DevelopmentStoreRoot)
                     || !Path.IsPathFullyQualified(options.DevelopmentStoreRoot)))
                 return HealthCheckResult.Unhealthy("The VAT evidence store is not configured.");
+            if (options.Enabled && options.PersistenceMode == VatPersistenceMode.AzureManaged)
+            {
+                var persistence = scope.ServiceProvider.GetService<IVatPersistenceProbe>();
+                if (persistence is null)
+                    return HealthCheckResult.Unhealthy("The VAT Azure persistence boundary is unavailable.");
+                await persistence.ProbeAsync(cancellationToken);
+            }
 
             var companiesHouse = companiesHouseHostOptions.Value;
             if (companiesHouse.Enabled

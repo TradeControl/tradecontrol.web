@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using TradeControl.Tax.UK.Adapters.Submission.Audit;
 using TradeControl.Tax.UK.Adapters.Submission.Configuration;
@@ -17,6 +18,7 @@ using TradeControl.Tax.UK.Adapters.Submission.Rest;
 using TradeControl.Tax.UK.Application.Preparation;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Obligations;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
+using TradeControl.Web.Tenancy;
 
 namespace TradeControl.Web.AppServices.TaxHub.Vat;
 
@@ -26,6 +28,8 @@ public interface IVatHmrcConnectionService
     Task<Uri> BeginConnectAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
     Task<VatConnectionStatus> CompleteCallbackAsync(ClaimsPrincipal principal, string state,
         string? code, string? error, CancellationToken cancellationToken = default);
+    Task<VatConnectionStatus> CompleteBrokerCallbackAsync(ClaimsPrincipal principal, string ticket,
+        CancellationToken cancellationToken = default);
     Task DisconnectAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);
 }
 
@@ -73,17 +77,62 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
     private readonly ISubmissionAttemptStore? _attempts;
     private readonly ISubmissionContentStore? _content;
     private readonly IVatFraudContextReferenceStore _fraudReferences;
+    private readonly ITenantContext? _tenantContext;
+    private readonly TimeProvider _clock;
+    private readonly OAuthBrokerTicketProtector? _brokerTickets;
 
     public VatHmrcConnectionService(IVatWorkflowIdentityAccessor identities,
         IOptions<VatProductHostOptions> hostOptions,
-        IVatFraudContextReferenceStore fraudReferences)
+        IVatFraudContextReferenceStore fraudReferences,
+        AzureVatPersistence? azurePersistence = null,
+        ITenantContext? tenantContext = null,
+        TimeProvider? clock = null)
     {
         _identities = identities;
         _fraudReferences = fraudReferences;
+        _tenantContext = tenantContext;
+        _clock = clock ?? TimeProvider.System;
         _host = hostOptions.Value;
         if (!_host.Enabled) return;
+
+        if (_host.PersistenceMode == VatPersistenceMode.AzureManaged)
+        {
+            if (azurePersistence is null || tenantContext is null || !tenantContext.IsResolved)
+                throw new InvalidOperationException("The Azure VAT persistence or tenant context is unavailable.");
+            var environment = EnvironmentSelector.Sandbox();
+            var secrets = new EnvironmentSecretProvider(HmrcSecretReferences.AppServiceEnvironmentVariables);
+            _tokens = new HmrcOAuthTokenEndpoint(environment);
+            _validator = new HmrcFraudPreventionValidator(environment);
+            var callback = _host.OAuthCallbackMode == VatOAuthCallbackMode.Brokered
+                ? _host.OAuthBrokerCallbackUri!
+                : new UriBuilder(Uri.UriSchemeHttps, tenantContext.RequiredTenant.CanonicalHost)
+                    { Path = _host.OAuthCallbackPath }.Uri;
+            if (_host.OAuthCallbackMode == VatOAuthCallbackMode.Brokered)
+            {
+                var encodedKey = Environment.GetEnvironmentVariable(
+                    _host.OAuthBrokerEnvelopeKeyEnvironmentVariable)
+                    ?? throw new InvalidOperationException("The OAuth broker envelope key is unavailable.");
+                _brokerTickets = OAuthBrokerTicketProtector.FromBase64(encodedKey);
+            }
+            _oauth = HmrcOAuthService.CreateSandbox(secrets, azurePersistence, _tokens,
+                new HmrcOAuthOptions(callback, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(5), 18)
+                {
+                    ApprovedProductCallbackHost = callback.IdnHost
+                });
+            if (_host.FraudCaptureEnabled)
+            {
+                _fraud = FraudHeaderService.Create(CreateTopology(_host), CreateVendor(), azurePersistence,
+                    sandboxValidatorDiagnostic: _host.AllowIncompleteSandboxFraudHeaders);
+                _attempts = azurePersistence;
+                _content = azurePersistence;
+                _gateway = new HmrcPreparedApiRequestGateway(environment, _oauth, _fraud,
+                    _attempts, _content);
+            }
+            return;
+        }
+
         if (_host.PersistenceMode != VatPersistenceMode.DevelopmentFiles)
-            throw new InvalidOperationException("The configured VAT persistence facility is not implemented.");
+            throw new InvalidOperationException("The configured VAT persistence facility is unavailable.");
 
         var root = Path.GetFullPath(_host.DevelopmentStoreRoot!);
         Directory.CreateDirectory(root);
@@ -108,17 +157,11 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
 
             if (_host.FraudCaptureEnabled)
             {
-                var trustedPeers = _host.FraudTrustedProxyAddresses.Select(IPAddress.Parse).ToHashSet();
-                var publicHops = _host.FraudPublicTlsAddresses.Select(IPAddress.Parse).ToArray();
-                var topology = trustedPeers.Count == 0
-                    ? FraudDeploymentTopology.Direct("tcweb-direct", publicHops.Single())
-                    : FraudDeploymentTopology.TrustedProxyChain("tcweb-trusted-proxy", trustedPeers, publicHops);
+                var topology = CreateTopology(_host);
                 var fraudKey = LoadOrCreateKey(Path.Combine(root, "fraud-store.key"));
                 try
                 {
-                var vendor = new FraudVendorConfiguration("Trade Control",
-                    new Dictionary<string, string> { ["tcweb"] = "2.0.2" },
-                    new Dictionary<string, string>());
+                var vendor = CreateVendor();
                 _fraud = _host.AllowIncompleteSandboxFraudHeaders
                     ? FraudHeaderService.CreateFileBackedSandboxReference(
                         Path.Combine(root, "fraud-contexts"), fraudKey, topology, vendor)
@@ -155,17 +198,76 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         CancellationToken cancellationToken = default)
     {
         var oauth = _oauth ?? throw new InvalidOperationException("The VAT host is unavailable.");
-        var start = await oauth.BeginAuthorisationAsync(await ContextAsync(principal, cancellationToken),
+        var dispatch = await ContextAsync(principal, cancellationToken);
+        var start = await oauth.BeginAuthorisationAsync(dispatch,
             HmrcOAuthScopes.VatReadWrite, cancellationToken);
-        return start.AuthorisationUri;
+        if (_host.OAuthCallbackMode == VatOAuthCallbackMode.Direct) return start.AuthorisationUri;
+
+        var protector = _brokerTickets
+            ?? throw new InvalidOperationException("The OAuth broker ticket service is unavailable.");
+        var tenant = _tenantContext?.IsResolved == true
+            ? _tenantContext.RequiredTenant
+            : throw new InvalidOperationException("The tenant context is unavailable.");
+        var query = QueryHelpers.ParseQuery(start.AuthorisationUri.Query);
+        if (!query.TryGetValue("state", out var stateValues) || stateValues.Count != 1
+            || string.IsNullOrWhiteSpace(stateValues[0]))
+            throw new InvalidOperationException("The authority request did not contain a valid state.");
+        var now = _clock.GetUtcNow();
+        var handoff = new OAuthBrokerHandoff(AuthorityEnvironmentName(), dispatch.TenantReference,
+            dispatch.AuthorisationPrincipalReference, dispatch.ActorReference,
+            start.AuthorisationUri.AbsoluteUri, stateValues[0]!,
+            new UriBuilder(Uri.UriSchemeHttps, tenant.CanonicalHost).Uri.AbsoluteUri,
+            now, start.ExpiresAtUtc);
+        var ticket = protector.Protect(handoff, OAuthBrokerContract.HandoffPurpose);
+        return new Uri(QueryHelpers.AddQueryString(_host.OAuthBrokerStartUri!.AbsoluteUri,
+            "handoff", ticket));
     }
 
     public async Task<VatConnectionStatus> CompleteCallbackAsync(ClaimsPrincipal principal, string state,
         string? code, string? error, CancellationToken cancellationToken = default)
     {
+        if (_host.OAuthCallbackMode != VatOAuthCallbackMode.Direct)
+            throw new OAuthCallbackValidationException("The direct OAuth callback is disabled for this host.");
         var oauth = _oauth ?? throw new InvalidOperationException("The VAT host is unavailable.");
         using var outcome = await oauth.CompleteCallbackAsync(await ContextAsync(principal, cancellationToken),
             new OAuthCallback(state, code, error), cancellationToken);
+        return outcome.Kind == OAuthAccessOutcomeKind.Available
+            ? new(VatConnectionState.Connected)
+            : Map(outcome.ReauthorisationReason);
+    }
+
+    public async Task<VatConnectionStatus> CompleteBrokerCallbackAsync(ClaimsPrincipal principal,
+        string ticket, CancellationToken cancellationToken = default)
+    {
+        if (_host.OAuthCallbackMode != VatOAuthCallbackMode.Brokered)
+            throw new OAuthCallbackValidationException("The brokered OAuth callback is disabled for this host.");
+        var oauth = _oauth ?? throw new InvalidOperationException("The VAT host is unavailable.");
+        var protector = _brokerTickets
+            ?? throw new InvalidOperationException("The OAuth broker ticket service is unavailable.");
+        OAuthBrokerCompletion completion;
+        try { completion = protector.Unprotect<OAuthBrokerCompletion>(ticket, OAuthBrokerContract.CompletionPurpose); }
+        catch (Exception exception) when (exception is ArgumentException or CryptographicException)
+        {
+            _ = exception;
+            throw new OAuthCallbackValidationException("The broker completion ticket is invalid.");
+        }
+        var dispatch = await ContextAsync(principal, cancellationToken);
+        var tenant = _tenantContext?.IsResolved == true
+            ? _tenantContext.RequiredTenant
+            : throw new OAuthCallbackValidationException("The tenant context is unavailable.");
+        var expectedOrigin = new UriBuilder(Uri.UriSchemeHttps, tenant.CanonicalHost).Uri.AbsoluteUri;
+        var now = _clock.GetUtcNow();
+        if (completion.Environment != AuthorityEnvironmentName()
+            || completion.IssuedAtUtc > now + TimeSpan.FromMinutes(1)
+            || completion.ExpiresAtUtc < now
+            || completion.ExpiresAtUtc - completion.IssuedAtUtc > OAuthBrokerContract.MaximumCompletionLifetime
+            || completion.TenantReference != dispatch.TenantReference
+            || completion.PrincipalReference != dispatch.AuthorisationPrincipalReference
+            || completion.ActorReference != dispatch.ActorReference
+            || completion.ReturnOrigin != expectedOrigin)
+            throw new OAuthCallbackValidationException("The broker completion ticket does not match this session.");
+        using var outcome = await oauth.CompleteCallbackAsync(dispatch,
+            new OAuthCallback(completion.State, completion.Code, completion.Error), cancellationToken);
         return outcome.Kind == OAuthAccessOutcomeKind.Available
             ? new(VatConnectionState.Connected)
             : Map(outcome.ReauthorisationReason);
@@ -269,6 +371,9 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(approved);
+        if (!_host.SubmissionEnabled)
+            return new(new(PreparedApiOutcomeKind.Failed, "VAT-SUBMISSION-LOCKED"),
+                null, null, false);
         if (_gateway is null || _content is null)
             return new(new(PreparedApiOutcomeKind.Failed, "VAT-AUTHORITY-TOPOLOGY-UNAVAILABLE"),
                 null, null, false);
@@ -450,6 +555,9 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         _ => new(VatConnectionState.ReauthorisationRequired, reason?.ToString())
     };
 
+    private string AuthorityEnvironmentName() =>
+        _host.AuthorityEnvironment == VatAuthorityEnvironment.Sandbox ? "sandbox" : "production";
+
     private static byte[] LoadOrCreateKey(string path)
     {
         if (File.Exists(path))
@@ -476,6 +584,23 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         }
     }
 
+    private static FraudDeploymentTopology CreateTopology(VatProductHostOptions host)
+    {
+        var trustedPeers = host.FraudTrustedProxyAddresses.Select(IPAddress.Parse).ToHashSet();
+        var publicHops = host.FraudPublicTlsAddresses.Select(IPAddress.Parse).ToArray();
+        return trustedPeers.Count == 0
+            ? FraudDeploymentTopology.Direct("tcweb-direct", publicHops.Single())
+            : FraudDeploymentTopology.TrustedProxyChain("tcweb-trusted-proxy", trustedPeers, publicHops);
+    }
+
+    private static FraudVendorConfiguration CreateVendor() => new("Trade Control",
+        new Dictionary<string, string>
+        {
+            ["tcweb-client"] = "2.0.2",
+            ["tcweb-server"] = "2.0.2"
+        },
+        new Dictionary<string, string>());
+
     public void Dispose()
     {
         _gateway?.Dispose();
@@ -483,5 +608,6 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         _fraud?.Dispose();
         _oauth?.Dispose();
         _tokens?.Dispose();
+        _brokerTickets?.Dispose();
     }
 }

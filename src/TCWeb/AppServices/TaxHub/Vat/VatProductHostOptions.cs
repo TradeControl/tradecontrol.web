@@ -27,16 +27,27 @@ public enum VatSandboxSecretSource
     EnvironmentVariables
 }
 
+public enum VatOAuthCallbackMode
+{
+    Direct,
+    Brokered
+}
+
 public sealed class VatProductHostOptions
 {
     public const string SectionName = "TaxHub:VatProduct";
 
     public bool Enabled { get; set; }
+    public bool SubmissionEnabled { get; set; }
     public VatAuthorityEnvironment AuthorityEnvironment { get; set; } = VatAuthorityEnvironment.Sandbox;
     public VatPersistenceMode PersistenceMode { get; set; } = VatPersistenceMode.Disabled;
     public string? TenantReference { get; set; }
     public Uri? PublicOrigin { get; set; }
     public string OAuthCallbackPath { get; set; } = "/TaxHub/HmrcCallback";
+    public VatOAuthCallbackMode OAuthCallbackMode { get; set; } = VatOAuthCallbackMode.Direct;
+    public Uri? OAuthBrokerStartUri { get; set; }
+    public Uri? OAuthBrokerCallbackUri { get; set; }
+    public string OAuthBrokerEnvelopeKeyEnvironmentVariable { get; set; } = "OAUTH_BROKER_ENVELOPE_KEY";
     public string? DevelopmentStoreRoot { get; set; }
     public string? DevelopmentClientSettingsPath { get; set; }
     public VatSandboxSecretSource SandboxSecretSource { get; set; } = VatSandboxSecretSource.DevelopmentJsonFile;
@@ -48,6 +59,7 @@ public sealed class VatProductHostOptions
     public Uri? KeyVaultUri { get; set; }
     public string? WorkflowConnectionName { get; set; }
     public string? EvidenceBlobServiceUri { get; set; }
+    public string EvidenceContainerName { get; set; } = "statutory-evidence";
 }
 
 public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironment)
@@ -60,14 +72,6 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
             return ValidateOptionsResult.Success;
 
         var failures = new List<string>();
-        if (!Guid.TryParse(options.TenantReference, out _))
-            failures.Add("TenantReference must be an opaque GUID assigned to this Trade Control node.");
-        if (options.PublicOrigin is null || !options.PublicOrigin.IsAbsoluteUri
-            || options.PublicOrigin.Scheme != Uri.UriSchemeHttps
-            || options.PublicOrigin.AbsolutePath != "/"
-            || !string.IsNullOrEmpty(options.PublicOrigin.Query)
-            || !string.IsNullOrEmpty(options.PublicOrigin.Fragment))
-            failures.Add("PublicOrigin must be an HTTPS origin without a path, query or fragment.");
         if (string.IsNullOrWhiteSpace(options.OAuthCallbackPath)
             || !options.OAuthCallbackPath.StartsWith('/')
             || options.OAuthCallbackPath.StartsWith("//", StringComparison.Ordinal)
@@ -80,15 +84,28 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
         if (options.AuthorityEnvironment == VatAuthorityEnvironment.Production)
             failures.Add("Production HMRC composition is unavailable until the Phase 6.0 durable facilities are implemented and approved.");
         if (options.SandboxObligationAsOfDate.HasValue
-            && (!hostEnvironment.IsDevelopment()
-                || options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox
-                || options.PersistenceMode != VatPersistenceMode.DevelopmentFiles))
-            failures.Add("SandboxObligationAsOfDate is permitted only for a DevelopmentFiles HMRC sandbox host.");
+            && options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox)
+            failures.Add("SandboxObligationAsOfDate is permitted only for an HMRC sandbox host.");
+        if (options.SubmissionEnabled)
+            failures.Add("VAT submission remains locked until the accreditation dispatch gate is explicitly implemented and approved.");
         if (options.AllowIncompleteSandboxFraudHeaders
-            && (!hostEnvironment.IsDevelopment()
-                || options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox
-                || options.PersistenceMode != VatPersistenceMode.DevelopmentFiles))
-            failures.Add("Incomplete sandbox fraud headers are permitted only for a DevelopmentFiles HMRC sandbox host.");
+            && options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox)
+            failures.Add("Incomplete fraud headers are permitted only for an HMRC sandbox host.");
+
+        if (options.OAuthCallbackMode == VatOAuthCallbackMode.Brokered)
+        {
+            if (options.PersistenceMode != VatPersistenceMode.AzureManaged)
+                failures.Add("Brokered OAuth is permitted only for an AzureManaged product host.");
+            if (!IsBrokerUri(options.OAuthBrokerStartUri, "/oauth/start"))
+                failures.Add("OAuthBrokerStartUri must be the broker's exact HTTPS /oauth/start endpoint.");
+            if (!IsBrokerUri(options.OAuthBrokerCallbackUri, "/TaxHub/HmrcCallback"))
+                failures.Add("OAuthBrokerCallbackUri must be the broker's exact HTTPS callback endpoint.");
+            if (!string.Equals(options.OAuthBrokerStartUri?.IdnHost,
+                    options.OAuthBrokerCallbackUri?.IdnHost, StringComparison.OrdinalIgnoreCase))
+                failures.Add("The OAuth broker start and callback endpoints must use the same host.");
+            if (string.IsNullOrWhiteSpace(options.OAuthBrokerEnvelopeKeyEnvironmentVariable))
+                failures.Add("OAuthBrokerEnvelopeKeyEnvironmentVariable is required in brokered mode.");
+        }
 
         switch (options.PersistenceMode)
         {
@@ -96,6 +113,14 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
                 failures.Add("An enabled VAT product host requires an approved persistence mode.");
                 break;
             case VatPersistenceMode.DevelopmentFiles:
+                if (!Guid.TryParse(options.TenantReference, out _))
+                    failures.Add("TenantReference must be an opaque GUID in single-tenant DevelopmentFiles mode.");
+                if (options.PublicOrigin is null || !options.PublicOrigin.IsAbsoluteUri
+                    || options.PublicOrigin.Scheme != Uri.UriSchemeHttps
+                    || options.PublicOrigin.AbsolutePath != "/"
+                    || !string.IsNullOrEmpty(options.PublicOrigin.Query)
+                    || !string.IsNullOrEmpty(options.PublicOrigin.Fragment))
+                    failures.Add("PublicOrigin must be an HTTPS origin without a path, query or fragment in DevelopmentFiles mode.");
                 if (!hostEnvironment.IsDevelopment())
                     failures.Add("DevelopmentFiles is permitted only in the Development host environment.");
                 if (string.IsNullOrWhiteSpace(options.DevelopmentStoreRoot)
@@ -126,8 +151,10 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
                 if (!Uri.TryCreate(options.EvidenceBlobServiceUri, UriKind.Absolute, out var blobUri)
                     || !IsAzureHttpsHost(blobUri, ".blob.core.windows.net"))
                     failures.Add("AzureManaged requires an HTTPS Azure Blob service URI.");
-                // The facility contracts are selected, but deliberately not composed in Phase 6.0.
-                failures.Add("AzureManaged VAT persistence has been selected but is not implemented; hosted composition remains disabled.");
+                if (string.IsNullOrWhiteSpace(options.EvidenceContainerName))
+                    failures.Add("AzureManaged requires an evidence container name.");
+                if (options.SandboxSecretSource != VatSandboxSecretSource.EnvironmentVariables)
+                    failures.Add("AzureManaged sandbox credentials must be supplied through environment variables or Key Vault references.");
                 break;
         }
 
@@ -139,6 +166,12 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
         && uri.IsDefaultPort
         && uri.IdnHost.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
         && uri.IdnHost.Length > suffix.Length;
+
+    private static bool IsBrokerUri(Uri? uri, string path) => uri is { IsAbsoluteUri: true }
+        && uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort
+        && uri.AbsolutePath.Equals(path, StringComparison.Ordinal)
+        && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment)
+        && Uri.CheckHostName(uri.IdnHost) == UriHostNameType.Dns;
 
     private static bool IsPublicAddress(string value)
     {
