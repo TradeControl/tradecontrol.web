@@ -28,110 +28,117 @@ Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "tcNodeDb4", "sqlnode\src\tc
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "projects", "projects", "{BBA9A645-E4FD-4781-A324-76DE3A7E71BA}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tax hub", "tax hub", "{CB6F3104-CF0B-47FC-AD73-396F64581FBF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tax", "tax", "{CB6F3104-CF0B-47FC-AD73-396F64581FBF}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\change-log.md = ..\docs\projects\Tax Hub\change-log.md
-		..\docs\projects\Tax Hub\findings.md = ..\docs\projects\Tax Hub\findings.md
-		..\docs\projects\Tax Hub\README.md = ..\docs\projects\Tax Hub\README.md
+		..\docs\projects\tax\change-log.md = ..\docs\projects\tax\change-log.md
+		..\docs\projects\tax\findings.md = ..\docs\projects\tax\findings.md
+		..\docs\projects\tax\README.md = ..\docs\projects\tax\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "platform", "platform", "{28089177-8B6D-4FFE-856A-56CFAC1E218A}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\platform\hmrc-transport.md = ..\docs\projects\Tax Hub\platform\hmrc-transport.md
-		..\docs\projects\Tax Hub\platform\README.md = ..\docs\projects\Tax Hub\platform\README.md
-		..\docs\projects\Tax Hub\platform\tax-hub-data-provision-inventory.md = ..\docs\projects\Tax Hub\platform\tax-hub-data-provision-inventory.md
-		..\docs\projects\Tax Hub\platform\tax-hub-data-readiness-matrix.md = ..\docs\projects\Tax Hub\platform\tax-hub-data-readiness-matrix.md
-		..\docs\projects\Tax Hub\platform\tax-hub-implementation-3.md = ..\docs\projects\Tax Hub\platform\tax-hub-implementation-3.md
-		..\docs\projects\Tax Hub\platform\tax-hub-repo-structure.md = ..\docs\projects\Tax Hub\platform\tax-hub-repo-structure.md
-		..\docs\projects\Tax Hub\platform\tax-hub-test-payloads.md = ..\docs\projects\Tax Hub\platform\tax-hub-test-payloads.md
-		..\docs\projects\Tax Hub\platform\tax-hub-workplan-4.md = ..\docs\projects\Tax Hub\platform\tax-hub-workplan-4.md
-		..\docs\projects\Tax Hub\platform\tax-hub-workplan-5.md = ..\docs\projects\Tax Hub\platform\tax-hub-workplan-5.md
+		..\docs\projects\tax\platform\hmrc-transport.md = ..\docs\projects\tax\platform\hmrc-transport.md
+		..\docs\projects\tax\platform\README.md = ..\docs\projects\tax\platform\README.md
+		..\docs\projects\tax\platform\tax-hub-data-provision-inventory.md = ..\docs\projects\tax\platform\tax-hub-data-provision-inventory.md
+		..\docs\projects\tax\platform\tax-hub-data-readiness-matrix.md = ..\docs\projects\tax\platform\tax-hub-data-readiness-matrix.md
+		..\docs\projects\tax\platform\tax-hub-implementation-3.md = ..\docs\projects\tax\platform\tax-hub-implementation-3.md
+		..\docs\projects\tax\platform\tax-hub-repo-structure.md = ..\docs\projects\tax\platform\tax-hub-repo-structure.md
+		..\docs\projects\tax\platform\tax-hub-test-payloads.md = ..\docs\projects\tax\platform\tax-hub-test-payloads.md
+		..\docs\projects\tax\platform\tax-hub-workplan-4.md = ..\docs\projects\tax\platform\tax-hub-workplan-4.md
+		..\docs\projects\tax\platform\tax-hub-workplan-5.md = ..\docs\projects\tax\platform\tax-hub-workplan-5.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "programme", "programme", "{DEFB1068-AB8F-4086-9ED2-22CD4558419D}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\programme\tax-hub-documentation-structure.md = ..\docs\projects\Tax Hub\programme\tax-hub-documentation-structure.md
-		..\docs\projects\Tax Hub\programme\tax-hub-spec-programme.md = ..\docs\projects\Tax Hub\programme\tax-hub-spec-programme.md
+		..\docs\projects\tax\programme\tax-hub-documentation-structure.md = ..\docs\projects\tax\programme\tax-hub-documentation-structure.md
+		..\docs\projects\tax\programme\tax-hub-spec-programme.md = ..\docs\projects\tax\programme\tax-hub-spec-programme.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mtd-income-tax", "mtd-income-tax", "{DC738C34-A9CF-4CEA-B696-51D8BDD33E58}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\mtd-income-tax\README.md = ..\docs\projects\Tax Hub\mtd-income-tax\README.md
-		..\docs\projects\Tax Hub\mtd-income-tax\sa-change-log.md = ..\docs\projects\Tax Hub\mtd-income-tax\sa-change-log.md
-		..\docs\projects\Tax Hub\mtd-income-tax\sa-findings.md = ..\docs\projects\Tax Hub\mtd-income-tax\sa-findings.md
-		..\docs\projects\Tax Hub\mtd-income-tax\self-assessment-sql-node-spec.md = ..\docs\projects\Tax Hub\mtd-income-tax\self-assessment-sql-node-spec.md
-		..\docs\projects\Tax Hub\mtd-income-tax\sole-trader-capital.md = ..\docs\projects\Tax Hub\mtd-income-tax\sole-trader-capital.md
-		..\docs\projects\Tax Hub\mtd-income-tax\sole-trader-contracts.md = ..\docs\projects\Tax Hub\mtd-income-tax\sole-trader-contracts.md
-		..\docs\projects\Tax Hub\mtd-income-tax\sole-trader-field-sets.md = ..\docs\projects\Tax Hub\mtd-income-tax\sole-trader-field-sets.md
+		..\docs\projects\tax\mtd-income-tax\README.md = ..\docs\projects\tax\mtd-income-tax\README.md
+		..\docs\projects\tax\mtd-income-tax\sa-change-log.md = ..\docs\projects\tax\mtd-income-tax\sa-change-log.md
+		..\docs\projects\tax\mtd-income-tax\sa-findings.md = ..\docs\projects\tax\mtd-income-tax\sa-findings.md
+		..\docs\projects\tax\mtd-income-tax\self-assessment-sql-node-spec.md = ..\docs\projects\tax\mtd-income-tax\self-assessment-sql-node-spec.md
+		..\docs\projects\tax\mtd-income-tax\sole-trader-capital.md = ..\docs\projects\tax\mtd-income-tax\sole-trader-capital.md
+		..\docs\projects\tax\mtd-income-tax\sole-trader-contracts.md = ..\docs\projects\tax\mtd-income-tax\sole-trader-contracts.md
+		..\docs\projects\tax\mtd-income-tax\sole-trader-field-sets.md = ..\docs\projects\tax\mtd-income-tax\sole-trader-field-sets.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "vat", "vat", "{E001F5DB-9EB5-4F34-B1CB-3F66EFC57005}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\vat\brexit-vat-surface.md = ..\docs\projects\Tax Hub\vat\brexit-vat-surface.md
-		..\docs\projects\Tax Hub\vat\phase-6.1-tcweb-hmrc-setup.md = ..\docs\projects\Tax Hub\vat\phase-6.1-tcweb-hmrc-setup.md
-		..\docs\projects\Tax Hub\vat\phase-6.2-vat-obligations-and-sandbox-alignment.md = ..\docs\projects\Tax Hub\vat\phase-6.2-vat-obligations-and-sandbox-alignment.md
-		..\docs\projects\Tax Hub\vat\phase-6.3-vat-return-review.md = ..\docs\projects\Tax Hub\vat\phase-6.3-vat-return-review.md
-		..\docs\projects\Tax Hub\vat\phase-6.5-vat-filing-history.md = ..\docs\projects\Tax Hub\vat\phase-6.5-vat-filing-history.md
-		..\docs\projects\Tax Hub\vat\phase-6.6-hmrc-approval-readiness.md = ..\docs\projects\Tax Hub\vat\phase-6.6-hmrc-approval-readiness.md
-		..\docs\projects\Tax Hub\vat\phase-6.7-hmrc-production-approval.md = ..\docs\projects\Tax Hub\vat\phase-6.7-hmrc-production-approval.md
-		..\docs\projects\Tax Hub\vat\README.md = ..\docs\projects\Tax Hub\vat\README.md
-		..\docs\projects\Tax Hub\vat\tax-hub-vat-surface-sql.md = ..\docs\projects\Tax Hub\vat\tax-hub-vat-surface-sql.md
-		..\docs\projects\Tax Hub\vat\tax-hub-workplan-6.md = ..\docs\projects\Tax Hub\vat\tax-hub-workplan-6.md
+		..\docs\projects\tax\vat\brexit-vat-surface.md = ..\docs\projects\tax\vat\brexit-vat-surface.md
+		..\docs\projects\tax\vat\phase-6.1-tcweb-hmrc-setup.md = ..\docs\projects\tax\vat\phase-6.1-tcweb-hmrc-setup.md
+		..\docs\projects\tax\vat\phase-6.2-vat-obligations-and-sandbox-alignment.md = ..\docs\projects\tax\vat\phase-6.2-vat-obligations-and-sandbox-alignment.md
+		..\docs\projects\tax\vat\phase-6.3-vat-return-review.md = ..\docs\projects\tax\vat\phase-6.3-vat-return-review.md
+		..\docs\projects\tax\vat\phase-6.5-vat-filing-history.md = ..\docs\projects\tax\vat\phase-6.5-vat-filing-history.md
+		..\docs\projects\tax\vat\phase-6.6-hmrc-approval-readiness.md = ..\docs\projects\tax\vat\phase-6.6-hmrc-approval-readiness.md
+		..\docs\projects\tax\vat\phase-6.7-hmrc-production-approval.md = ..\docs\projects\tax\vat\phase-6.7-hmrc-production-approval.md
+		..\docs\projects\tax\vat\README.md = ..\docs\projects\tax\vat\README.md
+		..\docs\projects\tax\vat\tax-hub-vat-surface-sql.md = ..\docs\projects\tax\vat\tax-hub-vat-surface-sql.md
+		..\docs\projects\tax\vat\tax-hub-workplan-6.md = ..\docs\projects\tax\vat\tax-hub-workplan-6.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "company", "company", "{62C230DD-6FAD-477C-ABD5-54BAF32596E0}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\company\README.md = ..\docs\projects\Tax Hub\company\README.md
+		..\docs\projects\tax\company\README.md = ..\docs\projects\tax\company\README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{9C195757-4A35-4CA9-AF14-2A25530AD6CF}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\company\shared\company-field-sets.md = ..\docs\projects\Tax Hub\company\shared\company-field-sets.md
-		..\docs\projects\Tax Hub\company\shared\company-statutory-contract-design.md = ..\docs\projects\Tax Hub\company\shared\company-statutory-contract-design.md
-		..\docs\projects\Tax Hub\company\shared\tax-hub-company-projection-inventory.md = ..\docs\projects\Tax Hub\company\shared\tax-hub-company-projection-inventory.md
+		..\docs\projects\tax\company\shared\company-field-sets.md = ..\docs\projects\tax\company\shared\company-field-sets.md
+		..\docs\projects\tax\company\shared\company-statutory-contract-design.md = ..\docs\projects\tax\company\shared\company-statutory-contract-design.md
+		..\docs\projects\tax\company\shared\tax-hub-company-projection-inventory.md = ..\docs\projects\tax\company\shared\tax-hub-company-projection-inventory.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "corporation-tax", "corporation-tax", "{7892DFA3-7F51-488E-A17D-A6486D34697F}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\company\corporation-tax\phase-5.10-ct-external-test-local.md = ..\docs\projects\Tax Hub\company\corporation-tax\phase-5.10-ct-external-test-local.md
-		..\docs\projects\Tax Hub\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md = ..\docs\projects\Tax Hub\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md
-		..\docs\projects\Tax Hub\company\corporation-tax\phase-5.9-transaction-engine-fixture.md = ..\docs\projects\Tax Hub\company\corporation-tax\phase-5.9-transaction-engine-fixture.md
-		..\docs\projects\Tax Hub\company\corporation-tax\README.md = ..\docs\projects\Tax Hub\company\corporation-tax\README.md
-		..\docs\projects\Tax Hub\company\corporation-tax\tax-hub-workplan-3.md = ..\docs\projects\Tax Hub\company\corporation-tax\tax-hub-workplan-3.md
+		..\docs\projects\tax\company\corporation-tax\phase-5.10-ct-external-test-local.md = ..\docs\projects\tax\company\corporation-tax\phase-5.10-ct-external-test-local.md
+		..\docs\projects\tax\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md = ..\docs\projects\tax\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md
+		..\docs\projects\tax\company\corporation-tax\phase-5.9-transaction-engine-fixture.md = ..\docs\projects\tax\company\corporation-tax\phase-5.9-transaction-engine-fixture.md
+		..\docs\projects\tax\company\corporation-tax\README.md = ..\docs\projects\tax\company\corporation-tax\README.md
+		..\docs\projects\tax\company\corporation-tax\tax-hub-workplan-3.md = ..\docs\projects\tax\company\corporation-tax\tax-hub-workplan-3.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "companies-house", "companies-house", "{1CA02FB4-47A6-46AA-A718-C54C1087E18D}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\company\companies-house\companies-house-development-simulator-workplan.md = ..\docs\projects\Tax Hub\company\companies-house\companies-house-development-simulator-workplan.md
-		..\docs\projects\Tax Hub\company\companies-house\phase-5.11-companies-house-prerequisite-assurance.md = ..\docs\projects\Tax Hub\company\companies-house\phase-5.11-companies-house-prerequisite-assurance.md
-		..\docs\projects\Tax Hub\company\companies-house\phase-7.0-companies-house-integration-boundary.md = ..\docs\projects\Tax Hub\company\companies-house\phase-7.0-companies-house-integration-boundary.md
-		..\docs\projects\Tax Hub\company\companies-house\README.md = ..\docs\projects\Tax Hub\company\companies-house\README.md
-		..\docs\projects\Tax Hub\company\companies-house\tax-hub-workplan-7.md = ..\docs\projects\Tax Hub\company\companies-house\tax-hub-workplan-7.md
+		..\docs\projects\tax\company\companies-house\companies-house-development-simulator-workplan.md = ..\docs\projects\tax\company\companies-house\companies-house-development-simulator-workplan.md
+		..\docs\projects\tax\company\companies-house\phase-5.11-companies-house-prerequisite-assurance.md = ..\docs\projects\tax\company\companies-house\phase-5.11-companies-house-prerequisite-assurance.md
+		..\docs\projects\tax\company\companies-house\phase-7.0-companies-house-integration-boundary.md = ..\docs\projects\tax\company\companies-house\phase-7.0-companies-house-integration-boundary.md
+		..\docs\projects\tax\company\companies-house\README.md = ..\docs\projects\tax\company\companies-house\README.md
+		..\docs\projects\tax\company\companies-house\tax-hub-workplan-7.md = ..\docs\projects\tax\company\companies-house\tax-hub-workplan-7.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "approval", "approval", "{12BD567E-A9B8-4D52-9DA9-6BB09F18CCF1}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\company\companies-house\approval\companies-house-test-submission-evidence.md = ..\docs\projects\Tax Hub\company\companies-house\approval\companies-house-test-submission-evidence.md
-		..\docs\projects\Tax Hub\company\companies-house\approval\README.md = ..\docs\projects\Tax Hub\company\companies-house\approval\README.md
-		..\docs\projects\Tax Hub\company\companies-house\approval\STD-cash-statement-year-3-additive-transition.xlsx = ..\docs\projects\Tax Hub\company\companies-house\approval\STD-cash-statement-year-3-additive-transition.xlsx
-		..\docs\projects\Tax Hub\company\companies-house\approval\STD-cash-statement-years-1-and-2-baseline.xlsx = ..\docs\projects\Tax Hub\company\companies-house\approval\STD-cash-statement-years-1-and-2-baseline.xlsx
+		..\docs\projects\tax\company\companies-house\approval\companies-house-test-submission-evidence.md = ..\docs\projects\tax\company\companies-house\approval\companies-house-test-submission-evidence.md
+		..\docs\projects\tax\company\companies-house\approval\README.md = ..\docs\projects\tax\company\companies-house\approval\README.md
+		..\docs\projects\tax\company\companies-house\approval\STD-cash-statement-year-3-additive-transition.xlsx = ..\docs\projects\tax\company\companies-house\approval\STD-cash-statement-year-3-additive-transition.xlsx
+		..\docs\projects\tax\company\companies-house\approval\STD-cash-statement-years-1-and-2-baseline.xlsx = ..\docs\projects\tax\company\companies-house\approval\STD-cash-statement-years-1-and-2-baseline.xlsx
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ui", "ui", "{22E0F2A6-08C4-4422-8B72-F903A5B894B1}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "hub", "hub", "{22E0F2A6-08C4-4422-8B72-F903A5B894B1}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\ui\tax-hub-objective-5-hosting-decision.md = ..\docs\projects\Tax Hub\ui\tax-hub-objective-5-hosting-decision.md
+		..\docs\projects\tax\hub\tax-hub-objective-5-hosting-decision.md = ..\docs\projects\tax\hub\tax-hub-objective-5-hosting-decision.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "seal", "seal", "{A3D227B7-1AC3-4A45-8F8A-5A0F42ED6F25}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\tax\seal\README.md = ..\docs\projects\tax\seal\README.md
+		..\docs\projects\tax\seal\statutory-seal-contract.md = ..\docs\projects\tax\seal\statutory-seal-contract.md
+		..\docs\projects\tax\seal\tax-balance-and-optimisation-workplan.md = ..\docs\projects\tax\seal\tax-balance-and-optimisation-workplan.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "archive", "archive", "{D79BA1BE-3274-4B5C-BAE2-802B3DED90AC}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\Tax Hub\archive\legacy\tax-hub-hmrc-repo-structure-2.md = ..\docs\projects\Tax Hub\archive\legacy\tax-hub-hmrc-repo-structure-2.md
-		..\docs\projects\Tax Hub\archive\legacy\tax-hub-implementation-1.md = ..\docs\projects\Tax Hub\archive\legacy\tax-hub-implementation-1.md
-		..\docs\projects\Tax Hub\archive\legacy\tax-hub-implementation-2.md = ..\docs\projects\Tax Hub\archive\legacy\tax-hub-implementation-2.md
-		..\docs\projects\Tax Hub\archive\legacy\tax-hub-workplan-1.md = ..\docs\projects\Tax Hub\archive\legacy\tax-hub-workplan-1.md
-		..\docs\projects\Tax Hub\archive\legacy\tax-hub-workplan-2.md = ..\docs\projects\Tax Hub\archive\legacy\tax-hub-workplan-2.md
+		..\docs\projects\tax\archive\legacy\tax-hub-hmrc-repo-structure-2.md = ..\docs\projects\tax\archive\legacy\tax-hub-hmrc-repo-structure-2.md
+		..\docs\projects\tax\archive\legacy\tax-hub-implementation-1.md = ..\docs\projects\tax\archive\legacy\tax-hub-implementation-1.md
+		..\docs\projects\tax\archive\legacy\tax-hub-implementation-2.md = ..\docs\projects\tax\archive\legacy\tax-hub-implementation-2.md
+		..\docs\projects\tax\archive\legacy\tax-hub-workplan-1.md = ..\docs\projects\tax\archive\legacy\tax-hub-workplan-1.md
+		..\docs\projects\tax\archive\legacy\tax-hub-workplan-2.md = ..\docs\projects\tax\archive\legacy\tax-hub-workplan-2.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tax Hub", "Tax Hub", "{F6B01961-56EB-455F-9668-4814B8F70E85}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tax", "Tax", "{F6B01961-56EB-455F-9668-4814B8F70E85}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Export", "Export", "{BC8F5617-4B32-49EF-B585-E20CEEF90CDF}"
 EndProject
@@ -373,6 +380,7 @@ Global
 		{1CA02FB4-47A6-46AA-A718-C54C1087E18D} = {62C230DD-6FAD-477C-ABD5-54BAF32596E0}
 		{12BD567E-A9B8-4D52-9DA9-6BB09F18CCF1} = {1CA02FB4-47A6-46AA-A718-C54C1087E18D}
 		{22E0F2A6-08C4-4422-8B72-F903A5B894B1} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
+		{A3D227B7-1AC3-4A45-8F8A-5A0F42ED6F25} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
 		{D79BA1BE-3274-4B5C-BAE2-802B3DED90AC} = {CB6F3104-CF0B-47FC-AD73-396F64581FBF}
 		{E38ACEA6-90EC-4077-AB8D-FE870F0791B8} = {C18FDC84-40B5-4B48-A904-28CC71942ECA}
 		{52FBB751-B38F-699D-C8C3-FEEDB726A4E5} = {F6B01961-56EB-455F-9668-4814B8F70E85}

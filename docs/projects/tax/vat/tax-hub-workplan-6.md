@@ -23,7 +23,7 @@ The resulting product should be technically ready for the current HMRC VAT (MTD)
 
 The following sources govern this plan, in descending order where their decisions overlap:
 
-1. `docs/projects/Tax Hub/programme/tax-hub-spec-programme.md`.
+1. `docs/projects/tax/programme/tax-hub-spec-programme.md`.
 2. Current authoritative HMRC material:
    - [VAT (MTD) end-to-end service guide](https://developer.service.hmrc.gov.uk/guides/vat-mtd-end-to-end-service-guide/), updated 23 June 2026;
    - [VAT setup journeys](https://developer.service.hmrc.gov.uk/guides/vat-mtd-end-to-end-service-guide/documentation/set-up.html);
@@ -32,7 +32,7 @@ The following sources govern this plan, in descending order where their decision
    - current HMRC fraud-prevention-header specification and terms of use.
 3. The completed Objective 2 and Objective 3 records, especially `tax-hub-implementation-3.md` and `tax-hub-workplan-4.md`.
 4. `tax-hub-workplan-5.md`, including the implemented and accepted VAT phases 5.0–5.6.
-5. `docs/projects/Tax Hub/ui/tax-hub-objective-5-hosting-decision.md`, including its Phase 6.0 review qualifications.
+5. `docs/projects/tax/hub/tax-hub-objective-5-hosting-decision.md`, including its Phase 6.0 review qualifications.
 6. The actual source beneath `src/TCWeb`, `src/tax-hub/src` and their tests.
 7. Earlier Tax Hub work plans and implementation history, where they do not conflict with later reviewed decisions or current source.
 
@@ -243,7 +243,7 @@ Host configuration is disabled by default. Startup validation confines file stor
 
 The mixed .NET/SSDT `tradecontrol.web.sln` build passed through Visual Studio MSBuild, and `TaxHub.slnx` built with zero warnings. The new TCWeb boundary suite passed 20 assertions covering dependency direction, host-neutral workflow shape, fail-closed configuration, stable context construction and cross-tenant rejection. All nine established Tax Hub suites passed; the secret-backed data-provision executable used its supported offline source/preparation/handoff path because no database secret was supplied to that test process. No credential or protected value was read or committed.
 
-The approved detail is recorded in `docs/projects/Tax Hub/ui/tax-hub-objective-5-hosting-decision.md`. Phase 6.1 requires separate implementation authority and does not inherit production enablement from this approval.
+The approved detail is recorded in `docs/projects/tax/hub/tax-hub-objective-5-hosting-decision.md`. Phase 6.1 requires separate implementation authority and does not inherit production enablement from this approval.
 
 ## Phase 6.1 — Product authentication, HMRC connection and client facts
 
@@ -603,8 +603,8 @@ not combine the two authority workflows or their evidence.
 After each accepted phase:
 
 - record implementation evidence and current status beneath that phase in this work plan;
-- add durable discoveries, external decisions and unresolved risks to `docs/projects/Tax Hub/findings.md`;
-- add significant implemented changes to `docs/projects/Tax Hub/change-log.md`;
+- add durable discoveries, external decisions and unresolved risks to `docs/projects/tax/findings.md`;
+- add significant implemented changes to `docs/projects/tax/change-log.md`;
 - update user/admin guidance for any visible workflow or operational change; and
 - keep secrets, tokens, real VRNs, user credentials and unrestricted authority responses out of the repository.
 

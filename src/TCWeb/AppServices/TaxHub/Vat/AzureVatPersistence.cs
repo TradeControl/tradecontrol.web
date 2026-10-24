@@ -261,6 +261,63 @@ public sealed class AzureVatPersistence : IOAuthGrantStore, IFraudContextStore,
             cancellationToken);
     }
 
+    internal Task AddReviewCandidateAsync(VatReviewCandidateRecord candidate,
+        CancellationToken cancellationToken = default) =>
+        MutateReviewCandidatesAsync(candidate.TenantReference, records =>
+        {
+            records.RemoveAll(item => item.ExpiresAtUtc <= _clock.GetUtcNow());
+            if (records.Any(item => item.Reference == candidate.Reference))
+                throw new InvalidOperationException("The VAT preparation reference already exists.");
+            records.Add(candidate);
+            return true;
+        }, cancellationToken);
+
+    internal async Task<VatReviewCandidateRecord?> GetReviewCandidateAsync(string reference,
+        VatWorkflowIdentity identity, CancellationToken cancellationToken = default) =>
+        (await ReadReviewCandidatesAsync(identity.TenantReference, cancellationToken)).SingleOrDefault(item =>
+            item.Reference == reference && item.PrincipalReference == identity.AspNetSubjectReference
+            && item.ActorReference == identity.ActorReference);
+
+    internal async Task<VatReviewCandidateRecord?> GetReviewCandidateForTenantAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default) =>
+        (await ReadReviewCandidatesAsync(tenantReference, cancellationToken)).SingleOrDefault(item =>
+            item.Reference == reference && item.TenantReference == tenantReference);
+
+    internal async Task<IReadOnlyList<VatReviewCandidateRecord>> GetReviewCandidatesAsync(
+        string tenantReference, IReadOnlySet<string> references,
+        CancellationToken cancellationToken = default) =>
+        (await ReadReviewCandidatesAsync(tenantReference, cancellationToken))
+            .Where(item => references.Contains(item.Reference)).ToArray();
+
+    internal Task<VatReviewApprovalRecord> AddReviewApprovalAsync(VatReviewApprovalRecord proposed,
+        CancellationToken cancellationToken = default) =>
+        MutateReviewApprovalsAsync(proposed.TenantReference, records =>
+        {
+            var existing = records.SingleOrDefault(item =>
+                item.PreparationReference == proposed.PreparationReference
+                && item.PrincipalReference == proposed.PrincipalReference);
+            if (existing is not null) return existing;
+            records.Add(proposed);
+            return proposed;
+        }, cancellationToken);
+
+    internal async Task<VatReviewApprovalRecord?> GetReviewApprovalAsync(string reference,
+        VatWorkflowIdentity identity, CancellationToken cancellationToken = default) =>
+        (await ReadReviewApprovalsAsync(identity.TenantReference, cancellationToken)).SingleOrDefault(item =>
+            item.Reference == reference && item.PrincipalReference == identity.AspNetSubjectReference
+            && item.ActorReference == identity.ActorReference);
+
+    internal async Task<VatReviewApprovalRecord?> GetReviewApprovalForTenantAsync(string tenantReference,
+        string reference, CancellationToken cancellationToken = default) =>
+        (await ReadReviewApprovalsAsync(tenantReference, cancellationToken)).SingleOrDefault(item =>
+            item.Reference == reference && item.TenantReference == tenantReference);
+
+    internal async Task<IReadOnlyList<VatReviewApprovalRecord>> GetReviewApprovalsAsync(
+        string tenantReference, IReadOnlySet<string> references,
+        CancellationToken cancellationToken = default) =>
+        (await ReadReviewApprovalsAsync(tenantReference, cancellationToken))
+            .Where(item => references.Contains(item.Reference)).ToArray();
+
     private async Task<SubmissionAttemptRecord> UpdateAttemptAsync(string tenantReference,
         string principalReference, string attemptReference, Func<SubmissionAttemptRecord, SubmissionAttemptRecord> update,
         CancellationToken cancellationToken) => await MutateAttemptsAsync(tenantReference, records =>
@@ -289,6 +346,46 @@ public sealed class AzureVatPersistence : IOAuthGrantStore, IFraudContextStore,
         CancellationToken cancellationToken) =>
         await ReadAsync<List<SubmissionAttemptRecord>>(_container.GetBlobClient(
             $"vat/v1/attempts/{Fingerprint(tenantReference)}.json"), null, cancellationToken) ?? [];
+
+    private async Task<T> MutateReviewCandidatesAsync<T>(string tenantReference,
+        Func<List<VatReviewCandidateRecord>, T> action, CancellationToken cancellationToken)
+    {
+        var owner = Fingerprint(tenantReference);
+        await using var lease = await AcquireLeaseAsync(
+            _container.GetBlobClient($"vat/v1/reviews/{owner}.lock"), createIfMissing: true,
+            cancellationToken) ?? throw new InvalidOperationException("The VAT review-store lease is unavailable.");
+        var blob = _container.GetBlobClient($"vat/v1/reviews/{owner}-candidates.json");
+        var records = await ReadAsync<List<VatReviewCandidateRecord>>(blob, null, cancellationToken) ?? [];
+        var result = action(records);
+        await WriteAsync(blob, JsonSerializer.SerializeToUtf8Bytes(records, Json), overwrite: true,
+            cancellationToken);
+        return result;
+    }
+
+    private async Task<T> MutateReviewApprovalsAsync<T>(string tenantReference,
+        Func<List<VatReviewApprovalRecord>, T> action, CancellationToken cancellationToken)
+    {
+        var owner = Fingerprint(tenantReference);
+        await using var lease = await AcquireLeaseAsync(
+            _container.GetBlobClient($"vat/v1/reviews/{owner}.lock"), createIfMissing: true,
+            cancellationToken) ?? throw new InvalidOperationException("The VAT review-store lease is unavailable.");
+        var blob = _container.GetBlobClient($"vat/v1/reviews/{owner}-approvals.json");
+        var records = await ReadAsync<List<VatReviewApprovalRecord>>(blob, null, cancellationToken) ?? [];
+        var result = action(records);
+        await WriteAsync(blob, JsonSerializer.SerializeToUtf8Bytes(records, Json), overwrite: true,
+            cancellationToken);
+        return result;
+    }
+
+    private async Task<List<VatReviewCandidateRecord>> ReadReviewCandidatesAsync(string tenantReference,
+        CancellationToken cancellationToken) =>
+        await ReadAsync<List<VatReviewCandidateRecord>>(_container.GetBlobClient(
+            $"vat/v1/reviews/{Fingerprint(tenantReference)}-candidates.json"), null, cancellationToken) ?? [];
+
+    private async Task<List<VatReviewApprovalRecord>> ReadReviewApprovalsAsync(string tenantReference,
+        CancellationToken cancellationToken) =>
+        await ReadAsync<List<VatReviewApprovalRecord>>(_container.GetBlobClient(
+            $"vat/v1/reviews/{Fingerprint(tenantReference)}-approvals.json"), null, cancellationToken) ?? [];
 
     private async Task UploadNewAsync(string path, byte[] plaintext, CancellationToken cancellationToken)
     {

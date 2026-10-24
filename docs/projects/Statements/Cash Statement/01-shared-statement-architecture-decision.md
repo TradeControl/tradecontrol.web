@@ -324,7 +324,7 @@ These costs are concentrated in delivery. The independent Python alternative con
 - `src/TCExports/src/TCExports.Generator/python/exporters/cash_statement_ods.py`
 - `src/TCWeb/TCWeb.csproj`
 - `src/TCWeb/Properties/ServiceDependencies/TCWeb - Web Deploy/profile.arm.json`
-- `docs/projects/Tax Hub/ui/tax-hub-objective-5-hosting-decision.md`
+- `docs/projects/tax/hub/tax-hub-objective-5-hosting-decision.md`
 
 ### External specifications
 

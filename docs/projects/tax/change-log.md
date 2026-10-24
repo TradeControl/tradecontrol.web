@@ -1,4 +1,12 @@
-# Tax Hub Change Log
+# Tax Change Log
+
+## 24 October 2026 — Tax documentation and seal ownership clarified
+
+- Renamed the documentation root from `Tax Hub` to `tax` because the hub is a UI/workflow surface rather than the parent subsystem.
+- Renamed the documentation `ui` folder to `hub`, moved the provider-neutral statutory seal contract from the private hosting repository into the public `tax/seal` area, and updated the Visual Studio solution map.
+- Added a two-stage work plan: pre-accreditation statement-balance continuity and period-close validation first, followed by separately gated MIS Mode real-time tax optimisation.
+- Kept the submission seal distinct from the tax-balance checkpoint because statement payments affect calculation continuity but are not part of the authority payload.
+- Preserved archived documents byte-for-byte and updated active references only.
 
 ## 22 October 2026 — Corporation Tax recognition sequence clarified
 

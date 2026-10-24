@@ -750,6 +750,7 @@ Assert(developmentValidator.Validate(null, sandbox).Failed,
 var azure = new VatProductHostOptions
 {
     Enabled = true,
+    ReviewEnabled = true,
     AuthorityEnvironment = VatAuthorityEnvironment.Sandbox,
     PersistenceMode = VatPersistenceMode.AzureManaged,
     TenantReference = Guid.NewGuid().ToString(),
@@ -1004,8 +1005,9 @@ Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.
     && alignmentSql.Contains("Cash.vwTaxVatSubmission", StringComparison.Ordinal)
     && alignmentSql.Contains("Cash.proc_ReportingProfileSave", StringComparison.Ordinal)
     && alignmentSql.Contains("UPDATE Subject.tbVirtual", StringComparison.Ordinal)
+    && alignmentSql.Contains("@ValidFrom > @ObligationStart", StringComparison.Ordinal)
     && alignmentSql.Contains("@SandboxVrn = N'999000001'", StringComparison.Ordinal),
-    "The disposable VAT alignment guard or authoritative calculation/configuration boundary changed.");
+    "The disposable VAT alignment guard, historical profile coverage or authoritative calculation/configuration boundary changed.");
 var syntheticBootstrapSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
     "Stored Procedures", "proc_DatasetSyntheticMIS_Bootstrap.sql"));
 var restoreDomainUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO Usr.tbUser", StringComparison.Ordinal);
@@ -1038,13 +1040,13 @@ var returnReview = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", 
     "Components", "TaxHubVatReturnReview.razor"));
 var obligationsPanel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubVatObligations.razor"));
-Assert(obligationsPanel.Contains("item.CanReview && VatHost.Value.SubmissionEnabled", StringComparison.Ordinal)
-    && obligationsPanel.Contains("_selected is not null && VatHost.Value.SubmissionEnabled", StringComparison.Ordinal)
-    && obligationsPanel.Contains("Review and submission are currently locked", StringComparison.Ordinal),
-    "The Azure-hosted VAT obligations panel can activate the development-only review store while submission is locked.");
+Assert(obligationsPanel.Contains("item.CanReview && VatHost.Value.ReviewEnabled", StringComparison.Ordinal)
+    && obligationsPanel.Contains("_selected is not null && VatHost.Value.ReviewEnabled", StringComparison.Ordinal)
+    && obligationsPanel.Contains("Return review is currently locked", StringComparison.Ordinal),
+    "The VAT obligations panel no longer has an independent preparation-and-review gate.");
 Assert(appServiceRegistration.Contains("PersistenceMode\") == VatPersistenceMode.DevelopmentFiles", StringComparison.Ordinal)
     && appServiceRegistration.Contains("IVatFilingHistoryService, DisabledVatFilingHistoryService", StringComparison.Ordinal),
-    "Azure-managed composition can activate filing history backed by the development-only approval store.");
+    "Azure-managed composition can activate filing history before durable dispatch evidence is enabled.");
 var sharedLayout = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared", "_Layout.cshtml"));
 Assert(sharedLayout.Contains("@inject UserManager<TradeControlWebUser> UserManager", StringComparison.Ordinal)
     && sharedLayout.Contains("@inject NodeContext NodeContext", StringComparison.Ordinal)
@@ -1056,6 +1058,9 @@ Assert(returnReview.Contains("The values below are read from the immutable prepa
     && returnReview.Contains("Not yet submitted to HMRC", StringComparison.Ordinal)
     && returnReview.Contains("Final step — submit to HMRC", StringComparison.Ordinal),
     "The Phase 6.3 exact-review boundary or separate submit gate is no longer explicit in the UI.");
+Assert(returnReview.Contains("!VatHost.Value.SubmissionEnabled", StringComparison.Ordinal)
+    && returnReview.Contains("Approved and retained — not submitted to HMRC", StringComparison.Ordinal),
+    "An approved accreditation candidate can expose the HMRC submission action while dispatch is disabled.");
 Assert(returnReview.Contains("@bind=\"_confirmed\"", StringComparison.Ordinal)
     && !returnReview.Contains("checked=", StringComparison.OrdinalIgnoreCase)
     && returnReview.Contains("_warningsAcknowledged", StringComparison.Ordinal),
@@ -1105,26 +1110,30 @@ var evidence = new VatSourceEvidenceSnapshot("database-a", "HOME", 42, "4.1.16",
     [new(new DateOnly(2026, 6, 1), 0.05m, "Supplier rounding evidence")]);
 Assert(evidence.SameBoundaryAndContent(evidence with { }),
     "An unchanged VAT evidence boundary was treated as concurrent mutation.");
-Assert(!evidence.SameBoundaryAndContent(evidence with { AccountingEventId = 43 })
+Assert(evidence.SameBoundaryAndContent(evidence with { AccountingEventId = 43 })
     && !evidence.SameBoundaryAndContent(evidence with { SourceInventorySha256 = new string('B', 64) })
     && !evidence.SameBoundaryAndContent(evidence with
         { Adjustments = [new(new DateOnly(2026, 6, 1), 0.05m, "Changed explanation")] }),
-    "VAT preparation does not fail closed for event, source, or adjustment mutation.");
+    "VAT preparation either treated an unrelated database row-version as a tax mutation or failed to detect scoped source/adjustment mutation.");
 var evidenceReader = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
     "VatSourceEvidenceReader.cs"));
 Assert(evidenceReader.Contains("App.proc_VatSourceEvidence", StringComparison.Ordinal)
     && reviewService.Contains("evidenceBefore.SameBoundaryAndContent(evidenceAfter)", StringComparison.Ordinal)
+    && reviewService.Contains("JsonSerializer.Deserialize<VatReturnRequest>(bodyBytes.Span, VatBodyJson)", StringComparison.Ordinal)
+    && reviewService.Contains("PropertyNameCaseInsensitive = true", StringComparison.Ordinal)
     && reviewService.Contains("VatStatutorySeal.Verify", StringComparison.Ordinal)
     && reviewService.Contains("DatabaseInstanceReference != candidate.DatabaseInstanceReference", StringComparison.Ordinal)
-    && reviewService.Contains("AccountingEventId != candidate.AccountingEventId", StringComparison.Ordinal)
-    && reviewService.Contains("SourceInventorySha256 != candidate.SourceInventorySha256", StringComparison.Ordinal),
-    "VAT preparation lost its durable database identity, concurrent-change guard, or retained seal verification.");
+    && !reviewService.Contains("AccountingEventId != candidate.AccountingEventId", StringComparison.Ordinal)
+    && reviewService.Contains("SourceInventorySha256 != candidate.SourceInventorySha256", StringComparison.Ordinal)
+    && reviewService.Contains("changed since this review was prepared", StringComparison.Ordinal),
+    "VAT preparation lost its scoped source guard, durable database identity, or retained seal verification, or again treated an unrelated row-version as a tax mutation.");
 Assert(returnReview.Contains("Submit VAT return to HMRC", StringComparison.Ordinal)
     && returnReview.Contains("@bind=\"_submitConfirmed\"", StringComparison.Ordinal)
-    && returnReview.Contains("taxHubHmrc.captureClientFacts", StringComparison.Ordinal)
+    && returnReview.Split("taxHubHmrc.captureClientFacts", StringSplitOptions.None).Length - 1 >= 2
+    && returnReview.Contains("if (VatHost.Value.SubmissionEnabled)", StringComparison.Ordinal)
     && returnReview.Contains("AuthorityErrors", StringComparison.Ordinal)
     && returnReview.Contains("VatAuthorityUserMessages.Submission", StringComparison.Ordinal),
-    "The controlled submit confirmation, rejection detail, fresh fraud capture or unknown-outcome warning is missing.");
+    "The approval/submit controls, rejection detail, fresh fraud capture or unknown-outcome warning are missing.");
 var submissionService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
     "VatReturnSubmissionService.cs"));
 Assert(submissionService.Contains("IVatApprovedReturnResolver", StringComparison.Ordinal)
@@ -1151,6 +1160,13 @@ Assert(azureVatPersistence.Contains("var isWrite = method is not \"GET\" and not
     && azureVatPersistence.Contains("var blocking = isWrite ?", StringComparison.Ordinal)
     && azureVatPersistence.Contains("item.IsWrite && item.BlocksReplay", StringComparison.Ordinal),
     "Azure VAT persistence incorrectly applies submission replay protection to read-only HMRC enquiries.");
+Assert(reviewService.Contains("AzureVatPersistence? azurePersistence", StringComparison.Ordinal)
+    && reviewService.Contains("_azurePersistence.AddReviewCandidateAsync", StringComparison.Ordinal)
+    && reviewService.Contains("_azurePersistence.AddReviewApprovalAsync", StringComparison.Ordinal)
+    && azureVatPersistence.Contains("vat/v1/reviews/", StringComparison.Ordinal)
+    && azureVatPersistence.Contains("GetReviewCandidateAsync", StringComparison.Ordinal)
+    && azureVatPersistence.Contains("GetReviewApprovalAsync", StringComparison.Ordinal),
+    "Azure-managed VAT preparation and approval evidence is not retained in the protected tenant store.");
 Assert(reviewService.Contains("WithVerifiedBody(bytes)", StringComparison.Ordinal)
     && reviewService.Contains("GetApprovalAsync", StringComparison.Ordinal)
     && reviewService.Contains("approval.PreparedSha256 != candidate.PreparedSha256", StringComparison.Ordinal),
@@ -1371,6 +1387,7 @@ Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions
 static VatProductHostOptions ValidDevelopmentOptions() => new()
 {
     Enabled = true,
+    ReviewEnabled = true,
     AuthorityEnvironment = VatAuthorityEnvironment.Sandbox,
     PersistenceMode = VatPersistenceMode.DevelopmentFiles,
     TenantReference = Guid.NewGuid().ToString(),

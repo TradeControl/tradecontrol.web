@@ -1,4 +1,4 @@
-# Tax Hub Programme Specification
+# Trade Control Tax Programme Specification
 
 Trade Control  
 Accounts Mode Release
@@ -7,8 +7,7 @@ Accounts Mode Release
 
 ## 1. Introduction
 
-Tax Hub is the statutory reporting, reconciliation, and filing workspace of Trade Control.  
-It is an orchestration module, not an accounting module.
+The Trade Control tax subsystem projects operational accounting data into statutory products, evidence and authority workflows. Tax Hub is its statutory reporting, reconciliation and filing workspace: a user interface and orchestration surface, not the parent architecture or an accounting module.
 
 Tax Hub provides a unified interface through which businesses can:
 

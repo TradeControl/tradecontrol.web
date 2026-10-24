@@ -257,20 +257,29 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
             : throw new OAuthCallbackValidationException("The tenant context is unavailable.");
         var expectedOrigin = new UriBuilder(Uri.UriSchemeHttps, tenant.CanonicalHost).Uri.AbsoluteUri;
         var now = _clock.GetUtcNow();
-        if (completion.Environment != AuthorityEnvironmentName()
-            || completion.IssuedAtUtc > now + TimeSpan.FromMinutes(1)
-            || completion.ExpiresAtUtc < now
-            || completion.ExpiresAtUtc - completion.IssuedAtUtc > OAuthBrokerContract.MaximumCompletionLifetime
-            || completion.TenantReference != dispatch.TenantReference
-            || completion.PrincipalReference != dispatch.AuthorisationPrincipalReference
-            || completion.ActorReference != dispatch.ActorReference
-            || completion.ReturnOrigin != expectedOrigin)
-            throw new OAuthCallbackValidationException("The broker completion ticket does not match this session.");
+        ValidateBrokerCompletion(completion, AuthorityEnvironmentName(), dispatch.TenantReference,
+            dispatch.AuthorisationPrincipalReference, dispatch.ActorReference, expectedOrigin, now);
         using var outcome = await oauth.CompleteCallbackAsync(dispatch,
             new OAuthCallback(completion.State, completion.Code, completion.Error), cancellationToken);
         return outcome.Kind == OAuthAccessOutcomeKind.Available
             ? new(VatConnectionState.Connected)
             : Map(outcome.ReauthorisationReason);
+    }
+
+    internal static void ValidateBrokerCompletion(OAuthBrokerCompletion completion,
+        string environment, string tenantReference, string principalReference, string actorReference,
+        string expectedOrigin, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(completion);
+        if (completion.Environment != environment
+            || completion.IssuedAtUtc > now + TimeSpan.FromMinutes(1)
+            || completion.ExpiresAtUtc <= now
+            || completion.ExpiresAtUtc - completion.IssuedAtUtc > OAuthBrokerContract.MaximumCompletionLifetime
+            || completion.TenantReference != tenantReference
+            || completion.PrincipalReference != principalReference
+            || completion.ActorReference != actorReference
+            || completion.ReturnOrigin != expectedOrigin)
+            throw new OAuthCallbackValidationException("The broker completion ticket does not match this session.");
     }
 
     public async Task DisconnectAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)

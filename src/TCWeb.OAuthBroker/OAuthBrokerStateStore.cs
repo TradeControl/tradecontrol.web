@@ -62,7 +62,7 @@ public sealed class AzureOAuthBrokerStateStore(
         var valid = pending.Handoff.State.Equals(state, StringComparison.Ordinal)
             && pending.CorrelationFingerprint.Equals(OAuthBrokerTicketProtector.Fingerprint(correlation),
                 StringComparison.Ordinal)
-            && pending.Handoff.ExpiresAtUtc >= now;
+            && pending.Handoff.ExpiresAtUtc > now;
         if (!await TryDeleteAsync(blob, response.Value.Details.ETag, cancellationToken)) return null;
         return valid ? pending : null;
     }

@@ -1,4 +1,4 @@
-# Tax Hub Findings
+# Tax Findings
 
 ## 22 October 2026 — ETS precedes optional Corporation Tax recognition
 

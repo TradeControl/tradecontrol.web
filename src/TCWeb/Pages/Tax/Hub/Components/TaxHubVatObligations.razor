@@ -63,14 +63,14 @@
                             <td data-label="Received">@Date(item.Received)</td>
                             <td data-label="Status"><span class="badge @Badge(item.MatchState)">@Label(item.MatchState)</span></td>
                             <td class="text-end tc-vat-obligation-action">
-                                @if (item.CanReview && VatHost.Value.SubmissionEnabled)
+                                @if (item.CanReview && VatHost.Value.ReviewEnabled)
                                 {
                                     <button type="button" class="btn btn-sm btn-primary"
                                             @onclick="() => SelectForReview(item)">Review return</button>
                                 }
                                 else if (item.CanReview)
                                 {
-                                    <span class="small text-muted">Review and submission are currently locked</span>
+                                    <span class="small text-muted">Return review is currently locked</span>
                                 }
                                 else if (item.MatchState == VatObligationMatchState.Fulfilled)
                                 {
@@ -86,7 +86,7 @@
                     </tbody>
                 </table>
             </div>
-            @if (_selected is not null && VatHost.Value.SubmissionEnabled)
+            @if (_selected is not null && VatHost.Value.ReviewEnabled)
             {
                 <TaxHubVatReturnReview PeriodKey="@(_selected.PeriodKey ?? string.Empty)" />
             }

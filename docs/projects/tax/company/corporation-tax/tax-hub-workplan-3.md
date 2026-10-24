@@ -10,7 +10,7 @@ namespace.
 
 The implementation must be derived from the authoritative Corporation Tax contracts documented in:
 
-`docs/projects/Tax Hub/company/shared/company-field-sets.md`
+`docs/projects/tax/company/shared/company-field-sets.md`
 
 It must not be derived from the historical Trade Control `AC` / `CP` Tax Tags or existing Corporation Tax SQL bootstrap.
 
@@ -288,7 +288,7 @@ Do not connect Trade Control accounting data yet.
 
 Before any Trade Control mapping work begins, review the resulting Corporation Tax model against:
 
-`docs/projects/Tax Hub/company/shared/company-field-sets.md`
+`docs/projects/tax/company/shared/company-field-sets.md`
 
 Confirm:
 

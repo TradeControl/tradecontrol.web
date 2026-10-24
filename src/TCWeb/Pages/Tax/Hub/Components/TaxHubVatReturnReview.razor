@@ -1,7 +1,9 @@
 @using TradeControl.Web.AppServices.TaxHub.Vat
+@using Microsoft.Extensions.Options
 @using Microsoft.JSInterop
 @inject IVatReturnReviewService Reviews
 @inject IVatReturnSubmissionService Submissions
+@inject IOptions<VatProductHostOptions> VatHost
 @inject IJSRuntime JavaScript
 
 <section class="card mt-3" aria-labelledby="vat-return-review-title">
@@ -97,7 +99,14 @@
 
             @if (IsApproved)
             {
-                @if (_submission is null)
+                @if (!VatHost.Value.SubmissionEnabled)
+                {
+                    <div class="alert alert-info" role="status">
+                        <strong>Approved and retained — not submitted to HMRC.</strong>
+                        HMRC submission is disabled in this environment. The exact approved return remains available for accreditation evidence.
+                    </div>
+                }
+                else if (_submission is null)
                 {
                     <div class="alert alert-warning" role="status">
                         <strong>Not yet submitted to HMRC.</strong>
@@ -221,10 +230,12 @@
         _error = null;
         try
         {
+            await JavaScript.InvokeVoidAsync("taxHubHmrc.captureClientFacts");
             _review = await Reviews.ApproveAsync(_review.PreparationReference,
                 _review.DeclarationVersion, _warningsAcknowledged);
             await InvokeAsync(StateHasChanged);
-            await JavaScript.InvokeVoidAsync("taxHubHmrc.showSubmissionStep", _submissionStep);
+            if (VatHost.Value.SubmissionEnabled)
+                await JavaScript.InvokeVoidAsync("taxHubHmrc.showSubmissionStep", _submissionStep);
         }
         catch (VatReturnReviewException exception) { _error = exception.Message; }
         catch { _error = "The approval could not be recorded safely. Consult the Event Log."; }

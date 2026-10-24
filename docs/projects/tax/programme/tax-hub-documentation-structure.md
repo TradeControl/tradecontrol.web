@@ -1,23 +1,23 @@
-# Tax Hub Documentation Housekeeping Proposal
+# Tax documentation structure
 
-14 October 2026
+24 October 2026
 
-**Implementation status:** applied as a documentation-only migration on 14 October 2026. Counts and path observations below describe the pre-migration tree and are retained as the review record.
+**Implementation status:** current documentation map. This supersedes the Tax Hub-rooted structure introduced on 14 October 2026.
 
 ## Purpose and scope
 
-This proposal reorganises the Tax Hub documentation so that a developer can find the current programme position and the governing material within a minute or two.
+The documentation follows the stable subsystem boundary: tax is the parent capability, while Tax Hub is one presentation and workflow surface. A developer should be able to find the current programme position and governing material within a minute or two.
 
 It is deliberately a small documentation-housekeeping exercise. It does not introduce a document-management system, mandatory metadata, new status registers or a hierarchy of document types. It does not change any statutory contract, implementation, review gate, external dependency or production restriction.
 
-No files have been moved or edited as part of this proposal. The later migration should preserve document contents, repair paths and update the documentation entries in `src/tradecontrol.web.sln` as one documentation-only change.
+This documentation-only migration renames the project root, repairs active paths and updates the documentation entries in `src/tradecontrol.web.sln`. It does not rename source projects, change runtime assembly boundaries, authorise an external submission or approve a calculation-root change.
 
 ## Recommended structure
 
 Use a shallow set of directories based on the programme's stable architectural boundaries. Documents sit directly in their owning directory unless a real collection, such as Companies House approval evidence or archived sessions, justifies another level.
 
 ```text
-docs/projects/Tax Hub/
+docs/projects/tax/
   README.md
   change-log.md
   findings.md
@@ -82,8 +82,13 @@ docs/projects/Tax Hub/
         STD-cash-statement-year-3-additive-transition.xlsx
         STD-cash-statement-years-1-and-2-baseline.xlsx
 
-  ui/
+  hub/
     tax-hub-objective-5-hosting-decision.md
+
+  seal/
+    README.md
+    statutory-seal-contract.md
+    tax-balance-and-optimisation-workplan.md
 
   archive/
     legacy/
@@ -96,7 +101,7 @@ docs/projects/Tax Hub/
       <existing session briefs, with their current filenames>
 ```
 
-This is a target layout, not an instruction to create empty directories. The `ui` directory needs no README while it contains only the shared hosting decision; the root README can link directly to that document. The same rule applies elsewhere: add a short README only when a directory has enough material or status to navigate.
+The `hub` directory needs no README while it contains only the shared UI hosting decision; the root README links directly to that document. The `seal` directory has an index because it owns both the evidence contract and a staged delivery plan.
 
 The older Objective 1 and 2 instructions and plans are proposed for `archive/legacy` because later reviewed programme, SQL Node and Objective 3–5 documents now govern the active work. Their contents remain intact and reachable. If review establishes that any still governs unfinished work, leave it with its active boundary and identify that fact in the relevant README instead.
 
@@ -106,7 +111,7 @@ The following is sufficient for the migration; a separate per-file metadata mani
 
 | Current material | Treatment |
 |---|---|
-| `change-log.md` and `findings.md` | Keep at the Tax Hub root, with all historical content intact. Continue using them for genuinely cross-programme matters. Add a stream-specific record later only when active work makes it useful. |
+| `change-log.md` and `findings.md` | Keep at the tax root, with all historical content intact. Continue using them for genuinely cross-programme matters. Add a stream-specific record later only when active work makes it useful. |
 | `specs/tax-hub-spec-programme.md` | Move to `programme/`; it remains the programme-level governing specification. |
 | This proposal | Move to `programme/` when the housekeeping change is implemented. |
 | Repository architecture, HMRC transport, data-provision/readiness material, Implementation Guide 3 and Work Plans 4–5 | Move intact to `platform/`. Work Plans 4 and 5 are not split or copied. Stream READMEs link to their relevant headings. |
@@ -115,16 +120,17 @@ The following is sufficient for the migration; a separate per-file metadata mani
 | Shared company field-set, statutory-contract and projection documents | Move to `company/shared/`; they must not imply ownership by either CT or Companies House. |
 | Work Plan 3 and Phase 5.8–5.10 CT records | Move intact to `company/corporation-tax/`. |
 | Work Plan 7, the simulator plan and CH phase records | Move intact to `company/companies-house/`. Move the existing `companies-house-approval` directory beneath it as `approval`, preserving its contents. |
-| Shared Objective 5 hosting decision | Move to `ui/`. VAT- and Companies House-specific UI plans remain with their authority stream. |
+| Shared Objective 5 hosting decision | Keep in `hub/`. VAT- and Companies House-specific UI plans remain with their authority stream. |
+| Statutory seal and tax calculation continuity | Keep in `seal/`. The portable contract belongs to the open-source tax subsystem; hosting retains only deployment-specific assurance controls. |
 | Older Objective 1/2 instructions and plans, plus the superseded repository proposal | Move intact to `archive/legacy/`, subject to the governing-status check noted above. |
 | `sessions/` | Move as a directory to `archive/sessions/`. Preserve the briefs and their original filenames; do not classify or rename all 31 files. |
 | Empty root `session-brief.md` | Do not repurpose it as an index. Delete it only if the reviewer confirms that the zero-byte file has no external purpose. |
 
 No historical entry is redistributed between journals. No document is decomposed. Where a large work plan covers several streams, the index links to the document and describes the relevant phase in words.
 
-## Draft root README
+## Earlier draft root README
 
-The following is illustrative content for the new `README.md`. Status wording must be rechecked against the working tree immediately before migration because the active CT and Companies House documents are still changing.
+The following records the earlier Tax Hub-rooted draft. The current root README supersedes it.
 
 ```markdown
 # Tax Hub documentation
@@ -144,7 +150,7 @@ Tax Hub projects Trade Control accounting data into supported statutory products
 
 - [Platform architecture and cross-cutting work](platform/README.md)
 - [Shared company statutory material](company/README.md)
-- [Shared UI hosting decision](ui/tax-hub-objective-5-hosting-decision.md)
+- [Shared UI hosting decision](hub/tax-hub-objective-5-hosting-decision.md)
 - [Programme findings](findings.md) and [change log](change-log.md)
 - [Historical and superseded material](archive/)
 
@@ -219,7 +225,7 @@ Every move will invalidate some of the 24 relative links unless they are changed
 `src/tradecontrol.web.sln` currently contains one already-stale Tax Hub documentation entry:
 
 ```text
-..\docs\projects\Tax Hub\implementation\companies-house-test-submission-evidence.md
+..\docs\projects\tax\implementation\companies-house-test-submission-evidence.md
 ```
 
 The file actually lives under `companies-house-approval`. The solution currently lists 41 Tax Hub Markdown paths while 38 Markdown files, including this proposal, are not represented. The migration should replace the documentation solution-folder entries with the intended new navigation set; it need not add every historical session brief to the solution.

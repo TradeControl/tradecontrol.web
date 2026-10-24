@@ -1,4 +1,4 @@
-# Shared Tax Hub platform
+# Shared tax platform
 
 This directory contains architecture and work that spans more than one statutory stream.
 

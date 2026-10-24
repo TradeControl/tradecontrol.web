@@ -49,11 +49,11 @@ No live request should be possible when an artifact has errors, is a preview, ha
 
 The following repository documents were treated as the current project record:
 
-- `docs/projects/Tax Hub/programme/tax-hub-spec-programme.md` — governing programme specification;
-- `docs/projects/Tax Hub/platform/tax-hub-implementation-3.md` — Objective 3 design and boundary;
-- `docs/projects/Tax Hub/platform/tax-hub-workplan-4.md` — completed Objective 3 work record despite its filename;
-- `docs/projects/Tax Hub/platform/tax-hub-repo-structure.md` — target dependency and assembly ownership;
-- `docs/projects/Tax Hub/findings.md` and `change-log.md` — reviewed decisions and implementation history; and
+- `docs/projects/tax/programme/tax-hub-spec-programme.md` — governing programme specification;
+- `docs/projects/tax/platform/tax-hub-implementation-3.md` — Objective 3 design and boundary;
+- `docs/projects/tax/platform/tax-hub-workplan-4.md` — completed Objective 3 work record despite its filename;
+- `docs/projects/tax/platform/tax-hub-repo-structure.md` — target dependency and assembly ownership;
+- `docs/projects/tax/findings.md` and `change-log.md` — reviewed decisions and implementation history; and
 - the current session brief and its recorded 22 September 2026 sandbox verification.
 
 Older findings were used only where they were not superseded by a later reviewed decision or the current code.

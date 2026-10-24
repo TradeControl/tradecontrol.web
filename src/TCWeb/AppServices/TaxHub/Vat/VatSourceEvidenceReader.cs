@@ -20,7 +20,6 @@ internal sealed record VatSourceEvidenceSnapshot(
     public bool SameBoundaryAndContent(VatSourceEvidenceSnapshot other) =>
         DatabaseInstanceReference == other.DatabaseInstanceReference
         && ReportingSubjectReference == other.ReportingSubjectReference
-        && AccountingEventId == other.AccountingEventId
         && SqlNodeVersion == other.SqlNodeVersion
         && SourceInventorySha256 == other.SourceInventorySha256
         && Adjustments.SequenceEqual(other.Adjustments);

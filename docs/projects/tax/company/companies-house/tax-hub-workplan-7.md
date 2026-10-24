@@ -59,7 +59,7 @@ Status meanings:
 
 ### Governing records
 
-1. `docs/projects/Tax Hub/programme/tax-hub-spec-programme.md`.
+1. `docs/projects/tax/programme/tax-hub-spec-programme.md`.
 2. `tax-hub-workplan-5.md`, especially Phases 5.11–5.14.
 3. `company-statutory-contract-design.md` and the accepted Objective 3 statutory-accounts boundary.
 4. `phase-5.11-companies-house-prerequisite-assurance.md`.

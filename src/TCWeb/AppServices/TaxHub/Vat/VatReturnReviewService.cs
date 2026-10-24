@@ -88,6 +88,35 @@ public sealed class VatReturnReviewException : Exception
     public IReadOnlyList<VatReturnReviewFinding> Findings { get; }
 }
 
+internal sealed record VatReviewCandidateRecord(string Reference, string TenantReference,
+    string PrincipalReference, string ActorReference, string PeriodKey, DateOnly PeriodStart,
+    DateOnly PeriodEnd, string MaskedVrn, string VrnSha256, string PreparedSha256,
+    string ContentReference, string SealContentReference, string SealSha256,
+    string DatabaseInstanceReference, long AccountingEventId, string SourceInventorySha256,
+    string SqlNodeVersion, string SourceSystem, string DatasetKey, string SnapshotToken,
+    IReadOnlyList<VatReviewFindingRecord> Findings, DateTimeOffset CreatedAtUtc,
+    DateTimeOffset ExpiresAtUtc);
+
+internal sealed record VatReviewApprovalRecord(string Reference, string PreparationReference,
+    string TenantReference, string PrincipalReference, string ActorReference,
+    string LogicalSubmissionIdentity, string PeriodKey, DateOnly PeriodStart, DateOnly PeriodEnd,
+    string DeclarationVersion, string DeclarationSha256, string PreparedSha256, string SourceSystem,
+    string DatasetKey, string SnapshotToken, bool WarningsAcknowledged, DateTimeOffset ApprovedAtUtc);
+
+internal sealed record VatReviewFindingRecord(string Severity, string Code, string Message)
+{
+    public static VatReviewFindingRecord From(PreparedArtifactFinding finding) =>
+        new(finding.Severity.ToString(), finding.Code, SafeMessage(finding));
+    public VatReturnReviewFinding ToView() => new(Severity, Code, Message);
+    private static string SafeMessage(PreparedArtifactFinding finding) => finding.Code switch
+    {
+        "VAT-CONTEXT-UNAVAILABLE" => "The effective VAT reporting context is unavailable.",
+        "VAT-PERIOD-UNAVAILABLE" => "The calculated VAT period is unavailable.",
+        "VAT-READINESS-UNAVAILABLE" => "VAT readiness checks could not be completed.",
+        _ => finding.Message
+    };
+}
+
 public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprovedReturnResolver,
     IVatApprovalEvidenceSource
 {
@@ -97,6 +126,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     private static readonly TimeSpan CandidateLifetime = TimeSpan.FromHours(24);
     private static readonly SemaphoreSlim StoreGate = new(1, 1);
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    private static readonly JsonSerializerOptions VatBodyJson = new() { PropertyNameCaseInsensitive = true };
 
     private readonly NodeContext _nodeContext;
     private readonly IVatWorkflowIdentityAccessor _identities;
@@ -106,16 +136,18 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     private readonly ILogger<VatReturnReviewService> _logger;
     private readonly VatProductHostOptions _host;
     private readonly TimeProvider _time;
-    private readonly FileSubmissionContentStore _content;
-    private readonly string _candidatePath;
-    private readonly string _approvalPath;
+    private readonly ISubmissionContentStore _content;
+    private readonly AzureVatPersistence? _azurePersistence;
+    private readonly string? _candidatePath;
+    private readonly string? _approvalPath;
     private readonly string _declarationText;
     private readonly string _declarationSha256;
 
     public VatReturnReviewService(NodeContext nodeContext, IVatWorkflowIdentityAccessor identities,
         IVatObligationWorkspaceService obligations, IOptions<VatProductHostOptions> hostOptions,
         TimeProvider timeProvider, IVatFilingAuthorisationPolicy filingPolicy,
-        IHttpContextAccessor httpContextAccessor, ILogger<VatReturnReviewService> logger)
+        IHttpContextAccessor httpContextAccessor, ILogger<VatReturnReviewService> logger,
+        AzureVatPersistence? azurePersistence = null)
     {
         _nodeContext = nodeContext;
         _identities = identities;
@@ -125,14 +157,25 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         _logger = logger;
         _host = hostOptions.Value;
         _time = timeProvider;
-        if (!_host.Enabled || _host.PersistenceMode != VatPersistenceMode.DevelopmentFiles
-            || string.IsNullOrWhiteSpace(_host.DevelopmentStoreRoot))
+        if (!_host.Enabled || !_host.ReviewEnabled)
             throw new InvalidOperationException("The VAT return review store is unavailable.");
-        var root = Path.GetFullPath(_host.DevelopmentStoreRoot);
-        Directory.CreateDirectory(root);
-        _candidatePath = Path.Combine(root, "vat-review-candidates.json");
-        _approvalPath = Path.Combine(root, "vat-approvals.json");
-        _content = new(new(Path.Combine(root, "prepared-content"), Retention: CandidateLifetime));
+        if (_host.PersistenceMode == VatPersistenceMode.AzureManaged)
+        {
+            _azurePersistence = azurePersistence
+                ?? throw new InvalidOperationException("The Azure VAT review store is unavailable.");
+            _content = _azurePersistence;
+        }
+        else if (_host.PersistenceMode == VatPersistenceMode.DevelopmentFiles
+                 && !string.IsNullOrWhiteSpace(_host.DevelopmentStoreRoot))
+        {
+            var root = Path.GetFullPath(_host.DevelopmentStoreRoot);
+            Directory.CreateDirectory(root);
+            _candidatePath = Path.Combine(root, "vat-review-candidates.json");
+            _approvalPath = Path.Combine(root, "vat-approvals.json");
+            _content = new FileSubmissionContentStore(new(
+                Path.Combine(root, "prepared-content"), Retention: CandidateLifetime));
+        }
+        else throw new InvalidOperationException("The VAT return review store is unavailable.");
         _declarationText = ReadDeclaration();
         _declarationSha256 = Sha256(Encoding.UTF8.GetBytes(_declarationText));
     }
@@ -160,7 +203,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             || string.IsNullOrWhiteSpace(prepared.Request.BodySha256))
             throw new VatReturnReviewException(
                 "The VAT return is not ready for review. Resolve its blocking findings first.",
-                prepared.Request.Findings.Select(FindingRecord.From).Select(item => item.ToView()).ToArray());
+                prepared.Request.Findings.Select(VatReviewFindingRecord.From).Select(item => item.ToView()).ToArray());
 
         var reference = Guid.NewGuid().ToString("N");
         var now = _time.GetUtcNow();
@@ -170,14 +213,15 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         var sealContentReference = await _content.StoreAsync(identity.TenantReference,
             identity.AspNetSubjectReference, SubmissionContentKind.Payload, seal.CanonicalBytes, cancellationToken);
         var source = prepared.Request.SourceEvidence.Single();
-        var candidate = new CandidateRecord(reference, identity.TenantReference,
+        var candidate = new VatReviewCandidateRecord(reference, identity.TenantReference,
             identity.AspNetSubjectReference, identity.ActorReference, prepared.Obligation.PeriodKey,
             prepared.Obligation.Start, prepared.Obligation.End, prepared.MaskedVrn,
             prepared.VrnSha256, prepared.Request.BodySha256!, contentReference, sealContentReference, seal.Sha256,
             prepared.Evidence.DatabaseInstanceReference, prepared.Evidence.AccountingEventId,
             prepared.Evidence.SourceInventorySha256, prepared.Evidence.SqlNodeVersion,
             source.SourceSystem, source.DatasetKey, source.SnapshotToken,
-            prepared.Request.Findings.Select(FindingRecord.From).ToArray(), now, now.Add(CandidateLifetime));
+            prepared.Request.Findings.Select(VatReviewFindingRecord.From).ToArray(), now,
+            now.Add(CandidateLifetime));
         await AddCandidateAsync(candidate, cancellationToken);
         return await ReadModelAsync(candidate, null, cancellationToken);
     }
@@ -270,58 +314,69 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
         if (!_filingPolicy.CanManageHmrcConnection(principal))
             throw new UnauthorizedAccessException("VAT filing history requires Administrator or Manager permission.");
-        await StoreGate.WaitAsync(cancellationToken);
-        try
+        VatReviewApprovalRecord[] approvals;
+        IReadOnlyList<VatReviewCandidateRecord> candidates;
+        if (_azurePersistence is not null)
         {
-            var approvals = (await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken))
-                .Where(item => requested.Contains(item.Reference)
-                    && item.TenantReference == identity.TenantReference)
-                .ToArray();
-            var candidates = await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken);
-            var result = new Dictionary<string, VatApprovalEvidence>(StringComparer.Ordinal);
-            foreach (var approval in approvals)
-            {
-                var candidate = candidates.SingleOrDefault(item => item.Reference == approval.PreparationReference
-                    && item.TenantReference == identity.TenantReference);
-                if (candidate is null)
-                {
-                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
-                        approval.PeriodStart, approval.PeriodEnd, "Unavailable", approval.ActorReference,
-                        string.Empty, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
-                        "The retained preparation metadata is missing.");
-                    continue;
-                }
-                var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
-                    candidate.ContentReference, cancellationToken);
-                if (bytes is null || !Sha256(bytes).Equals(approval.PreparedSha256, StringComparison.Ordinal))
-                {
-                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
-                        approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
-                        candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
-                        bytes is null ? "The protected approved payload is missing."
-                            : "The protected approved payload failed digest verification.");
-                    continue;
-                }
-                try
-                {
-                    var body = JsonSerializer.Deserialize<VatReturnRequest>(bytes,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                        ?? throw new JsonException();
-                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
-                        approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
-                        candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, ProjectBoxes(body), true);
-                }
-                catch (JsonException)
-                {
-                    result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
-                        approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
-                        candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
-                        "The protected approved payload is malformed.");
-                }
-            }
-            return result;
+            approvals = (await _azurePersistence.GetReviewApprovalsAsync(identity.TenantReference,
+                    requested, cancellationToken)).ToArray();
+            candidates = await _azurePersistence.GetReviewCandidatesAsync(identity.TenantReference,
+                approvals.Select(item => item.PreparationReference).ToHashSet(StringComparer.Ordinal),
+                cancellationToken);
         }
-        finally { StoreGate.Release(); }
+        else
+        {
+            await StoreGate.WaitAsync(cancellationToken);
+            try
+            {
+                approvals = (await ReadAsync<VatReviewApprovalRecord>(_approvalPath!, cancellationToken))
+                    .Where(item => requested.Contains(item.Reference)
+                        && item.TenantReference == identity.TenantReference).ToArray();
+                candidates = await ReadAsync<VatReviewCandidateRecord>(_candidatePath!, cancellationToken);
+            }
+            finally { StoreGate.Release(); }
+        }
+        var result = new Dictionary<string, VatApprovalEvidence>(StringComparer.Ordinal);
+        foreach (var approval in approvals)
+        {
+            var candidate = candidates.SingleOrDefault(item => item.Reference == approval.PreparationReference
+                && item.TenantReference == identity.TenantReference);
+            if (candidate is null)
+            {
+                result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                    approval.PeriodStart, approval.PeriodEnd, "Unavailable", approval.ActorReference,
+                    string.Empty, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
+                    "The retained preparation metadata is missing.");
+                continue;
+            }
+            var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
+                candidate.ContentReference, cancellationToken);
+            if (bytes is null || !Sha256(bytes).Equals(approval.PreparedSha256, StringComparison.Ordinal))
+            {
+                result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                    approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
+                    candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
+                    bytes is null ? "The protected approved payload is missing."
+                        : "The protected approved payload failed digest verification.");
+                continue;
+            }
+            try
+            {
+                    var body = JsonSerializer.Deserialize<VatReturnRequest>(bytes, VatBodyJson)
+                    ?? throw new JsonException();
+                result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                    approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
+                    candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, ProjectBoxes(body), true);
+            }
+            catch (JsonException)
+            {
+                result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
+                    approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
+                    candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
+                    "The protected approved payload is malformed.");
+            }
+        }
+        return result;
     }
 
     public async Task<ApprovedVatReturnDispatch> ResolveForReconciliationAsync(string approvalReference,
@@ -334,20 +389,33 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
         if (!_filingPolicy.CanManageHmrcConnection(principal))
             throw new UnauthorizedAccessException("VAT reconciliation requires Administrator or Manager permission.");
-        ApprovalRecord approval;
-        CandidateRecord candidate;
-        await StoreGate.WaitAsync(cancellationToken);
-        try
+        VatReviewApprovalRecord approval;
+        VatReviewCandidateRecord candidate;
+        if (_azurePersistence is not null)
         {
-            approval = (await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken)).SingleOrDefault(item =>
-                item.Reference == approvalReference && item.TenantReference == identity.TenantReference)
+            approval = await _azurePersistence.GetReviewApprovalForTenantAsync(identity.TenantReference,
+                    approvalReference, cancellationToken)
                 ?? throw new VatReturnReviewException("The VAT approval is unavailable for this tenant.");
-            candidate = (await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken)).SingleOrDefault(item =>
-                item.Reference == approval.PreparationReference
-                && item.TenantReference == identity.TenantReference)
+            candidate = await _azurePersistence.GetReviewCandidateForTenantAsync(identity.TenantReference,
+                    approval.PreparationReference, cancellationToken)
                 ?? throw new VatReturnReviewException("The approved VAT preparation is unavailable.");
         }
-        finally { StoreGate.Release(); }
+        else
+        {
+            await StoreGate.WaitAsync(cancellationToken);
+            try
+            {
+                approval = (await ReadAsync<VatReviewApprovalRecord>(_approvalPath!, cancellationToken))
+                    .SingleOrDefault(item => item.Reference == approvalReference
+                        && item.TenantReference == identity.TenantReference)
+                    ?? throw new VatReturnReviewException("The VAT approval is unavailable for this tenant.");
+                candidate = (await ReadAsync<VatReviewCandidateRecord>(_candidatePath!, cancellationToken))
+                    .SingleOrDefault(item => item.Reference == approval.PreparationReference
+                        && item.TenantReference == identity.TenantReference)
+                    ?? throw new VatReturnReviewException("The approved VAT preparation is unavailable.");
+            }
+            finally { StoreGate.Release(); }
+        }
         if (!Sha256(Encoding.UTF8.GetBytes(vrn)).Equals(candidate.VrnSha256, StringComparison.Ordinal))
             throw new VatReturnReviewException("The current VAT registration does not match the filed return.");
         var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
@@ -407,7 +475,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     private StatutorySealCandidate CreateSeal(VatWorkflowIdentity identity, PreparedCurrent prepared,
         ReadOnlyMemory<byte> bodyBytes)
     {
-        var body = JsonSerializer.Deserialize<VatReturnRequest>(bodyBytes.Span)
+        var body = JsonSerializer.Deserialize<VatReturnRequest>(bodyBytes.Span, VatBodyJson)
             ?? throw new InvalidDataException("The prepared VAT return body is invalid.");
         var versions = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -437,7 +505,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         return vrn;
     }
 
-    private static void EnsureCurrent(CandidateRecord candidate, PreparedCurrent current)
+    private static void EnsureCurrent(VatReviewCandidateRecord candidate, PreparedCurrent current)
     {
         var source = current.Request.SourceEvidence.SingleOrDefault();
         if (current.Request.HasErrors || current.Request.BodySha256 != candidate.PreparedSha256
@@ -445,15 +513,14 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             || source is null || source.DatasetKey != candidate.DatasetKey
             || source.SnapshotToken != candidate.SnapshotToken
             || current.Evidence.DatabaseInstanceReference != candidate.DatabaseInstanceReference
-            || current.Evidence.AccountingEventId != candidate.AccountingEventId
             || current.Evidence.SourceInventorySha256 != candidate.SourceInventorySha256
             || current.Evidence.SqlNodeVersion != candidate.SqlNodeVersion
             || current.Obligation.Start != candidate.PeriodStart || current.Obligation.End != candidate.PeriodEnd)
             throw new VatReturnReviewException(
-                "The VAT source or obligation changed after approval. Prepare and review a new return.");
+                "The VAT source or obligation changed since this review was prepared. Prepare and review a new return.");
     }
 
-    private async Task<VatReturnReviewModel> ReadModelAsync(CandidateRecord candidate,
+    private async Task<VatReturnReviewModel> ReadModelAsync(VatReviewCandidateRecord candidate,
         string? approvalReference, CancellationToken cancellationToken)
     {
         var bytes = await _content.ReadAsync(candidate.TenantReference, candidate.PrincipalReference,
@@ -466,8 +533,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             throw new InvalidDataException("The prepared VAT statutory seal failed digest verification.");
         if (!Sha256(bytes).Equals(candidate.PreparedSha256, StringComparison.Ordinal))
             throw new InvalidDataException("The exact prepared VAT return failed digest verification.");
-        var body = JsonSerializer.Deserialize<VatReturnRequest>(bytes,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+        var body = JsonSerializer.Deserialize<VatReturnRequest>(bytes, VatBodyJson)
             ?? throw new InvalidDataException("The exact prepared VAT return is invalid.");
         return new(candidate.Reference, candidate.PeriodKey, candidate.PeriodStart, candidate.PeriodEnd,
             candidate.MaskedVrn, ProjectBoxes(body), candidate.Findings.Select(item => item.ToView()).ToArray(),
@@ -489,26 +555,33 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         new(9, "Total acquisitions from other EC Member States", Whole(body.TotalAcquisitionsExVat))
     ];
 
-    private async Task AddCandidateAsync(CandidateRecord candidate, CancellationToken cancellationToken)
+    private async Task AddCandidateAsync(VatReviewCandidateRecord candidate, CancellationToken cancellationToken)
     {
+        if (_azurePersistence is not null)
+        {
+            await _azurePersistence.AddReviewCandidateAsync(candidate, cancellationToken);
+            return;
+        }
         await StoreGate.WaitAsync(cancellationToken);
         try
         {
-            var records = await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken);
+            var records = await ReadAsync<VatReviewCandidateRecord>(_candidatePath!, cancellationToken);
             records.RemoveAll(item => item.ExpiresAtUtc <= _time.GetUtcNow());
             records.Add(candidate);
-            await WriteAsync(_candidatePath, records, cancellationToken);
+            await WriteAsync(_candidatePath!, records, cancellationToken);
         }
         finally { StoreGate.Release(); }
     }
 
-    private async Task<CandidateRecord?> GetCandidateAsync(string reference, VatWorkflowIdentity identity,
+    private async Task<VatReviewCandidateRecord?> GetCandidateAsync(string reference, VatWorkflowIdentity identity,
         CancellationToken cancellationToken)
     {
+        if (_azurePersistence is not null)
+            return await _azurePersistence.GetReviewCandidateAsync(reference, identity, cancellationToken);
         await StoreGate.WaitAsync(cancellationToken);
         try
         {
-            return (await ReadAsync<CandidateRecord>(_candidatePath, cancellationToken)).SingleOrDefault(item =>
+            return (await ReadAsync<VatReviewCandidateRecord>(_candidatePath!, cancellationToken)).SingleOrDefault(item =>
                 item.Reference == reference && item.TenantReference == identity.TenantReference
                 && item.PrincipalReference == identity.AspNetSubjectReference
                 && item.ActorReference == identity.ActorReference);
@@ -516,13 +589,15 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         finally { StoreGate.Release(); }
     }
 
-    private async Task<ApprovalRecord?> GetApprovalAsync(string reference, VatWorkflowIdentity identity,
+    private async Task<VatReviewApprovalRecord?> GetApprovalAsync(string reference, VatWorkflowIdentity identity,
         CancellationToken cancellationToken)
     {
+        if (_azurePersistence is not null)
+            return await _azurePersistence.GetReviewApprovalAsync(reference, identity, cancellationToken);
         await StoreGate.WaitAsync(cancellationToken);
         try
         {
-            return (await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken)).SingleOrDefault(item =>
+            return (await ReadAsync<VatReviewApprovalRecord>(_approvalPath!, cancellationToken)).SingleOrDefault(item =>
                 item.Reference == reference && item.TenantReference == identity.TenantReference
                 && item.PrincipalReference == identity.AspNetSubjectReference
                 && item.ActorReference == identity.ActorReference);
@@ -530,26 +605,28 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         finally { StoreGate.Release(); }
     }
 
-    private async Task<ApprovalRecord> AddApprovalAsync(CandidateRecord candidate,
+    private async Task<VatReviewApprovalRecord> AddApprovalAsync(VatReviewCandidateRecord candidate,
         VatWorkflowIdentity identity, bool warningsAcknowledged, CancellationToken cancellationToken)
     {
+        var proposed = new VatReviewApprovalRecord(Guid.NewGuid().ToString("N"), candidate.Reference,
+            identity.TenantReference, identity.AspNetSubjectReference, identity.ActorReference,
+            Sha256(Encoding.UTF8.GetBytes($"{candidate.VrnSha256}:{candidate.PeriodKey}")),
+            candidate.PeriodKey, candidate.PeriodStart, candidate.PeriodEnd, DeclarationVersion,
+            _declarationSha256, candidate.PreparedSha256, candidate.SourceSystem,
+            candidate.DatasetKey, candidate.SnapshotToken, warningsAcknowledged, _time.GetUtcNow());
+        if (_azurePersistence is not null)
+            return await _azurePersistence.AddReviewApprovalAsync(proposed, cancellationToken);
         await StoreGate.WaitAsync(cancellationToken);
         try
         {
-            var approvals = await ReadAsync<ApprovalRecord>(_approvalPath, cancellationToken);
+            var approvals = await ReadAsync<VatReviewApprovalRecord>(_approvalPath!, cancellationToken);
             var existing = approvals.SingleOrDefault(item => item.PreparationReference == candidate.Reference
                 && item.TenantReference == identity.TenantReference
                 && item.PrincipalReference == identity.AspNetSubjectReference);
             if (existing is not null) return existing;
-            var approval = new ApprovalRecord(Guid.NewGuid().ToString("N"), candidate.Reference,
-                identity.TenantReference, identity.AspNetSubjectReference, identity.ActorReference,
-                Sha256(Encoding.UTF8.GetBytes($"{candidate.VrnSha256}:{candidate.PeriodKey}")),
-                candidate.PeriodKey, candidate.PeriodStart, candidate.PeriodEnd, DeclarationVersion,
-                _declarationSha256, candidate.PreparedSha256, candidate.SourceSystem,
-                candidate.DatasetKey, candidate.SnapshotToken, warningsAcknowledged, _time.GetUtcNow());
-            approvals.Add(approval);
-            await WriteAsync(_approvalPath, approvals, cancellationToken);
-            return approval;
+            approvals.Add(proposed);
+            await WriteAsync(_approvalPath!, approvals, cancellationToken);
+            return proposed;
         }
         finally { StoreGate.Release(); }
     }
@@ -611,29 +688,4 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
 
     private sealed record PreparedCurrent(PreparedApiRequest Request, VatObligationWorkspaceRow Obligation,
         string MaskedVrn, string VrnSha256, string Vrn, VatSourceEvidenceSnapshot Evidence);
-    private sealed record CandidateRecord(string Reference, string TenantReference, string PrincipalReference,
-        string ActorReference, string PeriodKey, DateOnly PeriodStart, DateOnly PeriodEnd, string MaskedVrn,
-        string VrnSha256, string PreparedSha256, string ContentReference,
-        string SealContentReference, string SealSha256, string DatabaseInstanceReference,
-        long AccountingEventId, string SourceInventorySha256, string SqlNodeVersion, string SourceSystem,
-        string DatasetKey, string SnapshotToken, IReadOnlyList<FindingRecord> Findings,
-        DateTimeOffset CreatedAtUtc, DateTimeOffset ExpiresAtUtc);
-    private sealed record ApprovalRecord(string Reference, string PreparationReference, string TenantReference,
-        string PrincipalReference, string ActorReference, string LogicalSubmissionIdentity,
-        string PeriodKey, DateOnly PeriodStart, DateOnly PeriodEnd, string DeclarationVersion,
-        string DeclarationSha256, string PreparedSha256, string SourceSystem, string DatasetKey,
-        string SnapshotToken, bool WarningsAcknowledged, DateTimeOffset ApprovedAtUtc);
-    private sealed record FindingRecord(string Severity, string Code, string Message)
-    {
-        public static FindingRecord From(PreparedArtifactFinding finding) =>
-            new(finding.Severity.ToString(), finding.Code, SafeMessage(finding));
-        public VatReturnReviewFinding ToView() => new(Severity, Code, Message);
-        private static string SafeMessage(PreparedArtifactFinding finding) => finding.Code switch
-        {
-            "VAT-CONTEXT-UNAVAILABLE" => "The effective VAT reporting context is unavailable.",
-            "VAT-PERIOD-UNAVAILABLE" => "The calculated VAT period is unavailable.",
-            "VAT-READINESS-UNAVAILABLE" => "VAT readiness checks could not be completed.",
-            _ => finding.Message
-        };
-    }
 }

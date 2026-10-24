@@ -41,12 +41,12 @@ Part I is deliberately not named or modelled as an HMRC subsystem. The initial c
 
 Implementation must follow:
 
-- `docs/projects/Tax Hub/platform/tax-hub-implementation-3.md`;
+- `docs/projects/tax/platform/tax-hub-implementation-3.md`;
 - the endpoint descriptors and request types in `TradeControl.Tax.UK.Hmrc.Vat.Contracts`;
 - the endpoint descriptors and request types in `TradeControl.Tax.UK.Hmrc.MtdIncomeTax.Contracts`;
 - the existing VAT and MTD Income Tax contract tests and fixtures;
 - the authoritative Trade Control projections and validation implemented in `sqlnode`; and
-- the Objective 2 / Objective 3 reconciliation recorded in `docs/projects/Tax Hub/findings.md`.
+- the Objective 2 / Objective 3 reconciliation recorded in `docs/projects/tax/findings.md`.
 
 Where these sources disagree, externally governed HMRC contract evidence governs the wire contract, while authoritative Trade Control SQL governs the accounting facts. The Application population layer owns the explicit translation between them.
 

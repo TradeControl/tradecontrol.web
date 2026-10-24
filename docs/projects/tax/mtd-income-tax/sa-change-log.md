@@ -12,7 +12,7 @@ Make the MIN and STD Sole Trader accounting bootstrap templates tax-neutral by r
 - `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_2026.sql`
 - `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_MIN_MTD_2026.sql`
 - `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_SA_2026.sql`
-- `docs/projects/Tax Hub/change-log.md`
+- `docs/projects/tax/change-log.md`
 
 ### Meaningful changes
 
@@ -61,7 +61,7 @@ Compose each Sole Trader variant wrapper from exactly one accounting template an
 - `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_MIN_SA_2026.sql`
 - `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_MTD_2026.sql`
 - `src/sqlnode/src/tcNodeDb4/App/Stored Procedures/proc_Template_ST_SOLE_CUR_STD_SA_2026.sql`
-- `docs/projects/Tax Hub/change-log.md`
+- `docs/projects/tax/change-log.md`
 
 ### Meaningful changes
 

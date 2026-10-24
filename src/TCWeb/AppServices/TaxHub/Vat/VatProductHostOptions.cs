@@ -38,6 +38,7 @@ public sealed class VatProductHostOptions
     public const string SectionName = "TaxHub:VatProduct";
 
     public bool Enabled { get; set; }
+    public bool ReviewEnabled { get; set; }
     public bool SubmissionEnabled { get; set; }
     public VatAuthorityEnvironment AuthorityEnvironment { get; set; } = VatAuthorityEnvironment.Sandbox;
     public VatPersistenceMode PersistenceMode { get; set; } = VatPersistenceMode.Disabled;
@@ -86,6 +87,8 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
         if (options.SandboxObligationAsOfDate.HasValue
             && options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox)
             failures.Add("SandboxObligationAsOfDate is permitted only for an HMRC sandbox host.");
+        if (options.SubmissionEnabled && !options.ReviewEnabled)
+            failures.Add("VAT submission cannot be enabled while preparation and review are disabled.");
         if (options.SubmissionEnabled)
             failures.Add("VAT submission remains locked until the accreditation dispatch gate is explicitly implemented and approved.");
         if (options.AllowIncompleteSandboxFraudHeaders
