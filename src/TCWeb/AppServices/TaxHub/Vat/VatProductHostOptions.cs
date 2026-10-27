@@ -89,8 +89,10 @@ public sealed class VatProductHostOptionsValidator(IHostEnvironment hostEnvironm
             failures.Add("SandboxObligationAsOfDate is permitted only for an HMRC sandbox host.");
         if (options.SubmissionEnabled && !options.ReviewEnabled)
             failures.Add("VAT submission cannot be enabled while preparation and review are disabled.");
-        if (options.SubmissionEnabled)
-            failures.Add("VAT submission remains locked until the accreditation dispatch gate is explicitly implemented and approved.");
+        if (options.SubmissionEnabled && options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox)
+            failures.Add("The accreditation dispatch gate is restricted to the HMRC sandbox authority environment.");
+        if (options.SubmissionEnabled && !options.FraudCaptureEnabled)
+            failures.Add("VAT submission requires fresh fraud-prevention evidence capture.");
         if (options.AllowIncompleteSandboxFraudHeaders
             && options.AuthorityEnvironment != VatAuthorityEnvironment.Sandbox)
             failures.Add("Incomplete fraud headers are permitted only for an HMRC sandbox host.");

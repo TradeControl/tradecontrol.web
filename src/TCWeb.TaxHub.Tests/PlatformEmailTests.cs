@@ -68,6 +68,18 @@ internal static class PlatformEmailTests
                 "!nodeSettings.HasMailHost && !_platformEmailSender.IsConfigured",
                 StringComparison.Ordinal),
             "Registration still requires a tenant mail host when platform email is configured.");
+        var bootstrapSeed = registrationPage.IndexOf(
+            "await _nodeContext.InitializeNode()", StringComparison.Ordinal);
+        var bootstrapUserCreation = registrationPage.IndexOf(
+            "await _userManager.CreateAsync", StringComparison.Ordinal);
+        Assert(bootstrapSeed >= 0
+               && bootstrapSeed < bootstrapUserCreation
+               && registrationPage.Contains("requiresBootstrapSeed", StringComparison.Ordinal)
+               && registrationPage.Contains("App_tbTemplates.AnyAsync()", StringComparison.Ordinal)
+               && registrationPage.Contains("App_tbJurisdictions.AnyAsync()", StringComparison.Ordinal)
+               && registrationPage.Contains("App_tbUocs.AnyAsync()", StringComparison.Ordinal)
+               && registrationPage.Contains("App_tbMonths.AnyAsync()", StringComparison.Ordinal),
+            "Hosted first-user registration does not seed pristine lookup data before creating Identity records.");
 
         var confirmEmailPage = File.ReadAllText(Path.Combine(
             root, "src", "TCWeb", "Areas", "Identity", "Pages", "Account", "ConfirmEmail.cshtml.cs"));

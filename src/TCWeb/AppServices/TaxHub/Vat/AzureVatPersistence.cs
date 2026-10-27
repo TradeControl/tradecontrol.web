@@ -289,6 +289,12 @@ public sealed class AzureVatPersistence : IOAuthGrantStore, IFraudContextStore,
         (await ReadReviewCandidatesAsync(tenantReference, cancellationToken))
             .Where(item => references.Contains(item.Reference)).ToArray();
 
+    internal async Task<IReadOnlyList<VatReviewCandidateRecord>> GetReviewCandidatesAsync(
+        VatWorkflowIdentity identity, CancellationToken cancellationToken = default) =>
+        (await ReadReviewCandidatesAsync(identity.TenantReference, cancellationToken))
+            .Where(item => item.PrincipalReference == identity.AspNetSubjectReference
+                && item.ActorReference == identity.ActorReference).ToArray();
+
     internal Task<VatReviewApprovalRecord> AddReviewApprovalAsync(VatReviewApprovalRecord proposed,
         CancellationToken cancellationToken = default) =>
         MutateReviewApprovalsAsync(proposed.TenantReference, records =>
@@ -317,6 +323,12 @@ public sealed class AzureVatPersistence : IOAuthGrantStore, IFraudContextStore,
         CancellationToken cancellationToken = default) =>
         (await ReadReviewApprovalsAsync(tenantReference, cancellationToken))
             .Where(item => references.Contains(item.Reference)).ToArray();
+
+    internal async Task<IReadOnlyList<VatReviewApprovalRecord>> GetReviewApprovalsAsync(
+        VatWorkflowIdentity identity, CancellationToken cancellationToken = default) =>
+        (await ReadReviewApprovalsAsync(identity.TenantReference, cancellationToken))
+            .Where(item => item.PrincipalReference == identity.AspNetSubjectReference
+                && item.ActorReference == identity.ActorReference).ToArray();
 
     private async Task<SubmissionAttemptRecord> UpdateAttemptAsync(string tenantReference,
         string principalReference, string attemptReference, Func<SubmissionAttemptRecord, SubmissionAttemptRecord> update,

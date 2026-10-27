@@ -117,6 +117,19 @@ namespace TradeControl.Web.Areas.Identity.Pages.Account
                         return Page();
                     }
 
+                    // Hosted bootstrap reaches registration before Index can seed a
+                    // pristine tenant. Seed the lookup catalogue before creating the
+                    // first Identity record because proc_NodeDataInit deliberately
+                    // clears Identity users during a destructive reinitialisation.
+                    var requiresBootstrapSeed =
+                        !await _nodeContext.App_tbTemplates.AnyAsync()
+                        || !await _nodeContext.App_tbJurisdictions.AnyAsync()
+                        || !await _nodeContext.App_tbUocs.AnyAsync()
+                        || !await _nodeContext.App_tbMonths.AnyAsync();
+
+                    if (requiresBootstrapSeed)
+                        await _nodeContext.InitializeNode();
+
                     foreach (var roleName in new[]
                              {
                                  Constants.AdministratorsRole,

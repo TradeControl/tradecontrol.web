@@ -1,6 +1,7 @@
 using System;
 using Azure.Identity;
 using Azure.Storage.Blobs;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -33,6 +34,7 @@ namespace TradeControl.Web.AppServices
             services.AddSingleton<ITenantDirectory, ConfiguredTenantDirectory>();
             services.AddSingleton<TenantAmbientContext>();
             services.AddScoped<ITenantContext, TenantContext>();
+            services.AddScoped<IDbContextFactory<Data.NodeContext>, TenantNodeContextFactory>();
             services.AddScoped<IBusinessClock, BusinessClock>();
             services.AddScoped<ITemplateTreeProvider, TemplateTreeProvider>();
             services.AddScoped<ITemplateInvoicesService, TemplateInvoicesService>();
@@ -113,6 +115,7 @@ namespace TradeControl.Web.AppServices
             }
             services.AddHttpContextAccessor();
             services.AddScoped<IVatWorkflowIdentityAccessor, VatWorkflowIdentityAccessor>();
+            services.AddScoped<IVatSubmissionGate, VatSubmissionGate>();
             services.AddSingleton<IVatAuthorityDispatchContextFactory, VatAuthorityDispatchContextFactory>();
             services.AddSingleton<TimeProvider>(TimeProvider.System);
             services.AddSingleton<IVatFraudContextReferenceStore, VatFraudContextReferenceStore>();
@@ -155,8 +158,10 @@ namespace TradeControl.Web.AppServices
                 provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovalEvidenceSource
                 ?? throw new InvalidOperationException("The VAT approval evidence source is unavailable."));
             if (configuration.GetValue<bool>($"{VatProductHostOptions.SectionName}:Enabled")
+                && configuration.GetValue<bool>($"{VatProductHostOptions.SectionName}:ReviewEnabled")
                 && configuration.GetValue<VatPersistenceMode>(
-                    $"{VatProductHostOptions.SectionName}:PersistenceMode") == VatPersistenceMode.DevelopmentFiles)
+                    $"{VatProductHostOptions.SectionName}:PersistenceMode") is VatPersistenceMode.DevelopmentFiles
+                    or VatPersistenceMode.AzureManaged)
                 services.AddScoped<IVatFilingHistoryService, VatFilingHistoryService>();
             else
                 services.AddScoped<IVatFilingHistoryService, DisabledVatFilingHistoryService>();

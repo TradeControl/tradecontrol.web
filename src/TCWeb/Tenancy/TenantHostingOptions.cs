@@ -21,6 +21,7 @@ public sealed class TenantRegistration
     public string? ConnectionStringName { get; set; }
     public string BusinessTimeZoneId { get; set; } = "Europe/London";
     public bool Enabled { get; set; } = true;
+    public bool VatSubmissionEnabled { get; set; }
 }
 
 public sealed class TenantDescriptor(
@@ -29,7 +30,8 @@ public sealed class TenantDescriptor(
     string connectionStringName,
     string connectionString,
     string businessTimeZoneId,
-    TimeZoneInfo businessTimeZone)
+    TimeZoneInfo businessTimeZone,
+    bool vatSubmissionEnabled = true)
 {
     public TenantDescriptor(Guid tenantId, string canonicalHost, string connectionStringName,
         string connectionString)
@@ -42,6 +44,7 @@ public sealed class TenantDescriptor(
     public string ConnectionString { get; } = connectionString;
     public string BusinessTimeZoneId { get; } = businessTimeZoneId;
     public TimeZoneInfo BusinessTimeZone { get; } = businessTimeZone;
+    public bool VatSubmissionEnabled { get; } = vatSubmissionEnabled;
 
     public override string ToString() => TenantId.ToString("D");
 }

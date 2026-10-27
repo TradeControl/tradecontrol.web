@@ -36,7 +36,7 @@ public sealed class ConfiguredTenantDirectory : ITenantDirectory
                 throw new InvalidOperationException($"Tenant connection '{connectionName}' is not configured.");
             var (timeZoneId, timeZone) = RequiredBusinessTimeZone(registration.BusinessTimeZoneId);
             tenants.Add(new TenantDescriptor(tenantId, host, connectionName, connectionString,
-                timeZoneId, timeZone));
+                timeZoneId, timeZone, registration.VatSubmissionEnabled));
         }
 
         _byHost = tenants.ToDictionary(item => item.CanonicalHost, StringComparer.OrdinalIgnoreCase);

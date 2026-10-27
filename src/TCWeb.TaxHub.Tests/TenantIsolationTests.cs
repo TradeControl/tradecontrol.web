@@ -29,7 +29,12 @@ internal static class TenantIsolationTests
             Tenants =
             [
                 new() { TenantReference = tenantA.ToString(), Host = "Alpha.Example.Test.", ConnectionStringName = "TenantA", BusinessTimeZoneId = "Europe/London" },
-                new() { TenantReference = tenantB.ToString(), Host = "beta.example.test", ConnectionStringName = "TenantB", BusinessTimeZoneId = "Australia/Sydney" }
+                new()
+                {
+                    TenantReference = tenantB.ToString(), Host = "beta.example.test",
+                    ConnectionStringName = "TenantB", BusinessTimeZoneId = "Australia/Sydney",
+                    VatSubmissionEnabled = true
+                }
             ]
         });
         var directory = new ConfiguredTenantDirectory(options, configuration);
@@ -40,6 +45,9 @@ internal static class TenantIsolationTests
             "Canonical host resolution did not select tenant B.");
         Assert(directory.ResolveHost("beta.example.test")?.BusinessTimeZoneId == "Australia/Sydney",
             "Tenant resolution did not retain the business time-zone assignment.");
+        Assert(!directory.ResolveHost("alpha.example.test")!.VatSubmissionEnabled
+            && directory.ResolveHost("beta.example.test")!.VatSubmissionEnabled,
+            "Shared-host VAT submission switches did not remain tenant-scoped and fail-closed by default.");
         Assert(!directory.ResolveHost("beta.example.test")!.ToString().Contains("Server=", StringComparison.Ordinal),
             "A tenant descriptor rendered its protected connection locator.");
         Assert(directory.ResolveHost("unknown.example.test") is null,

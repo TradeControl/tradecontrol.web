@@ -3,7 +3,7 @@
 @using Microsoft.JSInterop
 @inject IVatReturnReviewService Reviews
 @inject IVatReturnSubmissionService Submissions
-@inject IOptions<VatProductHostOptions> VatHost
+@inject IVatSubmissionGate SubmissionGate
 @inject IJSRuntime JavaScript
 
 <section class="card mt-3" aria-labelledby="vat-return-review-title">
@@ -99,7 +99,7 @@
 
             @if (IsApproved)
             {
-                @if (!VatHost.Value.SubmissionEnabled)
+                @if (!SubmissionGate.IsEnabled)
                 {
                     <div class="alert alert-info" role="status">
                         <strong>Approved and retained — not submitted to HMRC.</strong>
@@ -234,7 +234,7 @@
             _review = await Reviews.ApproveAsync(_review.PreparationReference,
                 _review.DeclarationVersion, _warningsAcknowledged);
             await InvokeAsync(StateHasChanged);
-            if (VatHost.Value.SubmissionEnabled)
+            if (SubmissionGate.IsEnabled)
                 await JavaScript.InvokeVoidAsync("taxHubHmrc.showSubmissionStep", _submissionStep);
         }
         catch (VatReturnReviewException exception) { _error = exception.Message; }

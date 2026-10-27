@@ -77,6 +77,7 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
     private readonly ISubmissionAttemptStore? _attempts;
     private readonly ISubmissionContentStore? _content;
     private readonly IVatFraudContextReferenceStore _fraudReferences;
+    private readonly IVatSubmissionGate _submissionGate;
     private readonly ITenantContext? _tenantContext;
     private readonly TimeProvider _clock;
     private readonly OAuthBrokerTicketProtector? _brokerTickets;
@@ -84,12 +85,14 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
     public VatHmrcConnectionService(IVatWorkflowIdentityAccessor identities,
         IOptions<VatProductHostOptions> hostOptions,
         IVatFraudContextReferenceStore fraudReferences,
+        IVatSubmissionGate submissionGate,
         AzureVatPersistence? azurePersistence = null,
         ITenantContext? tenantContext = null,
         TimeProvider? clock = null)
     {
         _identities = identities;
         _fraudReferences = fraudReferences;
+        _submissionGate = submissionGate;
         _tenantContext = tenantContext;
         _clock = clock ?? TimeProvider.System;
         _host = hostOptions.Value;
@@ -380,7 +383,7 @@ public sealed class VatHmrcConnectionService : IVatHmrcConnectionService, IVatAu
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(approved);
-        if (!_host.SubmissionEnabled)
+        if (!_submissionGate.IsEnabled)
             return new(new(PreparedApiOutcomeKind.Failed, "VAT-SUBMISSION-LOCKED"),
                 null, null, false);
         if (_gateway is null || _content is null)

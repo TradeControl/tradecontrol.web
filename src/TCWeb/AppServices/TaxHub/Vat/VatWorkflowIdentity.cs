@@ -41,7 +41,7 @@ public interface IVatWorkflowIdentityAccessor
 
 public sealed class VatWorkflowIdentityAccessor(
     IHttpContextAccessor httpContextAccessor,
-    NodeContext nodeContext,
+    IDbContextFactory<NodeContext> nodeContextFactory,
     ITenantContext tenantContext) : IVatWorkflowIdentityAccessor
 {
     public async Task<VatWorkflowIdentity> GetRequiredAsync(CancellationToken cancellationToken = default)
@@ -63,6 +63,7 @@ public sealed class VatWorkflowIdentityAccessor(
             throw new InvalidOperationException("The VAT workflow tenant is not configured.");
         var tenant = tenantContext.RequiredTenant.TenantId.ToString("D");
 
+        await using var nodeContext = await nodeContextFactory.CreateDbContextAsync(cancellationToken);
         var actor = await nodeContext.GetUserId(aspNetSubject);
         var reportingSubject = await nodeContext.App_tbOptions
             .AsNoTracking()

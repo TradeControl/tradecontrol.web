@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Controllers;
 using TradeControl.Web.Data;
+using TradeControl.Web.Tenancy;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Tax.UK.Application.Preparation;
@@ -43,6 +44,22 @@ async Task AssertThrowsAsync<TException>(Func<Task> action, string message)
 }
 
 var root = FindRoot(AppContext.BaseDirectory);
+var tenantAmbient = new TenantAmbientContext();
+using (var tenantContext = new TenantContext(tenantAmbient))
+{
+    const string tenantConnection = "Server=tenant-factory;Database=tenant-factory;Integrated Security=True;TrustServerCertificate=True";
+    tenantContext.Bind(new TenantDescriptor(Guid.NewGuid(), "tenant-factory.example", "TenantFactory",
+        tenantConnection));
+    var nodeFactory = new TenantNodeContextFactory(tenantContext);
+    await using var firstNodeContext = await nodeFactory.CreateDbContextAsync();
+    await using var secondNodeContext = await nodeFactory.CreateDbContextAsync();
+    Assert(!ReferenceEquals(firstNodeContext, secondNodeContext)
+        && firstNodeContext.Database.GetConnectionString()?.Contains("tenant-factory",
+            StringComparison.Ordinal) == true
+        && secondNodeContext.Database.GetConnectionString()?.Contains("tenant-factory",
+            StringComparison.Ordinal) == true,
+        "Concurrent tenant operations do not receive independent tenant-bound node contexts.");
+}
 var webProject = Path.Combine(root, "src", "TCWeb", "TCWeb.csproj");
 var webReferences = ProjectReferences(webProject);
 Assert(webReferences.Any(reference => reference.Contains("Tax.UK.Application", StringComparison.Ordinal)),
@@ -776,8 +793,35 @@ Assert(productionValidator.Validate(null, azure).Failed,
     "Broker start and callback endpoints on different hosts were accepted.");
 azure.OAuthBrokerCallbackUri = new Uri("https://auth.tradecontrol.co.uk/TaxHub/HmrcCallback");
 azure.SubmissionEnabled = true;
+Assert(productionValidator.Validate(null, azure).Succeeded,
+    "The explicit Azure-managed HMRC sandbox accreditation dispatch composition was rejected.");
+azure.FraudCaptureEnabled = false;
 Assert(productionValidator.Validate(null, azure).Failed,
-    "The hosted VAT submission gate was opened before explicit accreditation approval.");
+    "Sandbox dispatch was accepted without fresh fraud-prevention evidence capture.");
+azure.FraudCaptureEnabled = true;
+azure.AuthorityEnvironment = VatAuthorityEnvironment.Production;
+Assert(productionValidator.Validate(null, azure).Failed,
+    "The accreditation dispatch gate was accepted against the production HMRC authority environment.");
+
+var lockedTenantContext = new TenantContext();
+lockedTenantContext.Bind(new TenantDescriptor(Guid.NewGuid(), "locked.example.test", "LockedTenant",
+    "Server=(local);Database=locked;Trusted_Connection=True;", "Europe/London",
+    TimeZoneInfo.FindSystemTimeZoneById("Europe/London"), vatSubmissionEnabled: false));
+var openEnvironment = Microsoft.Extensions.Options.Options.Create(new VatProductHostOptions
+    { SubmissionEnabled = true });
+Assert(!new VatSubmissionGate(openEnvironment, lockedTenantContext).IsEnabled,
+    "The shared environment gate bypassed a locked tenant VAT submission switch.");
+
+var openTenantContext = new TenantContext();
+openTenantContext.Bind(new TenantDescriptor(Guid.NewGuid(), "open.example.test", "OpenTenant",
+    "Server=(local);Database=open;Trusted_Connection=True;", "Europe/London",
+    TimeZoneInfo.FindSystemTimeZoneById("Europe/London"), vatSubmissionEnabled: true));
+var lockedEnvironment = Microsoft.Extensions.Options.Options.Create(new VatProductHostOptions
+    { SubmissionEnabled = false });
+Assert(!new VatSubmissionGate(lockedEnvironment, openTenantContext).IsEnabled,
+    "A tenant VAT submission switch bypassed the locked environment gate.");
+Assert(new VatSubmissionGate(openEnvironment, openTenantContext).IsEnabled,
+    "The explicitly enabled sandbox environment and tenant did not open the VAT submission gate.");
 
 var tenant = Guid.NewGuid().ToString();
 var identity = new VatWorkflowIdentity(tenant, "aspnet-subject", "internal-actor", "HOME");
@@ -1044,9 +1088,10 @@ Assert(obligationsPanel.Contains("item.CanReview && VatHost.Value.ReviewEnabled"
     && obligationsPanel.Contains("_selected is not null && VatHost.Value.ReviewEnabled", StringComparison.Ordinal)
     && obligationsPanel.Contains("Return review is currently locked", StringComparison.Ordinal),
     "The VAT obligations panel no longer has an independent preparation-and-review gate.");
-Assert(appServiceRegistration.Contains("PersistenceMode\") == VatPersistenceMode.DevelopmentFiles", StringComparison.Ordinal)
-    && appServiceRegistration.Contains("IVatFilingHistoryService, DisabledVatFilingHistoryService", StringComparison.Ordinal),
-    "Azure-managed composition can activate filing history before durable dispatch evidence is enabled.");
+Assert(appServiceRegistration.Contains("VatPersistenceMode.DevelopmentFiles", StringComparison.Ordinal)
+    && appServiceRegistration.Contains("or VatPersistenceMode.AzureManaged", StringComparison.Ordinal)
+    && appServiceRegistration.Contains("IVatFilingHistoryService, VatFilingHistoryService", StringComparison.Ordinal),
+    "Azure-managed composition did not activate filing history over durable dispatch evidence.");
 var sharedLayout = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared", "_Layout.cshtml"));
 Assert(sharedLayout.Contains("@inject UserManager<TradeControlWebUser> UserManager", StringComparison.Ordinal)
     && sharedLayout.Contains("@inject NodeContext NodeContext", StringComparison.Ordinal)
@@ -1058,9 +1103,9 @@ Assert(returnReview.Contains("The values below are read from the immutable prepa
     && returnReview.Contains("Not yet submitted to HMRC", StringComparison.Ordinal)
     && returnReview.Contains("Final step — submit to HMRC", StringComparison.Ordinal),
     "The Phase 6.3 exact-review boundary or separate submit gate is no longer explicit in the UI.");
-Assert(returnReview.Contains("!VatHost.Value.SubmissionEnabled", StringComparison.Ordinal)
+Assert(returnReview.Contains("!SubmissionGate.IsEnabled", StringComparison.Ordinal)
     && returnReview.Contains("Approved and retained — not submitted to HMRC", StringComparison.Ordinal),
-    "An approved accreditation candidate can expose the HMRC submission action while dispatch is disabled.");
+    "An approved accreditation candidate can expose the HMRC submission action while its tenant dispatch gate is disabled.");
 Assert(returnReview.Contains("@bind=\"_confirmed\"", StringComparison.Ordinal)
     && !returnReview.Contains("checked=", StringComparison.OrdinalIgnoreCase)
     && returnReview.Contains("_warningsAcknowledged", StringComparison.Ordinal),
@@ -1072,6 +1117,8 @@ var reviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServ
     "VatReturnReviewService.cs"));
 Assert(reviewService.Contains("new VatReturnPreparer", StringComparison.Ordinal)
     && reviewService.Contains("Cash.vwTaxVatSubmission", StringComparison.Ordinal) == false
+    && reviewService.Contains("FindReusableReviewAsync", StringComparison.Ordinal)
+    && reviewService.Contains("OrderByDescending(item => item.Approval is not null)", StringComparison.Ordinal)
     && reviewService.Contains("current.Request.BodySha256 != candidate.PreparedSha256", StringComparison.Ordinal)
     && reviewService.Contains("source.SnapshotToken != candidate.SnapshotToken", StringComparison.Ordinal),
     "VAT approval no longer reuses the Objective 3 preparer or rejects a stale exact candidate.");
@@ -1130,7 +1177,7 @@ Assert(evidenceReader.Contains("App.proc_VatSourceEvidence", StringComparison.Or
 Assert(returnReview.Contains("Submit VAT return to HMRC", StringComparison.Ordinal)
     && returnReview.Contains("@bind=\"_submitConfirmed\"", StringComparison.Ordinal)
     && returnReview.Split("taxHubHmrc.captureClientFacts", StringSplitOptions.None).Length - 1 >= 2
-    && returnReview.Contains("if (VatHost.Value.SubmissionEnabled)", StringComparison.Ordinal)
+    && returnReview.Contains("if (SubmissionGate.IsEnabled)", StringComparison.Ordinal)
     && returnReview.Contains("AuthorityErrors", StringComparison.Ordinal)
     && returnReview.Contains("VatAuthorityUserMessages.Submission", StringComparison.Ordinal),
     "The approval/submit controls, rejection detail, fresh fraud capture or unknown-outcome warning are missing.");
@@ -1148,6 +1195,7 @@ Assert(submissionService.Contains("IVatApprovedReturnResolver", StringComparison
 var connectionService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
     "VatHmrcConnectionService.cs"));
 Assert(connectionService.Contains("_gateway.SendAsync(approved.Request", StringComparison.Ordinal)
+    && connectionService.Contains("if (!_submissionGate.IsEnabled)", StringComparison.Ordinal)
     && connectionService.Contains("vat-return-preflight", StringComparison.Ordinal)
     && connectionService.Contains("ActiveSubmissionAttemptException", StringComparison.Ordinal)
     && connectionService.Contains("VatReturnReconciliation.Compare", StringComparison.Ordinal)
@@ -1182,6 +1230,9 @@ Assert(filingHistory.Contains("attempts.ListTenantAsync(identity.TenantReference
     && filingHistory.Contains("IsVisible(approved, currentVrnDigest", StringComparison.Ordinal)
     && filingHistory.Contains("vat.returns.submit", StringComparison.Ordinal),
     "VAT filing history is not scoped to the server-derived tenant/principal or does not verify dispatched bytes.");
+Assert(filingHistory.Contains("AzureVatPersistence? azurePersistence = null", StringComparison.Ordinal)
+    && filingHistory.Contains("return (azurePersistence, azurePersistence);", StringComparison.Ordinal),
+    "Azure-managed filing history did not select the durable attempt and content stores.");
 Assert(filingHistoryView.Contains("VAT filing history", StringComparison.Ordinal)
     && filingHistoryView.Contains("Approved return and audit references", StringComparison.Ordinal)
     && filingHistoryView.Contains("Prepared SHA-256", StringComparison.Ordinal)
@@ -1227,8 +1278,17 @@ var connectionView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages"
     "Components", "TaxHubHmrcConnection.razor"));
 Assert(connectionView.Contains("correct-errors-in-your-vat-return", StringComparison.Ordinal)
     && connectionView.Contains("www.gov.uk/pay-vat", StringComparison.Ordinal)
-    && connectionView.Contains("Validate fraud headers", StringComparison.Ordinal),
+    && connectionView.Contains("Validate fraud headers", StringComparison.Ordinal)
+    && connectionView.Contains("VAT-CONNECTION-TEMPORARILY-UNAVAILABLE", StringComparison.Ordinal)
+    && connectionView.Contains("Retry status", StringComparison.Ordinal)
+    && connectionView.Contains("No connection was removed", StringComparison.Ordinal)
+    && connectionView.Contains("VatConnectionStatusUnavailable", StringComparison.Ordinal),
     "The VAT connection panel lost required HMRC journey guidance or deployed fraud validation.");
+var workflowIdentitySource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub", "Vat",
+    "VatWorkflowIdentity.cs"));
+Assert(workflowIdentitySource.Contains("IDbContextFactory<NodeContext>", StringComparison.Ordinal)
+    && workflowIdentitySource.Contains("CreateDbContextAsync", StringComparison.Ordinal),
+    "The VAT workflow identity boundary can share a circuit-scoped NodeContext across concurrent components.");
 var hmrcControllerSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Controllers",
     "TaxHubHmrcController.cs"));
 Assert(hmrcControllerSource.Contains("FraudPrevention/Validate", StringComparison.Ordinal)

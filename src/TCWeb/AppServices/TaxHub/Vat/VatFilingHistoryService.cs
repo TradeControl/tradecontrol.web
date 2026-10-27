@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TradeControl.Tax.UK.Adapters.Submission.Audit;
 using TradeControl.Web.Data;
@@ -60,16 +61,13 @@ public sealed class VatFilingHistoryService(
     IHttpContextAccessor httpContextAccessor,
     IVatAuthorityReturnSubmission authority,
     NodeContext nodeContext,
-    IOptions<VatProductHostOptions> hostOptions) : IVatFilingHistoryService
+    IOptions<VatProductHostOptions> hostOptions,
+    ILogger<VatFilingHistoryService> logger,
+    AzureVatPersistence? azurePersistence = null) : IVatFilingHistoryService
 {
     public async Task<IReadOnlyList<VatFilingHistoryRecord>> GetAsync(DateOnly? periodFrom = null,
         DateOnly? periodTo = null, CancellationToken cancellationToken = default)
     {
-        var host = hostOptions.Value;
-        if (!host.Enabled || host.PersistenceMode != VatPersistenceMode.DevelopmentFiles
-            || string.IsNullOrWhiteSpace(host.DevelopmentStoreRoot))
-            return [];
-
         var identity = await identities.GetRequiredAsync(cancellationToken);
         var principal = httpContextAccessor.HttpContext?.User
             ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
@@ -85,16 +83,16 @@ public sealed class VatFilingHistoryService(
         var currentVrnDigest = Convert.ToHexString(SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(profile.AuthorityReference.Trim())));
         var adoptionDate = DateOnly.FromDateTime(profile.ValidFrom);
-        var root = Path.GetFullPath(host.DevelopmentStoreRoot);
-        var attempts = new FileSubmissionAttemptStore(
-            SubmissionAttemptStoreOptions.SevenYearMetadata(Path.Combine(root, "attempts.json")));
-        var content = new FileSubmissionContentStore(new SubmissionContentStoreOptions(
-            Path.Combine(root, "protected-content")));
-        var writes = (await attempts.ListTenantAsync(identity.TenantReference, 500, cancellationToken))
+        var (attempts, content) = GetStores();
+        var tenantAttempts = await attempts.ListTenantAsync(identity.TenantReference, 500, cancellationToken);
+        var writes = tenantAttempts
             .Where(item => item.OperationId == "vat.returns.submit" && item.ApprovalReference is not null)
             .ToArray();
         var evidence = await approvals.GetEvidenceAsync(writes.Select(item => item.ApprovalReference!)
             .Distinct(StringComparer.Ordinal).ToArray(), cancellationToken);
+        logger.LogInformation(
+            "VAT filing history loaded {AttemptCount} tenant attempts, {WriteCount} linked VAT writes and {EvidenceCount} approval records.",
+            tenantAttempts.Count, writes.Length, evidence.Count);
         var result = new List<VatFilingHistoryRecord>(writes.Length);
         foreach (var attempt in writes)
         {
@@ -137,6 +135,8 @@ public sealed class VatFilingHistoryService(
                 attempt.Reconciliation, approved.Boxes,
                 payloadVerified, evidenceState ?? "Approved and dispatched payload digests match."));
         }
+        logger.LogInformation("VAT filing history exposed {VisibleCount} records after statutory scope checks.",
+            result.Count);
         return result.OrderByDescending(item => item.UpdatedAtUtc).ToArray();
     }
 
@@ -152,17 +152,12 @@ public sealed class VatFilingHistoryService(
     {
         if (string.IsNullOrWhiteSpace(attemptReference) || attemptReference.Length > 64)
             throw new VatReturnReviewException("The VAT attempt reference is invalid.");
-        var host = hostOptions.Value;
-        if (!host.Enabled || host.PersistenceMode != VatPersistenceMode.DevelopmentFiles
-            || string.IsNullOrWhiteSpace(host.DevelopmentStoreRoot))
-            throw new VatReturnReviewException("VAT filing reconciliation is unavailable.");
         var principal = httpContextAccessor.HttpContext?.User
             ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
         if (!filingPolicy.CanManageHmrcConnection(principal))
             throw new UnauthorizedAccessException("VAT reconciliation requires Administrator or Manager permission.");
         var identity = await identities.GetRequiredAsync(cancellationToken);
-        var attempts = new FileSubmissionAttemptStore(SubmissionAttemptStoreOptions.SevenYearMetadata(
-            Path.Combine(Path.GetFullPath(host.DevelopmentStoreRoot), "attempts.json")));
+        var (attempts, _) = GetStores();
         var attempt = (await attempts.ListTenantAsync(identity.TenantReference, 500, cancellationToken))
             .SingleOrDefault(item => item.AttemptReference == attemptReference)
             ?? throw new VatReturnReviewException("The VAT filing attempt is unavailable for this tenant.");
@@ -176,5 +171,28 @@ public sealed class VatFilingHistoryService(
         var approved = await approvals.ResolveForReconciliationAsync(attempt.ApprovalReference, vrn,
             cancellationToken);
         return await authority.ReconcileApprovedAsync(approved, attemptReference, cancellationToken);
+    }
+
+    private (ISubmissionAttemptStore Attempts, ISubmissionContentStore Content) GetStores()
+    {
+        var host = hostOptions.Value;
+        if (!host.Enabled)
+            throw new VatReturnReviewException("VAT filing history is unavailable.");
+        if (host.PersistenceMode == VatPersistenceMode.AzureManaged)
+        {
+            if (azurePersistence is null)
+                throw new VatReturnReviewException("The Azure VAT filing evidence store is unavailable.");
+            return (azurePersistence, azurePersistence);
+        }
+        if (host.PersistenceMode == VatPersistenceMode.DevelopmentFiles
+            && !string.IsNullOrWhiteSpace(host.DevelopmentStoreRoot))
+        {
+            var root = Path.GetFullPath(host.DevelopmentStoreRoot);
+            return (new FileSubmissionAttemptStore(
+                    SubmissionAttemptStoreOptions.SevenYearMetadata(Path.Combine(root, "attempts.json"))),
+                new FileSubmissionContentStore(new SubmissionContentStoreOptions(
+                    Path.Combine(root, "protected-content"))));
+        }
+        throw new VatReturnReviewException("VAT filing history is unavailable.");
     }
 }

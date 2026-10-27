@@ -205,8 +205,12 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
                 "The VAT return is not ready for review. Resolve its blocking findings first.",
                 prepared.Request.Findings.Select(VatReviewFindingRecord.From).Select(item => item.ToView()).ToArray());
 
-        var reference = Guid.NewGuid().ToString("N");
         var now = _time.GetUtcNow();
+        var reusable = await FindReusableReviewAsync(identity, prepared, now, cancellationToken);
+        if (reusable.Candidate is not null)
+            return await ReadModelAsync(reusable.Candidate, reusable.Approval?.Reference, cancellationToken);
+
+        var reference = Guid.NewGuid().ToString("N");
         var seal = CreateSeal(identity, prepared, body.ToArray());
         var contentReference = await _content.StoreAsync(identity.TenantReference,
             identity.AspNetSubjectReference, SubmissionContentKind.Payload, body.ToArray(), cancellationToken);
@@ -224,6 +228,63 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             now.Add(CandidateLifetime));
         await AddCandidateAsync(candidate, cancellationToken);
         return await ReadModelAsync(candidate, null, cancellationToken);
+    }
+
+    private async Task<(VatReviewCandidateRecord? Candidate, VatReviewApprovalRecord? Approval)>
+        FindReusableReviewAsync(VatWorkflowIdentity identity, PreparedCurrent prepared, DateTimeOffset now,
+            CancellationToken cancellationToken)
+    {
+        IReadOnlyList<VatReviewCandidateRecord> candidates;
+        IReadOnlyList<VatReviewApprovalRecord> approvals;
+        if (_azurePersistence is not null)
+        {
+            candidates = await _azurePersistence.GetReviewCandidatesAsync(identity, cancellationToken);
+            approvals = await _azurePersistence.GetReviewApprovalsAsync(identity, cancellationToken);
+        }
+        else
+        {
+            await StoreGate.WaitAsync(cancellationToken);
+            try
+            {
+                candidates = (await ReadAsync<VatReviewCandidateRecord>(_candidatePath!, cancellationToken))
+                    .Where(item => item.TenantReference == identity.TenantReference
+                        && item.PrincipalReference == identity.AspNetSubjectReference
+                        && item.ActorReference == identity.ActorReference).ToArray();
+                approvals = (await ReadAsync<VatReviewApprovalRecord>(_approvalPath!, cancellationToken))
+                    .Where(item => item.TenantReference == identity.TenantReference
+                        && item.PrincipalReference == identity.AspNetSubjectReference
+                        && item.ActorReference == identity.ActorReference).ToArray();
+            }
+            finally { StoreGate.Release(); }
+        }
+
+        var validApprovals = approvals.Where(item => item.DeclarationVersion == DeclarationVersion
+                && item.DeclarationSha256 == _declarationSha256)
+            .ToDictionary(item => item.PreparationReference, StringComparer.Ordinal);
+        var matches = candidates.Where(item => item.ExpiresAtUtc > now && MatchesCurrent(item, prepared))
+            .Select(item => (Candidate: item,
+                Approval: validApprovals.GetValueOrDefault(item.Reference)))
+            .OrderByDescending(item => item.Approval is not null)
+            .ThenByDescending(item => item.Approval?.ApprovedAtUtc ?? item.Candidate.CreatedAtUtc)
+            .ToArray();
+        return matches.Length == 0 ? (null, null) : matches[0];
+    }
+
+    private static bool MatchesCurrent(VatReviewCandidateRecord candidate, PreparedCurrent current)
+    {
+        var source = current.Request.SourceEvidence.SingleOrDefault();
+        return !current.Request.HasErrors && source is not null
+            && current.Request.BodySha256 == candidate.PreparedSha256
+            && current.VrnSha256 == candidate.VrnSha256
+            && current.Obligation.PeriodKey == candidate.PeriodKey
+            && current.Obligation.Start == candidate.PeriodStart
+            && current.Obligation.End == candidate.PeriodEnd
+            && source.SourceSystem == candidate.SourceSystem
+            && source.DatasetKey == candidate.DatasetKey
+            && source.SnapshotToken == candidate.SnapshotToken
+            && current.Evidence.DatabaseInstanceReference == candidate.DatabaseInstanceReference
+            && current.Evidence.SourceInventorySha256 == candidate.SourceInventorySha256
+            && current.Evidence.SqlNodeVersion == candidate.SqlNodeVersion;
     }
 
     public async Task<VatReturnReviewModel> ApproveAsync(string preparationReference,
