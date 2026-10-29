@@ -1,0 +1,90 @@
+<div class="h-100 overflow-auto p-2 p-md-3">
+    <div class="alert alert-info d-flex gap-3 align-items-start" role="status">
+        <i class="bi bi-door-open fs-3" aria-hidden="true"></i>
+        <div>
+            <h2 class="h5 alert-heading mb-1">Sorry to see you go</h2>
+            <p class="mb-0">
+                If you are moving to another software provider, Customer Exit gives you a documented copy of your
+                Trade Control business data and tenant-owned files.
+            </p>
+        </div>
+    </div>
+
+    <h2 class="h5">About this export</h2>
+    <p>
+        This facility supports the HMRC production-credentials requirement that customers can obtain their data
+        when changing software provider. It does not imply HMRC endorsement or certification of Trade Control.
+    </p>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-6">
+            <section class="border rounded h-100 p-3" aria-labelledby="customer-exit-includes">
+                <h3 id="customer-exit-includes" class="h6">
+                    <i class="bi bi-file-earmark-zip me-2" aria-hidden="true"></i>What the archive contains
+                </h3>
+                <ul class="mb-0">
+                    <li>A manifest explaining the archive structure and exclusions.</li>
+                    <li>Supported physical business tables as documented UTF-8 JSON.</li>
+                    <li>Your tenant-owned documents, images and templates in their original formats.</li>
+                    <li>A unique export reference and SHA-256 integrity digest.</li>
+                </ul>
+            </section>
+        </div>
+        <div class="col-12 col-lg-6">
+            <section class="border rounded h-100 p-3" aria-labelledby="customer-exit-excludes">
+                <h3 id="customer-exit-excludes" class="h6">
+                    <i class="bi bi-shield-lock me-2" aria-hidden="true"></i>What the archive excludes
+                </h3>
+                <ul class="mb-0">
+                    <li>Passwords, cryptographic private keys and infrastructure configuration.</li>
+                    <li>OAuth grants, access or refresh tokens and vendor credentials.</li>
+                    <li>Operational event logs and information belonging to another tenant.</li>
+                    <li>Automatic migration into another product.</li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <div class="alert alert-warning" role="note" id="customer-exit-warning">
+        <strong>Keep the download secure.</strong> It contains sensitive business and personal data. Store it in an
+        access-controlled location and transfer it only to a provider you trust. Generating the archive is recorded
+        in your tenant Event Viewer.
+    </div>
+
+    <p>
+        Downloading an archive does <strong>not</strong> close your account, cancel your service, delete any data or
+        authorise a tax filing. Those actions are separate and require their own instructions.
+    </p>
+
+    <form method="get" action="/Admin/CustomerExit/Download" class="border rounded p-3 bg-light">
+        <div class="form-check mb-3">
+            <input class="form-check-input"
+                   type="checkbox"
+                   id="confirmCustomerExit"
+                   name="confirmed"
+                   value="true"
+                   @bind="_confirmed"
+                   aria-describedby="customer-exit-warning" />
+            <label class="form-check-label" for="confirmCustomerExit">
+                I understand what this archive contains and want to generate it now.
+            </label>
+        </div>
+
+        <button type="submit"
+                class="btn btn-primary"
+                disabled="@(!_confirmed)">
+            <i class="bi bi-download me-2" aria-hidden="true"></i>Generate and download archive
+        </button>
+    </form>
+
+    <p class="small text-muted mt-3 mb-0">
+        <a href="https://tradecontrol.github.io/admin/admin-manager-customer-exit"
+           target="_blank"
+           rel="noopener noreferrer">Read the Customer Exit guide</a>
+        for archive contents, security precautions and next steps.
+    </p>
+</div>
+
+@code {
+    private bool _confirmed;
+}

@@ -193,6 +193,9 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IInvoiceRegisterLookupService, InvoiceRegisterLookupService>();
             services.AddScoped<IInvoiceRegisterService, InvoiceRegisterService>();
             services.AddScoped<IInvoiceRegisterWorkflowService, InvoiceRegisterWorkflowService>();
+            services.AddScoped<ICustomerExitDataSource, EfCustomerExitDataSource>();
+            services.AddScoped<ICustomerExitAudit, CustomerExitAudit>();
+            services.AddScoped<ICustomerExitArchiveService, CustomerExitArchiveService>();
 
             services.AddSingleton<ExecutionRuntimeStore>();
             services.AddScoped<IExecutionRuntimeState, ExecutionRuntimeState>();

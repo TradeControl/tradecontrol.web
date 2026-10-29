@@ -51,3 +51,31 @@
 .tc-admin-manager-tree i.bi-tags {
     color: var(--tc-admin-tags-icon);
 }
+
+/*
+ * Browser zoom reduces the CSS viewport width without changing the server-side
+ * device classification.  Stack the desktop panes at the responsive breakpoint
+ * so the selected details remain visible at 200% and 400% zoom.
+ */
+@media (max-width: 991.98px) {
+    .tc-tree-manager-frame > .tc-tree-split {
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
+    }
+
+    .tc-tree-split > #leftCol,
+    .tc-tree-split > #rightCol {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .tc-tree-split > #rightCol {
+        margin-top: 0.75rem;
+    }
+
+    .tc-tree-split > .gutter {
+        display: none;
+    }
+}

@@ -19,7 +19,7 @@
                 @if (!_loading && Compact && _status.State == VatConnectionState.Connected)
                 {
                     <button type="button"
-                            class="btn btn-sm btn-link p-0 text-decoration-none"
+                            class="btn btn-sm btn-link p-0 text-decoration-none tc-tax-hub-hmrc-manage"
                             aria-expanded="@_detailsExpanded"
                             @onclick="ToggleDetails">
                         @(_detailsExpanded ? "Hide" : "Manage")

@@ -67,6 +67,24 @@
                     </div>
                 </div>
             }
+            else if (_selected == ManagerTreeHost.ManagerNode.CustomerExit)
+            {
+                <div class="d-flex flex-column" style="min-height:0; height:100%;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <button type="button"
+                                class="tc-back-btn"
+                                @onclick="NavigateToMobileTreeAsync">
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back
+                        </button>
+
+                        <div class="fw-semibold text-truncate ms-2">@RightHeader</div>
+                    </div>
+
+                    <div class="flex-grow-1 border rounded bg-light p-2 d-flex flex-column" style="min-height:0;">
+                        <CustomerExitPanel />
+                    </div>
+                </div>
+            }
             else if (_selected == ManagerTreeHost.ManagerNode.Periods)
             {
                 <div class="d-flex flex-column" style="min-height:0; height:100%;">
@@ -363,6 +381,7 @@
         ManagerTreeHost.ManagerNode.FileTransferContentType => $"{_companyName} / File Transfer / {_selectedContentType}",
         ManagerTreeHost.ManagerNode.Host => $"{_companyName} / Mail Host",
         ManagerTreeHost.ManagerNode.Users => $"{_companyName} / Users",
+        ManagerTreeHost.ManagerNode.CustomerExit => $"{_companyName} / Customer Exit",
         ManagerTreeHost.ManagerNode.Templates => $"{_companyName} / Templates",
         ManagerTreeHost.ManagerNode.TemplateInvoices => $"{_companyName} / Templates / Invoices",
         ManagerTreeHost.ManagerNode.TemplateSystem => $"{_companyName} / Templates / System",
@@ -426,6 +445,11 @@
         ManagerTreeHost.ManagerNode.Users =>
             @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
     <UsersPanel IsMobile="false" />
+</div>,
+
+        ManagerTreeHost.ManagerNode.CustomerExit =>
+            @<div class="bg-white border rounded p-2 d-flex flex-column h-100" style="min-height:0;">
+    <CustomerExitPanel />
 </div>,
 
         ManagerTreeHost.ManagerNode.Periods =>
@@ -686,6 +710,16 @@
                 return Task.CompletedTask;
             }
 
+            if (node == ManagerTreeHost.ManagerNode.CustomerExit)
+            {
+                var returnNode = previousNode == ManagerTreeHost.ManagerNode.CustomerExit
+                    ? ManagerTreeHost.ManagerNode.Root
+                    : previousNode;
+
+                NavigationManager.NavigateTo($"/Admin/Manager/Index?node=CustomerExit&returnNode={returnNode}", forceLoad: true);
+                return Task.CompletedTask;
+            }
+
             if (node == ManagerTreeHost.ManagerNode.Periods)
             {
                 var returnNode = previousNode == ManagerTreeHost.ManagerNode.Periods
@@ -781,6 +815,7 @@
             or ManagerTreeHost.ManagerNode.TemplateSystem
             or ManagerTreeHost.ManagerNode.EventViewer
             or ManagerTreeHost.ManagerNode.Users
+            or ManagerTreeHost.ManagerNode.CustomerExit
             or ManagerTreeHost.ManagerNode.Periods
             or ManagerTreeHost.ManagerNode.TaxSettings
             or ManagerTreeHost.ManagerNode.ReportingProfiles

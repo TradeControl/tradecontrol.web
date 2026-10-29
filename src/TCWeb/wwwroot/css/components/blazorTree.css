@@ -88,6 +88,12 @@ body {
     text-decoration: none;
 }
 
+button.tc-tree-row[title="Expand"],
+button.tc-tree-row[title="Collapse"] {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+}
+
     .tc-tree-row:hover {
         background: var(--tc-tree-hover-bg);
         text-decoration: none;

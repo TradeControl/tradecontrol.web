@@ -14,14 +14,14 @@ It is modelled on the completed Companies House approval package: planned result
 
 | Repository | Reviewed revision | Working-tree state at review | Publication state |
 |---|---|---|---|
-| `tradecontrol.web` | `1f8deca` (B3/B4 failed-run provenance); `446e865` (B5/B6 deployed discovery baseline) | B5/B6 began clean; first-registration correction now uncommitted | Both revisions committed locally; neither pushed |
-| `tradecontrol.hosting` | `a61040f` | Clean | Committed locally; not pushed |
+| `tradecontrol.web` | `1f8deca` (B3/B4 deployed discovery provenance); `446e865` (B5/B6 deployed discovery baseline); `f169e79` (current consolidated public baseline) | Clean at the published baseline; documentation preflight changes remain uncommitted for review | `f169e79` published |
+| `tradecontrol.hosting` | `a61040f` (deployed discovery baseline); `001a5d5` (current amended private baseline) | Clean | `001a5d5` pushed to the private origin; not accessible to HMRC |
 
-These revisions define the attempted no-corrective-coding baselines. A later documentation-only evidence update does not change the deployed product baseline. Any product, database, infrastructure, configuration-contract or manual tenant-data correction needed to make a journey pass is recorded as a failed commissioning attempt.
+The discovery revisions define the attempted no-corrective-coding baselines. Their later consolidation and documentation-only evidence updates do not change the deployed product baseline. Any product, database, infrastructure, configuration-contract or manual tenant-data correction needed to make a journey pass is recorded as a failed commissioning attempt.
 
-The B3/B4 authorisations exposed the refresh-lease and circuit-scoped EF-context defects; those corrections were reviewed and committed as part of `446e865` before B5/B6 began. B5/B6 then exposed a different hosted first-registration defect: the configured bootstrap-administrator redirect reached Identity registration before `NodeContext.InitializeNode()`, so required jurisdictions, templates, units and months were absent when business commissioning began. A bounded transaction seeded the lookups, commissioned each tenant and restored its single registered Identity account byte-for-byte before OAuth. The product candidate now detects the missing lookup state and seeds it before the first Identity record is created; the regression suite and full Visual Studio build pass. This fails the seamless Business Node commissioning claim, but it does not invalidate the later clean HMRC process, which began only after each tenant's identity, statutory profile, year set and `18A2` eligibility had been independently verified.
+The B3/B4 authorisations exposed the refresh-lease and circuit-scoped EF-context defects; those corrections were reviewed and committed as part of deployed discovery revision `446e865` before B5/B6 began. B5/B6 then exposed a different hosted first-registration defect: the configured bootstrap-administrator redirect reached Identity registration before `NodeContext.InitializeNode()`, so required jurisdictions, templates, units and months were absent when business commissioning began. A bounded transaction seeded the lookups, commissioned each tenant and restored its single registered Identity account byte-for-byte before OAuth. The product correction now detects the missing lookup state and seeds it before the first Identity record is created; the regression suite and full Visual Studio build pass, and the correction is included in public baseline `f169e79`. It was not deployed for the B5/B6 run. This fails the seamless Business Node commissioning claim, but it does not invalidate the later clean HMRC process, which began only after each tenant's identity, statutory profile, year set and `18A2` eligibility had been independently verified.
 
-The revisions are recorded as local identifiers rather than public links because neither commit has been pushed.
+The consolidated application baselines are available from the linked public repositories. `tradecontrol.hosting` is a private internal provenance reference and is not presented as evidence HMRC can open. The public dossier states the material topology, controls and results directly. Historical deployed discovery identifiers are retained so the recorded runs remain interpretable after consolidation.
 
 ## Prerequisite evidence — B1 and B2
 
@@ -132,7 +132,7 @@ Both fraud-header validation calls used the reviewed shared-host browser, broker
 
 B5 (`Business 5 Ltd`, Standard Micro Entity) and B6 (`Business 6 SA`, sole trader) were created on the committed `tradecontrol.web` `446e865` and `tradecontrol.hosting` `a61040f` discovery baseline. Each received its own database, tenant reference, custom TLS hostname, tenant-local first administrator and fresh HMRC organisation sandbox identity. Independent readback confirmed distinct database and tenant identities, the intended business form, one domain user, one Identity user, accounting years 2016–2018 only, and an exact locally eligible `18A2` period.
 
-Business Node commissioning was not seamless. Hosted first-administrator registration created the Identity account before SQL Node lookup data had been seeded. The first B5 business-initialisation call therefore failed on a missing jurisdiction and rolled back; B6 had not yet been changed. A bounded repair for each tenant preserved the single Identity account and its role state, ran the ordinary seed and business-initialisation procedures, restored the Identity records byte-for-byte, completed Basic Setup and independently verified the resulting profile. The product correction now performs the missing lookup seed before the first hosted Identity account is created. Its regression assertion, Tax Hub boundary suite and full Visual Studio solution build pass, but the change remains uncommitted and was not deployed for this run. This finding remains open in the Business Node commissioning track and must be closed before production launch.
+Business Node commissioning was not seamless. Hosted first-administrator registration created the Identity account before SQL Node lookup data had been seeded. The first B5 business-initialisation call therefore failed on a missing jurisdiction and rolled back; B6 had not yet been changed. A bounded repair for each tenant preserved the single Identity account and its role state, ran the ordinary seed and business-initialisation procedures, restored the Identity records byte-for-byte, completed Basic Setup and independently verified the resulting profile. The product correction now performs the missing lookup seed before the first hosted Identity account is created. Its regression assertion, Tax Hub boundary suite and full Visual Studio solution build pass, and it is committed in public baseline `f169e79`; it was not deployed for this run. This finding remains open in the Business Node commissioning track and must be closed before production launch.
 
 The HMRC VAT evidence boundary begins with those independently verified commissioned tenants. From that boundary, both cases completed the ordinary product journey without any corrective code or tenant-data adjustment:
 
@@ -197,8 +197,8 @@ The public dossier records classifications and safe digests only. Operational sw
 ## Execution sequence
 
 1. Retain B3/B4 as corrective HMRC discovery evidence and B5/B6 as clean HMRC VAT journeys from independently verified commissioned tenants.
-2. Review the uncommitted hosted first-registration seed correction and its regression coverage.
-3. Commit and deploy the reviewed application revision only after human review; record the exact application and hosting revisions without pushing as part of the evidence action.
+2. Retain the completed review of the hosted first-registration seed correction and its regression coverage in public baseline `f169e79`.
+3. Deploy the reviewed application revision only after human approval and record the exact deployed application and hosting revisions.
 4. Prove seamless Business Node delivery from empty databases through registration, lookup seeding, business commissioning and independently verified statutory readiness before production launch.
 5. Repeat HMRC filings only if HMRC requests current logs or selected retesting, or if the OAuth, fraud-header, tenant-isolation or filing topology changes materially.
 6. Complete redaction and consistency review of the submission package.
@@ -228,7 +228,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 | Exact nine-box readback | **Discovery pass — period key and all nine values matched exactly** |
 | Fraud-header validation | **Discovery pass — specification 3.3; zero errors; two disclosed truthful empty-value warnings** |
 | Durable history/evidence | **Discovery pass — accepted receipt class, digest match and exact readback retained after restart** |
-| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; uncommitted candidate deployed for discovery |
+| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; the then-uncommitted candidate was deployed for discovery and later consolidated into `f169e79` |
 | Case conclusion | **Corrective HMRC discovery complete; B5 later supplied the clean VAT repeat and live kill-switch evidence** |
 
 ## B4 result sheet — sole trader
@@ -253,7 +253,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 | Exact nine-box readback | **Discovery pass — period key and all nine values matched exactly** |
 | Fraud-header validation | **Discovery pass — specification 3.3; zero errors; two disclosed truthful empty-value warnings** |
 | Durable history/evidence | **Discovery pass — accepted receipt class, digest match and exact readback retained across the post-acceptance restart** |
-| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; uncommitted candidate deployed for discovery |
+| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; the then-uncommitted candidate was deployed for discovery and later consolidated into `f169e79` |
 | Case conclusion | **Corrective HMRC discovery complete; B6 later supplied the clean VAT repeat and live kill-switch evidence** |
 
 ## B5 result sheet — Standard Micro Entity
@@ -279,7 +279,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 | Fraud-header validation | **Passed — specification 3.3; zero errors; two disclosed truthful empty-value warnings** |
 | Durable history/evidence | **Passed — accepted outcome, digest match and exact readback retained** |
 | Post-write gate | **Passed — B5 tenant submission returned to disabled** |
-| Business Node corrective action | **Required before OAuth — first-registration lookup seeding correction is implemented and tested but remains uncommitted and undeployed** |
+| Business Node corrective action | **Required before OAuth — first-registration lookup seeding correction is implemented, tested and committed in `f169e79`, but was not deployed for this run; seamless fresh-database proof remains pending** |
 | HMRC journey corrective action | **None — no code or tenant-data correction from verified VAT readiness through exact readback** |
 | Case conclusion | **Clean HMRC VAT journey passed; seamless Business Node delivery remains a separate production-launch gate** |
 
@@ -306,7 +306,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 | Fraud-header validation | **Passed — specification 3.3; zero errors; two disclosed truthful empty-value warnings** |
 | Durable history/evidence | **Passed — accepted outcome, digest match and exact readback retained** |
 | Post-write gate | **Passed — B6 tenant submission returned to disabled** |
-| Business Node corrective action | **Required before OAuth — first-registration lookup seeding correction is implemented and tested but remains uncommitted and undeployed** |
+| Business Node corrective action | **Required before OAuth — first-registration lookup seeding correction is implemented, tested and committed in `f169e79`, but was not deployed for this run; seamless fresh-database proof remains pending** |
 | HMRC journey corrective action | **None — no code or tenant-data correction from verified VAT readiness through exact readback** |
 | Case conclusion | **Clean HMRC VAT journey passed; seamless Business Node delivery remains a separate production-launch gate** |
 
@@ -314,7 +314,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 
 The HMRC VAT sandbox matrix is complete. B3/B4 provide corrective discovery provenance; B5/B6 provide clean, independently repeated HMRC journeys from verified commissioned tenants. Together they prove populated reciprocal isolation, brokered OAuth, immutable approval, live fail-closed tenant gates, shared-host restart recovery, separately authorised sandbox acceptance, already-filed reconciliation, exact readback, fraud-header validation and retained history on the intended multi-tenant topology.
 
-The separate Business Node production-launch gate remains open until the first-registration seed fix is reviewed, committed and deployed and fresh empty databases commission without corrective action. Closing that gate does not require another VAT filing unless HMRC asks for refreshed evidence or the relevant filing topology changes.
+The separate Business Node production-launch gate remains open until the committed first-registration seed fix is deployed and fresh empty databases commission without corrective action. Closing that gate does not require another VAT filing unless HMRC asks for refreshed evidence or the relevant filing topology changes.
 
 Completion of this matrix permits human review of the production-credentials application evidence. It does not request credentials, accept terms, authorise a production filing or submit the final application.
 

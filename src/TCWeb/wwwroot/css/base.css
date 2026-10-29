@@ -4,48 +4,48 @@
 
 :root {
     --tc-footer-height: 60px;
-    --tc-header-gradient-start: #ff9800;
-    --tc-header-gradient-end: #f57c00;
-    --tc-header-border: #e65100;
+    --tc-header-gradient-start: #a63d00;
+    --tc-header-gradient-end: #8f3200;
+    --tc-header-border: #6f2600;
     --tc-header-link-hover: #fffde7;
     --tc-brand-text: #fffde7;
     --tc-brand-hover: #ffd54f;
     --tc-auth-link: #ffd54f;
     --tc-auth-link-hover: #ffffff;
-    --tc-footer-bg: #ff9800;
+    --tc-footer-bg: #a63d00;
     --tc-footer-text: #ffffff;
-    --tc-footer-border: #e65100;
+    --tc-footer-border: #6f2600;
     --tc-footer-shadow: rgba(255, 152, 0, 0.08);
-    --tc-heading-colour: #ff9800;
+    --tc-heading-colour: #a63d00;
     --tc-table-bg: #ffffff;
     --tc-table-shadow: rgba(255, 152, 0, 0.04);
     --tc-table-head-bg: #ffe0b2;
-    --tc-table-head-text: #f57c00;
+    --tc-table-head-text: #a63d00;
     --tc-table-striped-bg: #fffde7;
-    --tc-input-border: #ff9800;
-    --tc-input-focus-border: #e65100;
+    --tc-input-border: #a63d00;
+    --tc-input-focus-border: #8f3200;
     --tc-input-focus-shadow: rgba(245, 124, 0, 0.15);
-    --tc-button-bg: #ff9800;
-    --tc-button-border: #ff9800;
-    --tc-button-hover-bg: #f57c00;
-    --tc-button-hover-border: #f57c00;
+    --tc-button-bg: #a63d00;
+    --tc-button-border: #a63d00;
+    --tc-button-hover-bg: #8f3200;
+    --tc-button-hover-border: #8f3200;
     --tc-button-text: #ffffff;
     --tc-dropdown-bg: #ffffff;
-    --tc-dropdown-text: #f57c00;
-    --tc-dropdown-border: #e65100;
+    --tc-dropdown-text: #a63d00;
+    --tc-dropdown-border: #8f3200;
     --tc-dropdown-hover-bg: #ffe0b2;
-    --tc-dropdown-hover-text: #ff9800;
+    --tc-dropdown-hover-text: #a63d00;
     --tc-section-bg: #ffe0b2;
     --tc-section-text: #222222;
     --tc-section-shadow: rgba(255, 152, 0, 0.08);
-    --tc-base: #ff7a00;
-    --tc-base-600: #e66e00;
+    --tc-base: #a63d00;
+    --tc-base-600: #8f3200;
     --tc-on-base: #ffffff;
     --tc-muted: #6c757d;
     --tc-split-gutter: #e0e0e0;
     --tc-split-gutter-hover: #d0d0d0;
     --tc-tree-selected-bg: #ffe0b2;
-    --tc-tree-selected-fg: #e65100;
+    --tc-tree-selected-fg: #a63d00;
     --tc-tree-hover-bg: #fffde7;
     --tc-tree-icon-muted: #6c757d;
     --tc-tree-drop-target-bg: rgba(25, 135, 84, 0.12);
@@ -61,8 +61,8 @@
     --tc-tree-glyph-mapped: #198754;
     --tc-tree-glyph-disabled: #6c757d;
     --tc-mobile-actionbar-shadow: rgba(0, 0, 0, 0.25);
-    --tc-back-btn-gradient-start: #ff9a3d;
-    --tc-back-btn-gradient-end: #ff7a00;
+    --tc-back-btn-gradient-start: #a63d00;
+    --tc-back-btn-gradient-end: #8f3200;
     --tc-back-btn-text: #ffffff;
     --tc-back-btn-shadow: rgba(255, 122, 0, 0.28);
     --tc-back-btn-hover-shadow: rgba(255, 122, 0, 0.34);
@@ -80,7 +80,7 @@
     --tc-admin-bank-icon: #198754;
     --tc-admin-hash-icon: #0dcaf0;
     --tc-admin-tags-icon: #fd7e14;
-    --tc-tax-geo-icon: #f57c00;
+    --tc-tax-geo-icon: #a63d00;
     --tc-tax-diagram-icon: #1976d2;
     --tc-tax-bullseye-icon: #198754;
     --tc-tax-calculator-icon: #6f42c1;
@@ -106,6 +106,12 @@
 }
 
 /* --- Trade Control Corporate Theme (Bootstrap 4/5 compatible) --- */
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid #ffffff !important;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 5px #000000 !important;
+}
 
 /* Header and Navbar */
 header, .navbar, .tc-header {
@@ -478,6 +484,10 @@ select,
     .tc-section dd {
         color: var(--tc-section-text);
         font-size: 1.1rem;
+    }
+
+    .tc-section a {
+        color: #084298;
     }
 
 /* Main content container */

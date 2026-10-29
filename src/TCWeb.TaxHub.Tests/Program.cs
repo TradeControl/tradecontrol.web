@@ -76,6 +76,7 @@ assertions += BusinessClockTests.Run();
 assertions += TenantFileProviderTests.Run();
 assertions += await FileUploadValidationTests.RunAsync();
 assertions += TenantAssetDownloadTests.Run();
+assertions += await CustomerExitArchiveTests.RunAsync();
 assertions += TemplateBootstrapTests.Run(root);
 assertions += PlatformEmailTests.Run(root);
 assertions += await OAuthBrokerTests.RunAsync();
@@ -1101,7 +1102,10 @@ Assert(returnReview.Contains("The values below are read from the immutable prepa
     && returnReview.Contains("following day as the exclusive period boundary", StringComparison.Ordinal)
     && returnReview.Contains("Approve return — does not submit", StringComparison.Ordinal)
     && returnReview.Contains("Not yet submitted to HMRC", StringComparison.Ordinal)
-    && returnReview.Contains("Final step — submit to HMRC", StringComparison.Ordinal),
+    && returnReview.Contains("Final step — submit to HMRC", StringComparison.Ordinal)
+    && returnReview.Contains("aria-label=\"Prepared VAT return values\"", StringComparison.Ordinal)
+    && returnReview.Contains("alert alert-success py-2\" role=\"status\"", StringComparison.Ordinal)
+    && returnReview.Contains("FindingClass(finding.Severity) py-2\" role=\"alert\"", StringComparison.Ordinal),
     "The Phase 6.3 exact-review boundary or separate submit gate is no longer explicit in the UI.");
 Assert(returnReview.Contains("!SubmissionGate.IsEnabled", StringComparison.Ordinal)
     && returnReview.Contains("Approved and retained — not submitted to HMRC", StringComparison.Ordinal),
@@ -1240,6 +1244,9 @@ Assert(filingHistoryView.Contains("VAT filing history", StringComparison.Ordinal
     && filingHistoryView.Contains("All nine retrieved VAT values exactly match", StringComparison.Ordinal)
     && filingHistoryView.Contains("Do not repeat an uncertain submission", StringComparison.Ordinal)
     && filingHistoryView.Contains("Reconcile with HMRC", StringComparison.Ordinal)
+    && filingHistoryView.Split("role=\"status\"", StringSplitOptions.None).Length - 1 >= 4
+    && filingHistoryView.Contains("aria-label=\"VAT readback differences\"", StringComparison.Ordinal)
+    && filingHistoryView.Contains("aria-label=\"Approved VAT return values\"", StringComparison.Ordinal)
     && filingHistoryView.Contains("taxHubHmrc.captureClientFacts", StringComparison.Ordinal)
     && filingHistoryView.Contains("selected Tax Hub period", StringComparison.Ordinal)
     && !filingHistoryView.Contains("SafePayloadReference", StringComparison.Ordinal)

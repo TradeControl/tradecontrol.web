@@ -131,26 +131,26 @@ Trade Control Ltd will maintain reasonable technical and organisational security
 
 Backups, operational logs and statutory evidence serve different purposes and will have separately published retention and recovery arrangements. Statutory evidence will use an approved immutable-retention policy; ordinary backup or soft-deletion controls will not be represented as immutable filing evidence.
 
-**Publication gate:** Complete independent tenant-isolation and security testing, penetration testing, restore and disaster-recovery exercises, incident-response procedures, production authority checks, retention approval and operational access review. Insert the final backup, recovery-point and recovery-time commitments only after those tests establish what can be promised.
+**Publication gate:** Complete independent tenant-isolation and security testing, penetration testing, restore and disaster-recovery exercises, owner adoption of the incident-response procedure and final private contact route, production authority checks, retention approval and operational access review. Insert the final backup, recovery-point and recovery-time commitments only after those tests establish what can be promised.
 
 ## 11. Data export and termination
 
-Customers will be able to obtain their business data and statutory filing evidence through documented export arrangements in a durable, machine-readable form. Available reports and document downloads do not, by themselves, constitute the complete account export.
+Customers will be able to obtain their supported business data through documented export arrangements in durable, machine-readable formats. Available financial reports and the Identity account's personal-data download do not, by themselves, constitute a business account export.
 
-An authorised business owner may request a customer exit package on demand. Because the package contains a complete and highly sensitive copy of the business records, Trade Control Ltd may require renewed authentication, confirmation of the request through an independently recorded channel, and manual operator approval before release. The package will be made available through a protected, time-limited download and the request, approval, access and subsequent deletion will be audited.
+An authenticated tenant administrator can generate a customer-exit archive on demand. The archive is generated in application memory and returned directly over the authenticated HTTPS response; the service does not create a reusable public link or server-side temporary package. The response prohibits caching, provides an export reference and content digest, and the generation event is recorded against the requesting administrator.
 
-The exit package is intended to contain:
+The first-release archive contains:
 
-- a portable export of the tenant database, initially as a BACPAC file;
+- supported physical tenant business tables as UTF-8 JSON arrays;
 - the business's uploaded documents, images and templates;
-- statutory filing payloads, acknowledgements, receipts and sealed evidence held for the business; and
-- a manifest identifying the contents, formats, creation time and cryptographic hashes needed to verify the package.
+- a manifest identifying the table paths, columns, scope, formats, creation time and exclusions; and
+- a SHA-256 digest for package verification.
 
-A BACPAC is a sensitive database-portability format rather than an operational backup, and does not by itself constitute the complete exit package. Trade Control Ltd will document the software and procedure required to restore or migrate each supplied format.
+Infrastructure configuration, operational logs, host passwords, encryption material, OAuth grants and tokens, vendor credentials, central identity credentials and any other tenant's information are excluded. This control provides interpretable customer data; it does not promise automated import into another product or export of protected authority credentials.
 
 Before an account is closed, the customer will be given a reasonable opportunity to obtain the complete export. The published closure process will explain the termination notice, access period, secure deletion timetable, treatment of backups, and any records or immutable filing evidence that Trade Control Ltd must retain. It will also explain the customer's responsibility to retain accounting and statutory records after leaving the service.
 
-**Publication gate:** Implement and verify the authorised request and sign-off process, consistent database export, file and authority-evidence packaging, manifest validation, protected download, expiry, account closure, deletion and recovery processes; then insert the supported formats, fulfilment times, reasonable-use limits, notice periods and approved retention timetable.
+**Publication gate:** Deploy and inspect distinct B5/B6 archives; verify the documented formats and manifest against real synthetic records; complete the account-closure, deletion and recovery processes; and insert fulfilment, reasonable-use, notice and approved retention terms.
 
 Any outstanding charges and applicable statutory record-retention obligations will be handled under the published service terms.
 
@@ -187,7 +187,7 @@ These are pre-launch Terms and Conditions supplied in support of Trade Control's
 
 The `tradecontrol.co.uk` deployment is the sandbox and accreditation environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
 
-This submission copy was derived from `tradecontrol.hosting/docs/legal/trade-control-toc.md` on the clean hosting revision `a61040fdccea7b66937b95717061d4269012674f`. The source legal documents were last changed in hosting commit `d16a2ae` on 24 October 2026.
+This submission copy was derived from `tradecontrol.hosting/docs/legal/trade-control-toc.md` in Trade Control's private internal hosting repository. The clean source baseline was subsequently consolidated and pushed to its private origin as revision `001a5d50a0e4a752ba15e15ae97825d93601be39`; the source legal documents themselves were last changed in hosting commit `d16a2ae` on 24 October 2026. HMRC is not expected to access the private repository; the reference is retained solely for internal provenance.
 
 Before these terms are offered to customers, the final production composition and commercial terms must be checked against this document, every publication gate must be resolved and the text must receive legal approval.
 

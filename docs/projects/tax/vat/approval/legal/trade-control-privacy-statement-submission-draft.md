@@ -68,7 +68,7 @@ Open-source transparency supports independent scrutiny but does not constitute a
 
 The source code and the hosted configuration are separate security boundaries. Publication of the source supports scrutiny of application controls; access to the production subscription, databases, storage, keys and credentials will remain restricted to authorised operators and service identities.
 
-The shared topology has passed independent B1/B2 brokered-authorisation, immutable-approval, explicit sandbox-submission, reconciliation, durable-history and exact-readback journeys. The corrective B3/B4 VAT discovery cases also passed brokered authorisation, populated reciprocal isolation, approval, one HTTP `201` sandbox submission each, exact readback, fraud-header validation and complementary restart recovery. The final live kill-switch refusal belongs to the fresh B5/B6 seamless run governed by the approval matrix.
+The shared topology has passed independent B1/B2 brokered-authorisation, immutable-approval, explicit sandbox-submission, reconciliation, durable-history and exact-readback journeys. The corrective B3/B4 VAT discovery cases also passed brokered authorisation, populated reciprocal isolation, approval, one HTTP `201` sandbox submission each, exact readback, fraud-header validation and complementary restart recovery. B5/B6 then completed the fresh repeatability run: independently verified tenant commissioning, organisation OAuth, live fail-closed kill-switch refusal, restart recovery, explicit sandbox submission, HTTP `201` acceptance, obligation reconciliation, durable history and exact nine-box readback. Their earlier bootstrap-seeding correction remains a separate production-commissioning launch gate and does not invalidate the completed VAT evidence.
 
 **Publication gate:** Complete the remaining tenant-isolation review, penetration test, restoration exercise, incident-response exercise and authority security checks before relying on these controls in an effective customer statement.
 
@@ -121,9 +121,11 @@ The launch retention schedule will separately define periods for:
 
 Short-lived HMRC authorisation state will be deleted when consumed and abandoned state will expire automatically. Statutory filing evidence will be protected against alteration for its approved retention period. Backup retention will not be presented as the retention period for a customer's accounting records or filing evidence.
 
-Customers will be provided with documented arrangements for obtaining their data before account closure and for requesting deletion. Deletion will remain subject to applicable legal obligations, the customer's own record-keeping responsibilities, fraud and security requirements, and any immutable statutory evidence that must be retained.
+An authenticated tenant administrator can use **Admin Manager → Company → Customer Exit** to review the export scope and security guidance, acknowledge the per-download warning and generate an on-demand customer-exit archive containing the tenant's supported business tables as documented UTF-8 JSON and its tenant-owned documents, templates and images in their original formats. The archive includes a manifest and content digest, is generated in memory without server-side temporary files, and excludes infrastructure configuration, operational logs, credentials, encryption material and OAuth grants. The generation event is attributable to the requesting administrator. This is a data-access and portability control; it does not promise automatic migration into another product, close the account or immediately delete records that must lawfully be retained.
 
-**Publication gate:** Approve and insert the actual retention periods, implement the full tenant export and closure workflow, lock the statutory-evidence retention policy, and verify deletion and recovery before publication.
+Customers will be provided with documented arrangements for obtaining this archive before account closure and for requesting deletion. Deletion will remain subject to applicable legal obligations, the customer's own record-keeping responsibilities, fraud and security requirements, and any immutable statutory evidence that must be retained.
+
+**Publication gate:** Deploy and exercise the customer-exit archive against both synthetic tenants; approve and insert the actual retention periods; complete the account-closure workflow; lock the statutory-evidence retention policy; and verify deletion and recovery before publication.
 
 ## 10. Individual rights
 
@@ -141,9 +143,9 @@ Security concerns may be reported to office@tradecontrol.co.uk until a dedicated
 
 Trade Control welcomes responsible security research and contributions to its open-source projects.
 
-Before launch, Trade Control Ltd will publish a vulnerability-disclosure procedure and establish documented incident assessment, containment, recovery and legally required notification processes.
+Trade Control Ltd maintains a documented incident assessment, containment, recovery and notification procedure. Issues affecting personal or customer data are escalated immediately for HMRC notification through Developer Hub support, with the required details supplied within 72 hours. Personal-data breaches are assessed separately against the UK GDPR notification thresholds, including notification to the applicable customer controller without undue delay where Trade Control acts as processor.
 
-**Publication gate:** Insert the final security contact and link to the reviewed vulnerability-disclosure procedure.
+**Publication gate:** Insert the final security contact, link to the reviewed vulnerability-disclosure procedure and complete the separate security-assurance exercise.
 
 ## 12. Changes to this statement
 
@@ -157,7 +159,7 @@ This is a pre-launch Privacy Statement supplied in support of Trade Control's HM
 
 The `tradecontrol.co.uk` deployment is the sandbox and accreditation environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
 
-This submission copy was derived from `tradecontrol.hosting/docs/legal/trade-control-privacy-policy.md` on the clean hosting revision `a61040fdccea7b66937b95717061d4269012674f`. The source legal documents were last changed in hosting commit `d16a2ae` on 24 October 2026.
+This submission copy was derived from `tradecontrol.hosting/docs/legal/trade-control-privacy-policy.md` in Trade Control's private internal hosting repository. The clean source baseline was subsequently consolidated and pushed to its private origin as revision `001a5d50a0e4a752ba15e15ae97825d93601be39`; the source legal documents themselves were last changed in hosting commit `d16a2ae` on 24 October 2026. HMRC is not expected to access the private repository; the reference is retained solely for internal provenance.
 
 Before publication as an effective customer notice, the final production composition must be checked against this statement, every publication gate must be resolved and the text must receive legal approval.
 

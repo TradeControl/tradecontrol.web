@@ -1,5 +1,19 @@
 # Tax Change Log
 
+## 28 October 2026 — VAT application preflight and public baseline
+
+- Completed the bounded Compliance Readiness Pass 1 without starting penetration testing, active vulnerability scanning or the data-protection security-control audit reserved for Pass 2.
+- Added repeatable WCAG 2.2 A/AA Playwright/axe coverage and a criterion matrix. The first public-page run found a 3.68:1 blue primary-button contrast defect; changed the source theme tokens to Level AA-capable colours and retained deployment/authenticated/manual/screen-reader verification as an explicit HOLD.
+- Added an HMRC/ICO incident-response procedure, private record template and synthetic cross-tenant tabletop, distinguishing defects, security incidents and risk-based personal-data-breach notifications.
+- Added the pre-launch GDPR accountability inventory, DPIA decision, Article 28 draft and explicit owner/legal decisions rather than treating encryption or tenant isolation as a complete GDPR attestation.
+- Implemented an authenticated tenant-administrator customer-exit archive with documented JSON tables, tenant files, manifest/digest, protected exclusions, no temporary server package, no-cache delivery and attributable audit event. The application build passed without warnings or errors and the full Tax Hub boundary executable passed 329 assertions; B5/B6 deployment demonstrations remain required.
+- Updated the Privacy Statement to record the completed B5/B6 VAT journey and to describe the implemented customer-exit and incident controls as pre-launch material. All legal-document changes remain proposed for owner review.
+- Recorded the consolidated public application baselines as `tradecontrol.web` `f169e79` and Tax Hub `6bd0702`, plus private internal hosting baseline `tradecontrol.hosting` `001a5d5`, while retaining the actual deployed discovery revision identifiers in the evidence history. The public dossier does not imply that HMRC can inspect the private hosting repository.
+- Updated the Phase 6.7 dossier to distinguish the completed clean B5/B6 HMRC VAT evidence from the separate production-launch requirement to deploy the committed first-registration correction and prove seamless fresh-database Business Node delivery.
+- Began the Developer Hub application under direct human control: the initial software-distribution branch was answered **Yes** and the VAT API selected. Paused on HMRC's checklist for consistency, anonymous-URL and redaction preflight before further answers.
+- Re-pinned the submission Privacy Statement and Terms and Conditions provenance to the private pushed hosting baseline, explicitly noting that HMRC is not expected to access that repository. No HMRC terms were accepted, no production credentials requested or created, no protected identifier disclosed and no final application submitted.
+- Left the documentation changes uncommitted for human review.
+
 ## 27 October 2026 — B5/B6 bootstrap correction and authorised sandbox evidence
 
 - Classified `tradecontrol.co.uk` as the pre-launch sandbox accreditation environment on the intended production topology, not as a live customer service.

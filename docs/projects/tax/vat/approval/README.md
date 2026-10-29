@@ -7,6 +7,9 @@ This package describes a pre-launch sandbox accreditation environment, not a liv
 ## Evidence package
 
 - [Production-access evidence dossier](vat-production-access-evidence.md) — scope, evidence rules, completed HMRC evidence, and the separate Business Node production-launch gate.
+- [Compliance accessibility review](accessibility-review.md) — WCAG 2.2 benchmark, repeatable checks, detected contrast correction and explicit remaining evidence.
+- [Security incident response](security-incident-response.md) — public notification, containment and evidence-handling procedure supported by a private synthetic tabletop.
+- [Customer data exit control](customer-data-exit.md) — deployed authenticated business-data export, exclusions, independent B5/B6 exercise and owner acceptance.
 - [Legal submission documents](legal/README.md) — pre-launch Privacy Statement and managed-hosting Terms and Conditions, with topology context, provenance and publication gates.
 - [Phase 6.7 approval record](../phase-6.7-hmrc-production-approval.md) — governing status, external gates and owner controls.
 - [Phase 6.6 readiness evidence](../phase-6.6-hmrc-approval-readiness.md) — preserved single-tenant technical baseline.
@@ -29,4 +32,4 @@ Public evidence records whether a required result was proved. Protected evidence
 
 ## Current gate
 
-Review, commit and deploy the first-registration bootstrap correction, then prove seamless Business Node delivery from an empty database before production launch. B5/B6 already supply the clean HMRC VAT evidence from independently verified commissioned tenants. Their VAT filings need be repeated only if HMRC requests newer logs, selected API retesting or evidence from a materially changed filing topology. Production deployment remains gated on both evidence streams passing independently.
+The first-registration bootstrap correction is reviewed, committed and published in `tradecontrol.web` `f169e79`. Deploy that correction and prove seamless Business Node delivery from an empty database before production launch. B5/B6 already supply the clean HMRC VAT evidence from independently verified commissioned tenants. Their VAT filings need be repeated only if HMRC requests newer logs, selected API retesting or evidence from a materially changed filing topology. Production deployment remains gated on both evidence streams passing independently.

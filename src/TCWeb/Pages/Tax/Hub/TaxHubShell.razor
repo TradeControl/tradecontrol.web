@@ -263,7 +263,10 @@ else
         : string.Join(" ", VatReportingProfile.Findings);
 
     private RenderFragment LoadingIndicator(string text) => @<div class="tc-tax-hub-loading" role="status" aria-live="polite" aria-atomic="true">
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Medium" />
+        <MudProgressCircular Color="Color.Primary"
+                             Indeterminate="true"
+                             Size="Size.Medium"
+                             aria-label="@text" />
         <span>@text</span>
     </div>;
 

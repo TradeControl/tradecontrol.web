@@ -96,6 +96,22 @@
 .tc-tax-hub-sidebar-toggle {
     flex: 0 0 auto;
     margin-left: auto;
+    min-width: 2rem;
+    min-height: 2rem;
+}
+
+.tc-tax-hub-hmrc-manage {
+    min-width: 2rem;
+    min-height: 1.5rem;
+    padding-inline: 0.25rem !important;
+}
+
+.tc-tax-hub details > summary {
+    min-height: 1.5rem;
+    display: list-item;
+    cursor: pointer;
+    font-weight: 600;
+    padding-block: 0.25rem;
 }
 
 .tc-tax-hub-sidebar-collapsed .tc-tax-hub-sidebar-header {
@@ -186,8 +202,9 @@
     min-height: 0;
 }
 
-/* MudTabs renders panels beneath its tab toolbar. Keep that generated wrapper in
-   the bounded workspace and let the active panel own vertical scrolling. */
+/* MudTabs renders panels beneath its tab toolbar. Current MudBlazor versions
+   render the active .mud-tab-panel as display: contents, so the generated
+   panels wrapper must own vertical scrolling. */
 .tc-tax-hub-vat > .mud-tabs,
 .tc-tax-hub-business-tax > .mud-tabs,
 .tc-tax-hub-accounts > .mud-tabs {
@@ -202,7 +219,9 @@
 .tc-tax-hub-accounts > .mud-tabs > .mud-tabs-panels {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
 }
 
 .tc-tax-hub-vat > .mud-tabs > .mud-tabs-panels > .mud-tab-panel,
@@ -210,7 +229,6 @@
 .tc-tax-hub-accounts > .mud-tabs > .mud-tabs-panels > .mud-tab-panel {
     height: 100%;
     min-height: 0;
-    overflow: auto;
 }
 
 .tc-tax-hub-summary-card {

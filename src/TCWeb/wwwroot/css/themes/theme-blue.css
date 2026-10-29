@@ -1,17 +1,17 @@
 :root {
-    --tc-header-gradient-start: #1e88e5;
-    --tc-header-gradient-end: #1565c0;
+    --tc-header-gradient-start: #1565c0;
+    --tc-header-gradient-end: #0d47a1;
     --tc-header-border: #0d47a1;
     --tc-header-link-hover: #e3f2fd;
     --tc-brand-text: #e3f2fd;
-    --tc-brand-hover: #bbdefb;
-    --tc-auth-link: #90caf9;
+    --tc-brand-hover: #ffffff;
+    --tc-auth-link: #ffffff;
     --tc-auth-link-hover: #ffffff;
-    --tc-footer-bg: #1e88e5;
+    --tc-footer-bg: #1565c0;
     --tc-footer-text: #ffffff;
     --tc-footer-border: #0d47a1;
     --tc-footer-shadow: rgba(30, 136, 229, 0.12);
-    --tc-heading-colour: #1e88e5;
+    --tc-heading-colour: #1565c0;
     --tc-table-shadow: rgba(30, 136, 229, 0.06);
     --tc-table-head-bg: #bbdefb;
     --tc-table-head-text: #0d47a1;
@@ -19,10 +19,10 @@
     --tc-input-border: #1e88e5;
     --tc-input-focus-border: #1565c0;
     --tc-input-focus-shadow: rgba(21, 101, 192, 0.15);
-    --tc-button-bg: #1e88e5;
-    --tc-button-border: #1e88e5;
-    --tc-button-hover-bg: #1565c0;
-    --tc-button-hover-border: #1565c0;
+    --tc-button-bg: #1565c0;
+    --tc-button-border: #1565c0;
+    --tc-button-hover-bg: #0d47a1;
+    --tc-button-hover-border: #0d47a1;
     --tc-dropdown-text: #1565c0;
     --tc-dropdown-border: #0d47a1;
     --tc-dropdown-hover-bg: #bbdefb;

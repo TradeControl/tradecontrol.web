@@ -21,7 +21,7 @@
             <div class="alert alert-warning" role="alert">@_error</div>
             @foreach (var finding in _blockingFindings)
             {
-                <div class="alert @FindingClass(finding.Severity) py-2">
+                <div class="alert @FindingClass(finding.Severity) py-2" role="alert">
                     <strong>@finding.Severity.ToUpperInvariant()</strong> @finding.Code — @finding.Message
                 </div>
             }
@@ -38,7 +38,7 @@
             </div>
 
             <div class="table-responsive mb-3">
-                <table class="table table-sm align-middle">
+                <table class="table table-sm align-middle" aria-label="Prepared VAT return values">
                     <thead><tr><th>Box</th><th>Statutory description</th><th class="text-end">Value</th></tr></thead>
                     <tbody>
                     @foreach (var box in _review.Boxes)
@@ -51,13 +51,13 @@
 
             @if (_review.Findings.Count == 0)
             {
-                <div class="alert alert-success py-2">PASS — no preparation or reconciliation findings.</div>
+                <div class="alert alert-success py-2" role="status">PASS — no preparation or reconciliation findings.</div>
             }
             else
             {
                 @foreach (var finding in _review.Findings)
                 {
-                    <div class="alert @FindingClass(finding.Severity) py-2">
+                    <div class="alert @FindingClass(finding.Severity) py-2" role="status">
                         <strong>@finding.Severity.ToUpperInvariant()</strong> @finding.Code — @finding.Message
                     </div>
                 }

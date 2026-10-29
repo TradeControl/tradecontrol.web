@@ -15,7 +15,7 @@ The documents describe the intended accredited service while retaining explicit 
 
 ## Provenance
 
-Both documents were copied on 26 October 2026 from the clean `main` branch of `tradecontrol.hosting` at revision `a61040fdccea7b66937b95717061d4269012674f`:
+Both documents were copied on 26 October 2026 from the clean `main` branch of the private internal `tradecontrol.hosting` repository. That source was subsequently consolidated and pushed to its private origin at revision `001a5d50a0e4a752ba15e15ae97825d93601be39`. HMRC is not expected to access that repository; this reference is retained solely for internal provenance:
 
 - `docs/legal/trade-control-privacy-policy.md`
 - `docs/legal/trade-control-toc.md`
