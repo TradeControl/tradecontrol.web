@@ -1,8 +1,8 @@
 # HMRC VAT production-access evidence dossier
 
-27 October 2026
+30 October 2026
 
-**Status:** This is evidence from a pre-launch sandbox accreditation environment on the intended shared multi-tenant Azure topology; it is not a live customer service. B3/B4 proved the corrected OAuth-status and tenant-context boundaries. After B5/B6 were independently verified as valid commissioned VAT-registered tenants, both completed a clean HMRC VAT process without corrective code or tenant-data adjustment: fresh organisation OAuth, immutable preparation and approval, live fail-closed tenant submission gates, shared Linux App Service restart recovery, one explicitly authorised sandbox submission, HTTP `201`, fulfilled-obligation reconciliation, exact nine-box HMRC readback and durable filing history. Fraud-header validation used specification 3.3 with zero errors and the two previously disclosed truthful empty-value warnings. A separate pre-OAuth first-registration bootstrap defect remains a Business Node commissioning finding and production-launch gate. Production credentials have not been requested, HMRC terms have not been accepted, no production return has been filed and the final application has not been submitted.
+**Status:** This is evidence from a pre-launch sandbox accreditation environment on the intended shared multi-tenant Azure topology; it is not a live customer service. B3/B4 proved the corrected OAuth-status and tenant-context boundaries. After B5/B6 were independently verified as valid commissioned VAT-registered tenants, both completed a clean HMRC VAT process without corrective code or tenant-data adjustment: fresh organisation OAuth, immutable preparation and approval, live fail-closed tenant submission gates, shared Linux App Service restart recovery, one explicitly authorised sandbox submission, HTTP `201`, fulfilled-obligation reconciliation, exact nine-box HMRC readback and durable filing history. Fraud-header validation used specification 3.3 with zero errors and the two previously disclosed truthful empty-value warnings. Compliance Readiness Pass 1 is complete for application review. The bounded Pass 2 assessment is complete; deployed jQuery 3.7.1 and self-hosted `jquery-validation` 1.22.1 close the two browser-library findings by separate retests. No high or critical application finding remains open. Production credentials have not been requested, HMRC terms have not been accepted, no production return has been filed and the final application has not been submitted.
 
 ## Purpose
 
@@ -12,18 +12,20 @@ It is modelled on the completed Companies House approval package: planned result
 
 ## Reviewed baselines
 
-| Repository | Reviewed revision | Working-tree state at review | Publication state |
+| Repository | Reviewed revision | Evidence role | Public accessibility |
 |---|---|---|---|
-| `tradecontrol.web` | `1f8deca` (B3/B4 deployed discovery provenance); `446e865` (B5/B6 deployed discovery baseline); `f169e79` (current consolidated public baseline) | Clean at the published baseline; documentation preflight changes remain uncommitted for review | `f169e79` published |
-| `tradecontrol.hosting` | `a61040f` (deployed discovery baseline); `001a5d5` (current amended private baseline) | Clean | `001a5d5` pushed to the private origin; not accessible to HMRC |
+| `tradecontrol.web` | `1f8deca` (B3/B4 deployed discovery provenance); `446e865` (B5/B6 deployed discovery baseline); `f169e79` (consolidated filing baseline); `3666059` (deployed security-hardening baseline); the public revision containing this dossier (validation closure and submission package) | Preserves the code/evidence sequence without relabelling failed commissioning attempts | Public GitHub repository; this dossier's revision is the controlling submission source |
+| `tradecontrol.hosting` | `a61040f` (deployed discovery baseline); `001a5d5` (current amended private baseline) | Internal infrastructure provenance only; the material topology is stated in this dossier | Private and not presented as evidence HMRC must open |
 
 The discovery revisions define the attempted no-corrective-coding baselines. Their later consolidation and documentation-only evidence updates do not change the deployed product baseline. Any product, database, infrastructure, configuration-contract or manual tenant-data correction needed to make a journey pass is recorded as a failed commissioning attempt.
 
 The B3/B4 authorisations exposed the refresh-lease and circuit-scoped EF-context defects; those corrections were reviewed and committed as part of deployed discovery revision `446e865` before B5/B6 began. B5/B6 then exposed a different hosted first-registration defect: the configured bootstrap-administrator redirect reached Identity registration before `NodeContext.InitializeNode()`, so required jurisdictions, templates, units and months were absent when business commissioning began. A bounded transaction seeded the lookups, commissioned each tenant and restored its single registered Identity account byte-for-byte before OAuth. The product correction now detects the missing lookup state and seeds it before the first Identity record is created; the regression suite and full Visual Studio build pass, and the correction is included in public baseline `f169e79`. It was not deployed for the B5/B6 run. This fails the seamless Business Node commissioning claim, but it does not invalidate the later clean HMRC process, which began only after each tenant's identity, statutory profile, year set and `18A2` eligibility had been independently verified.
 
-The consolidated application baselines are available from the linked public repositories. `tradecontrol.hosting` is a private internal provenance reference and is not presented as evidence HMRC can open. The public dossier states the material topology, controls and results directly. Historical deployed discovery identifiers are retained so the recorded runs remain interpretable after consolidation.
+The consolidated application baselines are identified by the public repository revision containing this dossier. `tradecontrol.hosting` is a private internal provenance reference and is not presented as evidence HMRC can open. The public dossier states the material topology, controls and results directly. Historical deployed discovery identifiers are retained so the recorded runs remain interpretable after consolidation.
 
-## Prerequisite evidence — B1 and B2
+## Historical shared-host prerequisite — B1 and B2
+
+B1/B2 are retained here only to explain the earlier hosting prerequisite. They are not the final VAT application cases: B3/B4 provide corrective discovery provenance, B5/B6 provide the clean VAT evidence, and B1/B2 remain reserved for the separate Corporation Tax journey.
 
 B1 and B2 independently passed the shared-host journey through:
 
@@ -228,7 +230,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 | Exact nine-box readback | **Discovery pass — period key and all nine values matched exactly** |
 | Fraud-header validation | **Discovery pass — specification 3.3; zero errors; two disclosed truthful empty-value warnings** |
 | Durable history/evidence | **Discovery pass — accepted receipt class, digest match and exact readback retained after restart** |
-| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; the then-uncommitted candidate was deployed for discovery and later consolidated into `f169e79` |
+| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; the discovery candidate was deployed and later consolidated into `f169e79` |
 | Case conclusion | **Corrective HMRC discovery complete; B5 later supplied the clean VAT repeat and live kill-switch evidence** |
 
 ## B4 result sheet — sole trader
@@ -253,7 +255,7 @@ Every future external write in this sequence remains separately human-gated. Thi
 | Exact nine-box readback | **Discovery pass — period key and all nine values matched exactly** |
 | Fraud-header validation | **Discovery pass — specification 3.3; zero errors; two disclosed truthful empty-value warnings** |
 | Durable history/evidence | **Discovery pass — accepted receipt class, digest match and exact readback retained across the post-acceptance restart** |
-| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; the then-uncommitted candidate was deployed for discovery and later consolidated into `f169e79` |
+| Corrective coding required | Yes — the journey exposed connection-status representation, OAuth lease-surface and EF context-lifetime defects; the discovery candidate was deployed and later consolidated into `f169e79` |
 | Case conclusion | **Corrective HMRC discovery complete; B6 later supplied the clean VAT repeat and live kill-switch evidence** |
 
 ## B5 result sheet — Standard Micro Entity
@@ -310,6 +312,16 @@ Every future external write in this sequence remains separately human-gated. Thi
 | HMRC journey corrective action | **None — no code or tenant-data correction from verified VAT readiness through exact readback** |
 | Case conclusion | **Clean HMRC VAT journey passed; seamless Business Node delivery remains a separate production-launch gate** |
 
+## Compliance and security readiness
+
+Compliance Readiness Pass 1 exercised the public and authenticated accessibility scope, complete no-submission VAT journey, keyboard and screen-reader behaviour, 400% zoom, safe error/focus handling, incident procedure/tabletop and customer-data exit control. The public [accessibility review](accessibility-review.md), [incident-response procedure](security-incident-response.md) and [customer-exit record](customer-data-exit.md) preserve the application evidence without claiming independent certification or completed live-customer legal arrangements.
+
+Security Assurance Pass 2 used OWASP ZAP, source/configuration review, dependency analysis, repeatable boundary tests, a bounded authenticated Client Spider and manually reasoned tenant checks against B5/B6 and the OAuth broker. No tenant crossover or statutory-state mutation was found. The missing resource-integrity and insecure-cookie findings were corrected and retested; server-banner, host-boundary, development-dependency, password-policy and broker-throttling hardening was also deployed. Deployed jQuery 3.7.1 and self-hosted `jquery-validation` 1.22.1 close the two browser-library findings by separate retests. The [penetration-test summary](penetration-test-summary.md) records the scope, stop condition, timeout triage and limitations.
+
+The remaining content-policy use of legacy inline script/style support is accepted and disclosed as defence-in-depth; no injection exploit was demonstrated. Comprehensive Azure resource diagnostic export is retained as a live-production monitoring and retention decision. The [data-protection security-controls audit](data-protection-security-controls-audit.md) records that position without claiming full UK GDPR certification.
+
+These results support pre-launch HMRC application review. Final publication, consistency checking and the Developer Hub submission remain under contemporaneous human control. Commercial launch remains prohibited until HMRC grants the necessary accreditation and the separate live-customer contractual, retention, monitoring and operational gates are completed.
+
 ## Completion gate
 
 The HMRC VAT sandbox matrix is complete. B3/B4 provide corrective discovery provenance; B5/B6 provide clean, independently repeated HMRC journeys from verified commissioned tenants. Together they prove populated reciprocal isolation, brokered OAuth, immutable approval, live fail-closed tenant gates, shared-host restart recovery, separately authorised sandbox acceptance, already-filed reconciliation, exact readback, fraud-header validation and retained history on the intended multi-tenant topology.
@@ -322,6 +334,8 @@ Completion of this matrix permits human review of the production-credentials app
 
 - [Phase 6.7 production approval](../phase-6.7-hmrc-production-approval.md)
 - [Phase 6.6 readiness evidence](../phase-6.6-hmrc-approval-readiness.md)
+- [Software penetration-test summary](penetration-test-summary.md)
+- [Data-protection security-controls audit](data-protection-security-controls-audit.md)
 - [VAT Work Plan 6](../tax-hub-workplan-6.md)
 - [Tax findings](../../findings.md)
 - [Tax change log](../../change-log.md)

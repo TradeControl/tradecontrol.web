@@ -15,11 +15,8 @@ The documents describe the intended accredited service while retaining explicit 
 
 ## Provenance
 
-Both documents were copied on 26 October 2026 from the clean `main` branch of the private internal `tradecontrol.hosting` repository. That source was subsequently consolidated and pushed to its private origin at revision `001a5d50a0e4a752ba15e15ae97825d93601be39`. HMRC is not expected to access that repository; this reference is retained solely for internal provenance:
+Both documents were derived on 26 October 2026 from the corresponding legal drafts in Trade Control's private internal hosting repository and reconciled against the completed public accreditation evidence on 30 October 2026. The public `tradecontrol.web` revision containing these documents is the controlling submission source that HMRC can open. Private repository paths and revisions are retained only in the internal evidence record.
 
-- `docs/legal/trade-control-privacy-policy.md`
-- `docs/legal/trade-control-toc.md`
-
-The source legal documents were last changed in hosting commit `d16a2ae` on 24 October 2026. This repository holds the submission copies so a public, commit-specific URL can identify exactly what accompanied the application without suggesting that the drafts are already effective on the Trade Control website.
+This repository holds the submission copies so a public, revision-specific URL can identify exactly what accompanied the application without suggesting that the drafts are already effective on the Trade Control website.
 
 Before submission, replace any remaining open publication-gate language only where retained evidence and legal review support a definitive statement. Do not invent service commitments, retention periods, subprocessors, accreditation status or an effective date.

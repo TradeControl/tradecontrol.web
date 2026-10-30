@@ -68,4 +68,4 @@ The procedure was exercised on 28 October 2026 using a synthetic cross-tenant di
 
 ## Document status
 
-This procedure is proposed for owner adoption as part of the pre-launch HMRC production-access package. Adopting it creates an operational process; it does not state that a real incident has occurred, that a notification has been made, or that the separate security-assurance exercise has passed.
+This procedure was adopted on 30 October 2026 by Trade Control Ltd's responsible individual for the pre-launch HMRC production-access process. The private incident telephone number is retained outside the public repository and will be supplied through the appropriate private authority channel when required. Adoption creates the operational process; it does not state that a real incident has occurred or that a notification has been made.

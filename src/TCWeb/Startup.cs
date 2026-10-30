@@ -151,7 +151,7 @@ namespace TradeControl.Web
                         "default-src 'self'; "
                         + "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; frame-src 'self'; "
                         + "form-action 'self'; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; "
-                        + "script-src 'self' 'unsafe-inline' https://ajax.aspnetcdn.com https://cdn.jsdelivr.net "
+                        + "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
                         + "https://code.jquery.com https://unpkg.com; "
                         + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; "
                         + "connect-src 'self' "

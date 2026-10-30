@@ -131,7 +131,7 @@ Trade Control Ltd will maintain reasonable technical and organisational security
 
 Backups, operational logs and statutory evidence serve different purposes and will have separately published retention and recovery arrangements. Statutory evidence will use an approved immutable-retention policy; ordinary backup or soft-deletion controls will not be represented as immutable filing evidence.
 
-**Publication gate:** Complete independent tenant-isolation and security testing, penetration testing, restore and disaster-recovery exercises, owner adoption of the incident-response procedure and final private contact route, production authority checks, retention approval and operational access review. Insert the final backup, recovery-point and recovery-time commitments only after those tests establish what can be promised.
+The application-scope tenant-isolation and penetration testing is complete, and the responsible individual has adopted the incident-response procedure for the accreditation process. Before these terms are offered to customers, complete the restore and disaster-recovery exercises, activate and test the final live contact route, complete production authority checks, approve retention and perform the operational access review. Insert final backup, recovery-point and recovery-time commitments only after those exercises establish what can be promised.
 
 ## 11. Data export and termination
 
@@ -150,7 +150,7 @@ Infrastructure configuration, operational logs, host passwords, encryption mater
 
 Before an account is closed, the customer will be given a reasonable opportunity to obtain the complete export. The published closure process will explain the termination notice, access period, secure deletion timetable, treatment of backups, and any records or immutable filing evidence that Trade Control Ltd must retain. It will also explain the customer's responsibility to retain accounting and statutory records after leaving the service.
 
-**Publication gate:** Deploy and inspect distinct B5/B6 archives; verify the documented formats and manifest against real synthetic records; complete the account-closure, deletion and recovery processes; and insert fulfilment, reasonable-use, notice and approved retention terms.
+**Publication gate:** Distinct B5/B6 archives, formats, manifests and synthetic records have been inspected. Before these terms are offered to customers, complete the account-closure, deletion and recovery processes and insert fulfilment, reasonable-use, notice and approved retention terms.
 
 Any outstanding charges and applicable statutory record-retention obligations will be handled under the published service terms.
 
@@ -187,10 +187,10 @@ These are pre-launch Terms and Conditions supplied in support of Trade Control's
 
 The `tradecontrol.co.uk` deployment is the sandbox and accreditation environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
 
-This submission copy was derived from `tradecontrol.hosting/docs/legal/trade-control-toc.md` in Trade Control's private internal hosting repository. The clean source baseline was subsequently consolidated and pushed to its private origin as revision `001a5d50a0e4a752ba15e15ae97825d93601be39`; the source legal documents themselves were last changed in hosting commit `d16a2ae` on 24 October 2026. HMRC is not expected to access the private repository; the reference is retained solely for internal provenance.
+This submission copy was derived from the corresponding draft in Trade Control's private internal hosting repository and reconciled against the completed public accreditation evidence on 30 October 2026. The public `tradecontrol.web` revision containing this document is the controlling submission source. Private source paths and revisions remain in the internal evidence record and are not presented as material HMRC must access.
 
 Before these terms are offered to customers, the final production composition and commercial terms must be checked against this document, every publication gate must be resolved and the text must receive legal approval.
 
-**Submission draft date:** 26 October 2026
+**Submission draft date:** 30 October 2026
 
 **Effective date:** Not yet effective.

@@ -20,8 +20,7 @@ Run from `src/tests/ui`:
 ```powershell
 npm.cmd install
 $env:BASE_URL='https://business5.tradecontrol.co.uk'
-$env:TEST_USERNAME='<tenant application user>'
-$env:TEST_PASSWORD='<read from the approved private source>'
+# Supply TEST_USERNAME and TEST_PASSWORD to the current process from the approved private source.
 npx.cmd playwright test tests/vat-compliance.accessibility.spec.ts --project=edge
 ```
 
@@ -33,7 +32,7 @@ The first public-page run detected a repeated blue-theme contrast defect: primar
 
 The first authenticated B5 run then detected insufficient contrast in the orange user theme, an unnamed Tax Hub loading indicator and a missing visible first-focus indicator. The theme tokens were darkened, the loading indicator was named and a two-colour focus treatment was applied. Extending the suite to Customer Exit exposed three Admin Manager expanders whose effective safe target was 23.6 pixels rather than the required 24 pixels; those controls now have a 28-pixel minimum. Independent B6 testing then exposed the equivalent contrast defect in its green user theme, which received the same bounded correction.
 
-On 29 October the owner confirmed that Blue is the default presentation and that the established bright Orange palette must remain available unchanged because it is used throughout the published product screenshots. The pending source therefore restores the original Orange palette. The earlier B5 result proves the temporarily darkened palette only; it is not evidence that the restored optional Orange presentation meets the contrast criterion. The final assessment will exercise the authenticated VAT journey in the default Blue presentation and verify that the accessible user-theme selector provides a clear route back to that presentation. No claim is made that every optional colour palette independently conforms.
+On 29 October the owner confirmed that Blue is the default presentation and that the established bright Orange palette must remain available unchanged because it is used throughout the published product screenshots. The deployed source restores the original Orange palette. The earlier B5 result proves the temporarily darkened palette only; it is not evidence that the restored optional Orange presentation meets the contrast criterion. The final authenticated VAT assessment used the default Blue presentation and verified that the labelled user-theme selector had Default selected. No claim is made that every optional colour palette independently conforms.
 
 The final correction was deployed to the B5/B6 Integration topology on 28 October 2026 as deployment `ec3799cf-6a1c-4e3b-9ba0-2fca729fdc49`. Separate Edge runs against B5 and B6 each passed four public checks and nine authenticated checks. The authenticated cases cover Dashboard, Tax Hub and Customer Exit with axe WCAG 2.2 A/AA analysis, a main-landmark/visible-first-focus assertion and 320 CSS-pixel reflow. No automatically detectable WCAG 2.2 A/AA violation remained on the assessed pages. Protected test artifacts are retained only under the ignored local evidence area. Earlier restricted-runner and superseded discovery failures are not counted as final product evidence.
 
@@ -41,7 +40,7 @@ A subsequent live B5 keyboard and zoom review confirmed the primary navigation's
 
 The owner then completed a bounded Windows Narrator check on the deployed B5 Customer Exit page. Heading navigation announced the page and content headings; control navigation announced the complete confirmation-checkbox label and unchecked state, the download button and its unavailable state, and the guide link. No confirmation was selected and no download was invoked.
 
-On 29 October a fresh B7 Standard Micro Entity tenant was commissioned specifically for the remaining full VAT-journey evidence. Its default Blue public checks passed, and an owner-authenticated Tax Hub inspection confirmed the main landmark and heading structure, named HMRC connection region, intelligible disconnected guidance, labelled VAT tabs/tables and retained focus when Filing History was selected. A missing B7 broker return-host entry was found during the first connection attempt and corrected as Integration configuration without product-code or database changes. The owner then completed Elvin Lee's sandbox OAuth. The live journey retrieved obligations, prepared a named immutable nine-box return with PASS reconciliation, gated approval behind an explicit declaration, announced that approval did not submit, retained the approved return across reload and exposed an explicit non-destructive submission-disabled state. No VAT submission has been authorised or made.
+On 29 October a fresh B7 Standard Micro Entity tenant was commissioned specifically for the remaining full VAT-journey evidence. Its default Blue public checks passed, and an owner-authenticated Tax Hub inspection confirmed the main landmark and heading structure, named HMRC connection region, intelligible disconnected guidance, labelled VAT tabs/tables and retained focus when Filing History was selected. A missing B7 broker return-host entry was found during the first connection attempt and corrected as Integration configuration without product-code or database changes. The owner then completed the B7 sandbox OAuth. The live journey retrieved obligations, prepared a named immutable nine-box return with PASS reconciliation, gated approval behind an explicit declaration, announced that approval did not submit, retained the approved return across reload and exposed an explicit non-destructive submission-disabled state. No VAT submission has been authorised or made.
 
 The same session verified that the labelled Theme selector had Default selected. It also exposed an incomplete account title and unnamed tenant-brand link. The shared layout correction was built, deployed and verified as `Profile - Business 7 Ltd` with a named Business 7 Ltd link. The deployment's Linux App Service restart retained B7's Connected grant and approved/not-submitted return while the tenant filing gate remained disabled.
 
@@ -67,4 +66,4 @@ The criterion matrix records multimedia criteria as not applicable to the assess
 
 ## Document status
 
-Public, non-secret Pass 1 evidence for owner review. Detailed local results and the criterion matrix remain in the ignored evidence area until the review is complete.
+Public, non-secret Pass 1 evidence for owner attestation. Detailed local results and the criterion matrix remain in the ignored evidence area.

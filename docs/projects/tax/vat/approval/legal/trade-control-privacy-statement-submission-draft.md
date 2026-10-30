@@ -68,13 +68,13 @@ Open-source transparency supports independent scrutiny but does not constitute a
 
 The source code and the hosted configuration are separate security boundaries. Publication of the source supports scrutiny of application controls; access to the production subscription, databases, storage, keys and credentials will remain restricted to authorised operators and service identities.
 
-The shared topology has passed independent B1/B2 brokered-authorisation, immutable-approval, explicit sandbox-submission, reconciliation, durable-history and exact-readback journeys. The corrective B3/B4 VAT discovery cases also passed brokered authorisation, populated reciprocal isolation, approval, one HTTP `201` sandbox submission each, exact readback, fraud-header validation and complementary restart recovery. B5/B6 then completed the fresh repeatability run: independently verified tenant commissioning, organisation OAuth, live fail-closed kill-switch refusal, restart recovery, explicit sandbox submission, HTTP `201` acceptance, obligation reconciliation, durable history and exact nine-box readback. Their earlier bootstrap-seeding correction remains a separate production-commissioning launch gate and does not invalidate the completed VAT evidence.
+The corrective B3/B4 VAT discovery cases exercised brokered authorisation, populated reciprocal isolation, approval, sandbox filing boundaries, exact readback, fraud-header validation and restart recovery. B5/B6 then completed the clean repeatability run: independently verified VAT readiness, organisation OAuth, live fail-closed kill-switch refusal, restart recovery, explicit sandbox submission, HTTP `201` acceptance, obligation reconciliation, durable history and exact nine-box readback. B1/B2 remain reserved for the separate Corporation Tax journey. The earlier Business Node bootstrap-seeding correction remains a production-commissioning launch gate and does not invalidate the completed VAT evidence.
 
-**Publication gate:** Complete the remaining tenant-isolation review, penetration test, restoration exercise, incident-response exercise and authority security checks before relying on these controls in an effective customer statement.
+The application-scope tenant-isolation review, penetration test and incident-response exercise are complete, and the responsible individual has adopted the incident-response procedure for the accreditation process. Before this becomes an effective customer statement, Trade Control must reconfirm the final production composition, complete the remaining recovery and authority checks, adopt the remaining live operational arrangements and close the contractual and retention gates identified in this draft.
 
 ## 6. Hosting and third-party services
 
-The accreditation topology uses Microsoft Azure infrastructure in the United Kingdom. The customer-facing web application and the dedicated HMRC credential broker run on Linux-based Azure App Service. The application, protected storage, cryptographic keys and operational monitoring are hosted in the UK West Azure region, with Azure SQL databases in the UK South region. Data may move between those UK regions to provide the service, monitoring and recovery arrangements. The production-credentials submission is based on this reviewed topology; the final commercial deployment must be reconfirmed before this statement becomes effective.
+The accreditation topology uses Microsoft Azure infrastructure in the United Kingdom. The customer-facing web application and the dedicated HMRC credential broker run on Linux-based Azure App Service. The application, protected storage, cryptographic keys and operational monitoring are hosted in the UK West Azure region, with Azure SQL databases in the UK South region. Primary service data moves between those UK regions to provide the service, monitoring and recovery arrangements. Microsoft support, security and telemetry operations may involve processing outside those regions under the applicable contractual terms and international-transfer safeguards. The actual Azure subscription arrangements and final commercial deployment must be reconfirmed before this statement becomes effective.
 
 Microsoft Azure will provide the principal cloud infrastructure. Any transactional email, payment, support, monitoring or other provider that processes customer information will be identified in the final subprocessor schedule before the relevant service is enabled.
 
@@ -125,7 +125,7 @@ An authenticated tenant administrator can use **Admin Manager → Company → Cu
 
 Customers will be provided with documented arrangements for obtaining this archive before account closure and for requesting deletion. Deletion will remain subject to applicable legal obligations, the customer's own record-keeping responsibilities, fraud and security requirements, and any immutable statutory evidence that must be retained.
 
-**Publication gate:** Deploy and exercise the customer-exit archive against both synthetic tenants; approve and insert the actual retention periods; complete the account-closure workflow; lock the statutory-evidence retention policy; and verify deletion and recovery before publication.
+**Publication gate:** The customer-exit archive has been deployed and exercised against distinct synthetic tenants. Before this becomes an effective customer statement, approve and insert the actual retention periods, complete the account-closure workflow, lock the statutory-evidence retention policy, and verify deletion and recovery.
 
 ## 10. Individual rights
 
@@ -145,7 +145,7 @@ Trade Control welcomes responsible security research and contributions to its op
 
 Trade Control Ltd maintains a documented incident assessment, containment, recovery and notification procedure. Issues affecting personal or customer data are escalated immediately for HMRC notification through Developer Hub support, with the required details supplied within 72 hours. Personal-data breaches are assessed separately against the UK GDPR notification thresholds, including notification to the applicable customer controller without undue delay where Trade Control acts as processor.
 
-**Publication gate:** Insert the final security contact, link to the reviewed vulnerability-disclosure procedure and complete the separate security-assurance exercise.
+**Publication gate:** The security-assurance exercise and incident-response adoption are complete for the accreditation process. Before this becomes an effective customer statement, retain a working public reporting address, keep the private emergency contact current and link the reviewed vulnerability-disclosure procedure.
 
 ## 12. Changes to this statement
 
@@ -159,10 +159,10 @@ This is a pre-launch Privacy Statement supplied in support of Trade Control's HM
 
 The `tradecontrol.co.uk` deployment is the sandbox and accreditation environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
 
-This submission copy was derived from `tradecontrol.hosting/docs/legal/trade-control-privacy-policy.md` in Trade Control's private internal hosting repository. The clean source baseline was subsequently consolidated and pushed to its private origin as revision `001a5d50a0e4a752ba15e15ae97825d93601be39`; the source legal documents themselves were last changed in hosting commit `d16a2ae` on 24 October 2026. HMRC is not expected to access the private repository; the reference is retained solely for internal provenance.
+This submission copy was derived from the corresponding draft in Trade Control's private internal hosting repository and reconciled against the completed public accreditation evidence on 30 October 2026. The public `tradecontrol.web` revision containing this document is the controlling submission source. Private source paths and revisions remain in the internal evidence record and are not presented as material HMRC must access.
 
 Before publication as an effective customer notice, the final production composition must be checked against this statement, every publication gate must be resolved and the text must receive legal approval.
 
-**Submission draft date:** 26 October 2026
+**Submission draft date:** 30 October 2026
 
 **Effective date:** Not yet effective.

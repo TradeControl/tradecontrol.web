@@ -15,9 +15,11 @@ B3/B4 were the first paired VAT exercise. They supplied corrective discovery evi
 ## Evidence package
 
 - [Production-access evidence dossier](vat-production-access-evidence.md) — scope, evidence rules, completed HMRC evidence, and the separate Business Node production-launch gate.
-- [Compliance accessibility review](accessibility-review.md) — WCAG 2.2 benchmark, repeatable checks, detected contrast correction and explicit remaining evidence.
+- [Compliance accessibility review](accessibility-review.md) — WCAG 2.2 benchmark, repeatable checks, deployed corrections, manual journey evidence and explicit limitations.
 - [Security incident response](security-incident-response.md) — public notification, containment and evidence-handling procedure supported by a private synthetic tabletop.
 - [Customer data exit control](customer-data-exit.md) — deployed authenticated business-data export, exclusions, independent B5/B6 exercise and owner acceptance.
+- [Software penetration-test summary](penetration-test-summary.md) — bounded OWASP/ZAP assessment, remediation, retest, exclusions and disclosed residual risk.
+- [Data-protection security-controls audit](data-protection-security-controls-audit.md) — ICO-informed review of application and operational controls, with the production logging decision kept explicit.
 - [Legal submission documents](legal/README.md) — pre-launch Privacy Statement and managed-hosting Terms and Conditions, with topology context, provenance and publication gates.
 - [Phase 6.7 approval record](../phase-6.7-hmrc-production-approval.md) — governing status, external gates and owner controls.
 - [Phase 6.6 readiness evidence](../phase-6.6-hmrc-approval-readiness.md) — preserved single-tenant technical baseline.
@@ -40,4 +42,8 @@ Public evidence records whether a required result was proved. Protected evidence
 
 ## Current gate
 
-The first-registration bootstrap correction is reviewed, committed and published in `tradecontrol.web` `f169e79`. Deploy that correction and prove seamless Business Node delivery from an empty database before production launch. B5/B6 already supply the clean HMRC VAT evidence from independently verified commissioned tenants. Their VAT filings need be repeated only if HMRC requests newer logs, selected API retesting or evidence from a materially changed filing topology. Production deployment remains gated on both evidence streams passing independently.
+The public package now contains the completed application-scope accessibility, incident-response, customer-exit, penetration-test and security-controls evidence. The authenticated modern-client assessment disclosed the remaining inline-content-policy limitation and two browser-library dependency findings. Deployed jQuery 3.7.1 closed the core finding. The separate legacy validation dependency was then replaced with self-hosted version 1.22.1 and closed by browser-behaviour verification and bounded passive retest. No high or critical application finding remains open. The production diagnostic-log decision remains visible rather than hidden.
+
+The package is ready for human review, publication and consistency checking before the time-limited Developer Hub application is resumed with the owner present. Accreditation remains a prerequisite to commercial launch. The separate live-customer gates—final contractual documents, retention/deletion implementation, production monitoring decisions and operational adoption—remain open and are not misrepresented as features of the sandbox environment.
+
+B5/B6 already supply the clean HMRC VAT evidence from independently verified commissioned tenants. Their VAT filings need be repeated only if HMRC requests newer logs, selected API retesting or evidence from a materially changed filing topology. Nothing here requests production credentials, accepts HMRC terms or submits the application.
