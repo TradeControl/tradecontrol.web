@@ -28,6 +28,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 using Wangkanai.Detection.Models;
@@ -60,6 +61,18 @@ namespace TradeControl.Web
             services.AddLogging(logging =>
                 logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None));
             services.AddRazorPages();
+            services.AddAntiforgery(options =>
+            {
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            });
+            services.Configure<CookieTempDataProviderOptions>(options =>
+            {
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            });
 
             // Blazor Server (for Admin/Manager tree host)
             services.AddServerSideBlazor();
@@ -135,23 +148,18 @@ namespace TradeControl.Web
                     context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
                     context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
                     context.Response.Headers.TryAdd("Content-Security-Policy",
-                        "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'");
+                        "default-src 'self'; "
+                        + "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; frame-src 'self'; "
+                        + "form-action 'self'; img-src 'self' data:; font-src 'self' data: https://cdn.jsdelivr.net; "
+                        + "script-src 'self' 'unsafe-inline' https://ajax.aspnetcdn.com https://cdn.jsdelivr.net "
+                        + "https://code.jquery.com https://unpkg.com; "
+                        + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; "
+                        + "connect-src 'self' "
+                        + $"wss://{context.Request.Host.Host}; manifest-src 'self'; worker-src 'self' blob:");
                     return Task.CompletedTask;
                 });
                 await next();
             });
-            
-            app.Use(async (context, next) =>
-            {
-                if (context.Request.Path.Equals("/favicon.ico", StringComparison.OrdinalIgnoreCase))
-                {
-                    context.Response.Redirect("/favicon.svg", permanent: false);
-                    return;
-                }
-                await next();
-            });
-
-            app.UseStaticFiles();
 
             // Platform liveness must not resolve a tenant or construct tenant-scoped
             // authentication services. Dependency readiness remains tenant-bound below.
@@ -163,6 +171,20 @@ namespace TradeControl.Web
             app.UseDetection();
 
             app.UseMiddleware<TenantResolutionMiddleware>();
+
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.Equals("/favicon.ico", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.Redirect("/favicon.svg", permanent: false);
+                    return;
+                }
+                await next();
+            });
+
+            // Static and favicon responses are tenant-host-bound. Only the platform
+            // liveness endpoint is deliberately available before tenant resolution.
+            app.UseStaticFiles();
 
             app.UseRouting();
 

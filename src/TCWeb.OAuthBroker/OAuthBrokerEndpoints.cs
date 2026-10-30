@@ -7,10 +7,13 @@ namespace TradeControl.Web.OAuthBroker;
 
 public static class OAuthBrokerEndpoints
 {
+    public const string RateLimitPolicy = "oauth-broker-entry";
+
     public static IEndpointRouteBuilder MapOAuthBroker(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/oauth/start", BeginAsync).AllowAnonymous();
-        endpoints.MapGet("/TaxHub/HmrcCallback", CompleteAsync).AllowAnonymous();
+        endpoints.MapGet("/oauth/start", BeginAsync).AllowAnonymous().RequireRateLimiting(RateLimitPolicy);
+        endpoints.MapGet("/TaxHub/HmrcCallback", CompleteAsync).AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicy);
         return endpoints;
     }
 

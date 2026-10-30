@@ -1,6 +1,12 @@
 {
+  "name": "tradecontrol.web",
+  "version": "0.0.0",
+  "private": true,
   "scripts": {
-    "lint": "eslint \"**/wwwroot/js/**/*.js\"",
-    "lint:fix": "eslint --fix \"**/wwwroot/js/**/*.js\""
+    "lint": "eslint \"src/TCWeb/wwwroot/js/**/*.js\"",
+    "lint:fix": "eslint --fix \"src/TCWeb/wwwroot/js/**/*.js\""
+  },
+  "devDependencies": {
+    "eslint": "^10.13.0"
   }
 }

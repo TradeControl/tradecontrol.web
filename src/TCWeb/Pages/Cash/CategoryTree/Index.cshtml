@@ -7,8 +7,14 @@
     ViewData["Title"] = "Cash Configuration";
     var isAdmin = User.IsInRole(Constants.AdministratorsRole);
 }
-<link href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/skin-win8/ui.fancytree.min.css" rel="stylesheet" />
+<link href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css"
+      rel="stylesheet"
+      integrity="sha384-Nlo8b0yiGl7Dn+BgLn4mxhIIBU6We7aeeiulNCjHdUv/eKHx59s3anfSUjExbDxn"
+      crossorigin="anonymous" />
+<link href="https://cdn.jsdelivr.net/npm/jquery.fancytree@2.38.5/dist/skin-win8/ui.fancytree.min.css"
+      rel="stylesheet"
+      integrity="sha384-FUVwJ3by7avXe2vqmwBVE8gCNXYZY54kKUpg7mAgOWN3CkNWdBpiyjZiksSnwU8e"
+      crossorigin="anonymous" />
 <link href="~/css/components/categoryTree.css" rel="stylesheet" />
 <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
 
@@ -48,9 +54,15 @@
             window.tcTree.debug = true;
         </script>
     }
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery.fancytree/dist/jquery.fancytree-all.min.js"></script>
-    <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+            integrity="sha384-Dziy8F2VlJQLMShA6FHWNul/veM9bCkRUaLqr199K94ntO5QUrLJBEbYegdSkkqX"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery.fancytree@2.38.5/dist/jquery.fancytree-all.min.js"
+            integrity="sha384-M4+Dhi5orFzLNM7YIZ4phlcFpXTfMPDHcfqXXompcm3zUztA3Up1PROCofjiTiVo"
+            crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/split.js@1.6.5/dist/split.min.js"
+            integrity="sha384-q2ksSc8z6Q4ZUnxlfZj9AXZLpSdWmD3q/YrId1twTeNHh56fNh98YbJSpppzGUvL"
+            crossorigin="anonymous"></script>
     <script src="~/js/categoryTree.js" asp-append-version="true"></script>
     <script src="~/js/categoryTree.page.js" asp-append-version="true"></script>
     <script src="~/js/categoryTree.move.js" asp-append-version="true"></script>

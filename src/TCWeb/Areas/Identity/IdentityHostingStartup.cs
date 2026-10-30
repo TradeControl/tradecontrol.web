@@ -98,7 +98,7 @@ namespace TradeControl.Web.Areas.Identity
                     options.Password.RequireLowercase = true;
                     options.Password.RequireNonAlphanumeric = true;
                     options.Password.RequireUppercase = true;
-                    options.Password.RequiredLength = 6;
+                    options.Password.RequiredLength = 12;
                     options.Password.RequiredUniqueChars = 1;
 
                     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(double.Parse(defaultLockoutTimeSpan));

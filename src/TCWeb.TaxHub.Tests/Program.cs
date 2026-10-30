@@ -1448,6 +1448,41 @@ Assert(livenessMiddlewareIndex >= 0
 Assert(startupSource.Contains("endpoints.MapHealthChecks(\"/health/ready\"", StringComparison.Ordinal)
     && startupSource.Contains("}).AllowAnonymous();", StringComparison.Ordinal),
     "The tenant-bound App Service readiness probe is missing or protected by interactive authentication.");
+var webProgramSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Program.cs"));
+var identityStartupSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Areas", "Identity",
+    "IdentityHostingStartup.cs"));
+var embeddedLayout = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared",
+    "_EmbeddedLayout.cshtml"));
+var oauthProgramSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb.OAuthBroker", "Program.cs"));
+var oauthEndpointsSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb.OAuthBroker",
+    "OAuthBrokerEndpoints.cs"));
+var staticFilesIndex = startupSource.IndexOf("app.UseStaticFiles()", StringComparison.Ordinal);
+Assert(webProgramSource.Contains("options.AddServerHeader = false", StringComparison.Ordinal)
+    && oauthProgramSource.Contains("options.AddServerHeader = false", StringComparison.Ordinal),
+    "A public Kestrel endpoint can disclose its server implementation header.");
+Assert(oauthProgramSource.Contains("ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto", StringComparison.Ordinal)
+    && oauthProgramSource.Contains("app.UseForwardedHeaders();", StringComparison.Ordinal)
+    && !oauthProgramSource.Contains("ForwardedHeaders.XForwardedHost", StringComparison.Ordinal),
+    "The OAuth broker must restore App Service client/protocol forwarding without trusting a forwarded host.");
+Assert(startupSource.Contains("options.Cookie.SecurePolicy = CookieSecurePolicy.Always", StringComparison.Ordinal)
+    && startupSource.Contains("services.Configure<CookieTempDataProviderOptions>", StringComparison.Ordinal)
+    && startupSource.Contains("default-src 'self'", StringComparison.Ordinal)
+    && startupSource.Contains("script-src 'self' 'unsafe-inline'", StringComparison.Ordinal)
+    && startupSource.Contains("style-src 'self' 'unsafe-inline'", StringComparison.Ordinal)
+    && staticFilesIndex > tenantMiddlewareIndex,
+    "The tenant host, secure framework-cookie or explicit CSP boundary is no longer configured.");
+Assert(sharedLayout.Contains("bootstrap-icons@1.11.3", StringComparison.Ordinal)
+    && sharedLayout.Contains("integrity=\"sha384-", StringComparison.Ordinal)
+    && embeddedLayout.Contains("bootstrap-icons@1.11.3", StringComparison.Ordinal)
+    && embeddedLayout.Contains("integrity=\"sha384-", StringComparison.Ordinal),
+    "An external shared-layout stylesheet is no longer versioned and integrity-pinned.");
+Assert(identityStartupSource.Contains("options.Password.RequiredLength = 12", StringComparison.Ordinal),
+    "The minimum password length has fallen below the reviewed Pass 2 policy.");
+Assert(oauthProgramSource.Contains("AddRateLimiter", StringComparison.Ordinal)
+    && oauthProgramSource.Contains("PermitLimit = 30", StringComparison.Ordinal)
+    && oauthProgramSource.Contains("options.PublicOrigin!.IdnHost", StringComparison.Ordinal)
+    && oauthEndpointsSource.Contains("RequireRateLimiting(RateLimitPolicy)", StringComparison.Ordinal),
+    "The OAuth broker exact-host or bounded anonymous-entry control is missing.");
 
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 
