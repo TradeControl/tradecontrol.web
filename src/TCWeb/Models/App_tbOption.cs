@@ -24,6 +24,9 @@ namespace TradeControl.Web.Models
         [StringLength(50)]
         public string RegisterName { get; set; }
 
+        [StringLength(10)]
+        public string CategoryVersionId { get; set; }
+
         public short DefaultPrintMode { get; set; }
         public short BucketTypeCode { get; set; }
         public short BucketIntervalCode { get; set; }

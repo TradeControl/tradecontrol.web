@@ -1,6 +1,6 @@
 # Category Tree change-control work plan
 
-**Status:** Architecture agreed; implementation not started
+**Status:** Architecture agreed; Increment 2 implementation started locally
 
 **Release boundary:** Required before the Accounts Mode production release
 
@@ -90,6 +90,10 @@ The database, rather than only the web interface, must enforce these rules:
 - an initialised node has exactly one `App.tbOptions` row and a non-null `CategoryVersionId`;
 - the version referenced by `App.tbOptions.CategoryVersionId` is the one active Category Tree and has status Published or Submitted;
 - no version other than the options-selected version is treated as active, regardless of status;
+- every persistent Cash Code has exactly one mapping in the active version, and that mapping targets a Nominal category;
+- Total and Expression categories cannot receive Cash Code mappings;
+- a mapped Nominal category cannot be deleted or changed to another category type until its same-version Cash Codes are explicitly moved; disabling does not erase its mappings or historical classification;
+- physical Cash Code deletion cannot cascade through version history and is allowed only when no transaction or immutable version refers to the code;
 - Submitted and Archived contents cannot be inserted, updated or deleted;
 - a Draft cannot affect the operational Category Tree or ordinary statements;
 - publishing a Draft archives the predecessor and activates the successor atomically;
@@ -288,9 +292,9 @@ A full graphical diff is not required for the first release. The initial review 
 
 ### 8.1 Pre-launch adoption
 
-There are no customer databases to migrate. Implementation therefore updates the templates, bootstrap and synthetic generator first, then recreates every disposable local and hosted test tenant so that change control is present from initial commissioning. Existing B1/B2 and other synthetic databases may be retained as BACPAC evidence or troubleshooting references, but they are not upgraded into the accepted test population.
+There are no customer databases to migrate. Implementation therefore updates the templates, bootstrap and synthetic generator first so that new databases receive change control during commissioning. The B1-B7 Azure accounting sandboxes are the sole adoption exception: `tcNodeDb4-COSIPFVT1-COSTD26` is wiped and recreated to prove the upgraded bootstrap and synthetic generator, while the company MIN and both sole-trader databases are converted by the bounded migration in section 13 so their accumulated test data remains available.
 
-Regeneration must prove that each template produces one valid first Published version, that its canonical representation matches the version-owned rows, that the active views expose exactly that version, and that the expected statements remain correct. This is the complete migration process for the pre-launch programme; do not build customer conversion machinery that has no users to serve.
+Regeneration must prove that each template produces one valid first Published version, that its canonical representation matches the version-owned rows, that the active views expose exactly that version, and that the expected statements remain correct. Together with the B1-B7 sandbox conversion, this is the complete migration process for the pre-launch programme; do not generalise it into customer conversion machinery that has no users to serve.
 
 The underlying schema and lifecycle must nevertheless remain forward-upgradeable after launch. A future customer upgrade path will require its own plan and evidence rather than being inferred from this synthetic regeneration exercise.
 
@@ -433,3 +437,19 @@ The recommended sequence for the three current programmes is:
 3. **Complete the Stage 1 pre-optimisation seal update and integrate it.** Add the then-current Category Tree version and hash to statutory evidence and bind its submission lock to the established Category Tree mutation boundary.
 
 The later tax calculation optimisation remains a separate Stage 2 programme. It may consume sealed balances and Category Tree provenance, but it is not a prerequisite for this change-control lifecycle.
+
+## 13. B1-B7 Azure sandbox migration
+
+Once the local schema implementation, regenerated templates and executable contract have passed review, wipe and recreate `tcNodeDb4-COSIPFVT1-COSTD26` through the upgraded Standard Company bootstrap and synthetic dataset generator. Review that evidence first. Then write and review a single-database migration script and apply the same artefact sequentially to `tcNodeDb4-COMIPFVT1-COMIN26`, `tcNodeDb4-STMIPFVT1-STMIN26` and `tcNodeDb4-STSIPFVT1-STSTD26`. Use the company MIN database as the migration canary and stop on the first failure.
+
+The migration must:
+
+- preflight the expected database build, singleton options row, graph, Cash Code mappings and legacy roots;
+- use an agreed backup/export recovery point and temporarily remove the earlier development read-only lock by its supported mechanism;
+- convert the current graph into one initial Published version, derive versioned Cash Code mappings and roots, and assign `App.tbOptions.CategoryVersionId` atomically;
+- migrate dependent objects and retire the legacy category/root authorities only after validation;
+- prove canonical equivalence and unchanged accounting, Cash Statement, Equity Bridge and applicable tax baselines;
+- emit per-database, secret-free evidence and restore the intended sandbox access state; and
+- reject unexpected builds, partial prior attempts, out-of-scope databases and unsafe reruns.
+
+The rebuilt Standard Company database must prove clean commissioning, version creation and full synthetic generation without transitional compatibility state. The detailed object order, transaction boundary, recovery behaviour and acceptance checks are governed by section 11 of `category-tree-schema-change-plan.md`. This exception is limited to the four named accounting sandboxes: it does not authorise customer migration tooling, general Azure rollout, hosted-tenant deployment, accreditation or User Guide publication.

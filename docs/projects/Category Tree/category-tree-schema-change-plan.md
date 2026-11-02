@@ -1,9 +1,11 @@
 # Category Tree schema change plan
 
 **Date:** 2 November 2026
-**Status:** Increment 2 implementation plan; no schema implementation started
+**Status:** Increment 2 in progress; Step 3 active-pointer slice implemented locally for review
 **Governing documents:** `category-tree-change-control-workplan.md` and `category-tree-increment-1-inventory-and-contract.md`
 **Scope:** local tcNodeDb4, TCWeb and TCExports changes only
+
+**Implementation progress (2 November 2026):** Step 1 adds the status/root vocabularies, version header, event audit shape, non-reusing `nvarchar(10)` allocator, destructive-reset integration and rollback-only SQL fixture. The Step 2 shadow slice places `VersionId` first in the existing category/edge tables while retaining their legacy primary keys, captures mappings and roots, keeps them synchronised from the existing authorities, and adds explicit-version category, tax and primary-parent functions. All four supported templates commission one Published shadow version with complete mapping/root coverage, and equivalence fixtures pass without changing any current view or calculation consumer. The options pointer and operational authority cutover have not started.
 
 ## 1. Purpose
 
@@ -163,11 +165,23 @@ Required keys and indexes:
 - foreign key `CashCode -> Cash.tbCode.CashCode` without cascade delete;
 - composite foreign key `(VersionId, CategoryCode) -> Cash.tbCategory`;
 - index `(VersionId, CategoryCode, CashCode)` for expansion; and
-- validation that the mapped category is enabled and is an eligible leaf category.
+- validation that the mapped category has `CategoryTypeCode = 0` (Nominal).
+
+During the Step 2 shadow phase only, the `CashCode -> tbCode` foreign key is deferred so existing physical Cash Code deletion retains its prior behaviour. A compatibility trigger creates, moves and removes the shadow mapping in the same transaction. Step 4 replaces that trigger with the authoritative Cash Code commands and adds the non-cascading foreign key before the mapping becomes operational authority.
+
+The three category types have distinct structural rules:
+
+- **Nominal (`0`)** is the only valid Cash Code mapping target. It is a leaf and cannot be changed to Total or Expression or deleted in a version while that version has a mapping to it. Disabling a Nominal category or Cash Code does not erase the mapping needed for historical classification.
+- **Total (`1`)** may own graph children and may be a configured root, but cannot receive a Cash Code mapping. Its removal is governed by same-version edges and roots.
+- **Expression (`2`)** cannot receive a Cash Code mapping or own graph children. Its formula row remains governed separately by the global `tbCategoryExp` contract.
+
+The same-version mapping foreign key uses `NO ACTION`, never cascade delete. It therefore provides the final database backstop against deleting a mapped Nominal category. Mapping triggers reject a non-Nominal target, while category triggers reject changing the type of a mapped Nominal row; these checks apply to direct DML as well as commands. Guarded category-delete and type-change commands must check the complete same-version descendant set first and return the blocking Cash Codes; they must not delete mappings implicitly. Moving those Cash Codes to other valid Nominal categories is a separate explicit mutation.
 
 `Cash.tbCode.CategoryCode`, its category foreign key and its category-based index are removed only after every dependent object reads the mapping table or active mapping view.
 
-Cash Code creation inserts the global `tbCode` row and its active mapping atomically. Existing Drafts are not silently changed; validation requires a mapping for every Cash Code that exists when the Draft is published, including disabled codes. Archived versions remain immutable and legitimately lack codes created later. A historical Cash Statement encountering transactions for a code absent from the selected version must report the unmapped code rather than silently applying the active mapping.
+Cash Code creation inserts the global `tbCode` row and its active Nominal mapping atomically through an authoritative database command. Application principals receive execute permission on that command rather than direct insert permission on `tbCode` or unrestricted mapping DML. The command locks the options-selected version, requires editable Published state, validates the Nominal target, inserts both rows in one transaction and asserts exactly one active mapping before commit. Existing Drafts are not silently changed; validation requires a mapping for every Cash Code that exists when the Draft is published, including disabled codes. Archived versions remain immutable and legitimately lack codes created later. A historical Cash Statement encountering transactions for a code absent from the selected version must report the unmapped code rather than silently applying the active mapping.
+
+Physical Cash Code deletion is also an authoritative transaction, not a mapping cascade. It is permitted only when the code has no transactional references and no mapping in a Submitted or Archived version. The command removes mappings from every affected editable version and then the global `tbCode` row in the same transaction; otherwise it rejects deletion and normal retirement uses `IsEnabled = 0`. Deleting a mapping alone from the active version is rejected because it would leave a persistent Cash Code unclassified. A mapping move is an update from one valid Nominal category to another and cannot expose an uncommitted gap.
 
 `Cash.tbCode.IsEnabled` controls operational availability for new work. It must not cause historical transactions to disappear from accounting statements. Statement-classification queries therefore use the version mapping even when the persistent Cash Code has since been disabled; posting and selection lookups may continue to filter `IsEnabled`.
 
@@ -344,7 +358,8 @@ SQL procedures or an equivalent tightly bounded service transaction must own:
 - commissioning the first Published version;
 - cloning the active version to Draft;
 - editing version description and notes;
-- category, edge, mapping and root mutations;
+- category, edge, mapping and root mutations, including type changes and subtree deletion;
+- atomic Cash Code creation with its active Nominal mapping, Cash Code moves and guarded physical deletion;
 - validation and canonical digest refresh;
 - Draft refresh/rebase;
 - publishing or discarding a Draft;
@@ -372,40 +387,52 @@ Every command resolves the application actor, locks the singleton options row wh
 ### Step 1 — Add independent vocabulary and version infrastructure
 
 - Add status/root-type tables, version sequence/allocator, version header and event table.
-- Add `App.tbOptions.CategoryVersionId`, its foreign key, the initialisation rule and the serialised singleton trigger assertion.
 - Add their SSDT project entries.
 - Seed system rows in `proc_NodeDataInit`.
-- Add effective-interval, pointer-status and singleton tests.
+- Add version-allocation and effective-interval tests.
 
 These objects do not yet change current calculations.
 
-### Step 2 — Convert the category graph to version-owned keys
+### Step 2 — Shadow-version the current graph without changing behaviour
 
-- Add `VersionId` to `tbCategory` and `tbCategoryTotal` definitions.
-- Replace primary, unique and foreign keys with version-scoped equivalents.
-- Rewrite audit and cycle triggers to use composite keys.
-- Add `tbCategoryCodeMap`, root tables and their constraints.
-- Add active views and version-aware traversal functions.
+- Allocate an initial version, add and backfill `VersionId` on `tbCategory` and `tbCategoryTotal`, but temporarily retain the legacy keys and all existing read paths.
+- Add `tbCategoryCodeMap` and `tbCategoryRoot`, populated from `Cash.tbCode.CategoryCode` and the two existing options roots; at this stage they are verified shadow data, not operational authorities.
+- Add explicit-version inline table-valued functions for category, traversal, root and Cash Code membership queries.
+- Compare every function at the initial `VersionId` with its legacy view/query and require row-for-row equivalence.
+- Do not expose Draft creation, change any existing view definition or redirect any writer in this step.
 
-Because there are no customer databases, validation occurs on freshly regenerated databases. Do not build a general in-place conversion framework. Any developer-only transitional deployment script must use an exact database allow-list and is discarded after regeneration is proven.
+This is the deliberately non-disruptive introduction point: version metadata exists and can be tested, while all application behaviour still follows the original keys, root columns and Cash Code relationship.
 
-### Step 3 — Cut over dependent SQL reads
+### Step 3 — Make the options pointer and root table authoritative
 
-- Migrate high-risk statement/tax objects first.
-- Migrate posting triggers and operational procedures.
-- Migrate lookup, project, object and invoice objects.
-- Update `tbTaxTagMap` validation to active/Draft-aware rules.
-- Rebuild SSDT after each dependency group to expose missed column and key assumptions.
+- Add `App.tbOptions.CategoryVersionId`, its foreign key, initialisation rule and serialised singleton assertion, then point it to the verified initial Published version.
+- Make the explicit-version functions the calculation implementations. Existing active views become compatibility wrappers which obtain `CategoryVersionId` from the singleton options row and pass it to those functions.
+- For example, `App.vwTaxVatCashCodes` joins the singleton options row and uses `CROSS APPLY App.fnTaxVatCashCodes(options.CategoryVersionId)`; callers remain unchanged, while a historical or Draft validator can call the function with an explicit version.
+- Convert `App.vwTaxBizCashCodes`, `App.vwTaxVatCashCodes`, `Cash.vwCategoryPrimaryParent` and the other high-risk statement/tax consumers first, proving equivalence after each group.
+- Resolve Net Profit and VAT roots only through `Cash.tbCategoryRoot` for the selected version; remove the two options root columns after the dependency scan is clean.
+- Rebuild SSDT after each dependency group to expose missed root, column and key assumptions.
 
-Legacy columns remain during this step only as temporary compatibility data. No new code may write them.
+The wrapper views are the ordinary operational projection. They contain no category logic beyond resolving the active pointer; reusable and historical logic belongs in the parameterised functions.
 
-### Step 4 — Cut over writers and commissioning
+Implementation checkpoint (2026-11-02): the options pointer is physically placed with the node/register identity fields, before the legacy root fields it supersedes. The options trigger now serialises the singleton assertion, requires a pointer once initialised and permits only Published or Submitted targets. The selected version cannot be moved to Draft or Archived. Commissioning assigns the first Published version only after the template succeeds. The six active views are present, and the tax Cash Code, primary-parent and category-membership wrappers delegate to their explicit-version implementations. The legacy root columns and their compatibility synchronisation remain temporarily in place until the remaining dependency groups have moved to `Cash.tbCategoryRoot`.
 
+The clean-database acceptance run commissioned `COMIN26` as `CV00000001`, matched every active wrapper to the explicit-version result, and rejected a second options row, a Draft pointer, a null pointer on an initialised node and archiving the selected version. The SQL infrastructure and shadow fixtures passed, as did the 20 Cash Statement service assertions and 349 TCWeb/Tax Hub boundary assertions.
+
+### Step 4 — Complete version-owned keys, writers and commissioning
+
+- Replace category primary, unique and foreign keys with version-scoped equivalents and rewrite audit/cycle triggers for composite keys.
+- Migrate remaining posting, lookup, project, object, invoice and tax-validation dependencies to active wrappers or explicit-version functions.
 - Update templates and synthetic generators to insert version-owned rows and mappings.
 - Add commissioning, clone, validate, mutation and publication commands.
 - Route TCWeb Category Tree handlers through the command boundary.
 - Update root and Cash Code move operations.
 - Add version context to retained JavaScript requests while keeping enforcement server-side.
+
+Implementation checkpoint (2026-11-02, uncommitted for review): commissioning now allocates the version before invoking a template and passes `CategoryVersionId` explicitly through all four supported template chains. `proc_Template_BASE_MIN_2026` and each company/sole-trader refinement explicitly write version-owned categories, totals, Cash Code mappings and roots. The legacy root and `tbCode.CategoryCode` writes remain temporarily as compatibility outputs, not as the inputs from which the initial version is inferred. Synthetic Cash Code creation uses one guarded transaction to add the persistent code and its active-version Nominal mapping.
+
+The SQL canonicaliser reproduces the 585-byte v1 conformance vector and SHA-256 `8B77B246D3DFDB77230B52695747D5D31A135FC5FFB65CD89CE4844A6D032177`. Commissioning stores the initial digest before publication; synthetic generation refreshes it after adding its operational codes and records a digest-bound validation event. Semantic writes invalidate the digest, while category, total, mapping and root triggers reject Submitted and Archived mutations.
+
+The blank-database matrix commissioned `COMIN26`, `COSTD26`, `STMIN26` and `STSTD26` with one selected Published `CV00000001`, two roots, complete Cash Code mapping and non-null canonical evidence. The full three-completed-year `COSTD26` run finished with 53 categories, 18 edges and 38/38 Cash Code mappings; its Equity Bridge variances were `0.00`, `0.00` and `0.08` against the `0.10` tolerance. SSDT, canonical/version/active-projection fixtures, the completed-year horizon regression, 20 Cash Statement service assertions and 349 TCWeb/Tax Hub boundary assertions passed. This proves clean rebuild readiness for review; it does not authorise deployment or declare the remaining Step 4/5 dependency cutover complete.
 
 ### Step 5 — Remove competing authorities
 
@@ -423,7 +450,7 @@ Only after a repository-wide reference scan and tests are clean:
 - Rebuild each supported company/sole-trader MIN/STD template database from scratch.
 - Assert one Published version, two roots, complete active mappings and canonical digest equivalence.
 - Run accounting, tax, Equity Bridge and Cash Statement baselines against the active views.
-- Keep Azure and hosted tenants out of this increment.
+- Keep Azure and hosted tenants out of the local schema/regeneration steps; the reviewed B1-B7 sandbox migration in section 11 is the only Azure exception.
 
 ### Step 7 — Add historical Cash Statement SQL surface
 
@@ -444,6 +471,10 @@ Only after a repository-wide reference scan and tests are clean:
 - Version code allocation is unique, bounded and non-reusing.
 - Every required root exists exactly once and satisfies graph rules.
 - Every Cash Code existing at publication, enabled or disabled, has exactly one mapping.
+- Every active mapping targets a Nominal category; Total and Expression categories reject mappings, while disabled Nominal mappings remain available for historical classification.
+- Deleting or changing the type of a mapped Nominal category is rejected without deleting its mapping.
+- Direct Cash Code insertion cannot commit without its active mapping, and deleting an active mapping alone is rejected.
+- Physical Cash Code deletion is rejected when any transaction or immutable version refers to it; otherwise code and editable mappings are removed atomically.
 - Submitted and Archived semantic rows reject insert, update and delete.
 - Expression rows remain editable without mutating the Category Tree hash.
 
@@ -501,3 +532,58 @@ The remaining choices are bounded engineering details to settle in the Increment
 - the precise split between SQL triggers and permission grants for defence in depth.
 
 None changes the accepted ownership boundary: category graph, Cash Code mapping and roots are versioned; Cash Code identity and BI expressions are not.
+
+## 11. B1-B7 Azure sandbox migration
+
+After the local schema, templates and executable contracts pass review, rebuild `tcNodeDb4-COSIPFVT1-COSTD26` from scratch and add one source-controlled migration script for the other three accounting sandbox databases in the B1-B7 estate. This is bounded development-data adoption, not customer migration machinery and not a hosted-tenant deployment process.
+
+### 11.1 Script and execution boundary
+
+- Keep the migration in the tcNodeDb4 SQL source tree and include it in the SSDT project as a non-build deployment script.
+- Make the script target one explicitly supplied database per execution. Its exact allow-list is `tcNodeDb4-COMIPFVT1-COMIN26`, `tcNodeDb4-STMIPFVT1-STMIN26` and `tcNodeDb4-STSIPFVT1-STSTD26`; do not embed credentials, server names or a cross-database loop.
+- Require an expected pre-migration build/version and refuse an unknown, partially migrated or already newer schema.
+- Make a completed migration safely detectable and non-repeatable. A rerun may report success only after verifying the installed objects and data; it must not allocate another initial version.
+- Emit a compact evidence result containing database identity, previous/new build, allocated `VersionId`, row counts, roots, mapping coverage and canonical digest.
+
+### 11.2 Preflight and write access
+
+Before changing a sandbox database:
+
+1. capture its build, options row, category/category-total/Cash Code counts, legacy roots and existing validation results;
+2. take or identify the agreed recoverable backup/export point;
+3. remove the previous development read-only lock using the same supported mechanism by which it was applied and prove a rollback transaction can write; and
+4. abort without schema changes if the database is not one of the three allow-listed migration targets, has more or fewer than one options row, contains invalid roots, orphaned graph rows, unmapped Cash Codes or an unexpected build.
+
+The runner records the lock state and restores the intended sandbox access policy after verification. The migration contains no Azure credentials or environment-wide permission changes.
+
+### 11.3 Transactional conversion
+
+For each database, perform the following as one controlled migration transaction wherever SQL Server DDL permits:
+
+1. add the status/root vocabularies, version header/event infrastructure and the nullable options pointer;
+2. allocate one initial version and copy the current category graph into the new version-owned key shape;
+3. create `Cash.tbCategoryCodeMap` from every persistent `Cash.tbCode.CategoryCode` relationship, failing on null, orphaned or duplicate coverage;
+4. create the Net Profit and VAT root rows from the two legacy `App.tbOptions` root values;
+5. validate graph integrity, complete Cash Code coverage, roots, tax-tag compatibility and the canonical digest;
+6. mark the initial version Published, set its effective start and point the singleton options row to it;
+7. migrate all dependent SQL objects to active views or explicit-version implementations;
+8. remove the retired category/root authorities and expression foreign key only after dependency checks succeed; and
+9. update the database build marker and commit.
+
+Any error rolls back the database to its pre-migration schema and data. If a DDL operation cannot participate in the transaction, the script must stop before that boundary or provide a separately tested recovery step; it must never continue from an unrecognised partial state.
+
+### 11.4 Rebuild proof and per-database acceptance
+
+First wipe and recreate `tcNodeDb4-COSIPFVT1-COSTD26` through the upgraded bootstrap, Standard Company template and synthetic dataset generator. Do not run the migration script against it. This proves that a newly commissioned versioned database and the full synthetic accounting surface can be produced without transitional compatibility data. Preserve the required scenario parameters in the evidence rather than relying silently on future script defaults.
+
+Then run the migration script against the three allow-listed databases. The sandbox adoption is accepted only when the rebuilt database and every migrated database independently prove:
+
+- exactly one options row points to exactly one Published initial version;
+- active categories, edges, Cash Code mappings and roots are semantically equivalent to the preflight snapshot;
+- the initial canonical digest recomputes identically in SQL and C#;
+- accounting, Cash Statement, Equity Bridge and applicable tax baselines are unchanged;
+- no current object refers to `Cash.tbCode.CategoryCode`, `App.tbOptions.NetProfitCode` or `VatCategoryCode`;
+- clone/edit/publish and immutable Submitted/Archived smoke tests pass; and
+- the final access state and evidence output are recorded without secrets.
+
+Review the recreated Standard Company evidence before migrating anything. Use `tcNodeDb4-COMIPFVT1-COMIN26` as the migration canary, review it, then migrate the sole-trader MIN and STD databases one at a time. Stop on the first failure, preserve the pre-migration recovery point and do not treat success on one sandbox as permission to modify any database outside the named set.
