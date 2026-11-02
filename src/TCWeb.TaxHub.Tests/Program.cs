@@ -71,6 +71,7 @@ Assert(webReferences.Any(reference => reference.Contains("Adapters.Submission", 
 Assert(webReferences.All(reference => !reference.Contains("WebHarness", StringComparison.OrdinalIgnoreCase)),
     "TCWeb must not reference the diagnostic WebHarness.");
 assertions += await CashStatementServiceTests.RunAsync();
+assertions += CategoryTreeContractTests.Run();
 assertions += await TenantIsolationTests.RunAsync();
 assertions += BusinessClockTests.Run();
 assertions += TenantFileProviderTests.Run();
