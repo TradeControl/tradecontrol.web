@@ -12,10 +12,6 @@
 
 For ongoing development and updates, visit: [tradecontrol.github.io](https://tradecontrol.github.io)
 
-## Current Project
-
-[Tax Hub](./docs/projects/Tax%20Hub/README.md)
-
 ## 🚧 Status
 
 - Working release available (Accounts Mode, July 2021)
