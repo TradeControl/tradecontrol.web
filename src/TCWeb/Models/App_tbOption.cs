@@ -31,10 +31,10 @@ namespace TradeControl.Web.Models
         public short BucketTypeCode { get; set; }
         public short BucketIntervalCode { get; set; }
 
-        [StringLength(10)]
+        [NotMapped]
         public string NetProfitCode { get; set; }
 
-        [StringLength(10)]
+        [NotMapped]
         public string VatCategoryCode { get; set; }
 
         public short TaxHorizon { get; set; }
@@ -112,10 +112,6 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(MinerFeeCode))]
         [InverseProperty(nameof(Cash_tbCode.TbOptions))]
         public virtual Cash_tbCode MinerFeeCodeNavigation { get; set; }
-
-        [ForeignKey(nameof(NetProfitCode))]
-        [InverseProperty(nameof(Cash_tbCategory.TbOptions))]
-        public virtual Cash_tbCategory NetProfitCodeNavigation { get; set; }
 
         [ForeignKey(nameof(RegisterName))]
         [InverseProperty(nameof(App_tbRegister.TbOptions))]

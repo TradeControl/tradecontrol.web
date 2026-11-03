@@ -10,7 +10,6 @@ namespace TradeControl.Web.Models
 {
     [Table("tbCode", Schema = "Cash")]
     [Index(nameof(CashDescription), Name = "IX_Cash_tbCodeDescription", IsUnique = true)]
-    [Index(nameof(CategoryCode), nameof(IsEnabled), nameof(CashCode), Name = "IX_Cash_tbCode_Category_IsEnabled_Code", IsUnique = true)]
     [Index(nameof(IsEnabled), nameof(CashCode), Name = "IX_Cash_tbCode_IsEnabled_Code", IsUnique = true)]
     [Index(nameof(IsEnabled), nameof(CashDescription), Name = "IX_Cash_tbCode_IsEnabled_Description", IsUnique = true)]
     public partial class Cash_tbCode
@@ -39,8 +38,7 @@ namespace TradeControl.Web.Models
         [StringLength(100)]
         [Display(Name = "Description")]
         public string CashDescription { get; set; }
-        [Required]
-        [StringLength(10)]
+        [NotMapped]
         [Display(Name = "Category Code")]
         public string CategoryCode { get; set; }
         [Required]
@@ -60,9 +58,6 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
 
-        [ForeignKey(nameof(CategoryCode))]
-        [InverseProperty(nameof(Cash_tbCategory.TbCodes))]
-        public virtual Cash_tbCategory CategoryCodeNavigation { get; set; }
         [ForeignKey(nameof(TaxCode))]
         [InverseProperty(nameof(App_tbTaxCode.TbCodes))]
         public virtual App_tbTaxCode TaxCodeNavigation { get; set; }

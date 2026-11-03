@@ -26,12 +26,14 @@ namespace TradeControl.Web.AppServices
         string SubjectCode,
         string SubjectName,
         string SubjectType,
+        bool IsStructural,
         NodeEnum.CashPolarity CashPolarity,
         double CurrentBalance,
         string? ParentSubjectCode);
 
     public sealed record SubjectEnquiryInvoiceItem(
         string InvoiceNumber,
+        string SubjectName,
         string InvoiceType,
         DateTime InvoicedOn,
         double InvoiceValue,
@@ -42,6 +44,7 @@ namespace TradeControl.Web.AppServices
 
     public sealed record SubjectEnquiryPaymentItem(
         string PaymentCode,
+        string SubjectName,
         DateTime PaidOn,
         string? PaymentReference,
         decimal PaidOutValue,

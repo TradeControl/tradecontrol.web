@@ -1,6 +1,6 @@
 # Category Tree change-control work plan
 
-**Status:** Architecture agreed; Increment 2 implementation started locally
+**Status:** Architecture agreed; Increment 2 local schema and migration complete; Increment 3 is next
 
 **Release boundary:** Required before the Accounts Mode production release
 
@@ -235,7 +235,11 @@ Archived versions and their canonical objects remain verifiable through the stan
 
 ## 7. Web and JavaScript user experience
 
+The implementation-level interaction, request-boundary, existing-file and delivery sequence is maintained separately in `category-tree-ui-change-plan.md`. That document is the governing Increment 3/4 UI plan; this section retains the architectural summary.
+
 The existing Fancytree/JavaScript implementation can remain. Change control is a server-owned capability exposed to it; the browser must not determine whether a write is legal.
+
+The existing synthetic `__ROOT__` node becomes the **Category Tree** version workspace. Selecting it shows the active version, Draft proposals, historical versions, effective intervals, warnings and lifecycle commands. Selecting another version changes only the displayed workspace; only atomic Draft publication may change `App.tbOptions.CategoryVersionId`.
 
 ### 7.1 Persistent version banner
 
@@ -374,11 +378,19 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 
 ### Increment 2 — SQL foundation and regeneration
 
+**Progress:** Increment 2 is complete locally. The SSDT model builds; authoritative clone, refresh, metadata, category, edge, mapping, root, Cash Code create/delete, validate, publish, submit/archive and discard commands are present; and Submitted/Archived direct DML is rejected. The exact `tc-business1` build `4.1.18` BACPAC differential passed, followed by the three local build `4.1.13` shapes. The clean `tcNodeDb4-COSIPFVT1-COSTD26` publish and synthetic initialisation succeed, and owner smoke testing confirmed the Cash Statement, Equity Bridge and Tax Hub while the deliberately deferred Category Tree interface remains broken. Migration validation exposed and corrected three packaging omissions: ten generated Category Tree foreign keys were not re-trusted, the SQLCMD input had lost its required UTF-8 BOM, and the local `4.1.13` prerequisite retained the deliberately retired `Usr.tbMenu*` subsystem. The script now re-trusts the constraints, retains a BOM protected by an executable boundary assertion, and transactionally removes the legacy menu tables/views/procedures only on the allow-listed build `4.1.13` path. Both sole-trader databases were restored from their recovery BACPACs and replayed; the company MIN database then completed the final fresh end-to-end rehearsal. All three retain exact pre/post calculation checksums, contain no mojibake or legacy menu objects, pass DBCC and the strengthened lifecycle fixture, and report zero Category Tree DACPAC operations. The B1–B7 Azure sandboxes begin at build `4.1.18` and are therefore unaffected by the deprecated-menu cleanup. The VAT work remains unamended. TCExports and the Category Tree interface have not been changed.
+
 - Add status, version-owned tables, mapping, roots and active views.
 - Add the singleton options pointer and immutability enforcement.
 - Implement clone, validate, publish and submission-transition procedures.
 - Update templates, synthetic generation and bootstrap, and increment the tcNodeDb4 build.
 - Prove active-view selection, canonical equivalence and rollback.
+- Deliver one consolidated schema and sandbox migration that contain every amended database object; use the production schema comparison only to validate zero remaining differences.
+- Preserve existing client behaviour through compatibility views and procedure contracts, apart from the Category Tree JavaScript workspace which is deliberately deferred to Increment 4.
+- Build one pre-update synthetic database, clone it, apply the migration only to the clone and compare calculation-sensitive SQL outputs in both directions before application testing.
+- Remove the superseded Cash Code/category and options/root authority columns only after the differential proves equivalent active Cash Codes, roots and accounting outputs.
+- Point the application with its bounded EF compatibility alignment at the migrated clone and require every client surface except the deliberately deferred Category Tree interface to work.
+- Make no TCExports or Category Tree interface changes in this increment; permit only the bounded TCWeb EF compatibility alignment required after physical authority-column removal.
 
 ### Increment 3 — Server boundary
 
@@ -438,18 +450,18 @@ The recommended sequence for the three current programmes is:
 
 The later tax calculation optimisation remains a separate Stage 2 programme. It may consume sealed balances and Category Tree provenance, but it is not a prerequisite for this change-control lifecycle.
 
-## 13. B1-B7 Azure sandbox migration
+## 13. IAM-01 synthetic-business migration
 
-Once the local schema implementation, regenerated templates and executable contract have passed review, wipe and recreate `tcNodeDb4-COSIPFVT1-COSTD26` through the upgraded Standard Company bootstrap and synthetic dataset generator. Review that evidence first. Then write and review a single-database migration script and apply the same artefact sequentially to `tcNodeDb4-COMIPFVT1-COMIN26`, `tcNodeDb4-STMIPFVT1-STMIN26` and `tcNodeDb4-STSIPFVT1-STSTD26`. Use the company MIN database as the migration canary and stop on the first failure.
+`tcNodeDb4-COSIPFVT1-COSTD26` is the accepted clean bootstrap and synthetic-generation target and remains excluded from the migration allow-list. Maintain the single-database migration artefact alongside the implementation at `src/sqlnode/src/tcNodeDb4/Scripts/DB4 cat change control migration script.sql`; its source copy remains guarded and UTF-8 BOM encoded. With explicit owner authorisation, both sole-trader databases were restored and replayed after the trust/encoding corrections, then `tcNodeDb4-COMIPFVT1-COMIN26` completed the final fresh rehearsal including retirement of the old Access-client menu subsystem. All four local databases are now build `4.1.19`; the three migrated businesses passed their shape-specific accounting and lifecycle evidence.
 
 The migration must:
 
 - preflight the expected database build, singleton options row, graph, Cash Code mappings and legacy roots;
 - use an agreed backup/export recovery point and temporarily remove the earlier development read-only lock by its supported mechanism;
 - convert the current graph into one initial Published version, derive versioned Cash Code mappings and roots, and assign `App.tbOptions.CategoryVersionId` atomically;
-- migrate dependent objects and retire the legacy category/root authorities only after validation;
+- migrate dependent objects and remove the legacy category/root authority columns only after the pre/post differential proves equivalent outputs;
 - prove canonical equivalence and unchanged accounting, Cash Statement, Equity Bridge and applicable tax baselines;
 - emit per-database, secret-free evidence and restore the intended sandbox access state; and
 - reject unexpected builds, partial prior attempts, out-of-scope databases and unsafe reruns.
 
-The rebuilt Standard Company database must prove clean commissioning, version creation and full synthetic generation without transitional compatibility state. The detailed object order, transaction boundary, recovery behaviour and acceptance checks are governed by section 11 of `category-tree-schema-change-plan.md`. This exception is limited to the four named accounting sandboxes: it does not authorise customer migration tooling, general Azure rollout, hosted-tenant deployment, accreditation or User Guide publication.
+The rebuilt Standard Company database must prove clean commissioning, version creation and full synthetic generation without transitional compatibility state. The detailed object order, transaction boundary, recovery behaviour and acceptance checks are governed by section 11 of `category-tree-schema-change-plan.md`. This exception is limited to the four named IAM-01 synthetic businesses: it does not authorise customer migration tooling, general Azure rollout, hosted-tenant deployment, accreditation or User Guide publication.

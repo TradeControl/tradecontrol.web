@@ -172,9 +172,19 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();
             services.AddScoped<ICashManagerService, CashManagerService>();
-            services.AddScoped<ICashNamespaceResolver, CashNamespaceResolver>();
-            services.AddScoped<ICashStatementQueryService, CashStatementQueryService>();
-            services.AddScoped<ICashStatementPaymentMaintenanceService, CashStatementPaymentMaintenanceService>();
+            // The statement and its payment editor are sibling Blazor components and can load
+            // concurrently. Give each service its own tenant context instead of sharing the
+            // circuit-scoped NodeContext (DbContext does not support concurrent operations).
+            services.AddScoped<ICashNamespaceResolver>(provider =>
+                new CashNamespaceResolver(
+                    provider.GetRequiredService<IDbContextFactory<Data.NodeContext>>().CreateDbContext()));
+            services.AddScoped<ICashStatementQueryService>(provider =>
+                new CashStatementQueryService(
+                    provider.GetRequiredService<IDbContextFactory<Data.NodeContext>>().CreateDbContext(),
+                    provider.GetRequiredService<ICashNamespaceResolver>()));
+            services.AddScoped<ICashStatementPaymentMaintenanceService>(provider =>
+                new CashStatementPaymentMaintenanceService(
+                    provider.GetRequiredService<IDbContextFactory<Data.NodeContext>>().CreateDbContext()));
             services.AddOptions<CashStatementGenerationOptions>()
                 .Bind(configuration.GetSection(CashStatementGenerationOptions.SectionName))
                 .ValidateOnStart();

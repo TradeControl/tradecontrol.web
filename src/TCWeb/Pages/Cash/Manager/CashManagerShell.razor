@@ -282,11 +282,13 @@ else
         _cashCodeOptions = await CashManagerService.GetCashCodeOptionsAsync();
 
         var preferredAccountCode = InitialAccountCode;
+        CashManagerPaymentNavigationTarget? paymentTarget = null;
 
         if (string.IsNullOrWhiteSpace(preferredAccountCode)
             && !string.IsNullOrWhiteSpace(InitialPaymentCode))
         {
-            preferredAccountCode = await CashManagerService.GetAccountCodeByPaymentCodeAsync(InitialPaymentCode);
+            paymentTarget = await CashManagerService.GetPaymentNavigationTargetAsync(InitialPaymentCode);
+            preferredAccountCode = paymentTarget?.AccountCode;
         }
 
         await RefreshAccountsAsync(preferredAccountCode);
@@ -298,15 +300,17 @@ else
         _years = await CashManagerService.GetYearsAsync();
 
         var defaultPeriod = await CashManagerService.GetDefaultPeriodAsync();
-        var hasRequestedYear = InitialYearNumber.HasValue
-            && _years.Any(year => year.YearNumber == InitialYearNumber.Value);
+        var requestedYearNumber = InitialYearNumber ?? paymentTarget?.YearNumber;
+        var hasRequestedYear = requestedYearNumber.HasValue
+            && _years.Any(year => year.YearNumber == requestedYearNumber.Value);
         _selectedYearNumber = hasRequestedYear
-            ? InitialYearNumber
+            ? requestedYearNumber
             : defaultPeriod?.YearNumber ?? _years.FirstOrDefault()?.YearNumber;
-        _selectedPeriodStartOn = hasRequestedYear ? null : defaultPeriod?.StartOn;
+        _selectedPeriodStartOn = paymentTarget?.PeriodStartOn
+            ?? (hasRequestedYear ? null : defaultPeriod?.StartOn);
 
         await LoadPeriodsAsync(_selectedYearNumber);
-        if (hasRequestedYear)
+        if (hasRequestedYear && paymentTarget is null)
             _selectedPeriodStartOn = null;
         await ReloadStatementAsync();
     }

@@ -62,6 +62,10 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbCalendar> App_tbCalendars { get; set; }
         public virtual DbSet<App_tbCalendarHoliday> App_tbCalendarHolidays { get; set; }
         public virtual DbSet<Cash_tbCategory> Cash_tbCategories { get; set; }
+        public virtual DbSet<Cash_tbCategoryVersion> Cash_tbCategoryVersions { get; set; }
+        public virtual DbSet<Cash_tbCategoryVersionStatus> Cash_tbCategoryVersionStatuses { get; set; }
+        public virtual DbSet<Cash_tbCategoryVersionEvent> Cash_tbCategoryVersionEvents { get; set; }
+        public virtual DbSet<Cash_tbCategoryRootType> Cash_tbCategoryRootTypes { get; set; }
         public virtual DbSet<Cash_tbCategoryExp> Cash_tbCategoryExps { get; set; }
         public virtual DbSet<Cash_tbCategoryExpSyntax> Cash_tbCategoryExpSyntax { get; set; }
         public virtual DbSet<Cash_tbCategoryExprFormat> Cash_tbCategoryExprFormats { get; set; }
@@ -1063,12 +1067,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
 
-                entity.HasOne(d => d.CategoryCodeNavigation)
-                    .WithMany(p => p.TbCodes)
-                    .HasForeignKey(d => d.CategoryCode)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Cash_tbCode_Cash_tbCategory1");
-
                 entity.HasOne(d => d.TaxCodeNavigation)
                     .WithMany(p => p.TbCodes)
                     .HasForeignKey(d => d.TaxCode)
@@ -1848,11 +1846,6 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbOptions)
                     .HasForeignKey(d => d.MinerFeeCode)
                     .HasConstraintName("FK_App_tbOptions_Cash_tbCode");
-
-                entity.HasOne(d => d.NetProfitCodeNavigation)
-                    .WithMany(p => p.TbOptions)
-                    .HasForeignKey(d => d.NetProfitCode)
-                    .HasConstraintName("FK_App_tbOption_Cash_tbCategory");
 
                 entity.HasOne(d => d.RegisterNameNavigation)
                     .WithMany(p => p.TbOptions)

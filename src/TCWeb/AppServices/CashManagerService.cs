@@ -150,7 +150,7 @@ namespace TradeControl.Web.AppServices
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<string?> GetAccountCodeByPaymentCodeAsync(
+        public async Task<CashManagerPaymentNavigationTarget?> GetPaymentNavigationTargetAsync(
             string paymentCode,
             CancellationToken cancellationToken = default)
         {
@@ -160,10 +160,23 @@ namespace TradeControl.Web.AppServices
             using var scope = _scopeFactory.CreateScope();
             var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
 
-            return await nodeContext.Cash_tbPayments
+            var payment = await nodeContext.Cash_tbPayments
                 .AsNoTracking()
-                .Where(payment => payment.PaymentCode == paymentCode)
-                .Select(payment => payment.AccountCode)
+                .Where(item => item.PaymentCode == paymentCode)
+                .Select(item => new { item.AccountCode, item.PaidOn })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (payment is null)
+                return null;
+
+            return await nodeContext.App_Periods
+                .AsNoTracking()
+                .Where(period => period.StartOn <= payment.PaidOn)
+                .OrderByDescending(period => period.StartOn)
+                .Select(period => new CashManagerPaymentNavigationTarget(
+                    payment.AccountCode,
+                    period.YearNumber,
+                    period.StartOn))
                 .FirstOrDefaultAsync(cancellationToken);
         }
     }

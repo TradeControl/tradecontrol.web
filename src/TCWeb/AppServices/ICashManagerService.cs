@@ -18,7 +18,7 @@ namespace TradeControl.Web.AppServices
         Task<IReadOnlyList<CashManagerSelectOption>> GetCashCodeOptionsAsync(
             CancellationToken cancellationToken = default);
 
-        Task<string?> GetAccountCodeByPaymentCodeAsync(
+        Task<CashManagerPaymentNavigationTarget?> GetPaymentNavigationTargetAsync(
             string paymentCode,
             CancellationToken cancellationToken = default);
     }

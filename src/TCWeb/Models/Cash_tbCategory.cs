@@ -17,8 +17,6 @@ namespace TradeControl.Web.Models
         {
             TbCategoryTotalChildCodeNavigations = new HashSet<Cash_tbCategoryTotal>();
             TbCategoryTotalParentCodeNavigations = new HashSet<Cash_tbCategoryTotal>();
-            TbCodes = new HashSet<Cash_tbCode>();
-            TbOptions = new HashSet<App_tbOption>();
         }
 
         [Key]
@@ -67,9 +65,5 @@ namespace TradeControl.Web.Models
         public virtual ICollection<Cash_tbCategoryTotal> TbCategoryTotalChildCodeNavigations { get; set; }
         [InverseProperty(nameof(Cash_tbCategoryTotal.ParentCodeNavigation))]
         public virtual ICollection<Cash_tbCategoryTotal> TbCategoryTotalParentCodeNavigations { get; set; }
-        [InverseProperty(nameof(Cash_tbCode.CategoryCodeNavigation))]
-        public virtual ICollection<Cash_tbCode> TbCodes { get; set; }
-        [InverseProperty(nameof(App_tbOption.NetProfitCodeNavigation))]
-        public virtual ICollection<App_tbOption> TbOptions { get; set; }
     }
 }

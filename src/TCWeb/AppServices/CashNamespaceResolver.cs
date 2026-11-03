@@ -8,7 +8,7 @@ using TradeControl.Web.Data;
 
 namespace TradeControl.Web.AppServices
 {
-    public sealed class CashNamespaceResolver : ICashNamespaceResolver
+    public sealed class CashNamespaceResolver : ICashNamespaceResolver, IDisposable
     {
         private readonly NodeContext _nodeContext;
         private Dictionary<string, IReadOnlyList<NamespaceEdge>>? _parentsByChild;
@@ -17,6 +17,8 @@ namespace TradeControl.Web.AppServices
         {
             _nodeContext = nodeContext;
         }
+
+        public void Dispose() => _nodeContext.Dispose();
 
         public async Task<string> ResolveNamespacePathAsync(
             string subjectCode,

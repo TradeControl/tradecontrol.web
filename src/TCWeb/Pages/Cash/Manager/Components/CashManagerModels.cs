@@ -65,6 +65,11 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         string Description,
         NodeEnum.CashStatus CashStatus);
 
+    public sealed record CashManagerPaymentNavigationTarget(
+        string AccountCode,
+        short YearNumber,
+        DateTime PeriodStartOn);
+
     public sealed record CashManagerStatementRow(
         long? RowNumber,
         string PaymentCode,

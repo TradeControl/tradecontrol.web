@@ -260,6 +260,8 @@ else
 
 @code
 {
+    [Parameter] public string? InitialInvoiceNumber { get; set; }
+
     private const int NamespaceSuggestionPageSize = 12;
 
     private readonly WorkspaceState<string> Workspace = new();
@@ -323,6 +325,24 @@ else
         _defaultPeriodStartOn = defaultPeriod?.StartOn;
 
         await ResetFiltersToDefaultAsync();
+
+        if (!string.IsNullOrWhiteSpace(InitialInvoiceNumber))
+        {
+            var invoiceNumber = InitialInvoiceNumber.Trim();
+            var invoicePeriod = await InvoiceRegisterLookupService.GetInvoicePeriodAsync(invoiceNumber);
+
+            if (invoicePeriod is not null)
+            {
+                _selectedYearNumber = invoicePeriod.YearNumber;
+                await LoadPeriodsAsync(_selectedYearNumber);
+                _selectedPeriodStartOn = invoicePeriod.StartOn;
+            }
+
+            Workspace.SelectedKey = invoiceNumber;
+            Workspace.Mode = WorkspaceMode.DetailPanel;
+            Filter.SelectedInvoiceNumber = invoiceNumber;
+        }
+
         await LoadCurrentWorkspaceAsync();
     }
 

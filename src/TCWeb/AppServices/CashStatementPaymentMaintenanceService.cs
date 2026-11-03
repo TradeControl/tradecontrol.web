@@ -10,7 +10,7 @@ using TradeControl.Web.Pages.Cash.Manager.Components;
 
 namespace TradeControl.Web.AppServices
 {
-    public sealed class CashStatementPaymentMaintenanceService : ICashStatementPaymentMaintenanceService
+    public sealed class CashStatementPaymentMaintenanceService : ICashStatementPaymentMaintenanceService, IDisposable
     {
         private readonly NodeContext _nodeContext;
 
@@ -18,6 +18,8 @@ namespace TradeControl.Web.AppServices
         {
             _nodeContext = nodeContext;
         }
+
+        public void Dispose() => _nodeContext.Dispose();
 
         public async Task<CashManagerStatementPaymentEditorState?> GetEditorAsync(
             string paymentCode,

@@ -44,6 +44,7 @@ namespace TradeControl.Web.AppServices
                     subject.SubjectCode,
                     subject.SubjectName,
                     subjectType.SubjectType,
+                    subjectType.SubjectClassCode,
                     subjectType.CashPolarityCode
                 })
                 .FirstOrDefaultAsync(cancellationToken);
@@ -64,6 +65,7 @@ namespace TradeControl.Web.AppServices
                 summary.SubjectCode,
                 summary.SubjectName,
                 summary.SubjectType,
+                summary.SubjectClassCode == (short)NodeEnum.SubjectClass.Structural,
                 (NodeEnum.CashPolarity)summary.CashPolarityCode,
                 currentBalance,
                 resolvedParentSubjectCode);
@@ -96,16 +98,26 @@ namespace TradeControl.Web.AppServices
                 .Take(normalizedPageSize)
                 .ToListAsync(cancellationToken);
 
+            var invoiceNumbers = rows.Select(row => row.InvoiceNumber).ToArray();
+            var subjectNames = await (
+                    from invoice in _nodeContext.Invoice_tbInvoices.AsNoTracking()
+                    join subject in _nodeContext.Subject_tbSubjects.AsNoTracking()
+                        on invoice.SubjectCode equals subject.SubjectCode
+                    where invoiceNumbers.Contains(invoice.InvoiceNumber)
+                    select new { invoice.InvoiceNumber, subject.SubjectName })
+                .ToDictionaryAsync(item => item.InvoiceNumber, item => item.SubjectName, cancellationToken);
+
             var items = rows
                 .Select(o => new SubjectEnquiryInvoiceItem(
                     o.InvoiceNumber,
+                    subjectNames.TryGetValue(o.InvoiceNumber, out var subjectName) ? subjectName : string.Empty,
                     o.InvoiceType,
                     o.InvoicedOn,
                     Convert.ToDouble(o.InvoiceValue),
                     Convert.ToDouble(o.TaxValue),
                     Convert.ToDouble(o.TotalPaidValue),
                     o.InvoiceStatus,
-                    $"/Invoice/Enquiry/Index?InvoiceNumber={Uri.EscapeDataString(o.InvoiceNumber)}"))
+                    $"/Invoice/Register?invoiceNumber={Uri.EscapeDataString(o.InvoiceNumber)}"))
                 .ToList();
 
             return new SubjectEnquiryPageResult<SubjectEnquiryInvoiceItem>
@@ -144,9 +156,19 @@ namespace TradeControl.Web.AppServices
                 .Take(normalizedPageSize)
                 .ToListAsync(cancellationToken);
 
+            var paymentCodes = rows.Select(row => row.PaymentCode).ToArray();
+            var subjectNames = await (
+                    from payment in _nodeContext.Cash_tbPayments.AsNoTracking()
+                    join subject in _nodeContext.Subject_tbSubjects.AsNoTracking()
+                        on payment.SubjectCode equals subject.SubjectCode
+                    where paymentCodes.Contains(payment.PaymentCode)
+                    select new { payment.PaymentCode, subject.SubjectName })
+                .ToDictionaryAsync(item => item.PaymentCode, item => item.SubjectName, cancellationToken);
+
             var items = rows
                 .Select(o => new SubjectEnquiryPaymentItem(
                     o.PaymentCode,
+                    subjectNames.TryGetValue(o.PaymentCode, out var subjectName) ? subjectName : string.Empty,
                     o.PaidOn,
                     o.PaymentReference,
                     o.PaidOutValue,

@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Controllers;
 using TradeControl.Web.Data;
+using TradeControl.Web.Models;
 using TradeControl.Web.Tenancy;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Application.DataProvision;
@@ -1056,6 +1057,14 @@ Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.
     "The disposable VAT alignment guard, historical profile coverage or authoritative calculation/configuration boundary changed.");
 var syntheticBootstrapSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
     "Stored Procedures", "proc_DatasetSyntheticMIS_Bootstrap.sql"));
+var categoryTreeMigrationPath = Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Scripts",
+    "DB4 cat change control migration script.sql");
+var categoryTreeMigrationBytes = File.ReadAllBytes(categoryTreeMigrationPath);
+Assert(categoryTreeMigrationBytes.Length >= 3
+    && categoryTreeMigrationBytes[0] == 0xEF
+    && categoryTreeMigrationBytes[1] == 0xBB
+    && categoryTreeMigrationBytes[2] == 0xBF,
+    "The SQLCMD Category Tree migration must retain its UTF-8 BOM so Unicode template text is not decoded as Windows-1252.");
 var restoreDomainUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO Usr.tbUser", StringComparison.Ordinal);
 var restoreIdentityUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO dbo.AspNetUsers", StringComparison.Ordinal);
 Assert(syntheticBootstrapSql.Contains("SELECT * INTO #Keep_AspNetUsers FROM dbo.AspNetUsers;", StringComparison.Ordinal)
@@ -1315,6 +1324,18 @@ using (var translationContext = new NodeContext(new DbContextOptionsBuilder<Node
            .UseSqlServer("Server=translation-only;Database=translation-only;Integrated Security=True;TrustServerCertificate=True")
            .Options))
 {
+    var optionsEntity = translationContext.Model.FindEntityType(typeof(App_tbOption));
+    var cashCodeEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCode));
+    Assert(optionsEntity is not null
+        && optionsEntity.FindProperty(nameof(App_tbOption.CategoryVersionId)) is not null
+        && optionsEntity.FindProperty(nameof(App_tbOption.NetProfitCode)) is null
+        && optionsEntity.FindProperty(nameof(App_tbOption.VatCategoryCode)) is null,
+        "The EF model must map the active CategoryVersionId and must not query retired App.tbOptions root columns.");
+    Assert(cashCodeEntity is not null
+        && cashCodeEntity.FindProperty(nameof(Cash_tbCode.CategoryCode)) is null
+        && cashCodeEntity.GetForeignKeys().All(foreignKey => foreignKey.PrincipalEntityType.ClrType != typeof(Cash_tbCategory)),
+        "The EF model must not query or relate through the retired Cash.tbCode.CategoryCode column.");
+
     var translatedSummary = translationContext.SubjectDatedBalances(new DateTime(2026, 9, 30))
         .GroupBy(_ => 1)
         .Select(group => new
@@ -1348,10 +1369,22 @@ var cashManagerPageModel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "
     "Index.cshtml.cs"));
 var cashManagerShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Manager",
     "CashManagerShell.razor"));
+var cashManagerServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "CashManagerService.cs"));
+var serviceCollectionSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "ServiceCollectionExtensions.cs"));
 var subjectBrowserShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
     "SubjectBrowserShell.razor"));
 var subjectBrowserPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
     "Index.cshtml"));
+var subjectEnquiryShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Subject", "Browser",
+    "Components", "SubjectEnquiryShell.razor"));
+var subjectEnquiryServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "SubjectEnquiryService.cs"));
+var invoiceRegisterPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Invoice", "Register",
+    "Index.cshtml"));
+var invoiceRegisterShell = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Invoice", "Register",
+    "InvoiceRegisterShell.razor"));
 Assert(accountsWorkspaceView.Contains("Year-end debtors and creditors", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("Review in Subject Browser", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("Evidence SHA-256", StringComparison.Ordinal)
@@ -1425,11 +1458,31 @@ Assert(taxHubServiceSource.Contains("&YearNumber=", StringComparison.Ordinal)
     && cashManagerShell.Contains("[Parameter] public short? InitialYearNumber", StringComparison.Ordinal)
     && cashManagerShell.Contains("Enum.TryParse<CashManagerSection>(InitialSection", StringComparison.Ordinal)
     && cashManagerShell.Contains("_selectedPeriodStartOn = null;", StringComparison.Ordinal)
-    && cashManagerShell.Contains("if (hasRequestedYear)", StringComparison.Ordinal)
+    && cashManagerShell.Contains("if (hasRequestedYear && paymentTarget is null)", StringComparison.Ordinal)
     && yearEndReviewView.Contains("Review statement", StringComparison.Ordinal)
     && yearEndReviewView.Contains("Manage schedule", StringComparison.Ordinal)
     && taxHubServiceSource.Contains("&Section=Assets", StringComparison.Ordinal),
     "Tax Hub accounting-evidence drill-throughs do not preserve the reviewed accounting year and all-month statement scope.");
+Assert(subjectEnquiryServiceSource.Contains("/Invoice/Register?invoiceNumber=", StringComparison.Ordinal)
+    && !subjectEnquiryServiceSource.Contains("/Invoice/Enquiry/Index", StringComparison.Ordinal)
+    && invoiceRegisterPage.Contains("param-InitialInvoiceNumber=\"Model.InvoiceNumber\"", StringComparison.Ordinal)
+    && invoiceRegisterShell.Contains("GetInvoicePeriodAsync(invoiceNumber)", StringComparison.Ordinal)
+    && invoiceRegisterShell.Contains("Workspace.Mode = WorkspaceMode.DetailPanel", StringComparison.Ordinal)
+    && subjectEnquiryShell.Split("target=\"_blank\"", StringSplitOptions.None).Length - 1 == 4
+    && subjectEnquiryShell.Split("rel=\"noopener\"", StringSplitOptions.None).Length - 1 == 4,
+    "Subject Browser invoice/payment drill-throughs no longer open safely in a new tab or the invoice link misses Invoice Register.");
+Assert(subjectEnquiryServiceSource.Contains("subject.SubjectName", StringComparison.Ordinal)
+    && subjectEnquiryShell.Contains("_summary?.IsStructural == true", StringComparison.Ordinal)
+    && subjectEnquiryShell.Contains("@item.SubjectName", StringComparison.Ordinal),
+    "Structural Subject enquiries no longer identify the associated Subject in aggregate invoice and payment rows.");
+Assert(cashManagerServiceSource.Contains("GetPaymentNavigationTargetAsync", StringComparison.Ordinal)
+    && cashManagerServiceSource.Contains("item.PaidOn", StringComparison.Ordinal)
+    && cashManagerServiceSource.Contains("period.StartOn <= payment.PaidOn", StringComparison.Ordinal)
+    && cashManagerShell.Contains("paymentTarget?.PeriodStartOn", StringComparison.Ordinal)
+    && serviceCollectionSource.Contains("AddScoped<ICashStatementQueryService>(provider =>", StringComparison.Ordinal)
+    && serviceCollectionSource.Contains("AddScoped<ICashStatementPaymentMaintenanceService>(provider =>", StringComparison.Ordinal)
+    && serviceCollectionSource.Contains("IDbContextFactory<Data.NodeContext>", StringComparison.Ordinal),
+    "Subject Browser payment drill-through no longer selects the payment period or isolates concurrent statement/editor contexts.");
 var navigationView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Shared", "_Navigation.cshtml"));
 var legacyCompanyPages = Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Company");
 Assert((!Directory.Exists(legacyCompanyPages) || !Directory.EnumerateFiles(legacyCompanyPages).Any())

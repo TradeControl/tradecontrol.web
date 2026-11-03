@@ -10,6 +10,7 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
         Task<IReadOnlyList<InvoiceRegisterYearOption>> GetYearsAsync(CancellationToken cancellationToken = default);
         Task<IReadOnlyList<InvoiceRegisterPeriodOption>> GetPeriodsAsync(short yearNumber, CancellationToken cancellationToken = default);
         Task<InvoiceRegisterPeriodOption?> GetDefaultPeriodAsync(CancellationToken cancellationToken = default);
+        Task<InvoiceRegisterPeriodOption?> GetInvoicePeriodAsync(string invoiceNumber, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<InvoiceRegisterSelectOption>> GetCashCodeOptionsAsync(CancellationToken cancellationToken = default);
     }
 }

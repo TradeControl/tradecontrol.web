@@ -9,7 +9,7 @@ using TradeControl.Web.Pages.Cash.Manager.Components;
 
 namespace TradeControl.Web.AppServices
 {
-    public sealed class CashStatementQueryService : ICashStatementQueryService
+    public sealed class CashStatementQueryService : ICashStatementQueryService, IDisposable
     {
         private readonly NodeContext _nodeContext;
         private readonly ICashNamespaceResolver _namespaceResolver;
@@ -19,6 +19,8 @@ namespace TradeControl.Web.AppServices
             _nodeContext = nodeContext;
             _namespaceResolver = namespaceResolver;
         }
+
+        public void Dispose() => _nodeContext.Dispose();
 
         public async Task<CashManagerStatementResult> GetStatementAsync(
             string accountCode,

@@ -188,6 +188,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "cash statement", "cash stat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCWeb.OAuthBroker", "TCWeb.OAuthBroker\TCWeb.OAuthBroker.csproj", "{1D84274A-122B-41FD-9668-52BF1A061A4B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "category tree", "category tree", "{BCDB268F-D62F-4968-9DCE-2EA46805153C}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\Category Tree\category-tree-change-control-workplan.md = ..\docs\projects\Category Tree\category-tree-change-control-workplan.md
+		..\docs\projects\Category Tree\category-tree-increment-1-inventory-and-contract.md = ..\docs\projects\Category Tree\category-tree-increment-1-inventory-and-contract.md
+		..\docs\projects\Category Tree\category-tree-schema-change-plan.md = ..\docs\projects\Category Tree\category-tree-schema-change-plan.md
+		..\docs\projects\Category Tree\category-tree-ui-change-plan.md = ..\docs\projects\Category Tree\category-tree-ui-change-plan.md
+		..\docs\projects\Category Tree\categorytree_test_script.md = ..\docs\projects\Category Tree\categorytree_test_script.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -395,6 +404,7 @@ Global
 		{E0DDD42C-BF9A-4A77-BA49-A649E6F85393} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
 		{71C866CE-C248-47EC-B3B3-02985FC96E19} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
 		{5B65C1FF-73E7-4A46-8B6B-BCAAD510DC86} = {71C866CE-C248-47EC-B3B3-02985FC96E19}
+		{BCDB268F-D62F-4968-9DCE-2EA46805153C} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}

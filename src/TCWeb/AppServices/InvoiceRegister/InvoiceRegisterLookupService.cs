@@ -102,6 +102,38 @@ namespace TradeControl.Web.AppServices.InvoiceRegister
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        public async Task<InvoiceRegisterPeriodOption?> GetInvoicePeriodAsync(
+            string invoiceNumber,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(invoiceNumber))
+                return null;
+
+            using var scope = _scopeFactory.CreateScope();
+            var nodeContext = scope.ServiceProvider.GetRequiredService<NodeContext>();
+
+            var invoicedOn = await nodeContext.Invoice_tbInvoices
+                .AsNoTracking()
+                .Where(invoice => invoice.InvoiceNumber == invoiceNumber.Trim())
+                .Select(invoice => (System.DateTime?)invoice.InvoicedOn)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!invoicedOn.HasValue)
+                return null;
+
+            return await nodeContext.App_Periods
+                .AsNoTracking()
+                .Where(period => period.StartOn <= invoicedOn.Value)
+                .OrderByDescending(period => period.StartOn)
+                .Select(period => new InvoiceRegisterPeriodOption(
+                    period.YearNumber,
+                    period.MonthNumber,
+                    period.StartOn,
+                    period.Description,
+                    (NodeEnum.CashStatus)period.CashStatusCode))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<IReadOnlyList<InvoiceRegisterSelectOption>> GetCashCodeOptionsAsync(CancellationToken cancellationToken = default)
         {
             using var scope = _scopeFactory.CreateScope();
