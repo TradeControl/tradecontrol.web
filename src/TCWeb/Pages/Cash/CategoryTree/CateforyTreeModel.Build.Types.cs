@@ -75,7 +75,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             const short CATEGORYTYPE_CASHCODE = 0;
 
             var cats = await NodeContext.Cash_tbCategories
-                .Where(c => c.CashTypeCode == cashTypeCode && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
+                .Where(c => c.VersionId == WorkspaceVersionId
+                    && c.CashTypeCode == cashTypeCode
+                    && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
                 .OrderBy(c => c.DisplayOrder == 0 ? 1 : 0)
                 .ThenBy(c => c.DisplayOrder == 0 ? short.MaxValue : c.DisplayOrder)
                 .ThenBy(c => c.Category)

@@ -66,6 +66,8 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_tbCategoryVersionStatus> Cash_tbCategoryVersionStatuses { get; set; }
         public virtual DbSet<Cash_tbCategoryVersionEvent> Cash_tbCategoryVersionEvents { get; set; }
         public virtual DbSet<Cash_tbCategoryRootType> Cash_tbCategoryRootTypes { get; set; }
+        public virtual DbSet<Cash_tbCategoryRoot> Cash_tbCategoryRoots { get; set; }
+        public virtual DbSet<Cash_tbCategoryCodeMap> Cash_tbCategoryCodeMaps { get; set; }
         public virtual DbSet<Cash_tbCategoryExp> Cash_tbCategoryExps { get; set; }
         public virtual DbSet<Cash_tbCategoryExpSyntax> Cash_tbCategoryExpSyntax { get; set; }
         public virtual DbSet<Cash_tbCategoryExprFormat> Cash_tbCategoryExprFormats { get; set; }
@@ -705,10 +707,6 @@ namespace TradeControl.Web.Data
 
                 entity.Property(e => e.PrintOrder).HasDefaultValueSql("((10))");
 
-                entity.Property(e => e.RowVer)
-                    .IsRowVersion()
-                    .IsConcurrencyToken();
-
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
                 entity.Property(e => e.UpdatedOn).HasDefaultValueSql("(getdate())");
@@ -848,36 +846,41 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Cash_tbCategory>(entity =>
             {
-                entity.HasKey(e => e.CategoryCode)
+                entity.HasKey(e => new { e.VersionId, e.CategoryCode })
                     .HasName("PK_Cash_tbCategory");
 
-                entity.HasIndex(e => new { e.DisplayOrder, e.Category }, "IX_Cash_tbCategory_DisplayOrder")
+                entity.HasIndex(e => new { e.VersionId, e.DisplayOrder, e.Category }, "IX_Cash_tbCategory_DisplayOrder")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => e.Category, "IX_Cash_tbCategory_Name")
+                entity.HasIndex(e => new { e.VersionId, e.Category }, "IX_Cash_tbCategory_Name")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.CategoryTypeCode, e.Category }, "IX_Cash_tbCategory_TypeCategory")
+                entity.HasIndex(e => new { e.VersionId, e.CategoryTypeCode, e.Category }, "IX_Cash_tbCategory_TypeCategory")
                     .HasFillFactor((byte)90);
 
-                entity.HasIndex(e => new { e.CategoryTypeCode, e.DisplayOrder, e.Category }, "IX_Cash_tbCategory_TypeOrderCategory")
+                entity.HasIndex(e => new { e.VersionId, e.CategoryTypeCode, e.DisplayOrder, e.Category }, "IX_Cash_tbCategory_TypeOrderCategory")
                     .HasFillFactor((byte)90);
 
-                //entity.Property(e => e.CashPolarityCode).HasDefaultValueSql("((1))");
+                entity.HasIndex(e => new { e.VersionId, e.IsEnabled, e.Category }, "IX_Cash_tbCategory_IsEnabled_Category")
+                    .IsUnique();
 
-                //entity.Property(e => e.CashTypeCode).HasDefaultValueSql("((0))");
+                entity.HasIndex(e => new { e.VersionId, e.IsEnabled, e.CategoryCode }, "IX_Cash_tbCategory_IsEnabled_CategoryCode")
+                    .IsUnique();
 
-                //entity.Property(e => e.CategoryTypeCode).HasDefaultValueSql("((1))");
+                entity.Property(e => e.VersionId)
+                    .HasDefaultValueSql("([Cash].[fnCategoryVersionDefault]())");
+
+                entity.Property(e => e.CashPolarityCode).HasDefaultValueSql("((1))");
+
+                entity.Property(e => e.CashTypeCode).HasDefaultValueSql("((0))");
+
+                entity.Property(e => e.CategoryTypeCode).HasDefaultValueSql("((1))");
 
                 entity.Property(e => e.InsertedBy).HasDefaultValueSql("(suser_sname())");
 
                 entity.Property(e => e.InsertedOn).HasDefaultValueSql("(getdate())");
 
                 entity.Property(e => e.IsEnabled).HasDefaultValueSql("((1))");
-
-                //entity.Property(e => e.RowVer)
-                //    .IsRowVersion()
-                //    .IsConcurrencyToken();
 
                 entity.Property(e => e.UpdatedBy).HasDefaultValueSql("(suser_sname())");
 
@@ -905,11 +908,6 @@ namespace TradeControl.Web.Data
                 entity.HasKey(e => e.CategoryCode)
                     .HasName("PK_Cash_tbCategoryExp");
 
-                entity.HasOne(d => d.CategoryCodeNavigation)
-                    .WithOne(p => p.TbCategoryExp)
-                    .HasForeignKey<Cash_tbCategoryExp>(d => d.CategoryCode)
-                    .HasConstraintName("FK_Cash_tbCategoryExp_Cash_tbCategory");
-
                 entity.HasOne(d => d.SyntaxTypeCodeNavigation)
                     .WithMany(p => p.TbCategoryExps)
                     .HasForeignKey(d => d.SyntaxTypeCode)
@@ -921,20 +919,69 @@ namespace TradeControl.Web.Data
 
             modelBuilder.Entity<Cash_tbCategoryTotal>(entity =>
             {
-                entity.HasKey(e => new { e.ParentCode, e.ChildCode })
+                entity.HasKey(e => new { e.VersionId, e.ParentCode, e.ChildCode })
                     .HasName("PK_Cash_tbCategoryTotal");
+
+                entity.Property(e => e.VersionId)
+                    .HasDefaultValueSql("([Cash].[fnCategoryVersionDefault]())");
 
                 entity.HasOne(d => d.ChildCodeNavigation)
                     .WithMany(p => p.TbCategoryTotalChildCodeNavigations)
-                    .HasForeignKey(d => d.ChildCode)
+                    .HasForeignKey(d => new { d.VersionId, d.ChildCode })
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Cash_tbCategoryTotal_Cash_tbCategory_Child");
+                    .HasConstraintName("FK_Cash_tbCategoryTotal_Cash_tbCategory_ChildVersion");
 
                 entity.HasOne(d => d.ParentCodeNavigation)
                     .WithMany(p => p.TbCategoryTotalParentCodeNavigations)
-                    .HasForeignKey(d => d.ParentCode)
+                    .HasForeignKey(d => new { d.VersionId, d.ParentCode })
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Cash_tbCategoryTotal_Cash_tbCategory_Parent");
+                    .HasConstraintName("FK_Cash_tbCategoryTotal_Cash_tbCategory_ParentVersion");
+            });
+
+            modelBuilder.Entity<Cash_tbCategoryCodeMap>(entity =>
+            {
+                entity.HasKey(e => new { e.VersionId, e.CashCode })
+                    .HasName("PK_Cash_tbCategoryCodeMap");
+
+                entity.HasIndex(e => new { e.VersionId, e.CategoryCode, e.CashCode },
+                    "IX_Cash_tbCategoryCodeMap_VersionCategoryCashCode");
+
+            });
+
+            modelBuilder.Entity<Cash_tbCategoryRoot>(entity =>
+            {
+                entity.HasKey(e => new { e.VersionId, e.RootTypeCode })
+                    .HasName("PK_Cash_tbCategoryRoot");
+
+            });
+
+            modelBuilder.Entity<Cash_tbCategoryVersion>(entity =>
+            {
+                entity.HasKey(e => e.VersionId)
+                    .HasName("PK_Cash_tbCategoryVersion");
+
+            });
+
+            modelBuilder.Entity<Cash_tbCategoryVersionEvent>(entity =>
+            {
+                entity.HasKey(e => e.VersionEventId)
+                    .HasName("PK_Cash_tbCategoryVersionEvent");
+            });
+
+            modelBuilder.Entity<Cash_tbCategoryVersionStatus>(entity =>
+            {
+                entity.HasKey(e => e.VersionStatusCode)
+                    .HasName("PK_Cash_tbCategoryVersionStatus");
+
+                entity.Property(e => e.VersionStatusCode).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<Cash_tbCategoryRootType>(entity =>
+            {
+                entity.HasKey(e => e.RootTypeCode)
+                    .HasName("PK_Cash_tbCategoryRootType");
+
+                entity.Property(e => e.RootTypeCode).ValueGeneratedNever();
             });
 
             modelBuilder.Entity<Cash_tbCategoryType>(entity =>

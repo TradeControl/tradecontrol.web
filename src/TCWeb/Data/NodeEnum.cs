@@ -13,6 +13,9 @@ namespace TradeControl.Web.Data
         public enum SubjectClass { Virtual, Real, Structural }
         public enum ExportType { Home, Export, NorthernIreland }
         public enum CategoryType { Nominal, CashTotal, Expression };
+        public enum CategoryVersionStatus : short { Draft, Published, Submitted, Archived };
+        public enum CategoryVersionEventType : short { Create, Edit, Validate, Publish, Submit, Archive, RefreshOrRebase };
+        public enum CategoryRootType : short { NetProfit, Vat };
         public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, External, Money };
         public enum CashStatus { Forecast, Current, Closed, Archived };

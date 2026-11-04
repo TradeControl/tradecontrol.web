@@ -5,17 +5,19 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Authorization;
+using TradeControl.Web.AppServices.CategoryTree;
+using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public partial class CategoryTreeModel
     {
-        private async Task<HashSet<string>> GetRootAncestorsAsync(string key)
+        private async Task<HashSet<string>> GetRootAncestorsAsync(string versionId, string key)
         {
             var edges = await NodeContext.Cash_tbCategoryTotals
                 .AsNoTracking()
-                .Where(t => t.ParentCode != null && t.ChildCode != null)
+                .Where(t => t.VersionId == versionId && t.ParentCode != null && t.ChildCode != null)
                 .Select(t => new { t.ParentCode, t.ChildCode })
                 .ToListAsync();
 
@@ -51,13 +53,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             return roots;
         }
 
-        public async Task<JsonResult> OnPostMoveAsync([FromForm] string key, [FromForm] string targetParentKey)
+        public async Task<JsonResult> OnPostMoveAsync([FromForm] string versionId,
+            [FromForm] string key, [FromForm] string targetParentKey)
         {
             if (!User.IsInRole(Constants.AdministratorsRole))
             {
                 return new JsonResult(new { success = false, message = "Insufficient privileges" });
             }
-            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(targetParentKey))
+            if (string.IsNullOrWhiteSpace(versionId) || string.IsNullOrWhiteSpace(key)
+                || string.IsNullOrWhiteSpace(targetParentKey))
             {
                 return new JsonResult(new { success = false, message = "Missing parameters." });
             }
@@ -73,8 +77,37 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return new JsonResult(new { success = false, message = "Move not allowed in Cash Type view." });
                 }
 
+                if (key.StartsWith("code:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var cashCode = key.Substring("code:".Length);
+                    var targetIsNominal = await NodeContext.Cash_tbCategories
+                        .AnyAsync(category => category.VersionId == versionId
+                            && category.CategoryCode == targetParentKey
+                            && category.CategoryTypeCode == (short)NodeEnum.CategoryType.Nominal
+                            && category.IsEnabled != 0);
+
+                    if (!targetIsNominal)
+                    {
+                        return new JsonResult(new {
+                            success = false,
+                            message = "Cash Codes may be assigned only to enabled Nominal categories."
+                        });
+                    }
+
+                    await CategoryTreeService.MoveCashCodeAsync(versionId, cashCode,
+                        targetParentKey, "Cash Code moved by drag and drop.");
+
+                    return new JsonResult(new {
+                        success = true,
+                        oldParentKey = string.Empty,
+                        newParentKey = targetParentKey,
+                        mode = "move"
+                    });
+                }
+
                 var cats = await NodeContext.Cash_tbCategories
-                    .Where(c => (c.CategoryCode == key || c.CategoryCode == targetParentKey) && c.IsEnabled != 0)
+                    .Where(c => c.VersionId == versionId
+                        && (c.CategoryCode == key || c.CategoryCode == targetParentKey) && c.IsEnabled != 0)
                     .Select(c => c.CategoryCode)
                     .ToListAsync();
 
@@ -85,7 +118,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 // If already attached to target parent, do nothing
                 var alreadyAttached = await NodeContext.Cash_tbCategoryTotals
-                    .AnyAsync(t => t.ParentCode == targetParentKey && t.ChildCode == key);
+                    .AnyAsync(t => t.VersionId == versionId
+                        && t.ParentCode == targetParentKey && t.ChildCode == key);
 
                 if (alreadyAttached)
                 {
@@ -93,8 +127,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 // Compute whether key and targetParentKey are in the same totals tree (same root ancestor)
-                var keyRoots = await GetRootAncestorsAsync(key);
-                var targetRoots = await GetRootAncestorsAsync(targetParentKey);
+                var keyRoots = await GetRootAncestorsAsync(versionId, key);
+                var targetRoots = await GetRootAncestorsAsync(versionId, targetParentKey);
                 bool sameTree = keyRoots.Overlaps(targetRoots);
 
                 // Find an old parent link to remove *only if* this is a move within the same tree
@@ -102,34 +136,26 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (sameTree)
                 {
                     oldParentKey = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ChildCode == key)
+                        .Where(t => t.VersionId == versionId && t.ChildCode == key)
                         .OrderBy(t => t.ParentCode)
                         .Select(t => t.ParentCode)
                         .FirstOrDefaultAsync();
                 }
 
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
+                var changes = new List<CategoryTreeTotalCommand>();
                 if (sameTree && !string.IsNullOrWhiteSpace(oldParentKey))
                 {
-                    // Remove only the specific edge we are moving from (do not delete all other memberships)
-                    await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == oldParentKey && t.ChildCode == key)
-                        .ExecuteDeleteAsync();
+                    changes.Add(new CategoryTreeTotalCommand(versionId, oldParentKey, key, 0, true,
+                        "Category moved."));
                 }
 
                 short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ParentCode == targetParentKey)
+                    .Where(t => t.VersionId == versionId && t.ParentCode == targetParentKey)
                     .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
-                    ParentCode = targetParentKey,
-                    ChildCode = key,
-                    DisplayOrder = nextOrder
-                });
-
-                await NodeContext.SaveChangesAsync();
-                await tx.CommitAsync();
+                changes.Add(new CategoryTreeTotalCommand(versionId, targetParentKey, key, nextOrder, false,
+                    "Category moved."));
+                await ApplyTotalsAsync(versionId, changes);
 
                 return new JsonResult(new {
                     success = true,
@@ -141,7 +167,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             catch (Exception e)
             {
                 await NodeContext.ErrorLog(e);
-                return new JsonResult(new { success = false, message = "Server error." });
+                return new JsonResult(new {
+                    success = false,
+                    message = CategoryTreeCommandFeedback.From(e)
+                });
             }
         }
     }

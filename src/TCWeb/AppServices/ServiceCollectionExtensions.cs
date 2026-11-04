@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.Execution;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.AppServices.InvoiceRegister;
 using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
@@ -172,6 +173,7 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<ISubjectBrowserService, SubjectBrowserService>();
             services.AddScoped<ISubjectEnquiryService, SubjectEnquiryService>();
             services.AddScoped<ICashManagerService, CashManagerService>();
+            services.AddScoped<ICategoryTreeChangeControlService, CategoryTreeChangeControlService>();
             // The statement and its payment editor are sibling Blazor components and can load
             // concurrently. Give each service its own tenant context instead of sharing the
             // circuit-scoped NodeContext (DbContext does not support concurrent operations).

@@ -6,13 +6,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Data;
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
     public class EditCategoryModel : DI_BasePageModel
     {
-        public EditCategoryModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public EditCategoryModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty] public string VersionId { get; set; } = "";
         [BindProperty] public string CategoryCode { get; set; } = "";
         [BindProperty] public string Category { get; set; } = "";
         [BindProperty] public bool IsEnabled { get; set; }
@@ -27,7 +36,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool OperationSucceeded { get; private set; }
         public string ErrorMessage { get; private set; } = "";
 
-        public async Task<IActionResult> OnGetAsync(string key, bool embed = false)
+        public async Task<IActionResult> OnGetAsync(string key, string versionId = null,
+            bool embed = false)
         {
             try
             {
@@ -38,8 +48,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return embed ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
                 }
 
-                var cat = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(c => c.CategoryCode == key);
+                var workspace = await CategoryTreeService.GetWorkspaceAsync(versionId,
+                    HttpContext.RequestAborted);
+                VersionId = workspace.SelectedVersion.VersionId;
+
+                var cat = await NodeContext.Cash_tbCategories.AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.VersionId == VersionId && c.CategoryCode == key);
 
                 if (cat == null)
                 {
@@ -62,7 +76,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 CashPolarityCode = cat.CashPolarityCode;
 
                 ParentKey = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ChildCode == CategoryCode)
+                    .Where(t => t.VersionId == VersionId && t.ChildCode == CategoryCode)
                     .Select(t => t.ParentCode)
                     .FirstOrDefaultAsync() ?? "";
 
@@ -72,9 +86,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
+                ErrorMessage = CategoryTreeCommandFeedback.From(ex);
                 await BuildLists();
-                return embed ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
+                return embed
+                    ? Content($"<div class='text-danger small p-2'>{System.Net.WebUtility.HtmlEncode(ErrorMessage)}</div>")
+                    : Page();
             }
         }
 
@@ -94,8 +110,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return isEmbedded ? Content("<div class='text-danger small p-2'>Missing key</div>") : Page();
                 }
 
-                var cat = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(c => c.CategoryCode == CategoryCode);
+                if (string.IsNullOrWhiteSpace(VersionId))
+                {
+                    ErrorMessage = "Missing Category Tree version context.";
+                    await BuildLists();
+                    return isEmbedded ? Content("<div class='text-danger small p-2'>Missing version context</div>") : Page();
+                }
+
+                var cat = await NodeContext.Cash_tbCategories.AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.VersionId == VersionId
+                        && c.CategoryCode == CategoryCode);
 
                 if (cat == null || cat.CategoryTypeCode != (short)NodeEnum.CategoryType.Nominal)
                 {
@@ -104,19 +128,21 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                if (!string.IsNullOrWhiteSpace(Category))
-                {
-                    cat.Category = Category.Trim();
-                }
-                cat.IsEnabled = IsEnabled ? (short)1 : (short)0;
-                cat.CashTypeCode = CashTypeCode;
-                cat.CashPolarityCode = CashPolarityCode;
-
-                NodeContext.Attach(cat).State = EntityState.Modified;
-                await NodeContext.SaveChangesAsync();
+                await CategoryTreeService.SaveCategoryAsync(
+                    new CategoryTreeCategoryCommand(
+                        VersionId,
+                        CategoryCode,
+                        string.IsNullOrWhiteSpace(Category) ? cat.Category : Category.Trim(),
+                        cat.CategoryTypeCode,
+                        CashPolarityCode,
+                        CashTypeCode,
+                        cat.DisplayOrder,
+                        IsEnabled ? (short)1 : (short)0,
+                        $"Category {CategoryCode} edited."),
+                    HttpContext.RequestAborted);
 
                 ParentKey = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ChildCode == CategoryCode)
+                    .Where(t => t.VersionId == VersionId && t.ChildCode == CategoryCode)
                     .Select(t => t.ParentCode)
                     .FirstOrDefaultAsync() ?? "";
 
@@ -127,14 +153,21 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                return RedirectToPage("./Index", new { select = CategoryCode, expand = ParentKey });
+                return RedirectToPage("./Index", new
+                {
+                    versionId = VersionId,
+                    select = CategoryCode,
+                    expand = ParentKey
+                });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
+                ErrorMessage = CategoryTreeCommandFeedback.From(ex);
                 await BuildLists();
-                return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
+                return isEmbedded
+                    ? Content($"<div class='text-danger small p-2'>{System.Net.WebUtility.HtmlEncode(ErrorMessage)}</div>")
+                    : Page();
             }
         }
 

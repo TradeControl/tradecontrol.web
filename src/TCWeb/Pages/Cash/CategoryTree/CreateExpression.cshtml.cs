@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Models;
 using TCExports.Generator.CashStatement;
 
@@ -15,7 +16,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public class CreateExpressionModel : DI_BasePageModel
     {
-        public CreateExpressionModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public CreateExpressionModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = string.Empty;
 
         [BindProperty]
         [Required]
@@ -98,7 +108,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 short expressionTypeCode = (short)NodeEnum.CategoryType.Expression;
 
                 var categoryExists = await NodeContext.Cash_tbCategories
-                    .AnyAsync(c => c.CategoryCode == CategoryCode);
+                    .AnyAsync(c => c.VersionId == VersionId && c.CategoryCode == CategoryCode);
 
                 if (categoryExists)
                 {
@@ -149,34 +159,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
-                var newCategory = new Cash_tbCategory {
-                    CategoryCode = CategoryCode,
-                    Category = Category,
-                    CategoryTypeCode = expressionTypeCode,
-                    CashTypeCode = CashTypeCode.Value,
-                    CashPolarityCode = (short)NodeEnum.CashPolarity.Neutral,
-                    DisplayOrder = await NextExpressionDisplayOrderAsync(),
-                    IsEnabled = 1
-                };
-
-                NodeContext.Cash_tbCategories.Add(newCategory);
-                await NodeContext.SaveChangesAsync();
-
-                var expression = new Cash_tbCategoryExp {
-                    CategoryCode = CategoryCode,
-                    Expression = storageTranslation.Expression,
-                    Format = Format ?? string.Empty,
-                    IsError = false,
-                    ErrorMessage = null,
-                    SyntaxTypeCode = SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both
-                };
-
-                NodeContext.Cash_tbCategoryExps.Add(expression);
-                await NodeContext.SaveChangesAsync();
-
-                await tx.CommitAsync();
+                var categoryCommand = new CategoryTreeCategoryCommand(VersionId, CategoryCode,
+                    Category, expressionTypeCode, (short)NodeEnum.CashPolarity.Neutral,
+                    CashTypeCode.Value, await NextExpressionDisplayOrderAsync(), 1,
+                    "Expression category created.");
+                await CategoryTreeService.SaveExpressionAsync(new CategoryTreeExpressionCommand(
+                    categoryCommand, storageTranslation.Expression, Format ?? string.Empty,
+                    SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both));
 
                 OperationSucceeded = true;
 
@@ -185,6 +174,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (Request.Query["embed"] != "1")
                 {
                     return RedirectToPage("/Cash/CategoryTree/Index", new {
+                        versionId = VersionId,
                         select = exprKey,
                         key = exprKey,
                         expand = CategoryTreeModel.ExpressionsNodeKey
@@ -209,7 +199,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         format = Format ?? string.Empty,
                         syntaxTypeCode = SyntaxTypeCode ?? (short)NodeEnum.SyntaxType.Both,
                         isEnabled = 1,
-                        displayOrder = newCategory.DisplayOrder
+                        displayOrder = categoryCommand.DisplayOrder
                     }
                 };
 
@@ -284,7 +274,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         private async Task<short> NextExpressionDisplayOrderAsync()
         {
             var max = await NodeContext.Cash_tbCategories
-                .Where(c => c.CategoryTypeCode == (short)NodeEnum.CategoryType.Expression)
+                .Where(c => c.VersionId == VersionId
+                    && c.CategoryTypeCode == (short)NodeEnum.CategoryType.Expression)
                 .Select(c => (int?)c.DisplayOrder)
                 .MaxAsync() ?? 0;
 
@@ -295,6 +286,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         {
             var categories = await NodeContext.Cash_tbCategories
                 .AsNoTracking()
+                .Where(category => category.VersionId == VersionId)
                 .Select(category => new CashStatementCategoryReference(
                     category.CategoryCode,
                     category.Category,

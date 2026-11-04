@@ -16,6 +16,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [BindProperty(SupportsGet = true)]
         public string ChildKey { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; }
+
         // Friendly display names
         public string ParentDisplay { get; private set; } = string.Empty;
         public string ChildDisplay { get; private set; } = string.Empty;
@@ -25,14 +28,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             if (!string.IsNullOrWhiteSpace(ParentKey))
             {
                 var p = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(c => c.CategoryCode == ParentKey);
+                    .FirstOrDefaultAsync(c => c.VersionId == VersionId && c.CategoryCode == ParentKey);
                 ParentDisplay = p != null ? p.Category : ParentKey;
             }
 
             if (!string.IsNullOrWhiteSpace(ChildKey))
             {
                 var c = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(x => x.CategoryCode == ChildKey);
+                    .FirstOrDefaultAsync(x => x.VersionId == VersionId && x.CategoryCode == ChildKey);
                 ChildDisplay = c != null ? c.Category : ChildKey;
             }
         }

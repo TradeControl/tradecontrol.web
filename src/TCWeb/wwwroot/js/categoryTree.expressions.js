@@ -3,7 +3,7 @@
    - Adds menu items for expression nodes (expr:<CategoryCode>)
    - Navigates to Create/Edit/Delete/Details Razor Pages (desktop/mobile agnostic)
 */
-(function ()
+(function()
 {
     if (!window.jQuery)
     {
@@ -24,8 +24,14 @@
         if (params && typeof params === "object")
         {
             var qs = Object.keys(params)
-                .filter(function (k) { return params[k] != null && params[k] !== ""; })
-                .map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]); })
+                .filter(function(k)
+                {
+                    return params[k] != null && params[k] !== "";
+                })
+                .map(function(k)
+                {
+                    return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+                })
                 .join("&");
             if (qs.length)
             {
@@ -44,15 +50,25 @@
                 return;
 
             case "editExpression":
-                navigate("EditExpression", { key: key });
+                navigate("EditExpression",
+                    {
+                        key: key
+                    });
                 return;
 
             case "deleteExpression":
-                navigate("DeleteExpression", { key: key });
+                navigate("DeleteExpression",
+                    {
+                        key: key
+                    });
                 return;
 
             case "viewExpression":
-                navigate("Details", { key: key, parentKey: EXP_ROOT });
+                navigate("Details",
+                    {
+                        key: key,
+                        parentKey: EXP_ROOT
+                    });
                 return;
         }
     }
@@ -64,7 +80,7 @@
     }
 
     var prevNormalize = window.tcTree.normalizeActionName;
-    window.tcTree.normalizeActionName = function (name)
+    window.tcTree.normalizeActionName = function(name)
     {
         var raw = (name || "").trim().toLowerCase();
         switch (raw)
@@ -93,7 +109,7 @@
 
         if (typeof window.CategoryTree.extendContextMenu === "function")
         {
-            window.CategoryTree.extendContextMenu(function (ctx)
+            window.CategoryTree.extendContextMenu(function(ctx)
             {
                 var node = ctx && ctx.node;
                 if (!node)
@@ -104,17 +120,27 @@
                 if (node.key === EXP_ROOT)
                 {
                     return [
-                        { action: "createExpression", text: "New Expression" }
-                    ];
+                        {
+                            action: "createExpression",
+                            text: "New Expression"
+                        }];
                 }
 
                 if (isExpressionNode(node.key))
                 {
                     return [
-                        { action: "viewExpression", text: "View" },
-                        { action: "editExpression", text: "Edit" },
-                        { action: "deleteExpression", text: "Delete" }
-                    ];
+                        {
+                            action: "viewExpression",
+                            text: "View"
+                        },
+                        {
+                            action: "editExpression",
+                            text: "Edit"
+                        },
+                        {
+                            action: "deleteExpression",
+                            text: "Delete"
+                        }];
                 }
 
                 return null;
@@ -125,7 +151,7 @@
             // Fallback: intercept menu open if a generic builder exists
             // (Non-invasive; if project later provides extendContextMenu use that instead)
             var $doc = jQuery(document);
-            $doc.on("tcTree.buildMenu", function (e, data)
+            $doc.on("tcTree.buildMenu", function(e, data)
             {
                 var items = data && data.items;
                 var node = data && data.node;
@@ -136,13 +162,29 @@
 
                 if (node.key === EXP_ROOT)
                 {
-                    items.push({ action: "createExpression", text: "New Expression" });
+                    items.push(
+                        {
+                            action: "createExpression",
+                            text: "New Expression"
+                        });
                 }
                 else if (isExpressionNode(node.key))
                 {
-                    items.push({ action: "viewExpression", text: "View" });
-                    items.push({ action: "editExpression", text: "Edit" });
-                    items.push({ action: "deleteExpression", text: "Delete" });
+                    items.push(
+                        {
+                            action: "viewExpression",
+                            text: "View"
+                        });
+                    items.push(
+                        {
+                            action: "editExpression",
+                            text: "Edit"
+                        });
+                    items.push(
+                        {
+                            action: "deleteExpression",
+                            text: "Delete"
+                        });
                 }
             });
         }
@@ -151,7 +193,7 @@
     // Global click handler for custom menu actions
     function bindActionClicks()
     {
-        jQuery(document).on("click", ".tc-context-menu [data-action]", function (e)
+        jQuery(document).on("click", ".tc-context-menu [data-action]", function(e)
         {
             var $item = jQuery(this);
             var action = window.tcTree.normalizeActionName($item.data("action"));
@@ -169,7 +211,7 @@
         });
     }
 
-    jQuery(function ()
+    jQuery(function()
     {
         installContextMenuExtension();
         bindActionClicks();

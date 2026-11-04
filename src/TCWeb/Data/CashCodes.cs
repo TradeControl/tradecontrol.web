@@ -168,6 +168,63 @@ namespace TradeControl.Web.Data
             }
         }
 
+        public async Task<string> GetCategoryNamespace(string versionId, string categoryCode,
+            string parentCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(versionId) || string.IsNullOrWhiteSpace(categoryCode))
+                    return string.Empty;
+
+                var conn = _context.Database.GetDbConnection();
+                var close = conn.State != ConnectionState.Open;
+                if (close) await conn.OpenAsync();
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = string.IsNullOrWhiteSpace(parentCode)
+                        ? "SELECT Cash.fnCategoryNamespaceByVersion(@VersionId, @CategoryCode)"
+                        : "SELECT Cash.fnCategoryNamespaceInContextByVersion(@VersionId, @CategoryCode, @ParentCode)";
+
+                    var version = cmd.CreateParameter();
+                    version.ParameterName = "@VersionId";
+                    version.DbType = DbType.String;
+                    version.Size = 10;
+                    version.Value = versionId;
+                    cmd.Parameters.Add(version);
+
+                    var category = cmd.CreateParameter();
+                    category.ParameterName = "@CategoryCode";
+                    category.DbType = DbType.String;
+                    category.Size = 10;
+                    category.Value = categoryCode;
+                    cmd.Parameters.Add(category);
+
+                    if (!string.IsNullOrWhiteSpace(parentCode))
+                    {
+                        var parent = cmd.CreateParameter();
+                        parent.ParameterName = "@ParentCode";
+                        parent.DbType = DbType.String;
+                        parent.Size = 10;
+                        parent.Value = parentCode;
+                        cmd.Parameters.Add(parent);
+                    }
+
+                    var scalar = await cmd.ExecuteScalarAsync();
+                    return scalar?.ToString() ?? string.Empty;
+                }
+                finally
+                {
+                    if (close) await conn.CloseAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                await _context.ErrorLog(e);
+                return string.Empty;
+            }
+        }
+
         // Primary (NetProfit/VAT roots) namespace helper
         public async Task<string> GetPrimaryCategoryNamespace(string categoryCode)
         {

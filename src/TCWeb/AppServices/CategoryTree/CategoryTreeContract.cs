@@ -6,10 +6,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using CategoryTreeStatus = TradeControl.Web.Data.NodeEnum.CategoryVersionStatus;
 
 namespace TradeControl.Web.AppServices.CategoryTree;
-
-public enum CategoryTreeStatus : short { Draft, Published, Submitted, Archived }
 
 public static class CategoryTreeLifecycleContract
 {
@@ -37,7 +36,7 @@ public static class CategoryTreeLifecycleContract
 }
 
 public sealed record CategoryTreeCategoryContract(string CategoryCode, string Category,
-    short CategoryTypeCode, short? CashPolarityCode, short? CashTypeCode, short DisplayOrder, bool IsEnabled);
+    short CategoryTypeCode, short CashPolarityCode, short CashTypeCode, short DisplayOrder, bool IsEnabled);
 public sealed record CategoryTreeTotalContract(string ParentCode, string ChildCode, short DisplayOrder);
 public sealed record CategoryTreeCodeMapContract(string CashCode, string CategoryCode);
 public sealed record CategoryTreeRootContract(string RootType, string CategoryCode);
@@ -77,8 +76,8 @@ public static class CategoryTreeCanonicalizer
                 writer.WriteString("categoryCode", Nfc(x.CategoryCode));
                 writer.WriteString("category", Nfc(x.Category));
                 writer.WriteNumber("categoryTypeCode", x.CategoryTypeCode);
-                NullableNumber(writer, "cashPolarityCode", x.CashPolarityCode);
-                NullableNumber(writer, "cashTypeCode", x.CashTypeCode);
+                writer.WriteNumber("cashPolarityCode", x.CashPolarityCode);
+                writer.WriteNumber("cashTypeCode", x.CashTypeCode);
                 writer.WriteNumber("displayOrder", x.DisplayOrder);
                 writer.WriteBoolean("isEnabled", x.IsEnabled);
                 writer.WriteEndObject();
@@ -155,8 +154,4 @@ public static class CategoryTreeCanonicalizer
         ? throw new ArgumentException("A Category Tree value is required.") : Nfc(value);
     private static string Nfc(string value) => value.Normalize(NormalizationForm.FormC);
     private static int RootOrder(string value) => value switch { NetProfitRoot => 0, VatRoot => 1, _ => 2 };
-    private static void NullableNumber(Utf8JsonWriter writer, string property, short? value)
-    {
-        if (value.HasValue) writer.WriteNumber(property, value.Value); else writer.WriteNull(property);
-    }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Authorization;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -21,6 +22,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         /// <param name="anchorKey">Existing sibling to position relative to.</param>
         /// <param name="mode">"before" or "after".</param>
         public async Task<JsonResult> OnPostReorderSiblingsAsync(
+            [FromForm] string versionId,
             [FromForm] string parentKey,
             [FromForm] string key,
             [FromForm] string anchorKey,
@@ -31,7 +33,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 return new JsonResult(new { success = false, message = "Insufficient privileges" });
             }
 
-            if (string.IsNullOrWhiteSpace(key) ||
+            if (string.IsNullOrWhiteSpace(versionId) ||
+                string.IsNullOrWhiteSpace(key) ||
                 string.IsNullOrWhiteSpace(anchorKey) ||
                 string.IsNullOrWhiteSpace(parentKey))
             {
@@ -49,7 +52,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 // Root-level: reorder Cash_tbCategories.DisplayOrder for top-level linked categories
                 if (IsRootKey(parentKey))
                 {
-                    var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
+                    var totals = await NodeContext.Cash_tbCategoryTotals
+                        .Where(item => item.VersionId == versionId)
+                        .ToListAsync();
                     var childCodes = new System.Collections.Generic.HashSet<string>(
                         totals.Select(t => t.ChildCode).Where(s => !string.IsNullOrEmpty(s)));
 
@@ -58,6 +63,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     var list = await NodeContext.Cash_tbCategories
                         .Where(c =>
+                            c.VersionId == versionId &&
                             !childCodes.Contains(c.CategoryCode) &&
                             c.IsEnabled != 0 &&
                             linkedSet.Contains(c.CategoryCode))
@@ -81,18 +87,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     if (insertIdx > seq.Count) insertIdx = seq.Count;
                     seq.Insert(insertIdx, key);
 
-                    await using (var tx = await NodeContext.Database.BeginTransactionAsync())
-                    {
-                        short order = 1;
-                        foreach (var code in seq)
-                        {
-                            await NodeContext.Cash_tbCategories
-                                .Where(c => c.CategoryCode == code)
-                                .ExecuteUpdateAsync(s => s.SetProperty(c => c.DisplayOrder, order));
-                            order++;
-                        }
-                        await tx.CommitAsync();
-                    }
+                    await SaveCategoryOrdersAsync(versionId,
+                        seq.Select((code, index) => (code, (short)(index + 1))),
+                        "Root categories reordered.");
 
                     return new JsonResult(new { success = true });
                 }
@@ -100,12 +97,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 // Disconnected: reorder enabled categories not referenced in totals
                 if (string.Equals(parentKey, DisconnectedNodeKey, System.StringComparison.Ordinal))
                 {
-                    var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
+                    var totals = await NodeContext.Cash_tbCategoryTotals
+                        .Where(item => item.VersionId == versionId)
+                        .ToListAsync();
                     var linkedSet = new System.Collections.Generic.HashSet<string>(
                         totals.SelectMany(t => new[] { t.ParentCode, t.ChildCode }).Where(s => !string.IsNullOrEmpty(s)));
 
                     var list = await NodeContext.Cash_tbCategories
-                        .Where(c => c.IsEnabled != 0 && !linkedSet.Contains(c.CategoryCode))
+                        .Where(c => c.VersionId == versionId && c.IsEnabled != 0
+                            && !linkedSet.Contains(c.CategoryCode))
                         .OrderBy(c => c.DisplayOrder)
                         .ThenBy(c => c.CategoryCode)
                         .Select(c => new { c.CategoryCode, c.DisplayOrder })
@@ -126,18 +126,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     if (insertIdx > seq.Count) insertIdx = seq.Count;
                     seq.Insert(insertIdx, key);
 
-                    await using (var tx = await NodeContext.Database.BeginTransactionAsync())
-                    {
-                        short order = 1;
-                        foreach (var code in seq)
-                        {
-                            await NodeContext.Cash_tbCategories
-                                .Where(c => c.CategoryCode == code)
-                                .ExecuteUpdateAsync(s => s.SetProperty(c => c.DisplayOrder, order));
-                            order++;
-                        }
-                        await tx.CommitAsync();
-                    }
+                    await SaveCategoryOrdersAsync(versionId,
+                        seq.Select((code, index) => (code, (short)(index + 1))),
+                        "Disconnected categories reordered.");
 
                     return new JsonResult(new { success = true });
                 }
@@ -145,7 +136,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 // Child totals under a parent: reorder Cash_tbCategoryTotals.DisplayOrder
                 {
                     var tots = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == parentKey)
+                        .Where(t => t.VersionId == versionId && t.ParentCode == parentKey)
                         .OrderBy(t => t.DisplayOrder)
                         .Select(t => new { t.ChildCode, t.DisplayOrder })
                         .ToListAsync();
@@ -165,18 +156,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     if (insertIdx > seq.Count) insertIdx = seq.Count;
                     seq.Insert(insertIdx, key);
 
-                    await using (var tx = await NodeContext.Database.BeginTransactionAsync())
-                    {
-                        short order = 1;
-                        foreach (var code in seq)
-                        {
-                            await NodeContext.Cash_tbCategoryTotals
-                                .Where(t => t.ParentCode == parentKey && t.ChildCode == code)
-                                .ExecuteUpdateAsync(s => s.SetProperty(t => t.DisplayOrder, order));
-                            order++;
-                        }
-                        await tx.CommitAsync();
-                    }
+                    await SaveTotalOrdersAsync(versionId, parentKey,
+                        seq.Select((code, index) => (code, (short)(index + 1))),
+                        "Child categories reordered.");
 
                     return new JsonResult(new { success = true });
                 }
@@ -184,7 +166,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             catch (System.Exception e)
             {
                 await NodeContext.ErrorLog(e);
-                return new JsonResult(new { success = false, message = "Server error." });
+                return new JsonResult(new {
+                    success = false,
+                    message = CategoryTreeCommandFeedback.From(e)
+                });
             }
         }
     }

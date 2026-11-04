@@ -3,13 +3,23 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public class DeleteExpressionModel : DI_BasePageModel
     {
-        public DeleteExpressionModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public DeleteExpressionModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = string.Empty;
 
         [BindProperty]
         public string CategoryCode { get; set; } = string.Empty;
@@ -36,7 +46,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             }
 
             var cat = await NodeContext.Cash_tbCategories
-                .FirstOrDefaultAsync(c => c.CategoryCode == key);
+                .FirstOrDefaultAsync(c => c.VersionId == VersionId && c.CategoryCode == key);
 
             if (cat == null || cat.CategoryTypeCode != (short)NodeEnum.CategoryType.Expression)
             {
@@ -69,7 +79,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var cat = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(c => c.CategoryCode == key);
+                    .FirstOrDefaultAsync(c => c.VersionId == VersionId && c.CategoryCode == key);
 
                 if (cat == null || cat.CategoryTypeCode != (short)NodeEnum.CategoryType.Expression)
                 {
@@ -77,12 +87,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
-                NodeContext.Cash_tbCategories.Remove(cat);
-                await NodeContext.SaveChangesAsync();
-
-                await tx.CommitAsync();
+                await CategoryTreeService.DeleteCategoryAsync(VersionId, key,
+                    "Expression category deleted.");
 
                 var exprRoot = CategoryTreeModel.ExpressionsNodeKey;
                 var removedExprKey = CategoryTreeModel.MakeExpressionKey(key);
@@ -96,6 +102,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 return RedirectToPage("/Cash/CategoryTree/Index", new {
+                    versionId = VersionId,
                     select = exprRoot,
                     key = exprRoot,
                     expand = exprRoot,

@@ -31,6 +31,10 @@ else if (Model.NodeType == "cashCodeList" && Model.CashCodes != null)
 {
     await Html.RenderPartialAsync("_CashCodeListByPolarity", Model.CashCodes);
 }
+else if (Model.NodeType == "versionWorkspace" && Model.VersionWorkspace != null)
+{
+    await Html.RenderPartialAsync("_CategoryTreeVersionWorkspace", Model.VersionWorkspace);
+}
 else if (Model.NodeType == "code" && Model.Code != null)
 {
     await Html.RenderPartialAsync("_CashCodeDetailsCard", Model.Code);

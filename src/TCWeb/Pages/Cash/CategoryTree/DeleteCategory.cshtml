@@ -30,9 +30,10 @@
             </div>
         </div>
 
-        <form id="deleteCategoryForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteCategory", key = key })">
+        <form id="deleteCategoryForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteCategory", key = key, versionId = Model.VersionId })">
             @Html.AntiForgeryToken()
             <input type="hidden" name="key" value="@key" />
+            <input type="hidden" name="versionId" value="@Model.VersionId" />
 
             <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="confirmDelete" />

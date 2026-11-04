@@ -22,9 +22,11 @@ else
             <h5 class="card-title">Edit Cash Code</h5>
             <form method="post"
                   asp-page="./EditCashCode"
+                  asp-route-versionId="@Model.VersionId"
                   asp-route-key="code:@Model.CashCode"
                   asp-route-embed="@(isEmbedded ? "1" : null)">
                 @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="VersionId" />
                 @if (isEmbedded)
                 {
                     <input type="hidden" name="embed" value="1" />

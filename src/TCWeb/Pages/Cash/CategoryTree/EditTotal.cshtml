@@ -55,10 +55,12 @@ else
 
             <form method="post"
                   asp-page="./EditTotal"
+                  asp-route-versionId="@Model.VersionId"
                   asp-route-key="@Model.CategoryCode"
                   asp-route-returnKey="@returnKey"
                   asp-route-embed="@(embed ? "1" : null)">
                 @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="VersionId" />
 
                 @if (embed)
                 {

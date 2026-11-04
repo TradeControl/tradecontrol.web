@@ -1,18 +1,27 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
     public class DeleteCashCodeModel : DI_BasePageModel
     {
-        public DeleteCashCodeModel(NodeContext nodeContext) : base(nodeContext)
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public DeleteCashCodeModel(NodeContext nodeContext,
+            ICategoryTreeChangeControlService categoryTreeService) : base(nodeContext)
         {
+            CategoryTreeService = categoryTreeService;
         }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = "";
 
         // ?key=code:CC123 or ?key=CC123 (tree node key)
         [BindProperty(SupportsGet = true)]
@@ -54,7 +63,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (code != null)
                 {
                     CodeDisplay = $"{code.CashCode} - {code.CashDescription}";
-                    ParentCategoryCode = code.CategoryCode;
+                    ParentCategoryCode = await NodeContext.Cash_tbCategoryCodeMaps
+                        .Where(map => map.VersionId == VersionId && map.CashCode == CashCode)
+                        .Select(map => map.CategoryCode)
+                        .SingleOrDefaultAsync() ?? "";
                 }
                 else
                 {
@@ -84,12 +96,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page(); // treat as success (phantom node)
                 }
 
-                ParentCategoryCode = code.CategoryCode;
-
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-                NodeContext.Cash_tbCodes.Remove(code);
-                await NodeContext.SaveChangesAsync();
-                await tx.CommitAsync();
+                ParentCategoryCode = await NodeContext.Cash_tbCategoryCodeMaps
+                    .Where(map => map.VersionId == VersionId && map.CashCode == CashCode)
+                    .Select(map => map.CategoryCode)
+                    .SingleOrDefaultAsync() ?? "";
+                await CategoryTreeService.DeleteCashCodeAsync(VersionId, CashCode,
+                    "Cash Code deleted.");
 
                 OperationSucceeded = true;
 
@@ -107,18 +119,19 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (!string.IsNullOrWhiteSpace(ParentCategoryCode))
                 {
                     return RedirectToPage("/Cash/CategoryTree/Index", new {
+                        versionId = VersionId,
                         select = ParentCategoryCode,
                         parentKey = ParentCategoryCode,
                         expand = ParentCategoryCode
                     });
                 }
 
-                return RedirectToPage("/Cash/CategoryTree/Index");
+                return RedirectToPage("/Cash/CategoryTree/Index", new { versionId = VersionId });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ModelState.AddModelError(string.Empty, "Delete failed (server error).");
+                ModelState.AddModelError(string.Empty, CategoryTreeCommandFeedback.From(ex));
                 return Page();
             }
         }

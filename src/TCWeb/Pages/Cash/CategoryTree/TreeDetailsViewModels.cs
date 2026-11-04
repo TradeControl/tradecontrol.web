@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using TradeControl.Web.AppServices.CategoryTree;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public class CategoryDetailsVm
     {
+        public string VersionId { get; set; } = string.Empty;
         public string CategoryCode { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string CategoryType { get; set; } = string.Empty;
@@ -31,10 +33,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsRootContext { get; set; }
         public bool IsDisconnectedContext { get; set; }
         public bool IsCashCodeCategory { get; set; }
+        public bool CanEditTree { get; set; }
+        public bool CanCreateCashCode { get; set; }
     }
 
     public class CashCodeDetailsVm
     {
+        public string VersionId { get; set; } = string.Empty;
         public string CashCode { get; set; } = string.Empty;
         public string CashDescription { get; set; } = string.Empty;
         public string CategoryCode { get; set; } = string.Empty;
@@ -45,10 +50,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsEnabled { get; set; }
         public bool IsCategoryEnabled { get; set; }
         public string Namespace { get; set; } = string.Empty;
+        public bool CanEditMaster { get; set; }
     }
 
     public class ExpressionDetailsVm
     {
+        public string VersionId { get; set; } = string.Empty;
         public string CategoryCode { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string Expression { get; set; } = string.Empty;
@@ -56,6 +63,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public string SyntaxType { get; set; } = string.Empty;
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
+        public bool CanEditCategory { get; set; }
+        public bool CanManageMetadata { get; set; }
+        public string ContextNotice { get; set; } = string.Empty;
     }
 
     public class ExpressionReferenceItemVm
@@ -86,5 +96,22 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public List<CashCodeListItemVm> Neutral { get; set; } = new();
 
         public int TotalCount => (Expense?.Count ?? 0) + (Income?.Count ?? 0) + (Neutral?.Count ?? 0);
+    }
+
+    public class CategoryTreeVersionWorkspaceVm
+    {
+        public CategoryTreeWorkspaceContext Workspace { get; set; }
+        public CategoryTreeVersionReview Review { get; set; }
+        public IReadOnlyDictionary<string, CategoryTreeVersionSnapshotVm> Snapshots { get; set; }
+            = new Dictionary<string, CategoryTreeVersionSnapshotVm>();
+    }
+
+    public class CategoryTreeVersionSnapshotVm
+    {
+        public int CategoryCount { get; set; }
+        public int EdgeCount { get; set; }
+        public int CashCodeCount { get; set; }
+        public string ProfitRoot { get; set; } = string.Empty;
+        public string VatRoot { get; set; } = string.Empty;
     }
 }

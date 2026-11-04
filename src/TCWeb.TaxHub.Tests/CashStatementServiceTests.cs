@@ -76,9 +76,23 @@ internal static class CashStatementServiceTests
             Assert(excel.IsSuccess && excel.Content is { Length: 4 },
                 "Disabling ODS affected Excel generation.");
             Assert(exporter.Calls == 1, "Excel did not reach the exporter exactly once.");
+            Assert(exporter.LastPayload?.Params.ContainsKey("categoryVersionId") == false,
+                "The active-default request manufactured a Category Tree version parameter.");
         }
 
         var defaultOptions = Options.Create(new CashStatementGenerationOptions());
+        using (var gate = new CashStatementGenerationGate(defaultOptions))
+        {
+            var exporter = new SuccessfulExporter();
+            var service = Service(defaultOptions, gate, new FixedSourceResolver(), exporter, authenticatedContext);
+            var explicitVersion = await service.GenerateAsync(
+                Request("excel") with { CategoryVersionId = "CV00000002" });
+            Assert(explicitVersion.IsSuccess
+                && exporter.LastPayload?.Params.TryGetValue("categoryVersionId", out var versionId) == true
+                && versionId == "CV00000002",
+                "An explicitly selected Category Tree version did not reach the JSON parameter boundary.");
+        }
+
         using (var gate = new CashStatementGenerationGate(defaultOptions))
         {
             var exporter = new SuccessfulExporter();
@@ -279,11 +293,13 @@ internal static class CashStatementServiceTests
     private sealed class SuccessfulExporter : ICashStatementExporter
     {
         public int Calls { get; private set; }
+        public ExportPayload? LastPayload { get; private set; }
 
         public Task<ExportResult> ExportAsync(ExportPayload payload, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Calls++;
+            LastPayload = payload;
             return Task.FromResult(new ExportResult
             {
                 Status = "success",

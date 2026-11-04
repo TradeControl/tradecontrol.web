@@ -13,7 +13,7 @@
  - Accessibility: aria-live announcements on reorder; focus preserved
 */
 
-window.CategoryTree = (function ()
+window.CategoryTree = (function()
 {
     function appendQuery(url, key, value)
     {
@@ -34,27 +34,42 @@ window.CategoryTree = (function ()
         var nodesUrl = cfg.nodesUrl;
         var basePageUrl = cfg.basePageUrl;
         var detailsUrl = cfg.detailsUrl || null;
+        var selectedVersionId = cfg ? (cfg.versionId || "") : "";
+        var selectedTenantId = cfg ? (cfg.tenantId || "tenant") : "tenant";
+        if (selectedVersionId)
+        {
+            nodesUrl = appendQuery(nodesUrl, "versionId", selectedVersionId);
+            if (detailsUrl)
+            {
+                detailsUrl = appendQuery(detailsUrl, "versionId", selectedVersionId);
+            }
+        }
         var ROOT_KEY = cfg.rootKey;
         var DISC_KEY = cfg.discKey;
         var EXPR_ROOT_KEY = "__EXPRESSIONS__";
         var EXPR_PREFIX = "expr:";
         var isAdmin = !!cfg.isAdmin;
+        var canManageCashCodes = !!cfg.canManageCashCodes;
         var CATEGORYTYPE_CASHTOTAL = 1; // server: (short)NodeEnum.CategoryType.CashTotal
 
         var menuOriginalHtml = null;
-        var menuTemplates = { items: {}, dividerHtml: "<div class='dropdown-divider'></div>" };
+        var menuTemplates = {
+            items:
+            {},
+            dividerHtml: "<div class='dropdown-divider'></div>"
+        };
 
         var querySelectionApplied = false;
         var selectionRetryCount = 0;
         var MAX_SELECTION_RETRIES = 50;
 
-        const MAX_BFS_FOLDERS = 150;          // was 600
-        const CODE_POLL_MAX_TRIES = 12;       // was 40
-        const CODE_POLL_INTERVAL_MS = 150;    // unchanged interval, fewer tries
-        const BFS_STEP_DELAY_MS = 25;         // existing 25; keep symbolic
+        const MAX_BFS_FOLDERS = 150; // was 600
+        const CODE_POLL_MAX_TRIES = 12; // was 40
+        const CODE_POLL_INTERVAL_MS = 150; // unchanged interval, fewer tries
+        const BFS_STEP_DELAY_MS = 25; // existing 25; keep symbolic
 
         // Capture pristine menu and templates once when DOM ready (before any context mutations)
-        $(function ()
+        $(function()
         {
             try
             {
@@ -65,8 +80,7 @@ window.CategoryTree = (function ()
                 }
             }
             catch (_)
-            {
-            }
+            {}
             cacheMenuTemplates();
         });
 
@@ -78,8 +92,8 @@ window.CategoryTree = (function ()
 
         function antiXsrf()
         {
-            return document.querySelector("meta[name='request-verification-token']")?.getAttribute("content")
-                || document.querySelector("input[name='__RequestVerificationToken']")?.value;
+            return document.querySelector("meta[name='request-verification-token']")?.getAttribute("content") ||
+                document.querySelector("input[name='__RequestVerificationToken']")?.value;
         }
 
         function isMobile()
@@ -148,13 +162,14 @@ window.CategoryTree = (function ()
                     try
                     {
                         var resLoad = current.load();
-                        var after = function ()
+                        var after = function()
                         {
                             try
                             {
                                 (current.children || []).forEach(enqueue);
                             }
-                            catch (_) {}
+                            catch (_)
+                            {}
                             setTimeout(step, BFS_STEP_DELAY_MS);
                         };
 
@@ -169,7 +184,8 @@ window.CategoryTree = (function ()
                             return;
                         }
                     }
-                    catch (_) {}
+                    catch (_)
+                    {}
                 }
                 else
                 {
@@ -177,7 +193,8 @@ window.CategoryTree = (function ()
                     {
                         (current.children || []).forEach(enqueue);
                     }
-                    catch (_) {}
+                    catch (_)
+                    {}
                 }
 
                 setTimeout(step, BFS_STEP_DELAY_MS);
@@ -191,10 +208,16 @@ window.CategoryTree = (function ()
         {
             try
             {
-                if (!node) { return; }
+                if (!node)
+                {
+                    return;
+                }
 
                 var tree = getTree();
-                if (!tree) { return; }
+                if (!tree)
+                {
+                    return;
+                }
 
                 // Build set of keys to keep expanded: node + its ancestors
                 var keep = new Set();
@@ -218,9 +241,12 @@ window.CategoryTree = (function ()
 
                 // Visit all nodes and collapse those expanded folders not on the keep list
                 var root = tree.getRootNode();
-                if (!root) { return; }
+                if (!root)
+                {
+                    return;
+                }
 
-                root.visit(function (n)
+                root.visit(function(n)
                 {
                     try
                     {
@@ -320,14 +346,14 @@ window.CategoryTree = (function ()
                         if (idx >= ancestors.length)
                         {
                             // After expansion, collapse non-ancestor expanded nodes in the next RAF tick
-                            requestAnimationFrame(function ()
+                            requestAnimationFrame(function()
                             {
                                 try
                                 {
                                     var root = tree.getRootNode();
                                     if (root)
                                     {
-                                        root.visit(function (n)
+                                        root.visit(function(n)
                                         {
                                             try
                                             {
@@ -357,7 +383,7 @@ window.CategoryTree = (function ()
                                 }
 
                                 // Next RAF: restore transitions and resize, then call onComplete
-                                requestAnimationFrame(function ()
+                                requestAnimationFrame(function()
                                 {
                                     try
                                     {
@@ -412,15 +438,16 @@ window.CategoryTree = (function ()
 
                         if (res && typeof res.then === "function")
                         {
-                            res.then(function ()
+                            res.then(function()
                             {
                                 try
                                 {
                                     persistExpanded(a, true);
                                 }
-                                catch (_) { }
+                                catch (_)
+                                {}
                                 expandSeq(idx + 1);
-                            }).catch(function ()
+                            }).catch(function()
                             {
                                 expandSeq(idx + 1);
                             });
@@ -429,15 +456,16 @@ window.CategoryTree = (function ()
 
                         if (res && typeof res.done === "function")
                         {
-                            res.done(function ()
+                            res.done(function()
                             {
                                 try
                                 {
                                     persistExpanded(a, true);
                                 }
-                                catch (_) { }
+                                catch (_)
+                                {}
                                 expandSeq(idx + 1);
-                            }).fail(function ()
+                            }).fail(function()
                             {
                                 expandSeq(idx + 1);
                             });
@@ -448,7 +476,8 @@ window.CategoryTree = (function ()
                         {
                             persistExpanded(a, true);
                         }
-                        catch (_) { }
+                        catch (_)
+                        {}
                         expandSeq(idx + 1);
                     }
                     catch (_)
@@ -459,7 +488,7 @@ window.CategoryTree = (function ()
                 }
 
                 // Start expansion on next RAF to batch style changes
-                requestAnimationFrame(function ()
+                requestAnimationFrame(function()
                 {
                     expandSeq(0);
                 });
@@ -474,8 +503,7 @@ window.CategoryTree = (function ()
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
             }
         }
 
@@ -504,6 +532,40 @@ window.CategoryTree = (function ()
                     return;
                 }
 
+                if (selectKey === ROOT_KEY)
+                {
+                    var requestedRoot = tree.getNodeByKey(ROOT_KEY);
+                    if (!requestedRoot)
+                    {
+                        scheduleRetry();
+                        return;
+                    }
+
+                    querySelectionApplied = true;
+                    try
+                    {
+                        requestedRoot.setActive(true);
+                    }
+                    catch (_)
+                    {}
+                    try
+                    {
+                        persistActiveKey(requestedRoot);
+                    }
+                    catch (_)
+                    {}
+
+                    if (isMobile())
+                    {
+                        updateActionBar(requestedRoot);
+                    }
+                    else
+                    {
+                        loadDetails(requestedRoot);
+                    }
+                    return;
+                }
+
                 function keyVariants(key)
                 {
                     if (!key)
@@ -528,9 +590,9 @@ window.CategoryTree = (function ()
 
                 var variants = keyVariants(selectKey);
                 var isCodeKey =
-                    variants.length > 0
-                    && (variants[0].indexOf("code:") === 0
-                        || (variants[1] && variants[1].indexOf("code:") === 0));
+                    variants.length > 0 &&
+                    (variants[0].indexOf("code:") === 0 ||
+                        (variants[1] && variants[1].indexOf("code:") === 0));
 
                 var isExprKey = (typeof selectKey === "string" && selectKey.indexOf(EXPR_PREFIX) === 0);
                 if (isExprKey)
@@ -548,7 +610,10 @@ window.CategoryTree = (function ()
                     {
                         var kv = keyVariants(keyParam || "");
                         // If any variant of key equals any variant of select, assume 'fresh create' flow
-                        createdFlow = kv.some(function (k) { return variants.indexOf(k) >= 0; });
+                        createdFlow = kv.some(function(k)
+                        {
+                            return variants.indexOf(k) >= 0;
+                        });
                     }
                 }
                 catch (_)
@@ -558,7 +623,7 @@ window.CategoryTree = (function ()
 
                 function reloadChildrenNoCache(node)
                 {
-                    return new Promise(function (resolve)
+                    return new Promise(function(resolve)
                     {
                         try
                         {
@@ -569,14 +634,17 @@ window.CategoryTree = (function ()
                             }
 
                             var url = nodesUrl ? nocache(appendQuery(nodesUrl, "id", node.key)) : null;
-                            var r = url ? node.reloadChildren({ url: url }) : node.reloadChildren();
+                            var r = url ? node.reloadChildren(
+                                {
+                                    url: url
+                                }) : node.reloadChildren();
 
                             if (r && typeof r.then === "function")
                             {
-                                r.then(function ()
+                                r.then(function()
                                 {
                                     resolve();
-                                }, function ()
+                                }, function()
                                 {
                                     resolve();
                                 });
@@ -584,10 +652,10 @@ window.CategoryTree = (function ()
                             }
                             if (r && r.done)
                             {
-                                r.done(function ()
+                                r.done(function()
                                 {
                                     resolve();
-                                }).fail(function ()
+                                }).fail(function()
                                 {
                                     resolve();
                                 });
@@ -595,8 +663,7 @@ window.CategoryTree = (function ()
                             }
                         }
                         catch (_)
-                        {
-                        }
+                        {}
 
                         setTimeout(resolve, 120);
                     });
@@ -613,7 +680,7 @@ window.CategoryTree = (function ()
                             return list;
                         }
 
-                        root.visit(function (n)
+                        root.visit(function(n)
                         {
                             try
                             {
@@ -623,13 +690,11 @@ window.CategoryTree = (function ()
                                 }
                             }
                             catch (_)
-                            {
-                            }
+                            {}
                         });
                     }
                     catch (_)
-                    {
-                    }
+                    {}
                     return list;
                 }
 
@@ -666,7 +731,8 @@ window.CategoryTree = (function ()
                         return false;
                     }
                     var k = node.key || "";
-                    var d = node.data || {};
+                    var d = node.data ||
+                    {};
                     if (k.indexOf("type:") === 0)
                     {
                         return true;
@@ -796,208 +862,30 @@ window.CategoryTree = (function ()
                     return null;
                 }
 
- 		        function loadUnderRootUntilKey(targetKey, maxFolders, callback)
-		        {
-			        try
-			        {
-				        var tree = getTree();
-				        if (!tree)
-				        {
-					        callback(false);
-					        return;
-				        }
-
-				        // Guard: already present
-				        if (tree.getNodeByKey(targetKey))
-				        {
-					        callback(true);
-					        return;
-				        }
-
-				        var rootNode = tree.getNodeByKey(ROOT_KEY);
-				        if (!rootNode)
-				        {
-					        callback(false);
-					        return;
-				        }
-
-				        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
-
-				        var queue = [];
-				        var visited = new Set();
-
-				        function enqueue(n)
-				        {
-					        if (!n || !n.key || visited.has(n.key))
-					        {
-						        return;
-					        }
-					        visited.add(n.key);
-					        queue.push(n);
-				        }
-
-				        enqueue(rootNode);
-
-				        (function step()
-				        {
-					        if (tree.getNodeByKey(targetKey))
-					        {
-						        callback(true);
-						        return;
-					        }
-
-					        if (queue.length === 0 || visited.size > maxFolders)
-					        {
-						        callback(false);
-						        return;
-					        }
-
-					        var current = queue.shift();
-
-					        function isTypeSyntheticNode(node)
-					        {
-						        if (!node) { return false; }
-						        var k = node.key || "";
-						        var d = node.data || {};
-						        return k.indexOf("type:") === 0 || d.syntheticKind === "type" || d.isTypeContext === true;
-					        }
-
-					        if (current !== rootNode && isTypeSyntheticNode(current))
-					        {
-						        setTimeout(step, 10);
-						        return;
-					        }
-
-					        if (current.lazy && !current.loaded)
-					        {
-						        try
-						        {
-							        var res = current.load();
-							        var after = function ()
-							        {
-								        try
-								        {
-									        (current.children || []).forEach(enqueue);
-								        }
-								        catch (_) {}
-								        setTimeout(step, 15);
-							        };
-							        if (res && res.then) { res.then(after, after); return; }
-							        if (res && res.done) { res.done(after).fail(after); return; }
-						        }
-						        catch (_) {}
-					        }
-					        else
-					        {
-						        try
-						        {
-							        (current.children || []).forEach(enqueue);
-						        }
-						        catch (_) {}
-					        }
-
-					        setTimeout(step, 15);
-				        })();
-			        }
-			        catch (_)
-			        {
-				        callback(false);
-			        }
-		        }
- 
-		        function loadUnderDiscUntilKey(targetKey, maxFolders, callback)
-		        {
-			        try
-			        {
-				        var tree = getTree();
-				        if (!tree)
-				        {
-					        callback(false);
-					        return;
-				        }
-				        if (tree.getNodeByKey(targetKey))
-				        {
-					        callback(true);
-					        return;
-				        }
-				        var discNode = tree.getNodeByKey(DISC_KEY);
-				        if (!discNode)
-				        {
-					        callback(false);
-					        return;
-				        }
-
-				        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
-
-				        var queue = [];
-				        var visited = new Set();
-				        function enqueue(n)
-				        {
-					        if (!n || !n.key || visited.has(n.key)) { return; }
-					        visited.add(n.key);
-					        queue.push(n);
-				        }
-
-				        enqueue(discNode);
-
-				        (function step()
-				        {
-					        if (tree.getNodeByKey(targetKey))
-					        {
-						        callback(true);
-						        return;
-					        }
-					        if (queue.length === 0 || visited.size > maxFolders)
-					        {
-						        callback(false);
-						        return;
-					        }
-
-					        var current = queue.shift();
-
-					        if (current.lazy && !current.loaded)
-					        {
-						        try
-						        {
-							        var res = current.load();
-							        var after = function ()
-							        {
-								        try
-                                        {
-                                            (current.children || []).forEach(enqueue);
-                                        }
-                                        catch(_){}
-								        setTimeout(step, 15);
-							        };
-							        if (res && res.then) { res.then(after, after); return; }
-							        if (res && res.done) { res.done(after).fail(after); return; }
-						        }
-						        catch(_){}
-					        }
-					        else
-					        {
-						        try
-                                {
-                                    (current.children || []).forEach(enqueue);
-                                }
-                                catch(_){}
-					        }
-					        setTimeout(step, 15);
-				        })();
-			        }
-			        catch(_){ callback(false); }
-		        }
-
-                function loadUnderExprUntilKey(targetKey, maxFolders, callback)
+                function loadUnderRootUntilKey(targetKey, maxFolders, callback)
                 {
                     try
                     {
                         var tree = getTree();
-                        if (!tree) { callback(false); return; }
-                        if (tree.getNodeByKey(targetKey)) { callback(true); return; }
+                        if (!tree)
+                        {
+                            callback(false);
+                            return;
+                        }
 
-                        var exprRoot = tree.getNodeByKey(EXPR_ROOT_KEY);
-                        if (!exprRoot) { callback(false); return; }
+                        // Guard: already present
+                        if (tree.getNodeByKey(targetKey))
+                        {
+                            callback(true);
+                            return;
+                        }
+
+                        var rootNode = tree.getNodeByKey(ROOT_KEY);
+                        if (!rootNode)
+                        {
+                            callback(false);
+                            return;
+                        }
 
                         maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
 
@@ -1006,7 +894,233 @@ window.CategoryTree = (function ()
 
                         function enqueue(n)
                         {
-                            if (!n || !n.key || visited.has(n.key)) { return; }
+                            if (!n || !n.key || visited.has(n.key))
+                            {
+                                return;
+                            }
+                            visited.add(n.key);
+                            queue.push(n);
+                        }
+
+                        enqueue(rootNode);
+
+                        (function step()
+                        {
+                            if (tree.getNodeByKey(targetKey))
+                            {
+                                callback(true);
+                                return;
+                            }
+
+                            if (queue.length === 0 || visited.size > maxFolders)
+                            {
+                                callback(false);
+                                return;
+                            }
+
+                            var current = queue.shift();
+
+                            function isTypeSyntheticNode(node)
+                            {
+                                if (!node)
+                                {
+                                    return false;
+                                }
+                                var k = node.key || "";
+                                var d = node.data ||
+                                {};
+                                return k.indexOf("type:") === 0 || d.syntheticKind === "type" || d.isTypeContext === true;
+                            }
+
+                            if (current !== rootNode && isTypeSyntheticNode(current))
+                            {
+                                setTimeout(step, 10);
+                                return;
+                            }
+
+                            if (current.lazy && !current.loaded)
+                            {
+                                try
+                                {
+                                    var res = current.load();
+                                    var after = function()
+                                    {
+                                        try
+                                        {
+                                            (current.children || []).forEach(enqueue);
+                                        }
+                                        catch (_)
+                                        {}
+                                        setTimeout(step, 15);
+                                    };
+                                    if (res && res.then)
+                                    {
+                                        res.then(after, after);
+                                        return;
+                                    }
+                                    if (res && res.done)
+                                    {
+                                        res.done(after).fail(after);
+                                        return;
+                                    }
+                                }
+                                catch (_)
+                                {}
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    (current.children || []).forEach(enqueue);
+                                }
+                                catch (_)
+                                {}
+                            }
+
+                            setTimeout(step, 15);
+                        })();
+                    }
+                    catch (_)
+                    {
+                        callback(false);
+                    }
+                }
+
+                function loadUnderDiscUntilKey(targetKey, maxFolders, callback)
+                {
+                    try
+                    {
+                        var tree = getTree();
+                        if (!tree)
+                        {
+                            callback(false);
+                            return;
+                        }
+                        if (tree.getNodeByKey(targetKey))
+                        {
+                            callback(true);
+                            return;
+                        }
+                        var discNode = tree.getNodeByKey(DISC_KEY);
+                        if (!discNode)
+                        {
+                            callback(false);
+                            return;
+                        }
+
+                        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
+
+                        var queue = [];
+                        var visited = new Set();
+
+                        function enqueue(n)
+                        {
+                            if (!n || !n.key || visited.has(n.key))
+                            {
+                                return;
+                            }
+                            visited.add(n.key);
+                            queue.push(n);
+                        }
+
+                        enqueue(discNode);
+
+                        (function step()
+                        {
+                            if (tree.getNodeByKey(targetKey))
+                            {
+                                callback(true);
+                                return;
+                            }
+                            if (queue.length === 0 || visited.size > maxFolders)
+                            {
+                                callback(false);
+                                return;
+                            }
+
+                            var current = queue.shift();
+
+                            if (current.lazy && !current.loaded)
+                            {
+                                try
+                                {
+                                    var res = current.load();
+                                    var after = function()
+                                    {
+                                        try
+                                        {
+                                            (current.children || []).forEach(enqueue);
+                                        }
+                                        catch (_)
+                                        {}
+                                        setTimeout(step, 15);
+                                    };
+                                    if (res && res.then)
+                                    {
+                                        res.then(after, after);
+                                        return;
+                                    }
+                                    if (res && res.done)
+                                    {
+                                        res.done(after).fail(after);
+                                        return;
+                                    }
+                                }
+                                catch (_)
+                                {}
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    (current.children || []).forEach(enqueue);
+                                }
+                                catch (_)
+                                {}
+                            }
+                            setTimeout(step, 15);
+                        })();
+                    }
+                    catch (_)
+                    {
+                        callback(false);
+                    }
+                }
+
+                function loadUnderExprUntilKey(targetKey, maxFolders, callback)
+                {
+                    try
+                    {
+                        var tree = getTree();
+                        if (!tree)
+                        {
+                            callback(false);
+                            return;
+                        }
+                        if (tree.getNodeByKey(targetKey))
+                        {
+                            callback(true);
+                            return;
+                        }
+
+                        var exprRoot = tree.getNodeByKey(EXPR_ROOT_KEY);
+                        if (!exprRoot)
+                        {
+                            callback(false);
+                            return;
+                        }
+
+                        maxFolders = Math.min(maxFolders || MAX_BFS_FOLDERS, MAX_BFS_FOLDERS);
+
+                        var queue = [];
+                        var visited = new Set();
+
+                        function enqueue(n)
+                        {
+                            if (!n || !n.key || visited.has(n.key))
+                            {
+                                return;
+                            }
                             visited.add(n.key);
                             queue.push(n);
                         }
@@ -1034,19 +1148,29 @@ window.CategoryTree = (function ()
                                 try
                                 {
                                     var res = current.load();
-                                    var after = function ()
+                                    var after = function()
                                     {
                                         try
                                         {
                                             (current.children || []).forEach(enqueue);
                                         }
-                                        catch(_){}
+                                        catch (_)
+                                        {}
                                         setTimeout(step, 15);
                                     };
-                                    if (res && res.then) { res.then(after, after); return; }
-                                    if (res && res.done) { res.done(after).fail(after); return; }
+                                    if (res && res.then)
+                                    {
+                                        res.then(after, after);
+                                        return;
+                                    }
+                                    if (res && res.done)
+                                    {
+                                        res.done(after).fail(after);
+                                        return;
+                                    }
                                 }
-                                catch(_){}
+                                catch (_)
+                                {}
                             }
                             else
                             {
@@ -1054,15 +1178,18 @@ window.CategoryTree = (function ()
                                 {
                                     (current.children || []).forEach(enqueue);
                                 }
-                                catch(_){}
+                                catch (_)
+                                {}
                             }
 
                             setTimeout(step, 15);
                         })();
                     }
-                    catch(_){ callback(false); }
+                    catch (_)
+                    {
+                        callback(false);
+                    }
                 }
-
 
                 function findPreferredParentUnderRoot(parentKey)
                 {
@@ -1150,34 +1277,36 @@ window.CategoryTree = (function ()
                     setTimeout(applyQuerySelection, 110);
                 }
 
-		        function activateNodeFinal(n)
-		        {
-			        if (!n)
-			        {
-				        return;
-			        }
-			        if (querySelectionApplied)
-			        {
-				        return;
-			        }
-			        querySelectionApplied = true;
+                function activateNodeFinal(n)
+                {
+                    if (!n)
+                    {
+                        return;
+                    }
+                    if (querySelectionApplied)
+                    {
+                        return;
+                    }
+                    querySelectionApplied = true;
 
-			        try
-			        {
-				        focusBranch(n, function ()
-				        {
-					        try
+                    try
+                    {
+                        focusBranch(n, function()
+                        {
+                            try
                             {
                                 n.setActive(true);
 
                             }
-                            catch (_) {}
-					        try
+                            catch (_)
+                            {}
+                            try
                             {
                                 persistActiveKey(n);
                             }
-                            catch (_) {}
-					        if (isMobile())
+                            catch (_)
+                            {}
+                            if (isMobile())
                             {
                                 updateActionBar(n);
                             }
@@ -1185,26 +1314,29 @@ window.CategoryTree = (function ()
                             {
                                 loadDetails(n);
                             }
-				        });
-			        }
-			        catch (_)
-			        {
-				        try
+                        });
+                    }
+                    catch (_)
+                    {
+                        try
                         {
                             n.makeVisible();
                         }
-                        catch (_) {}
-				        try
+                        catch (_)
+                        {}
+                        try
                         {
                             n.setActive(true);
                         }
-                        catch (_) {}
-				        try
+                        catch (_)
+                        {}
+                        try
                         {
                             persistActiveKey(n);
                         }
-                        catch (_) {}
-				        if (isMobile())
+                        catch (_)
+                        {}
+                        if (isMobile())
                         {
                             updateActionBar(n);
                         }
@@ -1212,8 +1344,8 @@ window.CategoryTree = (function ()
                         {
                             loadDetails(n);
                         }
-			        }
-		        }
+                    }
+                }
 
                 function finalizeActivateGeneric()
                 {
@@ -1228,6 +1360,7 @@ window.CategoryTree = (function ()
                         }
 
                         var idx = 0;
+
                         function next()
                         {
                             if (idx >= (variants.length ? variants.length : 1))
@@ -1237,7 +1370,7 @@ window.CategoryTree = (function ()
                             }
                             var t = variants.length ? variants[idx++] : selectKey;
 
-                            loadUnderRootUntilKey(t, 600, function ()
+                            loadUnderRootUntilKey(t, 600, function()
                             {
                                 var p = choosePreferredInstanceFromVariants(variants.length ? variants : [selectKey], expandKey);
                                 if (p)
@@ -1257,35 +1390,35 @@ window.CategoryTree = (function ()
                 }
 
                 // Creation-aware poll: reload the intended parent under ROOT until the child appears (strictly under ROOT).
-		        function pollForChildUnderParent(parentNode, variantKeys, maxTries, intervalMs, onDone)
-		        {
-			        var tries = 0;
+                function pollForChildUnderParent(parentNode, variantKeys, maxTries, intervalMs, onDone)
+                {
+                    var tries = 0;
 
-			        function tick()
-			        {
-				        tries++;
+                    function tick()
+                    {
+                        tries++;
 
-				        reloadChildrenNoCache(parentNode).then(function ()
-				        {
-					        var hit = findChildUnderParentByVariants(parentNode, variantKeys);
-					        if (hit)
-					        {
-						        onDone(hit);
-						        return;
-					        }
+                        reloadChildrenNoCache(parentNode).then(function()
+                        {
+                            var hit = findChildUnderParentByVariants(parentNode, variantKeys);
+                            if (hit)
+                            {
+                                onDone(hit);
+                                return;
+                            }
 
-					        if (tries >= maxTries)
-					        {
-						        onDone(null);
-						        return;
-					        }
+                            if (tries >= maxTries)
+                            {
+                                onDone(null);
+                                return;
+                            }
 
-					        setTimeout(tick, intervalMs);
-				        });
-			        }
+                            setTimeout(tick, intervalMs);
+                        });
+                    }
 
-			        tick();
-		        }
+                    tick();
+                }
 
                 function attemptCodeParentSelection()
                 {
@@ -1299,7 +1432,7 @@ window.CategoryTree = (function ()
 
                     if (!parentUnderRoot)
                     {
-                        loadUnderRootUntilKey(expandKey, 400, function ()
+                        loadUnderRootUntilKey(expandKey, 400, function()
                         {
                             setTimeout(attemptCodeParentSelection, 80);
                         });
@@ -1319,7 +1452,7 @@ window.CategoryTree = (function ()
                         if (createdFlow)
                         {
                             // ~6s total with 40 * 150ms; adjust if needed
-                            pollForChildUnderParent(parentUnderRoot, (variants.length ? variants : [selectKey]), 40, 150, function (node)
+                            pollForChildUnderParent(parentUnderRoot, (variants.length ? variants : [selectKey]), 40, 150, function(node)
                             {
                                 if (node)
                                 {
@@ -1329,6 +1462,7 @@ window.CategoryTree = (function ()
 
                                 // Fallback: try materializing under ROOT broadly, but still prefer ROOT instance
                                 var vidx = 0;
+
                                 function tryNextVariant()
                                 {
                                     if (vidx >= (variants.length ? variants.length : 1))
@@ -1338,7 +1472,7 @@ window.CategoryTree = (function ()
                                     }
 
                                     var vk = variants.length ? variants[vidx++] : selectKey;
-                                    loadUnderRootUntilKey(vk, 600, function ()
+                                    loadUnderRootUntilKey(vk, 600, function()
                                     {
                                         var again = findChildUnderParentByVariants(parentUnderRoot, (variants.length ? variants : [selectKey]));
                                         if (again)
@@ -1357,6 +1491,7 @@ window.CategoryTree = (function ()
 
                         // Non-create flow: materialize under ROOT, then prefer ROOT instance
                         var idx = 0;
+
                         function tryNext()
                         {
                             if (idx >= (variants.length ? variants.length : 1))
@@ -1366,7 +1501,7 @@ window.CategoryTree = (function ()
                             }
 
                             var t = variants.length ? variants[idx++] : selectKey;
-                            loadUnderRootUntilKey(t, 600, function ()
+                            loadUnderRootUntilKey(t, 600, function()
                             {
                                 var p = choosePreferredInstanceFromVariants(variants.length ? variants : [selectKey], expandKey);
                                 if (p)
@@ -1381,9 +1516,9 @@ window.CategoryTree = (function ()
                         tryNext();
                     }
 
-                    var doReload = function ()
+                    var doReload = function()
                     {
-                        reloadChildrenNoCache(parentUnderRoot).then(function ()
+                        reloadChildrenNoCache(parentUnderRoot).then(function()
                         {
                             setTimeout(afterReady, 40);
                         });
@@ -1442,14 +1577,18 @@ window.CategoryTree = (function ()
                     if (!exprRoot)
                     {
                         // materialize expr root at top-level if needed
-                        setTimeout(function ()
+                        setTimeout(function()
                         {
-                            loadUnderExprUntilKey(selectKey, 200, function (ok)
+                            loadUnderExprUntilKey(selectKey, 200, function(ok)
                             {
                                 if (ok)
                                 {
                                     var n = tree.getNodeByKey(selectKey);
-                                    if (n) { activateNodeFinal(n); return; }
+                                    if (n)
+                                    {
+                                        activateNodeFinal(n);
+                                        return;
+                                    }
                                 }
                                 scheduleRetry();
                             });
@@ -1467,35 +1606,65 @@ window.CategoryTree = (function ()
                         }
 
                         var tries = 0;
-                        var maxTries = 40, intervalMs = 150;
+                        var maxTries = 40,
+                            intervalMs = 150;
 
                         (function poll()
                         {
                             tries++;
-                            var r = exprRoot.reloadChildren
-                                ? exprRoot.reloadChildren({ url: nocache(appendQuery(nodesUrl, "id", exprRoot.key)) })
-                                : null;
+                            var r = exprRoot.reloadChildren ?
+                                exprRoot.reloadChildren(
+                                    {
+                                        url: nocache(appendQuery(nodesUrl, "id", exprRoot.key))
+                                    }) :
+                                null;
 
-                            var cont = function ()
+                            var cont = function()
                             {
                                 var hit = tree.getNodeByKey(selectKey);
-                                if (hit) { activateNodeFinal(hit); return; }
-                                if (tries >= maxTries) { scheduleRetry(); return; }
+                                if (hit)
+                                {
+                                    activateNodeFinal(hit);
+                                    return;
+                                }
+                                if (tries >= maxTries)
+                                {
+                                    scheduleRetry();
+                                    return;
+                                }
                                 setTimeout(poll, intervalMs);
                             };
 
-                            if (r && r.then) { r.then(cont, cont); }
-                            else if (r && r.done) { r.done(cont).fail(cont); }
-                            else { cont(); }
+                            if (r && r.then)
+                            {
+                                r.then(cont, cont);
+                            }
+                            else if (r && r.done)
+                            {
+                                r.done(cont).fail(cont);
+                            }
+                            else
+                            {
+                                cont();
+                            }
                         })();
                     }
 
                     if (exprRoot.folder && !exprRoot.expanded)
                     {
                         var ex = exprRoot.setExpanded(true);
-                        if (ex && ex.then) { ex.then(afterReady, afterReady); }
-                        else if (ex && ex.done) { ex.done(afterReady).fail(afterReady); }
-                        else { afterReady(); }
+                        if (ex && ex.then)
+                        {
+                            ex.then(afterReady, afterReady);
+                        }
+                        else if (ex && ex.done)
+                        {
+                            ex.done(afterReady).fail(afterReady);
+                        }
+                        else
+                        {
+                            afterReady();
+                        }
                     }
                     else
                     {
@@ -1503,7 +1672,6 @@ window.CategoryTree = (function ()
                     }
                     return;
                 }
-
 
                 if (isCodeKey)
                 {
@@ -1516,7 +1684,7 @@ window.CategoryTree = (function ()
                         var parentUnderRoot = findPreferredParentUnderRoot(expandKey);
                         if (!parentUnderRoot)
                         {
-                            loadUnderRootUntilKey(expandKey, 400, function ()
+                            loadUnderRootUntilKey(expandKey, 400, function()
                             {
                                 setTimeout(finalizeActivateGeneric, 60);
                             });
@@ -1524,9 +1692,9 @@ window.CategoryTree = (function ()
                         }
 
                         var ex = parentUnderRoot.setExpanded(true);
-                        var afterExpand = function ()
+                        var afterExpand = function()
                         {
-                            reloadChildrenNoCache(parentUnderRoot).then(function ()
+                            reloadChildrenNoCache(parentUnderRoot).then(function()
                             {
                                 setTimeout(finalizeActivateGeneric, 40);
                             });
@@ -1556,12 +1724,15 @@ window.CategoryTree = (function ()
 
         // Fallback retry: when URL requests a selection, ensure applyQuerySelection runs until applied.
         // Conservative, throttled attempts (self-scheduling) to avoid overlapping calls.
-        (function ()
+        (function()
         {
             try
             {
                 var qs = new URLSearchParams(window.location.search || "");
-                if (!(qs.has("select") || qs.has("returnKey") || qs.has("key"))) { return; }
+                if (!(qs.has("select") || qs.has("returnKey") || qs.has("key")))
+                {
+                    return;
+                }
 
                 var tries = 0;
                 var maxTries = 20; // 20 * minInterval = maximum total time
@@ -1603,8 +1774,7 @@ window.CategoryTree = (function ()
                             }
                         }
                         catch (_)
-                        {
-                        }
+                        {}
 
                         // If not yet applied, schedule next attempt
                         if (!(typeof querySelectionApplied !== "undefined" && querySelectionApplied === true) && tries < maxTries)
@@ -1627,8 +1797,7 @@ window.CategoryTree = (function ()
                 setTimeout(attempt, minInterval);
             }
             catch (_)
-            {
-            }
+            {}
         })();
 
         // Open an action page in RHS (desktop) or navigate (mobile)
@@ -1663,12 +1832,16 @@ window.CategoryTree = (function ()
                 }
             }
             catch (_)
-            {
-            }
+            {}
 
             // Build query parameters
             var parts = [];
             parts.push("key=" + encodeURIComponent(key || ""));
+            var cfg = document.getElementById("categoryTreeConfig");
+            if (cfg && cfg.dataset && cfg.dataset.versionId)
+            {
+                parts.push("versionId=" + encodeURIComponent(cfg.dataset.versionId));
+            }
             if (parentKey)
             {
                 parts.push("parentKey=" + encodeURIComponent(parentKey));
@@ -1710,7 +1883,7 @@ window.CategoryTree = (function ()
             {
                 $pane.css("overflow", "auto");
                 $.get(nocache(url))
-                    .done(function (html)
+                    .done(function(html)
                     {
                         $pane.html(html);
 
@@ -1720,10 +1893,9 @@ window.CategoryTree = (function ()
                             tryApplyEmbedMarker($pane);
                         }
                         catch (_)
-                        {
-                        }
+                        {}
                     })
-                    .fail(function ()
+                    .fail(function()
                     {
                         $pane.html("<div class='text-danger small p-2'>Failed to load action.</div>");
                     });
@@ -1748,7 +1920,7 @@ window.CategoryTree = (function ()
             {
                 $pane.css("overflow", "auto");
                 $.get(nocache(url))
-                    .done(function (html)
+                    .done(function(html)
                     {
                         $pane.html(html);
 
@@ -1758,10 +1930,9 @@ window.CategoryTree = (function ()
                             tryApplyEmbedMarker($pane);
                         }
                         catch (_)
-                        {
-                        }
+                        {}
                     })
-                    .fail(function ()
+                    .fail(function()
                     {
                         $pane.html("<div class='text-muted small p-2'>No details</div>");
                     });
@@ -1776,19 +1947,41 @@ window.CategoryTree = (function ()
         function postJsonGlobal(handler, data)
         {
             var token = antiXsrf();
-            return $.ajax({
-                type: "POST",
-                url: handlerUrl(handler),
-                data: data,
-                headers: token ? { "RequestVerificationToken": token } : {},
-                dataType: "json"
-            });
+            var cfg = document.getElementById("categoryTreeConfig");
+            var payload = data ||
+            {};
+
+            if (cfg && cfg.dataset)
+            {
+                if (!payload.versionId)
+                {
+                    payload.versionId = cfg.dataset.versionId || "";
+                }
+            }
+
+            var request = $.ajax(
+                {
+                    type: "POST",
+                    url: handlerUrl(handler),
+                    data: payload,
+                    headers: token ?
+                        {
+                            "RequestVerificationToken": token
+                        } :
+                        {},
+                    dataType: "json"
+                });
+
+            return request;
         }
 
         function resetExpressionError(key, onDone)
         {
-            postJsonGlobal("ResetExpressionError", { key: key })
-                .done(function (res)
+            postJsonGlobal("ResetExpressionError",
+                {
+                    key: key
+                })
+                .done(function(res)
                 {
                     if (!res || res.success === false)
                     {
@@ -1810,7 +2003,7 @@ window.CategoryTree = (function ()
                         onDone(true, res);
                     }
                 })
-                .fail(function ()
+                .fail(function()
                 {
                     notify("Failed to reset expression error.", "warning");
 
@@ -1823,7 +2016,10 @@ window.CategoryTree = (function ()
 
         function getEffectiveParentKey(node, menuParentKey)
         {
-            if (typeof menuParentKey === "string" && menuParentKey) { return menuParentKey; }
+            if (typeof menuParentKey === "string" && menuParentKey)
+            {
+                return menuParentKey;
+            }
             try
             {
                 var p = node && node.getParent ? node.getParent() : null;
@@ -1840,7 +2036,10 @@ window.CategoryTree = (function ()
             try
             {
                 var t = getTree();
-                if (!t) { return; }
+                if (!t)
+                {
+                    return;
+                }
                 var root = t.getNodeByKey(ROOT_KEY);
                 var disc = t.getNodeByKey(DISC_KEY);
                 reloadIfExpandedNode(root);
@@ -1864,7 +2063,8 @@ window.CategoryTree = (function ()
 
                 var kinds = getNodeKinds(node);
                 var key = kinds.key;
-                var data = kinds.data || {};
+                var data = kinds.data ||
+                {};
 
                 // Resolve parentKey
                 var parentKey = (typeof menuParentKey === "string" && menuParentKey) ? menuParentKey : "";
@@ -1926,7 +2126,10 @@ window.CategoryTree = (function ()
                 var parentIsSyntheticType = (typeof parentKey === "string" && parentKey.indexOf("type:") === 0);
                 if (parentKey && parentKey !== "" && !parentIsSyntheticType && isTotalCategory)
                 {
-                    openAction("DeleteTotal", "", parentKey, { childKey: key });
+                    openAction("DeleteTotal", "", parentKey,
+                        {
+                            childKey: key
+                        });
                     return;
                 }
 
@@ -1946,18 +2149,25 @@ window.CategoryTree = (function ()
             {
                 return true;
             }
-            return key === "__DISCONNECTED__"
-                || key === "__ROOT__"
-                || key === "__EXPRESSIONS__"            // treat expressions root as synthetic anchor
-                || /^root_\d+$/i.test(key)
-                || (typeof key === "string" && key.indexOf("type:") === 0);
+            return key === "__DISCONNECTED__" ||
+                key === "__ROOT__" ||
+                key === "__EXPRESSIONS__" // treat expressions root as synthetic anchor
+                ||
+                /^root_\d+$/i.test(key) ||
+                (typeof key === "string" && key.indexOf("type:") === 0);
         }
 
         // Load details into RHS pane (desktop only)
         function loadDetails(node)
         {
-            if (!detailsUrl) { return; }
-            if (isMobile()) { return; }
+            if (!detailsUrl)
+            {
+                return;
+            }
+            if (isMobile())
+            {
+                return;
+            }
 
             var $pane = $("#detailsPane");
             if ($pane.length)
@@ -1983,15 +2193,15 @@ window.CategoryTree = (function ()
             if (typeof key === "string" && key.indexOf(EXPR_PREFIX) === 0)
             {
                 // Use existing detailsUrl (TreeDetailsModel.OnGetAsync) with embed
-                var url = detailsUrl + "?key=" + encodeURIComponent(key);
+                var url = appendQuery(detailsUrl, "key", key);
                 url = appendQuery(url, "embed", "1");
                 $.get(nocache(url))
-                    .done(function (html)
+                    .done(function(html)
                     {
                         $pane.html(html);
                         applyDetailsVisibility(node, $pane);
                     })
-                    .fail(function ()
+                    .fail(function()
                     {
                         $pane.html("<div class='text-muted small p-2'>No details</div>");
                     });
@@ -2003,21 +2213,21 @@ window.CategoryTree = (function ()
             if (tcIsSyntheticKey(key))
             {
                 var isCashCodeListSynthetic =
-                    key === ROOT_KEY
-                    || key === DISC_KEY
-                    || key === "__TYPE_ROOT__";
+                    key === ROOT_KEY ||
+                    key === DISC_KEY ||
+                    key === "__TYPE_ROOT__";
 
                 if (isCashCodeListSynthetic)
                 {
-                    var synUrl = detailsUrl + "?key=" + encodeURIComponent(key);
+                    var synUrl = appendQuery(detailsUrl, "key", key);
                     synUrl = appendQuery(synUrl, "embed", "1");
 
                     $.get(nocache(synUrl))
-                        .done(function (html)
+                        .done(function(html)
                         {
                             $pane.html(html);
                         })
-                        .fail(function ()
+                        .fail(function()
                         {
                             $pane.html("<div class='text-muted small p-2'>No details</div>");
                         });
@@ -2026,18 +2236,18 @@ window.CategoryTree = (function ()
 
                 if (parentKey && !tcIsSyntheticKey(parentKey))
                 {
-                    var parentUrl = detailsUrl + "?key=" + encodeURIComponent(parentKey);
+                    var parentUrl = appendQuery(detailsUrl, "key", parentKey);
 
                     // Desktop RHS should fetch embed=1 (no layout)
                     parentUrl = appendQuery(parentUrl, "embed", "1");
 
                     $.get(nocache(parentUrl))
-                        .done(function (html)
+                        .done(function(html)
                         {
                             $pane.html(html);
                             applyDetailsVisibility(node, $pane);
                         })
-                        .fail(function ()
+                        .fail(function()
                         {
                             $pane.html("<div class='text-muted small p-2'>No details</div>");
                         });
@@ -2050,22 +2260,22 @@ window.CategoryTree = (function ()
             }
 
             // Build URL for the selected node
-            var url = detailsUrl + "?key=" + encodeURIComponent(key);
+            var url = appendQuery(detailsUrl, "key", key);
             if (parentKey && !tcIsSyntheticKey(parentKey))
             {
-                url += "&parentKey=" + encodeURIComponent(parentKey);
+                url = appendQuery(url, "parentKey", parentKey);
             }
 
             // Desktop RHS should fetch embed=1 (no layout)
             url = appendQuery(url, "embed", "1");
 
             $.get(nocache(url))
-                .done(function (html)
+                .done(function(html)
                 {
                     $pane.html(html);
                     applyDetailsVisibility(node, $pane);
                 })
-                .fail(function ()
+                .fail(function()
                 {
                     $pane.html("<div class='text-muted small p-2'>No details</div>");
                 });
@@ -2125,8 +2335,7 @@ window.CategoryTree = (function ()
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
 
                 querySelectionApplied = true;
                 return true;
@@ -2149,7 +2358,7 @@ window.CategoryTree = (function ()
 
                     if (root)
                     {
-                        root.visit(function (n)
+                        root.visit(function(n)
                         {
                             if (n && n.key === removeKey)
                             {
@@ -2167,8 +2376,7 @@ window.CategoryTree = (function ()
                                     n.remove();
                                 }
                                 catch (_)
-                                {
-                                }
+                                {}
 
                                 return false;
                             }
@@ -2178,8 +2386,7 @@ window.CategoryTree = (function ()
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
 
                 var parentNode = removedParent || tree.getNodeByKey(expandVal);
 
@@ -2200,8 +2407,7 @@ window.CategoryTree = (function ()
                         }
                     }
                     catch (_)
-                    {
-                    }
+                    {}
 
                     querySelectionApplied = true;
                     return true;
@@ -2233,14 +2439,16 @@ window.CategoryTree = (function ()
             // Expression CREATE: inject and select
             if (spec && spec.key && spec.key.indexOf("expr:") === 0 && !tree.getNodeByKey(spec.key) && parentForCreate)
             {
-                var exprNodeData =
-                {
+                var exprNodeData = {
                     title: spec.title || (spec.data && spec.data.categoryCode) || spec.key,
                     key: spec.key,
                     folder: false,
                     lazy: false,
                     icon: false,
-                    data: spec.data || { nodeType: "expression" }
+                    data: spec.data ||
+                    {
+                        nodeType: "expression"
+                    }
                 };
 
                 function finishExprInjection()
@@ -2250,8 +2458,7 @@ window.CategoryTree = (function ()
                         parentForCreate.addChildren([exprNodeData]);
                     }
                     catch (_)
-                    {
-                    }
+                    {}
 
                     var injected = tree.getNodeByKey(spec.key);
 
@@ -2272,8 +2479,7 @@ window.CategoryTree = (function ()
                             }
                         }
                         catch (_)
-                        {
-                        }
+                        {}
 
                         querySelectionApplied = true;
                         return true;
@@ -2313,7 +2519,7 @@ window.CategoryTree = (function ()
             // Code CREATE: inject and select (unchanged)
             if (spec && spec.key && spec.key.indexOf("code:") === 0 && !tree.getNodeByKey(spec.key) && parentForCreate)
             {
-                var siblingTemplate = (function ()
+                var siblingTemplate = (function()
                 {
                     try
                     {
@@ -2336,8 +2542,7 @@ window.CategoryTree = (function ()
                         }
                     }
                     catch (_)
-                    {
-                    }
+                    {}
 
                     return null;
                 })();
@@ -2366,17 +2571,17 @@ window.CategoryTree = (function ()
                     siblingCodeNode = null;
                 }
 
-                var newNodeData =
-                {
+                var newNodeData = {
                     title: formattedTitle,
                     key: spec.key,
                     folder: false,
                     lazy: false,
                     icon: false,
                     extraClasses: siblingCodeNode && siblingCodeNode.extraClasses ? siblingCodeNode.extraClasses : "",
-                    data: (function ()
+                    data: (function()
                     {
-                        var d = spec.data || {};
+                        var d = spec.data ||
+                        {};
                         if (!d.nodeType)
                         {
                             d.nodeType = "code";
@@ -2396,8 +2601,7 @@ window.CategoryTree = (function ()
                         parentForCreate.addChildren([newNodeData]);
                     }
                     catch (_)
-                    {
-                    }
+                    {}
 
                     var created = tree.getNodeByKey(spec.key);
 
@@ -2414,8 +2618,7 @@ window.CategoryTree = (function ()
                             created.render(false);
                         }
                         catch (_)
-                        {
-                        }
+                        {}
 
                         try
                         {
@@ -2432,8 +2635,7 @@ window.CategoryTree = (function ()
                             }
                         }
                         catch (_)
-                        {
-                        }
+                        {}
 
                         querySelectionApplied = true;
                         return true;
@@ -2488,7 +2690,7 @@ window.CategoryTree = (function ()
                     return;
                 }
 
-                var obs = new MutationObserver(function (mutations)
+                var obs = new MutationObserver(function(mutations)
                 {
                     for (var i = 0; i < mutations.length; i++)
                     {
@@ -2503,7 +2705,8 @@ window.CategoryTree = (function ()
                                     if (marker)
                                     {
                                         var sel = marker.getAttribute("data-select") || "";
-                                        if (sel && !getTree().getNodeByKey(sel))
+                                        var remove = marker.getAttribute("data-remove") || "";
+                                        if (remove || (sel && !getTree().getNodeByKey(sel)))
                                         {
                                             // allow; fall through
                                         }
@@ -2520,30 +2723,46 @@ window.CategoryTree = (function ()
                                 tryApplyEmbedMarker($(pane));
                             }
                             catch (_)
-                            {
-                            }
+                            {}
                         }
                     }
                 });
 
-                obs.observe(pane, { childList: true, subtree: true });
+                obs.observe(pane,
+                    {
+                        childList: true,
+                        subtree: true
+                    });
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         function postJsonFlexible(handler, data)
         {
             var token = antiXsrf();
-            return $.ajax({
-                type: "POST",
-                url: handlerUrl(handler),
-                data: data,
-                headers: token ? { "RequestVerificationToken": token } : {},
-                // Accept text and parse JSON if possible, avoiding jQuery 'parseerror' with status 200
-                dataType: "text"
-            }).then(function (text, _, jqXHR)
+            var cfg = document.getElementById("categoryTreeConfig");
+            var payload = data ||
+            {};
+
+            if (cfg && cfg.dataset && !payload.versionId)
+            {
+                payload.versionId = cfg.dataset.versionId || "";
+            }
+
+            return $.ajax(
+                {
+                    type: "POST",
+                    url: handlerUrl(handler),
+                    data: payload,
+                    headers: token ?
+                        {
+                            "RequestVerificationToken": token
+                        } :
+                        {},
+                    // Accept text and parse JSON if possible, avoiding jQuery 'parseerror' with status 200
+                    dataType: "text"
+                }).then(function(text, _, jqXHR)
             {
                 var res = null;
                 try
@@ -2553,11 +2772,14 @@ window.CategoryTree = (function ()
                 catch (_)
                 {
                     // If not JSON, synthesize a success wrapper with raw text
-                    res = { success: true, message: (typeof text === "string" ? text : "") };
+                    res = {
+                        success: true,
+                        message: (typeof text === "string" ? text : "")
+                    };
                 }
                 // Normalize server ok (status 200) with missing JSON into success by default
                 return res;
-            }, function (jqXHR)
+            }, function(jqXHR)
             {
                 // If server returned 200 but jQuery treated it as failure (parseerror), expose payload
                 if (jqXHR && jqXHR.status === 200)
@@ -2570,7 +2792,10 @@ window.CategoryTree = (function ()
                     }
                     catch (_)
                     {
-                        res = { success: true, message: payload };
+                        res = {
+                            success: true,
+                            message: payload
+                        };
                     }
                     return res;
                 }
@@ -2594,7 +2819,11 @@ window.CategoryTree = (function ()
                 var alternate = (primary === "SetExpressionEnabled") ? "SetEnabled" : "SetExpressionEnabled";
 
                 // Attempt primary, then fallback if the server reports "not found"
-                return postJsonFlexible(primary, { key: key, enabled: enabled }).then(function (res)
+                return postJsonFlexible(primary,
+                    {
+                        key: key,
+                        enabled: enabled
+                    }).then(function(res)
                 {
                     var msg = (res && res.message) ? String(res.message) : "";
                     var failed = (res && res.success === false);
@@ -2602,7 +2831,11 @@ window.CategoryTree = (function ()
                     if (failed && /not\s+found/i.test(msg))
                     {
                         // Try the alternate handler automatically
-                        return postJsonFlexible(alternate, { key: key, enabled: enabled });
+                        return postJsonFlexible(alternate,
+                            {
+                                key: key,
+                                enabled: enabled
+                            });
                     }
 
                     return res;
@@ -2611,7 +2844,11 @@ window.CategoryTree = (function ()
             catch (_)
             {
                 var k = (typeof nodeOrKey === "string") ? nodeOrKey : ((nodeOrKey && nodeOrKey.key) ? nodeOrKey.key : "");
-                return postJsonFlexible("SetEnabled", { key: k, enabled: enabled });
+                return postJsonFlexible("SetEnabled",
+                    {
+                        key: k,
+                        enabled: enabled
+                    });
             }
         }
 
@@ -2621,7 +2858,8 @@ window.CategoryTree = (function ()
             try
             {
                 var kinds = getNodeKinds(node);
-                var data = kinds.data || {};
+                var data = kinds.data ||
+                {};
                 var key = kinds.key || "";
                 var parentKeyNow = "";
                 if (node && node.getParent)
@@ -2672,8 +2910,8 @@ window.CategoryTree = (function ()
                 var isCat = kinds.isCat === true;
                 var isRoot = kinds.isRoot === true;
                 var isDiscRoot = kinds.isDisconnect === true;
-                var isTypeNode = (typeof key === "string" && key.indexOf("type:") === 0)
-                                 || (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
+                var isTypeNode = (typeof key === "string" && key.indexOf("type:") === 0) ||
+                    (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
                 var inTypeCtx = (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
 
                 var catType = (typeof data.categoryType !== "undefined") ? Number(data.categoryType) : NaN;
@@ -2690,7 +2928,7 @@ window.CategoryTree = (function ()
                 function setButtonText($scope, action, text)
                 {
                     var $btns = $scope.find(actionSelectors(action).join(","));
-                    $btns.each(function ()
+                    $btns.each(function()
                     {
                         var $b = $(this);
                         var html = $b.html() || "";
@@ -2706,10 +2944,10 @@ window.CategoryTree = (function ()
                 }
 
                 var known = [
-                    "edit","delete","toggleEnabled",
-                    "addCategory","createCategory","newTotal","createTotal",
-                    "addCashCode","createCashCode",
-                    "move","moveUp","moveDown","setProfitRoot","setVatRoot","expand","collapse"
+                    "edit", "delete", "toggleEnabled",
+                    "addCategory", "createCategory", "newTotal", "createTotal",
+                    "addCashCode", "createCashCode",
+                    "move", "moveUp", "moveDown", "setProfitRoot", "setVatRoot", "expand", "collapse"
                 ];
                 for (var i = 0; i < known.length; i++)
                 {
@@ -2725,15 +2963,15 @@ window.CategoryTree = (function ()
 
                 if (isCode)
                 {
-                    dv("edit", isAdmin);
-                    dv("delete", isAdmin);
-                    dv("toggleEnabled", isAdmin);
-                    dv("createCashCode", isAdmin);
-                    dv("addCashCode", isAdmin);
+                    dv("edit", canManageCashCodes);
+                    dv("delete", canManageCashCodes);
+                    dv("toggleEnabled", canManageCashCodes);
+                    dv("createCashCode", canManageCashCodes);
+                    dv("addCashCode", false);
 
                     setButtonText($pane, "createCashCode", "New Cash Code");
 
-                    order = ["edit","delete","toggleEnabled","createCashCode","addCashCode"];
+                    order = ["edit", "delete", "toggleEnabled", "createCashCode", "addCashCode"];
                     arrangeDetailsButtons($pane, order);
                     setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                     return;
@@ -2752,7 +2990,7 @@ window.CategoryTree = (function ()
                     dv("addCashCode", isAdmin);
                     dv("move", isAdmin);
 
-                    order = ["edit","delete","toggleEnabled","addCashCode","move"];
+                    order = ["edit", "delete", "toggleEnabled", "addCashCode", "move"];
                     arrangeDetailsButtons($pane, order);
                     setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                     return;
@@ -2774,7 +3012,7 @@ window.CategoryTree = (function ()
                     setButtonText($pane, "createTotal", "New Total");
                     setButtonText($pane, "createCategory", "New Category");
 
-                    order = ["edit","delete","toggleEnabled","addCategory","createTotal","createCategory","move"];
+                    order = ["edit", "delete", "toggleEnabled", "addCategory", "createTotal", "createCategory", "move"];
                     arrangeDetailsButtons($pane, order);
                     setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                 }
@@ -2786,14 +3024,14 @@ window.CategoryTree = (function ()
                     dv("toggleEnabled", isAdmin);
 
                     dv("addCashCode", isAdmin);
-                    dv("createCashCode", isAdmin);
+                    dv("createCashCode", canManageCashCodes);
 
                     dv("move", isAdmin);
 
                     setButtonText($pane, "addCashCode", "Add Cash Code");
                     setButtonText($pane, "createCashCode", "New Cash Code");
 
-                    order = ["edit","delete","toggleEnabled","addCashCode","createCashCode","move"];
+                    order = ["edit", "delete", "toggleEnabled", "addCashCode", "createCashCode", "move"];
                     arrangeDetailsButtons($pane, order);
                     setToggleEnabledLabel($pane, (data && data.isEnabled === 1));
                 }
@@ -2818,7 +3056,7 @@ window.CategoryTree = (function ()
                         showTotalCategory();
                         dv("setProfitRoot", isAdmin);
                         dv("setVatRoot", isAdmin);
-                        order = ["edit","delete","toggleEnabled","addCategory","createTotal","createCategory","move","setProfitRoot","setVatRoot"];
+                        order = ["edit", "delete", "toggleEnabled", "addCategory", "createTotal", "createCategory", "move", "setProfitRoot", "setVatRoot"];
                         arrangeDetailsButtons($pane, order);
                     }
                     else if (isCatCashCode)
@@ -2838,20 +3076,20 @@ window.CategoryTree = (function ()
                 }
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         // Helpers to classify node
         function getNodeKinds(node)
         {
             var key = node ? node.key : null;
-            var data = (node && node.data) || {};
+            var data = (node && node.data) ||
+            {};
 
             var nodeType =
-                (typeof data.nodeType !== "undefined" && data.nodeType !== null)
-                    ? String(data.nodeType)
-                    : null;
+                (typeof data.nodeType !== "undefined" && data.nodeType !== null) ?
+                    String(data.nodeType) :
+                    null;
 
             if (!nodeType)
             {
@@ -2883,12 +3121,12 @@ window.CategoryTree = (function ()
 
             var isExpression = nodeType === "expression";
 
-            var isSynthetic =
-                !node
-                || key === ROOT_KEY
-                || key === DISC_KEY
-                || key === "__EXPRESSIONS__"        // ensure expressions root is synthetic
-                || (nodeType === "synthetic" && !isExpression);
+            var isSynthetic = !node ||
+                key === ROOT_KEY ||
+                key === DISC_KEY ||
+                key === "__EXPRESSIONS__" // ensure expressions root is synthetic
+                ||
+                (nodeType === "synthetic" && !isExpression);
 
             var isCode = (nodeType === "code") || (key && typeof key === "string" && key.indexOf("code:") === 0);
             var isCat = !!(node && node.folder && !isCode && !isSynthetic);
@@ -2919,7 +3157,10 @@ window.CategoryTree = (function ()
             {
                 var $tree = $(treeSel);
                 var $pane = $("#detailsPane");
-                if ($tree.length === 0) { return; }
+                if ($tree.length === 0)
+                {
+                    return;
+                }
 
                 $tree.css("overflow", "auto");
                 $pane.css("overflow", "auto");
@@ -2942,13 +3183,19 @@ window.CategoryTree = (function ()
 
                 ensureTreeContainerSizing();
             }
-            catch { /* no-op */ }
+            catch
+            {
+                /* no-op */
+            }
         }
 
         function getFooterHeight()
         {
             var $f = $("footer");
-            if ($f.length === 0) { return 0; }
+            if ($f.length === 0)
+            {
+                return 0;
+            }
             return $f.outerHeight(true) || 0;
         }
 
@@ -2957,7 +3204,11 @@ window.CategoryTree = (function ()
             var $ft = $(treeSel).find(".fancytree-container");
             if ($ft.length)
             {
-                $ft.css({ height: "100%", overflow: "auto" });
+                $ft.css(
+                    {
+                        height: "100%",
+                        overflow: "auto"
+                    });
             }
         }
 
@@ -2966,7 +3217,10 @@ window.CategoryTree = (function ()
         {
             try
             {
-                if (!$.ui || !$.ui.fancytree) { return null; }
+                if (!$.ui || !$.ui.fancytree)
+                {
+                    return null;
+                }
                 var el = $(treeSel).get(0);
                 return $.ui.fancytree.getTree(el);
             }
@@ -2982,8 +3236,14 @@ window.CategoryTree = (function ()
             try
             {
                 var tree = getTree();
-                if (!tree) { return; }
-                if (!nodeOrKey) { return; }
+                if (!tree)
+                {
+                    return;
+                }
+                if (!nodeOrKey)
+                {
+                    return;
+                }
 
                 var node = null;
 
@@ -3002,8 +3262,14 @@ window.CategoryTree = (function ()
 
                 if (node && typeof node.reloadChildren === "function" && node.expanded)
                 {
-                    if (options) { node.reloadChildren(options); }
-                    else { node.reloadChildren(); }
+                    if (options)
+                    {
+                        node.reloadChildren(options);
+                    }
+                    else
+                    {
+                        node.reloadChildren();
+                    }
                 }
             }
             catch (ex)
@@ -3016,10 +3282,11 @@ window.CategoryTree = (function ()
 
         function stateKey(name)
         {
-            // Namespace per page and root
+            // Namespace per tenant, selected version, page and root.
             var rootPart = (typeof ROOT_KEY !== "undefined" && ROOT_KEY) ? ROOT_KEY : "root";
             var pagePart = (window.location && window.location.pathname) ? window.location.pathname : "page";
-            return "tc.categoryTree." + name + "." + pagePart + "." + rootPart;
+            return "tc.categoryTree." + name + "." + selectedTenantId + "."
+                + (selectedVersionId || "active") + "." + pagePart + "." + rootPart;
         }
 
         function loadExpandedSet()
@@ -3028,7 +3295,10 @@ window.CategoryTree = (function ()
             {
                 var raw = localStorage.getItem(stateKey("expanded"));
                 var arr = raw ? JSON.parse(raw) : [];
-                if (!Array.isArray(arr)) { arr = []; }
+                if (!Array.isArray(arr))
+                {
+                    arr = [];
+                }
                 return new Set(arr);
             }
             catch (ex)
@@ -3044,13 +3314,15 @@ window.CategoryTree = (function ()
                 localStorage.setItem(stateKey("expanded"), JSON.stringify(Array.from(set)));
             }
             catch (ex)
-            {
-            }
+            {}
         }
 
         function persistExpanded(node, expanded)
         {
-            if (!node || !node.key) { return; }
+            if (!node || !node.key)
+            {
+                return;
+            }
             var set = loadExpandedSet();
             if (expanded)
             {
@@ -3067,10 +3339,13 @@ window.CategoryTree = (function ()
         {
             try
             {
-                if (!node || !node.children) { return; }
+                if (!node || !node.children)
+                {
+                    return;
+                }
                 var set = expandSet || loadExpandedSet();
                 // Expand any child that is marked expanded; lazy expand is handled by Fancytree on demand
-                node.children.forEach(function (ch)
+                node.children.forEach(function(ch)
                 {
                     if (ch && ch.key && set.has(ch.key))
                     {
@@ -3079,8 +3354,7 @@ window.CategoryTree = (function ()
                 });
             }
             catch (ex)
-            {
-            }
+            {}
         }
 
         function persistActiveKey(node)
@@ -3091,8 +3365,7 @@ window.CategoryTree = (function ()
                 localStorage.setItem(stateKey("active"), k || "");
             }
             catch (ex)
-            {
-            }
+            {}
         }
 
         function loadActiveKey()
@@ -3123,7 +3396,7 @@ window.CategoryTree = (function ()
                 el.style.padding = "8px 12px";
                 el.style.boxShadow = "0 0.25rem 0.75rem rgba(0,0,0,.15)";
                 document.body.appendChild(el);
-                setTimeout(function ()
+                setTimeout(function()
                 {
                     if (el && el.parentNode)
                     {
@@ -3132,8 +3405,7 @@ window.CategoryTree = (function ()
                 }, 1800);
             }
             catch (ex)
-            {
-            }
+            {}
         }
 
         // Accessibility: aria-live polite region
@@ -3158,20 +3430,25 @@ window.CategoryTree = (function ()
                 var live = ensureAriaLive();
                 // Clear then set to force screen readers to read
                 live.textContent = "";
-                setTimeout(function () { live.textContent = text || ""; }, 10);
+                setTimeout(function()
+                {
+                    live.textContent = text || "";
+                }, 10);
             }
             catch (ex)
-            {
-            }
+            {}
         }
 
         // Autoscroll tree container while dragging near edges
         function bindAutoscrollHandlers()
         {
             var $cont = $(treeSel).find(".fancytree-container");
-            if ($cont.length === 0) { return; }
+            if ($cont.length === 0)
+            {
+                return;
+            }
 
-            $cont.on("dragover", function (e)
+            $cont.on("dragover", function(e)
             {
                 var container = this;
                 var rect = container.getBoundingClientRect();
@@ -3180,7 +3457,7 @@ window.CategoryTree = (function ()
                 var bottomGap = rect.bottom - y;
 
                 var threshold = 40; // px
-                var maxStep = 18;   // px per event
+                var maxStep = 18; // px per event
 
                 if (topGap < threshold)
                 {
@@ -3198,7 +3475,10 @@ window.CategoryTree = (function ()
         // Allow moving leafs under Disconnected; restrict to folder-only elsewhere (via menu)
         function moveNodeInUi(node, direction)
         {
-            if (!node) {return;}
+            if (!node)
+            {
+                return;
+            }
             var parent = node.getParent && node.getParent();
             var parentKey = parent ? parent.key : "";
             var cursor = direction === "up" ? node.getPrevSibling() : node.getNextSibling();
@@ -3222,7 +3502,7 @@ window.CategoryTree = (function ()
         {
             function expandNode(n)
             {
-                return new Promise(function (resolve, reject)
+                return new Promise(function(resolve, reject)
                 {
                     if (!n || !n.folder)
                     {
@@ -3236,9 +3516,9 @@ window.CategoryTree = (function ()
                     {
                         var children = n.children || [];
                         var chain = Promise.resolve();
-                        children.forEach(function (ch)
+                        children.forEach(function(ch)
                         {
-                            chain = chain.then(function ()
+                            chain = chain.then(function()
                             {
                                 return expandNode(ch);
                             });
@@ -3267,9 +3547,12 @@ window.CategoryTree = (function ()
         // Recursively collapse the selected node and all descendants (no lazy-load needed)
         function collapseSubtree(node)
         {
-            if (!node) {return;}
+            if (!node)
+            {
+                return;
+            }
 
-            node.visit(function (n)
+            node.visit(function(n)
             {
                 if (n !== node && n.folder && n.expanded)
                 {
@@ -3307,15 +3590,15 @@ window.CategoryTree = (function ()
                 {
                     return;
                 }
-                n.data = n.data || {};
+                n.data = n.data ||
+                {};
                 n.data.isEnabled = enabled ? 1 : 0;
                 try
                 {
                     n.toggleClass("tc-disabled", !enabled);
                 }
                 catch (_)
-                {
-                }
+                {}
             }
 
             // Expressions: apply directly (no cascade)
@@ -3337,7 +3620,7 @@ window.CategoryTree = (function ()
 
             // Cascade to descendant categories only
             apply(node);
-            node.visit(function (n)
+            node.visit(function(n)
             {
                 if (n !== node && isCategory(n))
                 {
@@ -3352,13 +3635,19 @@ window.CategoryTree = (function ()
             var $children = $menu.children().filter(":visible");
             $menu.find(".dropdown-divider").hide();
             $children = $menu.children().filter(":visible");
-            if ($children.length === 0) {return;}
+            if ($children.length === 0)
+            {
+                return;
+            }
 
             var prevWasItem = false;
-            $menu.children().each(function ()
+            $menu.children().each(function()
             {
                 var $el = $(this);
-                if (!$el.is(":visible")) {return;}
+                if (!$el.is(":visible"))
+                {
+                    return;
+                }
 
                 if ($el.hasClass("dropdown-item"))
                 {
@@ -3376,10 +3665,13 @@ window.CategoryTree = (function ()
             });
 
             var lastWasDivider = false;
-            $menu.children().each(function ()
+            $menu.children().each(function()
             {
                 var $el = $(this);
-                if (!$el.is(":visible")) {return;}
+                if (!$el.is(":visible"))
+                {
+                    return;
+                }
 
                 if ($el.hasClass("dropdown-divider"))
                 {
@@ -3413,17 +3705,17 @@ window.CategoryTree = (function ()
         {
             switch (action)
             {
-                case "addCategory":          // attach existing category (mapping)
+                case "addCategory": // attach existing category (mapping)
                     return ["[data-action='addExistingCategory']"];
-                case "createCategory":       // create a new child category under a Total
+                case "createCategory": // create a new child category under a Total
                     return ["[data-action='createCategory']"];
-                case "createTotal":          // canonical new Total action
+                case "createTotal": // canonical new Total action
                     return ["[data-action='createTotal']"];
-                case "newTotal":             // legacy/migrated name mapped to createTotal
+                case "newTotal": // legacy/migrated name mapped to createTotal
                     return ["[data-action='createTotal']"];
-                case "addCashCode":          // attach existing cash code to category
+                case "addCashCode": // attach existing cash code to category
                     return ["[data-action='addExistingCashCode']", "[data-action='addExistingCode']"];
-                case "createCashCode":       // create new cash code
+                case "createCashCode": // create new cash code
                     return ["[data-action='createCashCode']"];
                 case "expand":
                     return ["[data-action='expandSelected']"];
@@ -3442,7 +3734,7 @@ window.CategoryTree = (function ()
                 var $btn = $scope.find("[data-action='toggleEnabled']");
                 if ($btn.length)
                 {
-                    $btn.each(function ()
+                    $btn.each(function()
                     {
                         var $b = $(this);
                         // If the item contains an icon, preserve it and replace trailing text
@@ -3460,8 +3752,7 @@ window.CategoryTree = (function ()
                 }
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         // Helper: ensure only one visible instance for a given action
@@ -3478,8 +3769,7 @@ window.CategoryTree = (function ()
                 }
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         // Helper: reorder menu items into a specific order and show group dividers
@@ -3488,7 +3778,7 @@ window.CategoryTree = (function ()
             try
             {
                 var items = [];
-                order.forEach(function (act)
+                order.forEach(function(act)
                 {
                     var $els = $menu.find(actionSelectors(act).join(",")).filter(":visible");
                     if ($els.length)
@@ -3507,7 +3797,7 @@ window.CategoryTree = (function ()
 
                 // Append in order to re-sequence
                 var $container = $menu;
-                items.forEach(function ($el)
+                items.forEach(function($el)
                 {
                     $container.append($el);
                 });
@@ -3518,7 +3808,7 @@ window.CategoryTree = (function ()
                 if (Array.isArray(groups) && groups.length > 0)
                 {
                     // groups is an array of indices where a new group starts (except 0)
-                    groups.forEach(function (startIdx)
+                    groups.forEach(function(startIdx)
                     {
                         if (startIdx > 0 && startIdx < items.length)
                         {
@@ -3538,8 +3828,7 @@ window.CategoryTree = (function ()
                 normalizeDividers($menu);
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         // Helper: reorder details pane buttons to match order
@@ -3562,7 +3851,7 @@ window.CategoryTree = (function ()
 
                 // Collect in order; prefer visible ones that exist
                 var list = [];
-                order.forEach(function (act)
+                order.forEach(function(act)
                 {
                     var $els = $pane.find(actionSelectors(act).join(",")).filter(":visible");
                     if ($els.length)
@@ -3579,14 +3868,13 @@ window.CategoryTree = (function ()
                     return;
                 }
 
-                list.forEach(function ($el)
+                list.forEach(function($el)
                 {
                     $container.append($el);
                 });
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         // Mobile action bar
@@ -3611,8 +3899,8 @@ window.CategoryTree = (function ()
 
             // Show a minimal action bar for synthetic cash-code-list anchors on mobile
             var isCashCodeListSynthetic =
-                kinds.isSynthetic
-                && (key === ROOT_KEY || key === DISC_KEY || key === "__TYPE_ROOT__");
+                kinds.isSynthetic &&
+                (key === ROOT_KEY || key === DISC_KEY || key === "__TYPE_ROOT__");
 
             if (!node || (kinds.isSynthetic && !isCashCodeListSynthetic) || key === "__EXPRESSIONS__")
             {
@@ -3622,7 +3910,7 @@ window.CategoryTree = (function ()
 
             if (isCashCodeListSynthetic)
             {
-                bar.querySelectorAll(".admin-only").forEach(function (el)
+                bar.querySelectorAll(".admin-only").forEach(function(el)
                 {
                     el.style.display = "none";
                 });
@@ -3630,34 +3918,43 @@ window.CategoryTree = (function ()
                 setBarButtonVisible("view", false);
                 setBarButtonVisible("openCashCodesList", true);
 
+                var browseButton = bar.querySelector("[data-action='openCashCodesList']");
+                if (browseButton)
+                {
+                    browseButton.innerHTML = key === ROOT_KEY
+                        ? "<i class='bi bi-clock-history'></i> Versions"
+                        : "<i class='bi bi-list'></i> Cash Codes";
+                }
+
                 bar.classList.add("tc-visible");
                 return;
             }
 
             var parentKeyNow = (node && node.getParent ? (node.getParent()?.key || "") : "");
-            var inTypeCtx = !!(data && (data.isTypeContext === true || data.syntheticKind === "type"))
-                            || (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
+            var inTypeCtx = !!(data && (data.isTypeContext === true || data.syntheticKind === "type")) ||
+                (typeof parentKeyNow === "string" && parentKeyNow.indexOf("type:") === 0);
 
-            bar.querySelectorAll(".admin-only").forEach(function (el)
+            bar.querySelectorAll(".admin-only").forEach(function(el)
             {
                 el.style.display = isAdmin ? "" : "none";
             });
 
             var isExpression = (nodeType === "expression");
+            var canEditSelectedNode = nodeType === "code" ? canManageCashCodes : isAdmin;
 
             setBarButtonVisible("view", true);
             setBarButtonVisible("openCashCodesList", false);
-            setBarButtonVisible("edit", isAdmin);
+            setBarButtonVisible("edit", canEditSelectedNode);
 
             // Move: hide for expressions explicitly
             setBarButtonVisible("move", isAdmin && !inTypeCtx && !isExpression);
 
-            setBarButtonVisible("delete", isAdmin && !inTypeCtx);
+            setBarButtonVisible("delete", canEditSelectedNode && !inTypeCtx);
             setBarButtonVisible("makePrimary", false);
             setBarButtonVisible("setProfitRoot", false);
             setBarButtonVisible("setVatRoot", false);
 
-            if (isAdmin && typeof data.isEnabled !== "undefined")
+            if (canEditSelectedNode && typeof data.isEnabled !== "undefined")
             {
                 var toggleBtn = bar.querySelector("[data-action='toggleEnabled']");
                 if (toggleBtn)
@@ -3688,16 +3985,25 @@ window.CategoryTree = (function ()
         function hideActionBar()
         {
             var bar = document.querySelector(actionBarSel);
-            if (bar) {bar.classList.remove("tc-visible");}
+            if (bar)
+            {
+                bar.classList.remove("tc-visible");
+            }
         }
 
         function getMenuInstance()
         {
             // Prefer the top-level menu (not inside #detailsPane)
             var $all = $(menuSel);
-            if ($all.length <= 1) { return $all.first(); }
+            if ($all.length <= 1)
+            {
+                return $all.first();
+            }
 
-            var $topLevel = $all.filter(function () { return $(this).closest("#detailsPane").length === 0; });
+            var $topLevel = $all.filter(function()
+            {
+                return $(this).closest("#detailsPane").length === 0;
+            });
             var $chosen = $topLevel.length ? $topLevel.first() : $all.first();
 
             return $chosen;
@@ -3708,9 +4014,12 @@ window.CategoryTree = (function ()
             try
             {
                 var $m = $(menuSel).first();
-                if ($m.length === 0) { return; }
+                if ($m.length === 0)
+                {
+                    return;
+                }
 
-                $m.find(".dropdown-item[data-action]").each(function ()
+                $m.find(".dropdown-item[data-action]").each(function()
                 {
                     var $it = $(this);
                     var act = String($it.data("action") || "");
@@ -3727,8 +4036,7 @@ window.CategoryTree = (function ()
                 }
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         function renderMenuFromTemplates($menu, actions, groupSplits)
@@ -3750,8 +4058,7 @@ window.CategoryTree = (function ()
                         }
                     }
                     catch (_)
-                    {
-                    }
+                    {}
 
                     // Fallback to input action if no alias mapping found
                     return act;
@@ -3759,7 +4066,10 @@ window.CategoryTree = (function ()
 
                 var parts = [];
                 var splits = Array.isArray(groupSplits) ? groupSplits.slice(0) : [];
-                splits.sort(function (a, b) { return a - b; });
+                splits.sort(function(a, b)
+                {
+                    return a - b;
+                });
 
                 for (var i = 0; i < actions.length; i++)
                 {
@@ -3781,21 +4091,36 @@ window.CategoryTree = (function ()
 
                 $menu.html(parts.join(""));
 
+                if (!canManageCashCodes)
+                {
+                    $menu.find("[data-action='createCashCode']")
+                        .prop("disabled", true)
+                        .addClass("disabled")
+                        .attr("aria-disabled", "true")
+                        .attr("title", "Cash Codes can only be created in the active Published tree")
+                        .text("New Cash Code... (active Published tree only)");
+                }
+
                 // Normalize if last/first ended up a divider
                 normalizeDividers($menu);
             }
             catch (_)
-            {
-            }
+            {}
         }
 
         function plainNodeTitle(node)
         {
             try
             {
-                if (!node) { return ""; }
+                if (!node)
+                {
+                    return "";
+                }
                 var raw = node.title || "";
-                if (!raw) { return node.key || ""; }
+                if (!raw)
+                {
+                    return node.key || "";
+                }
                 var div = document.createElement("div");
                 div.innerHTML = raw;
                 var txt = (div.textContent || "").trim();
@@ -3820,7 +4145,8 @@ window.CategoryTree = (function ()
                 menuOriginalHtml = $menu.html();
             }
 
-            var data = node.data || {};
+            var data = node.data ||
+            {};
             var parentKeyNow = "";
             try
             {
@@ -3839,8 +4165,8 @@ window.CategoryTree = (function ()
             var isExpressionNode = (typeof key === "string" && key.indexOf("expr:") === 0);
 
             var isTypeSynthetic =
-                (typeof key === "string" && key.indexOf("type:") === 0)
-                || (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
+                (typeof key === "string" && key.indexOf("type:") === 0) ||
+                (data && (data.syntheticKind === "type" || data.syntheticKind === "typesRoot" || data.isTypeContext === true));
 
             var isTopAnchor = isRootKey || isDiscKey || isTypeSynthetic || isExprRoot;
 
@@ -3939,12 +4265,15 @@ window.CategoryTree = (function ()
             {
                 order = ["view"];
                 pushIf(isAdmin, "createCashCode");
-                pushIf(isAdmin, "edit");
-                pushIf(isAdmin, "delete");
-                pushIf(isAdmin, "toggleEnabled");
+                pushIf(canManageCashCodes, "edit");
+                pushIf(canManageCashCodes, "delete");
+                pushIf(canManageCashCodes, "toggleEnabled");
                 renderMenuFromTemplates($menu, order, groups);
                 var $cc = $menu.find("[data-action='createCashCode']");
-                if ($cc.length) { $cc.text("New Cash Code like this…"); }
+                if ($cc.length)
+                {
+                    $cc.text("New Cash Code like this…");
+                }
                 setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
             }
             else if (isCat)
@@ -4073,7 +4402,7 @@ window.CategoryTree = (function ()
                 var $addCat = $menu.find("[data-action='addExistingCategory']");
                 if ($addCat.length)
                 {
-                    $addCat.each(function ()
+                    $addCat.each(function()
                     {
                         var $it = $(this);
                         var html = $it.html() || "";
@@ -4103,33 +4432,38 @@ window.CategoryTree = (function ()
                     normalizeDividers($menu);
                 }
                 catch (_)
-                {
-                }
+                {}
             }
 
             if (isMobile())
             {
-                $menu.addClass("mobile-sheet").css({ top: "", left: "" }).show();
-                $menu.css
-                (
+                $menu.addClass("mobile-sheet").css(
+                    {
+                        top: "",
+                        left: ""
+                    }).show();
+                $menu.css(
                     {
                         maxHeight: (window.innerHeight - 24) + "px",
                         overflowY: "auto",
                         paddingBottom: "64px",
                         minHeight: "220px"
-                    }
-                );
+                    });
             }
             else
             {
-                $menu.removeClass("mobile-sheet").css({ top: y + "px", left: x + "px" }).show();
+                $menu.removeClass("mobile-sheet").css(
+                    {
+                        top: y + "px",
+                        left: x + "px"
+                    }).show();
             }
 
             $menu.data("nodeKey", key).data("parentKey", (kinds.isSynthetic || isExprRoot ? "" : parentKeyNow));
 
-            setTimeout(function ()
+            setTimeout(function()
             {
-                $(document).one("click.treeCtx", function ()
+                $(document).one("click.treeCtx", function()
                 {
                     $menu.hide().data("nodeKey", null).data("parentKey", null);
                     if (isMobile() && node && !kinds.isSynthetic && !isExprRoot)
@@ -4146,19 +4480,26 @@ window.CategoryTree = (function ()
 
         function bindKeyboardHandlers()
         {
-            $(treeSel).on("keydown", function (e)
+            $(treeSel).on("keydown", function(e)
             {
-                var key = e.key || (function (kc)
+                var key = e.key || (function(kc)
                 {
                     switch (kc)
                     {
-                        case 37: return "ArrowLeft";
-                        case 39: return "ArrowRight";
-                        case 36: return "Home";
-                        case 35: return "End";
-                        case 38: return "ArrowUp";
-                        case 40: return "ArrowDown";
-                        default: return "";
+                        case 37:
+                            return "ArrowLeft";
+                        case 39:
+                            return "ArrowRight";
+                        case 36:
+                            return "Home";
+                        case 35:
+                            return "End";
+                        case 38:
+                            return "ArrowUp";
+                        case 40:
+                            return "ArrowDown";
+                        default:
+                            return "";
                     }
                 })(e.which);
 
@@ -4167,7 +4508,10 @@ window.CategoryTree = (function ()
                 {
                     var treeNav = getTree();
                     var cur = treeNav && treeNav.getActiveNode ? treeNav.getActiveNode() : null;
-                    if (!cur) { return; }
+                    if (!cur)
+                    {
+                        return;
+                    }
 
                     if (key === "ArrowLeft")
                     {
@@ -4205,7 +4549,11 @@ window.CategoryTree = (function ()
                     if (key === "Home")
                     {
                         var first = cur.getParent && cur.getParent() && cur.getParent().getFirstChild && cur.getParent().getFirstChild();
-                        if (first) { first.setActive(true); persistActiveKey(first); }
+                        if (first)
+                        {
+                            first.setActive(true);
+                            persistActiveKey(first);
+                        }
                         e.preventDefault();
                         e.stopPropagation();
                         return;
@@ -4214,7 +4562,11 @@ window.CategoryTree = (function ()
                     if (key === "End")
                     {
                         var last = cur.getParent && cur.getParent() && cur.getParent().getLastChild && cur.getParent().getLastChild();
-                        if (last) { last.setActive(true); persistActiveKey(last); }
+                        if (last)
+                        {
+                            last.setActive(true);
+                            persistActiveKey(last);
+                        }
                         e.preventDefault();
                         e.stopPropagation();
                         return;
@@ -4231,14 +4583,26 @@ window.CategoryTree = (function ()
                     return;
                 }
 
-                if (isMobile()) { return; }
-                if (!isAdmin) { return; }
+                if (isMobile())
+                {
+                    return;
+                }
+                if (!isAdmin)
+                {
+                    return;
+                }
 
                 var tree = getTree();
-                if (!tree) { return; }
+                if (!tree)
+                {
+                    return;
+                }
 
                 var node = tree.getActiveNode && tree.getActiveNode();
-                if (!node) { return; }
+                if (!node)
+                {
+                    return;
+                }
 
                 var kinds = getNodeKinds(node);
 
@@ -4259,8 +4623,13 @@ window.CategoryTree = (function ()
                     }
 
                     var modeExpr = isUp ? "before" : "after";
-                    postJsonGlobal("ReorderExpression", { key: node.key, anchorKey: anchorExpr.key, mode: modeExpr })
-                        .done(function (res)
+                    postJsonGlobal("ReorderExpression",
+                        {
+                            key: node.key,
+                            anchorKey: anchorExpr.key,
+                            mode: modeExpr
+                        })
+                        .done(function(res)
                         {
                             if (res && res.success)
                             {
@@ -4268,19 +4637,24 @@ window.CategoryTree = (function ()
                                 {
                                     node.moveTo(anchorExpr, modeExpr);
                                 }
-                                catch (_) {}
+                                catch (_)
+                                {}
                                 node.setActive(true);
                                 persistActiveKey(node);
                                 announce("Moved expression " + (node.title || node.key) + (modeExpr === "before" ? " before " : " after ") + (anchorExpr.title || anchorExpr.key));
                                 notify("Order updated", "success");
-                                if (!isMobile()) { loadDetails(node); resizeColumns(); }
+                                if (!isMobile())
+                                {
+                                    loadDetails(node);
+                                    resizeColumns();
+                                }
                             }
                             else
                             {
                                 alert((res && res.message) || "Reorder failed");
                             }
                         })
-                        .fail(function (xhr)
+                        .fail(function(xhr)
                         {
                             alert("Server error (" + xhr.status + ")");
                         });
@@ -4291,10 +4665,16 @@ window.CategoryTree = (function ()
                 }
 
                 // B) Categories: existing behaviour
-                if (!kinds.isCat) { return; }
+                if (!kinds.isCat)
+                {
+                    return;
+                }
 
                 var parent = node.getParent ? node.getParent() : null;
-                if (!parent) { return; }
+                if (!parent)
+                {
+                    return;
+                }
 
                 function findAnchor(n, direction)
                 {
@@ -4314,11 +4694,15 @@ window.CategoryTree = (function ()
 
                 function isTypeContainer(p)
                 {
-                    if (!p) { return false; }
-                    var d = p.data || {};
+                    if (!p)
+                    {
+                        return false;
+                    }
+                    var d = p.data ||
+                    {};
                     var k = p.key || "";
-                    return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                           || (typeof k === "string" && k.indexOf("type:") === 0);
+                    return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true)) ||
+                        (typeof k === "string" && k.indexOf("type:") === 0);
                 }
 
                 var anchor = findAnchor(node, isUp ? "up" : "down");
@@ -4333,73 +4717,86 @@ window.CategoryTree = (function ()
 
                 if (isTypeContainer(parent))
                 {
-                    postJsonGlobal("ReorderType", { key: node.key, anchorKey: anchor.key, mode: mode })
-                    .done(function (res)
-                    {
-                        if (res && res.success)
+                    postJsonGlobal("ReorderType",
                         {
-                            try
-                            {
-                                node.moveTo(anchor, mode);
-                            }
-                            catch (ex) {}
-                            reloadIfExpandedNode(parent);
-
-                            node.setActive(true);
-                            persistActiveKey(node);
-                            announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
-                            notify("Order updated", "success");
-
-                            if (!isMobile())
-                            {
-                                loadDetails(node);
-                                resizeColumns();
-                            }
-                        }
-                        else
+                            key: node.key,
+                            anchorKey: anchor.key,
+                            mode: mode
+                        })
+                        .done(function(res)
                         {
-                            alert((res && res.message) || "Reorder failed");
-                        }
-                    }).fail(function (xhr)
-                    {
-                        alert("Server error (" + xhr.status + ")");
-                    });
+                            if (res && res.success)
+                            {
+                                try
+                                {
+                                    node.moveTo(anchor, mode);
+                                }
+                                catch (ex)
+                                {}
+                                reloadIfExpandedNode(parent);
+
+                                node.setActive(true);
+                                persistActiveKey(node);
+                                announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
+                                notify("Order updated", "success");
+
+                                if (!isMobile())
+                                {
+                                    loadDetails(node);
+                                    resizeColumns();
+                                }
+                            }
+                            else
+                            {
+                                alert((res && res.message) || "Reorder failed");
+                            }
+                        }).fail(function(xhr)
+                        {
+                            alert("Server error (" + xhr.status + ")");
+                        });
                 }
                 else
                 {
-                    postJsonGlobal("ReorderSiblings", { parentKey: parent.key || "", key: node.key, anchorKey: anchor.key, mode: mode })
-                    .done(function (res)
-                    {
-                        if (res && res.success)
+                    postJsonGlobal("ReorderSiblings",
                         {
-                            try
-                            {
-                                node.moveTo(anchor, mode);
-                            }
-                            catch (ex) {}
-                            reloadIfExpandedNode(parent);
-
-                            node.setActive(true);
-                            persistActiveKey(node);
-                            announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
-                            notify("Order updated", "success");
-
-                            refreshTopAnchors();
-
-                            if (!isMobile())
-                            {
-                                loadDetails(node);
-                                resizeColumns();
-                            }
-                        }
-                        else
+                            parentKey: parent.key || "",
+                            key: node.key,
+                            anchorKey: anchor.key,
+                            mode: mode
+                        })
+                        .done(function(res)
                         {
-                            alert((res && res.message) || "Reorder failed");
-                        }
-                    }).fail(function (xhr)
-                    {
-                        alert("Server error (" + xhr.status + ")");
-                    });
+                            if (res && res.success)
+                            {
+                                try
+                                {
+                                    node.moveTo(anchor, mode);
+                                }
+                                catch (ex)
+                                {}
+                                reloadIfExpandedNode(parent);
+
+                                node.setActive(true);
+                                persistActiveKey(node);
+                                announce("Moved " + (node.title || node.key) + " " + (mode === "before" ? "before " : "after ") + (anchor.title || anchor.key));
+                                notify("Order updated", "success");
+
+                                refreshTopAnchors();
+
+                                if (!isMobile())
+                                {
+                                    loadDetails(node);
+                                    resizeColumns();
+                                }
+                            }
+                            else
+                            {
+                                alert((res && res.message) || "Reorder failed");
+                            }
+                        }).fail(function(xhr)
+                        {
+                            alert("Server error (" + xhr.status + ")");
+                        });
                 }
 
                 e.preventDefault();
@@ -4411,7 +4808,7 @@ window.CategoryTree = (function ()
         {
             var $menu = $(menuSel);
 
-            $menu.off("click.categoryActions").on("click.categoryActions", "[data-action]", function ()
+            $menu.off("click.categoryActions").on("click.categoryActions", "[data-action]", function()
             {
                 var action = $(this).data("action");
                 var key = $menu.data("nodeKey");
@@ -4462,7 +4859,7 @@ window.CategoryTree = (function ()
                             anchorKey: anchor.key,
                             mode: mode
                         })
-                        .done(function (res)
+                        .done(function(res)
                         {
                             if (res && res.success)
                             {
@@ -4471,8 +4868,7 @@ window.CategoryTree = (function ()
                                     curNode.moveTo(anchor, mode);
                                 }
                                 catch (_)
-                                {
-                                }
+                                {}
                                 curNode.setActive(true);
                                 persistActiveKey(curNode);
                                 notify("Expression order updated", "success");
@@ -4486,7 +4882,7 @@ window.CategoryTree = (function ()
                                 alert((res && res.message) || "Reorder failed");
                             }
                         })
-                        .fail(function (xhr)
+                        .fail(function(xhr)
                         {
                             alert("Server error (" + xhr.status + ")");
                         });
@@ -4496,16 +4892,25 @@ window.CategoryTree = (function ()
                 {
                     case "createExpression":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         openAction("CreateExpression", "");
                         break;
                     }
                     case "viewExpression":
                     {
-                        if (!key) { alert("Select an expression"); break; }
+                        if (!key)
+                        {
+                            alert("Select an expression");
+                            break;
+                        }
                         if (isMobile())
                         {
-                            var url = detailsUrl + "?key=" + encodeURIComponent(key) + "&parentKey=" + encodeURIComponent("__EXPRESSIONS__");
+                            var url = appendQuery(detailsUrl, "key", key);
+                            url = appendQuery(url, "parentKey", "__EXPRESSIONS__");
                             window.location.href = url;
                         }
                         else
@@ -4516,15 +4921,31 @@ window.CategoryTree = (function ()
                     }
                     case "editExpression":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!key) { alert("Select an expression"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!key)
+                        {
+                            alert("Select an expression");
+                            break;
+                        }
                         openAction("EditExpression", key);
                         break;
                     }
                     case "deleteExpression":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!key) { alert("Select an expression"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!key)
+                        {
+                            alert("Select an expression");
+                            break;
+                        }
                         openAction("DeleteExpression", key);
                         break;
                     }
@@ -4543,16 +4964,28 @@ window.CategoryTree = (function ()
                             reorderExpression("down");
                             break;
                         }
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
                         if (key && key.indexOf("code:") === 0)
                         {
                             alert("Cannot reorder cash code nodes");
                             break;
                         }
                         var handler = (action === "moveUp") ? "MoveUp" : "MoveDown";
-                        postJsonGlobal(handler, { key: key, parentKey: parentKey })
-                            .done(function (res)
+                        postJsonGlobal(handler,
+                            {
+                                key: key,
+                                parentKey: parentKey
+                            })
+                            .done(function(res)
                             {
                                 if (res && res.success)
                                 {
@@ -4575,7 +5008,13 @@ window.CategoryTree = (function ()
                             alert("Select a folder");
                             break;
                         }
-                        expandSubtree(node).then(function () { resizeColumns(); }).catch(function () { resizeColumns(); });
+                        expandSubtree(node).then(function()
+                        {
+                            resizeColumns();
+                        }).catch(function()
+                        {
+                            resizeColumns();
+                        });
                         break;
                     }
                     case "collapseSelected":
@@ -4592,11 +5031,18 @@ window.CategoryTree = (function ()
 
                     case "view":
                     {
-                        if (!node) { alert("Select a node first"); break; }
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
                         if (isMobile())
                         {
-                            var url = detailsUrl + "?key=" + encodeURIComponent(key);
-                            if (parentKey) { url += "&parentKey=" + encodeURIComponent(parentKey); }
+                            var url = appendQuery(detailsUrl, "key", key);
+                            if (parentKey)
+                            {
+                                url += "&parentKey=" + encodeURIComponent(parentKey);
+                            }
                             window.location.href = url;
                         }
                         else
@@ -4608,8 +5054,16 @@ window.CategoryTree = (function ()
 
                     case "edit":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
 
                         var kinds = getNodeKinds(node);
                         if (kinds.nodeType === "expression")
@@ -4640,7 +5094,11 @@ window.CategoryTree = (function ()
 
                     case "addExistingCategory":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
@@ -4653,7 +5111,11 @@ window.CategoryTree = (function ()
 
                     case "addExistingCashCode":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         var targetCategory = node && node.folder ? key : parentKey;
                         if (!targetCategory)
                         {
@@ -4666,8 +5128,16 @@ window.CategoryTree = (function ()
 
                     case "move":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node || !node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         if (key && key.indexOf("expr:") === 0)
                         {
                             alert("Expressions cannot be moved under other nodes.");
@@ -4679,21 +5149,33 @@ window.CategoryTree = (function ()
 
                     case "unlink":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node || !node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         if (!parentKey || parentKey === "__ROOT__" || parentKey === "__DISCONNECTED__" || parentKey.indexOf("type:") === 0)
                         {
                             alert("Cannot detach from this parent");
                             break;
                         }
-    
+
                         if (!confirm("Detach '" + plainNodeTitle(node) + "' from this parent?"))
                         {
                             break;
                         }
 
-                        postJsonGlobal("Unlink", { parentKey: parentKey, childKey: key })
-                            .done(function (res)
+                        postJsonGlobal("Unlink",
+                            {
+                                parentKey: parentKey,
+                                childKey: key
+                            })
+                            .done(function(res)
                             {
                                 if (res && res.success)
                                 {
@@ -4709,7 +5191,8 @@ window.CategoryTree = (function ()
                                                 {
                                                     c.remove();
                                                 }
-                                                catch (_){}
+                                                catch (_)
+                                                {}
                                                 break;
                                             }
                                         }
@@ -4721,8 +5204,8 @@ window.CategoryTree = (function ()
                                         {
                                             parentNode.reloadChildren();
                                         }
-                                        
-                                        setTimeout(function ()
+
+                                        setTimeout(function()
                                         {
                                             try
                                             {
@@ -4733,7 +5216,8 @@ window.CategoryTree = (function ()
                                                     loadDetails(parentNode);
                                                 }
                                             }
-                                            catch (_){}
+                                            catch (_)
+                                            {}
                                         }, 200);
                                     }
 
@@ -4756,7 +5240,11 @@ window.CategoryTree = (function ()
 
                     case "createTotal":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
@@ -4774,7 +5262,11 @@ window.CategoryTree = (function ()
 
                     case "createCategory":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         var targetParent = (node && node.folder) ? key : parentKey;
                         if (!targetParent)
                         {
@@ -4787,7 +5279,11 @@ window.CategoryTree = (function ()
 
                     case "createCashCode":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         if (!node)
                         {
                             alert("Select a node first");
@@ -4800,10 +5296,17 @@ window.CategoryTree = (function ()
                             alert("Select a category to add a code under");
                             break;
                         }
+                        if (!canManageCashCodes)
+                        {
+                            break;
+                        }
                         if (isCodeNode)
                         {
                             var siblingCash = (key.indexOf("code:") === 0) ? key.substring(5) : (node.data && node.data.cashCode) || "";
-                            openAction("CreateCashCode", targetCategory, null, { siblingCashCode: siblingCash });
+                            openAction("CreateCashCode", targetCategory, null,
+                                {
+                                    siblingCashCode: siblingCash
+                                });
                         }
                         else
                         {
@@ -4814,12 +5317,20 @@ window.CategoryTree = (function ()
 
                     case "toggleEnabled":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node) { alert("Select a node first"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
 
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
                         postToggleEnabled(node, makeEnabled)
-                            .done(function (res)
+                            .done(function(res)
                             {
                                 if (res && (res.success === true || typeof res.success === "undefined"))
                                 {
@@ -4839,7 +5350,7 @@ window.CategoryTree = (function ()
                                     alert((res && res.message) || "Update failed");
                                 }
                             })
-                            .fail(function (xhr)
+                            .fail(function(xhr)
                             {
                                 var msg = (xhr && xhr.status === 200) ? (xhr.responseText || "Parse error") : ("Server error (" + xhr.status + ")");
                                 alert(msg);
@@ -4847,11 +5358,15 @@ window.CategoryTree = (function ()
                         break;
                     }
 
-
                     case "delete":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        var kinds2 = node ? getNodeKinds(node) : {};
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        var kinds2 = node ? getNodeKinds(node) :
+                            {};
                         if (kinds2.nodeType === "expression")
                         {
                             openAction("DeleteExpression", key);
@@ -4863,10 +5378,22 @@ window.CategoryTree = (function ()
 
                     case "makePrimary":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!parentKey) { alert("Open from a parent context to make primary."); break; }
-                        postJsonGlobal("MakePrimary", { key: key, parentKey: parentKey })
-                            .done(function (res)
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!parentKey)
+                        {
+                            alert("Open from a parent context to make primary.");
+                            break;
+                        }
+                        postJsonGlobal("MakePrimary",
+                            {
+                                key: key,
+                                parentKey: parentKey
+                            })
+                            .done(function(res)
                             {
                                 alert((res && res.message) || "Not Yet Implemented");
                                 if (res && res.success)
@@ -4877,23 +5404,38 @@ window.CategoryTree = (function ()
                                     loadDetails(tree.getActiveNode());
                                 }
                             })
-                            .fail(function (xhr) { alert("Server error (" + xhr.status + ")"); });
+                            .fail(function(xhr)
+                            {
+                                alert("Server error (" + xhr.status + ")");
+                            });
                         break;
                     }
 
                     case "setProfitRoot":
                     case "setVatRoot":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node || !node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
                         var name = plainNodeTitle(node);
                         if (!confirm("Set '" + name + "' as the " + kind + " root?"))
                         {
                             break;
                         }
-                        postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
-                            .done(function (res)
+                        postJsonGlobal("SetPrimaryRoot",
+                            {
+                                kind: kind,
+                                categoryCode: key
+                            })
+                            .done(function(res)
                             {
                                 if (res && res.success)
                                 {
@@ -4906,7 +5448,7 @@ window.CategoryTree = (function ()
                                     alert((res && res.message) || ("Failed to set " + kind + " root."));
                                 }
                             })
-                            .fail(function (xhr)
+                            .fail(function(xhr)
                             {
                                 alert("Server error (" + xhr.status + ")");
                             });
@@ -4923,11 +5465,12 @@ window.CategoryTree = (function ()
                         // Full page for mobile; RHS embed for desktop (even though menu is mainly mobile)
                         if (isMobile())
                         {
-                            window.location.href = detailsUrl + "?key=" + encodeURIComponent(ROOT_KEY);
+                            window.location.href = appendQuery(detailsUrl, "key", ROOT_KEY);
                         }
                         else
                         {
-                            openEmbeddedUrl(detailsUrl + "?key=" + encodeURIComponent(ROOT_KEY) + "&embed=1");
+                            var rootDetailsUrl = appendQuery(detailsUrl, "key", ROOT_KEY);
+                            openEmbeddedUrl(appendQuery(rootDetailsUrl, "embed", "1"));
                         }
                         break;
                     }
@@ -4935,7 +5478,7 @@ window.CategoryTree = (function ()
             });
 
             // Click handler for Cash Code list boxes rendered in details pane
-            $(document).off("click.tcCashCodeList").on("click.tcCashCodeList", "[data-action='selectCashCode'][data-cashcode]", function (e)
+            $(document).off("click.tcCashCodeList").on("click.tcCashCodeList", "[data-action='selectCashCode'][data-cashcode]", function(e)
             {
                 try
                 {
@@ -4951,9 +5494,9 @@ window.CategoryTree = (function ()
                     {
                         // Return to the tree and request selection under ROOT so the mobile selector helper can resolve it reliably
                         window.location.href =
-                            basePageUrl
-                            + "/Index?select=" + encodeURIComponent("code:" + cashCode)
-                            + "&expand=" + encodeURIComponent(ROOT_KEY);
+                            basePageUrl +
+                            "/Index?select=" + encodeURIComponent("code:" + cashCode) +
+                            "&expand=" + encodeURIComponent(ROOT_KEY);
 
                         return;
                     }
@@ -4976,7 +5519,7 @@ window.CategoryTree = (function ()
                     }
 
                     var root = tree.getNodeByKey(ROOT_KEY) || tree.getRootNode();
-                    loadDescendantsUntilKey(root, key, MAX_BFS_FOLDERS, function (found)
+                    loadDescendantsUntilKey(root, key, MAX_BFS_FOLDERS, function(found)
                     {
                         if (!found)
                         {
@@ -4992,72 +5535,82 @@ window.CategoryTree = (function ()
                     });
                 }
                 catch (_)
-                {
-                }
+                {}
             });
 
             const $doc = $(document);
 
             $doc.off("input.tcCashCodeSearch keyup.tcCashCodeSearch change.tcCashCodeSearch")
-                .on("input.tcCashCodeSearch keyup.tcCashCodeSearch change.tcCashCodeSearch", "#tcCashCodeListSearch", function ()
-            {
-                try
+                .on("input.tcCashCodeSearch keyup.tcCashCodeSearch change.tcCashCodeSearch", "#tcCashCodeListSearch", function()
                 {
-                    const q = String($(this).val() || "").trim().toLowerCase();
-                    const $list = $("#tcCashCodeList");
-                    if ($list.length === 0)
+                    try
                     {
-                        return;
-                    }
-
-                    const $items = $list.find("[data-action='selectCashCode'][data-search]");
-                    const $groups = $list.find("details[data-cc-group]");
-
-                    if (!q)
-                    {
-                        $items.each(function () { this.style.display = ""; });
-                        $groups.each(function () { this.open = false; });
-                        return;
-                    }
-
-                    const hitGroups = new Set();
-
-                    $items.each(function ()
-                    {
-                        const hay = String(this.getAttribute("data-search") || "");
-                        const hit = hay.indexOf(q) >= 0;
-                        this.style.display = hit ? "" : "none";
-
-                        if (hit)
+                        const q = String($(this).val() || "").trim().toLowerCase();
+                        const $list = $("#tcCashCodeList");
+                        if ($list.length === 0)
                         {
-                            const det = this.closest("details[data-cc-group]");
-                            if (det)
-                            {
-                                hitGroups.add(det);
-                            }
+                            return;
                         }
-                    });
 
-                    $groups.each(function ()
-                    {
-                        this.open = hitGroups.has(this);
-                    });
-                }
-                catch (_)
-                {
-                }
-            });
+                        const $items = $list.find("[data-action='selectCashCode'][data-search]");
+                        const $groups = $list.find("details[data-cc-group]");
+
+                        if (!q)
+                        {
+                            $items.each(function()
+                            {
+                                this.style.display = "";
+                            });
+                            $groups.each(function()
+                            {
+                                this.open = false;
+                            });
+                            return;
+                        }
+
+                        const hitGroups = new Set();
+
+                        $items.each(function()
+                        {
+                            const hay = String(this.getAttribute("data-search") || "");
+                            const hit = hay.indexOf(q) >= 0;
+                            this.style.display = hit ? "" : "none";
+
+                            if (hit)
+                            {
+                                const det = this.closest("details[data-cc-group]");
+                                if (det)
+                                {
+                                    hitGroups.add(det);
+                                }
+                            }
+                        });
+
+                        $groups.each(function()
+                        {
+                            this.open = hitGroups.has(this);
+                        });
+                    }
+                    catch (_)
+                    {}
+                });
         }
 
         function bindActionBarHandlers()
         {
             var bar = document.querySelector(actionBarSel);
-            if (!bar) {return;}
+            if (!bar)
+            {
+                return;
+            }
 
-            bar.addEventListener("click", function (e)
+            bar.addEventListener("click", function(e)
             {
                 var target = e.target.closest("[data-action]");
-                if (!target) {return;}
+                if (!target)
+                {
+                    return;
+                }
 
                 var action = target.getAttribute("data-action");
                 var tree = getTree();
@@ -5082,11 +5635,18 @@ window.CategoryTree = (function ()
                 {
                     case "view":
                     {
-                        if (!node) { alert("Select a node first"); break; }
+                        if (!node)
+                        {
+                            alert("Select a node first");
+                            break;
+                        }
                         if (isMobile())
                         {
-                            var url = detailsUrl + "?key=" + encodeURIComponent(key);
-                            if (parentKey) { url += "&parentKey=" + encodeURIComponent(parentKey); }
+                            var url = appendQuery(detailsUrl, "key", key);
+                            if (parentKey)
+                            {
+                                url += "&parentKey=" + encodeURIComponent(parentKey);
+                            }
                             window.location.href = url;
                         }
                         else
@@ -5173,21 +5733,33 @@ window.CategoryTree = (function ()
 
                     case "unlink":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node || !node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         if (!parentKey || parentKey === "__ROOT__" || parentKey === "__DISCONNECTED__" || parentKey.indexOf("type:") === 0)
                         {
                             alert("Cannot detach from this parent");
                             break;
                         }
-    
+
                         if (!confirm("Detach '" + node.title + "' from this parent?"))
                         {
                             break;
                         }
 
-                        postJsonGlobal("Unlink", { parentKey: parentKey, childKey: key })
-                            .done(function (res)
+                        postJsonGlobal("Unlink",
+                            {
+                                parentKey: parentKey,
+                                childKey: key
+                            })
+                            .done(function(res)
                             {
                                 if (res && res.success)
                                 {
@@ -5195,7 +5767,8 @@ window.CategoryTree = (function ()
                                     {
                                         node.remove();
                                     }
-                                    catch (_){}
+                                    catch (_)
+                                    {}
 
                                     var parentNode = tree.getNodeByKey(parentKey);
                                     if (parentNode && typeof parentNode.reloadChildren === "function")
@@ -5203,7 +5776,8 @@ window.CategoryTree = (function ()
                                         parentNode.reloadChildren();
                                     }
 
-                                    var discKey = (document.getElementById("categoryTreeConfig") || {}).dataset.disc || "";
+                                    var discKey = (document.getElementById("categoryTreeConfig") ||
+                                    {}).dataset.disc || "";
                                     if (discKey)
                                     {
                                         var discNode = tree.getNodeByKey(discKey);
@@ -5251,7 +5825,7 @@ window.CategoryTree = (function ()
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
 
                         postToggleEnabled(node, makeEnabled)
-                            .done(function (res)
+                            .done(function(res)
                             {
                                 if (res && (res.success === true || typeof res.success === "undefined"))
                                 {
@@ -5268,7 +5842,7 @@ window.CategoryTree = (function ()
                                 {
                                     alert((res && res.message) || "Update failed");
                                 }
-                            }).fail(function (xhr)
+                            }).fail(function(xhr)
                             {
                                 var msg = (xhr && xhr.status === 200) ? (xhr.responseText || "Parse error") : ("Server error (" + xhr.status + ")");
                                 alert(msg);
@@ -5285,7 +5859,7 @@ window.CategoryTree = (function ()
                         }
 
                         var k = (node && node.key) ? node.key : ROOT_KEY;
-                        window.location.href = detailsUrl + "?key=" + encodeURIComponent(k);
+                        window.location.href = appendQuery(detailsUrl, "key", k);
                         break;
                     }
                 }
@@ -5300,7 +5874,7 @@ window.CategoryTree = (function ()
                 return;
             }
 
-            $pane.off("click.cancelEmbedded").on("click.cancelEmbedded", "[data-embedded-cancel]", function (e)
+            $pane.off("click.cancelEmbedded").on("click.cancelEmbedded", "[data-embedded-cancel]", function(e)
             {
                 e.preventDefault();
                 try
@@ -5321,11 +5895,32 @@ window.CategoryTree = (function ()
         function bindDetailsPaneHandlers()
         {
             var $pane = $("#detailsPane");
-            if ($pane.length === 0) { return; }
-
-            $pane.off("click.detailsActions").on("click.detailsActions", "[data-action]:not(form)", function ()
+            if ($pane.length === 0)
             {
-                if (this.tagName === "FORM") { return; }
+                return;
+            }
+
+            $pane.off("click.eventHistoryPage").on("click.eventHistoryPage",
+                "[data-event-page-target]", function(e)
+                {
+                    e.preventDefault();
+                    var $button = $(this);
+                    var page = String($button.data("event-page-target"));
+                    var $history = $button.closest("[data-event-history]");
+                    $history.find("[data-event-page-panel]").addClass("d-none");
+                    $history.find('[data-event-page-panel="' + page + '"]').removeClass("d-none");
+                    $history.find("[data-event-page-target]")
+                        .removeClass("active")
+                        .removeAttr("aria-current");
+                    $button.addClass("active").attr("aria-current", "page");
+                });
+
+            $pane.off("click.detailsActions").on("click.detailsActions", "[data-action]:not(form)", function()
+            {
+                if (this.tagName === "FORM")
+                {
+                    return;
+                }
 
                 var action = $(this).data("action");
                 var tree = getTree();
@@ -5352,8 +5947,11 @@ window.CategoryTree = (function ()
                     {
                         if (isMobile())
                         {
-                            var url = detailsUrl + "?key=" + encodeURIComponent(key);
-                            if (parentKey) { url += "&parentKey=" + encodeURIComponent(parentKey); }
+                            var url = appendQuery(detailsUrl, "key", key);
+                            if (parentKey)
+                            {
+                                url += "&parentKey=" + encodeURIComponent(parentKey);
+                            }
                             window.location.href = url;
                         }
                         else
@@ -5365,7 +5963,11 @@ window.CategoryTree = (function ()
 
                     case "edit":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         if (kinds.isCode)
                         {
                             var raw = (typeof key === "string" && key.indexOf("code:") === 0) ? key.substring(5) : key;
@@ -5383,16 +5985,32 @@ window.CategoryTree = (function ()
 
                     case "addExistingCategory":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         openAction("AddCategory", "", key);
                         break;
                     }
 
                     case "addExistingCashCode":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         openAction("AddCashCode", "", key);
                         break;
                     }
@@ -5400,33 +6018,60 @@ window.CategoryTree = (function ()
                     case "createTotal":
                     case "newTotal":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         openAction("CreateTotal", "", key);
                         break;
                     }
 
                     case "createCategory":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         openAction("CreateCategory", "", key);
                         break;
                     }
 
                     case "createCashCode":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         var targetCategory = node.folder ? key : parentKey;
                         if (!targetCategory)
                         {
                             alert("Select a parent category");
                             break;
                         }
+                        if (!canManageCashCodes)
+                        {
+                            break;
+                        }
                         if (kinds.isCode)
                         {
                             var rawSibling = (key.indexOf("code:") === 0) ? key.substring(5) : key;
-                            openAction("CreateCashCode", targetCategory, null, { siblingCashCode: rawSibling });
+                            openAction("CreateCashCode", targetCategory, null,
+                                {
+                                    siblingCashCode: rawSibling
+                                });
                         }
                         else
                         {
@@ -5437,12 +6082,16 @@ window.CategoryTree = (function ()
 
                     case "toggleEnabled":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
 
                         var makeEnabled = (node.data && node.data.isEnabled === 1) ? 0 : 1;
 
                         postToggleEnabled(node, makeEnabled)
-                            .done(function (res)
+                            .done(function(res)
                             {
                                 if (res && (res.success === true || typeof res.success === "undefined"))
                                 {
@@ -5456,7 +6105,7 @@ window.CategoryTree = (function ()
                                     alert((res && res.message) || "Update failed");
                                 }
                             })
-                            .fail(function (xhr)
+                            .fail(function(xhr)
                             {
                                 var msg = (xhr && xhr.status === 200) ? (xhr.responseText || "Parse error") : ("Server error (" + xhr.status + ")");
                                 alert(msg);
@@ -5466,15 +6115,27 @@ window.CategoryTree = (function ()
 
                     case "delete":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
                         openDeleteFor(node, parentKey || "");
                         break;
                     }
 
                     case "move":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
                         openAction("Move", key, parentKey);
                         break;
                     }
@@ -5482,8 +6143,16 @@ window.CategoryTree = (function ()
                     case "setProfitRoot":
                     case "setVatRoot":
                     {
-                        if (!isAdmin) { alert("Insufficient privileges"); break; }
-                        if (!node || !node.folder) { alert("Select a category"); break; }
+                        if (!isAdmin)
+                        {
+                            alert("Insufficient privileges");
+                            break;
+                        }
+                        if (!node || !node.folder)
+                        {
+                            alert("Select a category");
+                            break;
+                        }
 
                         var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
                         var name = plainNodeTitle(node);
@@ -5493,8 +6162,12 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        postJsonGlobal("SetPrimaryRoot", { kind: kind, categoryCode: key })
-                            .done(function (res)
+                        postJsonGlobal("SetPrimaryRoot",
+                            {
+                                kind: kind,
+                                categoryCode: key
+                            })
+                            .done(function(res)
                             {
                                 if (res && res.success)
                                 {
@@ -5502,12 +6175,14 @@ window.CategoryTree = (function ()
                                     {
                                         refreshTopAnchors();
                                     }
-                                    catch (_) {}
+                                    catch (_)
+                                    {}
                                     try
                                     {
                                         loadDetails(node);
                                     }
-                                    catch (_) {}
+                                    catch (_)
+                                    {}
                                     notify(kind + " root updated", "success");
                                 }
                                 else
@@ -5515,7 +6190,7 @@ window.CategoryTree = (function ()
                                     alert((res && res.message) || ("Failed to set " + kind + " root."));
                                 }
                             })
-                            .fail(function (xhr)
+                            .fail(function(xhr)
                             {
                                 alert("Server error (" + xhr.status + ")");
                             });
@@ -5555,7 +6230,7 @@ window.CategoryTree = (function ()
                             break;
                         }
 
-                        resetExpressionError(key, function (ok)
+                        resetExpressionError(key, function(ok)
                         {
                             if (!ok)
                             {
@@ -5601,9 +6276,15 @@ window.CategoryTree = (function ()
 
         function initTree()
         {
-            if (typeof $.ui === "undefined" || typeof $.fn.fancytree !== "function") {return;}
+            if (typeof $.ui === "undefined" || typeof $.fn.fancytree !== "function")
+            {
+                return;
+            }
 
-            $.ajaxSetup({ cache: false });
+            $.ajaxSetup(
+                {
+                    cache: false
+                });
 
             var exts = [];
             if ($.ui && $.ui.fancytree && $.ui.fancytree._extensions && $.ui.fancytree._extensions.dnd5)
@@ -5614,161 +6295,201 @@ window.CategoryTree = (function ()
             // Make the container focusable so keydown handlers fire reliably
             $(treeSel).attr("tabindex", "0");
 
-            $(treeSel).fancytree({
-                extensions: exts,
-                source: { url: nocache(nodesUrl) },
-                escapeTitles: false,
-                minExpandLevel: 1,
-                clickFolderMode: 3,
-                lazyLoad: function (event, data)
+            $(treeSel).fancytree(
                 {
-                    var node = data.node;
-                    data.result = { url: nocache(appendQuery(nodesUrl, 'id', node.key)) };
+                    extensions: exts,
+                    source:
+                {
+                    url: nocache(nodesUrl)
                 },
-                init: function (event, data)
-                {
-                    var root = data.tree.getNodeByKey(ROOT_KEY);
-                    if (root && !root.expanded) {root.setExpanded(true);}
-                    ensureTreeContainerSizing();
-                    resizeColumns();
-
-                    try
+                    escapeTitles: false,
+                    minExpandLevel: 1,
+                    clickFolderMode: 3,
+                    lazyLoad: function(event, data)
                     {
-                        var qs = new URLSearchParams(window.location.search || "");
-                        var hasQuerySelect = qs.has("select") || qs.has("returnKey") || qs.has("key");
-
-                        var activeKey = "";
-                        try
-                        {
-                            activeKey = loadActiveKey();
-                        }
-                        catch (_) { activeKey = ""; }
-
-                        if (!hasQuerySelect && (!activeKey || tcIsSyntheticKey(activeKey)))
-                        {
-                            if (root)
-                            {
-                                root.setActive(true);
-                                persistActiveKey(root);
-                                if (!isMobile())
-                                {
-                                    loadDetails(root);
-                                }
-                            }
-                        }
-                    }
-                    catch (_)
-                    {
-                    }
-
-                },
-                expand: function (event, data)
-                {
-                    persistExpanded(data.node, true);
-                },
-                collapse: function (event, data)
-                {
-                    persistExpanded(data.node, false);
-                },
-                load: function (event, data)
-                {
-                    if (!data.node)
+                        var node = data.node;
+                        data.result = {
+                            url: nocache(appendQuery(nodesUrl, 'id', node.key))
+                        };
+                    },
+                    init: function(event, data)
                     {
                         var root = data.tree.getNodeByKey(ROOT_KEY);
                         if (root && !root.expanded)
                         {
                             root.setExpanded(true);
                         }
-                    }
+                        ensureTreeContainerSizing();
+                        resizeColumns();
 
-                    var set = loadExpandedSet();
-                    var scope = data.node ? data.node : data.tree.getRootNode();
-                    restoreExpandedForNode(scope, set);
-
-                    ensureTreeContainerSizing();
-                    resizeColumns();
-
-                    try
-                    {
-                        var _qs = new URLSearchParams(window.location.search || "");
-                        if (_qs.has("select") || _qs.has("returnKey") || _qs.has("key"))
+                        try
                         {
-                            setTimeout(function ()
+                            var qs = new URLSearchParams(window.location.search || "");
+                            var hasQuerySelect = qs.has("select") || qs.has("returnKey") || qs.has("key");
+
+                            var activeKey = "";
+                            try
                             {
-                                try
+                                activeKey = loadActiveKey();
+                            }
+                            catch (_)
+                            {
+                                activeKey = "";
+                            }
+
+                            if (!hasQuerySelect && (!activeKey || tcIsSyntheticKey(activeKey)))
+                            {
+                                if (root)
                                 {
-                                    applyQuerySelection();
+                                    root.setActive(true);
+                                    persistActiveKey(root);
+                                    if (!isMobile())
+                                    {
+                                        loadDetails(root);
+                                    }
                                 }
-                                catch (_) { }
-                            }, 50);
+                            }
                         }
-                        else
+                        catch (_)
+                        {}
+
+                    },
+                    expand: function(event, data)
+                    {
+                        persistExpanded(data.node, true);
+                    },
+                    collapse: function(event, data)
+                    {
+                        persistExpanded(data.node, false);
+                    },
+                    load: function(event, data)
+                    {
+                        if (!data.node)
+                        {
+                            var root = data.tree.getNodeByKey(ROOT_KEY);
+                            if (root && !root.expanded)
+                            {
+                                root.setExpanded(true);
+                            }
+                        }
+
+                        var set = loadExpandedSet();
+                        var scope = data.node ? data.node : data.tree.getRootNode();
+                        restoreExpandedForNode(scope, set);
+
+                        ensureTreeContainerSizing();
+                        resizeColumns();
+
+                        try
+                        {
+                            var _qs = new URLSearchParams(window.location.search || "");
+                            if (_qs.has("select") || _qs.has("returnKey") || _qs.has("key"))
+                            {
+                                setTimeout(function()
+                                {
+                                    try
+                                    {
+                                        applyQuerySelection();
+                                    }
+                                    catch (_)
+                                    {}
+                                }, 50);
+                            }
+                            else
+                            {
+                                applyQuerySelection();
+                            }
+                        }
+                        catch (_)
                         {
                             applyQuerySelection();
                         }
-                    }
-                    catch (_)
+                    },
+                    activate: function(event, data)
                     {
-                        applyQuerySelection();
-                    }
-                },
-                activate: function (event, data)
-                {
-                    persistActiveKey(data.node);
+                        persistActiveKey(data.node);
 
-                    if (isMobile())
-                    {
-                        updateActionBar(data.node);
-                    }
-                    else
-                    {
-                        loadDetails(data.node);
-                    }
-                },
-                dnd5: {
+                        if (isMobile())
+                        {
+                            updateActionBar(data.node);
+                        }
+                        else
+                        {
+                            loadDetails(data.node);
+                        }
+                    },
+                    dnd5:
+                {
                     autoExpandMS: 300,
                     multiSource: false,
 
-                    dragStart: function (node, data)
+                    dragStart: function(node, data)
                     {
-                        if (isMobile()) { return false; }
-                        if (!isAdmin) { return false; }
+                        if (isMobile())
+                        {
+                            return false;
+                        }
+                        if (!isAdmin)
+                        {
+                            return false;
+                        }
 
                         var parent = node.getParent ? node.getParent() : null;
                         if (parent && parent.key === EXPR_ROOT_KEY)
-                        {                            
-                            return true;    // expression leaf reorder allowed
+                        {
+                            return true; // expression leaf reorder allowed
                         }
 
                         var kinds = getNodeKinds(node);
-                        if (!kinds.isCat)
+                        if (!kinds.isCat && !kinds.isCode)
                         {
-                            return false;   // categories only
-                        } 
+                            return false;
+                        }
                         return true;
                     },
 
-                    dragEnter: function (node, data)
+                    dragEnter: function(node, data)
                     {
-                        if (isMobile()) { return false; }
-                        if (!isAdmin) { return false; }
+                        if (isMobile())
+                        {
+                            return false;
+                        }
+                        if (!isAdmin)
+                        {
+                            return false;
+                        }
 
                         if (node.getParent && data.otherNode)
                         {
                             var srcParent = data.otherNode.getParent ? data.otherNode.getParent() : null;
-                            if (srcParent && srcParent.key === EXPR_ROOT_KEY
-                                && node.getParent && node.getParent().key === EXPR_ROOT_KEY)
+                            if (srcParent && srcParent.key === EXPR_ROOT_KEY &&
+                                node.getParent && node.getParent().key === EXPR_ROOT_KEY)
                             {
                                 return ["before", "after"]; // only sibling ordering
                             }
                         }
                         var src = data.otherNode;
-                        if (!src) { return false; }
-                        if (node === src || node.isDescendantOf(src)) { return false; }
+                        if (!src)
+                        {
+                            return false;
+                        }
+                        if (node === src || node.isDescendantOf(src))
+                        {
+                            return false;
+                        }
 
                         var srcKinds = getNodeKinds(src);
                         var tgtKinds = getNodeKinds(node);
-                        if (!srcKinds.isCat || !tgtKinds.isCat) { return false; }
+                        if (srcKinds.isCode)
+                        {
+                            return tgtKinds.isCat && tgtKinds.categoryType === 0
+                                ? ["over"]
+                                : false;
+                        }
+                        if (!srcKinds.isCat || !tgtKinds.isCat)
+                        {
+                            return false;
+                        }
 
                         // Same parent in Type or non-Type context => allow sibling reordering
                         var srcParent = src.getParent ? src.getParent() : null;
@@ -5776,11 +6497,15 @@ window.CategoryTree = (function ()
 
                         function isTypeContainer(p)
                         {
-                            if (!p) { return false; }
-                            var d = p.data || {};
+                            if (!p)
+                            {
+                                return false;
+                            }
+                            var d = p.data ||
+                            {};
                             var k = p.key || "";
-                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                                    || (typeof k === "string" && k.indexOf("type:") === 0);
+                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true)) ||
+                                (typeof k === "string" && k.indexOf("type:") === 0);
                         }
 
                         // Cash Type siblings
@@ -5792,13 +6517,16 @@ window.CategoryTree = (function ()
                         // Totals/Disconnected siblings
                         if (srcParent && tgtParent && srcParent === tgtParent && !isTypeContainer(tgtParent))
                         {
-                            return ["before", "after"];
+                            return tgtKinds.categoryType === CATEGORYTYPE_CASHTOTAL
+                                ? ["before", "after", "over"]
+                                : ["before", "after"];
                         }
 
                         // Otherwise, consider child drop (over). Only allow "over" when target is a Total category.
                         try
                         {
-                            var tgtData = node.data || {};
+                            var tgtData = node.data ||
+                            {};
                             if (typeof tgtData.categoryType !== "undefined")
                             {
                                 if (Number(tgtData.categoryType) === CATEGORYTYPE_CASHTOTAL)
@@ -5819,17 +6547,23 @@ window.CategoryTree = (function ()
                         }
                     },
 
-                    dragDrop: function (node, data)
+                    dragDrop: function(node, data)
                     {
-                        if (isMobile()) { return false; }
-                        if (!isAdmin) { return false; }
+                        if (isMobile())
+                        {
+                            return false;
+                        }
+                        if (!isAdmin)
+                        {
+                            return false;
+                        }
 
-                        if (data.otherNode
-                            && data.otherNode.getParent
-                            && node.getParent
-                            && data.otherNode.getParent().key === EXPR_ROOT_KEY
-                            && node.getParent().key === EXPR_ROOT_KEY
-                            && (data.hitMode === "before" || data.hitMode === "after"))
+                        if (data.otherNode &&
+                            data.otherNode.getParent &&
+                            node.getParent &&
+                            data.otherNode.getParent().key === EXPR_ROOT_KEY &&
+                            node.getParent().key === EXPR_ROOT_KEY &&
+                            (data.hitMode === "before" || data.hitMode === "after"))
                         {
                             postJsonGlobal("ReorderExpression",
                                 {
@@ -5837,7 +6571,7 @@ window.CategoryTree = (function ()
                                     anchorKey: node.key,
                                     mode: data.hitMode
                                 })
-                                .done(function (res)
+                                .done(function(res)
                                 {
                                     if (res && res.success)
                                     {
@@ -5845,7 +6579,8 @@ window.CategoryTree = (function ()
                                         {
                                             data.otherNode.moveTo(node, data.hitMode);
                                         }
-                                        catch (_) {}
+                                        catch (_)
+                                        {}
                                         data.otherNode.setActive(true);
                                         persistActiveKey(data.otherNode);
                                         notify("Expression order updated", "success");
@@ -5860,7 +6595,7 @@ window.CategoryTree = (function ()
                                         alert((res && res.message) || "Reorder failed");
                                     }
                                 })
-                                .fail(function (xhr)
+                                .fail(function(xhr)
                                 {
                                     alert("Server error (" + xhr.status + ")");
                                 });
@@ -5879,15 +6614,23 @@ window.CategoryTree = (function ()
                             return false;
                         }
 
+                        var srcKinds = getNodeKinds(src);
+                        var tgtKinds = getNodeKinds(node);
+                        var isCashCodeMove = srcKinds.isCode;
+
                         // Prevent dropping a CashCode-category under a non-Total category (extra safety server-side)
                         if (data.hitMode === "over")
                         {
                             try
                             {
-                                var tgtData = node.data || {};
-                                if (typeof tgtData.categoryType !== "undefined" && Number(tgtData.categoryType) !== CATEGORYTYPE_CASHTOTAL)
+                                var tgtData = node.data ||
+                                {};
+                                var expectedTargetType = isCashCodeMove ? 0 : CATEGORYTYPE_CASHTOTAL;
+                                if (typeof tgtData.categoryType !== "undefined" && Number(tgtData.categoryType) !== expectedTargetType)
                                 {
-                                    alert("Invalid move: only Total-type categories may have child categories.");
+                                    alert(isCashCodeMove
+                                        ? "Invalid move: Cash Codes may be assigned only to Nominal categories."
+                                        : "Invalid move: only Total-type categories may have child categories.");
                                     return false;
                                 }
                             }
@@ -5904,11 +6647,15 @@ window.CategoryTree = (function ()
                         // Helper: detect synthetic/type container parents
                         function isTypeContainer(p)
                         {
-                            if (!p) { return false; }
-                            var d = p.data || {};
+                            if (!p)
+                            {
+                                return false;
+                            }
+                            var d = p.data ||
+                            {};
                             var k = p.key || "";
-                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true))
-                                    || (typeof k === "string" && k.indexOf("type:") === 0);
+                            return (d.nodeType === "synthetic" && (d.syntheticKind === "type" || d.isTypeContext === true)) ||
+                                (typeof k === "string" && k.indexOf("type:") === 0);
                         }
 
                         // Sibling reordering (before/after)
@@ -5919,41 +6666,46 @@ window.CategoryTree = (function ()
                             // Cash Type sibling reorder -> ReorderType
                             if (parent && isTypeContainer(parent))
                             {
-                                postJsonGlobal("ReorderType", { key: src.key, anchorKey: node.key, mode: data.hitMode })
-                                .done(function (res)
-                                {
-                                    if (res && res.success)
+                                postJsonGlobal("ReorderType",
                                     {
-                                        try
-                                        {
-                                            src.moveTo(node, data.hitMode);
-                                        }
-                                        catch (ex)
-                                        {
-                                            // swallow
-                                        }
-
-                                        reloadIfExpandedNode(parent);
-
-                                        src.setActive(true);
-                                        persistActiveKey(src);
-                                        announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
-                                        notify("Order updated", "success");
-
-                                        if (!isMobile())
-                                        {
-                                            loadDetails(src);
-                                            resizeColumns();
-                                        }
-                                    }
-                                    else
+                                        key: src.key,
+                                        anchorKey: node.key,
+                                        mode: data.hitMode
+                                    })
+                                    .done(function(res)
                                     {
-                                        alert((res && res.message) || "Reorder failed");
-                                    }
-                                }).fail(function (xhr)
-                                {
-                                    alert("Server error (" + xhr.status + ")");
-                                });
+                                        if (res && res.success)
+                                        {
+                                            try
+                                            {
+                                                src.moveTo(node, data.hitMode);
+                                            }
+                                            catch (ex)
+                                            {
+                                                // swallow
+                                            }
+
+                                            reloadIfExpandedNode(parent);
+
+                                            src.setActive(true);
+                                            persistActiveKey(src);
+                                            announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
+                                            notify("Order updated", "success");
+
+                                            if (!isMobile())
+                                            {
+                                                loadDetails(src);
+                                                resizeColumns();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            alert((res && res.message) || "Reorder failed");
+                                        }
+                                    }).fail(function(xhr)
+                                    {
+                                        alert("Server error (" + xhr.status + ")");
+                                    });
 
                                 return;
                             }
@@ -5961,97 +6713,118 @@ window.CategoryTree = (function ()
                             // Totals/Disconnected sibling reorder -> ReorderSiblings
                             if (parent && !isTypeContainer(parent))
                             {
-                                postJsonGlobal("ReorderSiblings", { parentKey: parent.key || "", key: src.key, anchorKey: node.key, mode: data.hitMode })
-                                .done(function (res)
-                                {
-                                    if (res && res.success)
+                                postJsonGlobal("ReorderSiblings",
                                     {
-                                        try
-                                        {
-                                            src.moveTo(node, data.hitMode);
-                                        }
-                                        catch (ex)
-                                        {
-                                        }
-
-                                        reloadIfExpandedNode(parent);
-
-                                        src.setActive(true);
-                                        persistActiveKey(src);
-                                        announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
-                                        notify("Order updated", "success");
-
-                                        refreshTopAnchors();
-
-                                        if (!isMobile())
-                                        {
-                                            loadDetails(src);
-                                            resizeColumns();
-                                        }
-                                    }
-                                    else
+                                        parentKey: parent.key || "",
+                                        key: src.key,
+                                        anchorKey: node.key,
+                                        mode: data.hitMode
+                                    })
+                                    .done(function(res)
                                     {
-                                        alert((res && res.message) || "Reorder failed");
-                                    }
-                                }).fail(function (xhr)
-                                {
-                                    alert("Server error (" + xhr.status + ")");
-                                });
+                                        if (res && res.success)
+                                        {
+                                            try
+                                            {
+                                                src.moveTo(node, data.hitMode);
+                                            }
+                                            catch (ex)
+                                            {}
+
+                                            reloadIfExpandedNode(parent);
+
+                                            src.setActive(true);
+                                            persistActiveKey(src);
+                                            announce("Moved " + (src.title || src.key) + (data.hitMode === "before" ? " before " : " after ") + (node.title || node.key));
+                                            notify("Order updated", "success");
+
+                                            refreshTopAnchors();
+
+                                            if (!isMobile())
+                                            {
+                                                loadDetails(src);
+                                                resizeColumns();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            alert((res && res.message) || "Reorder failed");
+                                        }
+                                    }).fail(function(xhr)
+                                    {
+                                        alert("Server error (" + xhr.status + ")");
+                                    });
 
                                 return;
                             }
                         }
 
                         // Fallback: child drop (move under parent) - call Move handler when hitMode === "over"
-                        if (data.hitMode !== "over") { return false; }
-
-                        postJsonGlobal("Move", { key: src.key, targetParentKey: node.key })
-                        .done(function (res)
+                        if (data.hitMode !== "over")
                         {
-                            if (res && res.success)
+                            return false;
+                        }
+
+                        postJsonGlobal("Move",
                             {
-                                try
-                                {
-                                    src.moveTo(node, "child");
-                                }
-                                catch (ex)
-                                {
-                                }
-
-                                // reload relevant parents
-                                reloadIfExpandedNode(src.getParent ? (src.getParent() && src.getParent().key) || "" : "");
-                                reloadIfExpandedNode(node.key);
-
-                                refreshTopAnchors();
-
-                                src.setActive(true);
-                                persistActiveKey(src);
-
-                                if (!isMobile()) { loadDetails(src); resizeColumns(); }
-                                notify("Moved", "success");
-                                announce("Moved " + (src.title || src.key) + " under " + (node.title || node.key));
-                            }
-                            else
+                                key: src.key,
+                                targetParentKey: node.key
+                            })
+                            .done(function(res)
                             {
-                                alert((res && res.message) || "Move failed");
-                            }
-                        }).fail(function (xhr)
-                        {
-                            alert("Server error (" + xhr.status + ")");
-                        });
+                                if (res && res.success)
+                                {
+                                    try
+                                    {
+                                        src.moveTo(node, "child");
+                                    }
+                                    catch (ex)
+                                    {}
+
+                                    // reload relevant parents
+                                    reloadIfExpandedNode(src.getParent ? (src.getParent() && src.getParent().key) || "" : "");
+                                    reloadIfExpandedNode(node.key);
+
+                                    refreshTopAnchors();
+
+                                    src.setActive(true);
+                                    persistActiveKey(src);
+
+                                    if (!isMobile())
+                                    {
+                                        loadDetails(src);
+                                        resizeColumns();
+                                    }
+                                    notify("Moved", "success");
+                                    announce("Moved " + (src.title || src.key) + " under " + (node.title || node.key));
+                                }
+                                else
+                                {
+                                    alert((res && res.message) || "Move failed");
+                                }
+                            }).fail(function(xhr)
+                            {
+                                alert("Server error (" + xhr.status + ")");
+                            });
 
                         return;
                     }
                 }
-            });
+                });
 
             // Desktop: right click
-            $(treeSel).on("contextmenu", ".fancytree-node", function (e)
+            $(treeSel).on("contextmenu", ".fancytree-node", function(e)
             {
-                if (isMobile()) {return;}
+                if (isMobile())
+                {
+                    return;
+                }
                 e.preventDefault();
                 var node = $.ui.fancytree.getNode(this);
-                if (!node) {return;}
+                if (!node)
+                {
+                    return;
+                }
                 node.setActive(true);
                 showContextMenu(e.pageX, e.pageY, node);
             });
@@ -6060,20 +6833,30 @@ window.CategoryTree = (function ()
             (function bindLongPress()
             {
                 var pressTimer = null;
-                var startX = 0, startY = 0;
+                var startX = 0,
+                    startY = 0;
 
-                $(treeSel).on("touchstart", ".fancytree-node", function (e)
+                $(treeSel).on("touchstart", ".fancytree-node", function(e)
                 {
-                    if (!isMobile()) {return;}
+                    if (!isMobile())
+                    {
+                        return;
+                    }
                     var node = $.ui.fancytree.getNode(this);
-                    if (!node) {return;}
+                    if (!node)
+                    {
+                        return;
+                    }
                     var touch = e.originalEvent.touches && e.originalEvent.touches[0];
-                    if (!touch) {return;}
+                    if (!touch)
+                    {
+                        return;
+                    }
 
                     startX = touch.clientX + window.scrollX;
                     startY = touch.clientY + window.scrollY;
 
-                    pressTimer = setTimeout(function ()
+                    pressTimer = setTimeout(function()
                     {
                         node.setActive(true);
                         showContextMenu(startX, startY, node);
@@ -6089,7 +6872,7 @@ window.CategoryTree = (function ()
                     }
                 }
 
-                $(treeSel).on("touchend touchcancel touchmove", ".fancytree-node", function ()
+                $(treeSel).on("touchend touchcancel touchmove", ".fancytree-node", function()
                 {
                     cancelPress();
                 });
@@ -6107,10 +6890,13 @@ window.CategoryTree = (function ()
             if (!isMobile())
             {
                 var tree = getTree();
-                if (tree) { loadDetails(tree.getActiveNode()); }
+                if (tree && tree.getActiveNode())
+                {
+                    loadDetails(tree.getActiveNode());
+                }
             }
 
-            $(window).on("resize orientationchange", function ()
+            $(window).on("resize orientationchange", function()
             {
                 resizeColumns();
             });
@@ -6118,7 +6904,7 @@ window.CategoryTree = (function ()
         }
 
         // Public helper: select a new code under a parent immediately after creation (embed flow)
-        window.CategoryTree.selectNewCode = function (codeKey, parentKey)
+        window.CategoryTree.selectNewCode = function(codeKey, parentKey)
         {
             try
             {
@@ -6138,9 +6924,11 @@ window.CategoryTree = (function ()
                     u.searchParams.set("select", codeKey);
                     u.searchParams.set("key", codeKey);
                     u.searchParams.set("expand", parentKey);
-                    history.replaceState({}, "", u.toString());
+                    history.replaceState(
+                        {}, "", u.toString());
                 }
-                catch (_) {}
+                catch (_)
+                {}
 
                 var tree = getTree();
                 if (tree && tree.getNodeByKey(codeKey))
@@ -6156,22 +6944,30 @@ window.CategoryTree = (function ()
                     selectionRetryCount = 0;
                     applyQuerySelection();
                 }
-                catch (_) {}
+                catch (_)
+                {}
             }
-            catch (_) {}
+            catch (_)
+            {}
         };
 
         // Shim: embedded binder lives in categoryTree.embedded.js and auto-binds at DOMContentLoaded.
         // Expose a no-op to avoid duplicate binding and keep existing pages' calls harmless.
-        window.tcTree = window.tcTree || {};
+        window.tcTree = window.tcTree ||
+        {};
         if (typeof window.tcTree.bindEmbeddedFormSubmit !== "function")
         {
-            window.tcTree.bindEmbeddedFormSubmit = function () { /* embedded.js handles this */ };
+            window.tcTree.bindEmbeddedFormSubmit = function()
+            {
+                /* embedded.js handles this */
+            };
         }
 
         // Initialize the tree after cfg is available
         initTree();
     }
 
-    return { init: init };
+    return {
+        init: init
+    };
 })();

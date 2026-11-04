@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -12,7 +13,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize(Roles = "Administrators")]
     public class EditCashCodeModel : DI_BasePageModel
     {
-        public EditCashCodeModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public EditCashCodeModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = "";
 
         [BindProperty(SupportsGet = true)]
         public string CashCode { get; set; } = "";
@@ -46,9 +56,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             if (string.IsNullOrWhiteSpace(CashCode))
                 return NotFound();
 
-            var code = await NodeContext.Cash_tbCodes
-                .Where(c => c.CashCode == CashCode)
-                .Select(c => new { c.CashCode, c.CashDescription, c.TaxCode, c.IsEnabled, c.CategoryCode })
+            var code = await (from c in NodeContext.Cash_tbCodes
+                join map in NodeContext.Cash_tbCategoryCodeMaps on c.CashCode equals map.CashCode
+                where map.VersionId == VersionId && c.CashCode == CashCode
+                select new { c.CashCode, c.CashDescription, c.TaxCode, c.IsEnabled, map.CategoryCode })
                 .FirstOrDefaultAsync();
 
             if (code == null)
@@ -98,15 +109,30 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 return Page();
             }
 
-            code.CashDescription = CashDescription;
-            code.TaxCode = TaxCode;
-            code.IsEnabled = IsEnabled ? (short)1 : (short)0;
-
-            await NodeContext.SaveChangesAsync();
+            try
+            {
+                await CategoryTreeService.UpdateCashCodeAsync(new CategoryTreeCashCodeUpdateCommand(
+                    VersionId, CashCode, CashDescription, TaxCode,
+                    IsEnabled ? (short)1 : (short)0));
+            }
+            catch (System.Exception ex)
+            {
+                await NodeContext.ErrorLog(ex);
+                ModelState.AddModelError(string.Empty, CategoryTreeCommandFeedback.From(ex));
+                CategoryCode = await NodeContext.Cash_tbCategoryCodeMaps
+                    .Where(map => map.VersionId == VersionId && map.CashCode == CashCode)
+                    .Select(map => map.CategoryCode)
+                    .SingleOrDefaultAsync() ?? "";
+                await LoadTaxList(TaxCode);
+                return Page();
+            }
             OperationSucceeded = true;
 
             var nodeKey = "code:" + CashCode;
-            var parentKey = code.CategoryCode;
+            var parentKey = await NodeContext.Cash_tbCategoryCodeMaps
+                .Where(map => map.VersionId == VersionId && map.CashCode == CashCode)
+                .Select(map => map.CategoryCode)
+                .SingleAsync();
 
             var isEmbedded =
                 string.Equals(Request.Query["embed"], "1", System.StringComparison.OrdinalIgnoreCase) ||
@@ -117,14 +143,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 ViewData["EditMarkerKey"] = nodeKey;
                 ViewData["EditMarkerParent"] = parentKey;
                 ViewData["EditMarkerDesc"] = CashDescription;
-                ViewData["EditMarkerEnabled"] = code.IsEnabled;
+                ViewData["EditMarkerEnabled"] = IsEnabled ? (short)1 : (short)0;
                 await LoadTaxList(TaxCode); // Keep list for potential re-render
                 return Page();
             }
 
             // Full page redirect (mobile): include selection hints
             return RedirectToPage("/Cash/CategoryTree/Index",
-                new { select = nodeKey, expand = parentKey, parentKey = parentKey, key = nodeKey });
+                new { versionId = VersionId, select = nodeKey, expand = parentKey,
+                    parentKey = parentKey, key = nodeKey });
         }
 
         private async Task LoadTaxList(string selected)

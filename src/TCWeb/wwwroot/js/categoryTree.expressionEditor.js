@@ -1,4 +1,4 @@
-(function ()
+(function()
 {
     if (window.cashExpressionEditorInitialised)
     {
@@ -8,9 +8,9 @@
 
     function pickerFrom(element)
     {
-        return element && element.closest
-            ? element.closest("[data-expression-reference-picker]")
-            : null;
+        return element && element.closest ?
+            element.closest("[data-expression-reference-picker]") :
+            null;
     }
 
     function insertSelectedReference(picker)
@@ -34,10 +34,13 @@
         var end = typeof editor.selectionEnd === "number" ? editor.selectionEnd : start;
         editor.setRangeText(token, start, end, "end");
         editor.focus();
-        editor.dispatchEvent(new Event("input", { bubbles: true }));
+        editor.dispatchEvent(new Event("input",
+            {
+                bubbles: true
+            }));
     }
 
-    document.addEventListener("input", function (event)
+    document.addEventListener("input", function(event)
     {
         if (!event.target.matches("[data-reference-filter]"))
         {
@@ -52,7 +55,7 @@
             return;
         }
 
-        Array.prototype.forEach.call(list.options, function (option)
+        Array.prototype.forEach.call(list.options, function(option)
         {
             var search = String(option.getAttribute("data-search") || option.textContent || "").toLowerCase();
             option.hidden = query.length > 0 && search.indexOf(query) === -1;
@@ -65,7 +68,7 @@
         }
     });
 
-    document.addEventListener("change", function (event)
+    document.addEventListener("change", function(event)
     {
         if (!event.target.matches("[data-reference-list]"))
         {
@@ -79,7 +82,7 @@
         }
     });
 
-    document.addEventListener("dblclick", function (event)
+    document.addEventListener("dblclick", function(event)
     {
         if (event.target.matches("[data-reference-list], [data-reference-list] option"))
         {
@@ -87,7 +90,7 @@
         }
     });
 
-    document.addEventListener("keydown", function (event)
+    document.addEventListener("keydown", function(event)
     {
         if (event.key === "Enter" && event.target.matches("[data-reference-list]"))
         {
@@ -96,7 +99,7 @@
         }
     });
 
-    document.addEventListener("click", function (event)
+    document.addEventListener("click", function(event)
     {
         var button = event.target.closest("[data-reference-insert]");
         if (button)

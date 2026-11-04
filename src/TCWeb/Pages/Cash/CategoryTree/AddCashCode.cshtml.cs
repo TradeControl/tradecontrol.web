@@ -7,13 +7,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     [Authorize(Roles = "Administrators")]
     public class AddCashCodeModel : DI_BasePageModel
     {
-        public AddCashCodeModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public AddCashCodeModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = string.Empty;
 
         [BindProperty]
         public string ParentKey { get; set; }
@@ -75,7 +85,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var parent = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == resolvedParent)
+                    .Where(c => c.VersionId == VersionId && c.CategoryCode == resolvedParent)
                     .Select(c => new { c.CategoryCode, c.IsEnabled })
                     .FirstOrDefaultAsync();
 
@@ -96,10 +106,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
+                ErrorMessage = CategoryTreeCommandFeedback.From(ex);
                 ModelState.Remove(nameof(CashCode));
                 await PopulateCodesAsync(CashCode, parentKey);
-                return embed ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
+                return embed
+                    ? Content($"<div class='text-danger small p-2'>{System.Net.WebUtility.HtmlEncode(ErrorMessage)}</div>")
+                    : Page();
             }
         }
 
@@ -133,7 +145,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var parent = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == ParentKey)
+                    .Where(c => c.VersionId == VersionId && c.CategoryCode == ParentKey)
                     .Select(c => new { c.CategoryCode, c.IsEnabled })
                     .FirstOrDefaultAsync();
 
@@ -145,14 +157,10 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                var codeRow = await NodeContext.Cash_tbCodes
-                    .Where(cd => cd.CashCode == CashCode)
-                    .Select(cd => new {
-                        cd.CashCode,
-                        cd.CashDescription,
-                        cd.CategoryCode,
-                        cd.IsEnabled
-                    })
+                var codeRow = await (from cd in NodeContext.Cash_tbCodes
+                    join map in NodeContext.Cash_tbCategoryCodeMaps on cd.CashCode equals map.CashCode
+                    where map.VersionId == VersionId && cd.CashCode == CashCode
+                    select new { cd.CashCode, cd.CashDescription, map.CategoryCode, cd.IsEnabled })
                     .FirstOrDefaultAsync();
 
                 if (codeRow == null || codeRow.IsEnabled == 0)
@@ -170,20 +178,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                var rowToUpdate = await NodeContext.Cash_tbCodes
-                    .Where(cd => cd.CashCode == CashCode)
-                    .FirstOrDefaultAsync();
-
-                if (rowToUpdate == null)
-                {
-                    ErrorMessage = "Code not found.";
-                    ModelState.Remove(nameof(CashCode));
-                    await PopulateCodesAsync(CashCode, ParentKey);
-                    return Page();
-                }
-
-                rowToUpdate.CategoryCode = ParentKey;
-                await NodeContext.SaveChangesAsync();
+                await CategoryTreeService.MoveCashCodeAsync(VersionId, CashCode, ParentKey,
+                    "Cash Code moved.");
 
                 OperationSucceeded = true;
 
@@ -192,15 +188,20 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
                 }
 
-                return RedirectToPage("./Index", new { key = "code:" + CashCode });
+                return RedirectToPage("./Index", new {
+                    versionId = VersionId,
+                    key = "code:" + CashCode
+                });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
+                ErrorMessage = CategoryTreeCommandFeedback.From(ex);
                 ModelState.Remove(nameof(CashCode));
                 await PopulateCodesAsync(CashCode, ParentKey);
-                return isEmbedded ? Content("<div class='text-danger small p-2'>Server error</div>") : Page();
+                return isEmbedded
+                    ? Content($"<div class='text-danger small p-2'>{System.Net.WebUtility.HtmlEncode(ErrorMessage)}</div>")
+                    : Page();
             }
         }
 
@@ -208,12 +209,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         {
             var query =
                 from cd in NodeContext.Cash_tbCodes
-                join c in NodeContext.Cash_tbCategories on cd.CategoryCode equals c.CategoryCode
-                where cd.IsEnabled != 0
+                join map in NodeContext.Cash_tbCategoryCodeMaps on cd.CashCode equals map.CashCode
+                join c in NodeContext.Cash_tbCategories
+                    on new { map.VersionId, map.CategoryCode }
+                    equals new { c.VersionId, c.CategoryCode }
+                where map.VersionId == VersionId && cd.IsEnabled != 0
                 select new {
                     cd.CashCode,
                     cd.CashDescription,
-                    cd.CategoryCode,
+                    map.CategoryCode,
                     CategoryName = c.Category
                 };
 

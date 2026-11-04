@@ -1,11 +1,18 @@
 @page
 @using Microsoft.Extensions.Hosting
+@using TradeControl.Web.Data
 @model TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@inject TradeControl.Web.Tenancy.ITenantContext TenantContext
 @{
     ViewData["Title"] = "Cash Configuration";
     var isAdmin = User.IsInRole(Constants.AdministratorsRole);
+    var canEditTree = Model.Workspace.SelectedVersion.Capabilities.CanEditTree;
+    var canManageCashCodes = isAdmin
+        && Model.Workspace.SelectedVersion.IsActive
+        && Model.Workspace.SelectedVersion.Status == NodeEnum.CategoryVersionStatus.Published;
+    var tenantId = TenantContext.RequiredTenant.TenantId.ToString("D");
 }
 <link href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css"
       rel="stylesheet"
@@ -24,13 +31,29 @@
     </div>
 </div>
 
+<partial name="_CategoryTreeVersionBanner" model="Model.Workspace" />
+
+@if (!string.IsNullOrWhiteSpace(Model.CategoryTreeNotice))
+{
+    <div class="alert alert-success py-2" role="status">@Model.CategoryTreeNotice</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.CategoryTreeError))
+{
+    <div class="alert alert-danger py-2" role="alert">@Model.CategoryTreeError</div>
+}
+
 <!-- Wrapper for Split.js (flex) -->
 <div class="tc-tree-split">
     <div id="leftCol" class="tc-pane tc-initial-left">
         <div id="categoryTree" class="flex-grow-1 border rounded p-2 bg-white" style="min-height:220px;"></div>
     </div>
     <div id="rightCol" class="tc-pane tc-initial-right d-none d-lg-flex">
-        <div id="detailsPane" class="flex-grow-1 border rounded p-2 bg-light"></div>
+        <div id="detailsPane" class="flex-grow-1 border rounded p-2 bg-light">
+            <div class="d-flex justify-content-center align-items-center h-100" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <span class="visually-hidden">Loading Category Tree details</span>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -39,6 +62,13 @@
 
 <div id="categoryTreeConfig"
      data-is-admin="@(isAdmin ? "true" : "false")"
+     data-is-role-admin="@(isAdmin ? "true" : "false")"
+     data-can-edit-tree="@(canEditTree ? "true" : "false")"
+     data-can-manage-cash-codes="@(canManageCashCodes ? "true" : "false")"
+     data-tenant-id="@tenantId"
+     data-version-status="@Model.Workspace.SelectedVersion.Status"
+     data-is-active-version="@(Model.Workspace.SelectedVersion.IsActive ? "true" : "false")"
+     data-version-id="@Model.Workspace.SelectedVersion.VersionId"
      data-base-url="/Cash/CategoryTree"
      data-details-url="/Cash/CategoryTree/Details"
      data-nodes-url="/Cash/CategoryTree?handler=Nodes"

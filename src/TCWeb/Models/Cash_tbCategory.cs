@@ -9,8 +9,6 @@ using Microsoft.EntityFrameworkCore;
 namespace TradeControl.Web.Models
 {
     [Table("tbCategory", Schema = "Cash")]
-    [Index(nameof(IsEnabled), nameof(Category), Name = "IX_Cash_tbCategory_IsEnabled_Category", IsUnique = true)]
-    [Index(nameof(IsEnabled), nameof(CategoryCode), Name = "IX_Cash_tbCategory_IsEnabled_CategoryCode", IsUnique = true)]
     public partial class Cash_tbCategory
     {
         public Cash_tbCategory()
@@ -19,7 +17,8 @@ namespace TradeControl.Web.Models
             TbCategoryTotalParentCodeNavigations = new HashSet<Cash_tbCategoryTotal>();
         }
 
-        [Key]
+        [StringLength(10)]
+        public string VersionId { get; set; }
         [StringLength(10)]
         [Display(Name = "Category Code")]
         public string CategoryCode { get; set; }
@@ -47,9 +46,6 @@ namespace TradeControl.Web.Models
         public string UpdatedBy { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime UpdatedOn { get; set; }
-        //[Required]
-        //public byte[] RowVer { get; set; }
-
         [ForeignKey(nameof(CashPolarityCode))]
         [InverseProperty(nameof(Cash_tbPolarity.TbCategories))]
         public virtual Cash_tbPolarity CashPolarityCodeNavigation { get; set; }
@@ -59,8 +55,6 @@ namespace TradeControl.Web.Models
         [ForeignKey(nameof(CategoryTypeCode))]
         [InverseProperty(nameof(Cash_tbCategoryType.TbCategories))]
         public virtual Cash_tbCategoryType CategoryTypeCodeNavigation { get; set; }
-        [InverseProperty("CategoryCodeNavigation")]
-        public virtual Cash_tbCategoryExp TbCategoryExp { get; set; }
         [InverseProperty(nameof(Cash_tbCategoryTotal.ChildCodeNavigation))]
         public virtual ICollection<Cash_tbCategoryTotal> TbCategoryTotalChildCodeNavigations { get; set; }
         [InverseProperty(nameof(Cash_tbCategoryTotal.ParentCodeNavigation))]

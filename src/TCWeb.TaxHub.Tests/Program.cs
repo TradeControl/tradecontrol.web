@@ -1065,6 +1065,42 @@ Assert(categoryTreeMigrationBytes.Length >= 3
     && categoryTreeMigrationBytes[1] == 0xBB
     && categoryTreeMigrationBytes[2] == 0xBF,
     "The SQLCMD Category Tree migration must retain its UTF-8 BOM so Unicode template text is not decoded as Windows-1252.");
+var categoryTotalsView = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Cash",
+    "Views", "vwCategoryTotals.sql"));
+var categoryTreeMigration = File.ReadAllText(categoryTreeMigrationPath);
+var cashFlowCategoryRepository = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
+    "TCExports.Generator", "Data", "SqlServerCashFlowRepository.Categories.cs"));
+Assert(categoryTotalsView.Contains("FROM Cash.vwCategoryActive", StringComparison.Ordinal)
+    && !categoryTotalsView.Contains("FROM Cash.tbCategory", StringComparison.Ordinal)
+    && categoryTreeMigration.Contains("ALTER VIEW [Cash].[vwCategoryTotals]", StringComparison.Ordinal)
+    && categoryTreeMigration.Contains("FROM Cash.vwCategoryActive", StringComparison.Ordinal)
+    && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionResolve",
+        StringComparison.Ordinal)
+    && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionProjectionMismatches",
+        StringComparison.Ordinal)
+    && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionUnmappedCashCodes",
+        StringComparison.Ordinal)
+    && cashFlowCategoryRepository.Contains("Cash.fnFlowCategoryByVersion",
+        StringComparison.Ordinal)
+    && !cashFlowCategoryRepository.Contains("Cash.vwCategoryActive", StringComparison.Ordinal)
+    && !cashFlowCategoryRepository.Contains("Cash.vwCodeActive", StringComparison.Ordinal)
+    && !cashFlowCategoryRepository.Contains("Cash.vwCategoryTotals", StringComparison.Ordinal)
+    && cashFlowCategoryRepository.Contains("CommandType.Text", StringComparison.Ordinal)
+    && !cashFlowCategoryRepository.Contains("WITH version_context", StringComparison.OrdinalIgnoreCase)
+    && !cashFlowCategoryRepository.Contains("CROSS APPLY", StringComparison.OrdinalIgnoreCase)
+    && !cashFlowCategoryRepository.Contains("UNION ALL", StringComparison.OrdinalIgnoreCase)
+    && !cashFlowCategoryRepository.Contains("FROM Cash.tbCategory", StringComparison.OrdinalIgnoreCase)
+    && !cashFlowCategoryRepository.Contains("JOIN Cash.tbCategory", StringComparison.OrdinalIgnoreCase)
+    && !cashFlowCategoryRepository.Contains("UPDATE App.tbOptions", StringComparison.OrdinalIgnoreCase)
+    && cashFlowCategoryRepository.Contains("GetCategoryTreeProjectionMismatchesAsync",
+        StringComparison.Ordinal)
+    && categoryTreeMigration.Contains(
+        "CREATE OR ALTER FUNCTION Cash.fnCategoryVersionProjectionMismatches",
+        StringComparison.Ordinal)
+    && categoryTreeMigration.Contains(
+        "CREATE OR ALTER FUNCTION Cash.fnCategoryVersionUnmappedCashCodes",
+        StringComparison.Ordinal),
+    "The Cash Statement category-total or token-resolution boundary can still combine multiple Category Tree versions.");
 var restoreDomainUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO Usr.tbUser", StringComparison.Ordinal);
 var restoreIdentityUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO dbo.AspNetUsers", StringComparison.Ordinal);
 Assert(syntheticBootstrapSql.Contains("SELECT * INTO #Keep_AspNetUsers FROM dbo.AspNetUsers;", StringComparison.Ordinal)
@@ -1326,6 +1362,12 @@ using (var translationContext = new NodeContext(new DbContextOptionsBuilder<Node
 {
     var optionsEntity = translationContext.Model.FindEntityType(typeof(App_tbOption));
     var cashCodeEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCode));
+    var categoryEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCategory));
+    var totalEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCategoryTotal));
+    var mapEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCategoryCodeMap));
+    var rootEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCategoryRoot));
+    var versionEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCategoryVersion));
+    var expressionEntity = translationContext.Model.FindEntityType(typeof(Cash_tbCategoryExp));
     Assert(optionsEntity is not null
         && optionsEntity.FindProperty(nameof(App_tbOption.CategoryVersionId)) is not null
         && optionsEntity.FindProperty(nameof(App_tbOption.NetProfitCode)) is null
@@ -1335,6 +1377,45 @@ using (var translationContext = new NodeContext(new DbContextOptionsBuilder<Node
         && cashCodeEntity.FindProperty(nameof(Cash_tbCode.CategoryCode)) is null
         && cashCodeEntity.GetForeignKeys().All(foreignKey => foreignKey.PrincipalEntityType.ClrType != typeof(Cash_tbCategory)),
         "The EF model must not query or relate through the retired Cash.tbCode.CategoryCode column.");
+    Assert(categoryEntity?.FindPrimaryKey()?.Properties.Select(property => property.Name)
+            .SequenceEqual([nameof(Cash_tbCategory.VersionId), nameof(Cash_tbCategory.CategoryCode)]) == true
+        && categoryEntity.FindProperty("RowVer") is null
+        && categoryEntity.FindProperty(nameof(Cash_tbCategory.CashPolarityCode))?.IsNullable == false
+        && categoryEntity.FindProperty(nameof(Cash_tbCategory.CashTypeCode))?.IsNullable == false,
+        "Cash.tbCategory is not mapped with its version-owned key, required classifications and excluded SQL RowVer.");
+    Assert(totalEntity?.FindPrimaryKey()?.Properties.Select(property => property.Name)
+            .SequenceEqual([nameof(Cash_tbCategoryTotal.VersionId), nameof(Cash_tbCategoryTotal.ParentCode),
+                nameof(Cash_tbCategoryTotal.ChildCode)]) == true
+        && totalEntity.FindProperty("RowVer") is null,
+        "Cash.tbCategoryTotal is not mapped with its version-owned key and excluded SQL RowVer.");
+    Assert(mapEntity?.FindPrimaryKey()?.Properties.Select(property => property.Name)
+            .SequenceEqual([nameof(Cash_tbCategoryCodeMap.VersionId), nameof(Cash_tbCategoryCodeMap.CashCode)]) == true
+        && mapEntity.FindProperty("RowVer") is null,
+        "Cash.tbCategoryCodeMap is not mapped with its version-owned key and excluded SQL RowVer.");
+    Assert(rootEntity?.FindPrimaryKey()?.Properties.Select(property => property.Name)
+            .SequenceEqual([nameof(Cash_tbCategoryRoot.VersionId), nameof(Cash_tbCategoryRoot.RootTypeCode)]) == true
+        && rootEntity.FindProperty("RowVer") is null,
+        "Cash.tbCategoryRoot is not mapped with its version-owned key and excluded SQL RowVer.");
+    Assert(versionEntity?.FindProperty("RowVer") is null,
+        "Cash.tbCategoryVersion must not expose SQL RowVer through EF.");
+    Assert(expressionEntity is not null
+        && expressionEntity.GetForeignKeys().All(foreignKey => foreignKey.PrincipalEntityType.ClrType != typeof(Cash_tbCategory))
+        && expressionEntity.FindProperty("RowVer") is null,
+        "Cash.tbCategoryExp must remain current formula metadata without a category foreign key or EF RowVer.");
+
+    var versionedCodeQuery = (from map in translationContext.Cash_tbCategoryCodeMaps
+                              join code in translationContext.Cash_tbCodes
+                                  on map.CashCode equals code.CashCode
+                              join category in translationContext.Cash_tbCategories
+                                  on new { map.VersionId, map.CategoryCode }
+                                  equals new { category.VersionId, category.CategoryCode }
+                              where map.VersionId == "CV00000001"
+                              select new { code.CashCode, category.CategoryCode })
+        .ToQueryString();
+    Assert(versionedCodeQuery.Contains("tbCategoryCodeMap", StringComparison.Ordinal)
+        && versionedCodeQuery.Contains("VersionId", StringComparison.Ordinal)
+        && !versionedCodeQuery.Contains("[c].[CategoryCode] = [c0].[CategoryCode]", StringComparison.Ordinal),
+        "The explicit-version Cash Code query does not use the version-owned mapping boundary.");
 
     var translatedSummary = translationContext.SubjectDatedBalances(new DateTime(2026, 9, 30))
         .GroupBy(_ => 1)
@@ -1353,6 +1434,305 @@ using (var translationContext = new NodeContext(new DbContextOptionsBuilder<Node
         && translatedSummary.Contains("SUM", StringComparison.OrdinalIgnoreCase),
         "The SQL Server provider cannot translate the bounded Subject evidence summary query.");
 }
+var primaryRootHandlerSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash",
+    "CategoryTree", "CategoryTreeModel.PrimaryRoot.cs"));
+Assert(primaryRootHandlerSource.Contains("CategoryTreeService.SetRootAsync", StringComparison.Ordinal)
+    && !primaryRootHandlerSource.Contains("NetProfitCode", StringComparison.Ordinal)
+    && !primaryRootHandlerSource.Contains("VatCategoryCode", StringComparison.Ordinal),
+    "The primary-root handler bypasses the Category Tree command boundary or uses retired options roots.");
+var categoryTreePageSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash",
+    "CategoryTree", "Index.cshtml"));
+var categoryTreeScriptSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot", "js",
+    "categoryTree.js"));
+Assert(categoryTreePageSource.Contains("data-version-id", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("payload.versionId", StringComparison.Ordinal)
+    && !categoryTreePageSource.Contains("data-row-version", StringComparison.Ordinal)
+    && !categoryTreeScriptSource.Contains("expectedRowVersion", StringComparison.Ordinal),
+    "Category Tree JavaScript must carry version identity without exposing SQL RowVer.");
+var editCategoryHandlerSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash",
+    "CategoryTree", "EditCategory.cshtml.cs"));
+Assert(editCategoryHandlerSource.Contains("CategoryTreeService.SaveCategoryAsync", StringComparison.Ordinal)
+    && editCategoryHandlerSource.Contains("c.VersionId == VersionId", StringComparison.Ordinal)
+    && !editCategoryHandlerSource.Contains("SaveChangesAsync", StringComparison.Ordinal),
+    "The category-edit handler bypasses the versioned Category Tree command boundary.");
+var categoryTreeHandlerDirectory = Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "CategoryTree");
+var versionedMutationHandlers = new[]
+{
+    "AddCashCode.cshtml.cs",
+    "AddCategory.cshtml.cs",
+    "CategoryTreeMode.move.cs",
+    "CategoryTreeModel.ReorderSiblings.cs",
+    "CategoryTreeModel.TypeOrdering.cs",
+    "CreateCashCode.cshtml.cs",
+    "CreateCategory.cshtml.cs",
+    "CreateExpression.cshtml.cs",
+    "CreateTotal.cshtml.cs",
+    "DeleteCashCode.cshtml.cs",
+    "DeleteExpression.cshtml.cs",
+    "EditCashCode.cshtml.cs",
+    "EditExpression.cshtml.cs",
+    "EditTotal.cshtml.cs",
+    "Index.cshtml.cs",
+    "Move.cshtml.cs"
+};
+foreach (var handler in versionedMutationHandlers)
+{
+    var source = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory, handler));
+    Assert(source.Contains("VersionId", StringComparison.Ordinal)
+        && !source.Contains("SaveChangesAsync", StringComparison.Ordinal)
+        && !source.Contains("ExecuteUpdateAsync", StringComparison.Ordinal)
+        && !source.Contains("ExecuteDeleteAsync", StringComparison.Ordinal),
+        $"{handler} is not version-explicit or still bypasses the Category Tree command service.");
+}
+var maintenanceHandlerSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CategoryTreeModel.Maintenance.cs"));
+Assert(maintenanceHandlerSource.Contains("CategoryTreeService.ApplyBatchAsync", StringComparison.Ordinal)
+    && maintenanceHandlerSource.Contains("CategoryTreeService.MoveCashCodeAsync", StringComparison.Ordinal)
+    && maintenanceHandlerSource.Contains("CategoryTreeService.DeleteCashCodeAsync(versionId, cashCode",
+        StringComparison.Ordinal)
+    && !maintenanceHandlerSource.Contains("ExecuteUpdateAsync", StringComparison.Ordinal)
+    && !maintenanceHandlerSource.Contains("ExecuteDeleteAsync", StringComparison.Ordinal)
+    && maintenanceHandlerSource.Split("SaveChangesAsync", StringSplitOptions.None).Length - 1 == 1,
+    "The retained tree maintenance handlers bypass the command boundary; only BI expression error reset may write directly.");
+var categoryTreeServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "CategoryTree", "CategoryTreeChangeControlService.cs"));
+Assert(categoryTreeServiceSource.Contains("ApplyBatchAsync", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains("IsolationLevel.Serializable", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains("UPDLOCK, HOLDLOCK", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains("CoalesceBatchEditEventsAsync", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains("VersionEventId > @EventBoundary", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains("EnsureActivePublishedVersionAsync", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains(
+        "DeleteCashCodeAsync(string versionId, string cashCode", StringComparison.Ordinal),
+    "Composite Category Tree mutations are not locked or do not produce one consolidated audit event.");
+var categoryTreeFeedbackSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "CategoryTree", "CategoryTreeCommandFeedback.cs"));
+Assert(categoryTreeFeedbackSource.Contains("sqlException.Number is 1205 or 1222 or 3960",
+        StringComparison.Ordinal)
+    && categoryTreeFeedbackSource.Contains("sqlException.Number is >= 51000 and <= 51999",
+        StringComparison.Ordinal)
+    && maintenanceHandlerSource.Contains("CategoryTreeCommandFeedback.From(exception)",
+        StringComparison.Ordinal),
+    "Category Tree conflicts, guarded-state failures and lock errors do not have consistent feedback.");
+var versionPreservingPages = new[]
+{
+    "AddCashCode.cshtml.cs",
+    "AddCategory.cshtml.cs",
+    "CreateCashCode.cshtml.cs",
+    "CreateCategory.cshtml.cs",
+    "CreateExpression.cshtml.cs",
+    "CreateTotal.cshtml.cs",
+    "DeleteCashCode.cshtml.cs",
+    "DeleteExpression.cshtml.cs",
+    "EditCashCode.cshtml.cs",
+    "EditCategory.cshtml.cs",
+    "EditExpression.cshtml.cs",
+    "EditTotal.cshtml.cs",
+    "Move.cshtml.cs"
+};
+foreach (var page in versionPreservingPages)
+{
+    var source = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory, page));
+    Assert(source.Contains("versionId = VersionId", StringComparison.Ordinal),
+        $"{page} can return to a different Category Tree version after editing.");
+}
+var categoryTreeBuildSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CategoryTreeModel.Build.cs"));
+var categoryTreeDetailsSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "Details.cshtml.cs"));
+var categoryTreeVersionWorkspace = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "_CategoryTreeVersionWorkspace.cshtml"));
+Assert(categoryTreeBuildSource.Contains("Category Tree\"", StringComparison.Ordinal)
+    && categoryTreeDetailsSource.Contains("NodeType = \"versionWorkspace\"", StringComparison.Ordinal)
+    && categoryTreeDetailsSource.Contains("BuildVersionWorkspaceAsync", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("Active version", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("Draft proposals", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("Operational and historical versions", StringComparison.Ordinal),
+    "The Category Tree root does not expose the accepted version workspace structure.");
+var categoryTreeLifecycleSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CategoryTreeModel.Lifecycle.cs"));
+Assert(categoryTreeServiceSource.Contains("GetReviewAsync", StringComparison.Ordinal)
+    && categoryTreeServiceSource.Contains("expectedActiveVersionId", StringComparison.Ordinal)
+    && categoryTreeLifecycleSource.Contains("CloneActiveAsync(expectedActiveVersionId",
+        StringComparison.Ordinal)
+    && categoryTreeLifecycleSource.Contains("RefreshDraftAsync(versionId", StringComparison.Ordinal)
+    && categoryTreeLifecycleSource.Contains("ValidateAsync(versionId", StringComparison.Ordinal)
+    && categoryTreeLifecycleSource.Contains("PublishAsync(versionId", StringComparison.Ordinal)
+    && categoryTreeLifecycleSource.Contains("DiscardDraftAsync(versionId", StringComparison.Ordinal),
+    "Category Tree lifecycle actions do not use the guarded change-control service.");
+Assert(categoryTreeVersionWorkspace.Contains("Create successor Draft", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("value=\"@active.Description\"", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("d-flex flex-wrap align-items-start gap-2",
+        StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("Review changes against", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("Lifecycle event history", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("expectedPredecessorVersionId", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("No operational statement has used it",
+        StringComparison.Ordinal),
+    "The version workspace is missing exact lifecycle confirmations, review or event history.");
+var applyQuerySelectionIndex = categoryTreeScriptSource.IndexOf("function applyQuerySelection()",
+    StringComparison.Ordinal);
+var rootSelectionIndex = categoryTreeScriptSource.IndexOf("if (selectKey === ROOT_KEY)",
+    Math.Max(0, applyQuerySelectionIndex), StringComparison.Ordinal);
+var queryKeyVariantsIndex = categoryTreeScriptSource.IndexOf("function keyVariants(key)",
+    Math.Max(0, applyQuerySelectionIndex), StringComparison.Ordinal);
+var rootDetailsLoadIndex = categoryTreeScriptSource.IndexOf("loadDetails(requestedRoot)",
+    Math.Max(0, rootSelectionIndex), StringComparison.Ordinal);
+Assert(applyQuerySelectionIndex >= 0
+    && rootSelectionIndex > applyQuerySelectionIndex
+    && queryKeyVariantsIndex > rootSelectionIndex
+    && rootDetailsLoadIndex > rootSelectionIndex
+    && rootDetailsLoadIndex < queryKeyVariantsIndex,
+    "Explicit version navigation does not directly load the Category Tree root workspace.");
+Assert(categoryTreeVersionWorkspace.Contains("data-bs-target=\"#categoryTreeVersionsPanel\"",
+        StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("data-bs-target=\"#categoryTreeEventsPanel\"",
+        StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("data-event-page-panel", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("[data-event-page-target]", StringComparison.Ordinal),
+    "The Category Tree version workspace does not separate or page lifecycle history.");
+Assert(categoryTreePageSource.Contains("spinner-border text-primary", StringComparison.Ordinal)
+    && categoryTreePageSource.Contains("Loading Category Tree details", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("if (tree && tree.getActiveNode())",
+        StringComparison.Ordinal),
+    "The initial Category Tree detail pane does not retain its loading indicator until selection.");
+var createCashCodeViewSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CreateCashCode.cshtml"));
+var createCashCodeModelSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CreateCashCode.cshtml.cs"));
+var categoryDetailsCardSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "_CategoryDetailsCard.cshtml"));
+Assert(!categoryTreePageSource.Contains("data-active-version-id", StringComparison.Ordinal)
+    && !categoryTreeScriptSource.Contains("openCashCodeCreateInActiveTree", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("Cash Codes can only be created in the active Published tree",
+        StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("active Published tree only", StringComparison.Ordinal)
+    && categoryDetailsCardSource.Contains("Available only in the active Published tree.",
+        StringComparison.Ordinal),
+    "Non-operational workspaces do not visibly disable Cash Code creation at the version boundary.");
+Assert(createCashCodeViewSource.Contains("id=\"createCashCodeResult\"", StringComparison.Ordinal)
+    && createCashCodeViewSource.Contains("data-key=\"@Model.NewKey\"", StringComparison.Ordinal)
+    && createCashCodeViewSource.Contains("data-parent=\"@Model.CategoryCode\"", StringComparison.Ordinal)
+    && createCashCodeModelSource.Contains("ModelState.Remove(nameof(CategoryCode))",
+        StringComparison.Ordinal)
+    && createCashCodeModelSource.Contains("title = $\"{CashCode} - {CashDescription}\"",
+        StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("if (remove || (sel && !getTree().getNodeByKey(sel)))",
+        StringComparison.Ordinal),
+    "Embedded Cash Code create/delete results are not reconciled into the visible tree.");
+Assert(categoryTreeScriptSource.Contains("nodesUrl = appendQuery(nodesUrl, \"versionId\"",
+        StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("detailsUrl = appendQuery(detailsUrl, \"versionId\"",
+        StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("new { versionId, select = CategoryTreeModel.RootNodeKey }",
+        StringComparison.Ordinal),
+    "Version selection is not persisted through tree node/detail reads and explicit workspace URLs.");
+var categoryTreePageScriptSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot",
+    "js", "categoryTree.page.js"));
+var categoryTreeEmbeddedScriptSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot",
+    "js", "categoryTree.embedded.js"));
+Assert(categoryTreePageSource.Contains("_CategoryTreeVersionBanner", StringComparison.Ordinal)
+    && categoryTreePageSource.Contains("data-can-edit-tree", StringComparison.Ordinal)
+    && categoryTreePageSource.Contains("data-can-manage-cash-codes", StringComparison.Ordinal)
+    && categoryTreePageSource.Contains("data-tenant-id", StringComparison.Ordinal)
+    && categoryTreePageScriptSource.Contains("versionId: cfgEl.dataset.versionId", StringComparison.Ordinal)
+    && categoryTreePageScriptSource.Contains("tenantId: cfgEl.dataset.tenantId", StringComparison.Ordinal)
+    && categoryTreePageScriptSource.Contains("isAdmin: cfgEl.dataset.canEditTree",
+        StringComparison.Ordinal),
+    "The persistent version banner or server-calculated client capability/state context is missing.");
+Assert(categoryTreeScriptSource.Contains("selectedTenantId", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("selectedVersionId", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("canManageCashCodes", StringComparison.Ordinal)
+    && categoryTreeEmbeddedScriptSource.Contains("_nodesUrl = _nodesUrl ? _workspaceUrl(_nodesUrl)",
+        StringComparison.Ordinal),
+    "Category Tree state or auxiliary reads are not namespaced by tenant and selected version.");
+var categoryTreeSharedScriptSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot",
+    "js", "categoryTree.shared.js"));
+var categoryTreeEmbeddedScriptSourceText = File.ReadAllText(Path.Combine(root, "src", "TCWeb",
+    "wwwroot", "js", "categoryTree.embedded.js"));
+var createCategoryFormSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CreateCategory.cshtml"));
+var editTotalFormSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "EditTotal.cshtml"));
+var categoryTreeMoveHandlerSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CategoryTreeMode.move.cs"));
+Assert(categoryTreeScriptSource.Split("data: payload", StringSplitOptions.None).Length - 1 >= 2
+    && categoryTreeScriptSource.Contains("payload.versionId = cfg.dataset.versionId",
+        StringComparison.Ordinal)
+    && categoryTreeEmbeddedScriptSourceText.Contains("fd.set(\"VersionId\"",
+        StringComparison.Ordinal),
+    "Category Tree JSON or embedded-form mutations can omit the selected VersionId.");
+Assert(categoryTreeSharedScriptSource.Contains("function currentVersionId()", StringComparison.Ordinal)
+    && categoryTreeSharedScriptSource.Contains("else if (ctx.isTotal)", StringComparison.Ordinal)
+    && categoryTreeSharedScriptSource.Contains("nav(\"EditTotal\"", StringComparison.Ordinal)
+    && createCategoryFormSource.Contains("asp-for=\"VersionId\"", StringComparison.Ordinal)
+    && editTotalFormSource.Contains("asp-for=\"VersionId\"", StringComparison.Ordinal)
+    && !createCategoryFormSource.Contains("asp-route-version-id", StringComparison.Ordinal),
+    "Full-page Total editing or Category creation does not preserve the selected version.");
+Assert(categoryTreeScriptSource.Contains("!kinds.isCat && !kinds.isCode", StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains("isCashCodeMove ? 0 : CATEGORYTYPE_CASHTOTAL",
+        StringComparison.Ordinal)
+    && categoryTreeMoveHandlerSource.Contains("key.StartsWith(\"code:\"",
+        StringComparison.Ordinal)
+    && categoryTreeMoveHandlerSource.Contains("CategoryTreeService.MoveCashCodeAsync",
+        StringComparison.Ordinal),
+    "Cash Code drag-and-drop is not connected to the version-owned mapping command.");
+var categoryTreeMoveScriptSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot",
+    "js", "categoryTree.move.js"));
+var categoryTreeDeleteScriptSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot",
+    "js", "categoryTree.delete.js"));
+Assert(categoryTreeBuildSource.Contains(
+        "lazy = c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashTotal",
+        StringComparison.Ordinal),
+    "An empty newly-created Total is not retained as a Category drag-and-drop container.");
+Assert(categoryTreeMoveScriptSource.Contains("appendQuery(durl, \"embed\", \"1\")",
+        StringComparison.Ordinal)
+    && categoryTreeMoveScriptSource.Contains("var startsNow = buildTotalsStarts(tree)",
+        StringComparison.Ordinal)
+    && categoryTreeMoveScriptSource.Contains("liveMovedNode.moveTo(parentNode, \"child\")",
+        StringComparison.Ordinal)
+    && !categoryTreeMoveScriptSource.Contains("tree.reload(", StringComparison.Ordinal)
+    && !categoryTreeMoveScriptSource.Contains("reloadAnchors(tree)", StringComparison.Ordinal),
+    "Context-menu Move can inject a full layout or discard the moved-node selection.");
+Assert(categoryTreeScriptSource.Contains(
+        "? [\"before\", \"after\", \"over\"]", StringComparison.Ordinal),
+    "A leaf Total beneath the same parent cannot accept a Category child drop.");
+var deleteCashCodeScriptStart = categoryTreeDeleteScriptSource.IndexOf(
+    "function handleDeleteCashCode()", StringComparison.Ordinal);
+var deleteCategoryScriptStart = categoryTreeDeleteScriptSource.IndexOf(
+    "function handleDeleteCategory()", StringComparison.Ordinal);
+var deleteTotalScriptStart = categoryTreeDeleteScriptSource.IndexOf(
+    "function handleDeleteTotal()", StringComparison.Ordinal);
+var deleteCashCodeScript = categoryTreeDeleteScriptSource[deleteCashCodeScriptStart..deleteCategoryScriptStart];
+var deleteCategoryScript = categoryTreeDeleteScriptSource[deleteCategoryScriptStart..deleteTotalScriptStart];
+var deleteTotalScript = categoryTreeDeleteScriptSource[deleteTotalScriptStart..];
+var versionInputSelector =
+    "form.querySelector('input[name=\"versionId\"], input[name=\"VersionId\"]')";
+Assert(deleteCashCodeScript.Contains(versionInputSelector, StringComparison.Ordinal)
+    && deleteCashCodeScript.Contains("fd.append(\"versionId\"", StringComparison.Ordinal)
+    && deleteCategoryScript.Contains(
+        "form.querySelector('input[name=\"versionId\"], input[name=\"VersionId\"]')",
+        StringComparison.Ordinal)
+    && deleteCategoryScript.Contains("fd.append(\"versionId\"", StringComparison.Ordinal)
+    && deleteTotalScript.Contains(versionInputSelector, StringComparison.Ordinal)
+    && deleteTotalScript.Contains("fd.append(\"versionId\"", StringComparison.Ordinal),
+    "Cash Code, Category or Total deletion does not post the selected Category Tree version.");
+var categoryTreeCssSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot", "css",
+    "components", "categoryTree.css"));
+Assert(categoryTreeScriptSource.Contains("bi bi-clock-history'></i> Versions", StringComparison.Ordinal)
+    && categoryTreeVersionWorkspace.Contains("list-group list-group-flush d-md-none",
+        StringComparison.Ordinal)
+    && categoryTreeCssSource.Contains("span.fancytree-expander", StringComparison.Ordinal)
+    && categoryTreeCssSource.Contains("border-left: 1px solid", StringComparison.Ordinal),
+    "Mobile root navigation, responsive version history or visible tree hierarchy affordances are missing.");
+var deleteCategorySource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "DeleteCategory.cshtml.cs"));
+var deleteTotalSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "DeleteTotal.cshtml.cs"));
+Assert(deleteCategorySource.Contains("c.VersionId == VersionId", StringComparison.Ordinal)
+    && deleteTotalSource.Contains("c.VersionId == VersionId", StringComparison.Ordinal)
+    && deleteTotalSource.Contains("x.VersionId == VersionId", StringComparison.Ordinal),
+    "JavaScript-disabled delete confirmation reads are not scoped to the selected version.");
 var accountsWorkspaceView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubAccountsWorkspace.razor"));
 var yearEndReviewView = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",

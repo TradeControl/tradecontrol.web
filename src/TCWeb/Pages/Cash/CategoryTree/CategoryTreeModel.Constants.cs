@@ -11,6 +11,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         // Node key prefix for individual expression entries
         public const string ExpressionKeyPrefix = "expr:";
 
+        private const short NeutralCashPolarityCode = 2;
+        private const short TradeCashTypeCode = 0;
+
         // Helper to build expression node key from category code
         public static string MakeExpressionKey(string categoryCode) =>
             string.IsNullOrWhiteSpace(categoryCode) ? string.Empty : $"{ExpressionKeyPrefix}{categoryCode}";

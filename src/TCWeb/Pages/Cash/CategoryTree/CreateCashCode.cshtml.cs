@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -14,9 +15,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize(Roles = "Administrators")]
     public class CreateCashCodeModel : DI_BasePageModel
     {
-        public CreateCashCodeModel(NodeContext context) : base(context)
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public CreateCashCodeModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
         {
+            CategoryTreeService = categoryTreeService;
         }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = "";
 
         [BindProperty(SupportsGet = true)]
         public string CategoryCode { get; set; } = "";
@@ -141,6 +149,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     CategoryCode = val;
                 }
             }
+
+            if (!string.IsNullOrWhiteSpace(CategoryCode))
+            {
+                ModelState.Remove(nameof(CategoryCode));
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -157,7 +170,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                ?? f["categoryCode"].FirstOrDefault();
             }
 
-            if (string.IsNullOrWhiteSpace(CategoryCode)
+            if (string.IsNullOrWhiteSpace(VersionId) || string.IsNullOrWhiteSpace(CategoryCode)
                 || string.IsNullOrWhiteSpace(CashCode)
                 || string.IsNullOrWhiteSpace(CashDescription))
             {
@@ -182,7 +195,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             try
             {
                 var catExists = await NodeContext.Cash_tbCategories
-                    .AnyAsync(c => c.CategoryCode == CategoryCode && c.IsEnabled != 0);
+                    .AnyAsync(c => c.VersionId == VersionId && c.CategoryCode == CategoryCode
+                        && c.IsEnabled != 0);
 
                 if (!catExists)
                 {
@@ -208,40 +222,29 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     finalTax = anyTax.TaxCode;
                 }
 
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
-                var code = new Cash_tbCode {
-                    CashCode = CashCode,
-                    CashDescription = CashDescription,
-                    CategoryCode = CategoryCode,
-                    TaxCode = finalTax,
-                    IsEnabled = IsEnabled ? (short)1 : (short)0
-                };
-
-                NodeContext.Cash_tbCodes.Add(code);
-                await NodeContext.SaveChangesAsync();
+                await CategoryTreeService.CreateCashCodeAsync(new CategoryTreeCashCodeCreateCommand(
+                    VersionId, CashCode, CashDescription, CategoryCode, finalTax,
+                    IsEnabled ? (short)1 : (short)0));
 
                 var parent = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == CategoryCode)
+                    .Where(c => c.VersionId == VersionId && c.CategoryCode == CategoryCode)
                     .Select(c => new { c.CashPolarityCode, c.CategoryTypeCode, c.CashTypeCode })
                     .SingleOrDefaultAsync();
 
-                await tx.CommitAsync();
-
                 OperationSucceeded = true;
                 NewCashCode = CashCode;
-                NewKey = $"code:{code.CashCode}";
+                NewKey = $"code:{CashCode}";
                 NewParentKey = CategoryCode;
-                NewName = code.CashDescription;
+                NewName = CashDescription;
                 NewPolarity = parent?.CashPolarityCode ?? (short)NodeEnum.CashPolarity.Neutral;
                 NewCategoryType = parent?.CategoryTypeCode ?? (short)NodeEnum.CategoryType.Nominal;
-                NewCashType = parent?.CashTypeCode ?? 0;
-                NewIsEnabled = code.IsEnabled;
+                NewCashType = parent?.CashTypeCode ?? (short)NodeEnum.CashType.Trade;
+                NewIsEnabled = IsEnabled ? (short)1 : (short)0;
 
                 // Build JSON only now that the fields are populated
                 NewNodeJson = JsonSerializer.Serialize(new {
                     key = NewKey,
-                    title = NewName,
+                    title = $"{CashCode} - {CashDescription}",
                     folder = false,
                     lazy = false,
                     data = new {
@@ -265,12 +268,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 var nodeKey = $"code:{CashCode}";
                 return RedirectToPage("/Cash/CategoryTree/Index",
-                    new { select = nodeKey, parentKey = CategoryCode, expand = CategoryCode });
+                    new { versionId = VersionId, select = nodeKey, parentKey = CategoryCode,
+                        expand = CategoryCode });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ModelState.AddModelError(string.Empty, "Server error.");
+                ModelState.AddModelError(string.Empty, CategoryTreeCommandFeedback.From(ex));
                 return Page();
             }
         }

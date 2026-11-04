@@ -98,7 +98,8 @@ public sealed record CashStatementGenerationRequest(
     bool IncludeOrderBook,
     bool IncludeTaxAccruals,
     bool IncludeVatDetails,
-    bool IncludeReconciliation);
+    bool IncludeReconciliation,
+    string? CategoryVersionId = null);
 
 public sealed record CashStatementGenerationResult(
     bool IsSuccess,
@@ -356,23 +357,27 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         string format)
     {
         var userName = _httpContextAccessor.HttpContext?.User.Identity?.Name;
+        var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["commandTimeout"] = request.CommandTimeoutSeconds.ToString(CultureInfo.InvariantCulture),
+            ["includeActivePeriods"] = BooleanText(request.IncludeActivePeriods),
+            ["includeBalanceSheet"] = BooleanText(request.IncludeBalanceSheet),
+            ["includeBankBalances"] = BooleanText(request.IncludeBankBalances),
+            ["includeOrderBook"] = BooleanText(request.IncludeOrderBook),
+            ["includeTaxAccruals"] = BooleanText(request.IncludeTaxAccruals),
+            ["includeVatDetails"] = BooleanText(request.IncludeVatDetails),
+            ["includeReconciliation"] = BooleanText(request.IncludeReconciliation)
+        };
+        if (!string.IsNullOrWhiteSpace(request.CategoryVersionId))
+            parameters["categoryVersionId"] = request.CategoryVersionId.Trim();
+
         return new ExportPayload
         {
             SqlConnection = connectionString,
             UserName = string.IsNullOrWhiteSpace(userName) ? "authenticated-user" : userName,
             DocumentType = "cashflow",
             Format = format,
-            Params = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["commandTimeout"] = request.CommandTimeoutSeconds.ToString(CultureInfo.InvariantCulture),
-                ["includeActivePeriods"] = BooleanText(request.IncludeActivePeriods),
-                ["includeBalanceSheet"] = BooleanText(request.IncludeBalanceSheet),
-                ["includeBankBalances"] = BooleanText(request.IncludeBankBalances),
-                ["includeOrderBook"] = BooleanText(request.IncludeOrderBook),
-                ["includeTaxAccruals"] = BooleanText(request.IncludeTaxAccruals),
-                ["includeVatDetails"] = BooleanText(request.IncludeVatDetails),
-                ["includeReconciliation"] = BooleanText(request.IncludeReconciliation)
-            }
+            Params = parameters
         };
     }
 

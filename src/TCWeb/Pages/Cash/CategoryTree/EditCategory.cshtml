@@ -23,7 +23,11 @@
     {
         <div class="container py-3">
             <div class="alert alert-success mb-3"> Category updated: @Model.Category (@Model.CategoryCode)</div>
-            <a class="btn btn-primary" asp-page="./Index" asp-route-select="@Model.CategoryCode" asp-route-expand="@Model.ParentKey">Back to Category Tree</a>
+            <a class="btn btn-primary"
+               asp-page="./Index"
+               asp-route-versionId="@Model.VersionId"
+               asp-route-select="@Model.CategoryCode"
+               asp-route-expand="@Model.ParentKey">Back to Category Tree</a>
         </div>
     }
 }
@@ -50,6 +54,7 @@ else
 
                 <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
+                <input type="hidden" name="VersionId" value="@Model.VersionId" />
 
                 <div class="mb-3">
                     <label class="form-label">Category Code</label>
@@ -90,6 +95,7 @@ else
                     {
                         <a class="btn btn-secondary"
                            asp-page="./Index"
+                           asp-route-versionId="@Model.VersionId"
                            asp-route-select="@Model.CategoryCode"
                            asp-route-expand="@Model.ParentKey">Cancel</a>
                     }

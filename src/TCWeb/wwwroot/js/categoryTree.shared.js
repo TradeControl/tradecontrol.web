@@ -1,7 +1,8 @@
-(function ()
+(function()
 {
     // Shared tree utilities and constants (lightweight, global-safe)
-    window.tcTree = window.tcTree || {};
+    window.tcTree = window.tcTree ||
+    {};
 
     // Debug flag
     if (typeof window.tcTree.debug === "undefined")
@@ -10,13 +11,14 @@
     }
 
     // Anchors/constants shared across scripts
-    window.tcTree.anchors = window.tcTree.anchors || {
+    window.tcTree.anchors = window.tcTree.anchors ||
+    {
         ROOT: "__ROOT__",
         DISC: "__DISCONNECTED__"
     };
 
     // Adaptive retry/backoff helper
-    window.tcTree.retry = function (work, options)
+    window.tcTree.retry = function(work, options)
     {
         var attempts = (options && options.attempts) ? options.attempts : 5;
         var delay = (options && options.delayMs) ? options.delayMs : 150;
@@ -32,7 +34,8 @@
                     return;
                 }
             }
-            catch (_) { }
+            catch (_)
+            {}
 
             if (--attempts <= 0)
             {
@@ -120,7 +123,7 @@
             return;
         }
 
-        document.addEventListener("click", function (e)
+        document.addEventListener("click", function(e)
         {
             var btn = e.target.closest("#detailsPane [data-action]");
             if (!btn)
@@ -151,9 +154,12 @@
             {
                 btn.setAttribute("data-action", norm);
             }
-        }, { passive: false });
+        },
+        {
+            passive: false
+        });
 
-        document.addEventListener("submit", function (e)
+        document.addEventListener("submit", function(e)
         {
             var form = e.target;
             if (!form || !form.matches("#detailsPane form"))
@@ -195,7 +201,7 @@
         var hasCard = document.getElementById("categoryDetails") || document.getElementById("cashCodeDetails") || document.getElementById("expressionDetails");
         if (!hasCard)
         {
-            var mo = new MutationObserver(function ()
+            var mo = new MutationObserver(function()
             {
                 if (document.getElementById("categoryDetails") || document.getElementById("cashCodeDetails") || document.getElementById("expressionDetails"))
                 {
@@ -205,9 +211,14 @@
             });
             try
             {
-                mo.observe(document.body, { childList: true, subtree: true });
+                mo.observe(document.body,
+                    {
+                        childList: true,
+                        subtree: true
+                    });
             }
-            catch (_) { }
+            catch (_)
+            {}
             return;
         }
 
@@ -231,26 +242,56 @@
 
         var basePath = "/Cash/CategoryTree";
 
+        function currentVersionId()
+        {
+            var config = document.getElementById("categoryTreeConfig");
+            if (config && config.dataset && config.dataset.versionId)
+            {
+                return config.dataset.versionId;
+            }
+
+            var details = document.getElementById("expressionDetails") ||
+                document.getElementById("cashCodeDetails") ||
+                document.getElementById("categoryDetails");
+            if (details && details.getAttribute("data-version-id"))
+            {
+                return details.getAttribute("data-version-id");
+            }
+
+            return new URLSearchParams(window.location.search || "").get("versionId") || "";
+        }
+
         function currentContext()
         {
-            var el = document.getElementById("expressionDetails")
-                || document.getElementById("cashCodeDetails")
-                || document.getElementById("categoryDetails");
+            var el = document.getElementById("expressionDetails") ||
+                document.getElementById("cashCodeDetails") ||
+                document.getElementById("categoryDetails");
 
             if (!el)
             {
-                return { key: "", parentKey: "", nodeType: "" };
+                return {
+                    key: "",
+                    parentKey: "",
+                    nodeType: "",
+                    isTotal: false
+                };
             }
             return {
                 key: el.getAttribute("data-key") || "",
                 parentKey: el.getAttribute("data-parent-key") || "",
-                nodeType: el.getAttribute("data-node-type") || ""
+                nodeType: el.getAttribute("data-node-type") || "",
+                isTotal: el.getAttribute("data-total") === "1"
             };
         }
 
         function nav(pageName, key, parentKey, extras)
         {
             var parts = [];
+            var versionId = currentVersionId();
+            if (versionId)
+            {
+                parts.push("versionId=" + encodeURIComponent(versionId));
+            }
             if (key)
             {
                 parts.push("key=" + encodeURIComponent(key));
@@ -298,15 +339,16 @@
                 xhr.setRequestHeader("RequestVerificationToken", token);
             }
 
-            xhr.onreadystatechange = function ()
+            xhr.onreadystatechange = function()
             {
                 if (xhr.readyState === 4)
                 {
                     if (xhr.status === 200)
                     {
-                        var redirect = basePath + "/Index?select=" + encodeURIComponent(key)
-                            + "&key=" + encodeURIComponent(key)
-                            + "&expand=" + encodeURIComponent(parentKey || "");
+                        var redirect = basePath + "/Index?select=" + encodeURIComponent(key) +
+                            "&key=" + encodeURIComponent(key) +
+                            "&expand=" + encodeURIComponent(parentKey || "") +
+                            "&versionId=" + encodeURIComponent(currentVersionId());
                         window.location.href = redirect;
                     }
                     else
@@ -315,7 +357,8 @@
                     }
                 }
             };
-            xhr.send("key=" + encodeURIComponent(key) + "&enabled=" + newEnabled);
+            xhr.send("key=" + encodeURIComponent(key) + "&enabled=" + newEnabled +
+                "&versionId=" + encodeURIComponent(currentVersionId()));
         }
 
         function handleAction(action, ctx)
@@ -328,10 +371,11 @@
                     var url = basePath + "/Index";
                     if (selKey)
                     {
-                        url += "?select=" + encodeURIComponent(selKey)
-                            + "&key=" + encodeURIComponent(selKey)
-                            + "&expand=" + encodeURIComponent(expKey || "")
-                            + "&returnKey=" + encodeURIComponent(selKey);
+                        url += "?select=" + encodeURIComponent(selKey) +
+                            "&key=" + encodeURIComponent(selKey) +
+                            "&expand=" + encodeURIComponent(expKey || "") +
+                            "&returnKey=" + encodeURIComponent(selKey) +
+                            "&versionId=" + encodeURIComponent(currentVersionId());
                     }
                     window.location.href = url;
                     return;
@@ -344,6 +388,10 @@
                     else if (ctx.nodeType === "expression")
                     {
                         nav("EditExpression", ctx.key);
+                    }
+                    else if (ctx.isTotal)
+                    {
+                        nav("EditTotal", ctx.key, ctx.parentKey);
                     }
                     else
                     {
@@ -409,7 +457,7 @@
             }
         }
 
-        document.addEventListener("click", function (e)
+        document.addEventListener("click", function(e)
         {
             var btn = e.target.closest("#expressionDetails [data-action], #cashCodeDetails [data-action], #categoryDetails [data-action]");
             if (!btn)
@@ -433,30 +481,35 @@
                 return;
             }
             handleAction(action, ctx);
-        }, { passive: false });
+        },
+        {
+            passive: false
+        });
     })();
 
     // Init
     if (window.jQuery && window.jQuery.fn)
     {
-        window.jQuery(function ()
+        window.jQuery(function()
         {
             try
             {
                 bindDetailsActionAliases();
             }
-            catch (_) { }
+            catch (_)
+            {}
         });
     }
     else
     {
-        document.addEventListener("DOMContentLoaded", function ()
+        document.addEventListener("DOMContentLoaded", function()
         {
             try
             {
                 bindDetailsActionAliases();
             }
-            catch (_) { }
+            catch (_)
+            {}
         });
     }
 

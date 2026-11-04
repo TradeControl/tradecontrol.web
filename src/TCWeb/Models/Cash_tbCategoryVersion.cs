@@ -48,8 +48,6 @@ public sealed class Cash_tbCategoryVersion
     [Required, StringLength(10)]
     public string CreatedByUserId { get; set; } = string.Empty;
 
-    [Timestamp]
-    public byte[] RowVer { get; set; } = [];
 }
 
 [Table("tbCategoryVersionEvent", Schema = "Cash")]

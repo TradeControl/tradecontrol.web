@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -14,7 +15,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize(Roles = "Administrators")]
     public class AddCategoryModel : DI_BasePageModel
     {
-        public AddCategoryModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public AddCategoryModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = string.Empty;
 
         [BindProperty]
         public string ParentKey { get; set; }
@@ -47,7 +57,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var parent = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == parentKey)
+                    .Where(c => c.VersionId == VersionId && c.CategoryCode == parentKey)
                     .Select(c => new { c.CategoryCode, c.CategoryTypeCode, c.IsEnabled })
                     .FirstOrDefaultAsync();
 
@@ -78,11 +88,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
+                ErrorMessage = CategoryTreeCommandFeedback.From(ex);
                 ParentKey = parentKey;
                 await PopulateOptionsAsync(null);
                 return embed
-                    ? Content("<div class='text-danger small p-2'>Server error</div>")
+                    ? Content($"<div class='text-danger small p-2'>{System.Net.WebUtility.HtmlEncode(ErrorMessage)}</div>")
                     : Page();
             }
         }
@@ -131,7 +141,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var parent = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == ParentKey)
+                    .Where(c => c.VersionId == VersionId && c.CategoryCode == ParentKey)
                     .Select(c => new { c.CategoryCode, c.CategoryTypeCode, c.IsEnabled })
                     .FirstOrDefaultAsync();
 
@@ -150,7 +160,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 }
 
                 var child = await NodeContext.Cash_tbCategories
-                    .Where(c => c.CategoryCode == ChildKey)
+                    .Where(c => c.VersionId == VersionId && c.CategoryCode == ChildKey)
                     .Select(c => new {
                         c.CategoryCode,
                         c.CategoryTypeCode,
@@ -176,7 +186,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 // Already attached: idempotent success
                 var exists = await NodeContext.Cash_tbCategoryTotals
-                    .AnyAsync(t => t.ParentCode == ParentKey && t.ChildCode == ChildKey);
+                    .AnyAsync(t => t.VersionId == VersionId
+                        && t.ParentCode == ParentKey && t.ChildCode == ChildKey);
 
                 // Decide add vs move for the Add action
                 var childRoots = await GetRootAncestorsAsync(ChildKey);
@@ -189,7 +200,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     // Prevent cycles (ensure ParentKey is not a descendant of ChildKey)
                     var parentMap = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ChildCode != null && t.ParentCode != null)
+                        .Where(t => t.VersionId == VersionId
+                            && t.ChildCode != null && t.ParentCode != null)
                         .GroupBy(t => t.ChildCode)
                         .Select(g => new {
                             Child = g.Key,
@@ -205,14 +217,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         return Page();
                     }
 
-                    await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
+                    var totals = new List<CategoryTreeTotalCommand>();
                     if (sameTree)
                     {
                         // Remove one existing edge for this child that belongs to the same tree as the target.
                         // (If none, this degenerates to a pure add.)
                         var existingParents = await NodeContext.Cash_tbCategoryTotals
-                            .Where(t => t.ChildCode == ChildKey)
+                            .Where(t => t.VersionId == VersionId && t.ChildCode == ChildKey)
                             .Select(t => t.ParentCode)
                             .ToListAsync();
 
@@ -233,38 +244,33 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                         if (!string.IsNullOrWhiteSpace(oldParentInSameTree))
                         {
-                            await NodeContext.Cash_tbCategoryTotals
-                                .Where(t => t.ParentCode == oldParentInSameTree && t.ChildCode == ChildKey)
-                                .ExecuteDeleteAsync();
+                            totals.Add(new CategoryTreeTotalCommand(VersionId, oldParentInSameTree,
+                                ChildKey, 0, true, "Category moved."));
                         }
                     }
 
                     // Normalize any zero display orders under new parent
                     var existingUnderNew = await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == ParentKey)
+                        .Where(t => t.VersionId == VersionId && t.ParentCode == ParentKey)
                         .OrderBy(t => t.DisplayOrder)
                         .ToListAsync();
 
                     if (existingUnderNew.Any(e => e.DisplayOrder == 0))
                     {
-                        short i = 1;
-                        foreach (var row in existingUnderNew)
-                            row.DisplayOrder = i++;
-                        await NodeContext.SaveChangesAsync();
+                        totals.AddRange(existingUnderNew.Select((row, index) =>
+                            new CategoryTreeTotalCommand(VersionId, ParentKey, row.ChildCode,
+                                (short)(index + 1), false, "Sibling order normalised.")));
                     }
 
                     short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == ParentKey)
+                        .Where(t => t.VersionId == VersionId && t.ParentCode == ParentKey)
                         .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
-                        ParentCode = ParentKey,
-                        ChildCode = ChildKey,
-                        DisplayOrder = nextOrder
-                    });
-
-                    await NodeContext.SaveChangesAsync();
-                    await tx.CommitAsync();
+                    totals.Add(new CategoryTreeTotalCommand(VersionId, ParentKey, ChildKey,
+                        nextOrder, false, "Category attached."));
+                    await CategoryTreeService.ApplyBatchAsync(new CategoryTreeMutationBatchCommand(
+                        VersionId, Array.Empty<CategoryTreeCategoryCommand>(), totals,
+                        Array.Empty<CategoryTreeCashCodeMoveCommand>()));
                 }
 
                 ChildName = child.Category;
@@ -276,15 +282,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return Page();
 
                 return RedirectToPage("/Cash/CategoryTree/Index",
-                    new { select = ChildKey, parentKey = ParentKey, expand = ParentKey });
+                    new { versionId = VersionId, select = ChildKey, parentKey = ParentKey,
+                        expand = ParentKey });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ErrorMessage = "Server error.";
+                ErrorMessage = CategoryTreeCommandFeedback.From(ex);
                 await PopulateOptionsAsync(ChildKey);
                 return isEmbedded
-                    ? Content("<div class='text-danger small p-2'>Server error</div>")
+                    ? Content($"<div class='text-danger small p-2'>{System.Net.WebUtility.HtmlEncode(ErrorMessage)}</div>")
                     : Page();
             }
         }
@@ -293,7 +300,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         {
             var edges = await NodeContext.Cash_tbCategoryTotals
                 .AsNoTracking()
-                .Where(t => t.ParentCode != null && t.ChildCode != null)
+                .Where(t => t.VersionId == VersionId && t.ParentCode != null && t.ChildCode != null)
                 .Select(t => new { t.ParentCode, t.ChildCode })
                 .ToListAsync();
 
@@ -338,7 +345,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             if (!string.IsNullOrWhiteSpace(ParentKey))
             {
                 var attachedList = await NodeContext.Cash_tbCategoryTotals
-                    .Where(t => t.ParentCode == ParentKey)
+                    .Where(t => t.VersionId == VersionId && t.ParentCode == ParentKey)
                     .Select(t => t.ChildCode)
                     .ToListAsync();
                 attached = new HashSet<string>(attachedList, StringComparer.OrdinalIgnoreCase);
@@ -349,7 +356,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             var rows = await (from c in NodeContext.Cash_tbCategories
                               join ct in NodeContext.Cash_tbTypes on c.CashTypeCode equals ct.CashTypeCode
-                              where c.IsEnabled != 0
+                              where c.VersionId == VersionId && c.IsEnabled != 0
                                  && c.CategoryTypeCode != expressionType
                               select new {
                                   c.CategoryCode,

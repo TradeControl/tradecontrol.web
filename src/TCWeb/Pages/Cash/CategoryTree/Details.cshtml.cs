@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TCExports.Generator.CashStatement;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -13,8 +14,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize]
     public class TreeDetailsModel : DI_BasePageModel
     {
-        public TreeDetailsModel(NodeContext context) : base(context)
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public TreeDetailsModel(NodeContext context, ICategoryTreeChangeControlService categoryTreeService)
+            : base(context)
         {
+            CategoryTreeService = categoryTreeService;
         }
 
         public string NodeType { get; private set; } = "";
@@ -23,8 +28,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public ExpressionDetailsVm Expression { get; set; }
 
         public CashCodeListByPolarityVm CashCodes { get; private set; }
+        public CategoryTreeWorkspaceContext Workspace { get; private set; }
+        public CategoryTreeVersionWorkspaceVm VersionWorkspace { get; private set; }
 
-        public async Task<IActionResult> OnGetAsync(string key, string parentKey = null)
+        public async Task<IActionResult> OnGetAsync(string key, string parentKey = null,
+            string versionId = null)
         {
             try
             {
@@ -33,11 +41,22 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return NotFound();
                 }
 
+                Workspace = await CategoryTreeService.GetWorkspaceAsync(versionId,
+                    HttpContext.RequestAborted);
+                var workspaceVersionId = Workspace.SelectedVersion.VersionId;
+
                 var helper = new CashCodes(NodeContext);
 
+                if (string.Equals(key, CategoryTreeModel.RootNodeKey, StringComparison.Ordinal))
+                {
+                    NodeType = "versionWorkspace";
+                    VersionWorkspace = await BuildVersionWorkspaceAsync();
+                    await SetViewData();
+                    return Page();
+                }
+
                 var isSyntheticCashCodeListKey =
-                    string.Equals(key, CategoryTreeModel.RootNodeKey, StringComparison.Ordinal)
-                    || string.Equals(key, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal)
+                    string.Equals(key, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal)
                     || string.Equals(key, "__TYPE_ROOT__", StringComparison.Ordinal);
 
                 // Exclude Expressions synthetic root
@@ -45,16 +64,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     NodeType = "cashCodeList";
 
-                    var grouped = await NodeContext.Cash_Codes
-                        .OrderBy(t => t.CashCode)
-                        .Select(t => new {
-                            t.CashCode,
-                            t.CashDescription,
-                            t.Category,
-                            t.CashPolarityCode,
-                            t.IsCashEnabled,
-                            t.IsCategoryEnabled
-                        })
+                    var grouped = await (from map in NodeContext.Cash_tbCategoryCodeMaps.AsNoTracking()
+                                         join code in NodeContext.Cash_tbCodes.AsNoTracking()
+                                             on map.CashCode equals code.CashCode
+                                         join category in NodeContext.Cash_tbCategories.AsNoTracking()
+                                             on new { map.VersionId, map.CategoryCode }
+                                             equals new { category.VersionId, category.CategoryCode }
+                                         where map.VersionId == workspaceVersionId
+                                         orderby code.CashCode
+                                         select new
+                                         {
+                                             code.CashCode,
+                                             code.CashDescription,
+                                             category.Category,
+                                             category.CashPolarityCode,
+                                             IsCashEnabled = code.IsEnabled != 0,
+                                             IsCategoryEnabled = category.IsEnabled != 0
+                                         })
                         .ToListAsync();
 
                     CashCodes = new CashCodeListByPolarityVm {
@@ -98,11 +124,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     NodeType = "code";
                     var cashCode = key.Substring("code:".Length);
 
-                    var vm = await (from code in NodeContext.Cash_tbCodes
-                                    join cat in NodeContext.Cash_tbCategories on code.CategoryCode equals cat.CategoryCode
+                    var vm = await (from map in NodeContext.Cash_tbCategoryCodeMaps
+                                    join code in NodeContext.Cash_tbCodes on map.CashCode equals code.CashCode
+                                    join cat in NodeContext.Cash_tbCategories
+                                        on new { map.VersionId, map.CategoryCode }
+                                        equals new { cat.VersionId, cat.CategoryCode }
                                     join pol in NodeContext.Cash_tbPolaritys on cat.CashPolarityCode equals pol.CashPolarityCode
                                     join typ in NodeContext.Cash_tbTypes on cat.CashTypeCode equals typ.CashTypeCode
-                                    where code.CashCode == cashCode
+                                    where map.VersionId == workspaceVersionId && code.CashCode == cashCode
                                     select new CashCodeDetailsVm {
                                         CashCode = code.CashCode,
                                         CashDescription = code.CashDescription,
@@ -120,7 +149,12 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         return NotFound();
                     }
 
-                    vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
+                    vm.VersionId = workspaceVersionId;
+                    vm.Namespace = await helper.GetCategoryNamespace(workspaceVersionId,
+                        vm.CategoryCode, parentKey);
+                    vm.CanEditMaster = User.IsInRole(TradeControl.Web.Authorization.Constants.AdministratorsRole)
+                        && Workspace.SelectedVersion.IsActive
+                        && Workspace.SelectedVersion.Status == NodeEnum.CategoryVersionStatus.Published;
 
                     Code = vm;
                 }
@@ -137,7 +171,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                      join s in NodeContext.Cash_tbCategoryExpSyntax.AsNoTracking()
                                          on e.SyntaxTypeCode equals s.SyntaxTypeCode into syntaxRows
                                      from s in syntaxRows.DefaultIfEmpty()
-                                     where c.CategoryCode == categoryCode
+                                     where c.VersionId == workspaceVersionId
+                                           && c.CategoryCode == categoryCode
                                            && c.CategoryTypeCode == (short)NodeEnum.CategoryType.Expression
                                      select new {
                                          c.CategoryCode,
@@ -153,6 +188,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     // nullable in SQL; projecting it through a CASE expression made SqlClient call
                     // GetString on NULL before C# could supply an empty value.
                     var exp = new ExpressionDetailsVm {
+                        VersionId = workspaceVersionId,
                         CategoryCode = row.CategoryCode,
                         Category = row.Category,
                         Expression = row.ExpressionRow?.Expression ?? string.Empty,
@@ -166,11 +202,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     {
                         var displayTranslation = CashStatementExpressionTranslator.ForDisplay(
                             exp.Expression,
-                            await LoadExpressionReferencesAsync());
+                            await LoadExpressionReferencesAsync(workspaceVersionId));
                         exp.Expression = displayTranslation.Expression;
                     }
 
                     NodeType = "expression";
+                    exp.CanEditCategory = Workspace.SelectedVersion.Capabilities.CanEditTree;
+                    exp.CanManageMetadata = User.IsInRole(
+                        TradeControl.Web.Authorization.Constants.AdministratorsRole);
+                    exp.ContextNotice = Workspace.SelectedVersion.IsActive
+                        ? "Expression text is current BI metadata and is not versioned with the tree."
+                        : $"Expression text is current BI metadata parsed against {workspaceVersionId}; it is not historical content from this tree version.";
                     Expression = exp;
                 }
                 else
@@ -181,7 +223,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                                     join p in NodeContext.Cash_tbPolaritys on c.CashPolarityCode equals p.CashPolarityCode
                                     join t in NodeContext.Cash_tbTypes on c.CashTypeCode equals t.CashTypeCode
                                     join ct in NodeContext.Cash_tbCategoryTypes on c.CategoryTypeCode equals ct.CategoryTypeCode
-                                    where c.CategoryCode == key
+                                    where c.VersionId == workspaceVersionId && c.CategoryCode == key
                                     select new CategoryDetailsVm {
                                         CategoryCode = c.CategoryCode,
                                         Category = c.Category,
@@ -197,9 +239,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         return NotFound();
                     }
 
-                    vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ParentCode == vm.CategoryCode).CountAsync();
-                    vm.CodesCount = await NodeContext.Cash_tbCodes.Where(cd => cd.CategoryCode == vm.CategoryCode).CountAsync();
-                    vm.ParentCount = await NodeContext.Cash_tbCategoryTotals.Where(t => t.ChildCode == vm.CategoryCode).CountAsync();
+                    vm.VersionId = workspaceVersionId;
+                    vm.CanEditTree = Workspace.SelectedVersion.Capabilities.CanEditTree;
+                    vm.CanCreateCashCode = User.IsInRole(
+                            TradeControl.Web.Authorization.Constants.AdministratorsRole)
+                        && Workspace.SelectedVersion.IsActive
+                        && Workspace.SelectedVersion.Status == NodeEnum.CategoryVersionStatus.Published;
+
+                    vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.VersionId == workspaceVersionId && t.ParentCode == vm.CategoryCode)
+                        .CountAsync();
+                    vm.CodesCount = await NodeContext.Cash_tbCategoryCodeMaps
+                        .Where(map => map.VersionId == workspaceVersionId
+                            && map.CategoryCode == vm.CategoryCode)
+                        .CountAsync();
+                    vm.ParentCount = await NodeContext.Cash_tbCategoryTotals
+                        .Where(t => t.VersionId == workspaceVersionId && t.ChildCode == vm.CategoryCode)
+                        .CountAsync();
 
                     vm.IsRootNode = vm.ParentCount == 0;
 
@@ -209,12 +265,17 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     vm.IsRootContext = (effectiveParentKey == null) && vm.IsRootNode;
 
-                    var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
-                    vm.IsProfitRoot = options != null && string.Equals(options.NetProfitCode, vm.CategoryCode, StringComparison.Ordinal);
-                    vm.IsVatRoot = options != null && string.Equals(options.VatCategoryCode, vm.CategoryCode, StringComparison.Ordinal);
+                    var roots = await NodeContext.Cash_tbCategoryRoots
+                        .Where(root => root.VersionId == workspaceVersionId
+                            && root.CategoryCode == vm.CategoryCode)
+                        .Select(root => root.RootTypeCode)
+                        .ToListAsync();
+                    vm.IsProfitRoot = roots.Contains(0);
+                    vm.IsVatRoot = roots.Contains(1);
 
-                    var presentOnPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
-                        .AnyAsync(v => v.ChildCode == vm.CategoryCode);
+                    var presentOnPrimary = Workspace.SelectedVersion.IsActive
+                        && await NodeContext.Cash_vwCategoryPrimaryParents
+                            .AnyAsync(v => v.ChildCode == vm.CategoryCode);
 
                     if (effectiveParentKey == null)
                     {
@@ -225,20 +286,26 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     else
                     {
                         vm.IsCategoryInPrimary = presentOnPrimary;
-                        vm.IsContextInPrimary = await NodeContext.Cash_vwCategoryPrimaryParents
+                        vm.IsContextInPrimary = Workspace.SelectedVersion.IsActive
+                            && await NodeContext.Cash_vwCategoryPrimaryParents
                             .AnyAsync(v => v.ChildCode == vm.CategoryCode && v.ParentCode == effectiveParentKey);
 
-                        vm.PrimaryKind = await NodeContext.Cash_vwCategoryPrimaryParents
-                            .Where(v => v.ChildCode == vm.CategoryCode && v.ParentCode == effectiveParentKey)
-                            .Select(v => v.PrimaryKind)
-                            .FirstOrDefaultAsync() ?? "";
+                        vm.PrimaryKind = Workspace.SelectedVersion.IsActive
+                            ? await NodeContext.Cash_vwCategoryPrimaryParents
+                                .Where(v => v.ChildCode == vm.CategoryCode && v.ParentCode == effectiveParentKey)
+                                .Select(v => v.PrimaryKind)
+                                .FirstOrDefaultAsync() ?? ""
+                            : "";
                     }
 
-                    vm.PrimaryParentCount = await NodeContext.Cash_vwCategoryPrimaryParents
-                        .Where(v => v.ChildCode == vm.CategoryCode)
-                        .CountAsync();
+                    vm.PrimaryParentCount = Workspace.SelectedVersion.IsActive
+                        ? await NodeContext.Cash_vwCategoryPrimaryParents
+                            .Where(v => v.ChildCode == vm.CategoryCode)
+                            .CountAsync()
+                        : 0;
 
-                    vm.Namespace = await helper.GetCategoryNamespace(vm.CategoryCode, parentKey);
+                    vm.Namespace = await helper.GetCategoryNamespace(workspaceVersionId,
+                        vm.CategoryCode, parentKey);
 
                     bool isDisconnectedContext = string.Equals(parentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal);
 
@@ -262,23 +329,94 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             }
         }
 
-        private async Task<IReadOnlyList<CashStatementCategoryReference>> LoadExpressionReferencesAsync()
+        private async Task<IReadOnlyList<CashStatementCategoryReference>> LoadExpressionReferencesAsync(
+            string versionId)
         {
             var categories = await NodeContext.Cash_tbCategories
                 .AsNoTracking()
+                .Where(category => category.VersionId == versionId)
                 .Select(category => new CashStatementCategoryReference(
                     category.CategoryCode,
                     category.Category,
                     CashStatementReferenceKind.Category))
                 .ToListAsync();
-            var cashCodes = await NodeContext.Cash_tbCodes
-                .AsNoTracking()
-                .Select(code => new CashStatementCategoryReference(
+            var cashCodes = await (from map in NodeContext.Cash_tbCategoryCodeMaps.AsNoTracking()
+                                   join code in NodeContext.Cash_tbCodes.AsNoTracking()
+                                       on map.CashCode equals code.CashCode
+                                   where map.VersionId == versionId
+                                   select new CashStatementCategoryReference(
                     code.CashCode,
                     code.CashDescription,
                     CashStatementReferenceKind.CashCode))
                 .ToListAsync();
             return categories.Concat(cashCodes).ToList();
+        }
+
+        private async Task<CategoryTreeVersionWorkspaceVm> BuildVersionWorkspaceAsync()
+        {
+            var snapshots = Workspace.Versions.ToDictionary(version => version.VersionId,
+                _ => new CategoryTreeVersionSnapshotVm(), StringComparer.Ordinal);
+
+            var categoryCounts = await NodeContext.Cash_tbCategories
+                .AsNoTracking()
+                .GroupBy(category => category.VersionId)
+                .Select(group => new { VersionId = group.Key, Count = group.Count() })
+                .ToListAsync();
+            foreach (var count in categoryCounts)
+            {
+                if (snapshots.TryGetValue(count.VersionId, out var snapshot))
+                    snapshot.CategoryCount = count.Count;
+            }
+
+            var edgeCounts = await NodeContext.Cash_tbCategoryTotals
+                .AsNoTracking()
+                .GroupBy(total => total.VersionId)
+                .Select(group => new { VersionId = group.Key, Count = group.Count() })
+                .ToListAsync();
+            foreach (var count in edgeCounts)
+            {
+                if (snapshots.TryGetValue(count.VersionId, out var snapshot))
+                    snapshot.EdgeCount = count.Count;
+            }
+
+            var cashCodeCounts = await NodeContext.Cash_tbCategoryCodeMaps
+                .AsNoTracking()
+                .GroupBy(map => map.VersionId)
+                .Select(group => new { VersionId = group.Key, Count = group.Count() })
+                .ToListAsync();
+            foreach (var count in cashCodeCounts)
+            {
+                if (snapshots.TryGetValue(count.VersionId, out var snapshot))
+                    snapshot.CashCodeCount = count.Count;
+            }
+
+            var roots = await (from root in NodeContext.Cash_tbCategoryRoots.AsNoTracking()
+                               join category in NodeContext.Cash_tbCategories.AsNoTracking()
+                                   on new { root.VersionId, root.CategoryCode }
+                                   equals new { category.VersionId, category.CategoryCode }
+                               select new
+                               {
+                                   root.VersionId,
+                                   root.RootTypeCode,
+                                   Name = category.Category + " (" + category.CategoryCode + ")"
+                               }).ToListAsync();
+            foreach (var root in roots)
+            {
+                if (!snapshots.TryGetValue(root.VersionId, out var snapshot))
+                    continue;
+                if (root.RootTypeCode == (short)NodeEnum.CategoryRootType.NetProfit)
+                    snapshot.ProfitRoot = root.Name;
+                else if (root.RootTypeCode == (short)NodeEnum.CategoryRootType.Vat)
+                    snapshot.VatRoot = root.Name;
+            }
+
+            return new CategoryTreeVersionWorkspaceVm
+            {
+                Workspace = Workspace,
+                Review = await CategoryTreeService.GetReviewAsync(
+                    Workspace.SelectedVersion.VersionId, HttpContext.RequestAborted),
+                Snapshots = snapshots
+            };
         }
     }
 }

@@ -16,9 +16,11 @@
 
         <form method="post"
               asp-page="./CreateExpression"
+              asp-route-versionId="@Model.VersionId"
               asp-route-embed="@(embed ? "1" : null)"
               asp-route-parentKey="__EXPRESSIONS__">
             @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="VersionId" />
 
             @if (embed)
             {

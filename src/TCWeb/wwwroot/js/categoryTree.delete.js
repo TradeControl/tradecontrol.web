@@ -1,5 +1,22 @@
-(function ()
+(function()
 {
+    function appendQuery(url, key, value)
+    {
+        var separator = url.indexOf("?") === -1 ? "?" : "&";
+        return url + separator + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+    }
+
+    function workspaceUrl(url)
+    {
+        var config = document.getElementById("categoryTreeConfig");
+        var versionId = config && config.dataset ? (config.dataset.versionId || "") : "";
+        if (!versionId)
+        {
+            versionId = new URLSearchParams(window.location.search || "").get("versionId") || "";
+        }
+        return versionId ? appendQuery(url, "versionId", versionId) : url;
+    }
+
     // ----------- Tree helpers -----------
     function getTree()
     {
@@ -21,11 +38,12 @@
 
     function detailsUrlFor(key, parentKey)
     {
-        var u = "/Cash/CategoryTree/Details?key=" + encodeURIComponent(key || "");
-        u += "&embed=1";
+        var u = workspaceUrl("/Cash/CategoryTree/Details");
+        u = appendQuery(u, "key", key || "");
+        u = appendQuery(u, "embed", "1");
         if (parentKey)
         {
-            u += "&parentKey=" + encodeURIComponent(parentKey);
+            u = appendQuery(u, "parentKey", parentKey);
         }
         return u;
     }
@@ -40,23 +58,25 @@
                 return;
             }
 
-            fetch(detailsUrlFor(key, parentKey), { credentials: "same-origin" })
-                .then(function (r)
+            fetch(detailsUrlFor(key, parentKey),
+                {
+                    credentials: "same-origin"
+                })
+                .then(function(r)
                 {
                     return r.text();
                 })
-                .then(function (html)
+                .then(function(html)
                 {
                     pane.innerHTML = html;
                 })
-                .catch(function ()
+                .catch(function()
                 {
                     // silent
                 });
         }
         catch (_)
-        {
-        }
+        {}
     }
 
     // ----------- Confirm checkbox -> Delete button wiring -----------
@@ -111,8 +131,7 @@
                     b.disabled = !enabled;
                 }
                 catch (_)
-                {
-                }
+                {}
             }
         }
 
@@ -145,24 +164,31 @@
     function postJson(form, payload, callback)
     {
         var token =
-            (form.querySelector('input[name="__RequestVerificationToken"]') || {}).value
-            || (document.querySelector('meta[name="request-verification-token"]') || {}).content
-            || "";
+            (form.querySelector('input[name="__RequestVerificationToken"]') ||
+            {}).value ||
+            (document.querySelector('meta[name="request-verification-token"]') ||
+            {}).content ||
+            "";
 
-        fetch(form.action, {
-            method: "POST",
-            body: payload,
-            credentials: "same-origin",
-            headers: token ? { "RequestVerificationToken": token } : {}
-        })
-            .then(function (resp)
+        fetch(form.action,
+            {
+                method: "POST",
+                body: payload,
+                credentials: "same-origin",
+                headers: token ?
+                    {
+                        "RequestVerificationToken": token
+                    } :
+                    {}
+            })
+            .then(function(resp)
             {
                 var ct = (resp.headers.get("content-type") || "").toLowerCase();
                 if (ct.indexOf("application/json") >= 0)
                 {
                     return resp.json();
                 }
-                return resp.text().then(function (t)
+                return resp.text().then(function(t)
                 {
                     try
                     {
@@ -170,15 +196,18 @@
                     }
                     catch (_)
                     {
-                        return { success: false, message: "Unexpected response." };
+                        return {
+                            success: false,
+                            message: "Unexpected response."
+                        };
                     }
                 });
             })
-            .then(function (data)
+            .then(function(data)
             {
                 callback(null, data);
             })
-            .catch(function (err)
+            .catch(function(err)
             {
                 callback(err);
             });
@@ -193,7 +222,7 @@
             return;
         }
 
-        form.addEventListener("submit", function (e)
+        form.addEventListener("submit", function(e)
         {
             e.preventDefault();
             e.stopPropagation();
@@ -208,8 +237,10 @@
 
             var fd = new FormData();
             fd.append("key", key);
+            var versionInput = form.querySelector('input[name="versionId"], input[name="VersionId"]');
+            fd.append("versionId", versionInput ? (versionInput.value || "") : "");
 
-            postJson(form, fd, function (err, data)
+            postJson(form, fd, function(err, data)
             {
                 if (err || !data || data.success !== true)
                 {
@@ -232,8 +263,7 @@
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
 
                 if (!parentKey)
                 {
@@ -267,8 +297,7 @@
                                     p.reloadChildren();
                                 }
                                 catch (_)
-                                {
-                                }
+                                {}
                             }
                             if (p && p.setActive)
                             {
@@ -277,8 +306,7 @@
                                     p.setActive(true);
                                 }
                                 catch (_)
-                                {
-                                }
+                                {}
                             }
                         }
                     }
@@ -287,15 +315,15 @@
                         // No tree present (mobile/full-page) → go back to Index selecting parent
                         if (parentKey)
                         {
-                            var url1 = "/Cash/CategoryTree/Index?key=" + encodeURIComponent(parentKey);
+                            var url1 = workspaceUrl("/Cash/CategoryTree/Index");
+                            url1 = appendQuery(url1, "key", parentKey);
                             window.location.href = url1;
                             return;
                         }
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
 
                 if (parentKey)
                 {
@@ -315,7 +343,7 @@
 
     // Desktop embedded delete: remove node and select its parent without full reload.
     // Reuses existing tree utilities; does NOT duplicate deletion logic (server already deleted).
-    (function ()
+    (function()
     {
         try
         {
@@ -359,8 +387,7 @@
                     node.remove();
                 }
                 catch (_)
-                {
-                }
+                {}
             }
 
             if (parentNode)
@@ -370,8 +397,7 @@
                     parentNode.makeVisible();
                 }
                 catch (_)
-                {
-                }
+                {}
                 try
                 {
                     parentNode.setActive(true);
@@ -381,8 +407,7 @@
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
             }
         }
         catch (_)
@@ -390,7 +415,6 @@
             // silent
         }
     })();
-
 
     // ----------- Delete Category -----------
     function handleDeleteCategory()
@@ -401,7 +425,7 @@
             return;
         }
 
-        form.addEventListener("submit", function (e)
+        form.addEventListener("submit", function(e)
         {
             e.preventDefault();
             e.stopPropagation();
@@ -416,8 +440,10 @@
 
             var fd = new FormData();
             fd.append("key", key);
+            var versionInput = form.querySelector('input[name="versionId"], input[name="VersionId"]');
+            fd.append("versionId", versionInput ? (versionInput.value || "") : "");
 
-            postJson(form, fd, function (err, data)
+            postJson(form, fd, function(err, data)
             {
                 if (err || !data || data.success !== true)
                 {
@@ -441,14 +467,17 @@
                         // No tree present (mobile/full-page) → go back to Index selecting root
                         var cfg = document.getElementById("categoryTreeConfig");
                         var fbKey = (cfg && cfg.dataset) ? (cfg.dataset.root || "") : "";
-                        var url2 = "/Cash/CategoryTree/Index" + (fbKey ? ("?key=" + encodeURIComponent(fbKey)) : "");
+                        var url2 = workspaceUrl("/Cash/CategoryTree/Index");
+                        if (fbKey)
+                        {
+                            url2 = appendQuery(url2, "key", fbKey);
+                        }
                         window.location.href = url2;
                         return;
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
 
                 var fallbackKey = "";
                 try
@@ -460,8 +489,7 @@
                     }
                 }
                 catch (_)
-                {
-                }
+                {}
 
                 if (fallbackKey)
                 {
@@ -476,8 +504,7 @@
                         }
                     }
                     catch (_)
-                    {
-                    }
+                    {}
                 }
                 else
                 {
@@ -500,7 +527,7 @@
             return;
         }
 
-        form.addEventListener("submit", function (e)
+        form.addEventListener("submit", function(e)
         {
             e.preventDefault();
             e.stopPropagation();
@@ -520,8 +547,10 @@
             var fd = new FormData();
             fd.append("parentKey", parentKey);
             fd.append("childKey", childKey);
+            var versionInput = form.querySelector('input[name="versionId"], input[name="VersionId"]');
+            fd.append("versionId", versionInput ? (versionInput.value || "") : "");
 
-            postJson(form, fd, function (err, data)
+            postJson(form, fd, function(err, data)
             {
                 if (err || !data || data.success !== true)
                 {
@@ -558,7 +587,8 @@
                                     {
                                         ch.remove();
                                     }
-                                    catch (_){}
+                                    catch (_)
+                                    {}
                                     break;
                                 }
                             }
@@ -570,7 +600,8 @@
                             {
                                 pNode.reloadChildren();
                             }
-                            catch (_){}
+                            catch (_)
+                            {}
                         }
 
                         if (pNode && pNode.setActive)
@@ -579,12 +610,12 @@
                             {
                                 pNode.setActive(true);
                             }
-                            catch (_){}
+                            catch (_)
+                            {}
                         }
                     }
                     catch (_)
-                    {
-                    }
+                    {}
 
                     if (pKey)
                     {
@@ -595,11 +626,11 @@
                 {
                     // Mobile/full page: include both select and key to maximize matching paths
                     // Add parentKey hint (expand) for deeper nodes; cache‑buster to avoid stale HTML.
-                    var url = "/Cash/CategoryTree/Index"
-                        + "?select=" + encodeURIComponent(pKey)
-                        + "&key=" + encodeURIComponent(pKey)
-                        + "&expand=" + encodeURIComponent(pKey)
-                        + "&_=" + Date.now();
+                    var url = workspaceUrl("/Cash/CategoryTree/Index");
+                    url = appendQuery(url, "select", pKey);
+                    url = appendQuery(url, "key", pKey);
+                    url = appendQuery(url, "expand", pKey);
+                    url = appendQuery(url, "_", Date.now());
                     window.location.href = url;
                 }
             });

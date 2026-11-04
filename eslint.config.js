@@ -6,7 +6,7 @@
 module.exports = [
   {
     files: ["**/wwwroot/js/**/*.js"],
-    ignores: ["**/bin/**", "**/obj/**", "**/wwwroot/lib/**"],
+    ignores: ["**/bin/**", "**/obj/**", "**/wwwroot/lib/**", "**/*.min.js", "**/bundle*.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "script",
@@ -19,8 +19,10 @@ module.exports = [
       },
     },
     rules: {
-      "brace-style": ["error", "allman", { "allowSingleLine": true }],
+      "brace-style": ["error", "allman", { "allowSingleLine": false }],
       "curly": ["error", "all"],
+      "indent": ["error", 4, { "SwitchCase": 1 }],
+      "no-trailing-spaces": "error",
     },
   },
 ];

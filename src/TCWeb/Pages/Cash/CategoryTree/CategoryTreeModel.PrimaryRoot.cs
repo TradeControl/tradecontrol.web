@@ -1,13 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
+using TradeControl.Web.AppServices.CategoryTree;
+using TradeControl.Web.Data;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
     public partial class CategoryTreeModel
     {
-        public async Task<JsonResult> OnPostSetPrimaryRootAsync([FromForm] string kind, [FromForm] string categoryCode)
+        public async Task<JsonResult> OnPostSetPrimaryRootAsync([FromForm] string kind,
+            [FromForm] string categoryCode, [FromForm] string versionId)
         {
             try
             {
@@ -21,41 +23,32 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 if (normalized != "PROFIT" && normalized != "VAT")
                     return new JsonResult(new { success = false, message = "Unknown kind (expected Profit or VAT)" });
 
-                // Validate category exists and enabled
-                var cat = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(c => c.CategoryCode == categoryCode && c.IsEnabled != 0);
-                if (cat == null)
-                    return new JsonResult(new { success = false, message = "Category not found or disabled" });
+                if (string.IsNullOrWhiteSpace(versionId))
+                    return new JsonResult(new { success = false, message = "Missing Category Tree version context" });
 
-                // Must be a true root: no parent edge; must participate as a parent at least once
-                var hasParent = await NodeContext.Cash_tbCategoryTotals.AnyAsync(t => t.ChildCode == categoryCode);
-                if (hasParent)
-                    return new JsonResult(new { success = false, message = "Only root categories (no parents) can be assigned" });
-
-                var isParentSomewhere = await NodeContext.Cash_tbCategoryTotals.AnyAsync(t => t.ParentCode == categoryCode);
-                if (!isParentSomewhere)
-                    return new JsonResult(new { success = false, message = "Category must be a parent in the totals graph to be a primary root" });
-
-                // Update via EF (portable)
-                var options = await NodeContext.App_tbOptions.FirstOrDefaultAsync();
-                if (options == null)
-                    return new JsonResult(new { success = false, message = "Options not initialised" });
-
-                if (normalized == "PROFIT")
-                    options.NetProfitCode = categoryCode;
-                else
-                    options.VatCategoryCode = categoryCode;
-
-                NodeContext.Attach(options).State = EntityState.Modified;
-                await NodeContext.SaveChangesAsync();
+                short rootTypeCode = normalized == "PROFIT"
+                    ? (short)NodeEnum.CategoryRootType.NetProfit
+                    : (short)NodeEnum.CategoryRootType.Vat;
+                var result = await CategoryTreeService.SetRootAsync(versionId, rootTypeCode,
+                    categoryCode, $"{kind} root changed to {categoryCode}.",
+                    HttpContext.RequestAborted);
 
                 await SetViewData();
-                return new JsonResult(new { success = true, message = $"{kind} primary root set to {categoryCode}" });
+                return new JsonResult(new
+                {
+                    success = true,
+                    message = $"{kind} primary root set to {categoryCode}",
+                    versionId = result.VersionId,
+                    status = result.Status?.ToString()
+                });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                return new JsonResult(new { success = false, message = "Server error" });
+                return new JsonResult(new {
+                    success = false,
+                    message = CategoryTreeCommandFeedback.From(ex)
+                });
             }
         }
     }

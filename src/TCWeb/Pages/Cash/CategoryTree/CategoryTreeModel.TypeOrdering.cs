@@ -3,266 +3,187 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using TradeControl.Web.AppServices.CategoryTree;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
 {
-    /// <summary>
-    /// Cash Type-based category ordering (DisplayOrder on Cash_tbCategories).
-    /// Only applies to CategoryTypeCode == 0 (Cash Code).
-    /// </summary>
     public partial class CategoryTreeModel
     {
         private const short CATEGORYTYPE_CASHCODE = 0;
 
-        // -------- Helpers (no handlers in this file) --------
-
         private static bool IsTypeParent(string parentKey)
         {
             return !string.IsNullOrWhiteSpace(parentKey)
-                   && parentKey.StartsWith("type:", StringComparison.OrdinalIgnoreCase);
+                && parentKey.StartsWith("type:", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// Normalize DisplayOrder for categories within a CashTypeCode (CategoryTypeCode == 0).
-        /// Ensures strictly unique positive sequence for DisplayOrder > 0, leaves 0 values as is (uninitialized).
-        /// Returns the max positive DisplayOrder after normalization.
-        /// </summary>
-        private async Task<short> NormalizeCategoryDisplayOrderByType(short cashTypeCode)
+        private async Task<JsonResult> ReorderCategoryByType(string versionId, string categoryCode,
+            bool moveUp)
         {
-            var list = await NodeContext.Cash_tbCategories
-                .Where(c => c.CashTypeCode == cashTypeCode && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE && c.DisplayOrder > 0)
-                .OrderBy(c => c.DisplayOrder)
-                .ThenBy(c => c.CategoryCode)
-                .ToListAsync();
-
-            short seq = 1;
-            bool changed = false;
-            foreach (var c in list)
+            var category = await NodeContext.Cash_tbCategories
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.VersionId == versionId
+                    && item.CategoryCode == categoryCode);
+            if (category is null)
             {
-                if (c.DisplayOrder != seq)
-                {
-                    c.DisplayOrder = seq;
-                    changed = true;
-                }
-                seq++;
-            }
-
-            if (changed)
-                await NodeContext.SaveChangesAsync();
-
-            return (short)(seq - 1);
-        }
-
-        /// <summary>
-        /// Reorder a category within its CashTypeCode. 0-sorted last. If moving into or from 0,
-        /// the category is assigned to the end of the initialized block (max+1).
-        /// </summary>
-        private async Task<JsonResult> ReorderCategoryByType(string categoryCode, bool moveUp)
-        {
-            var cat = await NodeContext.Cash_tbCategories
-                .Where(c => c.CategoryCode == categoryCode)
-                .Select(c => new
-                {
-                    c.CategoryCode,
-                    c.DisplayOrder,
-                    c.CashTypeCode,
-                    c.CategoryTypeCode
-                })
-                .FirstOrDefaultAsync();
-
-            if (cat == null)
                 return new JsonResult(new { success = false, message = "Category not found" });
+            }
 
-            if (cat.CategoryTypeCode != CATEGORYTYPE_CASHCODE)
-                return new JsonResult(new { success = false, message = "Only Cash Code categories can be reordered here" });
+            if (category.CategoryTypeCode != CATEGORYTYPE_CASHCODE)
+            {
+                return new JsonResult(new
+                {
+                    success = false,
+                    message = "Only Cash Code categories can be reordered here"
+                });
+            }
 
-            short maxPos = await NormalizeCategoryDisplayOrderByType(cat.CashTypeCode);
-
-            var all = await NodeContext.Cash_tbCategories
-                .Where(c => c.CashTypeCode == cat.CashTypeCode && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
-                .Select(c => new { c.CategoryCode, c.DisplayOrder })
+            var sequence = await NodeContext.Cash_tbCategories
+                .AsNoTracking()
+                .Where(item => item.VersionId == versionId
+                    && item.CashTypeCode == category.CashTypeCode
+                    && item.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
+                .OrderBy(item => item.DisplayOrder == 0)
+                .ThenBy(item => item.DisplayOrder)
+                .ThenBy(item => item.CategoryCode)
+                .Select(item => item.CategoryCode)
                 .ToListAsync();
 
-            var positives = all
-                .Where(x => x.DisplayOrder > 0)
-                .OrderBy(x => x.DisplayOrder)
-                .ToList();
-
-            var zerosExist = all.Any(x => x.DisplayOrder == 0);
-
-            var current = all.First(x => x.CategoryCode == categoryCode);
-            if (current.DisplayOrder == 0)
+            var index = sequence.IndexOf(categoryCode);
+            var target = moveUp ? index - 1 : index + 1;
+            if (index < 0 || target < 0 || target >= sequence.Count)
             {
-                var tracked = await NodeContext.Cash_tbCategories.SingleAsync(c => c.CategoryCode == categoryCode);
-                tracked.DisplayOrder = (short)(maxPos + 1);
-                await NodeContext.SaveChangesAsync();
-                return new JsonResult(new { success = true, message = "Assigned to end of list", categoryCode, displayOrder = tracked.DisplayOrder });
-            }
-
-            int index = positives.FindIndex(x => x.CategoryCode == categoryCode);
-            if (index < 0)
-                return new JsonResult(new { success = false, message = "Reorder failed: item not found in sequence" });
-
-            if (moveUp)
-            {
-                if (index == 0)
-                    return new JsonResult(new { success = true, message = "Already at top" });
-
-                var prev = positives[index - 1];
-
-                var curTracked = await NodeContext.Cash_tbCategories.SingleAsync(c => c.CategoryCode == categoryCode);
-                var prevTracked = await NodeContext.Cash_tbCategories.SingleAsync(c => c.CategoryCode == prev.CategoryCode);
-
-                short tmp = curTracked.DisplayOrder;
-                curTracked.DisplayOrder = prevTracked.DisplayOrder;
-                prevTracked.DisplayOrder = tmp;
-
-                await NodeContext.SaveChangesAsync();
-                return new JsonResult(new { success = true, moved = "up", categoryCode, displayOrder = curTracked.DisplayOrder });
-            }
-            else
-            {
-                if (index < positives.Count - 1)
+                return new JsonResult(new
                 {
-                    var next = positives[index + 1];
-
-                    var curTracked = await NodeContext.Cash_tbCategories.SingleAsync(c => c.CategoryCode == categoryCode);
-                    var nextTracked = await NodeContext.Cash_tbCategories.SingleAsync(c => c.CategoryCode == next.CategoryCode);
-
-                    short tmp = curTracked.DisplayOrder;
-                    curTracked.DisplayOrder = nextTracked.DisplayOrder;
-                    nextTracked.DisplayOrder = tmp;
-
-                    await NodeContext.SaveChangesAsync();
-                    return new JsonResult(new { success = true, moved = "down", categoryCode, displayOrder = curTracked.DisplayOrder });
-                }
-
-                if (zerosExist)
-                {
-                    var curTracked = await NodeContext.Cash_tbCategories.SingleAsync(c => c.CategoryCode == categoryCode);
-                    curTracked.DisplayOrder = (short)(maxPos + 1);
-                    await NodeContext.SaveChangesAsync();
-                    return new JsonResult(new { success = true, moved = "down", categoryCode, displayOrder = curTracked.DisplayOrder });
-                }
-
-                return new JsonResult(new { success = true, message = "Already at bottom" });
+                    success = true,
+                    message = moveUp ? "Already at top" : "Already at bottom"
+                });
             }
+
+            (sequence[index], sequence[target]) = (sequence[target], sequence[index]);
+            await SaveCategoryOrdersAsync(versionId,
+                sequence.Select((code, order) => (code, (short)(order + 1))),
+                "Cash Type categories reordered.");
+            return new JsonResult(new { success = true });
         }
 
-        // Admin-only: normalize all Cash Types (CategoryTypeCode == 0)
-        public async Task<JsonResult> OnPostUpgradeTypeOrderingAsync()
-        {
-            try
-            {
-                if (!IsAdmin())
-                    return new JsonResult(new { success = false, message = "Insufficient privileges" });
-
-                var types = await NodeContext.Cash_tbTypes
-                    .Select(t => t.CashTypeCode)
-                    .ToListAsync();
-
-                int normalizedTypes = 0;
-                foreach (var t in types)
-                {
-                    var maxPos = await NormalizeCategoryDisplayOrderByType(t);
-                    normalizedTypes++;
-                }
-
-                return new JsonResult(new { success = true, normalizedTypes });
-            }
-            catch (Exception e)
-            {
-                await NodeContext.ErrorLog(e);
-                return new JsonResult(new { success = false, message = e.Message });
-            }
-        }
-
-        // Reorder within a single Cash Type by placing 'key' before/after 'anchorKey'.
-        // Only applies to CategoryTypeCode == 0 (Cash Code) and enabled categories.
-        public async Task<JsonResult> OnPostReorderTypeAsync([FromForm] string key, [FromForm] string anchorKey, [FromForm] string mode)
+        public async Task<JsonResult> OnPostUpgradeTypeOrderingAsync([FromForm] string versionId)
         {
             if (!IsAdmin())
+            {
                 return new JsonResult(new { success = false, message = "Insufficient privileges" });
+            }
 
-            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(anchorKey))
-                return new JsonResult(new { success = false, message = "Missing parameters." });
-
-            mode = (mode ?? "").ToLowerInvariant();
-            if (mode != "before" && mode != "after")
-                return new JsonResult(new { success = false, message = "Invalid mode." });
+            if (string.IsNullOrWhiteSpace(versionId))
+            {
+                return new JsonResult(new { success = false, message = "Missing version." });
+            }
 
             try
             {
-                // Validate both categories exist, enabled, and are Cash Code type
-                var pair = await NodeContext.Cash_tbCategories
-                    .Where(c => (c.CategoryCode == key || c.CategoryCode == anchorKey)
-                                && c.IsEnabled != 0
-                                && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
-                    .Select(c => new { c.CategoryCode, c.CashTypeCode })
+                var groups = await NodeContext.Cash_tbCategories
+                    .AsNoTracking()
+                    .Where(item => item.VersionId == versionId
+                        && item.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
+                    .OrderBy(item => item.CashTypeCode)
+                    .ThenBy(item => item.DisplayOrder == 0)
+                    .ThenBy(item => item.DisplayOrder)
+                    .ThenBy(item => item.CategoryCode)
+                    .Select(item => new { item.CashTypeCode, item.CategoryCode })
                     .ToListAsync();
 
-                if (pair.Count != 2)
-                    return new JsonResult(new { success = false, message = "Category not found or disabled." });
-
-                var srcType = pair.First(p => p.CategoryCode == key).CashTypeCode;
-                var anchType = pair.First(p => p.CategoryCode == anchorKey).CashTypeCode;
-
-                if (srcType != anchType)
-                    return new JsonResult(new { success = false, message = "Categories are not in the same Cash Type." });
-
-                // Build current sequence for this Cash Type (zeros last)
-                var list = await NodeContext.Cash_tbCategories
-                    .Where(c => c.IsEnabled != 0
-                                && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE
-                                && c.CashTypeCode == srcType)
-                    .OrderBy(c => c.DisplayOrder == 0)   // false (non-zero) first, true (zero) last
-                    .ThenBy(c => c.DisplayOrder)
-                    .ThenBy(c => c.CategoryCode)
-                    .Select(c => new { c.CategoryCode, c.DisplayOrder })
-                    .ToListAsync();
-
-                var seq = list.Select(x => x.CategoryCode).ToList();
-                var srcIdx = seq.IndexOf(key);
-                var anchIdx = seq.IndexOf(anchorKey);
-
-                if (srcIdx < 0 || anchIdx < 0)
-                    return new JsonResult(new { success = false, message = "Sequence not found." });
-
-                // Remove source and insert relative to anchor
-                seq.RemoveAt(srcIdx);
-                var insertIdx = seq.IndexOf(anchorKey);
-                if (insertIdx < 0) insertIdx = 0;
-                if (mode == "after") insertIdx++;
-
-                if (insertIdx < 0) insertIdx = 0;
-                if (insertIdx > seq.Count) insertIdx = seq.Count;
-
-                seq.Insert(insertIdx, key);
-
-                // Persist a compact 1..N order for stability
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
-                short order = 1;
-                foreach (var code in seq)
+                var orders = groups
+                    .GroupBy(item => item.CashTypeCode)
+                    .SelectMany(group => group.Select((item, order) =>
+                        (item.CategoryCode, (short)(order + 1))))
+                    .ToArray();
+                await SaveCategoryOrdersAsync(versionId, orders,
+                    "Cash Type category ordering normalised.");
+                return new JsonResult(new
                 {
-                    await NodeContext.Cash_tbCategories
-                        .Where(c => c.CategoryCode == code
-                                    && c.CashTypeCode == srcType
-                                    && c.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
-                        .ExecuteUpdateAsync(s => s.SetProperty(c => c.DisplayOrder, order));
-                    order++;
+                    success = true,
+                    normalizedTypes = groups.Select(item => item.CashTypeCode).Distinct().Count()
+                });
+            }
+            catch (Exception exception)
+            {
+                await NodeContext.ErrorLog(exception);
+                return new JsonResult(new { success = false, message = exception.Message });
+            }
+        }
+
+        public async Task<JsonResult> OnPostReorderTypeAsync([FromForm] string versionId,
+            [FromForm] string key, [FromForm] string anchorKey, [FromForm] string mode)
+        {
+            if (!IsAdmin())
+            {
+                return new JsonResult(new { success = false, message = "Insufficient privileges" });
+            }
+
+            if (string.IsNullOrWhiteSpace(versionId) || string.IsNullOrWhiteSpace(key)
+                || string.IsNullOrWhiteSpace(anchorKey))
+            {
+                return new JsonResult(new { success = false, message = "Missing parameters." });
+            }
+
+            mode = (mode ?? string.Empty).ToLowerInvariant();
+            if (mode != "before" && mode != "after")
+            {
+                return new JsonResult(new { success = false, message = "Invalid mode." });
+            }
+
+            try
+            {
+                var pair = await NodeContext.Cash_tbCategories
+                    .AsNoTracking()
+                    .Where(item => item.VersionId == versionId
+                        && (item.CategoryCode == key || item.CategoryCode == anchorKey)
+                        && item.IsEnabled != 0
+                        && item.CategoryTypeCode == CATEGORYTYPE_CASHCODE)
+                    .Select(item => new { item.CategoryCode, item.CashTypeCode })
+                    .ToListAsync();
+                if (pair.Count != 2 || pair[0].CashTypeCode != pair[1].CashTypeCode)
+                {
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        message = "Categories are unavailable or not in the same Cash Type."
+                    });
                 }
 
-                await tx.CommitAsync();
+                var cashTypeCode = pair[0].CashTypeCode;
+                var sequence = await NodeContext.Cash_tbCategories
+                    .AsNoTracking()
+                    .Where(item => item.VersionId == versionId && item.IsEnabled != 0
+                        && item.CategoryTypeCode == CATEGORYTYPE_CASHCODE
+                        && item.CashTypeCode == cashTypeCode)
+                    .OrderBy(item => item.DisplayOrder == 0)
+                    .ThenBy(item => item.DisplayOrder)
+                    .ThenBy(item => item.CategoryCode)
+                    .Select(item => item.CategoryCode)
+                    .ToListAsync();
 
+                sequence.Remove(key);
+                var insertIndex = sequence.IndexOf(anchorKey);
+                if (mode == "after")
+                {
+                    insertIndex++;
+                }
+                sequence.Insert(Math.Clamp(insertIndex, 0, sequence.Count), key);
+
+                await SaveCategoryOrdersAsync(versionId,
+                    sequence.Select((code, order) => (code, (short)(order + 1))),
+                    "Cash Type categories reordered.");
                 return new JsonResult(new { success = true });
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                await NodeContext.ErrorLog(e);
-                return new JsonResult(new { success = false, message = "Server error." });
+                await NodeContext.ErrorLog(exception);
+                return new JsonResult(new {
+                    success = false,
+                    message = CategoryTreeCommandFeedback.From(exception)
+                });
             }
         }
     }
-
 }

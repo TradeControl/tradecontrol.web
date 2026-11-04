@@ -1,0 +1,43 @@
+@model TradeControl.Web.AppServices.CategoryTree.CategoryTreeWorkspaceContext
+@using TradeControl.Web.Data
+@{
+    var version = Model.SelectedVersion;
+    var bannerClass = version.Status switch
+    {
+        NodeEnum.CategoryVersionStatus.Published when version.IsActive => "alert-success",
+        NodeEnum.CategoryVersionStatus.Submitted when version.IsActive => "alert-primary",
+        NodeEnum.CategoryVersionStatus.Draft => "alert-warning",
+        _ => "alert-secondary"
+    };
+    var contextLabel = version.Status switch
+    {
+        NodeEnum.CategoryVersionStatus.Draft => "Proposal",
+        _ when version.IsActive => "Live",
+        _ => "Historical"
+    };
+}
+
+<div class="alert @bannerClass py-2 px-3 mb-2" role="status" id="categoryTreeVersionBanner">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <strong>@contextLabel · @version.StatusName</strong>
+            <span class="font-monospace ms-1">@version.VersionId</span>
+            <span class="ms-1">@version.Description</span>
+            <div class="small">@Model.ConsequenceStatement</div>
+        </div>
+        <a class="btn btn-sm btn-outline-dark"
+           asp-page="/Cash/CategoryTree/Index"
+           asp-route-versionId="@version.VersionId"
+           asp-route-select="@CategoryTreeModel.RootNodeKey">
+            Versions
+        </a>
+    </div>
+    @if (version.PredecessorIsStale)
+    {
+        <div class="small fw-semibold mt-1">Predecessor changed. Refresh this Draft before validation or publication.</div>
+    }
+    else if (version.Status == NodeEnum.CategoryVersionStatus.Draft && !version.HasCurrentValidation)
+    {
+        <div class="small fw-semibold mt-1">This proposal has not been validated since its latest tree change.</div>
+    }
+</div>

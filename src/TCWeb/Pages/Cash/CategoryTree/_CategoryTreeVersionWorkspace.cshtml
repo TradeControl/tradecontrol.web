@@ -1,0 +1,462 @@
+@model TradeControl.Web.Pages.Cash.CategoryTree.CategoryTreeVersionWorkspaceVm
+@using TradeControl.Web.Data
+@{
+    var workspace = Model.Workspace;
+    var active = workspace.Versions.Single(version => version.IsActive);
+    var selected = workspace.SelectedVersion;
+    var activeSnapshot = Model.Snapshots.TryGetValue(active.VersionId, out var activeData)
+        ? activeData
+        : new CategoryTreeVersionSnapshotVm();
+    var drafts = workspace.Versions
+        .Where(version => version.Status == NodeEnum.CategoryVersionStatus.Draft)
+        .OrderByDescending(version => version.CreatedOn)
+        .ToList();
+    var history = workspace.Versions
+        .Where(version => version.Status != NodeEnum.CategoryVersionStatus.Draft)
+        .OrderByDescending(version => version.EffectiveFromOn ?? version.CreatedOn)
+        .ToList();
+    const int eventPageSize = 10;
+    var eventPages = workspace.SelectedVersionEvents
+        .Select((versionEvent, index) => new { VersionEvent = versionEvent, Page = index / eventPageSize })
+        .GroupBy(item => item.Page)
+        .ToList();
+    string TreeUrl(string versionId) => Url.Page("/Cash/CategoryTree/Index", null,
+        new { versionId, select = CategoryTreeModel.RootNodeKey }, null) ?? "#";
+    string StatusClass(NodeEnum.CategoryVersionStatus status) => status switch
+    {
+        NodeEnum.CategoryVersionStatus.Published => "text-bg-success",
+        NodeEnum.CategoryVersionStatus.Submitted => "text-bg-primary",
+        NodeEnum.CategoryVersionStatus.Draft => "text-bg-warning",
+        _ => "text-bg-secondary"
+    };
+    string EventName(short eventTypeCode) => eventTypeCode switch
+    {
+        (short)NodeEnum.CategoryVersionEventType.Create => "Created",
+        (short)NodeEnum.CategoryVersionEventType.Edit => "Edited",
+        (short)NodeEnum.CategoryVersionEventType.Validate => "Validated",
+        (short)NodeEnum.CategoryVersionEventType.Publish => "Published",
+        (short)NodeEnum.CategoryVersionEventType.Submit => "Submitted",
+        (short)NodeEnum.CategoryVersionEventType.Archive => "Archived",
+        (short)NodeEnum.CategoryVersionEventType.RefreshOrRebase => "Refreshed",
+        _ => $"Event {eventTypeCode}"
+    };
+}
+
+<section class="p-2 p-lg-3" aria-labelledby="categoryTreeWorkspaceTitle">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+        <div>
+            <h2 id="categoryTreeWorkspaceTitle" class="h5 mb-1">Category Tree versions</h2>
+            <p class="text-muted small mb-0">Evolve the classification while preserving the trees used by the historical past.</p>
+        </div>
+        <span class="badge @StatusClass(selected.Status)">
+            @(selected.IsActive ? "Live · " : string.Empty)@selected.StatusName
+        </span>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(workspace.Notice))
+    {
+        <div class="alert alert-warning py-2" role="status">@workspace.Notice</div>
+    }
+
+    @if (!selected.IsActive)
+    {
+        <div class="alert @(selected.Status == NodeEnum.CategoryVersionStatus.Draft ? "alert-info" : "alert-secondary") py-2" role="status">
+            <strong>@selected.VersionId is not the active tree.</strong>
+            @workspace.ConsequenceStatement
+        </div>
+    }
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="categoryTreeVersionsTab" data-bs-toggle="tab"
+                    data-bs-target="#categoryTreeVersionsPanel" type="button" role="tab"
+                    aria-controls="categoryTreeVersionsPanel" aria-selected="true">Versions</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="categoryTreeEventsTab" data-bs-toggle="tab"
+                    data-bs-target="#categoryTreeEventsPanel" type="button" role="tab"
+                    aria-controls="categoryTreeEventsPanel" aria-selected="false">
+                Event history <span class="badge text-bg-light">@workspace.SelectedVersionEvents.Count</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="categoryTreeVersionsPanel" role="tabpanel"
+             aria-labelledby="categoryTreeVersionsTab" tabindex="0">
+
+    <article class="card border-primary mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <span class="fw-semibold">Active version</span>
+                <span class="font-monospace ms-1">@active.VersionId</span>
+            </div>
+            <span class="badge @StatusClass(active.Status)">Live · @active.StatusName</span>
+        </div>
+        <div class="card-body">
+            <h3 class="h6 mb-1">@active.Description</h3>
+            @if (!string.IsNullOrWhiteSpace(active.Notes))
+            {
+                <p class="small text-muted text-break">@active.Notes</p>
+            }
+
+            <dl class="row small mb-2">
+                <dt class="col-5 col-lg-3">Effective from</dt>
+                <dd class="col-7 col-lg-3">@(active.EffectiveFromOn?.ToString("dd MMM yyyy HH:mm") ?? "Commissioning")</dd>
+                <dt class="col-5 col-lg-3">Last tree change</dt>
+                <dd class="col-7 col-lg-3">@active.ContentChangedOn.ToString("dd MMM yyyy HH:mm")</dd>
+                <dt class="col-5 col-lg-3">Net Profit root</dt>
+                <dd class="col-7 col-lg-3">@(string.IsNullOrWhiteSpace(activeSnapshot.ProfitRoot) ? "Not configured" : activeSnapshot.ProfitRoot)</dd>
+                <dt class="col-5 col-lg-3">VAT root</dt>
+                <dd class="col-7 col-lg-3">@(string.IsNullOrWhiteSpace(activeSnapshot.VatRoot) ? "Not configured" : activeSnapshot.VatRoot)</dd>
+                <dt class="col-5 col-lg-3">Tree content</dt>
+                <dd class="col-7 col-lg-3">@activeSnapshot.CategoryCount categories · @activeSnapshot.EdgeCount links · @activeSnapshot.CashCodeCount Cash Codes</dd>
+                <dt class="col-5 col-lg-3">Canonical evidence</dt>
+                <dd class="col-7 col-lg-3">
+                    @if (active.HasCurrentValidation)
+                    {
+                        <span>Validated · @(active.CanonicalByteLength?.ToString("N0") ?? "0") bytes</span>
+                    }
+                    else
+                    {
+                        <span class="text-warning-emphasis">Validation required after the latest change</span>
+                    }
+                </dd>
+            </dl>
+
+            @if (!active.HasCurrentValidation)
+            {
+                <div class="alert alert-warning py-2 small mb-2">
+                    The live tree has changed since its last successful validation. Ordinary statements use these changes immediately.
+                </div>
+            }
+
+            <div class="alert alert-info py-2 small mb-2">
+                @if (active.Status == NodeEnum.CategoryVersionStatus.Published)
+                {
+                    <span>Published remains editable, and changes affect current and unsubmitted statements immediately.</span>
+                }
+                else
+                {
+                    <span>This live version is read-only because it supports a statutory submission.</span>
+                }
+                Completed-period statements generated after a tree change may therefore differ from earlier output; the Cash Statement will provide the period-specific warning and selector.
+            </div>
+
+            <div class="d-flex flex-wrap align-items-start gap-2">
+                <a class="btn btn-sm @(selected.VersionId == active.VersionId ? "btn-outline-secondary disabled" : "btn-primary")"
+                   href="@TreeUrl(active.VersionId)"
+                   aria-disabled="@(selected.VersionId == active.VersionId ? "true" : "false")">
+                    @(selected.VersionId == active.VersionId ? "Currently displayed" : "Open active tree")
+                </a>
+
+                @if (active.Capabilities.CanCloneActive)
+                {
+                    <details>
+                    <summary class="btn btn-sm btn-outline-primary">Create successor Draft</summary>
+                    <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="CloneVersion"
+                          class="border rounded p-3 mt-2">
+                        <input type="hidden" name="expectedActiveVersionId" value="@active.VersionId" />
+                        <div class="mb-2">
+                            <label class="form-label" for="cloneDescription">Description</label>
+                            <input class="form-control" id="cloneDescription" name="description"
+                                   maxlength="100" value="@active.Description" required />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="cloneNotes">Notes</label>
+                            <textarea class="form-control" id="cloneNotes" name="notes" rows="2"></textarea>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="true"
+                                   id="confirmClone" name="confirmIsolation" required />
+                            <label class="form-check-label" for="confirmClone">
+                                Create a Draft from @active.VersionId. It will not affect operational statements until published.
+                            </label>
+                        </div>
+                        <button class="btn btn-primary btn-sm" type="submit">Create Draft</button>
+                    </form>
+                    </details>
+                }
+            </div>
+        </div>
+    </article>
+
+    <section class="card mb-3" aria-labelledby="categoryTreeSelectedActionsTitle">
+        <div class="card-header">
+            <h3 id="categoryTreeSelectedActionsTitle" class="h6 mb-0">
+                Review and lifecycle · <span class="font-monospace">@selected.VersionId</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            @if (Model.Review.Warnings.Count > 0)
+            {
+                @foreach (var warning in Model.Review.Warnings)
+                {
+                    <div class="alert alert-warning py-2 small">@warning</div>
+                }
+            }
+
+            <details class="mb-3" open="@(selected.Status == NodeEnum.CategoryVersionStatus.Draft ? "open" : null)">
+                <summary class="fw-semibold">Review changes against @(Model.Review.PredecessorVersionId ?? "recorded baseline")</summary>
+                @if (!Model.Review.HasChanges)
+                {
+                    <p class="small text-muted mt-2 mb-0">No version-content differences were found.</p>
+                }
+                else
+                {
+                    <div class="row g-2 mt-1">
+                        @foreach (var group in Model.Review.Groups)
+                        {
+                            <div class="col-12 col-lg-6">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="fw-semibold small">@group.Label <span class="badge text-bg-light">@group.Items.Count</span></div>
+                                    <ul class="small mb-0 mt-1">
+                                        @foreach (var item in group.Items)
+                                        {
+                                            <li class="text-break">@item</li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </details>
+
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+                @if (selected.Capabilities.CanValidate)
+                {
+                    <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="ValidateVersion">
+                        <input type="hidden" name="versionId" value="@selected.VersionId" />
+                        <button class="btn btn-sm btn-outline-success" type="submit">Validate @selected.VersionId</button>
+                    </form>
+                }
+                @if (selected.Capabilities.CanRefreshDraft)
+                {
+                    <details>
+                        <summary class="btn btn-sm btn-outline-warning">Refresh from active</summary>
+                        <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="RefreshVersion"
+                              class="border rounded p-3 mt-2">
+                            <input type="hidden" name="versionId" value="@selected.VersionId" />
+                            <label class="form-label" for="refreshNote">Required change note</label>
+                            <textarea class="form-control mb-2" id="refreshNote" name="changeNote" required></textarea>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="true"
+                                       id="confirmRefresh" name="confirmRefresh" required />
+                                <label class="form-check-label" for="confirmRefresh">
+                                    Replace all content in @selected.VersionId from active version @workspace.ActiveVersionId.
+                                </label>
+                            </div>
+                            <button class="btn btn-warning btn-sm" type="submit">Refresh Draft</button>
+                        </form>
+                    </details>
+                }
+                @if (selected.Capabilities.CanPublish && selected.PredecessorVersionId != null)
+                {
+                    <details>
+                        <summary class="btn btn-sm btn-primary">Publish Draft</summary>
+                        <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="PublishVersion"
+                              class="border rounded p-3 mt-2">
+                            <input type="hidden" name="versionId" value="@selected.VersionId" />
+                            <input type="hidden" name="expectedPredecessorVersionId" value="@selected.PredecessorVersionId" />
+                            <label class="form-label" for="publishNote">Required change note</label>
+                            <textarea class="form-control mb-2" id="publishNote" name="changeNote" required></textarea>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="true"
+                                       id="confirmPublish" name="confirmPublish" required />
+                                <label class="form-check-label" for="confirmPublish">
+                                    Publish @selected.VersionId over @selected.PredecessorVersionId. It will immediately drive current and unsubmitted statements; the predecessor will be retained as Archived evidence.
+                                </label>
+                            </div>
+                            <button class="btn btn-primary btn-sm" type="submit">Publish @selected.VersionId</button>
+                        </form>
+                    </details>
+                }
+                @if (selected.Capabilities.CanDiscard)
+                {
+                    <details>
+                        <summary class="btn btn-sm btn-outline-danger">Discard Draft</summary>
+                        <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="DiscardVersion"
+                              class="border rounded p-3 mt-2">
+                            <input type="hidden" name="versionId" value="@selected.VersionId" />
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" value="true"
+                                       id="confirmDiscard" name="confirmDiscard" required />
+                                <label class="form-check-label" for="confirmDiscard">
+                                    Permanently discard Draft @selected.VersionId. No operational statement has used it.
+                                </label>
+                            </div>
+                            <button class="btn btn-danger btn-sm" type="submit">Discard @selected.VersionId</button>
+                        </form>
+                    </details>
+                }
+            </div>
+        </div>
+    </section>
+
+    <section class="card mb-3" aria-labelledby="categoryTreeDraftsTitle">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 id="categoryTreeDraftsTitle" class="h6 mb-0">Draft proposals</h3>
+            <span class="badge text-bg-light">@drafts.Count</span>
+        </div>
+        <div class="list-group list-group-flush">
+            @if (drafts.Count == 0)
+            {
+                <div class="list-group-item small text-muted">No Draft proposals. A successor Draft can be cloned from the active version.</div>
+            }
+            else
+            {
+                @foreach (var draft in drafts)
+                {
+                    <div class="list-group-item @(draft.VersionId == selected.VersionId ? "list-group-item-info" : string.Empty)">
+                        <div class="d-flex flex-wrap justify-content-between gap-2">
+                            <div>
+                                <div class="fw-semibold">@draft.Description <span class="font-monospace fw-normal">@draft.VersionId</span></div>
+                                <div class="small text-muted">
+                                    From @(draft.PredecessorVersionId ?? "active tree") · @draft.CreatedOn.ToString("dd MMM yyyy HH:mm") · @draft.CreatedByUserId
+                                </div>
+                                <div class="small mt-1">
+                                    @if (draft.PredecessorIsStale)
+                                    {
+                                        <span class="badge text-bg-danger">Predecessor changed</span>
+                                    }
+                                    else if (draft.HasCurrentValidation)
+                                    {
+                                        <span class="badge text-bg-success">Validated</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-warning">Validation required</span>
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <a class="btn btn-sm btn-outline-primary" href="@TreeUrl(draft.VersionId)">
+                                    @(draft.VersionId == selected.VersionId ? "Displayed" : "Open")
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </section>
+
+    <section class="card" aria-labelledby="categoryTreeHistoryTitle">
+        <div class="card-header">
+            <h3 id="categoryTreeHistoryTitle" class="h6 mb-0">Operational and historical versions</h3>
+        </div>
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Version</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Effective interval</th>
+                        <th scope="col" class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var version in history)
+                    {
+                        <tr class="@(version.VersionId == selected.VersionId ? "table-primary" : string.Empty)">
+                            <td>
+                                <div class="fw-semibold">@version.Description</div>
+                                <div class="font-monospace small">@version.VersionId</div>
+                            </td>
+                            <td><span class="badge @StatusClass(version.Status)">@(version.IsActive ? "Live · " : string.Empty)@version.StatusName</span></td>
+                            <td class="small text-nowrap">
+                                @(version.EffectiveFromOn?.ToString("dd MMM yyyy") ?? "—")
+                                – @(version.EffectiveToOn?.ToString("dd MMM yyyy") ?? "present")
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary" href="@TreeUrl(version.VersionId)">
+                                    @(version.VersionId == selected.VersionId ? "Displayed" : "View tree")
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="list-group list-group-flush d-md-none">
+            @foreach (var version in history)
+            {
+                <div class="list-group-item @(version.VersionId == selected.VersionId ? "list-group-item-primary" : string.Empty)">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="min-w-0">
+                            <div class="fw-semibold text-break">@version.Description</div>
+                            <div class="font-monospace small">@version.VersionId</div>
+                        </div>
+                        <span class="badge @StatusClass(version.Status)">@(version.IsActive ? "Live · " : string.Empty)@version.StatusName</span>
+                    </div>
+                    <div class="small text-muted my-2">
+                        Effective @(version.EffectiveFromOn?.ToString("dd MMM yyyy") ?? "—")
+                        – @(version.EffectiveToOn?.ToString("dd MMM yyyy") ?? "present")
+                    </div>
+                    <a class="btn btn-sm btn-outline-secondary" href="@TreeUrl(version.VersionId)">
+                        @(version.VersionId == selected.VersionId ? "Displayed" : "View tree")
+                    </a>
+                </div>
+            }
+        </div>
+    </section>
+
+        </div>
+        <div class="tab-pane fade" id="categoryTreeEventsPanel" role="tabpanel"
+             aria-labelledby="categoryTreeEventsTab" tabindex="0">
+            <section class="card" aria-labelledby="categoryTreeEventHistoryTitle" data-event-history>
+                <div class="card-header">
+                    <h3 id="categoryTreeEventHistoryTitle" class="h6 mb-0">Lifecycle event history</h3>
+                </div>
+                @if (eventPages.Count == 0)
+                {
+                    <div class="card-body small text-muted">No lifecycle events have been recorded.</div>
+                }
+                @foreach (var eventPage in eventPages)
+                {
+                    <div class="list-group list-group-flush @(eventPage.Key == 0 ? string.Empty : "d-none")"
+                         data-event-page-panel="@eventPage.Key">
+                        @foreach (var item in eventPage)
+                        {
+                            var versionEvent = item.VersionEvent;
+                            <div class="list-group-item small">
+                                <div class="d-flex flex-wrap justify-content-between gap-2">
+                                    <span class="fw-semibold">@EventName(versionEvent.EventTypeCode)</span>
+                                    <time datetime="@versionEvent.EventOn.ToString("O")">@versionEvent.EventOn.ToString("dd MMM yyyy HH:mm")</time>
+                                </div>
+                                <div class="text-muted">@versionEvent.UserName</div>
+                                @if (!string.IsNullOrWhiteSpace(versionEvent.ChangeNote))
+                                {
+                                    <div class="text-break">@versionEvent.ChangeNote</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(versionEvent.ContentSha256))
+                                {
+                                    <div class="font-monospace text-muted text-break">SHA-256 @versionEvent.ContentSha256</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                @if (eventPages.Count > 1)
+                {
+                    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <span class="small text-muted">@workspace.SelectedVersionEvents.Count events · @eventPageSize per page</span>
+                        <nav aria-label="Lifecycle event history pages">
+                            <ul class="pagination pagination-sm mb-0">
+                                @foreach (var eventPage in eventPages)
+                                {
+                                    <li class="page-item">
+                                        <button type="button" class="page-link @(eventPage.Key == 0 ? "active" : string.Empty)"
+                                                data-event-page-target="@eventPage.Key"
+                                                aria-current="@(eventPage.Key == 0 ? "page" : null)">@(eventPage.Key + 1)</button>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+</section>

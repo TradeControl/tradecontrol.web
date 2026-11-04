@@ -21,6 +21,52 @@
     color: var(--tc-muted, #6c757d);
 }
 
+/* The Win8 skin is intentionally flat. Restore visible hierarchy without
+   replacing Fancytree's own expander element or interaction behaviour. */
+#categoryTree ul.fancytree-container ul {
+    border-left: 1px solid var(--tc-border, #c8ced4);
+    margin-left: .6rem;
+    padding-left: .55rem;
+}
+
+#categoryTree ul.fancytree-container ul > li {
+    position: relative;
+}
+
+#categoryTree ul.fancytree-container ul > li::before {
+    border-top: 1px solid var(--tc-border, #c8ced4);
+    content: "";
+    left: -.55rem;
+    position: absolute;
+    top: 1rem;
+    width: .5rem;
+}
+
+#categoryTree span.fancytree-expander {
+    background-image: none !important;
+    color: var(--tc-muted, #6c757d);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+}
+
+#categoryTree span.fancytree-folder > span.fancytree-expander::before,
+#categoryTree span.fancytree-lazy > span.fancytree-expander::before {
+    content: "\25B6";
+    font-size: .68rem;
+    line-height: 1;
+}
+
+#categoryTree span.fancytree-expanded > span.fancytree-expander::before {
+    content: "\25BC";
+}
+
+#categoryTree span.fancytree-node:not(.fancytree-folder):not(.fancytree-lazy) > span.fancytree-expander {
+    cursor: default;
+}
+
 /* Desktop split layout */
 @media (max-width: 991.98px) {
     .tc-tree-split {

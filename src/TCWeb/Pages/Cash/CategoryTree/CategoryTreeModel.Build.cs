@@ -16,10 +16,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     /// </summary>
     public partial class CategoryTreeModel
     {
-        public async Task<JsonResult> OnGetNodesAsync(string id)
+        public async Task<JsonResult> OnGetNodesAsync(string id, string versionId = null)
         {
             try
             {
+                var workspace = await CategoryTreeService.GetWorkspaceAsync(versionId, HttpContext.RequestAborted);
+                WorkspaceVersionId = workspace.SelectedVersion.VersionId;
+
                 HttpContext.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
                 HttpContext.Response.Headers["Pragma"] = "no-cache";
                 HttpContext.Response.Headers["Expires"] = "0";
@@ -29,6 +32,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 {
                     var totals = await NodeContext.Cash_tbCategoryTotals
                         .AsNoTracking()
+                        .Where(total => total.VersionId == WorkspaceVersionId)
                         .Select(t => new { t.ParentCode, t.ChildCode })
                         .ToListAsync();
 
@@ -38,13 +42,14 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     bool disconnectedExist = await NodeContext.Cash_tbCategories
                         .AsNoTracking()
+                        .Where(category => category.VersionId == WorkspaceVersionId)
                         .AnyAsync(c => !linkedSet.Contains(c.CategoryCode));
 
                     var nodes = new List<object>
                     {
                         new {
                             key = RootNodeKey,
-                            title = "<span class='tc-root-icon' style='font-weight:600;'>&#8721;</span> Root",
+                            title = "<span class='tc-root-icon' style='font-weight:600;'>&#8721;</span> Category Tree",
                             folder = true,
                             lazy = true,
                             icon = false,
@@ -130,7 +135,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             short exprType = (short)NodeEnum.CategoryType.Expression;
 
             var rows = await NodeContext.Cash_tbCategories
-                .Where(c => c.CategoryTypeCode == exprType)
+                .Where(c => c.VersionId == WorkspaceVersionId && c.CategoryTypeCode == exprType)
                 .GroupJoin(
                     NodeContext.Cash_tbCategoryExps,
                     c => c.CategoryCode,
@@ -183,7 +188,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
         private async Task<(List<Cash_tbCategoryTotal> totals, HashSet<string> childCodesSet, HashSet<string> linkedSet)> LoadTotalsAndSetsAsync()
         {
-            var totals = await NodeContext.Cash_tbCategoryTotals.ToListAsync();
+            var totals = await NodeContext.Cash_tbCategoryTotals
+                .Where(total => total.VersionId == WorkspaceVersionId)
+                .ToListAsync();
             var childCodesSet = new HashSet<string>(totals.Select(t => t.ChildCode).Where(s => !string.IsNullOrEmpty(s)));
             var linkedSet = new HashSet<string>(totals.SelectMany(t => new[] { t.ParentCode, t.ChildCode }).Where(s => !string.IsNullOrEmpty(s)));
             return (totals, childCodesSet, linkedSet);
@@ -192,7 +199,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         private async Task<List<object>> BuildRootNodesAsync(List<Cash_tbCategoryTotal> totals, HashSet<string> childCodesSet, HashSet<string> linkedSet)
         {
             var rootCandidates = await NodeContext.Cash_tbCategories
-                                .Where(c => !childCodesSet.Contains(c.CategoryCode))
+                                .Where(c => c.VersionId == WorkspaceVersionId
+                                    && !childCodesSet.Contains(c.CategoryCode))
                                 .ToListAsync();
 
             var cats = rootCandidates.Where(c => linkedSet.Contains(c.CategoryCode)).ToList();
@@ -228,7 +236,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             short exprType = (short)NodeEnum.CategoryType.Expression;
 
             var disconnectedCats = await NodeContext.Cash_tbCategories
-                .Where(c => !linkedSet.Contains(c.CategoryCode)
+                .Where(c => c.VersionId == WorkspaceVersionId
+                            && !linkedSet.Contains(c.CategoryCode)
                             && c.CategoryTypeCode != exprType) // filter out expressions here
                 .OrderBy(c => c.CashPolarityCode)
                 .ThenBy(c => c.DisplayOrder)
@@ -237,10 +246,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             var discCatCodes = disconnectedCats.Select(c => c.CategoryCode).ToArray();
 
-            var hasCodesSet = await NodeContext.Cash_tbCodes
-                .Where(code => discCatCodes.Contains(code.CategoryCode))
-                .GroupBy(code => code.CategoryCode)
-                .Select(g => g.Key)
+            var hasCodesSet = await NodeContext.Cash_tbCategoryCodeMaps
+                .Where(map => map.VersionId == WorkspaceVersionId
+                    && discCatCodes.Contains(map.CategoryCode))
+                .Select(map => map.CategoryCode)
+                .Distinct()
                 .ToListAsync();
             var hasCodes = new HashSet<string>(hasCodesSet);
 
@@ -250,7 +260,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     $"<span class='tc-cat-icon tc-cat-{PolarityClass(c.CashPolarityCode)}'></span> " +
                     $"{WebUtility.HtmlEncode(c.Category)} ({WebUtility.HtmlEncode(c.CategoryCode)})",
                 folder = true,
-                lazy = hasCodes.Contains(c.CategoryCode), // only lazy if we know codes exist
+                lazy = c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashTotal
+                    || hasCodes.Contains(c.CategoryCode),
                 icon = false,
                 extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
                 data = new {
@@ -278,7 +289,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 var childCodes = childTotals.Select(t => t.ChildCode).ToArray();
 
                 var dict = await NodeContext.Cash_tbCategories
-                                .Where(c => childCodes.Contains(c.CategoryCode))
+                                .Where(c => c.VersionId == WorkspaceVersionId
+                                    && childCodes.Contains(c.CategoryCode))
                                 .ToDictionaryAsync(c => c.CategoryCode);
 
                 bool anyOrder = childTotals.Any(t => t.DisplayOrder > 0);
@@ -304,7 +316,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             short categoryPolarity = 2;
             short categoryCashType = 0;
             var parentCategory = await NodeContext.Cash_tbCategories
-                                    .Where(c => c.CategoryCode == parentId)
+                                    .Where(c => c.VersionId == WorkspaceVersionId
+                                        && c.CategoryCode == parentId)
                                     .Select(c => new { c.CashPolarityCode, c.CashTypeCode })
                                     .SingleOrDefaultAsync();
             if (parentCategory != null)
@@ -320,10 +333,11 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 .Distinct()
                 .ToHashSet();
 
-            var hasCodesSet = await NodeContext.Cash_tbCodes
-                .Where(code => categoryCodes.Contains(code.CategoryCode))
-                .GroupBy(code => code.CategoryCode)
-                .Select(g => g.Key)
+            var hasCodesSet = await NodeContext.Cash_tbCategoryCodeMaps
+                .Where(map => map.VersionId == WorkspaceVersionId
+                    && categoryCodes.Contains(map.CategoryCode))
+                .Select(map => map.CategoryCode)
+                .Distinct()
                 .ToListAsync();
             var hasCodes = new HashSet<string>(hasCodesSet);
 
@@ -337,7 +351,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     key = c.CategoryCode,
                     title,
                     folder = true,
-                    lazy = hasChildCategory.Contains(c.CategoryCode) || hasCodes.Contains(c.CategoryCode),
+                    lazy = c.CategoryTypeCode == (short)NodeEnum.CategoryType.CashTotal
+                        || hasChildCategory.Contains(c.CategoryCode)
+                        || hasCodes.Contains(c.CategoryCode),
                     icon = false,
                     extraClasses = c.IsEnabled == 0 ? "tc-disabled" : null,
                     data = new {
@@ -375,10 +391,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             var categoryNodes = cats.Select(BuildCategoryNode).ToList();
 
-            var codes = await NodeContext.Cash_tbCodes
-                            .Where(code => code.CategoryCode == parentId)
-                            .OrderBy(code => code.CashCode)
-                            .Select(code => new { code.CashCode, code.CashDescription, code.IsEnabled })
+            var codes = await (from map in NodeContext.Cash_tbCategoryCodeMaps
+                               join code in NodeContext.Cash_tbCodes
+                                   on map.CashCode equals code.CashCode
+                               where map.VersionId == WorkspaceVersionId
+                                   && map.CategoryCode == parentId
+                               orderby code.CashCode
+                               select new { code.CashCode, code.CashDescription, code.IsEnabled })
                             .ToListAsync();
 
             var codeNodes = codes.Select(BuildCodeNode).ToList();

@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using TradeControl.Web.Data;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.CategoryTree
@@ -13,7 +14,16 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     [Authorize(Roles = "Administrators")]
     public class CreateCategoryModel : DI_BasePageModel
     {
-        public CreateCategoryModel(NodeContext context) : base(context) { }
+        private ICategoryTreeChangeControlService CategoryTreeService { get; }
+
+        public CreateCategoryModel(NodeContext context,
+            ICategoryTreeChangeControlService categoryTreeService) : base(context)
+        {
+            CategoryTreeService = categoryTreeService;
+        }
+
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; } = "";
 
         [BindProperty(SupportsGet = true)]
         public string ParentKey { get; set; } = "";
@@ -73,13 +83,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             // but do NOT overwrite bound properties (CashPolarityCode, CashTypeCode).
             await PopulateSelectListsAsync();
 
-            if (string.IsNullOrWhiteSpace(CategoryCode) || string.IsNullOrWhiteSpace(Category))
+            if (string.IsNullOrWhiteSpace(VersionId) || string.IsNullOrWhiteSpace(CategoryCode)
+                || string.IsNullOrWhiteSpace(Category))
             {
                 ModelState.AddModelError(string.Empty, "Category code and name are required.");
                 return Page();
             }
 
-            if (await NodeContext.Cash_tbCategories.AnyAsync(c => c.CategoryCode == CategoryCode))
+            if (await NodeContext.Cash_tbCategories.AnyAsync(c => c.VersionId == VersionId
+                && c.CategoryCode == CategoryCode))
             {
                 ModelState.AddModelError(nameof(CategoryCode), "Category code already exists.");
                 return Page();
@@ -87,38 +99,23 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
             try
             {
-                var cat = new Cash_tbCategory {
-                    CategoryCode = CategoryCode,
-                    Category = Category,
-                    CategoryTypeCode = (short)NodeEnum.CategoryType.Nominal,
-                    CashTypeCode = CashTypeCode,
-                    CashPolarityCode = CashPolarityCode,
-                    DisplayOrder = 0,
-                    IsEnabled = IsEnabled ? (short)1 : (short)0
-                };
-
-                await using var tx = await NodeContext.Database.BeginTransactionAsync();
-
-                NodeContext.Cash_tbCategories.Add(cat);
-                await NodeContext.SaveChangesAsync();
+                var categoryCommand = new CategoryTreeCategoryCommand(VersionId, CategoryCode,
+                    Category, (short)NodeEnum.CategoryType.Nominal, CashPolarityCode,
+                    CashTypeCode, 0, IsEnabled ? (short)1 : (short)0, "Category created.");
+                var totals = new System.Collections.Generic.List<CategoryTreeTotalCommand>();
 
                 if (!string.IsNullOrWhiteSpace(ParentKey)
                     && !string.Equals(ParentKey, CategoryTreeModel.DisconnectedNodeKey, StringComparison.Ordinal))
                 {
                     short nextOrder = (short)(((await NodeContext.Cash_tbCategoryTotals
-                        .Where(t => t.ParentCode == ParentKey)
+                        .Where(t => t.VersionId == VersionId && t.ParentCode == ParentKey)
                         .MaxAsync(t => (short?)t.DisplayOrder)) ?? (short)0) + 1);
 
-                    NodeContext.Cash_tbCategoryTotals.Add(new Cash_tbCategoryTotal {
-                        ParentCode = ParentKey,
-                        ChildCode = CategoryCode,
-                        DisplayOrder = nextOrder
-                    });
-
-                    await NodeContext.SaveChangesAsync();
+                    totals.Add(new CategoryTreeTotalCommand(VersionId, ParentKey, CategoryCode,
+                        nextOrder, false, "Category attached."));
                 }
-
-                await tx.CommitAsync();
+                await CategoryTreeService.ApplyBatchAsync(new CategoryTreeMutationBatchCommand(VersionId,
+                    new[] { categoryCommand }, totals, Array.Empty<CategoryTreeCashCodeMoveCommand>()));
 
                 OperationSucceeded = true;
                 NewKey = CategoryCode;
@@ -140,7 +137,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                 // Determine the best parent hint for selection/expand on mobile
                 var parentHint = !string.IsNullOrWhiteSpace(ParentKey)
                     ? ParentKey
-                    : $"type:{cat.CashTypeCode}";
+                    : $"type:{CashTypeCode}";
 
                 // Embedded desktop (AJAX/embed=1) => return Page()
                 var isEmbedded =
@@ -153,12 +150,13 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                 // Mobile/full-page: redirect with selection hints
                 return RedirectToPage("/Cash/CategoryTree/Index",
-                    new { select = CategoryCode, parentKey = parentHint, expand = parentHint });
+                    new { versionId = VersionId, select = CategoryCode, parentKey = parentHint,
+                        expand = parentHint });
             }
             catch (Exception ex)
             {
                 await NodeContext.ErrorLog(ex);
-                ModelState.AddModelError(string.Empty, "Server error.");
+                ModelState.AddModelError(string.Empty, CategoryTreeCommandFeedback.From(ex));
                 return Page();
             }
         }

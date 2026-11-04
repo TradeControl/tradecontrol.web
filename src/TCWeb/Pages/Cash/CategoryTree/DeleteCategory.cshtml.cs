@@ -15,6 +15,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         [BindProperty(SupportsGet = true)]
         public string Key { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public string VersionId { get; set; }
+
         public string CategoryDisplay { get; private set; } = string.Empty;
 
         public async Task OnGetAsync()
@@ -22,7 +25,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
             if (!string.IsNullOrWhiteSpace(Key))
             {
                 var cat = await NodeContext.Cash_tbCategories
-                    .FirstOrDefaultAsync(c => c.CategoryCode == Key);
+                    .FirstOrDefaultAsync(c => c.VersionId == VersionId && c.CategoryCode == Key);
                 CategoryDisplay = cat != null ? cat.Category : Key;
             }
         }

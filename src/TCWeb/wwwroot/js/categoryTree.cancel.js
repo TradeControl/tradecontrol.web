@@ -1,4 +1,4 @@
-(function ()
+(function()
 {
     function cfg()
     {
@@ -10,6 +10,23 @@
         {
             return null;
         }
+    }
+
+    function appendQuery(url, key, value)
+    {
+        var separator = url.indexOf("?") === -1 ? "?" : "&";
+        return url + separator + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+    }
+
+    function workspaceUrl(url)
+    {
+        var config = cfg();
+        var versionId = config && config.dataset ? (config.dataset.versionId || "") : "";
+        if (!versionId)
+        {
+            versionId = new URLSearchParams(window.location.search || "").get("versionId") || "";
+        }
+        return versionId ? appendQuery(url, "versionId", versionId) : url;
     }
 
     function getTree()
@@ -37,7 +54,10 @@
     {
         try
         {
-            if (!k) { return true; }
+            if (!k)
+            {
+                return true;
+            }
             var disc = (cfg() && cfg().dataset && cfg().dataset.disc) ? String(cfg().dataset.disc) : "";
             var kc = String(k).toLowerCase();
             return kc === "" || (disc && k === disc) || kc === "disc" || kc === "disconnected" || kc === "__root__";
@@ -78,9 +98,15 @@
         try
         {
             var tree = getTree();
-            if (!tree || !tree.getActiveNode) { return ""; }
+            if (!tree || !tree.getActiveNode)
+            {
+                return "";
+            }
             var active = tree.getActiveNode();
-            if (!active || !active.getParent) { return ""; }
+            if (!active || !active.getParent)
+            {
+                return "";
+            }
             var p = active.getParent();
             return (p && p.key) ? p.key : "";
         }
@@ -95,7 +121,10 @@
         try
         {
             var tree = getTree();
-            if (!tree || !key) { return; }
+            if (!tree || !key)
+            {
+                return;
+            }
             var n = tree.getNodeByKey(key);
 
             if (!n)
@@ -126,7 +155,11 @@
                 var el = (typeof n.getEventTarget === "function") ? n.getEventTarget() : null;
                 if (el && el.scrollIntoView)
                 {
-                    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+                    el.scrollIntoView(
+                        {
+                            block: "nearest",
+                            inline: "nearest"
+                        });
                 }
             }
             catch (e)
@@ -146,12 +179,23 @@
         {
             var pane = document.getElementById("detailsPane");
             var c = cfg();
-            if (!pane || !c) { return false; }
+            if (!pane || !c)
+            {
+                return false;
+            }
             var detailsUrl = c.dataset.detailsUrl;
-            if (!detailsUrl) { return false; }
-            var url = detailsUrl + "?key=" + encodeURIComponent(key) + "&embed=1";
-            fetch(url, { credentials: "same-origin" })
-                .then(function (r)
+            if (!detailsUrl)
+            {
+                return false;
+            }
+            var url = workspaceUrl(detailsUrl);
+            url = appendQuery(url, "key", key);
+            url = appendQuery(url, "embed", "1");
+            fetch(url,
+                {
+                    credentials: "same-origin"
+                })
+                .then(function(r)
                 {
                     if (!r.ok)
                     {
@@ -159,12 +203,12 @@
                     }
                     return r.text();
                 })
-                .then(function (html)
+                .then(function(html)
                 {
                     pane.innerHTML = html;
                     activateNode(key);
                 })
-                .catch(function ()
+                .catch(function()
                 {
                     pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
                 });
@@ -180,7 +224,7 @@
     {
         try
         {
-            window.location.href = "/Cash/CategoryTree/Index";
+            window.location.href = workspaceUrl("/Cash/CategoryTree/Index");
         }
         catch (e)
         {
@@ -188,11 +232,10 @@
         }
     }
 
-
     var _tcCancelReturnKey = "";
 
     // Expose setter for CategoryTree to record the return target before opening an action
-    window.tcSetCancelReturn = function (key)
+    window.tcSetCancelReturn = function(key)
     {
         try
         {
@@ -204,7 +247,7 @@
         }
     };
 
-    window.tcCancel = function ()
+    window.tcCancel = function()
     {
         try
         {
@@ -222,9 +265,13 @@
                     try
                     {
                         var fk = form.querySelector("input[name='ReturnKey']");
-                        if (fk && fk.value) { retKeyMobile = fk.value; }
+                        if (fk && fk.value)
+                        {
+                            retKeyMobile = fk.value;
+                        }
                     }
-                    catch (_) { }
+                    catch (_)
+                    {}
                 }
 
                 var parentHint = "";
@@ -233,9 +280,13 @@
                     try
                     {
                         var pk = form.querySelector("input[name='ParentKey']");
-                        if (pk && pk.value) { parentHint = pk.value; }
+                        if (pk && pk.value)
+                        {
+                            parentHint = pk.value;
+                        }
                     }
-                    catch (_) { }
+                    catch (_)
+                    {}
                 }
 
                 // Last resort: derive parent from in-memory tree if loaded
@@ -254,18 +305,25 @@
                             }
                         }
                     }
-                    catch (_) { }
+                    catch (_)
+                    {}
                 }
 
                 _tcCancelReturnKey = "";
 
-                var target = "/Cash/CategoryTree/Index";
+                var target = workspaceUrl("/Cash/CategoryTree/Index");
                 var qs = [];
-                if (retKeyMobile) { qs.push("select=" + encodeURIComponent(retKeyMobile)); }
-                if (parentHint) { qs.push("expand=" + encodeURIComponent(parentHint)); }
+                if (retKeyMobile)
+                {
+                    qs.push("select=" + encodeURIComponent(retKeyMobile));
+                }
+                if (parentHint)
+                {
+                    qs.push("expand=" + encodeURIComponent(parentHint));
+                }
                 if (qs.length)
                 {
-                    target += "?" + qs.join("&");
+                    target += (target.indexOf("?") === -1 ? "?" : "&") + qs.join("&");
                 }
                 window.location.href = target;
                 return;
@@ -387,14 +445,19 @@
                         return false;
                     }
 
-                    var url = detailsUrl + "?key=" + encodeURIComponent(key) + "&embed=1";
+                    var url = workspaceUrl(detailsUrl);
+                    url = appendQuery(url, "key", key);
+                    url = appendQuery(url, "embed", "1");
                     if (parentKey)
                     {
                         url += "&parentKey=" + encodeURIComponent(parentKey);
                     }
 
-                    fetch(_nocache(url), { credentials: "same-origin" })
-                        .then(function (r)
+                    fetch(_nocache(url),
+                        {
+                            credentials: "same-origin"
+                        })
+                        .then(function(r)
                         {
                             if (!r.ok)
                             {
@@ -402,7 +465,7 @@
                             }
                             return r.text();
                         })
-                        .then(function (html)
+                        .then(function(html)
                         {
                             pane.innerHTML = html;
 
@@ -419,21 +482,22 @@
                                         {
                                             n.makeVisible();
                                         }
-                                        catch (_) { }
+                                        catch (_)
+                                        {}
 
                                         try
                                         {
                                             n.setActive(true);
                                         }
-                                        catch (_) { }
+                                        catch (_)
+                                        {}
                                     }
                                 }
                             }
                             catch (_)
-                            {
-                            }
+                            {}
                         })
-                        .catch(function ()
+                        .catch(function()
                         {
                             pane.innerHTML = "<div class='text-muted small p-2'>No details</div>";
                         });
@@ -446,8 +510,8 @@
                 }
             }
 
-                // Handle EditExpression embedded result: update expr: node and reload details
-            (function ()
+            // Handle EditExpression embedded result: update expr: node and reload details
+            (function()
             {
                 try
                 {
@@ -457,8 +521,8 @@
                         return;
                     }
 
-                    var key = exprResult.dataset.key || "";             // e.g. "expr:SALES"
-                    var category = exprResult.dataset.category || "";   // new Category text
+                    var key = exprResult.dataset.key || ""; // e.g. "expr:SALES"
+                    var category = exprResult.dataset.category || ""; // new Category text
                     var categoryCode = exprResult.dataset.categorycode || "";
 
                     if (!key)
@@ -479,9 +543,9 @@
                     }
 
                     // Build title consistent with expression nodes: "Category (Code)"
-                    var title = category && categoryCode
-                        ? (category + " (" + categoryCode + ")")
-                        : node.title;
+                    var title = category && categoryCode ?
+                        (category + " (" + categoryCode + ")") :
+                        node.title;
 
                     try
                     {
@@ -543,7 +607,7 @@
         {
             try
             {
-                window.location.href = "/Cash/CategoryTree/Index";
+                window.location.href = workspaceUrl("/Cash/CategoryTree/Index");
             }
             catch (_)
             {
@@ -552,14 +616,16 @@
         }
     };
 
-
     // Delegated handler for anchors/buttons that declare data-embedded-cancel
-    document.addEventListener("click", function (e)
+    document.addEventListener("click", function(e)
     {
         try
         {
             var el = e.target && e.target.closest ? e.target.closest("[data-embedded-cancel]") : null;
-            if (!el) { return; }
+            if (!el)
+            {
+                return;
+            }
             e.preventDefault();
             window.tcCancel();
         }
@@ -571,7 +637,7 @@
     }, true);
 
     // Escape to cancel when a cancel-capable page is visible
-    document.addEventListener("keydown", function (e)
+    document.addEventListener("keydown", function(e)
     {
         try
         {

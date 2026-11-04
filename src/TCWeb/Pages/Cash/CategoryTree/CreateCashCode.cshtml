@@ -8,9 +8,10 @@
 
 @if (Model.OperationSucceeded && isEmbedded)
 {
-    <div id="tcEmbedResult"
-         data-select="code:@Model.NewCashCode"
-         data-expand="@Model.CategoryCode"
+    <div id="createCashCodeResult"
+         data-key="@Model.NewKey"
+         data-cashcode="@Model.NewCashCode"
+         data-parent="@Model.CategoryCode"
          data-node='@Html.Raw(Model.NewNodeJson)'></div>
 }
 else
@@ -21,9 +22,11 @@ else
 
             <form method="post"
                   asp-page="./CreateCashCode"
+                  asp-route-versionId="@Model.VersionId"
                   asp-route-key="@Model.CategoryCode"
                   asp-route-embed="@(isEmbedded ? "1" : null)">
                 @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="VersionId" />
                 @if (isEmbedded)
                 {
                     <input type="hidden" name="embed" value="1" />

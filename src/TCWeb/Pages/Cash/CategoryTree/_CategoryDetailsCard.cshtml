@@ -12,6 +12,7 @@
 }
 <div id="categoryDetails"
      class="card shadow-sm mb-3"
+     data-version-id="@Model.VersionId"
      data-node-type="category"
      data-key="@key"
      data-parent-key="@(string.IsNullOrWhiteSpace(parentKey) ? "" : parentKey)"
@@ -78,7 +79,7 @@
             </div>
         </div>
 
-        @if (User.IsInRole(TradeControl.Web.Authorization.Constants.AdministratorsRole))
+        @if (Model.CanEditTree)
         {
             <div class="mt-3 category-actions d-flex flex-wrap gap-2">
                 <!-- Desktop (embedded) JS-driven edit -->
@@ -93,6 +94,7 @@
                 {
                     <a class="btn btn-sm btn-primary admin-only"
                        asp-page="@(isTotal ? "./EditTotal" : "./EditCategory")"
+                       asp-route-versionId="@Model.VersionId"
                        asp-route-key="@Model.CategoryCode">
                         <i class="bi bi-pencil"></i> Edit
                     </a>
@@ -112,7 +114,20 @@
                 @if (isCashCodeCategory)
                 {
                     <button type="button" class="btn btn-sm btn-outline-success" data-action="addExistingCashCode">Add Cash Code</button>
-                    <button type="button" class="btn btn-sm btn-outline-success" data-action="createCashCode">New Cash Code</button>
+                    @if (Model.CanCreateCashCode)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-success" data-action="createCashCode">New Cash Code</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-success" disabled
+                                aria-describedby="newCashCodeUnavailableReason">
+                            New Cash Code
+                        </button>
+                        <span id="newCashCodeUnavailableReason" class="small text-muted align-self-center">
+                            Available only in the active Published tree.
+                        </span>
+                    }
                 }
 
                 @if (isTotal && isRootLevelChild)
@@ -134,6 +149,7 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="Kind" value="Profit" />
                                 <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
+                                <input type="hidden" name="VersionId" value="@Model.VersionId" />
                                 <button type="submit" class="btn btn-sm btn-outline-secondary">Set Profit Root</button>
                             </form>
                         }
@@ -155,6 +171,7 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="Kind" value="VAT" />
                                 <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
+                                <input type="hidden" name="VersionId" value="@Model.VersionId" />
                                 <button type="submit" class="btn btn-sm btn-outline-secondary">Set VAT Root</button>
                             </form>
                         }

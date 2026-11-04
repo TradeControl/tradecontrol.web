@@ -32,10 +32,12 @@ else
 
             <form method="post"
                   asp-page="./AddCategory"
+                  asp-route-versionId="@Model.VersionId"
                   asp-route-parentKey="@Model.ParentKey"
                   asp-route-embed="@(isEmbedded ? "1" : null)"
                   data-parent="@Model.ParentKey">
                 @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="VersionId" />
                 @if (isEmbedded)
                 {
                     <input type="hidden" name="embed" value="1" />

@@ -1,6 +1,6 @@
 # Category Tree change-control work plan
 
-**Status:** Architecture agreed; Increment 2 local schema and migration complete; Increment 3 is next
+**Status:** Architecture agreed; schema, migration, guarded mutations and lifecycle workspace complete locally; Cash Statement version selection and warnings in progress
 
 **Release boundary:** Required before the Accounts Mode production release
 
@@ -158,10 +158,10 @@ Active views such as `Cash.vwCategoryActive`, `Cash.vwCategoryTotalActive`, `Cas
 - canonical content hash, byte length and last semantic-change time;
 - effective-from and effective-to timestamps using a half-open active interval;
 - created timestamp and actor;
-- optimistic concurrency token; and
+- SQL-managed `rowversion` retained for ODBC/Office compatibility but excluded from EF and the ASP.NET command contract; and
 - the seal or submission association needed to prove why it became Submitted.
 
-`Cash.tbCategoryVersionEvent` records the actor, timestamp, from/to status, event kind and applicable note for create, edit, validate, publish, submit and archive events. Actor fields use the application identity established by `Usr.vwCredentials`, not the SQL login. SQL `timestamp` is not used as a business time; concurrency uses an explicit `rowversion` column.
+`Cash.tbCategoryVersionEvent` records the actor, timestamp, from/to status, event kind and applicable note for create, edit, validate, publish, submit and archive events. Actor fields use the application identity established by `Usr.vwCredentials`, not the SQL login. SQL `timestamp`/`rowversion` is not used as a business time or ASP.NET concurrency token; command serialization and lifecycle guards are enforced in SQL.
 
 ### 5.3 Controlled operations
 
@@ -185,7 +185,7 @@ For an editable Published version, an accepted tree mutation updates its version
 Publishing a Draft must:
 
 1. take an application lock for the tenant tree;
-2. verify that the active predecessor still has the Draft's recorded base content hash, then revalidate graph, Cash Code mappings, roots, tax coverage and concurrency tokens;
+2. verify that the active predecessor still has the Draft's recorded base content hash, then revalidate graph, Cash Code mappings, roots, tax coverage and transactional lifecycle guards;
 3. validate that every Cash Code existing at publication has exactly one same-version category mapping;
 4. mark the Draft Published and open its effective interval;
 5. switch `App.tbOptions.CategoryVersionId` from the predecessor to the successor;
@@ -394,6 +394,8 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 
 ### Increment 3 — Server boundary
 
+**Progress:** The version-aware EF alignment, workspace/capability contract and single Category Tree change-control service are implemented locally. Every retained tree mutation handler, including JavaScript-disabled page posts, carries the selected `VersionId` and routes category, edge, mapping, root and Cash Code changes through serializable guarded commands. Composite mutations are atomic. Submitted/Archived and inactive-Published rejection remains authoritative in SQL. SQL-managed `RowVer` columns are deliberately absent from EF and web contracts; executable boundary tests prohibit direct handler writes, except for current non-versioned BI expression parse status. The root workspace and lifecycle controls are operational. Cash Statement Steps 5.0–5.2 now provide a coherent active-default and explicit historical data boundary; period attribution, warnings and the selector remain outstanding under Steps 5.3–5.4. Seal integration remains the agreed later dependency.
+
 - Add EF models and a single Category Tree version/change-control service.
 - Route every Category Tree mutation through the shared guard.
 - Add canonical content/digest and seal-provider integration.
@@ -401,6 +403,8 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 - Add Cash Statement version selection and affected-period warnings.
 
 ### Increment 4 — Existing JavaScript UI integration
+
+**Progress:** The retained JavaScript tree now carries version context through editing, preserves selection during moves, supports lifecycle-aware read-only behaviour, and integrates the root version workspace on desktop and mobile. Browser review has covered Published, Draft and Submitted behaviour. Cash Statement period warnings and selection remain the next bounded UI work; full automated browser coverage is still outstanding.
 
 - Add status/version banner and workspace context.
 - Add successor Draft clone, validate, publish, discard and history flows.

@@ -34,11 +34,12 @@
             </div>
         </div>
 
-        <form id="deleteTotalForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteTotal", parentKey = parentKey, childKey = childKey })">
+        <form id="deleteTotalForm" method="post" action="@Url.Page("/Cash/CategoryTree/Index", null, new { handler = "DeleteTotal", parentKey = parentKey, childKey = childKey, versionId = Model.VersionId })">
             @Html.AntiForgeryToken()
             <input type="hidden" name="parentKey" value="@parentKey" />
             <input type="hidden" name="childKey" value="@childKey" />
             <input type="hidden" name="ParentKey" value="@parentKey" />
+            <input type="hidden" name="versionId" value="@Model.VersionId" />
 
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-danger">Delete</button>

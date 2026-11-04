@@ -29,12 +29,6 @@ namespace TradeControl.Web.Models
         [Column(TypeName = "nvarchar(max)")]
         public string? ErrorMessage { get; set; }
 
-        // RowVer retained (ignored in application logic; legacy concurrency)
-        //public byte[] RowVer { get; set; }
-
-        [ForeignKey(nameof(CategoryCode))]
-        [InverseProperty(nameof(Cash_tbCategory.TbCategoryExp))]
-        public virtual Cash_tbCategory CategoryCodeNavigation { get; set; }
 
         [ForeignKey(nameof(SyntaxTypeCode))]
         [InverseProperty(nameof(Cash_tbCategoryExpSyntax.TbCategoryExps))]

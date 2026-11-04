@@ -37,11 +37,13 @@ else
 
             <form method="post"
                   asp-page="./CreateTotal"
+                  asp-route-versionId="@Model.VersionId"
                   asp-route-parentKey="@Model.ParentKey"
                   asp-route-embed="1"
                   data-parent="@Model.ParentKey"
                   data-action="CreateTotal">
                 @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="VersionId" />
                 <input type="hidden" name="embed" value="1" />
                 <input type="hidden" name="ParentKey" value="@Model.ParentKey" />
                 <input type="hidden" name="ReturnKey" value="@Model.ParentKey" />

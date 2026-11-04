@@ -65,7 +65,7 @@ The four rows are seeded by `App.proc_NodeDataInit`. They are system vocabulary 
 | `EffectiveToOn` | `datetime2(3)` | UTC end of the half-open active interval. Null for Draft and the active version. |
 | `CreatedOn` | `datetime2(3)` | UTC creation time. |
 | `CreatedByUserId` | `nvarchar(10)` | Foreign key to `Usr.tbUser`, resolved from `Usr.vwCredentials`. |
-| `RowVer` | `rowversion` | Optimistic-concurrency token, not a business timestamp. |
+| `RowVer` | `rowversion` | SQL-managed compatibility field for ODBC/Office consumers; excluded from EF and the web command contract. |
 
 Required constraints and indexes:
 
@@ -129,11 +129,13 @@ Add `VersionId nvarchar(10) NOT NULL` and change the key from `CategoryCode` to 
 
 All existing semantic columns remain. Existing unique indexes become version-scoped, for example:
 
+`CashPolarityCode` and `CashTypeCode` remain `NOT NULL` for every category type. Nominal categories depend on both classifications, totals retain them, and expressions use the established Neutral/Trade values rather than weakening the table invariant with nulls. The EF model and `Cash.proc_CategorySave` must expose both values as required.
+
 - `(VersionId, IsEnabled, Category)`;
 - `(VersionId, IsEnabled, CategoryCode)`; and
 - `(VersionId, CategoryTypeCode, DisplayOrder, Category)`.
 
-Audit fields and `RowVer` remain row-local. The update trigger must join on both key columns and invoke the version mutation guard before accepting an insert, update or delete.
+Audit fields and SQL-managed `RowVer` remain row-local. `RowVer` is not mapped through EF. The update trigger must join on both key columns and invoke the version mutation guard before accepting an insert, update or delete.
 
 Category codes remain stable logical identifiers across versions. A successor may omit a category, but publication must reject an attempt to reuse a historical code for an unrelated meaning. The initial guard can compare category type and other identity-defining attributes across the predecessor chain; no separate category master table is required for this release.
 
@@ -155,7 +157,7 @@ No edge can cross versions.
 | `VersionId` | `nvarchar(10)` | Version owner. |
 | `CashCode` | `nvarchar(50)` | Persistent Cash Code identity. |
 | `CategoryCode` | `nvarchar(10)` | Leaf category within the same version. |
-| `RowVer` | `rowversion` | Optimistic concurrency. |
+| `RowVer` | `rowversion` | SQL-managed compatibility field; excluded from EF and web concurrency handling. |
 
 Required keys and indexes:
 
@@ -341,11 +343,11 @@ The complete Category Tree EF model still assumes single-column category keys. T
 
 Step 5 includes only the compatibility alignment needed by ordinary client surfaces: `App_tbOption` maps `CategoryVersionId` but not the retired root columns; `Cash_tbCode` no longer maps `CategoryCode`; and the obsolete category relationships are removed from the entities and `NodeContext`. Temporary `[NotMapped]` properties retain compile-time compatibility for the deliberately deferred Category Tree handlers without querying missing database columns. The Category Tree page currently performs many direct EF inserts, updates, bulk updates and deletes, so it remains the deliberate client exception after Increment 2 and moves to the guarded command boundary in Increment 3/4. The pre/post SQL differential and upgraded-database application smoke test determine whether any other EF dependency has been missed; schema compatibility is not assumed.
 
-### 5.8 Deferred TCExports and historical Cash Statements
+### 5.8 TCExports and historical Cash Statements
 
-In Increment 3, `SqlServerCashFlowRepository.Categories.cs` must accept the resolved eligible `VersionId` for category rows, totals, mappings, token resolution and root traversal. Current BI expressions continue to come from `tbCategoryExp` but are parsed against the selected version.
+**Progress: complete for the Step 5.2 data boundary.** `SqlServerCashFlowRepository.Categories.cs` accepts the resolved eligible `VersionId` for category rows, totals, mappings, token resolution and root traversal. Current BI expressions continue to come from `tbCategoryExp` but are parsed against the selected version.
 
-Other Cash Statement datasets that depend transitively on active classification must gain a version-aware SQL path. The implementation should centralise this in parameterised SQL functions or repository queries rather than temporarily changing the active database version. Historical generation must never update `tbCategoryVersion` or alter the active views.
+Category Tree selection, comparison and coverage SQL is centralised in named functions included in the SSDT project and the single migration. The C# repository is limited to small parameterised calls to those functions or existing views, result mapping, and stored-procedure calls for genuinely procedural operations; it does not embed joins, CTEs, unions or Category Tree business logic. Optional operational calculations are reused only after a database function proves selected-versus-active equivalence for every tree projection they consume. A mismatch fails before an active calculation is read. Historical generation never updates `tbCategoryVersion`, changes `App.tbOptions` or alters the active views. This boundary keeps the planned PostgreSQL port explicit without adding a stored-procedure wrapper around every simple read.
 
 ## 6. Mutation boundary and permissions
 

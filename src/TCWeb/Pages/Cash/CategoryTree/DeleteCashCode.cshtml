@@ -32,9 +32,11 @@ else if (!Model.OperationSucceeded)
 
     <form method="post"
           asp-page="./DeleteCashCode"
+          asp-route-versionId="@Model.VersionId"
           asp-route-key="@(string.IsNullOrWhiteSpace(Model.Key) ? deletedNodeKey : Model.Key)"
           asp-route-embed="@(isEmbedded ? "1" : null)">
         @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="VersionId" />
         @if (isEmbedded)
         {
             <input type="hidden" name="embed" value="1" />

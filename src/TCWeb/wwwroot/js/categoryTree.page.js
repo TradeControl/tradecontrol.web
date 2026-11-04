@@ -1,6 +1,33 @@
 // Bootstraps the CategoryTree page (kept separate from the core tree logic)
-(function ()
+(function()
 {
+    function appendQuery(url, key, value)
+    {
+        if (!url)
+        {
+            return url;
+        }
+        var separator = url.indexOf("?") === -1 ? "?" : "&";
+        return url + separator + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+    }
+
+    function versionedNodesUrl(configElement, nodeKey)
+    {
+        var url = configElement && configElement.dataset
+            ? (configElement.dataset.nodesUrl || "")
+            : "";
+        if (!url)
+        {
+            return "";
+        }
+        url = appendQuery(url, "versionId", configElement.dataset.versionId || "");
+        if (nodeKey)
+        {
+            url = appendQuery(url, "id", nodeKey);
+        }
+        return url;
+    }
+
     function isDesktop()
     {
         return window.matchMedia && window.matchMedia("(min-width: 992px)").matches;
@@ -8,35 +35,45 @@
 
     function initSplitter()
     {
-        if (typeof Split !== "function") { return; }
+        if (typeof Split !== "function")
+        {
+            return;
+        }
         var splitInstance = null;
 
         function ensureSplit()
         {
             if (!isDesktop())
             {
-                if (splitInstance) { splitInstance.destroy(true, true); splitInstance = null; }
+                if (splitInstance)
+                {
+                    splitInstance.destroy(true, true);
+                    splitInstance = null;
+                }
                 return;
             }
             if (!splitInstance)
             {
-                splitInstance = Split(["#leftCol", "#rightCol"], {
-                    sizes: [60, 40],
-                    minSize: [300, 300],
-                    gutterSize: 8,
-                    snapOffset: 0,
-                    onDragEnd: function ()
+                splitInstance = Split(["#leftCol", "#rightCol"],
                     {
-                        if (window.CategoryTree && CategoryTree._resizeColumns)
+                        sizes: [60, 40],
+                        minSize: [300, 300],
+                        gutterSize: 8,
+                        snapOffset: 0,
+                        onDragEnd: function()
                         {
-                            CategoryTree._resizeColumns();
+                            if (window.CategoryTree && CategoryTree._resizeColumns)
+                            {
+                                CategoryTree._resizeColumns();
+                            }
+                            else
+                            {
+                                var ev = document.createEvent("Event");
+                                ev.initEvent("resize", true, true);
+                                window.dispatchEvent(ev);
+                            }
                         }
-                        else
-                        {
-                            var ev = document.createEvent("Event"); ev.initEvent("resize", true, true); window.dispatchEvent(ev);
-                        }
-                    }
-                });
+                    });
             }
         }
 
@@ -47,11 +84,17 @@
     // Mobile selection helper: ensure we pick the node under the intended parent (__ROOT__ hierarchy)
     function forceSelectIfRequested()
     {
-        if (isDesktop()) { return; }
+        if (isDesktop())
+        {
+            return;
+        }
 
         var params = new URLSearchParams(window.location.search);
         var targetRaw = params.get("select") || params.get("key");
-        if (!targetRaw) { return; }
+        if (!targetRaw)
+        {
+            return;
+        }
         var parentKey = params.get("parentKey") || params.get("expand") || "";
 
         // Normalize code key variants
@@ -71,24 +114,36 @@
 
         function nocache(url)
         {
-            if (!url) { return url; }
+            if (!url)
+            {
+                return url;
+            }
             var sep = url.indexOf("?") === -1 ? "?" : "&";
             return url + sep + "_=" + Date.now();
         }
 
         function findUnderParent(parentNode)
         {
-            if (!parentNode) { return null; }
+            if (!parentNode)
+            {
+                return null;
+            }
             // Direct children check first (fast)
             if (parentNode.children)
             {
                 for (var i = 0; i < parentNode.children.length; i++)
                 {
                     var c = parentNode.children[i];
-                    if (!c) { continue; }
+                    if (!c)
+                    {
+                        continue;
+                    }
                     for (var k = 0; k < targetVariants.length; k++)
                     {
-                        if (c.key === targetVariants[k]) { return c; }
+                        if (c.key === targetVariants[k])
+                        {
+                            return c;
+                        }
                     }
                 }
             }
@@ -99,7 +154,10 @@
                 for (var j = 0; j < parentNode.children.length; j++)
                 {
                     var ch = parentNode.children[j];
-                    if (ch && ch.folder) { q.push(ch); }
+                    if (ch && ch.folder)
+                    {
+                        q.push(ch);
+                    }
                 }
             }
             var guard = 0;
@@ -111,12 +169,21 @@
                     for (var x = 0; x < n.children.length; x++)
                     {
                         var c2 = n.children[x];
-                        if (!c2) { continue; }
+                        if (!c2)
+                        {
+                            continue;
+                        }
                         for (var v = 0; v < targetVariants.length; v++)
                         {
-                            if (c2.key === targetVariants[v]) { return c2; }
+                            if (c2.key === targetVariants[v])
+                            {
+                                return c2;
+                            }
                         }
-                        if (c2.folder) { q.push(c2); }
+                        if (c2.folder)
+                        {
+                            q.push(c2);
+                        }
                     }
                 }
             }
@@ -129,33 +196,50 @@
             {
                 var cfg = document.getElementById("categoryTreeConfig");
                 var rootKey = (cfg && cfg.dataset && cfg.dataset.root) ? cfg.dataset.root : "";
-                if (!rootKey) { return null; }
+                if (!rootKey)
+                {
+                    return null;
+                }
                 var rootAnchor = tree.getNodeByKey(rootKey);
-                if (!rootAnchor) { return null; }
+                if (!rootAnchor)
+                {
+                    return null;
+                }
 
                 var best = null;
                 var first = null;
-                rootAnchor.visit(function (n)
+                rootAnchor.visit(function(n)
                 {
-                    if (!n || !n.key) { return; }
+                    if (!n || !n.key)
+                    {
+                        return;
+                    }
                     for (var i = 0; i < targetVariants.length; i++)
                     {
                         if (n.key === targetVariants[i])
                         {
-                            if (!first) { first = n; }
+                            if (!first)
+                            {
+                                first = n;
+                            }
                             // Ensure ancestry contains the intended parentKey if provided
                             if (parentKey)
                             {
                                 var a = n;
                                 while (a)
                                 {
-                                    if (a.key === parentKey) { best = n; return false; }
+                                    if (a.key === parentKey)
+                                    {
+                                        best = n;
+                                        return false;
+                                    }
                                     a = a.parent;
                                 }
                             }
                             else
                             {
-                                best = n; return false;
+                                best = n;
+                                return false;
                             }
                         }
                     }
@@ -170,68 +254,119 @@
 
         function activate(node)
         {
-            if (!node) { return false; }
+            if (!node)
+            {
+                return false;
+            }
             try
             {
                 node.setActive(true);
             }
-            catch (_){}
+            catch (_)
+            {}
             try
             {
                 node.makeVisible();
             }
-            catch (_){}
+            catch (_)
+            {}
             return true;
         }
 
         function ensureParentReload(tree, pNode, done)
         {
-            if (!pNode || typeof pNode.reloadChildren !== "function") { done(); return; }
+            if (!pNode || typeof pNode.reloadChildren !== "function")
+            {
+                done();
+                return;
+            }
             if (!pNode.expanded && typeof pNode.setExpanded === "function")
             {
                 var ex = pNode.setExpanded(true);
-                var afterExpand = function ()
+                var afterExpand = function()
                 {
                     var cfg = document.getElementById("categoryTreeConfig");
-                    var nodesUrl = (cfg && cfg.dataset && cfg.dataset.nodesUrl) ? cfg.dataset.nodesUrl : "";
+                    var nodesUrl = versionedNodesUrl(cfg, pNode.key);
                     if (nodesUrl)
                     {
                         try
                         {
-                            var r = pNode.reloadChildren({ url: nocache(nodesUrl + "?id=" + encodeURIComponent(pNode.key)) });
-                            if (r && typeof r.then === "function") { r.then(done, done); return; }
-                            if (r && r.done) { r.done(done).fail(done); return; }
+                            var r = pNode.reloadChildren(
+                                {
+                                    url: nocache(nodesUrl)
+                                });
+                            if (r && typeof r.then === "function")
+                            {
+                                r.then(done, done);
+                                return;
+                            }
+                            if (r && r.done)
+                            {
+                                r.done(done).fail(done);
+                                return;
+                            }
                         }
-                        catch (_){}
+                        catch (_)
+                        {}
                     }
                     // Fallback
                     try
                     {
                         var r2 = pNode.reloadChildren();
-                        if (r2 && typeof r2.then === "function") { r2.then(done, done); return; }
-                        if (r2 && r2.done) { r2.done(done).fail(done); return; }
+                        if (r2 && typeof r2.then === "function")
+                        {
+                            r2.then(done, done);
+                            return;
+                        }
+                        if (r2 && r2.done)
+                        {
+                            r2.done(done).fail(done);
+                            return;
+                        }
                     }
-                    catch (_){}
+                    catch (_)
+                    {}
                     setTimeout(done, 120);
                 };
-                if (ex && typeof ex.then === "function") { ex.then(afterExpand, afterExpand); }
-                else if (ex && ex.done) { ex.done(afterExpand).fail(afterExpand); }
-                else { afterExpand(); }
+                if (ex && typeof ex.then === "function")
+                {
+                    ex.then(afterExpand, afterExpand);
+                }
+                else if (ex && ex.done)
+                {
+                    ex.done(afterExpand).fail(afterExpand);
+                }
+                else
+                {
+                    afterExpand();
+                }
                 return;
             }
 
             // Already expanded: force a nocache reload once
             var cfg2 = document.getElementById("categoryTreeConfig");
-            var nodesUrl2 = (cfg2 && cfg2.dataset && cfg2.dataset.nodesUrl) ? cfg2.dataset.nodesUrl : "";
+            var nodesUrl2 = versionedNodesUrl(cfg2, pNode.key);
             try
             {
-                var r3 = nodesUrl2
-                    ? pNode.reloadChildren({ url: nocache(nodesUrl2 + "?id=" + encodeURIComponent(pNode.key)) })
-                    : pNode.reloadChildren();
-                if (r3 && typeof r3.then === "function") { r3.then(done, done); return; }
-                if (r3 && r3.done) { r3.done(done).fail(done); return; }
+                var r3 = nodesUrl2 ?
+                    pNode.reloadChildren(
+                        {
+                            url: nocache(nodesUrl2)
+                        }) :
+                    pNode.reloadChildren();
+                if (r3 && typeof r3.then === "function")
+                {
+                    r3.then(done, done);
+                    return;
+                }
+                if (r3 && r3.done)
+                {
+                    r3.done(done).fail(done);
+                    return;
+                }
             }
-            catch (_){}
+            catch (_)
+            {}
             setTimeout(done, 120);
         }
 
@@ -242,13 +377,30 @@
             {
                 if (!window.$ || !window.$.ui || !window.$.ui.fancytree)
                 {
-                    if (attempts < maxAttempts) { setTimeout(attempt, 140); }
+                    if (attempts < maxAttempts)
+                    {
+                        setTimeout(attempt, 140);
+                    }
                     return;
                 }
                 var treeEl = document.querySelector("#categoryTree");
-                if (!treeEl) { if (attempts < maxAttempts) { setTimeout(attempt, 140); } return; }
+                if (!treeEl)
+                {
+                    if (attempts < maxAttempts)
+                    {
+                        setTimeout(attempt, 140);
+                    }
+                    return;
+                }
                 var tree = $.ui.fancytree.getTree(treeEl);
-                if (!tree) { if (attempts < maxAttempts) { setTimeout(attempt, 140); } return; }
+                if (!tree)
+                {
+                    if (attempts < maxAttempts)
+                    {
+                        setTimeout(attempt, 140);
+                    }
+                    return;
+                }
 
                 // Parent-first strategy
                 if (parentKey)
@@ -257,11 +409,14 @@
                     if (!pNode)
                     {
                         // Try again later; parent may not yet be loaded
-                        if (attempts < maxAttempts) { setTimeout(attempt, 160); }
+                        if (attempts < maxAttempts)
+                        {
+                            setTimeout(attempt, 160);
+                        }
                         return;
                     }
 
-                    ensureParentReload(tree, pNode, function ()
+                    ensureParentReload(tree, pNode, function()
                     {
                         var found = findUnderParent(pNode);
                         if (found && activate(found))
@@ -289,7 +444,10 @@
                             }
                         }
 
-                        if (attempts < maxAttempts) { setTimeout(attempt, 170); }
+                        if (attempts < maxAttempts)
+                        {
+                            setTimeout(attempt, 170);
+                        }
                     });
 
                     return;
@@ -314,11 +472,17 @@
                     }
                 }
 
-                if (attempts < maxAttempts) { setTimeout(attempt, 170); }
+                if (attempts < maxAttempts)
+                {
+                    setTimeout(attempt, 170);
+                }
             }
             catch (_)
             {
-                if (attempts < maxAttempts) { setTimeout(attempt, 180); }
+                if (attempts < maxAttempts)
+                {
+                    setTimeout(attempt, 180);
+                }
             }
         }
 
@@ -329,19 +493,26 @@
     function initPage()
     {
         var cfgEl = document.getElementById("categoryTreeConfig");
-        if (!cfgEl || !window.CategoryTree) { return; }
+        if (!cfgEl || !window.CategoryTree)
+        {
+            return;
+        }
 
-        CategoryTree.init({
-            treeSelector: "#categoryTree",
-            menuSelector: "#treeContextMenu",
-            actionBarSelector: "#mobileActionBar",
-            nodesUrl: cfgEl.dataset.nodesUrl,
-            basePageUrl: cfgEl.dataset.baseUrl,
-            detailsUrl: cfgEl.dataset.detailsUrl,
-            rootKey: cfgEl.dataset.root,
-            discKey: cfgEl.dataset.disc,
-            isAdmin: cfgEl.dataset.isAdmin === "true"
-        });
+        CategoryTree.init(
+            {
+                treeSelector: "#categoryTree",
+                menuSelector: "#treeContextMenu",
+                actionBarSelector: "#mobileActionBar",
+                nodesUrl: cfgEl.dataset.nodesUrl,
+                basePageUrl: cfgEl.dataset.baseUrl,
+                detailsUrl: cfgEl.dataset.detailsUrl,
+                rootKey: cfgEl.dataset.root,
+                discKey: cfgEl.dataset.disc,
+                isAdmin: cfgEl.dataset.canEditTree === "true",
+                canManageCashCodes: cfgEl.dataset.canManageCashCodes === "true",
+                versionId: cfgEl.dataset.versionId || "",
+                tenantId: cfgEl.dataset.tenantId || "tenant"
+            });
 
         initSplitter();
         forceSelectIfRequested();

@@ -1,6 +1,6 @@
 # Category Tree user-interface change plan
 
-**Status:** Draft for owner review; root version-workspace direction agreed; implementation has not started
+**Status:** UI Steps 0–4 complete; UI Step 5 in progress
 
 **Governing plan:** `category-tree-change-control-workplan.md`
 
@@ -234,7 +234,7 @@ The client does not construct or copy tree rows.
 
 ### 6.4 Edit a Published version or Draft
 
-Every read and mutation carries the explicit workspace `VersionId`. Mutation requests also carry the latest version/item concurrency token required by the server contract.
+Every read and mutation carries the explicit workspace `VersionId`. The server serializes changes against that version and rechecks lifecycle/active state inside the command transaction; SQL-managed `RowVer` is not part of the EF or web contract.
 
 After success, the server returns the current status and replacement token. The interface reloads affected nodes and the banner without assuming the version remained editable during the request.
 
@@ -301,7 +301,7 @@ The service returns a workspace context containing at least:
 - status and active flag;
 - description, notes and predecessor;
 - effective interval and semantic-change time;
-- row-version/concurrency token;
+- selected `VersionId` and server-resolved lifecycle/capability state;
 - validation and canonical-evidence state;
 - stale-predecessor/submission-lock state; and
 - server-calculated capabilities for the current actor.
@@ -325,13 +325,13 @@ Every Category Tree mutation posts:
 
 - antiforgery token;
 - explicit `versionId`;
-- expected concurrency token;
+- explicit selected `VersionId`;
 - semantic command fields; and
 - change note where required.
 
 The service routes commands to the authoritative SQL procedures for category, edge, mapping, root, Cash Code and lifecycle changes. Existing direct `SaveChanges`, `ExecuteUpdate`, `ExecuteDelete` and bulk mutation paths are removed from page handlers.
 
-Common responses identify success/failure, resolved version/status, replacement concurrency token, affected nodes and an actionable message. Stale requests produce a conflict result and reload option; immutable or locked state produces a state-specific rejection. Raw SQL exceptions are translated consistently without hiding the server audit entry.
+Common responses identify success/failure, resolved version/status, affected nodes and an actionable message. Requests invalidated by a lifecycle or active-version change produce a conflict result and reload option; immutable or locked state produces a state-specific rejection. Raw SQL exceptions are translated consistently without hiding the server audit entry.
 
 ### 7.4 Authorisation
 
@@ -353,7 +353,7 @@ JavaScript-disabled posts and direct handler requests receive the same authorisa
 | `_ExpressionDetailsCard` | Explain current formula metadata versus version-owned category fields. |
 | `_TreeContextMenu` | Render only server-authorised actions for the selected context. |
 | `_MobileActionBar` | Match desktop capabilities and include access to version workspace. |
-| Add/create/edit/delete/move pages | Carry version and concurrency tokens and use the shared service. |
+| Add/create/edit/delete/move pages | Carry explicit version identity and use the shared service. |
 
 ### 8.2 JavaScript
 
@@ -378,15 +378,21 @@ The generated Cash Statement gains an optional Category Tree version selector se
 - Excluded: Draft.
 - Selection affects only that generated Cash Statement request and never updates `App.tbOptions`.
 - Each choice shows version code, description, status and effective interval.
+- The JSON `params` dictionary accepts optional `categoryVersionId`. Absence or blank means resolve `App.tbOptions.CategoryVersionId` at generation time; the web page does not manufacture or persist the active identifier as a user preference.
+- `CashStatementRequestV1.CategoryVersionId` is nullable at the transport boundary, while the built document always contains the resolved selected version and the active version observed in the same read.
 
-For every included period end, the service reports:
+For every included period end, the service resolves the historically applicable version from `Cash.tbCategoryVersion.EffectiveFromOn` and `EffectiveToOn` using the half-open interval `[EffectiveFromOn, EffectiveToOn)`. The commissioned first version (the row with no predecessor) is the baseline for statement periods ending before Category Tree versioning began. The service reports:
 
-- whether the selected version's last semantic change occurred after that period end; and
-- whether lifecycle history identifies a different eligible version as active at that date.
+- whether the selected version differs from the version applicable at that period end; and
+- whether the selected version's last semantic change occurred after that period end.
 
-Warnings are explanatory and list the affected periods. Where an eligible historical version is identifiable, the interface may offer **Select that version**, but it must not switch silently. Missing Cash Code mappings or BI-expression parse failures are errors/warnings against the selected version, never a reason to fall back to active classification.
+The generated workbook uses one selected version for every section and period; period attribution is explanatory evidence and never causes a silent per-period version switch. A differing period receives only a light orange warning fill in its period header. The Settings sheet records the selected version, active version, canonical digest and a compact list of differing periods. It does not repeat matching periods or turn the main statement into a warning report.
+
+Missing Cash Code mappings, BI-expression parse failures or an Equity Bridge that cannot reconcile against a superseded version are explicit selected-version results. In particular, an Archived version may legitimately be unable to classify Cash Codes created after it was superseded. The generator must report the missing codes or failed reconciliation and must never borrow the active mapping, omit the activity silently or coerce the bridge to zero.
 
 No equivalent general selector is added to Accounts, Equity Bridge, Tax Hub or other operational workspaces.
+
+The local changeover acceptance fixture uses the synthetic company database. It captures an active-default statement, clones the active version, moves one transaction-bearing historical Cash Code between compatible Nominal categories, validates and publishes the successor, then generates the same period with both the new active version and its Archived predecessor. The fixture must prove a deliberate classification difference, an affected-period warning, exact historical reconstruction, exclusion of the Draft before publication and an unchanged `App.tbOptions.CategoryVersionId` when the predecessor is selected. The remap is introduced only after the complete explicit-version data boundary is in place, so the test cannot accidentally combine selected flow rows with active VAT, balance-sheet or reconciliation data.
 
 ## 10. Accessibility, errors and safety
 
@@ -397,13 +403,17 @@ No equivalent general selector is added to Accounts, Equity Bridge, Tax Hub or o
 - Long notes and validation errors wrap without breaking the split pane or mobile viewport.
 - Network retry never automatically repeats publish, discard, Cash Code delete or other non-idempotent commands.
 - A post whose server state changed is rejected and refreshed; the client does not overwrite newer work.
-- Errors distinguish validation, authorisation, immutable state, submission lock, stale predecessor, optimistic concurrency and unexpected failure.
+- Errors distinguish validation, authorisation, immutable state, submission lock, stale predecessor and unexpected failure.
 
 ## 11. Implementation sequence and progress
 
 Only one UI step should normally be in progress at a time. Each step must build and pass its bounded tests before the next begins.
 
 ### UI Step 0 — Server prerequisite
+
+**Status: Complete.**
+
+**Progress: complete.** The EF model maps version headers/events, category and total composite keys, Cash Code mappings and roots while deliberately excluding SQL-managed `RowVer` fields. Category polarity/type remain structurally required in SQL and EF, and `NodeEnum` contains the version-status, version-event and root-type vocabularies. The tenant-scoped change-control service resolves active/displayed workspaces, calculates capabilities, exposes lifecycle history and wraps lifecycle/category/edge/mapping/root/Cash Code procedures in serializable SQL command boundaries. Composite category-plus-edge, reorder, move and expression-shell operations use one locked batch transaction. Active-default and explicit-version node/detail reads use `Cash.tbCategoryCodeMap` rather than the retired `Cash.tbCode.CategoryCode`. Every retained interactive and JavaScript-disabled mutation handler now carries `VersionId` and routes version-owned writes through the service; the sole direct handler write is the intentionally current, non-versioned BI expression parse-status reset. Executable source-boundary assertions reject reintroduced direct EF or bulk writes. The retained Category Tree JavaScript family has four-space indentation and strict Allman braces, enforced by dedicated format/lint commands.
 
 - Complete EF mappings for version headers, events and version-owned composite keys.
 - Implement the one Category Tree workspace/change-control service.
@@ -415,6 +425,10 @@ Only one UI step should normally be in progress at a time. Each step must build 
 
 ### UI Step 1 — Root version workspace
 
+**Status: Complete.**
+
+**Progress: implemented for review.** The visible root is now **Category Tree** while retaining `__ROOT__`. Its right-hand/mobile detail surface separates the active version, Draft proposals and operational/history rows, including effective intervals, validation/stale-predecessor warnings, configured roots and content counts. Selecting a row reloads an explicit `versionId` URL without changing `App.tbOptions`; the retained node and detail endpoints inherit that selected version. Lifecycle command buttons remain deliberately deferred to Step 4.
+
 - Rename the visible root to Category Tree without changing `__ROOT__`.
 - Add the root-only detail model and responsive versions workspace.
 - Add active, Draft and history summaries plus broad warnings.
@@ -423,6 +437,10 @@ Only one UI step should normally be in progress at a time. Each step must build 
 **Exit:** users can inspect and switch among versions without changing the active pointer; all trees are initially read-only through this new selection path.
 
 ### UI Step 2 — Version-aware tree reads and controls
+
+**Status: Complete.**
+
+**Progress: implemented for review.** Node, detail, candidate, confirmation and auxiliary refresh reads now carry the selected `VersionId`. Expanded and active-node state is namespaced by tenant and version. A persistent server-rendered banner distinguishes Live, Proposal and Historical contexts, and the existing desktop/mobile action surfaces receive `CanEditTree` rather than inferring editability from the administrator role. Persistent Cash Code master controls are further limited to an active Published context, while Draft mapping changes remain available. Full-page detail cards apply the same capability result when JavaScript is absent. BI expression details explicitly distinguish current formula metadata from version-owned category fields. Mobile root navigation opens **Versions**, history becomes a stacked card list at narrow widths, and the retained Fancytree now has explicit disclosure triangles and hierarchy connectors.
 
 - Pass `versionId` through every node, detail, candidate and form read.
 - Namespace expansion/selection state by tenant and version.
@@ -434,14 +452,22 @@ Only one UI step should normally be in progress at a time. Each step must build 
 
 ### UI Step 3 — Guarded editing
 
-- Cut create, edit, move, reorder, enable/disable, root and mapping actions over to the service.
+**Status: Complete.**
+
+**Progress: implemented for review.** The retained desktop and mobile editing surfaces now consume the server-resolved tree capability for the selected version. Persistent Cash Code create, edit, enable/disable and delete actions are restricted to the active Published version at both the visible-control and command-service boundaries; Drafts retain version-owned mapping and Category Tree edits without gaining Cash Code master-data authority. Full-page edit redirects preserve `VersionId`, and guarded-state, concurrency and lock failures return a consistent actionable message while retaining server-side error logging.
+
+- Retain the completed Step 0 command-service cutover for create, edit, move, reorder, enable/disable, root and mapping actions while applying visible capability controls.
 - Split persistent Cash Code master actions from version membership.
-- Carry and refresh concurrency tokens.
+- Preserve explicit version identity and refresh server-resolved lifecycle capabilities after changes.
 - Standardise conflict, immutable-state and lock feedback.
 
 **Exit:** Published and Draft changes affect only their intended version; every existing handler bypass test is guarded.
 
 ### UI Step 4 — Lifecycle commands and review
+
+**Status: Complete.**
+
+**Progress: complete.** The root workspace now exposes successor-Draft cloning, stale-Draft refresh, validation, publication and discard through the existing serializable command service and authoritative SQL procedures. Exact version/predecessor confirmations and required change notes accompany destructive or operational transitions; clone checks the expected active version while holding the active/version locks, and publication retains the SQL predecessor/digest recheck. A deterministic server-side comparison groups category, link, Cash Code mapping and root changes against the recorded predecessor without treating current BI formula text as version content. Versions/actions and lifecycle history use separate responsive tabs; history is chronologically paged and explicit version links activate and load the root workspace. Successful publication follows the newly active version; discard returns to the active tree. Composite commands coalesce their uncommitted component-procedure Edit events into one user-action event inside the same serializable transaction. Rollback-only database evidence and hands-on owner testing cover lifecycle transitions, Published editing, Submitted/Archived immutability and the retained desktop/mobile tree interactions.
 
 - Add clone, refresh, validate, deterministic review, publish and discard flows.
 - Add exact version/change-note confirmations.
@@ -452,14 +478,98 @@ Only one UI step should normally be in progress at a time. Each step must build 
 
 ### UI Step 5 — Cash Statement selection and warnings
 
-- Add the eligible version source and active default.
-- Pass the selected version through TCExports generation.
-- Add affected-period, historical-version, missing-mapping and formula-parser warnings.
-- Prove that selection never changes the active options pointer.
+**Status: In progress.**
+
+**Progress: Steps 5.0–5.2 complete; Step 5.3 is next.** A two-version synthetic database exposed a missed legacy read: `Cash.vwCategoryTotals` scanned every version and caused duplicate calculated-category contract violations. The active-default repair is retained, and the typed request now accepts an optional `categoryVersionId`, resolves active and selected metadata once, and carries the resolved context on the immutable document. Omitted, explicit-active and eligible historical requests now use one coherent version-explicit Category Tree boundary. The selector remains hidden until period attribution and warnings are complete.
+
+#### Step 5.0 — Restore and guard the active-default contract
+
+**Status: Complete.**
+
+- Keep every ordinary statement defaulting through the active projection.
+- Correct `Cash.vwCategoryTotals` and token resolution so multiple stored versions cannot duplicate active rows.
+- Add executable source-boundary assertions covering the SSDT object, build `4.1.13` migration and TCExports repository.
+- Prove the two-version company database produces a valid active-default XLSX and does not change the options pointer.
+
+**Exit:** omission of `categoryVersionId` retains the accepted ordinary statement behaviour on a database containing multiple versions.
+
+#### Step 5.1 — Add the optional request and resolution contract
+
+**Status: Complete.**
+
+The optional transport field, parser validation, TCWeb payload propagation, SQL resolver and renderer-neutral context are implemented. Editable Published versions may legitimately have null canonical evidence after a tree edit; resolution reports that state without invoking the mutating canonicalisation procedure. Contract tests prove active default, identifier normalisation, malformed/Draft rejection and the temporary historical fail-closed gate. Live IAM-01 generation proves omitted and explicit-active requests return identical successful workbooks while an Archived request is stopped before any active-only data can be misrepresented as historical.
+
+- Add nullable `CategoryVersionId` to `CashStatementRequestV1` without changing existing Boolean/default behaviour.
+- Accept `categoryVersionId` in `CashStatementRequestParser` and `CashPayloadValidator`; reject malformed, unknown or duplicate values at the existing typed boundary.
+- Add the same optional field to `CashStatementGenerationRequest` and emit it in `ExportPayload.Params` only when the user explicitly chooses a version.
+- Resolve active and selected version metadata once per generation. Null selects the options-referenced version. An explicit value must exist and be Published, Submitted or Archived; Draft is rejected server-side.
+- Carry the resolved identifier, description, status, effective interval and current canonical-evidence state in a renderer-neutral `CashStatementCategoryTreeContext` on the immutable document. SHA-256 and byte length are nullable for an editable Published version changed since its last validation; statement generation must not canonicalise or mutate it.
+- Recheck that the active pointer observed after resolution has not been modified by generation; resolution never updates `App.tbOptions`.
+
+**Tests:** absent/blank default, explicit eligible values, Draft/missing/malformed rejection, unknown-option regression, and unchanged active pointer.
+
+**Exit:** the transport and immutable model identify one eligible version, while all data reads still deliberately remain on the active path until Step 5.2 completes.
+
+#### Step 5.2 — Make the complete TCExports data boundary version-explicit
+
+**Status: Complete.** The core flow graph is version-explicit: category rows, direct Cash Code mappings, calculated totals, total edges, expression rows and expression token resolution all receive the single resolved `VersionId` through named database functions. Complex selection, comparison and coverage logic is owned by the SQL project and the migration. TCExports contains only small parameterised function/view invocations, result mapping and calls to procedures that perform genuine procedural work; it does not embed joins, CTEs, unions or Category Tree business logic. This keeps the later PostgreSQL port bounded without manufacturing a stored-procedure wrapper for every simple view read. A bounded pre-build coverage function rejects transaction-bearing Cash Codes absent from the selected mapping over the statement year horizon. The remaining operational VAT, tax-accrual, balance-sheet and Equity Bridge views are reused only after an executable dependency function proves selected-versus-active equivalence for VAT-root membership, business-profit membership and polarity, open-project polarity, and asset-account polarity. Any dependency difference required by the request fails explicitly rather than mixing versions. Contract tests prove coherent identifier propagation and fail-closed mismatches. Active-default, explicit-active and Archived requests with the normal default sections all generate valid XLSX packages against the local synthetic company database. Step 5.3 is next; the selector remains hidden.
+
+- Add explicit-version flow/category SQL for category rows, total edges, Cash Code mappings and roots. Active wrappers remain for ordinary non-versioned consumers; the selected statement path calls only the explicit forms.
+- Pass the resolved `VersionId` to category, Cash Code, total, expression-reference and token-resolution repository methods. Current `Cash.tbCategoryExp` formula text remains unversioned but is parsed only against the selected version's categories and mapped Cash Codes.
+- Inventory every optional statement dataset (`VAT`, balance sheet, bank balances, tax accruals and Equity Bridge). Use an explicit-version query where output classification itself varies by version. Existing operational calculations may be reused only when an executable pre-build guard proves that every Category Tree projection they consume is identical between selected and active; otherwise fail before reading the active calculation. Bank balances and the period calendar remain version-independent because their dependency audit proves they consume no categories, mappings or roots.
+- Detect transaction-bearing Cash Codes absent from the selected mapping for the requested period horizon before building totals. Return their codes and descriptions as a bounded contract violation; do not fall back to active classification.
+- Keep one resolved version across all repository reads. Do not temporarily repoint `App.tbOptions`, use session context as an implicit selector or mix active views with explicit-version functions.
+
+**Tests:** active-wrapper versus explicit-active equivalence, old/new mapping divergence, missing later Cash Code, expression failure, optional-section coherence and an unchanged options pointer after success and failure.
+
+**Exit:** every Category Tree-sensitive value in one document comes from the same resolved version. Only then may the selector become visible.
+
+#### Step 5.3 — Attribute periods and mark only genuine differences
+
+**Status: Not started.**
+
+- Resolve the applicable version for each monthly and annual period end from the effective intervals; use the no-predecessor first version as the pre-versioning baseline.
+- Add the applicable version and a `DiffersFromSelectedVersion` flag to the renderer-neutral period model. This is comparison metadata only; calculations continue to use the single selected version.
+- Apply a light orange fill to the affected period header cells in XLSX and the equivalent ODS header style. Do not colour the whole data column and do not replace the existing yellow active-period convention.
+- When annual and monthly columns share an affected year, mark each affected period header deterministically; avoid colouring unrelated labels or totals.
+
+**Tests:** boundary instants at `EffectiveFromOn`/`EffectiveToOn`, pre-versioning baseline, no-warning current match, selected-old/current-period mismatch, selected-active/historical-period mismatch, annual header behaviour and XLSX/ODS style parity.
+
+**Exit:** the statement remains visually quiet by default and uses the agreed orange header cue only where selected and historically applicable versions differ.
+
+#### Step 5.4 — Add the selector and durable workbook explanation
+
+**Status: Not started.**
+
+- Add a Category Tree selector to the Cash Statement generation page, populated with Published, Submitted and Archived versions and defaulted to **Active** rather than a persisted version code.
+- Show version code, description, status and effective interval. Drafts never appear and crafted Draft posts are rejected.
+- Preserve the selected value when validation or generation fails, but do not save it in `App.tbOptions` or as a user preference.
+- Extend both renderer-owned Settings sheets with selected version, active version, status, effective interval and canonical SHA-256/byte length when current. Show **Not validated since latest tree change** when an editable Published version has deliberately invalidated evidence.
+- Add a compact period comparison table containing only differing periods and their applicable version. The orange header remains the only cue on operational statement sheets.
+- Surface missing mappings, parser failures and reconciliation failure in plain language against the selected version.
+
+**Tests:** Razor binding/validation, eligible list, Draft exclusion, failed-post retention, Settings values and period table in XLSX/ODS, accessibility and mobile layout.
+
+**Exit:** users normally generate with Active unchanged, but can deliberately reconstruct an eligible historical view and understand the orange period warnings.
+
+#### Step 5.5 — Execute the controlled local changeover
+
+**Status: Not started.**
+
+- Capture the active pointer and baseline statement from the synthetic company database.
+- Clone the active version, move one transaction-bearing historical Cash Code between compatible Nominal categories, validate and publish the successor.
+- Generate the same period with the new active version and the Archived predecessor. Require a deliberate classification difference, the expected orange header, correct Settings evidence and deterministic outputs.
+- Generate a later horizon with the predecessor. If it lacks a subsequently created Cash Code, require the explicit missing-mapping or Equity Bridge failure accepted by this design.
+- Prove Draft exclusion, no active-pointer mutation during historical generation, and exact active-default equivalence when `categoryVersionId` is omitted.
+- Keep the fixture rollback-controlled or restore the disposable synthetic database after evidence capture; it must not become customer migration machinery.
+
+**Exit:** the local database proves active default, historical reconstruction, changeover warnings and honest failure beyond an old version's classification horizon.
 
 **Exit:** current statements remain active-by-default and deliberate historical reconstruction works without a general product-wide selector.
 
 ### UI Step 6 — Acceptance and evidence
+
+**Status: Not started.**
 
 - Extend contract, handler, Playwright and manual desktop/mobile tests.
 - Run accessibility and keyboard checks.

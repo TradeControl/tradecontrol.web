@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "lint": "eslint \"src/TCWeb/wwwroot/js/**/*.js\"",
-    "lint:fix": "eslint --fix \"src/TCWeb/wwwroot/js/**/*.js\""
+    "lint:fix": "eslint --fix \"src/TCWeb/wwwroot/js/**/*.js\"",
+    "lint:category-tree": "eslint \"src/TCWeb/wwwroot/js/categoryTree*.js\"",
+    "lint:category-tree:fix": "eslint --fix \"src/TCWeb/wwwroot/js/categoryTree*.js\"",
+    "format:category-tree": "js-beautify --config .jsbeautifyrc --replace --quiet \"src/TCWeb/wwwroot/js/categoryTree*.js\" && eslint --fix \"src/TCWeb/wwwroot/js/categoryTree*.js\""
   },
   "devDependencies": {
-    "eslint": "^10.13.0"
+    "eslint": "^10.13.0",
+    "js-beautify": "^2.0.3"
   }
 }
