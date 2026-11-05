@@ -163,7 +163,7 @@ public interface ICategoryTreeChangeControlService
         CancellationToken cancellationToken = default);
 
     Task<CategoryTreeCommandResult> CloneActiveAsync(string expectedActiveVersionId,
-        string description, string? notes,
+        string description, string? notes, DateTime proposedEffectiveFromOn,
         CancellationToken cancellationToken = default);
 
     Task<CategoryTreeCommandResult> RefreshDraftAsync(string versionId, string changeNote,

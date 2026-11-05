@@ -8,14 +8,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
     public partial class CategoryTreeModel
     {
         public Task<IActionResult> OnPostCloneVersionAsync(string expectedActiveVersionId,
-            string description, string notes, bool confirmIsolation)
+            string description, string notes, DateTime proposedEffectiveFromOn,
+            bool confirmIsolation)
         {
             return RunLifecycleAsync(expectedActiveVersionId, confirmIsolation,
                 "Confirm that the successor Draft is isolated from operational statements.",
                 async () =>
                 {
                     var result = await CategoryTreeService.CloneActiveAsync(expectedActiveVersionId,
-                        description, notes, HttpContext.RequestAborted);
+                        description, notes, proposedEffectiveFromOn, HttpContext.RequestAborted);
                     return (result.VersionId,
                         $"Draft {result.VersionId} was cloned from {expectedActiveVersionId}.");
                 });
@@ -47,7 +48,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         }
 
         public Task<IActionResult> OnPostPublishVersionAsync(string versionId,
-            string expectedPredecessorVersionId, string changeNote, bool confirmPublish)
+            string expectedPredecessorVersionId, string changeNote,
+            bool confirmPublish)
         {
             return RunLifecycleAsync(versionId, confirmPublish,
                 $"Confirm publication of Draft {versionId} over {expectedPredecessorVersionId}.",

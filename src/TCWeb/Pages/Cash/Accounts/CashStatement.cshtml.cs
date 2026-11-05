@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
@@ -9,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices;
 using TradeControl.Web.Data;
+using TradeControl.Web.Models;
 
 namespace TradeControl.Web.Pages.Cash.Accounts;
 
@@ -43,9 +45,15 @@ public class CashStatementModel : PageModel
     [BindProperty] public bool IncludeTaxAccruals { get; set; } = true;
     [BindProperty] public bool IncludeVatDetails { get; set; } = true;
     [BindProperty] public bool IncludeReconciliation { get; set; }
+    [BindProperty] public string? CategoryVersionId { get; set; }
 
     public string? ErrorMessage { get; private set; }
     public bool OdsEnabled => _generationOptions.OdsEnabled;
+    public string ActiveCategoryVersionId { get; private set; } = string.Empty;
+    public IReadOnlyList<CashStatementCategoryVersionOption> CategoryVersions { get; private set; } =
+        Array.Empty<CashStatementCategoryVersionOption>();
+    public CashStatementCategoryVersionOption? ActiveCategoryVersion =>
+        CategoryVersions.SingleOrDefault(version => version.IsActive);
 
     public async Task OnGetAsync(CancellationToken ct)
     {
@@ -56,6 +64,7 @@ public class CashStatementModel : PageModel
             .FirstOrDefaultAsync(ct);
 
         Format = printMode == LibrePrintMode && OdsEnabled ? "libre" : "excel";
+        await LoadCategoryVersionsAsync(ct);
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
@@ -65,6 +74,15 @@ public class CashStatementModel : PageModel
         else if (printMode == LibrePrintMode && !OdsEnabled)
             ModelState.AddModelError(nameof(Format),
                 "LibreOffice generation is temporarily unavailable. Microsoft Excel remains available.");
+
+        await LoadCategoryVersionsAsync(ct);
+        if (!string.IsNullOrWhiteSpace(CategoryVersionId)
+            && !CategoryVersions.Any(version => string.Equals(version.VersionId,
+                CategoryVersionId.Trim(), StringComparison.Ordinal)))
+        {
+            ModelState.AddModelError(nameof(CategoryVersionId),
+                "Choose Active or an available Published, Submitted or Archived Category Tree version.");
+        }
 
         if (!ModelState.IsValid)
             return Page();
@@ -88,7 +106,8 @@ public class CashStatementModel : PageModel
                 IncludeOrderBook,
                 IncludeTaxAccruals,
                 IncludeVatDetails,
-                IncludeReconciliation),
+                IncludeReconciliation,
+                string.IsNullOrWhiteSpace(CategoryVersionId) ? null : CategoryVersionId.Trim()),
             ct);
         if (!result.IsSuccess)
         {
@@ -97,6 +116,31 @@ public class CashStatementModel : PageModel
         }
 
         return File(result.Content!, result.ContentType!, result.FileName!);
+    }
+
+    private async Task LoadCategoryVersionsAsync(CancellationToken ct)
+    {
+        ActiveCategoryVersionId = await _nodeContext.App_tbOptions
+            .AsNoTracking()
+            .Select(option => option.CategoryVersionId)
+            .SingleAsync(ct);
+
+        CategoryVersions = await
+            (from version in _nodeContext.Cash_tbCategoryVersions.AsNoTracking()
+             join status in _nodeContext.Cash_tbCategoryVersionStatuses.AsNoTracking()
+                 on version.VersionStatusCode equals status.VersionStatusCode
+             where version.VersionStatusCode == (short)NodeEnum.CategoryVersionStatus.Published
+                || version.VersionStatusCode == (short)NodeEnum.CategoryVersionStatus.Submitted
+                || version.VersionStatusCode == (short)NodeEnum.CategoryVersionStatus.Archived
+             orderby version.EffectiveFromOn descending, version.VersionId descending
+             select new CashStatementCategoryVersionOption(
+                 version.VersionId,
+                 version.Description,
+                 status.VersionStatus,
+                 version.EffectiveFromOn,
+                 version.EffectiveToOn,
+                 version.VersionId == ActiveCategoryVersionId))
+            .ToArrayAsync(ct);
     }
 
     private static bool TryGetPrintMode(string? format, out short printMode)
@@ -118,3 +162,11 @@ public class CashStatementModel : PageModel
     }
 
 }
+
+public sealed record CashStatementCategoryVersionOption(
+    string VersionId,
+    string Description,
+    string Status,
+    DateTime? EffectiveFromOn,
+    DateTime? EffectiveToOn,
+    bool IsActive);

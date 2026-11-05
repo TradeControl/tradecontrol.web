@@ -197,7 +197,7 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
     }
 
     public Task<CategoryTreeCommandResult> CloneActiveAsync(string expectedActiveVersionId,
-        string description, string? notes,
+        string description, string? notes, DateTime proposedEffectiveFromOn,
         CancellationToken cancellationToken = default)
     {
         DemandAdministrator();
@@ -223,6 +223,7 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
                 await ExecuteProcedureAsync(context, "Cash.proc_CategoryVersionClone", cancellationToken,
                     NVarChar("@Description", 100, description.Trim()),
                     NVarCharMax("@Notes", notes),
+                    Date("@EffectiveFromOn", proposedEffectiveFromOn),
                     outputVersionId);
 
                 var versionId = Convert.ToString(outputVersionId.Value)
@@ -890,4 +891,7 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
 
     private static SqlParameter Bit(string name, bool value) =>
         new(name, SqlDbType.Bit) { Value = value };
+
+    private static SqlParameter Date(string name, DateTime value) =>
+        new(name, SqlDbType.Date) { Value = value.Date };
 }

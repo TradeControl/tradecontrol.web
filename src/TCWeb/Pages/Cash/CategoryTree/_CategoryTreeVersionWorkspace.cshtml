@@ -102,7 +102,7 @@
 
             <dl class="row small mb-2">
                 <dt class="col-5 col-lg-3">Effective from</dt>
-                <dd class="col-7 col-lg-3">@(active.EffectiveFromOn?.ToString("dd MMM yyyy HH:mm") ?? "Commissioning")</dd>
+                <dd class="col-7 col-lg-3">@(active.EffectiveFromOn?.ToString("dd MMM yyyy") ?? "Commissioning")</dd>
                 <dt class="col-5 col-lg-3">Last tree change</dt>
                 <dd class="col-7 col-lg-3">@active.ContentChangedOn.ToString("dd MMM yyyy HH:mm")</dd>
                 <dt class="col-5 col-lg-3">Net Profit root</dt>
@@ -165,6 +165,12 @@
                         <div class="mb-2">
                             <label class="form-label" for="cloneNotes">Notes</label>
                             <textarea class="form-control" id="cloneNotes" name="notes" rows="2"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="cloneEffectiveFromOn">Proposed effective date</label>
+                            <input class="form-control" type="date" id="cloneEffectiveFromOn"
+                                   name="proposedEffectiveFromOn" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                            <div class="form-text">Publication remains manual and is permitted only on this date.</div>
                         </div>
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" value="true"
@@ -259,6 +265,11 @@
                               class="border rounded p-3 mt-2">
                             <input type="hidden" name="versionId" value="@selected.VersionId" />
                             <input type="hidden" name="expectedPredecessorVersionId" value="@selected.PredecessorVersionId" />
+                            <div class="mb-2">
+                                Proposed effective date:
+                                <strong>@(selected.EffectiveFromOn?.ToString("dd MMM yyyy") ?? "not set")</strong>
+                            </div>
+                            <div class="form-text mb-2">The predecessor will end on the preceding date. Publication is permitted only on the stored proposed effective date.</div>
                             <label class="form-label" for="publishNote">Required change note</label>
                             <textarea class="form-control mb-2" id="publishNote" name="changeNote" required></textarea>
                             <div class="form-check mb-2">

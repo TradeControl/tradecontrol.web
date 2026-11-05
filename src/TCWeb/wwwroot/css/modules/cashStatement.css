@@ -44,6 +44,22 @@
     box-shadow: 0 .35rem 1.1rem rgba(32, 49, 66, .06);
 }
 
+.cash-category-version-select {
+    max-width: 100%;
+}
+
+.cash-category-version-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+}
+
+.cash-category-version-summary::marker {
+    color: var(--bs-primary);
+}
+
 .cash-format-option {
     position: relative;
     display: flex;

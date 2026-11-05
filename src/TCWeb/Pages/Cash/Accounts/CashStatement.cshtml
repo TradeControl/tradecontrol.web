@@ -2,6 +2,9 @@
 @model TradeControl.Web.Pages.Cash.Accounts.CashStatementModel
 @{
     ViewData["Title"] = "Cash Statement";
+    var categoryVersionHasError = ViewData.ModelState[nameof(Model.CategoryVersionId)]?.Errors.Count > 0;
+    var showCategoryVersionSelector = !string.IsNullOrWhiteSpace(Model.CategoryVersionId)
+        || categoryVersionHasError;
 }
 
 <link href="~/css/modules/cashStatement.css" rel="stylesheet" asp-append-version="true" />
@@ -81,6 +84,49 @@
                 </div>
                 <span asp-validation-for="Format" class="text-danger small"></span>
             </div>
+        </section>
+
+        <section class="card cash-statement-card mb-4">
+            <details class="cash-category-version" open="@showCategoryVersionSelector">
+                <summary class="cash-category-version-summary p-3 p-lg-4">
+                    <span>
+                        <strong class="d-block">Category Tree</strong>
+                        <small class="text-muted">
+                            Active — @(Model.ActiveCategoryVersion?.VersionId ?? Model.ActiveCategoryVersionId)
+                            · @(Model.ActiveCategoryVersion?.Description ?? "Current classification")
+                        </small>
+                    </span>
+                    <span class="badge text-bg-light border">Choose version</span>
+                </summary>
+                <div class="border-top p-3 p-lg-4">
+                    <p class="text-muted mb-3">
+                        Active is the normal choice. Select a historical version only when deliberately reconstructing an earlier classification.
+                    </p>
+                <label asp-for="CategoryVersionId" class="form-label">Statement classification</label>
+                <select asp-for="CategoryVersionId" class="form-select cash-category-version-select">
+                    @if (Model.ActiveCategoryVersion is { } activeVersion)
+                    {
+                        <option value="">
+                            Active — @activeVersion.VersionId · @activeVersion.Description · @activeVersion.Status
+                        </option>
+                    }
+                    @foreach (var version in Model.CategoryVersions.Where(version => !version.IsActive))
+                    {
+                        var interval = version.EffectiveFromOn?.ToString("dd MMM yyyy") ?? "not effective";
+                        interval += version.EffectiveToOn is null
+                            ? " – present"
+                            : $" – {version.EffectiveToOn:dd MMM yyyy}";
+                        <option value="@version.VersionId">
+                            @version.VersionId · @version.Description · @version.Status · @interval@(version.IsActive ? " · Active" : string.Empty)
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="CategoryVersionId" class="text-danger small"></span>
+                <div class="form-text">
+                    This choice applies only to this generated statement. It does not change the active Category Tree or your saved preferences.
+                </div>
+                </div>
+            </details>
         </section>
 
         <div class="row g-4">

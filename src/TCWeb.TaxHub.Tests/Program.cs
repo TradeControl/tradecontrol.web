@@ -1070,15 +1070,19 @@ var categoryTotalsView = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "
 var categoryTreeMigration = File.ReadAllText(categoryTreeMigrationPath);
 var cashFlowCategoryRepository = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
     "TCExports.Generator", "Data", "SqlServerCashFlowRepository.Categories.cs"));
+var cashStatementBuilder = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
+    "TCExports.Generator", "CashStatement", "CashStatementBuilder.cs"));
+var cashFlowPeriodRepository = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
+    "TCExports.Generator", "Data", "SqlServerCashFlowRepository.Periods.cs"));
+var categoryVersionTable = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Cash",
+    "Tables", "tbCategoryVersion.sql"));
+var categoryVersionPublish = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Cash",
+    "Stored Procedures", "proc_CategoryVersionPublish.sql"));
 Assert(categoryTotalsView.Contains("FROM Cash.vwCategoryActive", StringComparison.Ordinal)
     && !categoryTotalsView.Contains("FROM Cash.tbCategory", StringComparison.Ordinal)
     && categoryTreeMigration.Contains("ALTER VIEW [Cash].[vwCategoryTotals]", StringComparison.Ordinal)
     && categoryTreeMigration.Contains("FROM Cash.vwCategoryActive", StringComparison.Ordinal)
     && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionResolve",
-        StringComparison.Ordinal)
-    && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionProjectionMismatches",
-        StringComparison.Ordinal)
-    && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionUnmappedCashCodes",
         StringComparison.Ordinal)
     && cashFlowCategoryRepository.Contains("Cash.fnFlowCategoryByVersion",
         StringComparison.Ordinal)
@@ -1092,7 +1096,9 @@ Assert(categoryTotalsView.Contains("FROM Cash.vwCategoryActive", StringCompariso
     && !cashFlowCategoryRepository.Contains("FROM Cash.tbCategory", StringComparison.OrdinalIgnoreCase)
     && !cashFlowCategoryRepository.Contains("JOIN Cash.tbCategory", StringComparison.OrdinalIgnoreCase)
     && !cashFlowCategoryRepository.Contains("UPDATE App.tbOptions", StringComparison.OrdinalIgnoreCase)
-    && cashFlowCategoryRepository.Contains("GetCategoryTreeProjectionMismatchesAsync",
+    && !cashStatementBuilder.Contains("CATEGORY_VERSION_OPTIONAL_PROJECTION_MISMATCH",
+        StringComparison.Ordinal)
+    && !cashStatementBuilder.Contains("CATEGORY_VERSION_CASH_CODE_UNMAPPED",
         StringComparison.Ordinal)
     && categoryTreeMigration.Contains(
         "CREATE OR ALTER FUNCTION Cash.fnCategoryVersionProjectionMismatches",
@@ -1101,6 +1107,51 @@ Assert(categoryTotalsView.Contains("FROM Cash.vwCategoryActive", StringCompariso
         "CREATE OR ALTER FUNCTION Cash.fnCategoryVersionUnmappedCashCodes",
         StringComparison.Ordinal),
     "The Cash Statement category-total or token-resolution boundary can still combine multiple Category Tree versions.");
+Assert(categoryVersionTable.Contains("[EffectiveFromOn] DATE", StringComparison.Ordinal)
+    && categoryVersionTable.Contains("[EffectiveToOn] DATE", StringComparison.Ordinal)
+    && categoryVersionPublish.Contains("@EffectiveFromOn = EffectiveFromOn", StringComparison.Ordinal)
+    && categoryVersionPublish.Contains("EffectiveToOn = DATEADD(DAY, -1, @EffectiveFromOn)",
+        StringComparison.Ordinal)
+    && !categoryVersionPublish[..categoryVersionPublish.IndexOf(")", StringComparison.Ordinal)]
+        .Contains("@EffectiveFromOn", StringComparison.Ordinal)
+    && cashFlowCategoryRepository.Contains("Cash.fnCategoryVersionTimeline()", StringComparison.Ordinal)
+    && cashFlowPeriodRepository.Contains("App.fnStatementPeriods()", StringComparison.Ordinal)
+    && categoryTreeMigration.Contains("CREATE OR ALTER FUNCTION Cash.fnCategoryVersionTimeline()",
+        StringComparison.Ordinal)
+    && categoryTreeMigration.Contains("CREATE OR ALTER FUNCTION App.fnStatementPeriods()",
+        StringComparison.Ordinal),
+    "Category Tree effectivity is not an inclusive SQL-managed date interval or period attribution bypasses its authoritative functions.");
+var cashStatementPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Accounts",
+    "CashStatement.cshtml"));
+var cashStatementPageModel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Accounts",
+    "CashStatement.cshtml.cs"));
+var cashStatementSettings = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
+    "TCExports.Generator", "CashStatement", "CashStatementSettingsData.cs"));
+var cashStatementXlsxRenderer = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
+    "TCExports.Generator", "Excel", "CashStatementXlsxRenderer.cs"));
+var cashStatementOdsRenderer = File.ReadAllText(Path.Combine(root, "src", "TCExports", "src",
+    "TCExports.Generator", "Ods", "CashStatementOdsRenderer.cs"));
+Assert(cashStatementPage.Contains("asp-for=\"CategoryVersionId\"", StringComparison.Ordinal)
+    && cashStatementPage.Contains("Active —", StringComparison.Ordinal)
+    && cashStatementPage.Contains("<details class=\"cash-category-version\"", StringComparison.Ordinal)
+    && cashStatementPage.Contains("open=\"@showCategoryVersionSelector\"", StringComparison.Ordinal)
+    && cashStatementPage.Contains("does not change the active Category Tree", StringComparison.Ordinal)
+    && cashStatementPageModel.Contains("[BindProperty] public string? CategoryVersionId", StringComparison.Ordinal)
+    && cashStatementPageModel.Contains("CategoryVersionStatus.Published", StringComparison.Ordinal)
+    && cashStatementPageModel.Contains("CategoryVersionStatus.Submitted", StringComparison.Ordinal)
+    && cashStatementPageModel.Contains("CategoryVersionStatus.Archived", StringComparison.Ordinal)
+    && !cashStatementPageModel.Contains("CategoryVersionStatus.Draft", StringComparison.Ordinal)
+    && cashStatementPageModel.Contains("ModelState.AddModelError(nameof(CategoryVersionId)", StringComparison.Ordinal)
+    && cashStatementPageModel.Contains("string.IsNullOrWhiteSpace(CategoryVersionId) ? null", StringComparison.Ordinal),
+    "The Cash Statement selector is not Active-default, eligible-version-only, or fail-closed at the page boundary.");
+Assert(cashStatementSettings.Contains("AddVersion(settings, \"Selected\"", StringComparison.Ordinal)
+    && cashStatementSettings.Contains("AddVersion(settings, \"Active\"", StringComparison.Ordinal)
+    && cashStatementSettings.Contains("canonical SHA-256", StringComparison.Ordinal)
+    && cashStatementSettings.Contains("Not validated since latest tree change", StringComparison.Ordinal)
+    && cashStatementSettings.Contains("DiffersFromSelectedVersion", StringComparison.Ordinal)
+    && cashStatementXlsxRenderer.Contains("CashStatementSettingsDataBuilder.Build", StringComparison.Ordinal)
+    && cashStatementOdsRenderer.Contains("CashStatementSettingsDataBuilder.Build", StringComparison.Ordinal),
+    "XLSX and ODS Settings do not share Category Tree evidence and differing-period metadata.");
 var restoreDomainUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO Usr.tbUser", StringComparison.Ordinal);
 var restoreIdentityUsersAt = syntheticBootstrapSql.IndexOf("INSERT INTO dbo.AspNetUsers", StringComparison.Ordinal);
 Assert(syntheticBootstrapSql.Contains("SELECT * INTO #Keep_AspNetUsers FROM dbo.AspNetUsers;", StringComparison.Ordinal)

@@ -194,6 +194,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "category tree", "category t
 		..\docs\projects\Category Tree\category-tree-increment-1-inventory-and-contract.md = ..\docs\projects\Category Tree\category-tree-increment-1-inventory-and-contract.md
 		..\docs\projects\Category Tree\category-tree-schema-change-plan.md = ..\docs\projects\Category Tree\category-tree-schema-change-plan.md
 		..\docs\projects\Category Tree\category-tree-ui-change-plan.md = ..\docs\projects\Category Tree\category-tree-ui-change-plan.md
+		..\docs\projects\Category Tree\category-tree-controlled-changeover-test.md = ..\docs\projects\Category Tree\category-tree-controlled-changeover-test.md
 		..\docs\projects\Category Tree\categorytree_test_script.md = ..\docs\projects\Category Tree\categorytree_test_script.md
 	EndProjectSection
 EndProject

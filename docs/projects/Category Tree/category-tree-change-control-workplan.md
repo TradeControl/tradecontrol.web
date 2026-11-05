@@ -1,6 +1,6 @@
 # Category Tree change-control work plan
 
-**Status:** Architecture agreed; schema, migration, guarded mutations and lifecycle workspace complete locally; Cash Statement version selection and warnings in progress
+**Status:** Architecture agreed; schema, migration, guarded mutations, lifecycle workspace and Cash Statement version selection complete locally; final UI acceptance remains
 
 **Release boundary:** Required before the Accounts Mode production release
 
@@ -156,7 +156,7 @@ Active views such as `Cash.vwCategoryActive`, `Cash.vwCategoryTotalActive`, `Cas
 - predecessor base-content hash for stale-Draft detection;
 - content-schema/canonicalisation version;
 - canonical content hash, byte length and last semantic-change time;
-- effective-from and effective-to timestamps using a half-open active interval;
+- inclusive effective-from and effective-to business dates; the Draft start is a proposal and the predecessor end is system-managed;
 - created timestamp and actor;
 - SQL-managed `rowversion` retained for ODBC/Office compatibility but excluded from EF and the ASP.NET command contract; and
 - the seal or submission association needed to prove why it became Submitted.
@@ -394,7 +394,7 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 
 ### Increment 3 — Server boundary
 
-**Progress:** The version-aware EF alignment, workspace/capability contract and single Category Tree change-control service are implemented locally. Every retained tree mutation handler, including JavaScript-disabled page posts, carries the selected `VersionId` and routes category, edge, mapping, root and Cash Code changes through serializable guarded commands. Composite mutations are atomic. Submitted/Archived and inactive-Published rejection remains authoritative in SQL. SQL-managed `RowVer` columns are deliberately absent from EF and web contracts; executable boundary tests prohibit direct handler writes, except for current non-versioned BI expression parse status. The root workspace and lifecycle controls are operational. Cash Statement Steps 5.0–5.2 now provide a coherent active-default and explicit historical data boundary; period attribution, warnings and the selector remain outstanding under Steps 5.3–5.4. Seal integration remains the agreed later dependency.
+**Progress:** The version-aware EF alignment, workspace/capability contract and single Category Tree change-control service are implemented locally. Every retained tree mutation handler, including JavaScript-disabled page posts, carries the selected `VersionId` and routes category, edge, mapping, root and Cash Code changes through serializable guarded commands. Composite mutations are atomic. Submitted/Archived and inactive-Published rejection remains authoritative in SQL. SQL-managed `RowVer` columns are deliberately absent from EF and web contracts; executable boundary tests prohibit direct handler writes, except for current non-versioned BI expression parse status. The root workspace and lifecycle controls are operational. Cash Statement selection, inclusive period attribution, warnings and durable workbook evidence are operational. The controlled local changeover now proves active/default and historical Cash Flow plus reconciliation through one version-parameterised Equity Bridge function hierarchy. `Cash.vwEquityReconciliationByYear` is the active compatibility wrapper supplying `App.tbOptions.CategoryVersionId`; historical generation supplies the selected version directly to the same head function. Seal integration remains the agreed later dependency.
 
 - Add EF models and a single Category Tree version/change-control service.
 - Route every Category Tree mutation through the shared guard.
@@ -404,7 +404,7 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 
 ### Increment 4 — Existing JavaScript UI integration
 
-**Progress:** The retained JavaScript tree now carries version context through editing, preserves selection during moves, supports lifecycle-aware read-only behaviour, and integrates the root version workspace on desktop and mobile. Browser review has covered Published, Draft and Submitted behaviour. Cash Statement period warnings and selection remain the next bounded UI work; full automated browser coverage is still outstanding.
+**Progress: complete locally and owner-accepted.** The retained JavaScript tree carries version context through editing, preserves selection during moves, supports lifecycle-aware read-only behaviour, and integrates the root version workspace on desktop and mobile. Browser review covered Published, Draft and Submitted behaviour. Cash Statement selection, period warnings, Settings evidence, the controlled local changeover, cross-shape build `4.1.20` Equity Bridge equivalence and the loss-making company fixture are complete. Hosted acceptance remains an Increment 5 release-evidence activity rather than unfinished local UI implementation.
 
 - Add status/version banner and workspace context.
 - Add successor Draft clone, validate, publish, discard and history flows.
@@ -413,6 +413,8 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 
 ### Increment 5 — Accreditation and release evidence
 
+**Status: pending.** Local implementation evidence is complete. The next authorised boundary is the guarded build `4.1.18` to `4.1.20` sandbox migration rehearsal and B1–B7 hosted deployment, followed by the Category Tree statutory-seal field/digest integration and submission-lock/reconstruction evidence.
+
 - Execute SQL, accounting, Playwright, tamper and recovery tests.
 - Prove a Published change affects unsubmitted statements.
 - Seal a submission against the tree and prove immutability/reconstruction.
@@ -420,6 +422,8 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 - Record evidence in the VAT/CT accreditation dossier and Accounts Mode release checklist.
 
 ### Increment 6 — User Guide and release communication
+
+**Status: pending by design.** Do not publish until the hosted release candidate, statutory-seal integration and Increment 5 evidence are accepted.
 
 - Update the public User Guide only after the complete workflow and reviewed interface exist.
 - Explain the four statuses, the one-active-version rule and the immediate effect of editing Published content.
@@ -454,9 +458,13 @@ The recommended sequence for the three current programmes is:
 
 The later tax calculation optimisation remains a separate Stage 2 programme. It may consume sealed balances and Category Tree provenance, but it is not a prerequisite for this change-control lifecycle.
 
+**Current position, 5 November 2026:** the local Category Tree implementation and UI/reporting acceptance are complete at build `4.1.20`. Before hosted deployment, replay the consolidated build `4.1.18` to `4.1.20` artefact on a disposable restored sandbox clone and require the production schema comparison to report no unexplained Category Tree differences. Then upgrade B1–B7 and run hosted accounting/application smoke tests. The Stage 1 seal update remains intentionally next: bind the selected Category Tree version and canonical digest into statutory evidence, then prove submission immutability and historical reconstruction. Accreditation evidence follows that integration; public User Guide publication remains last.
+
 ## 13. IAM-01 synthetic-business migration
 
-`tcNodeDb4-COSIPFVT1-COSTD26` is the accepted clean bootstrap and synthetic-generation target and remains excluded from the migration allow-list. Maintain the single-database migration artefact alongside the implementation at `src/sqlnode/src/tcNodeDb4/Scripts/DB4 cat change control migration script.sql`; its source copy remains guarded and UTF-8 BOM encoded. With explicit owner authorisation, both sole-trader databases were restored and replayed after the trust/encoding corrections, then `tcNodeDb4-COMIPFVT1-COMIN26` completed the final fresh rehearsal including retirement of the old Access-client menu subsystem. All four local databases are now build `4.1.19`; the three migrated businesses passed their shape-specific accounting and lifecycle evidence.
+**Status: complete locally at build `4.1.20`.** The three former build `4.1.19` migrated databases passed a transactional reporting-only uplift whose commit was conditional on exact comparison of the complete old Equity Bridge body, active wrapper and version-explicit function. `tcNodeDb4-COSIPFVT1-COSTD26` already held the full current implementation. The company MIN database was subsequently used as the backed-up disposable Standard-company loss fixture and remains intentionally populated with that accepted dataset.
+
+`tcNodeDb4-COSIPFVT1-COSTD26` is the accepted clean bootstrap and synthetic-generation target and remains excluded from the migration allow-list. Maintain the single-database migration artefact alongside the implementation at `src/sqlnode/src/tcNodeDb4/Scripts/DB4 cat change control migration script.sql`; its source copy remains guarded and UTF-8 BOM encoded. With explicit owner authorisation, both sole-trader databases were restored and replayed after the trust/encoding corrections, then `tcNodeDb4-COMIPFVT1-COMIN26` completed the final fresh rehearsal including retirement of the old Access-client menu subsystem. All four local databases reached the completed Category Tree schema boundary at build `4.1.19`; the three migrated businesses passed their shape-specific accounting and lifecycle evidence. The current implementation target is build `4.1.20`, adding version-explicit Cash Statement and Equity Bridge reporting while retaining `4.1.19` as the recorded schema-migration milestone.
 
 The migration must:
 
@@ -469,3 +477,5 @@ The migration must:
 - reject unexpected builds, partial prior attempts, out-of-scope databases and unsafe reruns.
 
 The rebuilt Standard Company database must prove clean commissioning, version creation and full synthetic generation without transitional compatibility state. The detailed object order, transaction boundary, recovery behaviour and acceptance checks are governed by section 11 of `category-tree-schema-change-plan.md`. This exception is limited to the four named IAM-01 synthetic businesses: it does not authorise customer migration tooling, general Azure rollout, hosted-tenant deployment, accreditation or User Guide publication.
+
+Before changing B1–B7, restore or clone an exact build `4.1.18` sandbox locally, apply the current consolidated `4.1.20` migration once, rerun the accounting/lifecycle/Equity Bridge suites and use the production schema comparison only as a validator. This is the hosted-deployment gate for the amended artefact; it does not reopen the completed IAM-01 or UI acceptance steps.

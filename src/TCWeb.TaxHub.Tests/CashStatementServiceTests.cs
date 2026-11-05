@@ -95,6 +95,17 @@ internal static class CashStatementServiceTests
 
         using (var gate = new CashStatementGenerationGate(defaultOptions))
         {
+            var service = Service(defaultOptions, gate, new FixedSourceResolver(),
+                new CategoryTreeFailureExporter(), authenticatedContext);
+            var result = await service.GenerateAsync(
+                Request("excel") with { CategoryVersionId = "CV00000001" });
+            Assert(!result.IsSuccess
+                && result.Message == "Draft Category Tree versions cannot be used for an ordinary Cash Statement.",
+                "A safe Category Tree classification failure was not surfaced in plain language.");
+        }
+
+        using (var gate = new CashStatementGenerationGate(defaultOptions))
+        {
             var exporter = new SuccessfulExporter();
             var service = Service(defaultOptions, gate, new RejectingSourceResolver(), exporter, authenticatedContext);
             var result = await service.GenerateAsync(Request("excel"));
@@ -318,6 +329,23 @@ internal static class CashStatementServiceTests
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             throw new InvalidOperationException("Unreachable.");
         }
+    }
+
+    private sealed class CategoryTreeFailureExporter : ICashStatementExporter
+    {
+        public Task<ExportResult> ExportAsync(ExportPayload payload, CancellationToken cancellationToken) =>
+            Task.FromResult(new ExportResult
+            {
+                Status = "error",
+                Code = "CASH_STATEMENT_INVALID",
+                Details = new Dictionary<string, string[]>
+                {
+                    ["params.categoryVersionId"] =
+                    [
+                        "CATEGORY_VERSION_DRAFT: Draft Category Tree versions cannot be used for an ordinary Cash Statement."
+                    ]
+                }
+            });
     }
 
     private sealed class BlockingExporter : ICashStatementExporter

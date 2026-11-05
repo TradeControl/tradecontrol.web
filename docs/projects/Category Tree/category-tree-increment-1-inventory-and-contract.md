@@ -166,7 +166,7 @@ This section is the precise target for SQL and application tests. Names remain s
 - category, total, Cash Code mapping and root rows are owned by `VersionId`; their primary keys combine `VersionId` with the stable key(s).
 - lifecycle actor identifiers use `Usr.vwCredentials.UserId`; captured `UserName` is retained beside the stable identifier. Technical timestamps are UTC; business timestamp/zone fields follow the accepted Stage 1 convention.
 
-`Cash.tbCategoryVersionEvent` is an append-only audit of create, edit, validate, publish, submit and archive events, including actor, event time, status transition and applicable note. `EffectiveFromOn` and `EffectiveToOn` form a half-open interval for the period in which a version was active; Draft dates are null, submission leaves the interval open, and successor publication closes the predecessor at the successor's start.
+`Cash.tbCategoryVersionEvent` is an append-only audit of create, edit, validate, publish, submit and archive events, including actor, event time, status transition and applicable note. `EffectiveFromOn` and `EffectiveToOn` are inclusive business dates. A Draft may carry a proposed start date but has no end date. Publication is manual and is permitted only on the proposed start date; it automatically closes the predecessor on the preceding date. Submission leaves the active interval open.
 
 Draft rows are mutable only through Draft commands. Published category, total, mapping and root rows are the active data and remain editable through the guarded boundary. Submitted and Archived version-owned rows are immutable. `Cash.tbCode` and `Cash.tbCategoryExp` are not version-owned.
 

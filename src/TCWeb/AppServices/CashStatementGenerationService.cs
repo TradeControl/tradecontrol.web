@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -305,7 +306,7 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
                 format,
                 code,
                 stopwatch.ElapsedMilliseconds);
-            return CashStatementGenerationResult.Failure(code, SafeFailureMessage(code));
+            return CashStatementGenerationResult.Failure(code, SafeFailureMessage(code, export.Details));
         }
 
         if (string.IsNullOrWhiteSpace(export.FileContent))
@@ -381,13 +382,34 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         };
     }
 
-    private static string SafeFailureMessage(string code) => code switch
+    private static string SafeFailureMessage(string code, IReadOnlyDictionary<string, string[]>? details)
     {
-        "VALIDATION_ERROR" => "Review the Cash Statement options and try again.",
-        "CASH_STATEMENT_INVALID" => "The statement data did not satisfy the reporting contract.",
-        "UNSUPPORTED_FORMAT" => "Choose Microsoft Excel or LibreOffice Calc.",
-        _ => "Cash Statement generation failed."
-    };
+        if (code == "CASH_STATEMENT_INVALID" && details is not null)
+        {
+            var allowedCodes = new[]
+            {
+                "CATEGORY_VERSION_NOT_FOUND",
+                "CATEGORY_VERSION_DRAFT",
+                "CATEGORY_VERSION_STATUS_INVALID",
+                "CATEGORY_VERSION_INTERVAL_MISSING"
+            };
+            foreach (var message in details.Values.SelectMany(messages => messages))
+            {
+                var violationCode = allowedCodes.FirstOrDefault(allowed =>
+                    message.StartsWith($"{allowed}: ", StringComparison.Ordinal));
+                if (violationCode is not null)
+                    return message[(violationCode.Length + 2)..];
+            }
+        }
+
+        return code switch
+        {
+            "VALIDATION_ERROR" => "Review the Cash Statement options and try again.",
+            "CASH_STATEMENT_INVALID" => "The statement data did not satisfy the reporting contract.",
+            "UNSUPPORTED_FORMAT" => "Choose Microsoft Excel or LibreOffice Calc.",
+            _ => "Cash Statement generation failed."
+        };
+    }
 
     private static string BooleanText(bool value) => value ? "true" : "false";
 }
