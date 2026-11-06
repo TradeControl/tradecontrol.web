@@ -97,6 +97,7 @@ internal sealed class CompaniesHousePreparationReviewService(
     ICompaniesHouseProtectedContentStore contentStore,
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
     ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
+    ICategoryTreeSubmissionLockService submissionLocks,
     IHttpContextAccessor httpContextAccessor,
     IOptions<CompaniesHouseProductHostOptions> hostOptions,
     IBusinessClock businessClock,
@@ -230,7 +231,7 @@ internal sealed class CompaniesHousePreparationReviewService(
             CompaniesHouseProductPolicy.SupportedFilingProfile, snapshot,
             retainedInput.Sha256, document.Sha256, fullAccounts.Artifact.Sha256,
             categoryTreeAfter);
-        await workflowStore.AddPreparationAsync(new(
+        var preparation = new CompaniesHousePreparationRecord(
             reference,
             identity.TenantReference,
             identity.ReportingSubjectReference,
@@ -256,7 +257,10 @@ internal sealed class CompaniesHousePreparationReviewService(
             fullAccounts.Artifact.Sha256,
             retainedFullAccounts.Reference,
             accountsSnapshotSha256,
-            categoryTreeAfter), cancellationToken);
+            categoryTreeAfter);
+        await workflowStore.AddPreparationAsync(preparation, cancellationToken);
+        await submissionLocks.AcquireAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+            cancellationToken);
 
         return new(reference, document.Sha256, package.Transmission.Sha256, categoryTreeAfter,
             now.Add(CompaniesHouseProductPolicy.PreparationLifetime),

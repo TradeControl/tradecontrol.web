@@ -61,7 +61,8 @@ public sealed record ApprovedVatReturnDispatch(
     string Vrn,
     string PeriodKey,
     DateOnly PeriodStart,
-    DateOnly PeriodEnd);
+    DateOnly PeriodEnd,
+    CategoryTreeSubmissionLock SubmissionLock);
 
 public interface IVatApprovedReturnResolver
 {
@@ -134,6 +135,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     private readonly IVatWorkflowIdentityAccessor _identities;
     private readonly IVatObligationWorkspaceService _obligations;
     private readonly ICategoryTreeStatutoryEvidenceSource _categoryTreeEvidence;
+    private readonly ICategoryTreeSubmissionLockService _submissionLocks;
     private readonly IVatFilingAuthorisationPolicy _filingPolicy;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<VatReturnReviewService> _logger;
@@ -151,12 +153,14 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         TimeProvider timeProvider, IVatFilingAuthorisationPolicy filingPolicy,
         IHttpContextAccessor httpContextAccessor, ILogger<VatReturnReviewService> logger,
         ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
+        ICategoryTreeSubmissionLockService submissionLocks,
         AzureVatPersistence? azurePersistence = null)
     {
         _nodeContext = nodeContext;
         _identities = identities;
         _obligations = obligations;
         _categoryTreeEvidence = categoryTreeEvidence;
+        _submissionLocks = submissionLocks;
         _filingPolicy = filingPolicy;
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
@@ -213,7 +217,10 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         var now = _time.GetUtcNow();
         var reusable = await FindReusableReviewAsync(identity, prepared, now, cancellationToken);
         if (reusable.Candidate is not null)
+        {
+            await _submissionLocks.AcquireAsync(ToSubmissionLock(reusable.Candidate), cancellationToken);
             return await ReadModelAsync(reusable.Candidate, reusable.Approval?.Reference, cancellationToken);
+        }
 
         var reference = Guid.NewGuid().ToString("N");
         var seal = CreateSeal(identity, prepared, body.ToArray());
@@ -232,6 +239,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             prepared.Request.Findings.Select(VatReviewFindingRecord.From).ToArray(), now,
             now.Add(CandidateLifetime), prepared.CategoryTree);
         await AddCandidateAsync(candidate, cancellationToken);
+        await _submissionLocks.AcquireAsync(ToSubmissionLock(candidate), cancellationToken);
         return await ReadModelAsync(candidate, null, cancellationToken);
     }
 
@@ -366,7 +374,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         var vrn = ExtractVrn(request.RelativePath);
         return new(request, identity, approval.Reference, approval.LogicalSubmissionIdentity,
             approval.LogicalSubmissionIdentity, vrn, candidate.PeriodKey,
-            candidate.PeriodStart, candidate.PeriodEnd);
+            candidate.PeriodStart, candidate.PeriodEnd, ToSubmissionLock(candidate));
     }
 
     public async Task<IReadOnlyDictionary<string, VatApprovalEvidence>> GetEvidenceAsync(
@@ -500,7 +508,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             throw new VatReturnReviewException("The reconstructed filing evidence failed digest verification.");
         return new(request, identity, approval.Reference, approval.LogicalSubmissionIdentity,
             approval.LogicalSubmissionIdentity, vrn, approval.PeriodKey,
-            approval.PeriodStart, approval.PeriodEnd);
+            approval.PeriodStart, approval.PeriodEnd, ToSubmissionLock(candidate));
     }
 
     private async Task<PreparedCurrent> PrepareCurrentAsync(VatWorkflowIdentity identity, string periodKey,
@@ -577,6 +585,12 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             throw new VatReturnReviewException("The prepared VAT registration identity is invalid.");
         return vrn;
     }
+
+    private static CategoryTreeSubmissionLock ToSubmissionLock(VatReviewCandidateRecord candidate) =>
+        new(candidate.CategoryTree
+                ?? throw new VatReturnReviewException(
+                    "This preparation predates Category Tree statutory evidence. Prepare the return again."),
+            candidate.Reference, candidate.SealSha256);
 
     private static void EnsureCurrent(VatReviewCandidateRecord candidate, PreparedCurrent current)
     {

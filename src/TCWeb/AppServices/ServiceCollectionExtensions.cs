@@ -153,6 +153,8 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IVatObligationWorkspaceService, VatObligationWorkspaceService>();
             services.AddScoped<ICategoryTreeStatutoryEvidenceSource,
                 CategoryTreeStatutoryEvidenceSource>();
+            services.AddScoped<ICategoryTreeSubmissionLockService,
+                CategoryTreeSubmissionLockService>();
             services.AddScoped<IVatReturnReviewService, VatReturnReviewService>();
             services.AddScoped<IVatApprovedReturnResolver>(provider =>
                 provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovedReturnResolver

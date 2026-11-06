@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress on hosted Business 8 (`tc-business8`). Baseline commissioning passed on 6 November 2026; statutory-seal integration is the next gate.**
+**In progress on hosted Business 8 (`tc-business8`). Baseline commissioning and build `4.1.21` statutory-lock deployment passed on 6 November 2026; executable lock and authority-outcome acceptance is the next gate.**
 
 This is the living acceptance record for the final Category Tree change-control boundary. Update each result in place as evidence is established. Do not infer a pass from implementation or from a successful authority response: every row records its own observed evidence.
 
@@ -78,7 +78,7 @@ The historical generator initially published the tree using the real clock even 
 
 ## Test 1 — statutory-seal and lock contract
 
-**Status: in progress. Canonical provenance integration passes locally; the durable SQL submission lock and authority-outcome lifecycle remain the gate to hosted execution.**
+**Status: in progress. Canonical provenance and the durable lock/authority-outcome implementation are deployed; the executable hosted lifecycle evidence remains the gate to authority submission.**
 
 Before either authority journey, prove both filing paths consume one shared Category Tree provenance contract.
 
@@ -87,8 +87,8 @@ Before either authority journey, prove both filing paths consume one shared Cate
 | Seal input | Version ID, canonical profile, SHA-256 and byte length are explicit fields, not a broad row-version digest. | PASS — local contract |
 | Preparation | Prepared VAT and CH artifacts retain the selected active version and digest. | PASS — local contract |
 | Re-preparation | Approval and dispatch re-resolve the version and reject changed content or pointer drift. | PASS — local contract and pointer-drift test |
-| Durable lock | A prepared/approved operation prevents Published mutations and successor publication until conclusive outcome. | Pending |
-| Failure semantics | Conclusive rejection releases the lock; uncertain transport retains it; success records the seal relationship. | Pending |
+| Durable lock | A prepared/approved operation prevents Published mutations and successor publication until conclusive outcome. | Deployed — hosted execution pending |
+| Failure semantics | Conclusive rejection releases the lock; uncertain transport retains it; success records the seal relationship. | Deployed — hosted execution pending |
 | Success transition | Authority success changes Published to Submitted without changing canonical bytes. | Pending |
 | Additional filing | An unchanged Submitted version can support another seal without becoming editable. | Pending |
 | Tamper proof | One-bit canonical or seal mutation fails verification. | PASS — local canonical-vector tests |
@@ -193,6 +193,7 @@ Add one row for every execution or owner review. Keep credentials, access tokens
 | 6 Nov 2026 | Baseline Category Tree | Codex | `CV00000001`; 53 categories, 18 links, 38 mappings, 2 roots; canonical digest and length recorded above. | PASS |
 | 6 Nov 2026 | Historical anchor correction | Codex | `App.proc_BasicSetup` changed to publish the first version on `@AsOfDate`; B8 corrected to 30 Jun 2017; SQL build passed. | PASS |
 | 6 Nov 2026 | Shared statutory provenance contract | Codex | VAT seal profile v2 and the CH/CT accounts snapshot bind `VersionId`, canonical profile, SHA-256 and byte length; preparation and pre-dispatch checks reject active-pointer/content drift. Tax Hub application tests passed 90 assertions and TCWeb Tax Hub boundary tests passed 438 assertions. | PASS — local |
+| 6 Nov 2026 | Durable lock deployment | Codex | SQL build `4.1.21` published serially to hosted B3-B6 and B8 with constraint/data validation; the shared integration app deployed runtime-successfully and `business8.tradecontrol.co.uk` returned HTTP 200. No statutory submission was initiated. | PASS — deployment |
 
 ## Completion gate
 

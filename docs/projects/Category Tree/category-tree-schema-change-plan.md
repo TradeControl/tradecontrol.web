@@ -1,6 +1,6 @@
 # Category Tree schema change plan
 
-**Status:** Steps 0-6 complete locally and validated on hosted B1/B3-B6 at build `4.1.20`; statutory-seal integration is next
+**Status:** Steps 0-6 complete; build `4.1.21` statutory provenance and submission-lock integration is deployed to hosted B3-B6/B8, with hosted lifecycle evidence in progress
 **Governing documents:** `category-tree-change-control-workplan.md` and `category-tree-increment-1-inventory-and-contract.md`
 **UI partner:** `category-tree-ui-change-plan.md`
 **Scope:** local tcNodeDb4 SQL foundation, bootstrap, templates, synthetic generation and sandbox migration, plus the bounded TCWeb EF alignment required to run ordinary client surfaces after authority-column removal. Category Tree server/JavaScript integration and TCExports changes are deferred to later increments.

@@ -260,9 +260,10 @@ var stagingContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<
 var stagingHttp = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
 stagingHttp.HttpContext.User = Principal(Constants.AdministratorsRole);
 var stagingCategoryTreeSource = new StubCategoryTreeStatutoryEvidenceSource(stagingCategoryTree);
+var stagingSubmissionLocks = new StubCategoryTreeSubmissionLockService();
 var stagingService = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    stagingStore, stagingContent, stagingCategoryTreeSource,
+    stagingStore, stagingContent, stagingCategoryTreeSource, stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
@@ -273,7 +274,7 @@ var driftedCategoryTreeStaging = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
     new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval), stagingContent,
     new StubCategoryTreeStatutoryEvidenceSource(
-        stagingCategoryTree with { VersionId = "CV00000002" }),
+        stagingCategoryTree with { VersionId = "CV00000002" }), stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
@@ -323,7 +324,7 @@ await AssertThrowsAsync<InvalidOperationException>(
 var recordingExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0001");
 var dispatchService = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    stagingStore, stagingContent, stagingCategoryTreeSource,
+    stagingStore, stagingContent, stagingCategoryTreeSource, stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseAuthorityIdentifierSource(new("R00001", "RECORDED0001")),
     new StubCompaniesHouseSubmissionMaterializer(), recordingExchange, TimeProvider.System);
@@ -372,7 +373,7 @@ var recoveryContent = new StubCompaniesHouseProtectedContentStore(new Dictionary
 });
 var recoveryStaging = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    recoveryStore, recoveryContent, stagingCategoryTreeSource,
+    recoveryStore, recoveryContent, stagingCategoryTreeSource, stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
@@ -383,7 +384,7 @@ var recoveryConversation = await recoveryStaging.StageApprovedAsync(recoveryAppr
 var ambiguousExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0002", fail: true);
 var recoveryDispatch = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    recoveryStore, recoveryContent, stagingCategoryTreeSource,
+    recoveryStore, recoveryContent, stagingCategoryTreeSource, stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseAuthorityIdentifierSource(new("R00002", "RECORDED0002")),
     new StubCompaniesHouseSubmissionMaterializer(), ambiguousExchange, TimeProvider.System);
@@ -418,7 +419,7 @@ var statusContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<s
 });
 var statusStaging = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    statusStore, statusContent, stagingCategoryTreeSource,
+    statusStore, statusContent, stagingCategoryTreeSource, stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
@@ -428,7 +429,7 @@ var statusStaging = new CompaniesHouseSubmissionStagingService(
 var statusConversation = await statusStaging.StageApprovedAsync(statusApproval.Reference);
 var statusDispatch = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    statusStore, statusContent, stagingCategoryTreeSource,
+    statusStore, statusContent, stagingCategoryTreeSource, stagingSubmissionLocks,
     new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseAuthorityIdentifierSource(new("R00003", "RECORDED0003")),
     new StubCompaniesHouseSubmissionMaterializer(),
@@ -441,7 +442,8 @@ var statusService = new CompaniesHouseSubmissionStatusService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
     statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseStatusTransactionIdSource("STATUS0001", "STATUS0002"),
-    new StubCompaniesHouseStatusRequestMaterializer(), statusExchange, TimeProvider.System);
+    new StubCompaniesHouseStatusRequestMaterializer(), statusExchange, stagingSubmissionLocks,
+    TimeProvider.System);
 var pendingStatus = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
 var acceptedStatus = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
 var acceptedAgain = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
@@ -2090,6 +2092,34 @@ file sealed class StubCategoryTreeStatutoryEvidenceSource(CategoryTreeSealEviden
 {
     public Task<CategoryTreeSealEvidence> ReadActiveAsync(
         CancellationToken cancellationToken = default) => Task.FromResult(evidence);
+}
+
+file sealed class StubCategoryTreeSubmissionLockService : ICategoryTreeSubmissionLockService
+{
+    public int AcquireCount { get; private set; }
+    public int ReleaseCount { get; private set; }
+    public int CompleteCount { get; private set; }
+
+    public Task AcquireAsync(CategoryTreeSubmissionLock submissionLock,
+        CancellationToken cancellationToken = default)
+    {
+        AcquireCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task ReleaseAsync(CategoryTreeSubmissionLock submissionLock,
+        CancellationToken cancellationToken = default)
+    {
+        ReleaseCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task CompleteAsync(CategoryTreeSubmissionLock submissionLock, string outcomeNote,
+        CancellationToken cancellationToken = default)
+    {
+        CompleteCount++;
+        return Task.CompletedTask;
+    }
 }
 
 file sealed class StubCompaniesHouseWorkflowIdentityAccessor(CompaniesHouseWorkflowIdentity identity)

@@ -49,6 +49,7 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
     ICompaniesHouseWorkflowStore workflowStore,
     ICompaniesHouseProtectedContentStore contentStore,
     ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
+    ICategoryTreeSubmissionLockService submissionLocks,
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
     IHttpContextAccessor httpContextAccessor,
     ICompaniesHouseAuthorityIdentifierSource identifierSource,
@@ -94,6 +95,7 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
         if (currentCategoryTree != preparation.CategoryTree)
             throw new InvalidOperationException(
                 "The active Category Tree changed after Companies House approval. Prepare and review new accounts.");
+        await submissionLocks.AcquireAsync(CompaniesHouseCategoryTreeLock.From(preparation), cancellationToken);
 
         var document = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedDocumentReference, conversation.DocumentSha256, cancellationToken);
@@ -161,6 +163,9 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
                 UpdatedAtUtc = timeProvider.GetUtcNow()
             };
             await workflowStore.UpsertConversationAsync(completed, cancellationToken);
+            if (completed.State == CompaniesHouseConversationState.GatewayRejected)
+                await submissionLocks.ReleaseAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+                    cancellationToken);
             return ToStatus(completed);
         }
         catch (CompaniesHouseUnclassifiedResponseException exception)

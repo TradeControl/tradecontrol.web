@@ -158,6 +158,18 @@ internal sealed record CompaniesHouseApprovalRecord(
     string? AccountsSnapshotSha256 = null,
     CategoryTreeSealEvidence? CategoryTree = null);
 
+internal static class CompaniesHouseCategoryTreeLock
+{
+    internal static CategoryTreeSubmissionLock From(CompaniesHousePreparationRecord preparation) =>
+        new(preparation.CategoryTree
+                ?? throw new InvalidOperationException(
+                    "The Companies House preparation has no Category Tree statutory evidence."),
+            preparation.Reference,
+            preparation.AccountsSnapshotSha256
+                ?? throw new InvalidOperationException(
+                    "The Companies House preparation has no statutory snapshot proof."));
+}
+
 internal enum CompaniesHouseStatusCheckState
 {
     Dispatching,

@@ -32,6 +32,7 @@ internal sealed class CompaniesHouseSubmissionStagingService(
     ICompaniesHouseWorkflowStore workflowStore,
     ICompaniesHouseProtectedContentStore contentStore,
     ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
+    ICategoryTreeSubmissionLockService submissionLocks,
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
     IHttpContextAccessor httpContextAccessor,
     IOptions<CompaniesHouseProductHostOptions> hostOptions,
@@ -84,6 +85,7 @@ internal sealed class CompaniesHouseSubmissionStagingService(
         if (currentCategoryTree != preparation.CategoryTree)
             throw new InvalidOperationException(
                 "The active Category Tree changed after Companies House approval. Prepare and review new accounts.");
+        await submissionLocks.AcquireAsync(CompaniesHouseCategoryTreeLock.From(preparation), cancellationToken);
 
         _ = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedDocumentReference, approval.DocumentSha256, cancellationToken);

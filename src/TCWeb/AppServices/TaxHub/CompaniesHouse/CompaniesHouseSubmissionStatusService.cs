@@ -50,6 +50,7 @@ internal sealed class CompaniesHouseSubmissionStatusService(
     ICompaniesHouseStatusTransactionIdSource transactionIdSource,
     ICompaniesHouseStatusRequestMaterializer materializer,
     ICompaniesHouseStatusExchange exchange,
+    ICategoryTreeSubmissionLockService submissionLocks,
     TimeProvider timeProvider) : ICompaniesHouseSubmissionStatusService
 {
     public async Task<CompaniesHouseFilingStatus> CheckAsync(string conversationReference,
@@ -178,6 +179,13 @@ internal sealed class CompaniesHouseSubmissionStatusService(
                 StatusAcknowledged = false
             };
             await workflowStore.UpsertConversationAsync(completed, cancellationToken);
+            if (nextState == CompaniesHouseConversationState.Accepted)
+                await submissionLocks.CompleteAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+                    "Companies House accounts submission accepted.", cancellationToken);
+            else if (nextState is CompaniesHouseConversationState.Rejected
+                     or CompaniesHouseConversationState.InternalFailure)
+                await submissionLocks.ReleaseAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+                    cancellationToken);
             return ToStatus(completed);
         }
         catch (CompaniesHouseUnclassifiedResponseException exception)

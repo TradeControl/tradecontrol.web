@@ -45,6 +45,7 @@ public sealed class VatReturnSubmissionService(
     IVatFilingAuthorisationPolicy filingPolicy,
     IHttpContextAccessor httpContextAccessor,
     NodeContext nodeContext,
+    ICategoryTreeSubmissionLockService submissionLocks,
     ILogger<VatReturnSubmissionService> logger) : IVatReturnSubmissionService
 {
     public async Task<VatSubmissionResult> SubmitAsync(string approvalReference,
@@ -77,6 +78,7 @@ public sealed class VatReturnSubmissionService(
                     $"HMRC VAT submission rejected. Attempt {outcome.AttemptReference ?? "not supplied"}; " +
                     $"HTTP {outcome.ActualStatusCode?.ToString() ?? "not supplied"}; " +
                     $"outcome {outcome.OutcomeCode}; {detail}");
+                await submissionLocks.ReleaseAsync(approved.SubmissionLock, cancellationToken);
             }
             else if (state == VatSubmissionResultState.OutcomeUnknown)
             {
@@ -84,6 +86,11 @@ public sealed class VatReturnSubmissionService(
                     $"HMRC VAT submission outcome is unknown. Attempt {outcome.AttemptReference ?? "not supplied"}; " +
                     $"HTTP {outcome.ActualStatusCode?.ToString() ?? "not supplied"}; " +
                     $"outcome {outcome.OutcomeCode}. Automatic replay remains blocked pending reconciliation.");
+            }
+            else if (state == VatSubmissionResultState.Accepted)
+            {
+                await submissionLocks.CompleteAsync(approved.SubmissionLock,
+                    $"HMRC VAT submission accepted ({outcome.OutcomeCode}).", cancellationToken);
             }
             return new(state, outcome.OutcomeCode, outcome.AttemptReference, outcome.ActualStatusCode,
                 dispatched.Receipt?.ProcessingDate == default

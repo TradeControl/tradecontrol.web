@@ -48,6 +48,14 @@ public sealed class Cash_tbCategoryVersion
     [Required, StringLength(10)]
     public string CreatedByUserId { get; set; } = string.Empty;
 
+    [StringLength(64)]
+    public string? SubmissionLockReference { get; set; }
+
+    [Column(TypeName = "binary(32)")]
+    public byte[]? SubmissionLockSha256 { get; set; }
+
+    public DateTime? SubmissionLockedOn { get; set; }
+
 }
 
 [Table("tbCategoryVersionEvent", Schema = "Cash")]
