@@ -69,6 +69,10 @@
                     <dt class="col-sm-3">Prepared SHA-256</dt><dd class="col-sm-9 text-break">@_review.PreparedSha256</dd>
                     <dt class="col-sm-3">Source</dt><dd class="col-sm-9">@_review.SourceSystem / @_review.DatasetKey</dd>
                     <dt class="col-sm-3">Snapshot</dt><dd class="col-sm-9 text-break">@_review.SnapshotToken</dd>
+                    <dt class="col-sm-3">Category Tree</dt><dd class="col-sm-9">@_review.CategoryTree.VersionId</dd>
+                    <dt class="col-sm-3">Tree profile</dt><dd class="col-sm-9">@_review.CategoryTree.CanonicalProfile</dd>
+                    <dt class="col-sm-3">Tree SHA-256</dt><dd class="col-sm-9 text-break">@_review.CategoryTree.CanonicalSha256</dd>
+                    <dt class="col-sm-3">Tree bytes</dt><dd class="col-sm-9">@_review.CategoryTree.CanonicalByteLength.ToString("N0")</dd>
                     <dt class="col-sm-3">Expires</dt><dd class="col-sm-9">@_review.ExpiresAtUtc.ToString("u")</dd>
                 </dl>
             </details>

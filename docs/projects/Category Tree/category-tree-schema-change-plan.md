@@ -1,6 +1,6 @@
 # Category Tree schema change plan
 
-**Status:** Increment 2 complete locally; Steps 0-6 proven and Increment 3 is next
+**Status:** Steps 0-6 complete locally and validated on hosted B1/B3-B6 at build `4.1.20`; statutory-seal integration is next
 **Governing documents:** `category-tree-change-control-workplan.md` and `category-tree-increment-1-inventory-and-contract.md`
 **UI partner:** `category-tree-ui-change-plan.md`
 **Scope:** local tcNodeDb4 SQL foundation, bootstrap, templates, synthetic generation and sandbox migration, plus the bounded TCWeb EF alignment required to run ordinary client surfaces after authority-column removal. Category Tree server/JavaScript integration and TCExports changes are deferred to later increments.
@@ -369,6 +369,25 @@ SQL procedures or an equivalent tightly bounded service transaction must own:
 - Published-to-Submitted and active-to-Archived transitions.
 
 Every command resolves the application actor, locks the singleton options row when active state is involved, verifies status and concurrency, writes the version event and refreshes the digest in one transaction where applicable.
+
+The submission lock is transient state of a version header, not another version-owned content table. Add nullable `SubmissionLockReference`, `SubmissionLockSha256` and `SubmissionLockedOn` fields to `Cash.tbCategoryVersion`, with an all-null-or-all-populated check constraint. The digest is the exact prepared statutory seal or CH/CT snapshot proof; the opaque reference resolves the durable workflow record held by the statutory product. These fields are excluded from Category Tree canonicalisation. This permits one authority operation at a time for the active version without creating a parallel submission schema, while sequential VAT and Companies House seals may continue to reference the same unchanged Submitted version.
+
+Authoritative acquire, release and successful-completion commands must compare the version identifier and recomputed canonical evidence, own the lifecycle application lock and be idempotent for the same reference/digest pair. A conclusive local or authority failure clears the matching lock; an uncertain outcome retains it. Successful completion atomically verifies and clears the lock and changes Published to Submitted, or records the additional completed filing when the version is already Submitted. Successor publication rejects a locked predecessor. The application must compensate a conclusive persistence failure after acquisition, while startup/recovery evidence must surface—never silently clear—an orphaned or externally disputed lock.
+
+The lock gates only semantic changes to the active Category Tree and publication of a successor. It must not block login, ordinary accounting, reports, Cash Statements, historical reconstruction or access to the statutory workflow that owns the lock. `SubmissionLockedOn` is diagnostic evidence, not a lease expiry: elapsed time alone is never authority to release a possibly dispatched filing.
+
+Cross-store recovery follows a durable, idempotent sequence rather than assuming a distributed transaction:
+
+1. retain the exact prepared payload, seal and workflow record before acquiring the SQL lock;
+2. acquire the lock for that workflow reference and seal digest, rechecking the active version and canonical evidence;
+3. expose the preparation to the user only after acquisition succeeds;
+4. atomically claim dispatch in the durable workflow before making the authority request;
+5. retain a conclusive authority outcome before completing or releasing the SQL lock; and
+6. permit restart recovery to replay the same acquire, release or completion command safely.
+
+A preparation left without a lock is not dispatchable: recovery may acquire it only while its recorded version and digest still match, otherwise it is invalidated. A lock whose workflow proves that dispatch never began may be released automatically after the conclusive local failure is recorded. A crash after dispatch is claimed is treated as uncertain even where the authority normally rejects duplicate submissions; the product retains the lock and reconciles the existing attempt rather than relying on a second send. A retained acceptance completes Published-to-Submitted idempotently, while a retained conclusive rejection releases the lock. Missing, contradictory or restored-behind evidence enters an explicit recovery-required state and cannot be cleared merely by age.
+
+The Category Tree workspace and relevant Tax Hub surface must identify the owning filing and provide a route back to resume or reconcile it. An administrator may resolve an orphan only through a guarded recovery command that records the reason and available evidence. There is no general-purpose unlock button.
 
 ### 6.2 Defence in depth
 

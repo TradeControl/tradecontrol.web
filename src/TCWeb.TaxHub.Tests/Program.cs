@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
+using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 using TradeControl.Web.Authorization;
 using System.Security.Claims;
@@ -20,6 +21,7 @@ using TradeControl.Web.Tenancy;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.Application.StatutoryEvidence;
 using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 
 var assertions = 0;
@@ -217,10 +219,18 @@ var stagingPackageSha = new string('B', 64);
 var stagingFullAccounts = Encoding.UTF8.GetBytes("full-accounts");
 var stagingFullAccountsSha = Convert.ToHexString(SHA256.HashData(stagingFullAccounts));
 var stagingReviewedInputSha = new string('E', 64);
+var stagingCategoryTree = new TradeControl.Tax.UK.Application.StatutoryEvidence.CategoryTreeSealEvidence(
+    "CV00000001", "trade-control-category-tree-v1", new string('F', 64), 11501);
 var stagingAccountsSnapshotSha = CompaniesHouseAccountsSnapshot.Create(
     new string('C', 64), new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
     CompaniesHouseProductPolicy.SupportedFilingProfile, "snapshot", stagingReviewedInputSha,
-    stagingDocumentSha, stagingFullAccountsSha);
+    stagingDocumentSha, stagingFullAccountsSha, stagingCategoryTree);
+Assert(stagingAccountsSnapshotSha != CompaniesHouseAccountsSnapshot.Create(
+        new string('C', 64), new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
+        CompaniesHouseProductPolicy.SupportedFilingProfile, "snapshot", stagingReviewedInputSha,
+        stagingDocumentSha, stagingFullAccountsSha,
+        stagingCategoryTree with { VersionId = "CV00000002" }),
+    "A Category Tree version change did not change the CH/CT accounts snapshot proof.");
 var stagingPreparation = new CompaniesHousePreparationRecord(
     "chp1-stage", stagingTenant, "HOME", "SA", new string('C', 64), "••••4567",
     new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
@@ -230,7 +240,8 @@ var stagingPreparation = new CompaniesHousePreparationRecord(
     ReviewedInputSha256: stagingReviewedInputSha,
     FullAccountsSha256: stagingFullAccountsSha,
     ProtectedFullAccountsReference: "full-accounts",
-    AccountsSnapshotSha256: stagingAccountsSnapshotSha);
+    AccountsSnapshotSha256: stagingAccountsSnapshotSha,
+    CategoryTree: stagingCategoryTree);
 var stagingApproval = new CompaniesHouseApprovalRecord(
     "cha1-stage", stagingPreparation.Reference, stagingTenant, "subject", "SA",
     new string('D', 64), stagingPreparation.CompanyIdentitySha256,
@@ -238,7 +249,7 @@ var stagingApproval = new CompaniesHouseApprovalRecord(
     CompaniesHouseApprovalDeclaration.Version, CompaniesHouseApprovalDeclaration.Sha256,
     stagingPreparation.SourceSystem, stagingPreparation.DatasetKey, stagingPreparation.SnapshotToken,
     stagingDocumentSha, stagingPackageSha, true, DateTimeOffset.UtcNow,
-    stagingFullAccountsSha, stagingAccountsSnapshotSha);
+    stagingFullAccountsSha, stagingAccountsSnapshotSha, stagingCategoryTree);
 var stagingStore = new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval);
 var stagingContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<string, byte[]>
 {
@@ -248,20 +259,37 @@ var stagingContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<
 });
 var stagingHttp = new HttpContextAccessor { HttpContext = new DefaultHttpContext() };
 stagingHttp.HttpContext.User = Principal(Constants.AdministratorsRole);
+var stagingCategoryTreeSource = new StubCategoryTreeStatutoryEvidenceSource(stagingCategoryTree);
 var stagingService = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    stagingStore, stagingContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    stagingStore, stagingContent, stagingCategoryTreeSource,
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
         Enabled = true,
         DispatchMode = CompaniesHouseDispatchMode.SendDisabled
     }), TimeProvider.System);
+var driftedCategoryTreeStaging = new CompaniesHouseSubmissionStagingService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval), stagingContent,
+    new StubCategoryTreeStatutoryEvidenceSource(
+        stagingCategoryTree with { VersionId = "CV00000002" }),
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        Enabled = true,
+        DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+    }), TimeProvider.System);
+await AssertThrowsAsync<InvalidOperationException>(
+    () => driftedCategoryTreeStaging.StageApprovedAsync(stagingApproval.Reference),
+    "Companies House staging accepted an active Category Tree pointer change after approval.");
 var accountsSnapshotService = new CompaniesHouseAccountsSnapshotService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
     stagingStore, stagingContent);
 var approvedAccountsSnapshot = await accountsSnapshotService.ReadApprovedAsync(stagingApproval.Reference);
 Assert(approvedAccountsSnapshot.AccountsSnapshotSha256 == stagingAccountsSnapshotSha
        && approvedAccountsSnapshot.FullAccountsSha256 == stagingFullAccountsSha
+       && approvedAccountsSnapshot.CategoryTree == stagingCategoryTree
        && approvedAccountsSnapshot.FullAccountsBytes.SequenceEqual(stagingFullAccounts),
     "The approved Companies House snapshot did not return the exact cryptographically paired full accounts.");
 var legacySnapshotService = new CompaniesHouseAccountsSnapshotService(
@@ -295,7 +323,8 @@ await AssertThrowsAsync<InvalidOperationException>(
 var recordingExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0001");
 var dispatchService = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    stagingStore, stagingContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    stagingStore, stagingContent, stagingCategoryTreeSource,
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseAuthorityIdentifierSource(new("R00001", "RECORDED0001")),
     new StubCompaniesHouseSubmissionMaterializer(), recordingExchange, TimeProvider.System);
 var dispatched = await dispatchService.DispatchAsync(stagedFirst.ConversationReference);
@@ -343,7 +372,8 @@ var recoveryContent = new StubCompaniesHouseProtectedContentStore(new Dictionary
 });
 var recoveryStaging = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    recoveryStore, recoveryContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    recoveryStore, recoveryContent, stagingCategoryTreeSource,
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
         Enabled = true,
@@ -353,7 +383,8 @@ var recoveryConversation = await recoveryStaging.StageApprovedAsync(recoveryAppr
 var ambiguousExchange = new StubCompaniesHouseSubmissionExchange("RECORDED0002", fail: true);
 var recoveryDispatch = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    recoveryStore, recoveryContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    recoveryStore, recoveryContent, stagingCategoryTreeSource,
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseAuthorityIdentifierSource(new("R00002", "RECORDED0002")),
     new StubCompaniesHouseSubmissionMaterializer(), ambiguousExchange, TimeProvider.System);
 var uncertain = await recoveryDispatch.DispatchAsync(recoveryConversation.ConversationReference);
@@ -387,7 +418,8 @@ var statusContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<s
 });
 var statusStaging = new CompaniesHouseSubmissionStagingService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    statusStore, statusContent, stagingCategoryTreeSource,
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     Options.Create(new CompaniesHouseProductHostOptions
     {
         Enabled = true,
@@ -396,7 +428,8 @@ var statusStaging = new CompaniesHouseSubmissionStagingService(
 var statusConversation = await statusStaging.StageApprovedAsync(statusApproval.Reference);
 var statusDispatch = new CompaniesHouseSubmissionDispatchService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
-    statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    statusStore, statusContent, stagingCategoryTreeSource,
+    new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseAuthorityIdentifierSource(new("R00003", "RECORDED0003")),
     new StubCompaniesHouseSubmissionMaterializer(),
     new StubCompaniesHouseSubmissionExchange("RECORDED0003"), TimeProvider.System);
@@ -2050,6 +2083,13 @@ file sealed class StubCompaniesHouseDraftPdfRenderer(byte[] bytes) : ICompaniesH
     public byte[] Render(byte[] retainedIxbrl, string sourceSha256) => bytes;
     public byte[] RenderOfficialTestSubmission(byte[] retainedIxbrl, string sourceSha256,
         string submissionNumber, DateTimeOffset submittedAtUtc) => bytes;
+}
+
+file sealed class StubCategoryTreeStatutoryEvidenceSource(CategoryTreeSealEvidence evidence)
+    : ICategoryTreeStatutoryEvidenceSource
+{
+    public Task<CategoryTreeSealEvidence> ReadActiveAsync(
+        CancellationToken cancellationToken = default) => Task.FromResult(evidence);
 }
 
 file sealed class StubCompaniesHouseWorkflowIdentityAccessor(CompaniesHouseWorkflowIdentity identity)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.Application.StatutoryEvidence;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
@@ -18,6 +19,7 @@ internal sealed record CompaniesHouseApprovedAccountsSnapshot(
     string FilletedAccountsSha256,
     string FullAccountsSha256,
     string AccountsSnapshotSha256,
+    CategoryTreeSealEvidence CategoryTree,
     string FullAccountsMediaType,
     byte[] FullAccountsBytes,
     DateTimeOffset? AcceptedAtUtc = null);
@@ -80,8 +82,10 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
             || string.IsNullOrWhiteSpace(preparation.FullAccountsSha256)
             || string.IsNullOrWhiteSpace(preparation.ProtectedFullAccountsReference)
             || string.IsNullOrWhiteSpace(preparation.AccountsSnapshotSha256)
+            || preparation.CategoryTree is null
             || string.IsNullOrWhiteSpace(approval.FullAccountsSha256)
-            || string.IsNullOrWhiteSpace(approval.AccountsSnapshotSha256))
+            || string.IsNullOrWhiteSpace(approval.AccountsSnapshotSha256)
+            || approval.CategoryTree is null)
             throw new InvalidOperationException(
                 "The approved accounts predate the immutable CH/CT accounts snapshot and cannot be used for Corporation Tax.");
 
@@ -90,6 +94,7 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
                 StringComparison.Ordinal)
             || !string.Equals(approval.AccountsSnapshotSha256, preparation.AccountsSnapshotSha256,
                 StringComparison.Ordinal)
+            || approval.CategoryTree != preparation.CategoryTree
             || approval.PeriodStart != preparation.PeriodStart
             || approval.PeriodEnd != preparation.PeriodEnd
             || !string.Equals(approval.CompanyIdentitySha256, preparation.CompanyIdentitySha256,
@@ -100,7 +105,8 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
         var expectedSnapshotSha256 = CompaniesHouseAccountsSnapshot.Create(
             preparation.CompanyIdentitySha256, preparation.PeriodStart, preparation.PeriodEnd,
             preparation.FilingProfile, preparation.SnapshotToken, preparation.ReviewedInputSha256,
-            preparation.DocumentSha256, preparation.FullAccountsSha256);
+            preparation.DocumentSha256, preparation.FullAccountsSha256,
+            preparation.CategoryTree);
         if (!string.Equals(expectedSnapshotSha256, preparation.AccountsSnapshotSha256,
                 StringComparison.Ordinal))
             throw new InvalidOperationException("The retained CH/CT accounts snapshot proof is invalid.");
@@ -136,6 +142,7 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
             approval.DocumentSha256,
             approval.FullAccountsSha256,
             approval.AccountsSnapshotSha256,
+            approval.CategoryTree,
             "application/xhtml+xml",
             fullAccounts.Bytes)
         {

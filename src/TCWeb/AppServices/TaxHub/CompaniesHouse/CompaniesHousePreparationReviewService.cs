@@ -13,6 +13,7 @@ using TradeControl.Tax.UK.Adapters.TradeControl.Data;
 using TradeControl.Tax.UK.Adapters.TradeControl.Readers;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.Application.StatutoryEvidence;
 using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -43,6 +44,7 @@ public sealed record CompaniesHousePreparedReview(
     string Reference,
     string DocumentSha256,
     string PackageSha256,
+    CategoryTreeSealEvidence CategoryTree,
     DateTimeOffset ExpiresAtUtc,
     string DocumentPath,
     string DownloadPath,
@@ -94,6 +96,7 @@ internal sealed class CompaniesHousePreparationReviewService(
     ICompaniesHouseWorkflowStore workflowStore,
     ICompaniesHouseProtectedContentStore contentStore,
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
+    ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
     IHttpContextAccessor httpContextAccessor,
     IOptions<CompaniesHouseProductHostOptions> hostOptions,
     IBusinessClock businessClock,
@@ -126,6 +129,8 @@ internal sealed class CompaniesHousePreparationReviewService(
         if (period.Current.End != input.PeriodEnd
             || selectedPeriodStart.Date != period.LastPeriodStart.ToDateTime(TimeOnly.MinValue))
             throw new InvalidOperationException("The reviewed accounting period no longer matches the selected closed year end.");
+
+        var categoryTreeBefore = await categoryTreeEvidence.ReadActiveAsync(cancellationToken);
 
         var connectionString = nodeContext.Database.GetConnectionString();
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -194,6 +199,11 @@ internal sealed class CompaniesHousePreparationReviewService(
                 "The credential-free Companies House review package contains blocking findings",
                 package.Transmission.Findings));
 
+        var categoryTreeAfter = await categoryTreeEvidence.ReadActiveAsync(cancellationToken);
+        if (categoryTreeBefore != categoryTreeAfter)
+            throw new InvalidOperationException(
+                "The active Category Tree changed while the accounts were being prepared. Prepare them again.");
+
         var document = package.Documents.Single().Artifact;
         var reviewedInputBytes = JsonSerializer.SerializeToUtf8Bytes(input, ReviewJson);
         var retainedDocument = await contentStore.WriteAsync(identity.TenantReference,
@@ -218,7 +228,8 @@ internal sealed class CompaniesHousePreparationReviewService(
         var accountsSnapshotSha256 = CompaniesHouseAccountsSnapshot.Create(
             companyIdentitySha256, period.Current.Start, period.Current.End,
             CompaniesHouseProductPolicy.SupportedFilingProfile, snapshot,
-            retainedInput.Sha256, document.Sha256, fullAccounts.Artifact.Sha256);
+            retainedInput.Sha256, document.Sha256, fullAccounts.Artifact.Sha256,
+            categoryTreeAfter);
         await workflowStore.AddPreparationAsync(new(
             reference,
             identity.TenantReference,
@@ -244,9 +255,10 @@ internal sealed class CompaniesHousePreparationReviewService(
             retainedInput.Reference,
             fullAccounts.Artifact.Sha256,
             retainedFullAccounts.Reference,
-            accountsSnapshotSha256), cancellationToken);
+            accountsSnapshotSha256,
+            categoryTreeAfter), cancellationToken);
 
-        return new(reference, document.Sha256, package.Transmission.Sha256,
+        return new(reference, document.Sha256, package.Transmission.Sha256, categoryTreeAfter,
             now.Add(CompaniesHouseProductPolicy.PreparationLifetime),
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Document",
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Download",
@@ -357,7 +369,8 @@ internal sealed class CompaniesHousePreparationReviewService(
                 || !string.Equals(existing.FullAccountsSha256, preparation.FullAccountsSha256,
                     StringComparison.Ordinal)
                 || !string.Equals(existing.AccountsSnapshotSha256, preparation.AccountsSnapshotSha256,
-                    StringComparison.Ordinal))
+                    StringComparison.Ordinal)
+                || existing.CategoryTree != preparation.CategoryTree)
                 throw new InvalidOperationException(
                     "The existing approval does not match the current declaration or retained evidence.");
             return ToApprovalReview(existing);
@@ -368,7 +381,8 @@ internal sealed class CompaniesHousePreparationReviewService(
             || string.IsNullOrWhiteSpace(preparation.ProtectedInputReference)
             || string.IsNullOrWhiteSpace(preparation.FullAccountsSha256)
             || string.IsNullOrWhiteSpace(preparation.ProtectedFullAccountsReference)
-            || string.IsNullOrWhiteSpace(preparation.AccountsSnapshotSha256))
+            || string.IsNullOrWhiteSpace(preparation.AccountsSnapshotSha256)
+            || preparation.CategoryTree is null)
             throw new InvalidOperationException(
                 "This preparation predates the immutable CH/CT accounts snapshot. Prepare and review the accounts again.");
 
@@ -383,7 +397,8 @@ internal sealed class CompaniesHousePreparationReviewService(
         var expectedAccountsSnapshot = CompaniesHouseAccountsSnapshot.Create(
             preparation.CompanyIdentitySha256, preparation.PeriodStart, preparation.PeriodEnd,
             preparation.FilingProfile, preparation.SnapshotToken, preparation.ReviewedInputSha256,
-            preparation.DocumentSha256, preparation.FullAccountsSha256);
+            preparation.DocumentSha256, preparation.FullAccountsSha256,
+            preparation.CategoryTree);
         if (!string.Equals(expectedAccountsSnapshot, preparation.AccountsSnapshotSha256,
                 StringComparison.Ordinal))
             throw new InvalidOperationException("The retained CH/CT accounts snapshot proof is invalid.");
@@ -415,7 +430,8 @@ internal sealed class CompaniesHousePreparationReviewService(
             true,
             now,
             preparation.FullAccountsSha256,
-            preparation.AccountsSnapshotSha256);
+            preparation.AccountsSnapshotSha256,
+            preparation.CategoryTree);
         await workflowStore.AddApprovalAsync(approval, cancellationToken);
         return ToApprovalReview(approval);
     }
@@ -469,10 +485,12 @@ internal sealed class CompaniesHousePreparationReviewService(
         var currentFullAccounts = accountsPreparer.Prepare(accounts, false,
             $"{source.Identity.SubjectName} statutory accounts",
             $"{source.Identity.SubjectCode}-full-accounts.xhtml", source.Versions);
+        var currentCategoryTree = await categoryTreeEvidence.ReadActiveAsync(cancellationToken);
         var currentAccountsSnapshot = CompaniesHouseAccountsSnapshot.Create(
             preparation.CompanyIdentitySha256, preparation.PeriodStart, preparation.PeriodEnd,
             preparation.FilingProfile, Snapshot(source.Versions), preparation.ReviewedInputSha256!,
-            currentDocument.Artifact.Sha256, currentFullAccounts.Artifact.Sha256);
+            currentDocument.Artifact.Sha256, currentFullAccounts.Artifact.Sha256,
+            currentCategoryTree);
         if (currentDocument.Artifact.HasErrors
             || currentFullAccounts.Artifact.HasErrors
             || !string.Equals(Snapshot(source.Versions), preparation.SnapshotToken, StringComparison.Ordinal)
@@ -480,6 +498,7 @@ internal sealed class CompaniesHousePreparationReviewService(
                 StringComparison.Ordinal)
             || !string.Equals(currentFullAccounts.Artifact.Sha256, preparation.FullAccountsSha256,
                 StringComparison.Ordinal)
+            || currentCategoryTree != preparation.CategoryTree
             || !string.Equals(currentAccountsSnapshot, preparation.AccountsSnapshotSha256,
                 StringComparison.Ordinal))
             throw new InvalidOperationException(

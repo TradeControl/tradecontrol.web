@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TradeControl.Tax.UK.Application.Preparation;
+using TradeControl.Tax.UK.Application.StatutoryEvidence;
 using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 
 namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
@@ -78,12 +80,14 @@ internal static class CompaniesHouseFilingIdentity
 
 internal static class CompaniesHouseAccountsSnapshot
 {
-    private const string Version = "CH-CT-ACCOUNTS-SNAPSHOT-1";
+    private const string Version = "CH-CT-ACCOUNTS-SNAPSHOT-2";
 
     internal static string Create(string companyIdentitySha256, DateOnly periodStart,
         DateOnly periodEnd, string filingProfile, string sourceSnapshotToken, string reviewedInputSha256,
-        string filletedAccountsSha256, string fullAccountsSha256)
+        string filletedAccountsSha256, string fullAccountsSha256,
+        CategoryTreeSealEvidence categoryTree)
     {
+        CategoryTreeStatutoryEvidence.Validate(categoryTree);
         var manifest = string.Join('\n',
             Version,
             companyIdentitySha256,
@@ -93,7 +97,11 @@ internal static class CompaniesHouseAccountsSnapshot
             sourceSnapshotToken,
             reviewedInputSha256,
             filletedAccountsSha256,
-            fullAccountsSha256);
+            fullAccountsSha256,
+            categoryTree.VersionId,
+            categoryTree.CanonicalProfile,
+            categoryTree.CanonicalSha256.ToUpperInvariant(),
+            categoryTree.CanonicalByteLength.ToString(CultureInfo.InvariantCulture));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(manifest)));
     }
 }
@@ -123,7 +131,8 @@ internal sealed record CompaniesHousePreparationRecord(
     string? ProtectedInputReference = null,
     string? FullAccountsSha256 = null,
     string? ProtectedFullAccountsReference = null,
-    string? AccountsSnapshotSha256 = null);
+    string? AccountsSnapshotSha256 = null,
+    CategoryTreeSealEvidence? CategoryTree = null);
 
 internal sealed record CompaniesHouseApprovalRecord(
     string Reference,
@@ -146,7 +155,8 @@ internal sealed record CompaniesHouseApprovalRecord(
     bool DeclarationsConfirmed,
     DateTimeOffset ApprovedAtUtc,
     string? FullAccountsSha256 = null,
-    string? AccountsSnapshotSha256 = null);
+    string? AccountsSnapshotSha256 = null,
+    CategoryTreeSealEvidence? CategoryTree = null);
 
 internal enum CompaniesHouseStatusCheckState
 {

@@ -48,6 +48,7 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
     ICompaniesHouseWorkflowIdentityAccessor identityAccessor,
     ICompaniesHouseWorkflowStore workflowStore,
     ICompaniesHouseProtectedContentStore contentStore,
+    ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
     IHttpContextAccessor httpContextAccessor,
     ICompaniesHouseAuthorityIdentifierSource identifierSource,
@@ -85,8 +86,14 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
         if (!string.Equals(conversation.DocumentSha256, approval.DocumentSha256, StringComparison.Ordinal)
             || !string.Equals(conversation.PackageSha256, approval.PackageSha256, StringComparison.Ordinal)
             || !string.Equals(preparation.DocumentSha256, approval.DocumentSha256, StringComparison.Ordinal)
-            || !string.Equals(preparation.PackageSha256, approval.PackageSha256, StringComparison.Ordinal))
+            || !string.Equals(preparation.PackageSha256, approval.PackageSha256, StringComparison.Ordinal)
+            || preparation.CategoryTree is null
+            || preparation.CategoryTree != approval.CategoryTree)
             throw new InvalidOperationException("The filing conversation no longer matches its approved evidence.");
+        var currentCategoryTree = await categoryTreeEvidence.ReadActiveAsync(cancellationToken);
+        if (currentCategoryTree != preparation.CategoryTree)
+            throw new InvalidOperationException(
+                "The active Category Tree changed after Companies House approval. Prepare and review new accounts.");
 
         var document = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedDocumentReference, conversation.DocumentSha256, cancellationToken);

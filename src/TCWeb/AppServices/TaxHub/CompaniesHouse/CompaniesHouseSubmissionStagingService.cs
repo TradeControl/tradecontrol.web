@@ -31,6 +31,7 @@ internal sealed class CompaniesHouseSubmissionStagingService(
     ICompaniesHouseWorkflowIdentityAccessor identityAccessor,
     ICompaniesHouseWorkflowStore workflowStore,
     ICompaniesHouseProtectedContentStore contentStore,
+    ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
     ICompaniesHouseFilingAuthorisationPolicy filingAuthorisationPolicy,
     IHttpContextAccessor httpContextAccessor,
     IOptions<CompaniesHouseProductHostOptions> hostOptions,
@@ -75,8 +76,14 @@ internal sealed class CompaniesHouseSubmissionStagingService(
             approval.PreparationReference, cancellationToken)
             ?? throw new InvalidOperationException("The approved Companies House preparation was not found.");
         if (!string.Equals(preparation.DocumentSha256, approval.DocumentSha256, StringComparison.Ordinal)
-            || !string.Equals(preparation.PackageSha256, approval.PackageSha256, StringComparison.Ordinal))
+            || !string.Equals(preparation.PackageSha256, approval.PackageSha256, StringComparison.Ordinal)
+            || preparation.CategoryTree is null
+            || preparation.CategoryTree != approval.CategoryTree)
             throw new InvalidOperationException("The approval does not match its retained Companies House evidence.");
+        var currentCategoryTree = await categoryTreeEvidence.ReadActiveAsync(cancellationToken);
+        if (currentCategoryTree != preparation.CategoryTree)
+            throw new InvalidOperationException(
+                "The active Category Tree changed after Companies House approval. Prepare and review new accounts.");
 
         _ = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedDocumentReference, approval.DocumentSha256, cancellationToken);

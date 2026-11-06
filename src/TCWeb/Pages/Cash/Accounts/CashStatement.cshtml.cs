@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using TCExports.Generator.CashStatement.Model;
 using TradeControl.Web.AppServices;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -36,7 +37,7 @@ public class CashStatementModel : PageModel
     public string Format { get; set; } = "excel";
 
     [BindProperty, Range(1, 600), Display(Name = "Command timeout")]
-    public int CommandTimeout { get; set; } = 30;
+    public int CommandTimeout { get; set; } = CashStatementRequestV1.DefaultCommandTimeoutSeconds;
 
     [BindProperty] public bool IncludeActivePeriods { get; set; }
     [BindProperty] public bool IncludeBalanceSheet { get; set; } = true;

@@ -209,18 +209,41 @@ internal static class CashStatementServiceTests
 
         using (var gate = new CashStatementGenerationGate(defaultOptions))
         {
+            var reporter = new RecordingFailureReporter();
+            var service = Service(
+                defaultOptions,
+                gate,
+                new FixedSourceResolver(),
+                new ExecutionFailureExporter(),
+                authenticatedContext,
+                reporter);
+            var result = await service.GenerateAsync(Request("excel"));
+            Assert(!result.IsSuccess && result.Code == "EXECUTION_ERROR",
+                "A returned generator execution failure did not preserve its code.");
+            Assert(reporter.LastCode == "EXECUTION_ERROR"
+                && reporter.LastDiagnostic?.Contains("Execution Timeout Expired", StringComparison.Ordinal) == true,
+                "A returned generator execution failure was not sent to the Event Log boundary.");
+        }
+
+        using (var gate = new CashStatementGenerationGate(defaultOptions))
+        {
             const string sensitive = "Password=should-never-escape; report-content";
+            var reporter = new RecordingFailureReporter();
             var service = Service(
                 defaultOptions,
                 gate,
                 new FixedSourceResolver(),
                 new ThrowingExporter(sensitive),
-                authenticatedContext);
+                authenticatedContext,
+                reporter);
             var result = await service.GenerateAsync(Request("excel"));
             Assert(!result.IsSuccess && result.Code == "EXECUTION_ERROR",
                 "An unexpected exporter failure did not return the safe execution code.");
             Assert(!result.Message.Contains(sensitive, StringComparison.Ordinal),
                 "An unexpected exporter failure exposed sensitive exception text.");
+            Assert(reporter.LastCode == "EXECUTION_ERROR"
+                && reporter.LastDiagnostic?.Contains(sensitive, StringComparison.Ordinal) == false,
+                "An unexpected exporter failure exposed sensitive exception text to the Event Log boundary.");
         }
 
         Console.WriteLine($"Cash Statement service tests passed ({assertions} assertions).");
@@ -232,12 +255,14 @@ internal static class CashStatementServiceTests
         CashStatementGenerationGate gate,
         ICashStatementSourceResolver sourceResolver,
         ICashStatementExporter exporter,
-        HttpContext context) =>
+        HttpContext context,
+        ICashStatementFailureReporter? failureReporter = null) =>
         new(
             options,
             gate,
             sourceResolver,
             exporter,
+            failureReporter ?? new RecordingFailureReporter(),
             new HttpContextAccessor { HttpContext = context },
             NullLogger<CashStatementGenerationService>.Instance);
 
@@ -383,5 +408,35 @@ internal static class CashStatementServiceTests
     {
         public Task<ExportResult> ExportAsync(ExportPayload payload, CancellationToken cancellationToken) =>
             throw new InvalidOperationException(sensitiveMessage);
+    }
+
+    private sealed class ExecutionFailureExporter : ICashStatementExporter
+    {
+        public Task<ExportResult> ExportAsync(ExportPayload payload, CancellationToken cancellationToken) =>
+            Task.FromResult(new ExportResult
+            {
+                Status = "error",
+                Code = "EXECUTION_ERROR",
+                Details = new Dictionary<string, string[]>
+                {
+                    ["generation"] =
+                    [
+                        "SqlException -2: Execution Timeout Expired."
+                    ]
+                }
+            });
+    }
+
+    private sealed class RecordingFailureReporter : ICashStatementFailureReporter
+    {
+        public string? LastCode { get; private set; }
+        public string? LastDiagnostic { get; private set; }
+
+        public Task ReportAsync(string code, string diagnostic)
+        {
+            LastCode = code;
+            LastDiagnostic = diagnostic;
+            return Task.CompletedTask;
+        }
     }
 }

@@ -151,6 +151,8 @@ namespace TradeControl.Web.AppServices
             services.AddScoped<IVatFraudContextCapture, VatFraudContextCapture>();
             services.AddSingleton<VatObligationReconciler>();
             services.AddScoped<IVatObligationWorkspaceService, VatObligationWorkspaceService>();
+            services.AddScoped<ICategoryTreeStatutoryEvidenceSource,
+                CategoryTreeStatutoryEvidenceSource>();
             services.AddScoped<IVatReturnReviewService, VatReturnReviewService>();
             services.AddScoped<IVatApprovedReturnResolver>(provider =>
                 provider.GetRequiredService<IVatReturnReviewService>() as IVatApprovedReturnResolver
@@ -195,6 +197,7 @@ namespace TradeControl.Web.AppServices
             services.AddSingleton<CashStatementGenerationGate>();
             services.AddScoped<ICashStatementSourceResolver, ConfiguredCashStatementSourceResolver>();
             services.AddScoped<ICashStatementExporter, CashStatementExporter>();
+            services.AddScoped<ICashStatementFailureReporter, NodeCashStatementFailureReporter>();
             services.AddScoped<ICashStatementGenerationService, CashStatementGenerationService>();
             services.AddScoped<ICashPaymentsWorkspaceService, CashPaymentsWorkspaceService>();
             services.AddScoped<ICashAssetsWorkspaceService, CashAssetsWorkspaceService>();

@@ -1,6 +1,6 @@
 # Category Tree change-control work plan
 
-**Status:** Architecture agreed; schema, migration, guarded mutations, lifecycle workspace and Cash Statement version selection complete locally; final UI acceptance remains
+**Status:** Local implementation and hosted B1/B3-B6 build `4.1.20` rollout complete; statutory-seal integration and release evidence remain
 
 **Release boundary:** Required before the Accounts Mode production release
 
@@ -413,7 +413,9 @@ Extend the existing Playwright Category Tree suite and `categorytree_test_script
 
 ### Increment 5 — Accreditation and release evidence
 
-**Status: pending.** Local implementation evidence is complete. The next authorised boundary is the guarded build `4.1.18` to `4.1.20` sandbox migration rehearsal and B1–B7 hosted deployment, followed by the Category Tree statutory-seal field/digest integration and submission-lock/reconstruction evidence.
+**Status: in progress.** The guarded build `4.1.18` to `4.1.20` migration is complete on hosted B1 and B3-B6; B2 and B7 remain excluded development artefacts. B3-B6 each retained identical pre/post Profit and Loss, business-tax, VAT-statement, Equity Bridge and Cash Statement fingerprints, one active Published version, trusted Category Tree constraints and a clean `DBCC CHECKDB`. B1 and B3 DACPAC validation reported no unexplained build-20 differences. Shared Category Tree provenance is now integrated locally into the VAT seal v2 and the CH/CT accounts snapshot, including preparation bracketing, approval/dispatch revalidation, retained evidence and review-surface disclosure. The remaining Increment 5 boundary is the database-authoritative submission lock, authority-outcome lifecycle transitions and hosted reconstruction evidence.
+
+The living Business 8 authority/changeover sequence and its recorded baseline are maintained in [Category Tree hosted statutory changeover test](category-tree-hosted-statutory-changeover-test.md). It exercises VAT on the initial version, Companies House accounts on a successor, and the post-submission plant-purchase/Equity Bridge scenario on a further successor.
 
 - Execute SQL, accounting, Playwright, tamper and recovery tests.
 - Prove a Published change affects unsubmitted statements.
@@ -458,7 +460,7 @@ The recommended sequence for the three current programmes is:
 
 The later tax calculation optimisation remains a separate Stage 2 programme. It may consume sealed balances and Category Tree provenance, but it is not a prerequisite for this change-control lifecycle.
 
-**Current position, 5 November 2026:** the local Category Tree implementation and UI/reporting acceptance are complete at build `4.1.20`. Before hosted deployment, replay the consolidated build `4.1.18` to `4.1.20` artefact on a disposable restored sandbox clone and require the production schema comparison to report no unexplained Category Tree differences. Then upgrade B1–B7 and run hosted accounting/application smoke tests. The Stage 1 seal update remains intentionally next: bind the selected Category Tree version and canonical digest into statutory evidence, then prove submission immutability and historical reconstruction. Accreditation evidence follows that integration; public User Guide publication remains last.
+**Current position, 6 November 2026:** the local Category Tree implementation and UI/reporting acceptance are complete at build `4.1.20`. Hosted B1 and B3-B6 now run the same boundary; B2 and B7 were deliberately excluded as development artefacts. The B3-B6 one-off migration retained exact accounting/reporting fingerprints and passed structural, constraint and DBCC validation, while B1 and B3 production schema comparisons contain only the documented Azure-managed principal/`Platform`, physical `App.tbYearPeriod` column-order and equivalent check-constraint-text exclusions. A failed first B3 attempt was recovered from the verified pre-migration Azure point-in-time backup before the corrected artefact was replayed; its preserved partial database remains pending explicit cleanup approval. The Stage 1 seal update is intentionally next: bind the selected Category Tree version and canonical digest into statutory evidence, then prove submission immutability and historical reconstruction. Accreditation evidence follows that integration; public User Guide publication remains last.
 
 ## 13. IAM-01 synthetic-business migration
 

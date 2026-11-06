@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TradeControl.Web.Data;
 using TradeControl.Web.Tenancy;
 using TCExports.Generator;
 using TCExports.Generator.Contracts;
@@ -131,6 +132,42 @@ public sealed class CashStatementExporter : ICashStatementExporter
         ExportRunner.ExportDataAsync(payload, cancellationToken);
 }
 
+public interface ICashStatementFailureReporter
+{
+    Task ReportAsync(string code, string diagnostic);
+}
+
+public sealed class NodeCashStatementFailureReporter : ICashStatementFailureReporter
+{
+    private readonly NodeContext _nodeContext;
+    private readonly ILogger<NodeCashStatementFailureReporter> _logger;
+
+    public NodeCashStatementFailureReporter(
+        NodeContext nodeContext,
+        ILogger<NodeCashStatementFailureReporter> logger)
+    {
+        _nodeContext = nodeContext;
+        _logger = logger;
+    }
+
+    public async Task ReportAsync(string code, string diagnostic)
+    {
+        try
+        {
+            await _nodeContext.EventLog(
+                NodeEnum.EventType.IsError,
+                $"Cash Statement generation failure [{code}]. {diagnostic}");
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Cash Statement failure {Code} could not be written to the node Event Log.",
+                code);
+        }
+    }
+}
+
 public sealed class CashStatementGenerationGate : IDisposable
 {
     private readonly SemaphoreSlim _semaphore;
@@ -196,6 +233,7 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
     private readonly CashStatementGenerationGate _gate;
     private readonly ICashStatementSourceResolver _sourceResolver;
     private readonly ICashStatementExporter _exporter;
+    private readonly ICashStatementFailureReporter _failureReporter;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<CashStatementGenerationService> _logger;
 
@@ -204,6 +242,7 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         CashStatementGenerationGate gate,
         ICashStatementSourceResolver sourceResolver,
         ICashStatementExporter exporter,
+        ICashStatementFailureReporter failureReporter,
         IHttpContextAccessor httpContextAccessor,
         ILogger<CashStatementGenerationService> logger)
     {
@@ -211,6 +250,7 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         _gate = gate;
         _sourceResolver = sourceResolver;
         _exporter = exporter;
+        _failureReporter = failureReporter;
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
@@ -274,6 +314,9 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
             _logger.LogWarning(
                 "Cash Statement {Format} generation exceeded the configured execution limit.",
                 format);
+            await _failureReporter.ReportAsync(
+                "GENERATION_TIMEOUT",
+                $"Format={format}. The configured execution limit was exceeded.");
             return CashStatementGenerationResult.Failure(
                 "GENERATION_TIMEOUT",
                 "Cash Statement generation exceeded the service time limit.");
@@ -286,9 +329,13 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         catch (Exception exception)
         {
             _logger.LogError(
+                exception,
                 "Cash Statement {Format} generation failed with {ExceptionType}.",
                 format,
                 exception.GetType().Name);
+            await _failureReporter.ReportAsync(
+                "EXECUTION_ERROR",
+                $"Format={format}. ExceptionType={exception.GetType().Name}.");
             return CashStatementGenerationResult.Failure(
                 "EXECUTION_ERROR",
                 "Cash Statement generation failed.");
@@ -301,18 +348,28 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         if (!string.Equals(export.Status, "success", StringComparison.OrdinalIgnoreCase))
         {
             var code = string.IsNullOrWhiteSpace(export.Code) ? "EXECUTION_ERROR" : export.Code;
+            var diagnostic = DiagnosticDetails(export.Details);
             _logger.LogWarning(
-                "Cash Statement {Format} generation returned {Code} after {ElapsedMilliseconds} ms.",
+                "Cash Statement {Format} generation returned {Code} after {ElapsedMilliseconds} ms. {Diagnostic}",
                 format,
                 code,
-                stopwatch.ElapsedMilliseconds);
+                stopwatch.ElapsedMilliseconds,
+                diagnostic);
+            await _failureReporter.ReportAsync(
+                code,
+                $"Format={format}. ElapsedMilliseconds={stopwatch.ElapsedMilliseconds}. {diagnostic}");
             return CashStatementGenerationResult.Failure(code, SafeFailureMessage(code, export.Details));
         }
 
         if (string.IsNullOrWhiteSpace(export.FileContent))
+        {
+            await _failureReporter.ReportAsync(
+                "EMPTY_OUTPUT",
+                $"Format={format}. The generator returned no document.");
             return CashStatementGenerationResult.Failure(
                 "EMPTY_OUTPUT",
                 "Cash Statement generation returned no document.");
+        }
 
         byte[] content;
         try
@@ -321,6 +378,9 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
         }
         catch (FormatException)
         {
+            await _failureReporter.ReportAsync(
+                "INVALID_OUTPUT",
+                $"Format={format}. The generator returned invalid Base64 content.");
             return CashStatementGenerationResult.Failure(
                 "INVALID_OUTPUT",
                 "Cash Statement generation returned an invalid document.");
@@ -331,6 +391,9 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
             _logger.LogWarning(
                 "Cash Statement {Format} output exceeded the configured byte limit.",
                 format);
+            await _failureReporter.ReportAsync(
+                "OUTPUT_LIMIT_EXCEEDED",
+                $"Format={format}. OutputBytes={content.LongLength}.");
             return CashStatementGenerationResult.Failure(
                 "OUTPUT_LIMIT_EXCEEDED",
                 "The Cash Statement exceeds the service output limit.");
@@ -409,6 +472,20 @@ public sealed class CashStatementGenerationService : ICashStatementGenerationSer
             "UNSUPPORTED_FORMAT" => "Choose Microsoft Excel or LibreOffice Calc.",
             _ => "Cash Statement generation failed."
         };
+    }
+
+    private static string DiagnosticDetails(IReadOnlyDictionary<string, string[]>? details)
+    {
+        if (details is null || details.Count == 0)
+            return "No diagnostic details were returned.";
+
+        var diagnostic = string.Join(" | ", details
+            .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(pair => pair.Value.Select(message => $"{pair.Key}: {message}")));
+        const int maximumLength = 4000;
+        return diagnostic.Length <= maximumLength
+            ? diagnostic
+            : diagnostic[..maximumLength];
     }
 
     private static string BooleanText(bool value) => value ? "true" : "false";

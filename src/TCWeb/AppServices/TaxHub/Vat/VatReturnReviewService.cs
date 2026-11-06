@@ -41,6 +41,7 @@ public sealed record VatReturnReviewModel(
     string DeclarationVersion,
     string DeclarationText,
     string DeclarationSha256,
+    CategoryTreeSealEvidence CategoryTree,
     string? ApprovalReference = null);
 
 public interface IVatReturnReviewService
@@ -71,7 +72,8 @@ public interface IVatApprovedReturnResolver
 public sealed record VatApprovalEvidence(string ApprovalReference, string PeriodKey,
     DateOnly PeriodStart, DateOnly PeriodEnd, string MaskedVrn, string ActorReference,
     string VrnSha256, string PreparedSha256, DateTimeOffset ApprovedAtUtc, IReadOnlyList<VatReturnReviewBox> Boxes,
-    bool PayloadIntegrityVerified, string? EvidenceFailure = null);
+    bool PayloadIntegrityVerified, string? EvidenceFailure = null,
+    CategoryTreeSealEvidence? CategoryTree = null);
 
 public interface IVatApprovalEvidenceSource
 {
@@ -95,7 +97,7 @@ internal sealed record VatReviewCandidateRecord(string Reference, string TenantR
     string DatabaseInstanceReference, long AccountingEventId, string SourceInventorySha256,
     string SqlNodeVersion, string SourceSystem, string DatasetKey, string SnapshotToken,
     IReadOnlyList<VatReviewFindingRecord> Findings, DateTimeOffset CreatedAtUtc,
-    DateTimeOffset ExpiresAtUtc);
+    DateTimeOffset ExpiresAtUtc, CategoryTreeSealEvidence? CategoryTree = null);
 
 internal sealed record VatReviewApprovalRecord(string Reference, string PreparationReference,
     string TenantReference, string PrincipalReference, string ActorReference,
@@ -131,6 +133,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     private readonly NodeContext _nodeContext;
     private readonly IVatWorkflowIdentityAccessor _identities;
     private readonly IVatObligationWorkspaceService _obligations;
+    private readonly ICategoryTreeStatutoryEvidenceSource _categoryTreeEvidence;
     private readonly IVatFilingAuthorisationPolicy _filingPolicy;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<VatReturnReviewService> _logger;
@@ -147,11 +150,13 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         IVatObligationWorkspaceService obligations, IOptions<VatProductHostOptions> hostOptions,
         TimeProvider timeProvider, IVatFilingAuthorisationPolicy filingPolicy,
         IHttpContextAccessor httpContextAccessor, ILogger<VatReturnReviewService> logger,
+        ICategoryTreeStatutoryEvidenceSource categoryTreeEvidence,
         AzureVatPersistence? azurePersistence = null)
     {
         _nodeContext = nodeContext;
         _identities = identities;
         _obligations = obligations;
+        _categoryTreeEvidence = categoryTreeEvidence;
         _filingPolicy = filingPolicy;
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
@@ -225,7 +230,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             prepared.Evidence.SourceInventorySha256, prepared.Evidence.SqlNodeVersion,
             source.SourceSystem, source.DatasetKey, source.SnapshotToken,
             prepared.Request.Findings.Select(VatReviewFindingRecord.From).ToArray(), now,
-            now.Add(CandidateLifetime));
+            now.Add(CandidateLifetime), prepared.CategoryTree);
         await AddCandidateAsync(candidate, cancellationToken);
         return await ReadModelAsync(candidate, null, cancellationToken);
     }
@@ -284,7 +289,8 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             && source.SnapshotToken == candidate.SnapshotToken
             && current.Evidence.DatabaseInstanceReference == candidate.DatabaseInstanceReference
             && current.Evidence.SourceInventorySha256 == candidate.SourceInventorySha256
-            && current.Evidence.SqlNodeVersion == candidate.SqlNodeVersion;
+            && current.Evidence.SqlNodeVersion == candidate.SqlNodeVersion
+            && candidate.CategoryTree == current.CategoryTree;
     }
 
     public async Task<VatReturnReviewModel> ApproveAsync(string preparationReference,
@@ -418,7 +424,8 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
                     approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
                     candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
                     bytes is null ? "The protected approved payload is missing."
-                        : "The protected approved payload failed digest verification.");
+                        : "The protected approved payload failed digest verification.",
+                    candidate.CategoryTree);
                 continue;
             }
             try
@@ -427,14 +434,15 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
                     ?? throw new JsonException();
                 result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
                     approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
-                    candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, ProjectBoxes(body), true);
+                    candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, ProjectBoxes(body), true,
+                    CategoryTree: candidate.CategoryTree);
             }
             catch (JsonException)
             {
                 result[approval.Reference] = new(approval.Reference, approval.PeriodKey,
                     approval.PeriodStart, approval.PeriodEnd, candidate.MaskedVrn, approval.ActorReference,
                     candidate.VrnSha256, approval.PreparedSha256, approval.ApprovedAtUtc, [], false,
-                    "The protected approved payload is malformed.");
+                    "The protected approved payload is malformed.", candidate.CategoryTree);
             }
         }
         return result;
@@ -509,6 +517,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
 
         var connectionString = _nodeContext.Database.GetConnectionString()
             ?? throw new InvalidOperationException("The Trade Control source is unavailable.");
+        var categoryTreeBefore = await _categoryTreeEvidence.ReadActiveAsync(cancellationToken);
         var evidenceReader = new VatSourceEvidenceReader(connectionString);
         var evidenceBefore = await evidenceReader.ReadAsync(obligation.Start, obligation.End, cancellationToken);
         var sourceKey = new SourceKey("tcweb-node");
@@ -523,14 +532,16 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
         var request = await preparer.PrepareAsync(new(sourceKey, period, obligation.PeriodKey!, true),
             cancellationToken);
         var evidenceAfter = await evidenceReader.ReadAsync(obligation.Start, obligation.End, cancellationToken);
-        if (!evidenceBefore.SameBoundaryAndContent(evidenceAfter))
+        var categoryTreeAfter = await _categoryTreeEvidence.ReadActiveAsync(cancellationToken);
+        if (!evidenceBefore.SameBoundaryAndContent(evidenceAfter)
+            || categoryTreeBefore != categoryTreeAfter)
             throw new VatReturnReviewException(
-                "The VAT source changed while the return was being prepared. Prepare it again.");
+                "The VAT source or active Category Tree changed while the return was being prepared. Prepare it again.");
         var vrn = ExtractVrn(request.RelativePath);
         if (vrn.Length != 9 || vrn.Any(character => !char.IsDigit(character)))
             throw new VatReturnReviewException("The prepared VAT registration identity is invalid.");
         return new(request, obligation, $"*****{vrn[^4..]}", Sha256(Encoding.UTF8.GetBytes(vrn)), vrn,
-            evidenceAfter);
+            evidenceAfter, categoryTreeAfter);
     }
 
     private StatutorySealCandidate CreateSeal(VatWorkflowIdentity identity, PreparedCurrent prepared,
@@ -549,6 +560,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             prepared.Vrn, prepared.Obligation.PeriodKey, prepared.Obligation.Start, prepared.Obligation.End,
             _host.AuthorityEnvironment.ToString(), prepared.Evidence.AccountingEventId,
             prepared.Evidence.SourceInventorySha256, prepared.Request.BodySha256!, bodyBytes.Length,
+            prepared.CategoryTree,
             prepared.Evidence.Adjustments,
             new(body.VatDueSales, body.VatDueAcquisitions, body.TotalVatDue,
                 body.VatReclaimedCurrPeriod, body.NetVatDue, body.TotalValueSalesExVat,
@@ -576,6 +588,7 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             || current.Evidence.DatabaseInstanceReference != candidate.DatabaseInstanceReference
             || current.Evidence.SourceInventorySha256 != candidate.SourceInventorySha256
             || current.Evidence.SqlNodeVersion != candidate.SqlNodeVersion
+            || candidate.CategoryTree != current.CategoryTree
             || current.Obligation.Start != candidate.PeriodStart || current.Obligation.End != candidate.PeriodEnd)
             throw new VatReturnReviewException(
                 "The VAT source or obligation changed since this review was prepared. Prepare and review a new return.");
@@ -600,6 +613,9 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
             candidate.MaskedVrn, ProjectBoxes(body), candidate.Findings.Select(item => item.ToView()).ToArray(),
             candidate.PreparedSha256, candidate.SourceSystem, candidate.DatasetKey, candidate.SnapshotToken,
             candidate.ExpiresAtUtc, DeclarationVersion, _declarationText, _declarationSha256,
+            candidate.CategoryTree
+                ?? throw new VatReturnReviewException(
+                    "This preparation predates Category Tree statutory evidence. Prepare the return again."),
             approvalReference);
     }
 
@@ -748,5 +764,6 @@ public sealed class VatReturnReviewService : IVatReturnReviewService, IVatApprov
     }
 
     private sealed record PreparedCurrent(PreparedApiRequest Request, VatObligationWorkspaceRow Obligation,
-        string MaskedVrn, string VrnSha256, string Vrn, VatSourceEvidenceSnapshot Evidence);
+        string MaskedVrn, string VrnSha256, string Vrn, VatSourceEvidenceSnapshot Evidence,
+        CategoryTreeSealEvidence CategoryTree);
 }

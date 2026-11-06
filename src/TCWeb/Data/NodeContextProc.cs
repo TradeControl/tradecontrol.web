@@ -498,7 +498,7 @@ namespace TradeControl.Web.Data
                     _connection.Close();
                 }
 
-                return (string)_userId.Value;
+                return _userId.Value is string userId ? userId : string.Empty;
 
             }
             catch (Exception e)
