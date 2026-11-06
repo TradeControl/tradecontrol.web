@@ -152,8 +152,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     vm.VersionId = workspaceVersionId;
                     vm.Namespace = await helper.GetCategoryNamespace(workspaceVersionId,
                         vm.CategoryCode, parentKey);
-                    vm.CanEditMaster = User.IsInRole(TradeControl.Web.Authorization.Constants.AdministratorsRole)
-                        && Workspace.SelectedVersion.IsActive
+                    vm.CanEditMaster = Workspace.SelectedVersion.Capabilities.CanEditTree
                         && Workspace.SelectedVersion.Status == NodeEnum.CategoryVersionStatus.Published;
 
                     Code = vm;
@@ -241,9 +240,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
 
                     vm.VersionId = workspaceVersionId;
                     vm.CanEditTree = Workspace.SelectedVersion.Capabilities.CanEditTree;
-                    vm.CanCreateCashCode = User.IsInRole(
-                            TradeControl.Web.Authorization.Constants.AdministratorsRole)
-                        && Workspace.SelectedVersion.IsActive
+                    vm.CanCreateCashCode = Workspace.SelectedVersion.Capabilities.CanEditTree
                         && Workspace.SelectedVersion.Status == NodeEnum.CategoryVersionStatus.Published;
 
                     vm.ChildTotalsCount = await NodeContext.Cash_tbCategoryTotals

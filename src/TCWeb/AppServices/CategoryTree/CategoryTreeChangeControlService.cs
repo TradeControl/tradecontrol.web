@@ -103,7 +103,8 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
             .ToListAsync(cancellationToken);
 
         return new(activeVersionId, selected, versionInfo, events,
-            Consequence(selected.Status, selected.IsActive, activeVersionId), notice);
+            Consequence(selected.Status, selected.IsActive, selected.HasSubmissionLock,
+                activeVersionId), notice);
     }
 
     public async Task<CategoryTreeVersionReview> GetReviewAsync(string versionId,
@@ -801,8 +802,9 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
         var stale = PredecessorIsStale(version, byId);
         var validated = validationTimes.TryGetValue(version.VersionId, out var validatedOn)
             && validatedOn >= version.ContentChangedOn;
+        var hasSubmissionLock = !string.IsNullOrWhiteSpace(version.SubmissionLockReference);
         var capabilities = CategoryTreeCapabilityContract.Resolve(status, isActive, isAdministrator,
-            hasSubmissionLock: false, stale, validated);
+            hasSubmissionLock, stale, validated);
 
         return new(
             version.VersionId,
@@ -822,7 +824,8 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
             isActive,
             stale,
             validated,
-            capabilities);
+            capabilities,
+            hasSubmissionLock);
     }
 
     private static bool PredecessorIsStale(Cash_tbCategoryVersion version,
@@ -840,14 +843,17 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
                 predecessor.CanonicalSha256);
     }
 
-    private static string Consequence(CategoryTreeStatus status, bool isActive, string activeVersionId) =>
-        (status, isActive) switch
+    private static string Consequence(CategoryTreeStatus status, bool isActive,
+        bool hasSubmissionLock, string activeVersionId) =>
+        (status, isActive, hasSubmissionLock) switch
         {
-            (CategoryTreeStatus.Published, true) =>
+            (CategoryTreeStatus.Published, true, true) =>
+                "Temporarily read-only while a statutory filing is in progress. The lock is released after a conclusive submission outcome.",
+            (CategoryTreeStatus.Published, true, false) =>
                 "Live and editable. Changes affect current and unsubmitted statements immediately.",
-            (CategoryTreeStatus.Submitted, true) =>
+            (CategoryTreeStatus.Submitted, true, _) =>
                 "Live and read-only because this version supports a statutory submission.",
-            (CategoryTreeStatus.Draft, _) =>
+            (CategoryTreeStatus.Draft, _, _) =>
                 $"Proposal only. Statements continue to use {activeVersionId} until this Draft is published.",
             _ => "Historical and read-only. This version is retained for reconstruction and evidence."
         };

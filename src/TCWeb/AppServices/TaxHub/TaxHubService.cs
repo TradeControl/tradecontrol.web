@@ -106,9 +106,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .Select(t => t.TaxTypeCode == 0 ? "Limited Company" : "Sole Trader")
                 .FirstOrDefaultAsync() ?? string.Empty;
 
-            var validationSummary = await GetAccountsValidationSummaryAsync();
             var businessTaxCard = await BuildBusinessTaxCard(businessTaxTotals, obligations, projectedDue);
-            var payloadAudit = await GetPayloadAuditSummaryAsync();
             var reportingReadiness = await GetReportingReadinessAsync();
 
             return new TaxHubDashboardModel
@@ -119,14 +117,18 @@ namespace TradeControl.Web.AppServices.TaxHub
                     .Select(t => t.TaxType)
                     .ToArray(),
                 Obligations = obligations,
-                PayloadAudit = payloadAudit,
                 Cards = new[]
                 {
                     BuildVatCard(vatTotals, obligations, projectedDue),
-                    businessTaxCard,
-                    BuildAccountsCard(validationSummary)
+                    businessTaxCard
                 }
             };
+        }
+
+        public async Task<TaxHubDashboardCard> GetAccountsValidationCardAsync()
+        {
+            var summary = await GetAccountsValidationSummaryAsync();
+            return BuildAccountsCard(summary);
         }
 
         private async Task<TaxHubReportingReadinessSummary> GetReportingReadinessAsync()
@@ -1139,7 +1141,7 @@ namespace TradeControl.Web.AppServices.TaxHub
             };
         }
 
-        private async Task<TaxHubPayloadAuditSummary> GetPayloadAuditSummaryAsync()
+        public async Task<TaxHubPayloadAuditSummary> GetPayloadAuditSummaryAsync()
         {
             var rows = await _nodeContext.Cash_vwTaxBizPayloadAudits
                 .AsNoTracking()

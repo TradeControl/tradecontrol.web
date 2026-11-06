@@ -65,6 +65,43 @@ else
                         </div>
                     </div>
                 }
+
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 tc-tax-hub-summary-card">
+                        <div class="card-body py-3">
+                            @if (AccountsLoading)
+                            {
+                                <div class="tc-tax-hub-loading" role="status" aria-live="polite">
+                                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                                    <span>Loading Accounts Validation…</span>
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(AccountsError))
+                            {
+                                <div class="alert alert-warning mb-0" role="alert">@AccountsError</div>
+                            }
+                            else if (AccountsCard is not null)
+                            {
+                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <h3 class="h6 mb-1">@AccountsCard.Title</h3>
+                                        <div class="text-muted small">@AccountsCard.Subtitle</div>
+                                    </div>
+
+                                    <span class="badge text-bg-light border">@AccountsCard.Status</span>
+                                </div>
+
+                                <div class="tc-tax-hub-card-value">@AccountsCard.PrimaryValue</div>
+                                <div class="text-muted small">@AccountsCard.SecondaryValue</div>
+                                <p class="mt-2 mb-0 text-muted small">@AccountsCard.Detail</p>
+                            }
+                            else
+                            {
+                                <div class="text-muted">Accounts Validation is unavailable.</div>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -75,42 +112,67 @@ else
                     <div class="text-muted small">Aggregate integrity check comparing raw P&amp;L values with submission payload totals</div>
                 </div>
 
-                <MudChip T="string"
-                         Variant="Variant.Filled"
-                         Color="@GetAuditColour(Dashboard.PayloadAudit.Status)"
-                         Size="Size.Small">
-                    @Dashboard.PayloadAudit.Status
-                </MudChip>
+                @if (PayloadAuditLoading)
+                {
+                    <span class="badge text-bg-light border">Loading</span>
+                }
+                else if (!string.IsNullOrWhiteSpace(PayloadAuditError))
+                {
+                    <span class="badge text-bg-warning">Unavailable</span>
+                }
+                else if (PayloadAudit is not null)
+                {
+                    <MudChip T="string"
+                             Variant="Variant.Filled"
+                             Color="@GetAuditColour(PayloadAudit.Status)"
+                             Size="Size.Small">
+                        @PayloadAudit.Status
+                    </MudChip>
+                }
             </div>
 
-            <div class="row g-2">
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 tc-tax-hub-summary-card">
-                        <div class="card-body py-3">
-                            <div class="text-muted small mb-1">Audited Rows</div>
-                            <div class="tc-tax-hub-card-value">@Dashboard.PayloadAudit.TotalRows</div>
+            @if (PayloadAuditLoading)
+            {
+                <div class="tc-tax-hub-loading" role="status" aria-live="polite">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                    <span>Loading Payload Audit…</span>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(PayloadAuditError))
+            {
+                <div class="alert alert-warning mb-0" role="alert">@PayloadAuditError</div>
+            }
+            else if (PayloadAudit is not null)
+            {
+                <div class="row g-2">
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 tc-tax-hub-summary-card">
+                            <div class="card-body py-3">
+                                <div class="text-muted small mb-1">Audited Rows</div>
+                                <div class="tc-tax-hub-card-value">@PayloadAudit.TotalRows</div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 tc-tax-hub-summary-card">
-                        <div class="card-body py-3">
-                            <div class="text-muted small mb-1">Rows With Difference</div>
-                            <div class="tc-tax-hub-card-value">@Dashboard.PayloadAudit.ErrorRows</div>
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 tc-tax-hub-summary-card">
+                            <div class="card-body py-3">
+                                <div class="text-muted small mb-1">Rows With Difference</div>
+                                <div class="tc-tax-hub-card-value">@PayloadAudit.ErrorRows</div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-12 col-md-4">
-                    <div class="card h-100 tc-tax-hub-summary-card">
-                        <div class="card-body py-3">
-                            <div class="text-muted small mb-1">Net Difference</div>
-                            <div class="tc-tax-hub-card-value">@Dashboard.PayloadAudit.TotalDifference.ToString("#,##0.00;(#,##0.00);-")</div>
+                    <div class="col-12 col-md-4">
+                        <div class="card h-100 tc-tax-hub-summary-card">
+                            <div class="card-body py-3">
+                                <div class="text-muted small mb-1">Net Difference</div>
+                                <div class="tc-tax-hub-card-value">@PayloadAudit.TotalDifference.ToString("#,##0.00;(#,##0.00);-")</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            }
         </section>
 
         <section>
@@ -135,11 +197,20 @@ else
 
 @code {
     [Parameter] public TaxHubDashboardModel? Dashboard { get; set; }
+    [Parameter] public TaxHubDashboardCard? AccountsCard { get; set; }
+    [Parameter] public TaxHubPayloadAuditSummary? PayloadAudit { get; set; }
+    [Parameter] public bool AccountsLoading { get; set; }
+    [Parameter] public bool PayloadAuditLoading { get; set; }
+    [Parameter] public string? AccountsError { get; set; }
+    [Parameter] public string? PayloadAuditError { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     private bool _requiresFilingReconciliation;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+            return;
+
         try
         {
             var filings = await FilingHistory.GetAsync();
@@ -153,6 +224,8 @@ else
             // must never prevent the Tax Hub itself from loading.
             _requiresFilingReconciliation = false;
         }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private static Color GetAuditColour(string status)

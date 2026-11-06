@@ -9,8 +9,7 @@
     ViewData["Title"] = "Cash Configuration";
     var isAdmin = User.IsInRole(Constants.AdministratorsRole);
     var canEditTree = Model.Workspace.SelectedVersion.Capabilities.CanEditTree;
-    var canManageCashCodes = isAdmin
-        && Model.Workspace.SelectedVersion.IsActive
+    var canManageCashCodes = canEditTree
         && Model.Workspace.SelectedVersion.Status == NodeEnum.CategoryVersionStatus.Published;
     var tenantId = TenantContext.RequiredTenant.TenantId.ToString("D");
 }

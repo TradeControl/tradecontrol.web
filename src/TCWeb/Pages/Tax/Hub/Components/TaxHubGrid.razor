@@ -17,7 +17,14 @@
         @switch (Workspace)
         {
             case TaxHubWorkspace.Dashboard:
-                <TaxHubDashboard Dashboard="@Dashboard" IsMobile="@IsMobile" />
+                <TaxHubDashboard Dashboard="@Dashboard"
+                                 AccountsCard="@DashboardAccountsCard"
+                                 PayloadAudit="@DashboardPayloadAudit"
+                                 AccountsLoading="@DashboardAccountsLoading"
+                                 PayloadAuditLoading="@DashboardPayloadAuditLoading"
+                                 AccountsError="@DashboardAccountsError"
+                                 PayloadAuditError="@DashboardPayloadAuditError"
+                                 IsMobile="@IsMobile" />
                 break;
 
             case TaxHubWorkspace.Vat:
@@ -46,6 +53,12 @@
 @code {
     [Parameter] public TaxHubWorkspace Workspace { get; set; }
     [Parameter] public TaxHubDashboardModel? Dashboard { get; set; }
+    [Parameter] public TaxHubDashboardCard? DashboardAccountsCard { get; set; }
+    [Parameter] public TaxHubPayloadAuditSummary? DashboardPayloadAudit { get; set; }
+    [Parameter] public bool DashboardAccountsLoading { get; set; }
+    [Parameter] public bool DashboardPayloadAuditLoading { get; set; }
+    [Parameter] public string? DashboardAccountsError { get; set; }
+    [Parameter] public string? DashboardPayloadAuditError { get; set; }
     [Parameter] public TaxHubVatWorkspaceModel? VatWorkspace { get; set; }
     [Parameter] public TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace { get; set; }
     [Parameter] public TaxHubAccountsWorkspaceModel? AccountsWorkspace { get; set; }

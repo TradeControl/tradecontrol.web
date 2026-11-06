@@ -4,6 +4,7 @@
     var version = Model.SelectedVersion;
     var bannerClass = version.Status switch
     {
+        NodeEnum.CategoryVersionStatus.Published when version.IsActive && version.HasSubmissionLock => "alert-warning",
         NodeEnum.CategoryVersionStatus.Published when version.IsActive => "alert-success",
         NodeEnum.CategoryVersionStatus.Submitted when version.IsActive => "alert-primary",
         NodeEnum.CategoryVersionStatus.Draft => "alert-warning",
@@ -21,6 +22,10 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <strong>@contextLabel · @version.StatusName</strong>
+            @if (version.HasSubmissionLock)
+            {
+                <span class="badge text-bg-warning ms-1">Filing in progress</span>
+            }
             <span class="font-monospace ms-1">@version.VersionId</span>
             <span class="ms-1">@version.Description</span>
             <div class="small">@Model.ConsequenceStatement</div>

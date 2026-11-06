@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.Vat;
+using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -75,6 +76,20 @@ Assert(webReferences.All(reference => !reference.Contains("WebHarness", StringCo
     "TCWeb must not reference the diagnostic WebHarness.");
 assertions += await CashStatementServiceTests.RunAsync();
 assertions += CategoryTreeContractTests.Run();
+var lockedPublishedCapabilities = CategoryTreeCapabilityContract.Resolve(
+    NodeEnum.CategoryVersionStatus.Published, isActive: true, isAdministrator: true,
+    hasSubmissionLock: true, predecessorIsStale: false, hasCurrentValidation: true);
+Assert(!lockedPublishedCapabilities.CanEditTree
+    && !lockedPublishedCapabilities.CanCloneActive
+    && !lockedPublishedCapabilities.CanValidate,
+    "A submission-locked Published Category Tree still exposes mutation capabilities.");
+var unlockedPublishedCapabilities = CategoryTreeCapabilityContract.Resolve(
+    NodeEnum.CategoryVersionStatus.Published, isActive: true, isAdministrator: true,
+    hasSubmissionLock: false, predecessorIsStale: false, hasCurrentValidation: true);
+Assert(unlockedPublishedCapabilities.CanEditTree
+    && unlockedPublishedCapabilities.CanCloneActive
+    && unlockedPublishedCapabilities.CanValidate,
+    "An unlocked active Published Category Tree is not editable.");
 assertions += await TenantIsolationTests.RunAsync();
 assertions += BusinessClockTests.Run();
 assertions += TenantFileProviderTests.Run();
@@ -1041,8 +1056,23 @@ Assert(dashboardObligationsGrid.Contains("@if (Items.Count > 10)", StringCompari
     "The Dashboard obligations summary always renders a pager or lost its bounded page size.");
 Assert(dashboardComponent.Contains("A VAT filing needs confirmation", StringComparison.Ordinal)
     && dashboardComponent.Contains("Do not submit the return again", StringComparison.Ordinal)
-    && dashboardComponent.Contains("Reconcile with HMRC", StringComparison.Ordinal),
+    && dashboardComponent.Contains("Reconcile with HMRC", StringComparison.Ordinal)
+    && dashboardComponent.Contains("OnAfterRenderAsync", StringComparison.Ordinal),
     "The Dashboard no longer restores actionable filing-reconciliation guidance after reconnect or restart.");
+Assert(taxHubShellComponent.Contains("_initialWorkspacePending = true", StringComparison.Ordinal)
+    && taxHubShellComponent.Contains("OnAfterRenderAsync", StringComparison.Ordinal)
+    && taxHubShellComponent.Contains("LoadDashboardAssuranceAsync", StringComparison.Ordinal)
+    && taxHubShellComponent.Contains("_isWorkspaceLoading = false", StringComparison.Ordinal),
+    "The Tax Hub no longer paints its shell and ordinary Dashboard before loading assurance data.");
+Assert(dashboardComponent.Contains("AccountsLoading", StringComparison.Ordinal)
+    && dashboardComponent.Contains("Loading Accounts Validation", StringComparison.Ordinal)
+    && dashboardComponent.Contains("PayloadAuditLoading", StringComparison.Ordinal)
+    && dashboardComponent.Contains("Loading Payload Audit", StringComparison.Ordinal)
+    && dashboardComponent.Contains("Accounts Validation is unavailable", StringComparison.Ordinal),
+    "The Dashboard no longer presents independent loading and failure states for assurance data.");
+Assert(taxHubService.Contains("public async Task<TaxHubDashboardCard> GetAccountsValidationCardAsync()", StringComparison.Ordinal)
+    && taxHubService.Contains("public async Task<TaxHubPayloadAuditSummary> GetPayloadAuditSummaryAsync()", StringComparison.Ordinal),
+    "The Tax Hub service no longer exposes the sequential Dashboard assurance boundaries.");
 var taxHubGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubGrid.razor"));
 var taxHubCss = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "wwwroot", "css", "modules", "taxHub.css"));

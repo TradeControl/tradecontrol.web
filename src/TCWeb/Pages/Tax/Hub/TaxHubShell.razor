@@ -98,6 +98,12 @@
 
                                 <TaxHubGrid Workspace="@_state.SelectedWorkspace"
                                             Dashboard="@_dashboard"
+                                            DashboardAccountsCard="@_dashboardAccountsCard"
+                                            DashboardPayloadAudit="@_dashboardPayloadAudit"
+                                            DashboardAccountsLoading="@_dashboardAccountsLoading"
+                                            DashboardPayloadAuditLoading="@_dashboardPayloadAuditLoading"
+                                            DashboardAccountsError="@_dashboardAccountsError"
+                                            DashboardPayloadAuditError="@_dashboardPayloadAuditError"
                                             VatWorkspace="@_vatWorkspace"
                                             BusinessTaxWorkspace="@_businessTaxWorkspace"
                                             AccountsWorkspace="@_accountsWorkspace"
@@ -196,6 +202,12 @@ else
                         <div class="tc-tax-hub-main-body">
                             <TaxHubGrid Workspace="@_state.SelectedWorkspace"
                                         Dashboard="@_dashboard"
+                                        DashboardAccountsCard="@_dashboardAccountsCard"
+                                        DashboardPayloadAudit="@_dashboardPayloadAudit"
+                                        DashboardAccountsLoading="@_dashboardAccountsLoading"
+                                        DashboardPayloadAuditLoading="@_dashboardPayloadAuditLoading"
+                                        DashboardAccountsError="@_dashboardAccountsError"
+                                        DashboardPayloadAuditError="@_dashboardPayloadAuditError"
                                         VatWorkspace="@_vatWorkspace"
                                         BusinessTaxWorkspace="@_businessTaxWorkspace"
                                         AccountsWorkspace="@_accountsWorkspace"
@@ -224,6 +236,7 @@ else
     private bool _isMobile;
     private bool _isAdministrator;
     private bool _isSidebarCollapsed;
+    private bool _initialWorkspacePending;
     private string? _error;
     private string? _workspaceError;
     private long _requestVersion;
@@ -231,6 +244,12 @@ else
     private PersistingComponentStateSubscription _persistingSubscription;
     private TaxHubWorkflowState? _state;
     private TaxHubDashboardModel? _dashboard;
+    private TaxHubDashboardCard? _dashboardAccountsCard;
+    private TaxHubPayloadAuditSummary? _dashboardPayloadAudit;
+    private bool _dashboardAccountsLoading;
+    private bool _dashboardPayloadAuditLoading;
+    private string? _dashboardAccountsError;
+    private string? _dashboardPayloadAuditError;
     private TaxHubVatWorkspaceModel? _vatWorkspace;
     private TaxHubBusinessTaxWorkspaceModel? _businessTaxWorkspace;
     private TaxHubAccountsWorkspaceModel? _accountsWorkspace;
@@ -309,6 +328,7 @@ else
         {
             RestoreSnapshot(snapshot);
             _isLoading = false;
+            _initialWorkspacePending = _dashboard is null;
             return;
         }
 
@@ -336,7 +356,7 @@ else
             _defaultPeriodStartOn = defaultPeriod?.StartOn;
 
             await ResetPeriodsAsync();
-            await RefreshWorkspaceAsync();
+            _initialWorkspacePending = true;
         }
         catch (System.Exception ex)
         {
@@ -346,6 +366,18 @@ else
         {
             _isLoading = false;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !_initialWorkspacePending)
+            return;
+
+        _initialWorkspacePending = false;
+        var refreshTask = RefreshWorkspaceAsync();
+        await InvokeAsync(StateHasChanged);
+        await refreshTask;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ResetPeriodsAsync()
@@ -549,9 +581,20 @@ else
                             _accountsWorkspace = accounts;
                         break;
                     default:
+                        _dashboardAccountsCard = null;
+                        _dashboardPayloadAudit = null;
+                        _dashboardAccountsError = null;
+                        _dashboardPayloadAuditError = null;
+                        _dashboardAccountsLoading = true;
+                        _dashboardPayloadAuditLoading = true;
                         var dashboard = await TaxHubService.GetDashboardAsync();
                         if (requestVersion == _requestVersion)
+                        {
                             _dashboard = dashboard;
+                            _isWorkspaceLoading = false;
+                            await InvokeAsync(StateHasChanged);
+                            await LoadDashboardAssuranceAsync(requestVersion);
+                        }
                         break;
                 }
             }
@@ -569,6 +612,52 @@ else
         {
             if (requestVersion == _requestVersion)
                 _isWorkspaceLoading = false;
+        }
+    }
+
+    private async Task LoadDashboardAssuranceAsync(long requestVersion)
+    {
+        try
+        {
+            var accountsCard = await TaxHubService.GetAccountsValidationCardAsync();
+            if (requestVersion == _requestVersion)
+                _dashboardAccountsCard = accountsCard;
+        }
+        catch (System.Exception ex)
+        {
+            if (requestVersion == _requestVersion)
+                _dashboardAccountsError = $"Accounts validation could not be loaded. {ex.Message}";
+        }
+        finally
+        {
+            if (requestVersion == _requestVersion)
+            {
+                _dashboardAccountsLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        if (requestVersion != _requestVersion)
+            return;
+
+        try
+        {
+            var payloadAudit = await TaxHubService.GetPayloadAuditSummaryAsync();
+            if (requestVersion == _requestVersion)
+                _dashboardPayloadAudit = payloadAudit;
+        }
+        catch (System.Exception ex)
+        {
+            if (requestVersion == _requestVersion)
+                _dashboardPayloadAuditError = $"Payload audit could not be loaded. {ex.Message}";
+        }
+        finally
+        {
+            if (requestVersion == _requestVersion)
+            {
+                _dashboardPayloadAuditLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 

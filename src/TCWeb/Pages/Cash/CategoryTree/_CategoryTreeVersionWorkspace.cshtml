@@ -132,7 +132,11 @@
             }
 
             <div class="alert alert-info py-2 small mb-2">
-                @if (active.Status == NodeEnum.CategoryVersionStatus.Published)
+                @if (active.HasSubmissionLock)
+                {
+                    <span>This Published version is temporarily read-only while a statutory filing is in progress.</span>
+                }
+                else if (active.Status == NodeEnum.CategoryVersionStatus.Published)
                 {
                     <span>Published remains editable, and changes affect current and unsubmitted statements immediately.</span>
                 }

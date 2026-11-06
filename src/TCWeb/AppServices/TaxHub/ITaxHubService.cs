@@ -9,6 +9,8 @@ namespace TradeControl.Web.AppServices.TaxHub
     {
         Task<TaxHubResult> GetShellStateAsync();
         Task<TaxHubDashboardModel> GetDashboardAsync();
+        Task<TaxHubDashboardCard> GetAccountsValidationCardAsync();
+        Task<TaxHubPayloadAuditSummary> GetPayloadAuditSummaryAsync();
         Task<IReadOnlyList<TaxHubYearOption>> GetYearsAsync();
         Task<IReadOnlyList<TaxHubPeriodOption>> GetPeriodsAsync(short yearNumber);
         Task<TaxHubPeriodOption?> GetDefaultPeriodAsync();

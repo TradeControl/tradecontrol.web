@@ -61,7 +61,8 @@ public sealed record CategoryTreeVersionInfo(
     bool IsActive,
     bool PredecessorIsStale,
     bool HasCurrentValidation,
-    CategoryTreeCapabilities Capabilities);
+    CategoryTreeCapabilities Capabilities,
+    bool HasSubmissionLock = false);
 
 public sealed record CategoryTreeVersionEventInfo(
     long VersionEventId,
