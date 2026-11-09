@@ -41,11 +41,19 @@ namespace TradeControl.Web.AppServices
                 return null;
             }
 
-            var accountTypeCode = await _nodeContext.Subject_tbAccounts
+            var account = await _nodeContext.Subject_tbAccounts
                 .AsNoTracking()
                 .Where(item => item.AccountCode == payment.AccountCode)
-                .Select(item => item.AccountTypeCode)
+                .Select(item => new {
+                    item.AccountTypeCode,
+                    item.CashCode
+                })
                 .FirstOrDefaultAsync(cancellationToken);
+
+            var accountTypeCode = account?.AccountTypeCode ?? 0;
+            var assetCashCode = accountTypeCode == (short)NodeEnum.CashAccountType.Asset
+                ? NormalizeCode(account?.CashCode)
+                : string.Empty;
 
             var periodStatus = await GetCashStatusAsync(payment.PaidOn, cancellationToken);
 
@@ -57,7 +65,9 @@ namespace TradeControl.Web.AppServices
                 UserId = payment.UserId,
                 PaidOn = payment.PaidOn,
                 PaymentReference = payment.PaymentReference ?? string.Empty,
-                CashCode = payment.CashCode ?? string.Empty,
+                CashCode = string.IsNullOrWhiteSpace(assetCashCode)
+                    ? payment.CashCode ?? string.Empty
+                    : assetCashCode,
                 TaxCode = payment.TaxCode ?? string.Empty,
                 PaidInValue = payment.PaidInValue,
                 PaidOutValue = payment.PaidOutValue,
@@ -72,11 +82,14 @@ namespace TradeControl.Web.AppServices
                 await GetUsersAsync(cancellationToken),
                 isTransfer
                     ? await GetTransferCashCodesAsync(model.CashCode, cancellationToken)
-                    : await GetCashCodesAsync(cancellationToken),
+                    : accountTypeCode == (short)NodeEnum.CashAccountType.Asset
+                        ? await GetAssetCashCodesAsync(assetCashCode, cancellationToken)
+                        : await GetCashCodesAsync(cancellationToken),
                 await GetTaxCodesAsync(model.TaxCode, cancellationToken),
                 await GetAccountsAsync(accountTypeCode, cancellationToken),
-                !string.IsNullOrWhiteSpace(payment.CashCode)
-                    && accountTypeCode != (short)NodeEnum.CashAccountType.Asset);
+                accountTypeCode == (short)NodeEnum.CashAccountType.Asset
+                    ? !string.IsNullOrWhiteSpace(assetCashCode)
+                    : !string.IsNullOrWhiteSpace(payment.CashCode));
         }
 
         public async Task SaveEditAsync(
@@ -99,7 +112,10 @@ namespace TradeControl.Web.AppServices
             payment.UserId = NormalizeCode(model.UserId);
             payment.PaidOn = model.PaidOn;
             payment.PaymentReference = NormalizeText(model.PaymentReference);
-            payment.CashCode = NormalizeNullableCode(model.CashCode);
+            payment.CashCode = await NormalizePaymentCashCodeAsync(
+                payment.AccountCode,
+                model.CashCode,
+                cancellationToken);
             payment.UpdatedBy = await profile.UserName(userId);
 
             await _nodeContext.SaveChangesAsync(cancellationToken);
@@ -302,6 +318,64 @@ namespace TradeControl.Web.AppServices
             return options;
         }
 
+        private async Task<IReadOnlyList<CashManagerSelectOption>> GetAssetCashCodesAsync(
+            string configuredCashCode,
+            CancellationToken cancellationToken)
+        {
+            configuredCashCode = NormalizeCode(configuredCashCode);
+
+            if (string.IsNullOrWhiteSpace(configuredCashCode))
+            {
+                return Array.Empty<CashManagerSelectOption>();
+            }
+
+            return await _nodeContext.Cash_tbCodes
+                .AsNoTracking()
+                .Where(item => item.CashCode == configuredCashCode)
+                .Select(item => new CashManagerSelectOption(
+                    item.CashCode,
+                    $"{item.CashDescription} ({item.CashCode})"))
+                .ToListAsync(cancellationToken);
+        }
+
+        private async Task<string?> NormalizePaymentCashCodeAsync(
+            string accountCode,
+            string? cashCode,
+            CancellationToken cancellationToken)
+        {
+            accountCode = NormalizeCode(accountCode);
+            cashCode = NormalizeCode(cashCode);
+
+            var account = await _nodeContext.Subject_tbAccounts
+                .AsNoTracking()
+                .Where(item => item.AccountCode == accountCode)
+                .Select(item => new {
+                    item.AccountTypeCode,
+                    item.CashCode
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (account?.AccountTypeCode != (short)NodeEnum.CashAccountType.Asset)
+            {
+                return NormalizeNullableCode(cashCode);
+            }
+
+            var configuredCashCode = NormalizeCode(account.CashCode);
+
+            if (string.IsNullOrWhiteSpace(configuredCashCode))
+            {
+                throw new InvalidOperationException("The asset account does not have a configured Cash Code.");
+            }
+
+            if (!string.Equals(configuredCashCode, cashCode, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Asset transactions for this account must use Cash Code '{configuredCashCode}'.");
+            }
+
+            return configuredCashCode;
+        }
+
         private async Task<IReadOnlyList<CashManagerSelectOption>> GetTransferCashCodesAsync(
             string selectedCashCode,
             CancellationToken cancellationToken)
@@ -371,7 +445,12 @@ namespace TradeControl.Web.AppServices
             if (touchesClosedPeriod)
             {
                 var cashAccounts = new CashAccounts(_nodeContext);
-                await cashAccounts.RebuildAccount();
+
+                if (!await cashAccounts.RebuildSystem())
+                {
+                    throw new InvalidOperationException("The closed-period correction was saved, but the financial system rebuild failed. Check Event Viewer before continuing.");
+                }
+
                 return;
             }
 

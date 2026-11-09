@@ -294,7 +294,7 @@ private RenderFragment RenderPaymentEditor() => @<div @ref="_paymentEditorHost" 
                                        class="form-check-input"
                                        @bind-Value="_paymentEditor!.Model.AllowClosedPeriodOverride" />
                         <label class="form-check-label" for="statementPaymentClosedPeriodOverride">
-                            Confirm closed-period overwrite and request account rebuild
+                            Confirm closed-period overwrite and request system rebuild
                         </label>
                     </div>
                 }
@@ -781,6 +781,8 @@ private bool CanOpenPaymentEditor(CashManagerStatementRow row)
 {
     return _canCorrectPostedPayments
         && row.Status == CashManagerRowStatus.Posted
+        && row.RowNumber > 0
+        && !string.IsNullOrWhiteSpace(row.SubjectCode)
         && !string.IsNullOrWhiteSpace(row.PaymentCode);
 }
 
@@ -1104,7 +1106,7 @@ private string GetClosedPeriodOverrideMessage()
         return $"This payment is in a {_paymentEditor.Model.PeriodStatus} period. Only Administrators may overwrite it.";
     }
 
-    return "If this correction touches a closed or archived period, confirmation and an account rebuild are required.";
+    return "If this correction touches a closed or archived period, confirmation and a financial system rebuild are required.";
 }
 
 }

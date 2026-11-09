@@ -50,6 +50,15 @@ namespace TradeControl.Web.AppServices
                 .Select(item => (decimal?)item.CurrentBalance)
                 .FirstOrDefaultAsync(cancellationToken) ?? 0m;
 
+            var assetAccount = await nodeContext.Subject_CashAccountAssets
+                .AsNoTracking()
+                .Where(item => item.AccountCode == accountCode)
+                .Select(item => new {
+                    item.CashCode,
+                    item.TaxCode
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
             var rowsQuery = nodeContext.Cash_Payments
                 .AsNoTracking()
                 .Where(item =>
@@ -87,13 +96,15 @@ namespace TradeControl.Web.AppServices
                 SubjectCode = homeAccount?.SubjectCode ?? string.Empty,
                 SubjectName = homeAccount?.SubjectName ?? string.Empty,
                 PaidOn = today,
-                ReversalStartOn = today
+                ReversalStartOn = today,
+                CashCode = assetAccount?.CashCode ?? string.Empty,
+                TaxCode = assetAccount?.TaxCode ?? string.Empty
             };
 
             return new CashManagerAssetsWorkspaceState(
                 summary,
                 draft,
-                await GetCashCodesAsync(nodeContext, cancellationToken),
+                await GetCashCodesAsync(nodeContext, assetAccount?.CashCode, cancellationToken),
                 rows);
         }
 
@@ -157,6 +168,17 @@ namespace TradeControl.Web.AppServices
                 return Array.Empty<CashManagerPostedPaymentSearchResult>();
             }
 
+            var configuredCashCode = await nodeContext.Subject_CashAccountAssets
+                .AsNoTracking()
+                .Where(item => item.AccountCode == assetAccountCode)
+                .Select(item => item.CashCode)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(configuredCashCode))
+            {
+                return Array.Empty<CashManagerPostedPaymentSearchResult>();
+            }
+
             var userId = await GetUserIdAsync(nodeContext, aspNetUserId);
             var subject = await TryResolveSubjectAsync(nodeContext, namespaceFilter, cancellationToken);
             var subjectCode = subject?.SubjectCode ?? string.Empty;
@@ -165,7 +187,8 @@ namespace TradeControl.Web.AppServices
                 .AsNoTracking()
                 .Where(item =>
                     item.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Posted
-                    && item.AccountCode == assetAccountCode);
+                    && item.AccountCode == assetAccountCode
+                    && item.CashCode == configuredCashCode);
 
             if (!isPrivileged)
             {
@@ -190,24 +213,7 @@ namespace TradeControl.Web.AppServices
                     || (item.CashDescription != null && item.CashDescription.Contains(searchText)));
             }
 
-            return await query
-                .OrderByDescending(item => item.PaidOn)
-                .ThenByDescending(item => item.PaymentCode)
-                .Take(take)
-                .Select(item => new CashManagerPostedPaymentSearchResult(
-                    item.PaymentCode,
-                    item.PaidOn,
-                    item.AccountCode,
-                    item.AccountName ?? string.Empty,
-                    item.SubjectCode,
-                    item.SubjectName,
-                    item.PaymentReference ?? string.Empty,
-                    item.CashCode ?? string.Empty,
-                    item.CashDescription ?? string.Empty,
-                    item.PaidOutValue,
-                    item.PaidInValue,
-                    item.PaidInValue - item.PaidOutValue))
-                .ToListAsync(cancellationToken);
+            return await BuildPaymentSearchResultsAsync(nodeContext, query, take, cancellationToken);
         }
 
         public async Task AddFreehandAsync(
@@ -239,20 +245,17 @@ namespace TradeControl.Web.AppServices
                 throw new InvalidOperationException("An asset cash code is required.");
             }
 
+            draft.TaxCode = await EnsureCompatibleAssetCashCodeAsync(
+                nodeContext,
+                accountCode,
+                draft.CashCode,
+                cancellationToken);
+
             var subject = await TryResolveSubjectAsync(nodeContext, draft.NamespaceFilter, cancellationToken);
 
             if (subject is null)
             {
                 throw new InvalidOperationException("A subject or namespace selection is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(draft.TaxCode))
-            {
-                draft.TaxCode = await nodeContext.Cash_BankCashCodes
-                    .AsNoTracking()
-                    .Where(item => item.CashCode == draft.CashCode)
-                    .Select(item => item.TaxCode)
-                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
             }
 
             var profile = new Profile(nodeContext);
@@ -346,6 +349,12 @@ namespace TradeControl.Web.AppServices
 
             if (draft.GenerateReversalSeries)
             {
+                await EnsureCompatibleAssetCashCodeAsync(
+                    nodeContext,
+                    accountCode,
+                    sourcePayment.CashCode,
+                    cancellationToken);
+
                 var reversalPeriods = (short)Math.Clamp(draft.ReversalPeriods, 1, short.MaxValue);
                 var reversalIntervalMonths = (short)Math.Clamp(draft.ReversalIntervalMonths, 1, short.MaxValue);
 
@@ -367,6 +376,12 @@ namespace TradeControl.Web.AppServices
                 throw new InvalidOperationException("An asset cash code is required.");
             }
 
+            draft.TaxCode = await EnsureCompatibleAssetCashCodeAsync(
+                nodeContext,
+                accountCode,
+                draft.CashCode,
+                cancellationToken);
+
             var subject = await TryResolveSubjectAsync(nodeContext, draft.NamespaceFilter, cancellationToken);
 
             if (subject is null)
@@ -374,22 +389,18 @@ namespace TradeControl.Web.AppServices
                 throw new InvalidOperationException("A subject or namespace selection is required.");
             }
 
-            if (string.IsNullOrWhiteSpace(draft.TaxCode))
-            {
-                draft.TaxCode = await nodeContext.Cash_BankCashCodes
-                    .AsNoTracking()
-                    .Where(item => item.CashCode == draft.CashCode)
-                    .Select(item => item.TaxCode)
-                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
-            }
-
             var profile = new Profile(nodeContext);
             var userIdForInsert = await profile.UserId(aspNetUserId);
             var userName = await profile.UserName(aspNetUserId);
             var paymentCode = await cashAccounts.NextPaymentCode();
+            var capitalValue = await GetCapitalValueAsync(
+                nodeContext,
+                sourcePayment.TaxCode,
+                absoluteValue,
+                cancellationToken);
 
-            var paidInValue = deltaValue < 0m ? absoluteValue : 0m;
-            var paidOutValue = deltaValue < 0m ? 0m : absoluteValue;
+            var paidInValue = deltaValue < 0m ? capitalValue : 0m;
+            var paidOutValue = deltaValue < 0m ? 0m : capitalValue;
 
             var entity = CreateUnpostedAssetEntity(
                 paymentCode,
@@ -465,6 +476,12 @@ namespace TradeControl.Web.AppServices
                 return;
             }
 
+            await EnsureCompatibleAssetCashCodeAsync(
+                nodeContext,
+                payment.AccountCode,
+                payment.CashCode,
+                cancellationToken);
+
             if (!isPrivileged)
             {
                 var userId = await GetUserIdAsync(nodeContext, aspNetUserId);
@@ -476,6 +493,10 @@ namespace TradeControl.Web.AppServices
             }
 
             var cashAccounts = new CashAccounts(nodeContext);
+            var touchesClosedPeriod = await IsClosedPeriodAsync(
+                nodeContext,
+                payment.PaidOn,
+                cancellationToken);
 
             if (!await cashAccounts.PostAsset(paymentCode))
             {
@@ -483,6 +504,12 @@ namespace TradeControl.Web.AppServices
             }
 
             await nodeContext.SaveChangesAsync(cancellationToken);
+
+            if (touchesClosedPeriod && !await cashAccounts.RebuildSystem())
+            {
+                throw new InvalidOperationException(
+                    "The closed-period asset transaction was posted, but the financial system rebuild failed. Check Event Viewer before continuing.");
+            }
         }
 
         public async Task PostScheduledWriteOffAsync(
@@ -510,9 +537,7 @@ namespace TradeControl.Web.AppServices
             }
 
             if (payment.PaidInValue != 0m
-                || payment.PaidOutValue <= 0m
-                || string.IsNullOrWhiteSpace(payment.PaymentReference)
-                || !payment.PaymentReference.TrimStart().StartsWith("Write off", StringComparison.OrdinalIgnoreCase))
+                || payment.PaidOutValue <= 0m)
             {
                 throw new InvalidOperationException("The selected transaction is not a recognised scheduled asset write-off.");
             }
@@ -527,6 +552,12 @@ namespace TradeControl.Web.AppServices
             if (assetAccount is null
                 || assetAccount.AccountTypeCode != (short)NodeEnum.CashAccountType.Asset)
                 throw new InvalidOperationException("The scheduled transaction does not belong to an asset account.");
+
+            await EnsureCompatibleAssetCashCodeAsync(
+                nodeContext,
+                payment.AccountCode,
+                payment.CashCode,
+                cancellationToken);
 
             var connection = nodeContext.Database.GetDbConnection();
             var shouldClose = connection.State != System.Data.ConnectionState.Open;
@@ -571,10 +602,39 @@ namespace TradeControl.Web.AppServices
             }
 
             var cashAccounts = new CashAccounts(nodeContext);
+            var touchesClosedPeriod = await IsClosedPeriodAsync(
+                nodeContext,
+                payment.PaidOn,
+                cancellationToken);
+
             if (!await cashAccounts.PostAsset(paymentCode))
                 throw new InvalidOperationException($"Scheduled write-off '{paymentCode}' could not be posted.");
 
             await nodeContext.SaveChangesAsync(cancellationToken);
+
+            if (touchesClosedPeriod && !await cashAccounts.RebuildSystem())
+            {
+                throw new InvalidOperationException(
+                    "The closed-period write-off was posted, but the financial system rebuild failed. Check Event Viewer before continuing.");
+            }
+        }
+
+        private static async Task<bool> IsClosedPeriodAsync(
+            NodeContext nodeContext,
+            DateTime paidOn,
+            CancellationToken cancellationToken)
+        {
+            var periodStart = new DateTime(paidOn.Year, paidOn.Month, 1);
+
+            var statusCode = await nodeContext.App_tbYearPeriods
+                .AsNoTracking()
+                .Where(period => period.StartOn == periodStart)
+                .Select(period => (short?)period.CashStatusCode)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return statusCode.HasValue
+                && ((NodeEnum.CashStatus)statusCode.Value == NodeEnum.CashStatus.Closed
+                    || (NodeEnum.CashStatus)statusCode.Value == NodeEnum.CashStatus.Archived);
         }
 
         public async Task DeleteAsync(
@@ -657,6 +717,12 @@ namespace TradeControl.Web.AppServices
                 throw new InvalidOperationException("An asset cash code is required.");
             }
 
+            draft.TaxCode = await EnsureCompatibleAssetCashCodeAsync(
+                nodeContext,
+                accountCode,
+                draft.CashCode,
+                cancellationToken);
+
             var payment = await nodeContext.Cash_tbPayments
                 .FirstOrDefaultAsync(item => item.PaymentCode == paymentCode, cancellationToken);
 
@@ -692,15 +758,6 @@ namespace TradeControl.Web.AppServices
                 throw new InvalidOperationException("A subject or namespace selection is required.");
             }
 
-            if (string.IsNullOrWhiteSpace(draft.TaxCode))
-            {
-                draft.TaxCode = await nodeContext.Cash_BankCashCodes
-                    .AsNoTracking()
-                    .Where(item => item.CashCode == draft.CashCode)
-                    .Select(item => item.TaxCode)
-                    .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
-            }
-
             var profile = new Profile(nodeContext);
 
             payment.SubjectCode = subject.SubjectCode;
@@ -719,18 +776,62 @@ namespace TradeControl.Web.AppServices
 
         private static async Task<IReadOnlyList<CashManagerAssetCodeOption>> GetCashCodesAsync(
             NodeContext nodeContext,
+            string? configuredCashCode,
             CancellationToken cancellationToken)
         {
-            return await nodeContext.Cash_BankCashCodes
+            configuredCashCode = NormalizeCode(configuredCashCode);
+
+            if (string.IsNullOrWhiteSpace(configuredCashCode))
+            {
+                return Array.Empty<CashManagerAssetCodeOption>();
+            }
+
+            return await nodeContext.Cash_Codes
                 .AsNoTracking()
+                .Where(item =>
+                    item.CashCode == configuredCashCode
+                    && item.IsCashEnabled
+                    && item.IsCategoryEnabled)
                 .OrderBy(item => item.CashDescription)
                 .Select(item => new CashManagerAssetCodeOption(
                     item.CashCode,
                     item.CashDescription,
-                    ((NodeEnum.CashPolarity)item.CashPolarityCode).ToString(),
-                    string.Empty,
+                    item.CashPolarity,
+                    item.CashType,
                     item.CashPolarityCode))
                 .ToListAsync(cancellationToken);
+        }
+
+        private static async Task<string> EnsureCompatibleAssetCashCodeAsync(
+            NodeContext nodeContext,
+            string accountCode,
+            string? cashCode,
+            CancellationToken cancellationToken)
+        {
+            accountCode = NormalizeCode(accountCode);
+            cashCode = NormalizeCode(cashCode);
+
+            var assetAccount = await nodeContext.Subject_CashAccountAssets
+                .AsNoTracking()
+                .Where(item => item.AccountCode == accountCode)
+                .Select(item => new {
+                    item.CashCode,
+                    item.TaxCode
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (assetAccount is null)
+            {
+                throw new InvalidOperationException("The selected account is not configured as an asset account.");
+            }
+
+            if (!string.Equals(assetAccount.CashCode, cashCode, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Asset transactions for this account must use Cash Code '{assetAccount.CashCode}'.");
+            }
+
+            return assetAccount.TaxCode ?? string.Empty;
         }
 
         private static async Task<Subject_tbSubject?> TryResolveSubjectAsync(
@@ -816,7 +917,16 @@ namespace TradeControl.Web.AppServices
                     || (item.CashDescription != null && item.CashDescription.Contains(searchText)));
             }
 
-            return await query
+            return await BuildPaymentSearchResultsAsync(nodeContext, query, take, cancellationToken);
+        }
+
+        private static async Task<IReadOnlyList<CashManagerPostedPaymentSearchResult>> BuildPaymentSearchResultsAsync(
+            NodeContext nodeContext,
+            IQueryable<Cash_vwPayment> query,
+            int take,
+            CancellationToken cancellationToken)
+        {
+            var rows = await query
                 .OrderByDescending(item => item.PaidOn)
                 .ThenByDescending(item => item.PaymentCode)
                 .Take(take)
@@ -832,8 +942,62 @@ namespace TradeControl.Web.AppServices
                     item.CashDescription ?? string.Empty,
                     item.PaidOutValue,
                     item.PaidInValue,
-                    item.PaidInValue - item.PaidOutValue))
+                    item.PaidInValue - item.PaidOutValue,
+                    item.TaxCode ?? string.Empty,
+                    0m,
+                    2))
                 .ToListAsync(cancellationToken);
+
+            var selectedTaxCodes = rows
+                .Select(item => item.TaxCode)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (selectedTaxCodes.Length == 0)
+            {
+                return rows;
+            }
+
+            var taxRates = await nodeContext.App_tbTaxCodes
+                .AsNoTracking()
+                .Where(item => selectedTaxCodes.Contains(item.TaxCode))
+                .ToDictionaryAsync(
+                    item => item.TaxCode,
+                    item => (item.TaxRate, item.Decimals),
+                    StringComparer.OrdinalIgnoreCase,
+                    cancellationToken);
+
+            return rows
+                .Select(item => taxRates.TryGetValue(item.TaxCode, out var tax)
+                    ? item with { TaxRate = tax.TaxRate, TaxDecimals = tax.Decimals }
+                    : item)
+                .ToArray();
+        }
+
+        private static async Task<decimal> GetCapitalValueAsync(
+            NodeContext nodeContext,
+            string? taxCode,
+            decimal sourceValue,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(taxCode))
+            {
+                return sourceValue;
+            }
+
+            var tax = await nodeContext.App_tbTaxCodes
+                .AsNoTracking()
+                .Where(item => item.TaxCode == taxCode)
+                .Select(item => new { item.TaxRate, item.Decimals })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return tax is null
+                ? sourceValue
+                : CashManagerPostedPaymentSearchResult.CalculateCapitalValue(
+                    sourceValue,
+                    tax.TaxRate,
+                    tax.Decimals);
         }
 
         private static string ExtractSubjectCode(string namespaceFilter)

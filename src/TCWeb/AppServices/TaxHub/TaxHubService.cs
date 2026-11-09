@@ -994,7 +994,6 @@ namespace TradeControl.Web.AppServices.TaxHub
                       AND payment.PaymentStatusCode = 0
                       AND payment.PaidInValue = 0
                       AND payment.PaidOutValue > 0
-                      AND UPPER(LTRIM(COALESCE(payment.PaymentReference, N''))) LIKE N'WRITE OFF%'
                       AND EXISTS
                       (
                           SELECT 1

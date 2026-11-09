@@ -174,7 +174,7 @@
                             <label class="form-label" for="cloneEffectiveFromOn">Proposed effective date</label>
                             <input class="form-control" type="date" id="cloneEffectiveFromOn"
                                    name="proposedEffectiveFromOn" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
-                            <div class="form-text">Publication remains manual and is permitted only on this date.</div>
+                            <div class="form-text">Publication remains manual and cannot occur before this date.</div>
                         </div>
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" value="true"
@@ -236,7 +236,8 @@
             <div class="d-flex flex-wrap gap-2 align-items-start">
                 @if (selected.Capabilities.CanValidate)
                 {
-                    <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="ValidateVersion">
+                    <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="ValidateVersion"
+                          data-no-auto-embed>
                         <input type="hidden" name="versionId" value="@selected.VersionId" />
                         <button class="btn btn-sm btn-outline-success" type="submit">Validate @selected.VersionId</button>
                     </form>
@@ -246,6 +247,7 @@
                     <details>
                         <summary class="btn btn-sm btn-outline-warning">Refresh from active</summary>
                         <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="RefreshVersion"
+                              data-no-auto-embed
                               class="border rounded p-3 mt-2">
                             <input type="hidden" name="versionId" value="@selected.VersionId" />
                             <label class="form-label" for="refreshNote">Required change note</label>
@@ -266,6 +268,7 @@
                     <details>
                         <summary class="btn btn-sm btn-primary">Publish Draft</summary>
                         <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="PublishVersion"
+                              data-no-auto-embed
                               class="border rounded p-3 mt-2">
                             <input type="hidden" name="versionId" value="@selected.VersionId" />
                             <input type="hidden" name="expectedPredecessorVersionId" value="@selected.PredecessorVersionId" />
@@ -273,7 +276,7 @@
                                 Proposed effective date:
                                 <strong>@(selected.EffectiveFromOn?.ToString("dd MMM yyyy") ?? "not set")</strong>
                             </div>
-                            <div class="form-text mb-2">The predecessor will end on the preceding date. Publication is permitted only on the stored proposed effective date.</div>
+                            <div class="form-text mb-2">The predecessor will end on the preceding date. Publication cannot occur before the stored proposed effective date.</div>
                             <label class="form-label" for="publishNote">Required change note</label>
                             <textarea class="form-control mb-2" id="publishNote" name="changeNote" required></textarea>
                             <div class="form-check mb-2">
@@ -292,6 +295,7 @@
                     <details>
                         <summary class="btn btn-sm btn-outline-danger">Discard Draft</summary>
                         <form method="post" asp-page="/Cash/CategoryTree/Index" asp-page-handler="DiscardVersion"
+                              data-no-auto-embed
                               class="border rounded p-3 mt-2">
                             <input type="hidden" name="versionId" value="@selected.VersionId" />
                             <div class="form-check mb-2">

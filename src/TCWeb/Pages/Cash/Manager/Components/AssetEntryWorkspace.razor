@@ -175,7 +175,6 @@ else
     private bool _isLoaded;
     private bool _isBusy;
     private bool _isPrivileged;
-    private bool _isLoadingWorkspace;
     private bool _isModePanelCollapsed;
     private bool _isLoadingNamespaceSuggestions;
     private bool _isSearchingPostedPayments;
@@ -214,6 +213,7 @@ else
     {
         if (SelectedAccount is null)
         {
+            _workspaceLoadVersion++;
             _workspace = CashManagerAssetsWorkspaceState.Empty;
             _loadedAccountCode = null;
             _postedPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
@@ -224,7 +224,7 @@ else
             return;
         }
 
-        if (_isLoadingWorkspace || string.Equals(_loadedAccountCode, SelectedAccount.AccountCode, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(_loadedAccountCode, SelectedAccount.AccountCode, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
@@ -251,40 +251,29 @@ else
         }
 
         var loadVersion = ++_workspaceLoadVersion;
-        _isLoadingWorkspace = true;
 
-        try
+        var workspace = await CashAssetsWorkspaceService.GetWorkspaceAsync(
+            accountCode,
+            _currentAspNetUserId,
+            _isPrivileged);
+
+        if (loadVersion != _workspaceLoadVersion)
         {
-            var workspace = await CashAssetsWorkspaceService.GetWorkspaceAsync(
-                accountCode,
-                _currentAspNetUserId,
-                _isPrivileged);
-
-            if (loadVersion != _workspaceLoadVersion)
-            {
-                return;
-            }
-
-            _workspace = workspace;
-            _loadedAccountCode = accountCode;
-            _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
-            _postedPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
-            _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
-            _selectedPostedPayment = null;
-            _selectedReversalPayment = null;
-            _editingPaymentCode = null;
-            _postedPaymentSearchText = string.Empty;
-            _reversalPaymentSearchText = string.Empty;
-            _message = null;
-            _errorMessage = null;
+            return;
         }
-        finally
-        {
-            if (loadVersion == _workspaceLoadVersion)
-            {
-                _isLoadingWorkspace = false;
-            }
-        }
+
+        _workspace = workspace;
+        _loadedAccountCode = accountCode;
+        _namespaceSuggestions = Array.Empty<NamespaceSelectorSuggestion>();
+        _postedPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+        _reversalPaymentResults = Array.Empty<CashManagerPostedPaymentSearchResult>();
+        _selectedPostedPayment = null;
+        _selectedReversalPayment = null;
+        _editingPaymentCode = null;
+        _postedPaymentSearchText = string.Empty;
+        _reversalPaymentSearchText = string.Empty;
+        _message = null;
+        _errorMessage = null;
     }
 
     private RenderFragment RenderHeader() => @<div class="card">
@@ -659,10 +648,15 @@ private RenderFragment RenderSelectedSourcePayment(
             </div>
 
             <div class="text-end">
-                <div class="small text-muted">Source Net</div>
+                <div class="small text-muted">Source payment</div>
                 <div class="fw-semibold @(sourcePayment.DeltaValue < 0 ? "text-danger" : null)">
                     @sourcePayment.DeltaValue.ToString("C")
                 </div>
+                @if (!showReversalSettings)
+                {
+                    <div class="small text-muted mt-2">Capitalised net of tax</div>
+                    <div class="fw-semibold">@sourcePayment.CapitalValue.ToString("C")</div>
+                }
             </div>
         </div>
     </div>
@@ -748,33 +742,7 @@ private RenderFragment RenderSelectedSourcePayment(
 
 private IReadOnlyList<CashManagerAssetCodeOption> GetCashCodesForSourcePayment(CashManagerPostedPaymentSearchResult? payment)
 {
-    if (payment is null)
-    {
-        return _workspace.CashCodes;
-    }
-
-    var requiredPolarityCode = payment.DeltaValue < 0m
-        ? (short)NodeEnum.CashPolarity.Income
-        : (short)NodeEnum.CashPolarity.Expense;
-
-    var cashCodes = _workspace.CashCodes
-        .Where(item =>
-            item.CashPolarityCode == (short)NodeEnum.CashPolarity.Neutral
-            || item.CashPolarityCode == requiredPolarityCode)
-        .ToList();
-
-    if (!string.IsNullOrWhiteSpace(payment.CashCode)
-        && !cashCodes.Any(item => string.Equals(item.CashCode, payment.CashCode, StringComparison.OrdinalIgnoreCase)))
-    {
-        cashCodes.Insert(0, new CashManagerAssetCodeOption(
-            payment.CashCode,
-            payment.CashDescription,
-            string.Empty,
-            string.Empty,
-            requiredPolarityCode));
-    }
-
-    return cashCodes;
+    return _workspace.CashCodes;
 }
 
 private string GetModeButtonClass(AssetEntryMode mode)
@@ -986,13 +954,13 @@ private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult pa
         : payment.PaymentReference;
 
     _workspace.Draft.PaidOn = payment.PaidOn;
-    _workspace.Draft.GenerateReversalSeries = forceReversalSeries || payment.DeltaValue < 0m;
+    _workspace.Draft.GenerateReversalSeries = forceReversalSeries;
+    _workspace.Draft.NamespaceFilter = payment.SubjectCode ?? string.Empty;
+    _workspace.Draft.SubjectCode = payment.SubjectCode ?? string.Empty;
+    _workspace.Draft.SubjectName = payment.SubjectName ?? string.Empty;
 
     if (forceReversalSeries)
     {
-        _workspace.Draft.NamespaceFilter = payment.SubjectCode ?? string.Empty;
-        _workspace.Draft.SubjectCode = payment.SubjectCode ?? string.Empty;
-        _workspace.Draft.SubjectName = payment.SubjectName ?? string.Empty;
         _workspace.Draft.CashCode = payment.CashCode ?? string.Empty;
         _workspace.Draft.TaxCode = string.Empty;
         _workspace.Draft.PaymentReference = $"Write off - {sourceReference}";
@@ -1004,14 +972,18 @@ private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult pa
         _workspace.Draft.PaymentReference = sourceReference;
     }
 
+    var selectedValue = forceReversalSeries
+        ? payment.SourceValue
+        : payment.CapitalValue;
+
     if (payment.DeltaValue < 0m)
     {
-        _workspace.Draft.PaidInValue = Math.Abs(payment.DeltaValue);
+        _workspace.Draft.PaidInValue = selectedValue;
         _workspace.Draft.PaidOutValue = 0m;
     }
     else
     {
-        _workspace.Draft.PaidOutValue = Math.Abs(payment.DeltaValue);
+        _workspace.Draft.PaidOutValue = selectedValue;
         _workspace.Draft.PaidInValue = 0m;
     }
 
@@ -1020,7 +992,7 @@ private void ApplySourcePaymentSelection(CashManagerPostedPaymentSearchResult pa
     if (string.IsNullOrWhiteSpace(_workspace.Draft.CashCode)
         || !candidateCashCodes.Any(item => string.Equals(item.CashCode, _workspace.Draft.CashCode, StringComparison.OrdinalIgnoreCase)))
     {
-        _workspace.Draft.CashCode = payment.CashCode ?? string.Empty;
+        _workspace.Draft.CashCode = string.Empty;
         _workspace.Draft.TaxCode = string.Empty;
     }
 }

@@ -66,6 +66,12 @@ using (var tenantContext = new TenantContext(tenantAmbient))
 }
 var webProject = Path.Combine(root, "src", "TCWeb", "TCWeb.csproj");
 var webReferences = ProjectReferences(webProject);
+Assert(TradeControl.Web.Pages.Cash.Manager.Components.CashManagerPostedPaymentSearchResult
+        .CalculateCapitalValue(40000m, 0.20m, 2) == 33333.33m,
+    "VAT-inclusive source payments are not capitalised at their net-of-tax value.");
+Assert(TradeControl.Web.Pages.Cash.Manager.Components.CashManagerPostedPaymentSearchResult
+        .CalculateCapitalValue(5000m, 0.20m, 2) == 4166.67m,
+    "The White Van VAT-inclusive source payment is not capitalised at its net-of-tax value.");
 Assert(webReferences.Any(reference => reference.Contains("Tax.UK.Application", StringComparison.Ordinal)),
     "TCWeb does not reference the Tax Hub Application boundary.");
 Assert(webReferences.Any(reference => reference.Contains("Adapters.TradeControl", StringComparison.Ordinal)),
@@ -693,6 +699,8 @@ Assert(taxHubService.Contains("t.YearNumber == selectedYear && t.StartOn == peri
     "The Accounts service accepts a period from a different financial year.");
 var companiesHouseReviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CompaniesHouse", "CompaniesHousePreparationReviewService.cs"));
+var companiesHouseReadinessService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CompaniesHouse", "CompaniesHouseReadinessService.cs"));
 var companiesHouseContinuationService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CompaniesHouse", "CompaniesHouseFilingContinuationService.cs"));
 var appServiceRegistration = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
@@ -711,6 +719,11 @@ Assert(companiesHouseReviewService.Contains("Continue that filing instead of pre
        && companiesHouseContinuationService.Contains("conversation.DocumentSha256", StringComparison.Ordinal)
        && companiesHouseContinuationService.Contains("conversation.PackageSha256", StringComparison.Ordinal),
     "Companies House preparation no longer blocks duplicate period filings or rehydrates digest-bound continuation state.");
+Assert(companiesHouseReadinessService.Contains("var contextAsOfDate = periodEnd;", StringComparison.Ordinal)
+       && companiesHouseReviewService.Contains("var asOfDate = period.Current.End;", StringComparison.Ordinal)
+       && companiesHouseContinuationService.Contains(".ReadAsync(periodEnd, cancellationToken)",
+           StringComparison.Ordinal),
+    "Companies House statutory context is not anchored to the accounting period under review.");
 Assert(appServiceRegistration.Contains("ICompaniesHouseSubmissionStagingService", StringComparison.Ordinal)
        && appServiceRegistration.Contains("CompaniesHouseDispatchMode.OfficialTestSingleSend", StringComparison.Ordinal)
        && appServiceRegistration.Contains("ICompaniesHouseSubmissionDispatchService", StringComparison.Ordinal)
@@ -1029,8 +1042,24 @@ Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringCom
     "Business Tax or Accounts no longer provides compact mobile tab labels.");
 Assert(accountsWorkspaceComponent.Contains("ActivePanelIndexChanged=\"LoadSectionAsync\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("_loadedSections.Contains(section)", StringComparison.Ordinal)
-    && accountsWorkspaceComponent.Contains("TaxHubAccountsWorkspaceSection.Filing", StringComparison.Ordinal),
-    "Accounts no longer loads and caches its expensive report sections on demand.");
+    && accountsWorkspaceComponent.Contains("TaxHubAccountsWorkspaceSection.Filing", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("ServiceScopeFactory.CreateAsyncScope()", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("GetRequiredService<ITaxHubService>()", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("GetRequiredService<ICompaniesHouseFilingContinuationService>()",
+        StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("GetRequiredService<ICompaniesHouseSubmissionStatusService>()",
+        StringComparison.Ordinal),
+    "Accounts no longer loads and caches its expensive report sections on demand using an isolated database scope.");
+var periodsPanelComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Admin", "Manager",
+    "Components", "PeriodsPanel.razor"));
+var periodCloseProcedure = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Stored Procedures", "proc_PeriodClose.sql"));
+Assert(periodsPanelComponent.Contains("CanCloseActivePeriodAsync", StringComparison.Ordinal)
+    && periodsPanelComponent.Contains("PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted",
+        StringComparison.Ordinal)
+    && periodsPanelComponent.Contains("Post or delete them before Period End.", StringComparison.Ordinal)
+    && periodCloseProcedure.Contains("payment.PaymentStatusCode = 1", StringComparison.Ordinal),
+    "Period End no longer blocks current-period unposted payments or excludes them from asset summaries.");
 Assert(profitAndLossGridComponent.Contains("<HierarchyColumn", StringComparison.Ordinal)
        && profitAndLossGridComponent.Contains("<ChildRowContent>", StringComparison.Ordinal)
        && profitAndLossGridComponent.Contains("Collapse cash-code detail", StringComparison.Ordinal)
@@ -1859,6 +1888,10 @@ var taxHubServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "A
     "TaxHubService.cs"));
 var cashAssetsServiceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "CashAssetsWorkspaceService.cs"));
+var cashStatementPaymentMaintenanceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "CashStatementPaymentMaintenanceService.cs"));
+var assetEntryWorkspaceSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash",
+    "Manager", "Components", "AssetEntryWorkspace.razor"));
 var cashManagerPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Manager",
     "Index.cshtml"));
 var cashManagerPageModel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Cash", "Manager",
@@ -1904,9 +1937,9 @@ Assert(accountsWorkspaceView.Contains("File Your Accounts", StringComparison.Ord
     && accountsWorkspaceView.Contains("if (_evidenceReviewComplete)", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("EXISTING FILING — DO NOT RESUBMIT", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("Continue the existing Companies House filing", StringComparison.Ordinal)
-    && accountsWorkspaceView.Contains("CompaniesHouseContinuation.FindAsync", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("continuation.FindAsync", StringComparison.Ordinal)
     && accountsWorkspaceView.Contains("Check Companies House status", StringComparison.Ordinal)
-    && accountsWorkspaceView.Contains("CompaniesHouseStatus.CheckAsync", StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("status.CheckAsync", StringComparison.Ordinal)
     && yearEndReviewView.Contains("subject-balances/v1", StringComparison.Ordinal)
     && yearEndReviewView.Contains("These are year-end balances, not an aged-debt reconstruction", StringComparison.Ordinal)
     && yearEndReviewView.Contains("Review historical balances", StringComparison.Ordinal)
@@ -1924,7 +1957,8 @@ Assert(accountsWorkspaceView.Contains("File Your Accounts", StringComparison.Ord
     && yearEndReviewView.Contains("PostScheduledWriteOffAsync", StringComparison.Ordinal)
     && yearEndReviewView.Contains("Future — remains Unposted", StringComparison.Ordinal)
     && taxHubServiceSource.Contains("PaymentStatusCode = 0", StringComparison.Ordinal)
-    && taxHubServiceSource.Contains("LIKE N'WRITE OFF%'", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("payment.PaidInValue = 0", StringComparison.Ordinal)
+    && taxHubServiceSource.Contains("payment.PaidOutValue > 0", StringComparison.Ordinal)
     && taxHubServiceSource.Contains("DueWriteOffCount = dueWriteOffs.Count", StringComparison.Ordinal)
     && taxHubServiceSource.Contains("mapping.MappingRoot IN (N'CA-ASSET', N'CA-DEPREC')", StringComparison.Ordinal)
     && yearEndReviewView.Contains("year-end-evidence-review/v1", StringComparison.Ordinal)
@@ -1938,14 +1972,76 @@ Assert(cashAssetsServiceSource.Contains("PostScheduledWriteOffAsync", StringComp
     && cashAssetsServiceSource.Contains("PaymentStatus.Unposted", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("PaidInValue != 0m", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("PaidOutValue <= 0m", StringComparison.Ordinal)
-    && cashAssetsServiceSource.Contains("StartsWith(\"Write off\"", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("Future scheduled write-offs cannot be posted", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("CashAccountType.Asset", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("outside the mapped statutory fixed-asset population", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("You can only post your own scheduled asset write-offs", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("IsClosedPeriodAsync", StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains("cashAccounts.RebuildSystem()", StringComparison.Ordinal)
     && yearEndReviewView.Contains("Confirm and post", StringComparison.Ordinal)
     && yearEndReviewView.Contains("EvidenceChanged.InvokeAsync", StringComparison.Ordinal),
     "The year-end wizard scheduled-write-off action is missing a required accounting, timing, authority or refresh guard.");
+Assert(assetEntryWorkspaceSource.Contains(
+        "_workspace.Draft.GenerateReversalSeries = forceReversalSeries;",
+        StringComparison.Ordinal)
+    && assetEntryWorkspaceSource.Contains(
+        "_workspaceLoadVersion++;",
+        StringComparison.Ordinal)
+    && !assetEntryWorkspaceSource.Contains(
+        "_isLoadingWorkspace || string.Equals(_loadedAccountCode",
+        StringComparison.Ordinal)
+    && assetEntryWorkspaceSource.Contains(
+        "_workspace.Draft.NamespaceFilter = payment.SubjectCode ?? string.Empty;",
+        StringComparison.Ordinal)
+    && !assetEntryWorkspaceSource.Contains(
+        "forceReversalSeries || payment.DeltaValue < 0m",
+        StringComparison.Ordinal)
+    && !assetEntryWorkspaceSource.Contains(
+        "var requiredPolarityCode = payment.DeltaValue",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "nodeContext.Subject_CashAccountAssets",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "CashCode = assetAccount?.CashCode ?? string.Empty",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "nodeContext.Cash_Codes",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "EnsureCompatibleAssetCashCodeAsync",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "GetCapitalValueAsync",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "sourcePayment.TaxCode",
+        StringComparison.Ordinal)
+    && assetEntryWorkspaceSource.Contains(
+        "Capitalised net of tax",
+        StringComparison.Ordinal)
+    && assetEntryWorkspaceSource.Contains(
+        "payment.CapitalValue",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "Asset transactions for this account must use Cash Code",
+        StringComparison.Ordinal)
+    && cashAssetsServiceSource.Contains(
+        "item.CashCode == configuredCashCode",
+        StringComparison.Ordinal)
+    && cashStatementPaymentMaintenanceSource.Contains(
+        "GetAssetCashCodesAsync",
+        StringComparison.Ordinal)
+    && cashStatementPaymentMaintenanceSource.Contains(
+        "NormalizePaymentCashCodeAsync",
+        StringComparison.Ordinal)
+    && cashStatementPaymentMaintenanceSource.Contains(
+        "Asset transactions for this account must use Cash Code",
+        StringComparison.Ordinal)
+    && !cashAssetsServiceSource.Contains(
+        "Cash_BankCashCodes",
+        StringComparison.Ordinal),
+    "Asset entries do not preserve the selected source Subject or enforce the asset account's configured Cash Code.");
 Assert(taxHubServiceSource.Contains("&YearNumber=", StringComparison.Ordinal)
     && cashManagerPageModel.Contains("public short? YearNumber", StringComparison.Ordinal)
     && cashManagerPageModel.Contains("public string? Section", StringComparison.Ordinal)

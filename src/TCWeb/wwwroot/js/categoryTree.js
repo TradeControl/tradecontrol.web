@@ -60,6 +60,7 @@ window.CategoryTree = (function()
         };
 
         var querySelectionApplied = false;
+        var rootSelectionPending = false;
         var selectionRetryCount = 0;
         var MAX_SELECTION_RETRIES = 50;
 
@@ -534,6 +535,11 @@ window.CategoryTree = (function()
 
                 if (selectKey === ROOT_KEY)
                 {
+                    if (rootSelectionPending)
+                    {
+                        return;
+                    }
+
                     var requestedRoot = tree.getNodeByKey(ROOT_KEY);
                     if (!requestedRoot)
                     {
@@ -541,28 +547,101 @@ window.CategoryTree = (function()
                         return;
                     }
 
-                    querySelectionApplied = true;
-                    try
-                    {
-                        requestedRoot.setActive(true);
-                    }
-                    catch (_)
-                    {}
-                    try
-                    {
-                        persistActiveKey(requestedRoot);
-                    }
-                    catch (_)
-                    {}
+                    rootSelectionPending = true;
 
-                    if (isMobile())
+                    function activateRequestedRoot()
                     {
-                        updateActionBar(requestedRoot);
+                        rootSelectionPending = false;
+                        querySelectionApplied = true;
+
+                        try
+                        {
+                            requestedRoot.setActive(true);
+                        }
+                        catch (_)
+                        {}
+                        try
+                        {
+                            persistActiveKey(requestedRoot);
+                        }
+                        catch (_)
+                        {}
+
+                        if (isMobile())
+                        {
+                            updateActionBar(requestedRoot);
+                        }
+                        else
+                        {
+                            loadDetails(requestedRoot);
+                        }
                     }
-                    else
+
+                    function retryRequestedRoot()
                     {
-                        loadDetails(requestedRoot);
+                        rootSelectionPending = false;
+                        scheduleRetry();
                     }
+
+                    function expandRequestedRoot()
+                    {
+                        if (requestedRoot.expanded)
+                        {
+                            activateRequestedRoot();
+                            return;
+                        }
+
+                        var expandResult = null;
+                        try
+                        {
+                            expandResult = requestedRoot.setExpanded(true);
+                        }
+                        catch (_)
+                        {
+                            retryRequestedRoot();
+                            return;
+                        }
+
+                        if (expandResult && typeof expandResult.then === "function")
+                        {
+                            expandResult.then(activateRequestedRoot, retryRequestedRoot);
+                            return;
+                        }
+                        if (expandResult && typeof expandResult.done === "function")
+                        {
+                            expandResult.done(activateRequestedRoot).fail(retryRequestedRoot);
+                            return;
+                        }
+
+                        activateRequestedRoot();
+                    }
+
+                    if (requestedRoot.lazy && !requestedRoot.loaded)
+                    {
+                        var loadResult = null;
+                        try
+                        {
+                            loadResult = requestedRoot.load();
+                        }
+                        catch (_)
+                        {
+                            retryRequestedRoot();
+                            return;
+                        }
+
+                        if (loadResult && typeof loadResult.then === "function")
+                        {
+                            loadResult.then(expandRequestedRoot, retryRequestedRoot);
+                            return;
+                        }
+                        if (loadResult && typeof loadResult.done === "function")
+                        {
+                            loadResult.done(expandRequestedRoot).fail(retryRequestedRoot);
+                            return;
+                        }
+                    }
+
+                    expandRequestedRoot();
                     return;
                 }
 

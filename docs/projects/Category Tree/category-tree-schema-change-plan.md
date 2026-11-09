@@ -61,10 +61,10 @@ The four rows are seeded by `App.proc_NodeDataInit`. They are system vocabulary 
 | `CanonicalSha256` | `binary(32)` | Current semantic digest. |
 | `CanonicalByteLength` | `bigint` | Non-negative canonical byte length. |
 | `ContentChangedOn` | `datetime2(3)` | UTC time of the last accepted semantic edit. |
-| `EffectiveFromOn` | `date` | Inclusive business start date. For a Draft this is the proposed publication date; publication is permitted only on that date. |
+| `EffectiveFromOn` | `date` | Inclusive business start date. For a Draft this is the proposed effective date; publication cannot occur before that date. |
 | `EffectiveToOn` | `date` | Inclusive, SQL-managed end date. Null for Draft and the active version; successor publication sets the predecessor to the day before its start. |
 
-The Draft stores the sole proposed `EffectiveFromOn`. Publication does not accept a second date: it reads that proposal under the lifecycle lock, requires it to be the publication date, retains it as the successor's inclusive start and derives the predecessor's `EffectiveToOn`. The end date is display-only outside SQL lifecycle evidence.
+The Draft stores the sole proposed `EffectiveFromOn`. Publication does not accept a second date: it reads that proposal under the lifecycle lock, refuses early activation, retains the proposal as the successor's inclusive business start and derives the predecessor's `EffectiveToOn`. A later publication is recorded separately by the lifecycle event timestamp. The end date is display-only outside SQL lifecycle evidence.
 | `CreatedOn` | `datetime2(3)` | UTC creation time. |
 | `CreatedByUserId` | `nvarchar(10)` | Foreign key to `Usr.tbUser`, resolved from `Usr.vwCredentials`. |
 | `RowVer` | `rowversion` | SQL-managed compatibility field for ODBC/Office consumers; excluded from EF and the web command contract. |

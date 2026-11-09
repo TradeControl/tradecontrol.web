@@ -46,8 +46,7 @@ public interface ICompaniesHouseFilingContinuationService
 internal sealed class CompaniesHouseFilingContinuationService(
     NodeContext nodeContext,
     ICompaniesHouseWorkflowIdentityAccessor identityAccessor,
-    ICompaniesHouseWorkflowStore workflowStore,
-    IBusinessClock businessClock) : ICompaniesHouseFilingContinuationService
+    ICompaniesHouseWorkflowStore workflowStore) : ICompaniesHouseFilingContinuationService
 {
     public async Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
         CancellationToken cancellationToken = default)
@@ -58,7 +57,7 @@ internal sealed class CompaniesHouseFilingContinuationService(
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
 
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
-            .ReadAsync(businessClock.Today, cancellationToken);
+            .ReadAsync(periodEnd, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(
             context.Identity.CompanyNumber);
         if (companyNumber.Length != 8 || !companyNumber.All(char.IsAsciiLetterOrDigit))

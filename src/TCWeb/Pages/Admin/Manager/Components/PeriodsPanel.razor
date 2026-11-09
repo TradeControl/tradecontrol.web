@@ -284,6 +284,13 @@
     {
         try
         {
+            if (_pendingOperation == GlobalOperation.PeriodEnd
+                && !await CanCloseActivePeriodAsync())
+            {
+                _pendingOperation = GlobalOperation.None;
+                return;
+            }
+
             var periods = new FinancialPeriods(NodeContext);
             bool ok = _pendingOperation switch
             {
@@ -329,6 +336,38 @@
             _actionMessage = "Operation failed due to an unexpected error. Check Event Viewer for details.";
             _pendingOperation = GlobalOperation.None;
         }
+    }
+
+    private async Task<bool> CanCloseActivePeriodAsync()
+    {
+        var activeStartOn = await NodeContext.App_ActivePeriods
+            .Select(item => (DateTime?)item.StartOn)
+            .FirstOrDefaultAsync();
+
+        if (!activeStartOn.HasValue)
+            return true;
+
+        var nextStartOn = await NodeContext.App_tbYearPeriods
+            .Where(item => item.StartOn > activeStartOn.Value)
+            .OrderBy(item => item.StartOn)
+            .Select(item => (DateTime?)item.StartOn)
+            .FirstOrDefaultAsync()
+            ?? activeStartOn.Value.AddMonths(1);
+
+        var unpostedCount = await NodeContext.Cash_tbPayments
+            .CountAsync(item =>
+                item.PaymentStatusCode == (short)NodeEnum.PaymentStatus.Unposted
+                && item.PaidOn >= activeStartOn.Value
+                && item.PaidOn < nextStartOn);
+
+        if (unpostedCount == 0)
+            return true;
+
+        _actionTone = "danger";
+        _actionMessage = $"The active period contains {unpostedCount} unposted "
+            + $"payment{(unpostedCount == 1 ? string.Empty : "s")}. "
+            + "Post or delete them before Period End.";
+        return false;
     }
 
     private string GetOperationPrompt() => _pendingOperation switch

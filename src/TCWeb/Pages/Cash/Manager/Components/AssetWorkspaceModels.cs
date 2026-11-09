@@ -33,7 +33,26 @@ namespace TradeControl.Web.Pages.Cash.Manager.Components
         string CashDescription,
         decimal PaidOutValue,
         decimal PaidInValue,
-        decimal DeltaValue);
+        decimal DeltaValue,
+        string TaxCode,
+        decimal TaxRate,
+        short TaxDecimals)
+    {
+        public decimal SourceValue => Math.Abs(DeltaValue);
+
+        public decimal CapitalValue => CalculateCapitalValue(SourceValue, TaxRate, TaxDecimals);
+
+        public static decimal CalculateCapitalValue(decimal sourceValue, decimal taxRate, short taxDecimals)
+        {
+            if (taxRate <= 0m)
+            {
+                return sourceValue;
+            }
+
+            var decimals = Math.Clamp((int)taxDecimals, 0, 28);
+            return decimal.Round(sourceValue / (1m + taxRate), decimals, MidpointRounding.AwayFromZero);
+        }
+    }
 
     public sealed class CashManagerAssetDraftModel
     {

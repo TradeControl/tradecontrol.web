@@ -137,7 +137,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
 
-        var asOfDate = businessClock.Today;
+        var asOfDate = period.Current.End;
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
             .ReadAsync(asOfDate, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(
@@ -459,7 +459,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         var connectionString = nodeContext.Database.GetConnectionString();
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
-        var asOfDate = businessClock.Today;
+        var asOfDate = period.Current.End;
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
             .ReadAsync(asOfDate, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(context.Identity.CompanyNumber);

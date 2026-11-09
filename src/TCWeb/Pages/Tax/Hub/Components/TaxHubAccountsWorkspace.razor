@@ -1,4 +1,5 @@
 @using MudBlazor
+@using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
 @using TradeControl.Tax.UK.Application.Preparation
@@ -6,9 +7,7 @@
 @using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
 @inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
-@inject ICompaniesHouseFilingContinuationService CompaniesHouseContinuation
-@inject ICompaniesHouseSubmissionStatusService CompaniesHouseStatus
-@inject ITaxHubService TaxHubService
+@inject IServiceScopeFactory ServiceScopeFactory
 @inject ILogger<TaxHubAccountsWorkspace> Logger
 
 @if (Workspace is null)
@@ -470,7 +469,10 @@ else
         _filingContinuationLoading = true;
         try
         {
-            _existingFiling = await CompaniesHouseContinuation.FindAsync(
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var continuation = scope.ServiceProvider
+                .GetRequiredService<ICompaniesHouseFilingContinuationService>();
+            _existingFiling = await continuation.FindAsync(
                 Workspace.CompaniesHouse.FilingInputs.PeriodStart,
                 Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
         }
@@ -507,7 +509,9 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            var result = await TaxHubService.GetAccountsWorkspaceAsync(
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var taxHubService = scope.ServiceProvider.GetRequiredService<ITaxHubService>();
+            var result = await taxHubService.GetAccountsWorkspaceAsync(
                 Workspace.SelectedYearNumber,
                 Workspace.SelectedPeriodStartOn,
                 section);
@@ -584,8 +588,12 @@ else
         _statusCheckError = null;
         try
         {
-            await CompaniesHouseStatus.CheckAsync(_existingFiling.ConversationReference);
-            _existingFiling = await CompaniesHouseContinuation.FindAsync(
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var status = scope.ServiceProvider.GetRequiredService<ICompaniesHouseSubmissionStatusService>();
+            var continuation = scope.ServiceProvider
+                .GetRequiredService<ICompaniesHouseFilingContinuationService>();
+            await status.CheckAsync(_existingFiling.ConversationReference);
+            _existingFiling = await continuation.FindAsync(
                 Workspace!.CompaniesHouse.FilingInputs.PeriodStart,
                 Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
         }

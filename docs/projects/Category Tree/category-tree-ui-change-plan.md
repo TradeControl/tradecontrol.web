@@ -81,7 +81,7 @@ The banner must not rely on colour alone. Status text, an icon and accessible de
 
 ### 2.4 Effective dates are lifecycle evidence
 
-`EffectiveFromOn` and `EffectiveToOn` are inclusive business dates. A Draft's `EffectiveFromOn` is a user-visible proposal and may be adjusted before publication. Publication remains manual and succeeds only on that proposed date, so the first release does not backdate, activate early or schedule an automatic publication. `EffectiveToOn` is never user-editable: successor publication atomically sets the predecessor to the day before the successor starts, while the active version remains null-ended.
+`EffectiveFromOn` and `EffectiveToOn` are inclusive business dates. A Draft's `EffectiveFromOn` is a user-visible proposal and may be adjusted before publication. Publication remains manual and cannot occur before that proposed date; publication after it preserves the proposed business boundary while the event ledger records when activation actually occurred. The first release therefore cannot activate early or schedule an automatic publication. `EffectiveToOn` is never user-editable: successor publication atomically sets the predecessor to the day before the successor starts, while the active version remains null-ended.
 
 The root workspace may display broad warnings, such as:
 

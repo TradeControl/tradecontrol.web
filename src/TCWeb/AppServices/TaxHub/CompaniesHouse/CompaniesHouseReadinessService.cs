@@ -19,7 +19,7 @@ public interface ICompaniesHouseReadinessService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, IBusinessClock businessClock)
+public sealed class CompaniesHouseReadinessService(NodeContext nodeContext)
     : ICompaniesHouseReadinessService
 {
     private const decimal EquityBridgeTolerance = 0.10m;
@@ -60,7 +60,7 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext, IBus
             if (string.IsNullOrWhiteSpace(connectionString))
                 return Unavailable("CH-SOURCE-CONNECTION-MISSING",
                     "The statutory accounting source is not configured.");
-            var contextAsOfDate = businessClock.Today;
+            var contextAsOfDate = periodEnd;
             context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
                 .ReadAsync(contextAsOfDate, cancellationToken);
         }
