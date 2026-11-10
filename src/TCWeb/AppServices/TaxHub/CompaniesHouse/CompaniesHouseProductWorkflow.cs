@@ -132,7 +132,9 @@ internal sealed record CompaniesHousePreparationRecord(
     string? FullAccountsSha256 = null,
     string? ProtectedFullAccountsReference = null,
     string? AccountsSnapshotSha256 = null,
-    CategoryTreeSealEvidence? CategoryTree = null);
+    CategoryTreeSealEvidence? CategoryTree = null,
+    DateTimeOffset? InvalidatedAtUtc = null,
+    string? InvalidationReason = null);
 
 internal sealed record CompaniesHouseApprovalRecord(
     string Reference,
@@ -220,7 +222,10 @@ internal sealed record CompaniesHouseConversationRecord(
     DateOnly RetainUntil,
     IReadOnlyList<CompaniesHouseError>? Errors = null,
     IReadOnlyList<CompaniesHouseStatusCheckRecord>? StatusChecks = null,
-    DateTimeOffset? AcknowledgedAtUtc = null);
+    DateTimeOffset? AcknowledgedAtUtc = null,
+    bool AcceptanceSimulated = false,
+    DateTimeOffset? AcceptanceSimulatedAtUtc = null,
+    string? AcceptanceSimulatedBy = null);
 
 /// <summary>
 /// Durable persistence port. Implementations must make each mutation atomic, scope every lookup
@@ -230,6 +235,8 @@ internal sealed record CompaniesHouseConversationRecord(
 internal interface ICompaniesHouseWorkflowStore
 {
     Task AddPreparationAsync(CompaniesHousePreparationRecord preparation,
+        CancellationToken cancellationToken = default);
+    Task<bool> TryInvalidatePreparationAsync(CompaniesHousePreparationRecord preparation,
         CancellationToken cancellationToken = default);
     Task<CompaniesHousePreparationRecord?> GetPreparationAsync(string tenantReference, string reference,
         CancellationToken cancellationToken = default);

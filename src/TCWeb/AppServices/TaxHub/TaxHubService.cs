@@ -754,8 +754,13 @@ namespace TradeControl.Web.AppServices.TaxHub
                 ? await GetEquityReconciliationRowsAsync()
                 : Array.Empty<TaxHubEquityReconciliationRow>();
             var validationSummary = BuildAccountsValidationSummary(equityReconciliation);
+            var selectedEquityVariance = equityReconciliation
+                .Where(row => row.YearNumber == selectedYear)
+                .Select(row => (decimal?)row.Variance)
+                .SingleOrDefault();
             var companiesHouse = section == TaxHubAccountsWorkspaceSection.Filing
-                ? await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod)
+                ? await _companiesHouseReadiness.AssessAsync(selectedYear, selectedPeriod,
+                    selectedEquityVariance)
                 : new TaxHubCompaniesHouseReadiness();
             TaxHubSubjectBalanceEvidence? subjectBalanceEvidence = null;
             TaxHubBankCashEvidence? bankCashEvidence = null;

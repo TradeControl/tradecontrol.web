@@ -17,6 +17,8 @@ public interface ICompaniesHouseReadinessService
 {
     Task<TaxHubCompaniesHouseReadiness> AssessAsync(short yearNumber, DateTime selectedPeriodStart,
         CancellationToken cancellationToken = default);
+    Task<TaxHubCompaniesHouseReadiness> AssessAsync(short yearNumber, DateTime selectedPeriodStart,
+        decimal? equityVariance, CancellationToken cancellationToken = default);
 }
 
 public sealed class CompaniesHouseReadinessService(NodeContext nodeContext)
@@ -26,6 +28,18 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext)
 
     public async Task<TaxHubCompaniesHouseReadiness> AssessAsync(short yearNumber,
         DateTime selectedPeriodStart, CancellationToken cancellationToken = default)
+    {
+        var equityVariance = await nodeContext.Cash_vwEquityReconciliationByYears.AsNoTracking()
+            .Where(item => item.YearNumber == yearNumber)
+            .Select(item => (decimal?)item.Variance)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        return await AssessAsync(yearNumber, selectedPeriodStart, equityVariance, cancellationToken);
+    }
+
+    public async Task<TaxHubCompaniesHouseReadiness> AssessAsync(short yearNumber,
+        DateTime selectedPeriodStart, decimal? equityVariance,
+        CancellationToken cancellationToken = default)
     {
         var periods = await nodeContext.App_tbYearPeriods
             .AsNoTracking()
@@ -48,11 +62,6 @@ public sealed class CompaniesHouseReadinessService(NodeContext nodeContext)
         var isClosed = year.CashStatusCode == 2;
         var priorClosedYearExists = await nodeContext.App_tbYears.AsNoTracking()
             .AnyAsync(item => item.YearNumber < yearNumber && item.CashStatusCode == 2, cancellationToken);
-        var equityVariance = await nodeContext.Cash_vwEquityReconciliationByYears.AsNoTracking()
-            .Where(item => item.YearNumber == yearNumber)
-            .Select(item => (decimal?)item.Variance)
-            .SingleOrDefaultAsync(cancellationToken);
-
         StatutoryContextSnapshot context;
         try
         {

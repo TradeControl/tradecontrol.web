@@ -33,6 +33,7 @@ public enum CompaniesHouseDispatchMode
 public sealed class CompaniesHouseProductHostOptions
 {
     public const string SectionName = "TaxHub:CompaniesHouseProduct";
+    public const bool DevelopmentOfficialTestAcceptanceSimulationEnabled = true;
 
     public bool Enabled { get; set; }
     public CompaniesHouseAuthorityEnvironment AuthorityEnvironment { get; set; } =
@@ -48,6 +49,11 @@ public sealed class CompaniesHouseProductHostOptions
     public string? EvidenceBlobServiceUri { get; set; }
     public string EvidenceContainerName { get; set; } = "companies-house-evidence";
     public int OfficialTestSubmissionSequenceFloor { get; set; } = 1;
+
+    public bool CanSimulateOfficialTestAcceptance =>
+        DevelopmentOfficialTestAcceptanceSimulationEnabled
+        && AuthorityEnvironment == CompaniesHouseAuthorityEnvironment.OfficialTest
+        && DispatchMode == CompaniesHouseDispatchMode.OfficialTestSingleSend;
 }
 
 public sealed class CompaniesHouseProductHostOptionsValidator(IHostEnvironment hostEnvironment)

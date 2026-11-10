@@ -261,6 +261,31 @@ else
                                         <dd class="col-md-9 font-monospace">@_existingFiling.SupportReference</dd>
                                     }
                                 </dl>
+                                @if (_existingFiling.State == CompaniesHouseConversationState.Accepted)
+                                {
+                                    @if (_existingFiling.AcceptanceSimulated)
+                                    {
+                                        <div class="alert alert-warning mt-3 mb-0" role="status">
+                                            <strong>Development simulation — Companies House did not return this acceptance.</strong>
+                                            Acceptance was simulated by @_existingFiling.AcceptanceSimulatedBy
+                                            on @_existingFiling.AcceptanceSimulatedAtUtc?.ToLocalTime().ToString("dd MMM yyyy HH:mm").
+                                        </div>
+                                    }
+                                    <div class="alert alert-primary mt-3 mb-0" role="status">
+                                        <strong>Category Tree @_existingFiling.CategoryVersionId is now Submitted and read-only.</strong>
+                                        To change the classification, create and publish a successor Draft.
+                                    </div>
+                                }
+                                else if (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
+                                         or CompaniesHouseConversationState.Pending
+                                         or CompaniesHouseConversationState.Parked)
+                                {
+                                    <div class="alert alert-info mt-3 mb-0" role="status">
+                                        <strong>Category Tree @_existingFiling.CategoryVersionId remains Published but is temporarily read-only.</strong>
+                                        Submission @_existingFiling.SubmissionNumber is awaiting a terminal Companies House outcome.
+                                        Acceptance will set the tree to Submitted; rejection will release the filing lock.
+                                    </div>
+                                }
                                 @if (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
                                     or CompaniesHouseConversationState.Pending
                                     or CompaniesHouseConversationState.Parked
@@ -277,11 +302,19 @@ else
                                                 or CompaniesHouseConversationState.Parked))
                                         {
                                             <button type="button" class="btn btn-primary"
-                                                    disabled="@(_checkingFilingStatus || _existingFiling.StatusCheckInProgress)"
+                                                    disabled="@(_checkingFilingStatus || _simulatingAcceptance || _existingFiling.StatusCheckInProgress)"
                                                     @onclick="CheckFilingStatus">
                                                 @(_checkingFilingStatus || _existingFiling.StatusCheckInProgress
                                                     ? "Checking status…" : "Check Companies House status")
                                             </button>
+                                            @if (CompaniesHouseHost.Value.CanSimulateOfficialTestAcceptance)
+                                            {
+                                                <button type="button" class="btn btn-danger"
+                                                        disabled="@(_checkingFilingStatus || _simulatingAcceptance || _existingFiling.StatusCheckInProgress)"
+                                                        @onclick="SimulateFilingAcceptance">
+                                                    @(_simulatingAcceptance ? "Simulating acceptance…" : "Simulate Acceptance")
+                                                </button>
+                                            }
                                         }
                                     </div>
                                 }
@@ -401,6 +434,7 @@ else
     private bool _filingContinuationLoading;
     private string? _filingContinuationError;
     private bool _checkingFilingStatus;
+    private bool _simulatingAcceptance;
     private string? _statusCheckError;
     private int _activePanelIndex;
     private string? _workspaceKey;
@@ -463,6 +497,7 @@ else
         _filingContinuationError = null;
         _filingContinuationLoading = false;
         _checkingFilingStatus = false;
+        _simulatingAcceptance = false;
         _statusCheckError = null;
         if (Workspace is null || !Workspace.CompaniesHouse.IsEligible) return;
 
@@ -608,6 +643,38 @@ else
         finally
         {
             _checkingFilingStatus = false;
+        }
+    }
+
+    private async Task SimulateFilingAcceptance()
+    {
+        if (_existingFiling is null || _checkingFilingStatus || _simulatingAcceptance
+            || _existingFiling.StatusCheckInProgress)
+            return;
+        _simulatingAcceptance = true;
+        _statusCheckError = null;
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var status = scope.ServiceProvider.GetRequiredService<ICompaniesHouseSubmissionStatusService>();
+            var continuation = scope.ServiceProvider
+                .GetRequiredService<ICompaniesHouseFilingContinuationService>();
+            await status.SimulateAcceptanceAsync(_existingFiling.ConversationReference);
+            _existingFiling = await continuation.FindAsync(
+                Workspace!.CompaniesHouse.FilingInputs.PeriodStart,
+                Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            Logger.LogWarning(exception,
+                "Companies House filing acceptance could not be simulated for conversation {ConversationReference}.",
+                _existingFiling.ConversationReference);
+            _statusCheckError = exception.Message;
+        }
+        finally
+        {
+            _simulatingAcceptance = false;
         }
     }
 

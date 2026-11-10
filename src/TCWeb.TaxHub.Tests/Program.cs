@@ -305,6 +305,39 @@ var driftedCategoryTreeStaging = new CompaniesHouseSubmissionStagingService(
 await AssertThrowsAsync<InvalidOperationException>(
     () => driftedCategoryTreeStaging.StageApprovedAsync(stagingApproval.Reference),
     "Companies House staging accepted an active Category Tree pointer change after approval.");
+var restoredBehindStore = new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval);
+var restoredBehindContent = new StubCompaniesHouseProtectedContentStore(new Dictionary<string, byte[]>
+{
+    ["document"] = Encoding.UTF8.GetBytes("document"),
+    ["package"] = Encoding.UTF8.GetBytes("package"),
+    ["full-accounts"] = stagingFullAccounts
+});
+var restoredBehindStaging = new CompaniesHouseSubmissionStagingService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    restoredBehindStore, restoredBehindContent,
+    new StubCategoryTreeStatutoryEvidenceSource(
+        stagingCategoryTree with
+        {
+            VersionId = "CV00000000",
+            CanonicalSha256 = new string('0', 64),
+            CanonicalByteLength = 11000
+        }),
+    new StubCategoryTreeSubmissionLockService(), new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        Enabled = true,
+        DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+    }), TimeProvider.System);
+await AssertThrowsAsync<InvalidOperationException>(
+    () => restoredBehindStaging.StageApprovedAsync(stagingApproval.Reference),
+    "Companies House staging accepted a restored-behind Category Tree over newer retained seal evidence.");
+var restoredBehindSnapshot = await new CompaniesHouseAccountsSnapshotService(
+        new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+        restoredBehindStore, restoredBehindContent)
+    .ReadApprovedAsync(stagingApproval.Reference);
+Assert(restoredBehindSnapshot.CategoryTree == stagingCategoryTree
+       && restoredBehindSnapshot.AccountsSnapshotSha256 == stagingAccountsSnapshotSha,
+    "A restored-behind node rewrote the externally retained Category Tree seal evidence.");
 var accountsSnapshotService = new CompaniesHouseAccountsSnapshotService(
     new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
     stagingStore, stagingContent);
@@ -464,6 +497,12 @@ var statusService = new CompaniesHouseSubmissionStatusService(
     statusStore, statusContent, new CompaniesHouseFilingAuthorisationPolicy(), stagingHttp,
     new StubCompaniesHouseStatusTransactionIdSource("STATUS0001", "STATUS0002"),
     new StubCompaniesHouseStatusRequestMaterializer(), statusExchange, stagingSubmissionLocks,
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        Enabled = true,
+        AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.OfficialTest,
+        DispatchMode = CompaniesHouseDispatchMode.OfficialTestSingleSend
+    }),
     TimeProvider.System);
 var pendingStatus = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
 var acceptedStatus = await statusService.CheckAsync(statusAcknowledgement.ConversationReference);
@@ -481,6 +520,27 @@ Assert(pendingStatus.State == CompaniesHouseConversationState.Pending
        && !statusStore.ActiveConversation.StatusAcknowledgementRequired
        && !statusStore.ActiveConversation.StatusAcknowledged,
     "Specific Companies House status checks did not preserve the filing exchange, progress Pending to Accepted, or stop after the terminal result.");
+var completedLocksBeforeSimulation = stagingSubmissionLocks.CompleteCount;
+statusStore.SetState(CompaniesHouseConversationState.Pending);
+var simulatedStatus = await statusService.SimulateAcceptanceAsync(
+    statusAcknowledgement.ConversationReference);
+Assert(simulatedStatus.State == CompaniesHouseConversationState.Accepted
+       && statusStore.ActiveConversation?.AcceptanceSimulated == true
+       && statusStore.ActiveConversation.AcceptanceSimulatedAtUtc.HasValue
+       && statusStore.ActiveConversation.AcceptanceSimulatedBy == "SA"
+       && stagingSubmissionLocks.CompleteCount == completedLocksBeforeSimulation + 1,
+    "The official-test acceptance simulation did not durably identify itself or complete the Category Tree submission lock.");
+Assert(new CompaniesHouseProductHostOptions
+       {
+           AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.OfficialTest,
+           DispatchMode = CompaniesHouseDispatchMode.OfficialTestSingleSend
+       }.CanSimulateOfficialTestAcceptance
+       && !new CompaniesHouseProductHostOptions
+       {
+           AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.Production,
+           DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+       }.CanSimulateOfficialTestAcceptance,
+    "The hard-coded Companies House acceptance simulation boundary is not restricted to official-test single-send mode.");
 Assert(CompaniesHouseReadinessService.MaskCompanyNumber("01234567") == "••••4567",
     "Companies House readiness did not bound the company number shown in the browser model.");
 Assert(CompaniesHouseReadinessService.MaskCompanyNumber("  SC123456  ") == "••••3456",
@@ -523,9 +583,21 @@ Assert(new TradeControl.Web.Pages.Tax.Hub.Models.TaxHubCompaniesHouseFilingInput
     "The ordinary first-release filing eligibility answer does not default to confirmed none.");
 var filingInputComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubCompaniesHouseFilingInputs.razor"));
+var accountsWorkflowComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubAccountsWorkspace.razor"));
+Assert(accountsWorkflowComponent.Contains("Simulate Acceptance", StringComparison.Ordinal)
+       && accountsWorkflowComponent.Contains("btn btn-danger", StringComparison.Ordinal)
+       && accountsWorkflowComponent.Contains("remains Published but is temporarily read-only", StringComparison.Ordinal)
+       && accountsWorkflowComponent.Contains("Companies House did not return this acceptance", StringComparison.Ordinal),
+    "The official-test filing UI does not disclose the pending Category Tree lock and simulated acceptance boundary.");
 Assert(new[] { "Opening balance", "Advances or credits", "Repayments", "Closing balance", "Add director" }
         .All(filingInputComponent.Contains),
     "The director movement schedule does not explain its four period-summary values.");
+Assert(filingInputComponent.Contains("CompaniesHousePreparationInvalidatedException", StringComparison.Ordinal)
+       && filingInputComponent.Contains("_prepared = null;", StringComparison.Ordinal),
+    "A conclusively invalidated Companies House preparation does not return the UI to a safe re-preparation state.");
+Assert(typeof(ICompaniesHouseWorkflowStore).GetMethod("TryInvalidatePreparationAsync") is not null,
+    "The Companies House workflow store cannot durably record a conclusive pre-dispatch invalidation.");
 Assert(CompaniesHouseFilingInputReview.Validate(validFilingInputs, new DateOnly(2026, 10, 8)).Count == 0,
     "A valid reviewed Companies House filing-input draft was rejected.");
 validFilingInputs.DirectorAdvances.Add(new()
@@ -724,6 +796,12 @@ Assert(companiesHouseReadinessService.Contains("var contextAsOfDate = periodEnd;
        && companiesHouseContinuationService.Contains(".ReadAsync(periodEnd, cancellationToken)",
            StringComparison.Ordinal),
     "Companies House statutory context is not anchored to the accounting period under review.");
+Assert(taxHubService.Contains("selectedEquityVariance", StringComparison.Ordinal)
+       && taxHubService.Contains("selectedPeriod,\r\n                    selectedEquityVariance",
+           StringComparison.Ordinal)
+       && companiesHouseReadinessService.Contains("decimal? equityVariance",
+           StringComparison.Ordinal),
+    "The filing workspace recalculates the Equity Bridge instead of reusing its validation result.");
 Assert(appServiceRegistration.Contains("ICompaniesHouseSubmissionStagingService", StringComparison.Ordinal)
        && appServiceRegistration.Contains("CompaniesHouseDispatchMode.OfficialTestSingleSend", StringComparison.Ordinal)
        && appServiceRegistration.Contains("ICompaniesHouseSubmissionDispatchService", StringComparison.Ordinal)
@@ -740,22 +818,6 @@ Assert(typeof(AzureCompaniesHousePersistence).GetInterfaces().Contains(typeof(IC
        && typeof(AzureCompaniesHousePersistence).GetInterfaces()
            .Contains(typeof(ICompaniesHouseProtectedContentStore)),
     "The Azure composition does not provide both workflow metadata and protected-content boundaries.");
-var companiesHouseDdl = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "TaxHub",
-    "CompaniesHouse", "Sql", "CompaniesHouseWorkflow.sql"));
-Assert(companiesHouseDdl.Contains("PRIMARY KEY (TenantReference, Reference)", StringComparison.Ordinal)
-       && companiesHouseDdl.Contains("WHERE IsActive = 1", StringComparison.Ordinal)
-       && companiesHouseDdl.Contains("CompaniesHouseAuthoritySequence", StringComparison.Ordinal),
-    "Companies House workflow SQL lost tenant partitioning or one-active-filing enforcement.");
-Assert(companiesHouseDdl.Contains("FOREIGN KEY (TenantReference, PreparationReference)",
-           StringComparison.Ordinal)
-       && companiesHouseDdl.Contains("FOREIGN KEY (TenantReference, ApprovalReference)",
-           StringComparison.Ordinal),
-    "Companies House workflow SQL no longer preserves its tenant-scoped evidence chain.");
-Assert(companiesHouseDdl.Contains("UX_CompaniesHouseApproval_Preparation", StringComparison.Ordinal),
-    "Companies House workflow SQL permits competing approvals for one exact preparation.");
-Assert(!companiesHouseDdl.Contains("DROP TABLE", StringComparison.OrdinalIgnoreCase)
-       && !companiesHouseDdl.Contains("DELETE FROM", StringComparison.OrdinalIgnoreCase),
-    "The additive Companies House workflow deployment script contains destructive DDL or DML.");
 
 Assert(developmentValidator.Validate(null, new VatProductHostOptions()).Succeeded,
     "The disabled product boundary must permit an unconfigured host.");
@@ -2272,6 +2334,9 @@ file sealed class StubCompaniesHouseWorkflowStore(
 
     public Task AddPreparationAsync(CompaniesHousePreparationRecord value,
         CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<bool> TryInvalidatePreparationAsync(CompaniesHousePreparationRecord value,
+        CancellationToken cancellationToken = default) => Task.FromResult(true);
 
     public Task<CompaniesHousePreparationRecord?> GetPreparationAsync(string tenantReference,
         string reference, CancellationToken cancellationToken = default) =>

@@ -35,20 +35,20 @@ internal sealed class AzureCompaniesHouseAuthorityIdentifierSource(
         await using var command = new SqlCommand("""
             DECLARE @allocated int;
             SELECT @allocated = LastAllocated
-              FROM TaxHub.CompaniesHouseAuthoritySequence WITH (UPDLOCK, HOLDLOCK)
+              FROM Tax.CompaniesHouseAuthoritySequence WITH (UPDLOCK, HOLDLOCK)
              WHERE AuthorityEnvironment = N'OfficialTest';
 
             IF @allocated IS NULL
             BEGIN
                 SET @allocated = @floor;
-                INSERT INTO TaxHub.CompaniesHouseAuthoritySequence
+                INSERT INTO Tax.CompaniesHouseAuthoritySequence
                     (AuthorityEnvironment, LastAllocated, UpdatedAtUtc)
                 VALUES (N'OfficialTest', @allocated, SYSUTCDATETIME());
             END
             ELSE
             BEGIN
                 SET @allocated = CASE WHEN @allocated < @floor THEN @floor ELSE @allocated + 1 END;
-                UPDATE TaxHub.CompaniesHouseAuthoritySequence
+                UPDATE Tax.CompaniesHouseAuthoritySequence
                    SET LastAllocated = @allocated, UpdatedAtUtc = SYSUTCDATETIME()
                  WHERE AuthorityEnvironment = N'OfficialTest';
             END;

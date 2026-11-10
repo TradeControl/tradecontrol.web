@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress on hosted Business 8 (`tc-business8`). The initial VAT filing is accepted and sealed against `CV00000001`; successor `CV00000004` is active, the plant scenario and historical Cash Statement evidence are established, and the active Equity Bridge passes. Companies House preparation, filing and final recovery evidence are next.**
+**The hosted changeover is accepted on Business 8 (`tc-business8`). VAT is accepted and sealed against `CV00000001`. Companies House submission `S00001` was acknowledged and remains Pending at the authority; a clearly disclosed development simulation exercised the terminal-acceptance path and made `CV00000004` Submitted. Post-filing successor `CV00000005` is active from 1 April 2018, its later `CC-RND` transaction closes with a passing active Equity Bridge, and the CH predecessor exposes the expected £1,000 net classification difference. Recovery evidence now proves fail-closed restored-behind handling without rewriting the externally retained seal. Azure S0 Equity Bridge performance is an accepted separate follow-up; no terminal Companies House acceptance is claimed.**
 
 This is the living acceptance record for the final Category Tree change-control boundary. Update each result in place as evidence is established. Do not infer a pass from implementation or from a successful authority response: every row records its own observed evidence.
 
@@ -36,8 +36,8 @@ Codex steers the technical sequence, prepares each review surface, captures read
 |---|---|---|
 | HMRC authorisation | Sign in as the reviewed Carol Hughes sandbox user and grant the requested VAT authority. | PASS — connected 6 Nov 2026 |
 | VAT filing | Review the nine boxes and explicitly approve the sandbox submission. | PASS — HMRC sandbox accepted `18A2` on 6 Nov 2026 |
-| Companies House identity | Provide or confirm the test-company authentication/authority reference if it is not already configured. | Pending |
-| Companies House filing | Review the rendered accounts and explicitly approve the sandbox submission. | Pending |
+| Companies House identity | Provide or confirm the test-company authentication/authority reference if it is not already configured. | PASS — protected synthetic official-test identity configured and accepted by the gateway |
+| Companies House filing | Review the rendered accounts and explicitly approve the sandbox submission. | PASS — owner approved `S00001`; gateway acknowledged it and reports Pending manual attachment review |
 | Material discrepancy | Decide whether an unexplained accounting or authority difference is an accepted fixture property or a defect. | As required |
 
 ## Baseline — 6 November 2026
@@ -117,7 +117,7 @@ Before either authority journey, prove both filing paths consume one shared Cate
 
 ## Test 3 — successor version, plant scenario and Companies House accounts
 
-**Status: in progress. The successor and plant accounting are established; the active Equity Bridge passes. The financial year must now be closed through Admin Manager before Companies House preparation.**
+**Status: complete with an explicit authority limitation. The successor and plant accounting are established, the active Equity Bridge passes, and official-test submission `S00001` was acknowledged. Companies House has not supplied a terminal acceptance; the development-only simulation exercised the accepted-outcome transition and is retained as simulated evidence, not an authority receipt.**
 
 The execution order was deliberately adjusted during acceptance: the plant purchase is included before the Companies House filing so the filed accounts exercise the new classification and asset accounting. A further successor after filing will then prove that the CH-bound version becomes immutable without preventing later evolution.
 
@@ -138,13 +138,13 @@ The execution order was deliberately adjusted during acceptance: the plant purch
 | Successor publication | One active Published version; predecessor Archived | PASS — `CV00000004` active from 1 Jul 2017; `CV00000001` Archived for 30 Jun 2017 |
 | VAT predecessor after publication | Seal and reconstruction unchanged | PASS — archived Settings evidence retains the baseline SHA-256 and 11,501 bytes |
 | Plant accounting | Net £33,333.33 capitalisation and four-year depreciation schedule | PASS after correcting the synthetic asset fixture; active Equity Bridge passes |
-| Prepared CH seal | Successor version and current canonical digest | Pending |
-| CH outcome | Accepted test submission and durable receipt | Pending |
-| Successor after success | Submitted and immutable | Pending |
+| Prepared CH seal | Successor version and current canonical digest | PASS — preparation `chp1-ea679c4f36ba44728cb695dbbf9d4175` retained `CV00000004`, profile `trade-control-category-tree-v1`, SHA-256 `9CE6EC429DB66348D513151D33D436AC69A49CA0E6E16DB79B5F4FD344B02FE9` and 11,770 bytes |
+| CH outcome | Accepted test submission and durable receipt | PARTIAL — `S00001` was acknowledged and remains Pending manual attachment review; no Companies House terminal acceptance has been claimed |
+| Successor after success | Submitted and immutable | PASS — development-only Simulate Acceptance used the same terminal completion boundary, recorded actor/time and explicitly disclosed that Companies House did not return the acceptance |
 
 ## Test 4 — historical reporting and post-CH evolution
 
-**Status: partially established before the CH filing. Historical Cash Statement selection and the expected VAT-predecessor Equity Bridge failure are proved; post-CH immutability and successor evolution remain.**
+**Status: complete. Historical Cash Statement selection and the VAT-predecessor Equity Bridge difference are proved. `CV00000005` is the active Published successor from 1 April 2018, while `CV00000004` is Archived and visibly read-only. The posted `CC-RND` transaction closes through the ordinary period-end workflow: the active bridge passes and the CH predecessor differs by exactly the £1,000 net R&D amount that it cannot classify.**
 
 After the CH filing, create a further successor because the CH-supported tree is immutable. The plant scenario now belongs to Test 3; this test retains the historical comparison and proves subsequent evolution:
 
@@ -157,30 +157,30 @@ The active Equity Bridge must pass within the established rounding tolerance. B8
 
 | Evidence | Expected result | Observed result |
 |---|---|---|
-| Active pointer | Further successor throughout explicit historical reads | PASS for current `CV00000004`; repeat after CH successor publication |
-| Active bridge | Passes within tolerance after rebuild | PASS — owner confirmed after White Van correction and period projection rebuild |
-| Explicit active function | Exactly equals operational `Cash.vwEquityReconciliationByYear` | Pending |
-| CH predecessor bridge | Fails visibly by the mathematically explained post-supersession amount | Pending |
+| Active pointer | Further successor throughout explicit historical reads | PASS — `App.tbOptions` now selects Published `CV00000005`; `CV00000004` is Archived for 1 Jul 2017–31 Mar 2018 |
+| Active bridge | Passes within tolerance after ordinary period close | PASS — owner closed April 2018 through Admin Manager and confirmed the current version passes; a direct read returned maximum absolute variance £0.01 across three years |
+| Explicit active function | Exactly equals operational `Cash.vwEquityReconciliationByYear` | PASS — bidirectional `EXCEPT` returned zero rows after the R&D transaction and period close |
+| CH predecessor bridge | Fails visibly by the mathematically explained post-supersession amount | PASS — `CV00000004` differs by exactly £1,000, the VAT-exclusive R&D purchase classified only by successor `CC-RND` |
 | VAT predecessor bridge | Remains independently selectable; no active fallback | PASS — selected `CV00000001` reports `-£33,333.33` for 2017–18 |
 | Cash Statement XLSX/ODS | Active and eligible historical versions generate with correct Settings provenance and warnings | PASS — selector, warning, Settings provenance and historical failure screenshots retained |
-| Earlier statutory seals | VAT and CH seals still verify against their original versions | PASS for VAT; CH pending |
+| Earlier statutory seals | VAT and CH seals still verify against their original versions | PASS — retained version records remain `CV00000001` / 11,501 bytes / `1B067C…0DBF7` and `CV00000004` / 11,770 bytes / `9CE6EC…02FE9`; CH authority outcome remains acknowledged/Pending |
 
 ## Test 5 — final invariants and recovery evidence
 
-**Status: pending Tests 1–4.**
+**Status: complete for Category Tree release acceptance. Functional invariants, statutory provenance and recovery pass. The owner has explicitly deferred the unrelated hosted S0 Equity Bridge performance investigation.**
 
 | Test | Expected result | Observed result |
 |---|---|---|
-| Active-version invariant | Exactly one `App.tbOptions.CategoryVersionId`; target is Published or Submitted. | Pending |
-| Immutable history | Direct SQL, EF, handler and JavaScript mutation attempts fail for Submitted/Archived versions. | Pending |
-| Canonical isolation | Lifecycle changes do not alter semantic digests; content changes do. | Pending |
-| Seal inventory | Each VAT/CH seal names exactly one retained version and digest. | Pending |
-| Restart/retry | Prepared locks and authority attempts survive application restart without replay or unlocked mutation. | Pending |
-| User access during lock | Login, accounting, reports, historical statements and the owning filing workflow remain available; only tree mutation/successor publication is gated. | Pending |
-| Pre-dispatch crash | A retained preparation with no dispatch claim is resumed or conclusively invalidated/released without an age-based unlock. | Pending |
-| Uncertain dispatch | A claimed send with no conclusive outcome remains locked and is reconciled without blind resubmission. | Pending |
-| Recovery | Restored database state detects any disagreement with externally retained seal evidence; it does not rewrite that evidence. | Pending |
-| Performance | Active accounting and Tax Hub reads remain acceptable; warm active Equity Bridge stays within the agreed sub-second target where the service tier permits. | Pending |
+| Active-version invariant | Exactly one `App.tbOptions.CategoryVersionId`; target is Published or Submitted. | PASS through successor publication — sole active pointer moved atomically from Submitted `CV00000004` to Published `CV00000005` |
+| Immutable history | Direct SQL, EF, handler and JavaScript mutation attempts fail for Submitted/Archived versions. | PASS — hosted SQL guards reject protected writes; archived `CV00000004` renders without mutation controls after successor publication |
+| Canonical isolation | Lifecycle changes do not alter semantic digests; content changes do. | PASS — CV1 and CV4 retain their recorded digests after later lifecycle transitions; adding `CA-RND`/`CC-RND` invalidated CV5 until explicit revalidation produced 12,038 bytes and SHA-256 `47EE11D776CAC487F1F5C30A4893BC0477D0BCA1F2344333FFEADBAA889E239E` |
+| Seal inventory | Each VAT/CH seal names exactly one retained version and digest. | PASS — VAT evidence binds CV1 and CH preparation binds CV4; neither follows the active pointer to CV5 |
+| Restart/retry | Prepared locks and authority attempts survive application restart without replay or unlocked mutation. | PASS — acknowledged `S00001` and its lock survived application deployment/restart; the resumed workspace displayed `EXISTING FILING — DO NOT RESUBMIT` |
+| User access during lock | Login, accounting, reports, historical statements and the owning filing workflow remain available; only tree mutation/successor publication is gated. | PASS — Tax Hub, Cash Statement, Cash Manager and Category Tree review remained available while mutations were suppressed |
+| Pre-dispatch crash | A retained preparation with no dispatch claim is resumed or conclusively invalidated/released without an age-based unlock. | PASS — staging is idempotent for the retained preparation, conclusively stale preparation can be durably invalidated, and the 452-assertion boundary suite rejects replay or silent unlock |
+| Uncertain dispatch | A claimed send with no conclusive outcome remains locked and is reconciled without blind resubmission. | PASS — the acknowledged/Pending CH attempt retained its lock and disabled re-preparation/resubmission until the explicitly simulated terminal outcome |
+| Recovery | Restored database state detects any disagreement with externally retained seal evidence; it does not rewrite that evidence. | PASS — a deterministic restored-behind node fixture presents an older version/digest to newer retained CH evidence; staging fails closed and a subsequent evidence read returns the original version, snapshot hash and canonical evidence unchanged |
+| Performance | Active accounting and Tax Hub reads remain acceptable; warm active Equity Bridge stays within the agreed sub-second target where the service tier permits. | DEFERRED BY OWNER — B8 S0 returned the correct active bridge in 59.107 seconds and exact parity in 245.157 seconds. This isolated Equity Bridge performance issue will be revisited separately and does not reopen Category Tree correctness or change-control acceptance |
 
 ## Evidence ledger
 
@@ -204,14 +204,21 @@ Add one row for every execution or owner review. Keep credentials, access tokens
 | 7–9 Nov 2026 | Successor and historical statement evidence | Owner + Codex | Submitted `CV00000001` was cloned, reviewed and replaced by active Published `CV00000004` from 1 Jul 2017. The Indirect Costs/plant classification, historical selector, affected-period warning and Settings provenance were exercised through the UI. Archived `CV00000001` retained its baseline digest and produced the expected 2017–18 Equity Bridge difference of `-£33,333.33`, equal to the later net plant capitalisation. Twelve synthetic screenshots are retained for the User Guide. | PASS — CH filing pending |
 | 9 Nov 2026 | Active Equity Bridge restoration | Owner + Codex | The White Van synthetic asset was corrected to its £4,166.67 VAT-exclusive capital value and equal £833.334 write-offs; the closed-period rebuild boundary was corrected. The owner confirmed that the operational Equity Bridge now passes. | PASS |
 | 9 Nov 2026 | Public demonstration access | Codex + owner | The accidental main-site commissioning-IP restriction was removed from the B8 App Service while the SCM/deployment endpoint remained restricted to `78.148.7.78/32`. Public health and root requests returned HTTP 200 and the owner confirmed that B8 loads on iPhone. Mobile interaction differences are deferred to a dedicated project and are not a Category Tree acceptance result. | PASS — reachability only |
+| 10 Nov 2026 | Companies House preparation and dispatch | Codex + owner | Exact approved document SHA-256 `EC41F30186AA2AE6641D064F508792282E3467B4D08591F957F3CDBDA60EF1E1` and package SHA-256 `79CD3E609DEBB6FA114C233CC895CA33E18F582EBDC6920DAC043E4E9E71DA21` were dispatched once as `S00001`. Companies House acknowledged the package and reports `Pending review of attachment`; the durable conversation prevents resubmission. | PASS — acknowledged/Pending, not accepted |
+| 10 Nov 2026 | Development acceptance simulation | Codex | The official-test-only red `Simulate Acceptance` control used the normal terminal-completion boundary, explicitly recorded that Companies House did not return the acceptance, and changed `CV00000004` to Submitted/read-only. | PASS — lifecycle simulation only |
+| 10 Nov 2026 | Post-CH successor publication | Codex | Submitted `CV00000004` was cloned to `CV00000005`; review recorded added category `CA-RND` and edge `CT-OVERHD → CA-RND`. Validation produced 11,992 canonical bytes. Publication from 1 Apr 2018 atomically archived `CV00000004` at 31 Mar 2018 and activated Published `CV00000005`; `CC-RND` was then created in the active tree. | PASS — transaction comparison pending |
+| 10 Nov 2026 | Post-CH R&D transaction and close | Owner + Codex | Purchase invoice `030729.SA` for Jones Machine Tools Ltd posted at £1,200 gross (£1,000 net plus £200 VAT) to `CC-RND`; payment `SA_261110_173948_796` settled it exactly. The owner closed April 2018 through Admin Manager. CV5 passed its active Equity Bridge, while archived CV4 failed by exactly £1,000 because it cannot classify the later R&D Cash Code. | PASS |
+| 10 Nov 2026 | Post-transaction canonical and algorithm evidence | Codex | CV5 was explicitly revalidated through the Category Tree UI at 12,038 canonical bytes, SHA-256 `47EE11D776CAC487F1F5C30A4893BC0477D0BCA1F2344333FFEADBAA889E239E`. A bidirectional `EXCEPT` between the operational Equity Bridge view and explicit CV5 function returned zero rows. CV1 and CV4 retained their original canonical lengths and digests. | PASS |
+| 10 Nov 2026 | Hosted S0 reporting timing | Codex | Direct read-only SQL isolated the delay below workbook rendering: active Equity Bridge returned maximum absolute variance £0.01 in 59.107 seconds; the exact active-view/CV5 parity comparison returned zero differences in 245.157 seconds. | FAIL — performance only; functional evidence unaffected |
+| 10 Nov 2026 | Restored-behind seal recovery | Codex | The TCWeb boundary suite now presents an older restored Category Tree version, digest and byte length to a newer retained CH preparation/approval. Staging rejects the mismatch; reopening the retained snapshot returns its original Category Tree and accounts-snapshot evidence unchanged. The complete suite passes 452 assertions. | PASS |
+| 10 Nov 2026 | Web acceptance gate | Owner + Codex | Owner-led desktop and mobile acceptance exercised Published editing, Draft clone/review/publication, Submitted and Archived read-only behaviour, Cash Statement version selection/warnings and the retained JavaScript tree. Because this is a two-person pre-launch project, the owner accepted this executed browser evidence rather than duplicating it in a new Playwright journey. | PASS |
+| 10 Nov 2026 | Final technical gate | Codex | TCWeb built with zero warnings/errors; its boundary suite passed 452 assertions. The Tax Hub solution built under installed SDK 10.0.403 without changing its 10.0.204 repository pin; offline company, application, submission, Trade Control adapter, architecture, WebHarness, Companies House simulator, SA and VAT suites passed 645 assertions. The tcNodeDb4 DACPAC built successfully and the User Guide production build generated 72 pages. | PASS |
 
 ## Next-session restart point
 
-1. Open Admin Manager and close the required financial year through the interface; do not substitute a database script or unconditional system rebuild.
-2. Confirm the active `CV00000004` Equity Bridge still passes after period close.
-3. Open the Companies House filing journey, prepare the accounts and verify that the immutable review names `CV00000004` with its current canonical profile, SHA-256 digest and byte length.
-4. Stop for owner review before dispatch.
-5. After an accepted CH test receipt, prove `CV00000004` is Submitted and immutable, then create and publish one bounded successor to complete Test 4.
+1. Complete owner review of the three repository change sets.
+2. Publish the reorganised User Guide with the reviewed commits.
+3. Revisit the separately deferred Azure S0 Equity Bridge performance issue without changing the accepted algorithm or weakening the exact parity gate.
 
 The mobile presentation issues observed on iPhone are deliberately outside this restart sequence. The public B8 endpoint is reachable; responsive/mobile acceptance will be planned separately rather than mixed into the statutory changeover evidence.
 

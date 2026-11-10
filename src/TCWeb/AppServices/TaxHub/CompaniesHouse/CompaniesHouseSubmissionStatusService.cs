@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using TradeControl.Tax.UK.Application.Preparation;
 using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 
@@ -39,6 +40,8 @@ public interface ICompaniesHouseSubmissionStatusService
 {
     Task<CompaniesHouseFilingStatus> CheckAsync(string conversationReference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(string conversationReference,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseSubmissionStatusService(
@@ -51,6 +54,7 @@ internal sealed class CompaniesHouseSubmissionStatusService(
     ICompaniesHouseStatusRequestMaterializer materializer,
     ICompaniesHouseStatusExchange exchange,
     ICategoryTreeSubmissionLockService submissionLocks,
+    IOptions<CompaniesHouseProductHostOptions> hostOptions,
     TimeProvider timeProvider) : ICompaniesHouseSubmissionStatusService
 {
     public async Task<CompaniesHouseFilingStatus> CheckAsync(string conversationReference,
@@ -209,6 +213,74 @@ internal sealed class CompaniesHouseSubmissionStatusService(
         }
     }
 
+    public async Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(
+        string conversationReference, CancellationToken cancellationToken = default)
+    {
+        if (!hostOptions.Value.CanSimulateOfficialTestAcceptance)
+            throw new InvalidOperationException(
+                "Companies House acceptance simulation is unavailable in this host.");
+        if (string.IsNullOrWhiteSpace(conversationReference) || conversationReference.Length > 64)
+            throw new ArgumentException("A valid conversation reference is required.",
+                nameof(conversationReference));
+
+        var principal = httpContextAccessor.HttpContext?.User
+            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
+            throw new UnauthorizedAccessException(
+                "Simulating Companies House acceptance requires Administrator or Manager permission.");
+
+        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var conversation = await workflowStore.GetConversationAsync(identity.TenantReference,
+            conversationReference, cancellationToken)
+            ?? throw new KeyNotFoundException("The Companies House filing conversation was not found.");
+        var approval = await workflowStore.GetApprovalAsync(identity.TenantReference,
+            conversation.ApprovalReference, cancellationToken)
+            ?? throw new InvalidOperationException("The filing conversation approval was not found.");
+        var preparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
+            approval.PreparationReference, cancellationToken)
+            ?? throw new InvalidOperationException("The filing conversation preparation was not found.");
+        if (!string.Equals(preparation.PrincipalReference, identity.ReportingSubjectReference,
+                StringComparison.Ordinal)
+            || !string.Equals(preparation.DocumentSha256, conversation.DocumentSha256,
+                StringComparison.Ordinal)
+            || !string.Equals(preparation.PackageSha256, conversation.PackageSha256,
+                StringComparison.Ordinal))
+            throw new UnauthorizedAccessException(
+                "The Companies House filing conversation does not belong to this reporting subject.");
+
+        if (conversation.State == CompaniesHouseConversationState.Accepted
+            && conversation.AcceptanceSimulated)
+        {
+            await submissionLocks.CompleteAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+                "Companies House official-test acceptance simulated by an authorised development operator.",
+                cancellationToken);
+            return ToStatus(conversation);
+        }
+        if (conversation.State is not (CompaniesHouseConversationState.Acknowledged
+                or CompaniesHouseConversationState.Pending or CompaniesHouseConversationState.Parked)
+            || conversation.RecoveryRequired || string.IsNullOrWhiteSpace(conversation.SubmissionNumber))
+            throw new InvalidOperationException(
+                "Only an acknowledged or pending Companies House official-test filing can simulate acceptance.");
+
+        var now = timeProvider.GetUtcNow();
+        var accepted = conversation with
+        {
+            State = CompaniesHouseConversationState.Accepted,
+            StatusAcknowledgementRequired = false,
+            StatusAcknowledged = false,
+            AcceptanceSimulated = true,
+            AcceptanceSimulatedAtUtc = now,
+            AcceptanceSimulatedBy = identity.ActorReference,
+            UpdatedAtUtc = now,
+            RetainUntil = CompaniesHouseProductPolicy.RetainUntil(now)
+        };
+        await workflowStore.UpsertConversationAsync(accepted, cancellationToken);
+        await submissionLocks.CompleteAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+            "Companies House official-test acceptance simulated by an authorised development operator.",
+            cancellationToken);
+        return ToStatus(accepted);
+    }
+
     private async Task<CompaniesHouseFilingStatus> RecordRecoveryAsync(
         CompaniesHouseConversationRecord checking, string? responseSha256,
         string? protectedResponseReference, CancellationToken cancellationToken)
@@ -342,4 +414,8 @@ internal sealed class DisabledCompaniesHouseSubmissionStatusService : ICompanies
     public Task<CompaniesHouseFilingStatus> CheckAsync(string conversationReference,
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House status enquiries are disabled in this environment.");
+
+    public Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(string conversationReference,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House acceptance simulation is disabled in this environment.");
 }

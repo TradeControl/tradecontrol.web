@@ -270,6 +270,14 @@ else if (_draft is not null && _editContext is not null)
                                                         }
                                                     </ul>
                                                 }
+                                                @if (_filingStatus.State == CompaniesHouseConversationState.Accepted
+                                                     && _prepared is not null)
+                                                {
+                                                    <div class="alert alert-primary mt-3 mb-0" role="status">
+                                                        <strong>Category Tree @_prepared.CategoryTree.VersionId is now Submitted and read-only.</strong>
+                                                        To change the classification, create and publish a successor Draft.
+                                                    </div>
+                                                }
                                                 @if (_filingStatus.State == CompaniesHouseConversationState.Acknowledged
                                                      && _prepared is not null)
                                                 {
@@ -330,7 +338,7 @@ else if (_draft is not null && _editContext is not null)
 
     private string FilingStatusClass => _filingStatus?.State switch
     {
-        CompaniesHouseConversationState.Acknowledged => "alert-success",
+        CompaniesHouseConversationState.Acknowledged or CompaniesHouseConversationState.Accepted => "alert-success",
         CompaniesHouseConversationState.GatewayRejected => "alert-danger",
         _ when _filingStatus?.RecoveryRequired == true => "alert-danger",
         _ => "alert-info"
@@ -339,6 +347,7 @@ else if (_draft is not null && _editContext is not null)
     private string FilingStatusTitle => _filingStatus?.State switch
     {
         CompaniesHouseConversationState.Acknowledged => "Acknowledged by the Companies House official test gateway — not live filed.",
+        CompaniesHouseConversationState.Accepted => "Accepted by the Companies House official test service — not live filed.",
         CompaniesHouseConversationState.GatewayRejected => "The Companies House official test gateway rejected the request.",
         _ when _filingStatus?.RecoveryRequired == true => "The exchange requires recovery review and will not be retried automatically.",
         _ => "Official-test submission recorded."
@@ -412,6 +421,13 @@ else if (_draft is not null && _editContext is not null)
         {
             _approval = await PreparationService.ApproveAsync(_prepared.Reference,
                 CompaniesHouseApprovalDeclaration.Version, true);
+        }
+        catch (CompaniesHousePreparationInvalidatedException exception)
+        {
+            _errors = [exception.Message];
+            _prepared = null;
+            _approval = null;
+            _approvalConfirmed = false;
         }
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)

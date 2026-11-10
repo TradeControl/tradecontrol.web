@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TradeControl.Tax.UK.Adapters.TradeControl.Data;
@@ -53,6 +54,12 @@ public sealed record CompaniesHousePreparedReview(
 public sealed record CompaniesHouseReviewDocument(string MediaType, byte[] Bytes, string Sha256);
 public sealed record CompaniesHouseOfficialTestSubmittedDocument(byte[] Bytes, string Sha256,
     string SubmissionNumber, DateTimeOffset SubmittedAtUtc);
+
+internal sealed class CompaniesHousePreparationInvalidatedException(string message)
+    : InvalidOperationException(message);
+
+internal sealed class CompaniesHousePreparationStaleException(string message)
+    : InvalidOperationException(message);
 
 public sealed record CompaniesHouseApprovalReview(
     string Reference,
@@ -259,8 +266,40 @@ internal sealed class CompaniesHousePreparationReviewService(
             accountsSnapshotSha256,
             categoryTreeAfter);
         await workflowStore.AddPreparationAsync(preparation, cancellationToken);
-        await submissionLocks.AcquireAsync(CompaniesHouseCategoryTreeLock.From(preparation),
-            cancellationToken);
+        var submissionLock = CompaniesHouseCategoryTreeLock.From(preparation);
+        try
+        {
+            await submissionLocks.AcquireAsync(submissionLock, cancellationToken);
+        }
+        catch (SqlException exception) when (exception.Number == 51178)
+        {
+            await InvalidatePreparationAsync(preparation,
+                "Another statutory workflow already owns the active Category Tree submission lock.",
+                cancellationToken);
+            throw new InvalidOperationException(
+                "The active Category Tree is reserved by another statutory filing. Resume or resolve that filing before preparing new accounts.",
+                exception);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await InvalidatePreparationAsync(preparation,
+                "The Category Tree submission lock could not be established conclusively.",
+                cancellationToken);
+            try
+            {
+                await submissionLocks.ReleaseAsync(submissionLock, cancellationToken);
+            }
+            catch (Exception releaseException) when (releaseException is not OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    "Accounts preparation could not establish or safely release the Category Tree submission lock. Recovery review is required before another filing is prepared.",
+                    new AggregateException(exception, releaseException));
+            }
+
+            throw new InvalidOperationException(
+                "Accounts preparation could not reserve the Category Tree. No accounts were exposed for approval; prepare them again.",
+                exception);
+        }
 
         return new(reference, document.Sha256, package.Transmission.Sha256, categoryTreeAfter,
             now.Add(CompaniesHouseProductPolicy.PreparationLifetime),
@@ -408,7 +447,17 @@ internal sealed class CompaniesHousePreparationReviewService(
             throw new InvalidOperationException("The retained CH/CT accounts snapshot proof is invalid.");
         var input = JsonSerializer.Deserialize<CompaniesHousePreparationInput>(retainedInput.Bytes, ReviewJson)
             ?? throw new InvalidOperationException("The retained reviewed filing inputs are invalid.");
-        await VerifyCurrentCandidateAsync(preparation, input, identity, cancellationToken);
+        try
+        {
+            await VerifyCurrentCandidateAsync(preparation, input, identity, cancellationToken);
+        }
+        catch (CompaniesHousePreparationStaleException exception)
+        {
+            await InvalidatePreparationAsync(preparation, exception.Message, cancellationToken);
+            await submissionLocks.ReleaseAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+                cancellationToken);
+            throw new CompaniesHousePreparationInvalidatedException(exception.Message);
+        }
 
         var now = timeProvider.GetUtcNow();
         var approval = new CompaniesHouseApprovalRecord(
@@ -447,14 +496,16 @@ internal sealed class CompaniesHousePreparationReviewService(
         var errors = CompaniesHouseFilingInputReview.Validate(ToDraft(input),
             businessClock.Today);
         if (errors.Count != 0)
-            throw new InvalidOperationException("The reviewed filing inputs are no longer valid. Prepare the accounts again.");
+            throw new CompaniesHousePreparationStaleException(
+                "The reviewed filing inputs are no longer valid. Prepare the accounts again.");
 
         var period = await ResolvePeriodAsync(preparation.YearNumber!.Value, cancellationToken);
         if (period.Current.Start != preparation.PeriodStart
             || period.Current.End != preparation.PeriodEnd
             || period.LastPeriodStart != preparation.SelectedPeriodStart!.Value
             || input.PeriodEnd != preparation.PeriodEnd)
-            throw new InvalidOperationException("The selected accounting period changed after preparation.");
+            throw new CompaniesHousePreparationStaleException(
+                "The selected accounting period changed after preparation.");
 
         var connectionString = nodeContext.Database.GetConnectionString();
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -466,7 +517,8 @@ internal sealed class CompaniesHousePreparationReviewService(
         var currentCompanyIdentity = CompaniesHouseFilingIdentity.Company(
             identity.TenantReference, companyNumber);
         if (!string.Equals(currentCompanyIdentity, preparation.CompanyIdentitySha256, StringComparison.Ordinal))
-            throw new InvalidOperationException("The Companies House identity changed after preparation.");
+            throw new CompaniesHousePreparationStaleException(
+                "The Companies House identity changed after preparation.");
 
         var request = new CompanyProjectionRequest(
             asOfDate,
@@ -505,8 +557,21 @@ internal sealed class CompaniesHousePreparationReviewService(
             || currentCategoryTree != preparation.CategoryTree
             || !string.Equals(currentAccountsSnapshot, preparation.AccountsSnapshotSha256,
                 StringComparison.Ordinal))
-            throw new InvalidOperationException(
+            throw new CompaniesHousePreparationStaleException(
                 "The accounting source or reviewed inputs changed after preparation. Prepare and review new accounts.");
+    }
+
+    private async Task InvalidatePreparationAsync(CompaniesHousePreparationRecord preparation,
+        string reason, CancellationToken cancellationToken)
+    {
+        var invalidated = preparation with
+        {
+            InvalidatedAtUtc = timeProvider.GetUtcNow(),
+            InvalidationReason = reason
+        };
+        if (!await workflowStore.TryInvalidatePreparationAsync(invalidated, cancellationToken))
+            throw new InvalidOperationException(
+                "The Companies House preparation advanced while invalidation was being recorded. Recovery review is required.");
     }
 
     private void EnsurePreparationOwnerAndLifetime(CompaniesHousePreparationRecord preparation,
@@ -516,6 +581,9 @@ internal sealed class CompaniesHousePreparationReviewService(
                 StringComparison.Ordinal))
             throw new UnauthorizedAccessException(
                 "The Companies House preparation belongs to another reporting subject.");
+        if (preparation.InvalidatedAtUtc.HasValue)
+            throw new InvalidOperationException(
+                "The Companies House preparation was invalidated and cannot be approved. Prepare the accounts again.");
         if (preparation.ExpiresAtUtc <= timeProvider.GetUtcNow())
             throw new InvalidOperationException("The Companies House preparation has expired and must be regenerated.");
     }

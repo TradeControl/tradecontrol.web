@@ -17,6 +17,7 @@ namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 public sealed record CompaniesHouseFilingContinuation(
     string ConversationReference,
     string PreparationReference,
+    string CategoryVersionId,
     string? SubmissionNumber,
     CompaniesHouseConversationState State,
     string DocumentSha256,
@@ -35,7 +36,10 @@ public sealed record CompaniesHouseFilingContinuation(
     string? LastStatusResponseSha256,
     string? ExaminerComment,
     string? StatusCheckSupportReference,
-    IReadOnlyList<CompaniesHouseError> StatusCheckErrors);
+    IReadOnlyList<CompaniesHouseError> StatusCheckErrors,
+    bool AcceptanceSimulated,
+    DateTimeOffset? AcceptanceSimulatedAtUtc,
+    string? AcceptanceSimulatedBy);
 
 public interface ICompaniesHouseFilingContinuationService
 {
@@ -89,6 +93,9 @@ internal sealed class CompaniesHouseFilingContinuationService(
 
             var statusCheck = conversation.StatusChecks?.LastOrDefault();
             return new(conversation.Reference, preparation.Reference,
+                preparation.CategoryTree?.VersionId
+                    ?? throw new InvalidOperationException(
+                        "The existing Companies House filing has no Category Tree statutory evidence."),
                 conversation.SubmissionNumber, conversation.State,
                 conversation.DocumentSha256, conversation.PackageSha256,
                 conversation.UpdatedAtUtc, conversation.RecoveryRequired,
@@ -99,7 +106,8 @@ internal sealed class CompaniesHouseFilingContinuationService(
                 statusCheck?.CompletedAtUtc,
                 statusCheck?.RequestSha256, statusCheck?.ResponseSha256,
                 statusCheck?.ExaminerComment, statusCheck?.SupportReference,
-                statusCheck?.Errors ?? []);
+                statusCheck?.Errors ?? [], conversation.AcceptanceSimulated,
+                conversation.AcceptanceSimulatedAtUtc, conversation.AcceptanceSimulatedBy);
         }
 
         return null;

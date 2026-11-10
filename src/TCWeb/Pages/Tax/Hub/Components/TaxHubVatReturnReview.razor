@@ -159,6 +159,10 @@
                         }
                         @if (_submission.State == VatSubmissionResultState.Accepted)
                         {
+                            <div class="alert alert-primary mt-3 mb-0" role="status">
+                                <strong>Category Tree @_review.CategoryTree.VersionId is now Submitted and read-only.</strong>
+                                To change the classification, create and publish a successor Draft.
+                            </div>
                             <dl class="row small mt-2 mb-0">
                                 <dt class="col-sm-3">Processing date</dt><dd class="col-sm-9">@(_submission.ProcessingDate?.ToString("u") ?? "Not supplied")</dd>
                                 <dt class="col-sm-3">Form bundle</dt><dd class="col-sm-9">@(_submission.FormBundleNumber ?? "Not supplied")</dd>

@@ -34,9 +34,9 @@ internal sealed class AzureCompaniesHousePersistence(
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand(
-            "SELECT CASE WHEN OBJECT_ID(N'TaxHub.CompaniesHousePreparation', N'U') IS NOT NULL " +
-            "AND OBJECT_ID(N'TaxHub.CompaniesHouseApproval', N'U') IS NOT NULL " +
-            "AND OBJECT_ID(N'TaxHub.CompaniesHouseConversation', N'U') IS NOT NULL THEN 1 ELSE 0 END;",
+            "SELECT CASE WHEN OBJECT_ID(N'Tax.CompaniesHousePreparation', N'U') IS NOT NULL " +
+            "AND OBJECT_ID(N'Tax.CompaniesHouseApproval', N'U') IS NOT NULL " +
+            "AND OBJECT_ID(N'Tax.CompaniesHouseConversation', N'U') IS NOT NULL THEN 1 ELSE 0 END;",
             connection);
         if (Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) != 1)
             throw new InvalidOperationException("The Companies House workflow schema is unavailable.");
@@ -48,7 +48,7 @@ internal sealed class AzureCompaniesHousePersistence(
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
-            INSERT INTO TaxHub.CompaniesHousePreparation
+            INSERT INTO Tax.CompaniesHousePreparation
                 (TenantReference, Reference, CompanyIdentitySha256, PeriodEnd, CreatedAtUtc, PayloadJson)
             VALUES (@tenant, @reference, @company, @periodEnd, @created, @payload);
             """, connection);
@@ -63,14 +63,47 @@ internal sealed class AzureCompaniesHousePersistence(
 
     public Task<CompaniesHousePreparationRecord?> GetPreparationAsync(string tenantReference,
         string reference, CancellationToken cancellationToken = default) => ReadPayloadAsync<CompaniesHousePreparationRecord>(
-        "TaxHub.CompaniesHousePreparation", tenantReference, reference, cancellationToken);
+        "Tax.CompaniesHousePreparation", tenantReference, reference, cancellationToken);
+
+    public async Task<bool> TryInvalidatePreparationAsync(CompaniesHousePreparationRecord preparation,
+        CancellationToken cancellationToken = default)
+    {
+        if (!preparation.InvalidatedAtUtc.HasValue
+            || string.IsNullOrWhiteSpace(preparation.InvalidationReason))
+            throw new ArgumentException("A conclusive preparation invalidation is required.",
+                nameof(preparation));
+
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        await using var command = new SqlCommand("""
+            UPDATE preparation WITH (UPDLOCK, HOLDLOCK)
+               SET PayloadJson = @payload
+              FROM Tax.CompaniesHousePreparation AS preparation
+             WHERE preparation.TenantReference = @tenant
+               AND preparation.Reference = @reference
+               AND NOT EXISTS
+               (
+                   SELECT 1
+                     FROM Tax.CompaniesHouseApproval WITH (UPDLOCK, HOLDLOCK)
+                    WHERE TenantReference = @tenant
+                      AND PreparationReference = @reference
+               );
+            """, connection, transaction);
+        Add(command, "tenant", Guid.Parse(preparation.TenantReference));
+        Add(command, "reference", preparation.Reference);
+        Add(command, "payload", JsonSerializer.Serialize(preparation, Json));
+        var invalidated = await command.ExecuteNonQueryAsync(cancellationToken) == 1;
+        await transaction.CommitAsync(cancellationToken);
+        return invalidated;
+    }
 
     public async Task AddApprovalAsync(CompaniesHouseApprovalRecord approval,
         CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
-            INSERT INTO TaxHub.CompaniesHouseApproval
+            INSERT INTO Tax.CompaniesHouseApproval
                 (TenantReference, Reference, PreparationReference, LogicalFilingIdentity,
                  CompanyIdentitySha256, PeriodEnd, ApprovedAtUtc, PayloadJson)
             VALUES (@tenant, @reference, @preparation, @logical, @company, @periodEnd, @approved, @payload);
@@ -88,14 +121,14 @@ internal sealed class AzureCompaniesHousePersistence(
 
     public Task<CompaniesHouseApprovalRecord?> GetApprovalAsync(string tenantReference, string reference,
         CancellationToken cancellationToken = default) => ReadPayloadAsync<CompaniesHouseApprovalRecord>(
-        "TaxHub.CompaniesHouseApproval", tenantReference, reference, cancellationToken);
+        "Tax.CompaniesHouseApproval", tenantReference, reference, cancellationToken);
 
     public async Task<CompaniesHouseApprovalRecord?> GetApprovalForPreparationAsync(string tenantReference,
         string preparationReference, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
-            SELECT PayloadJson FROM TaxHub.CompaniesHouseApproval
+            SELECT PayloadJson FROM Tax.CompaniesHouseApproval
             WHERE TenantReference = @tenant AND PreparationReference = @preparation;
             """, connection);
         Add(command, "tenant", Guid.Parse(tenantReference));
@@ -108,7 +141,7 @@ internal sealed class AzureCompaniesHousePersistence(
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
-            SELECT PayloadJson FROM TaxHub.CompaniesHouseConversation
+            SELECT PayloadJson FROM Tax.CompaniesHouseConversation
             WHERE TenantReference = @tenant AND LogicalFilingIdentity = @logical AND IsActive = 1;
             """, connection);
         Add(command, "tenant", Guid.Parse(tenantReference));
@@ -134,7 +167,7 @@ internal sealed class AzureCompaniesHousePersistence(
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
         await using var command = new SqlCommand("""
-            UPDATE TaxHub.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
+            UPDATE Tax.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
                SET State = @dispatching, IsActive = 1, UpdatedAtUtc = @updated, PayloadJson = @payload
              WHERE TenantReference = @tenant AND Reference = @reference AND State = @prepared;
             """, connection, transaction);
@@ -162,7 +195,7 @@ internal sealed class AzureCompaniesHousePersistence(
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
         await using var command = new SqlCommand("""
-            UPDATE TaxHub.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
+            UPDATE Tax.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
                SET UpdatedAtUtc = @updated, PayloadJson = @payload
              WHERE TenantReference = @tenant AND Reference = @reference
                AND UpdatedAtUtc = @expected
@@ -189,15 +222,15 @@ internal sealed class AzureCompaniesHousePersistence(
             IsolationLevel.Serializable, cancellationToken);
         var isActive = IsActive(conversation.State);
         await using var command = new SqlCommand("""
-            IF EXISTS (SELECT 1 FROM TaxHub.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
+            IF EXISTS (SELECT 1 FROM Tax.CompaniesHouseConversation WITH (UPDLOCK, HOLDLOCK)
                        WHERE TenantReference = @tenant AND Reference = @reference)
-                UPDATE TaxHub.CompaniesHouseConversation
+                UPDATE Tax.CompaniesHouseConversation
                    SET ApprovalReference = @approval, LogicalFilingIdentity = @logical,
                        CompanyIdentitySha256 = @company, State = @state, IsActive = @active,
                        UpdatedAtUtc = @updated, PayloadJson = @payload
                  WHERE TenantReference = @tenant AND Reference = @reference;
             ELSE
-                INSERT INTO TaxHub.CompaniesHouseConversation
+                INSERT INTO Tax.CompaniesHouseConversation
                     (TenantReference, Reference, ApprovalReference, LogicalFilingIdentity,
                      CompanyIdentitySha256, State, IsActive, UpdatedAtUtc, PayloadJson)
                 VALUES (@tenant, @reference, @approval, @logical, @company, @state, @active,
@@ -222,7 +255,7 @@ internal sealed class AzureCompaniesHousePersistence(
         var result = new List<CompaniesHouseConversationRecord>();
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
-            SELECT PayloadJson FROM TaxHub.CompaniesHouseConversation
+            SELECT PayloadJson FROM Tax.CompaniesHouseConversation
             WHERE TenantReference = @tenant AND CompanyIdentitySha256 = @company
             ORDER BY UpdatedAtUtc DESC;
             """, connection);
@@ -286,7 +319,7 @@ internal sealed class AzureCompaniesHousePersistence(
     private async Task<T?> ReadPayloadAsync<T>(string table, string tenantReference, string reference,
         CancellationToken cancellationToken)
     {
-        if (table is not ("TaxHub.CompaniesHousePreparation" or "TaxHub.CompaniesHouseApproval"))
+        if (table is not ("Tax.CompaniesHousePreparation" or "Tax.CompaniesHouseApproval"))
             throw new ArgumentOutOfRangeException(nameof(table));
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand(
@@ -302,7 +335,7 @@ internal sealed class AzureCompaniesHousePersistence(
     {
         await using var connection = await OpenAsync(cancellationToken);
         await using var command = new SqlCommand(
-            "SELECT PayloadJson FROM TaxHub.CompaniesHouseConversation WHERE TenantReference = @tenant AND Reference = @reference;",
+            "SELECT PayloadJson FROM Tax.CompaniesHouseConversation WHERE TenantReference = @tenant AND Reference = @reference;",
             connection);
         Add(command, "tenant", Guid.Parse(tenantReference));
         Add(command, "reference", reference);
