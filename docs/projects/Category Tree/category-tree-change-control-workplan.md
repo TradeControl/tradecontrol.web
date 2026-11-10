@@ -1,6 +1,6 @@
 # Category Tree change-control work plan
 
-**Status:** Implementation and Category Tree acceptance complete; reviewed User Guide publication and repository sign-off remain
+**Status:** Complete — implementation, hosted acceptance, statutory provenance, recovery evidence, User Guide publication and repository sign-off finished on 10 November 2026
 
 **Release boundary:** Required before the Accounts Mode production release
 
@@ -425,7 +425,7 @@ The living Business 8 authority/changeover sequence and its recorded baseline ar
 
 ### Increment 6 — User Guide and release communication
 
-**Status: accepted and ready for publication with the reviewed repository push.** The Cash documentation is reorganised into Manager, Categories and Statement sections, the change-control workflow and synthetic release-candidate screenshots are integrated, and the production documentation build passes. Increment 5 is accepted; publication is now the repository sign-off action rather than an implementation dependency.
+**Status: complete and published.** The Cash documentation is reorganised into Manager, Categories and Statement sections, the change-control workflow and synthetic release-candidate screenshots are integrated, and the production documentation build passes. The reviewed User Guide was published with repository sign-off on 10 November 2026.
 
 - Update the public User Guide only after the complete workflow and reviewed interface exist.
 - Explain the four statuses, the one-active-version rule and the immediate effect of editing Published content.
@@ -460,7 +460,7 @@ The recommended sequence for the three current programmes is:
 
 The later tax calculation optimisation remains a separate Stage 2 programme. It may consume sealed balances and Category Tree provenance, but it is not a prerequisite for this change-control lifecycle.
 
-**Completed position, 10 November 2026:** the local and hosted Category Tree implementation, lifecycle, UI/reporting, migration, statutory-seal and recovery acceptance are complete. Hosted B1 and B3-B6 run the schema boundary; B8 proves the continuous VAT, Companies House and post-filing successor history. VAT accepted the CV1-bound return. Companies House acknowledged the CV4-bound official-test filing and retains it Pending; the disclosed development simulation exercised only the otherwise unavailable terminal transition. CV5 proves continued evolution, active/historical statement selection and mathematically explained predecessor differences without changing either earlier seal. The owner has accepted the desktop/mobile journey and the official-test limitation. User Guide publication accompanies the reviewed repository push. The isolated Azure S0 Equity Bridge performance regression is recorded for separate follow-up and does not reopen this accepted change-control boundary.
+**Completed position, 10 November 2026:** the local and hosted Category Tree implementation, lifecycle, UI/reporting, migration, statutory-seal and recovery acceptance are complete. Hosted B1 and B3-B6 run the schema boundary; B8 proves the continuous VAT, Companies House and post-filing successor history. VAT accepted the CV1-bound return. Companies House acknowledged the CV4-bound official-test filing and retains it Pending; the disclosed development simulation exercised only the otherwise unavailable terminal transition. CV5 proves continued evolution, active/historical statement selection and mathematically explained predecessor differences without changing either earlier seal. The owner has accepted the desktop/mobile journey and the official-test limitation. The reviewed User Guide is published. The isolated Azure S0 Equity Bridge performance regression is recorded for separate follow-up and does not reopen this accepted change-control boundary.
 
 ## 13. IAM-01 synthetic-business migration
 

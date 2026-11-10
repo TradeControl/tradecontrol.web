@@ -216,9 +216,7 @@ Add one row for every execution or owner review. Keep credentials, access tokens
 
 ## Next-session restart point
 
-1. Complete owner review of the three repository change sets.
-2. Publish the reorganised User Guide with the reviewed commits.
-3. Revisit the separately deferred Azure S0 Equity Bridge performance issue without changing the accepted algorithm or weakening the exact parity gate.
+The Category Tree project is closed. Revisit the separately deferred Azure S0 Equity Bridge performance issue as its own follow-up without changing the accepted algorithm or weakening the exact parity gate.
 
 The mobile presentation issues observed on iPhone are deliberately outside this restart sequence. The public B8 endpoint is reachable; responsive/mobile acceptance will be planned separately rather than mixed into the statutory changeover evidence.
 
