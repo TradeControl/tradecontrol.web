@@ -55,6 +55,14 @@ namespace TradeControl.Web.AppServices.Execution
             var templateManager = new TemplateManager(NodeContext, FileProvider);
             await templateManager.InitialiseBootstrap();
 
+            var initiatedBy = string.IsNullOrWhiteSpace(execution.QueuedBy)
+                ? "unattributed"
+                : execution.QueuedBy;
+            await NodeContext.EventLog(
+                NodeEnum.EventType.IsInformation,
+                $"Synthetic dataset bootstrap completed. Execution={execution.ExecutionCode}; InitiatedBy={initiatedBy}; QueuedOn={execution.QueuedOn:O}.",
+                execution.QueuedBy);
+
             execution.ProgressMessage = "Synthetic dataset installed.";
             ExecutionRuntimeState.UpdateProgress(execution.ExecutionCode, execution.ProgressMessage);
             await NodeContext.SaveChangesAsync(cancellationToken);

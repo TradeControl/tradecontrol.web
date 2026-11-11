@@ -11,6 +11,19 @@ multi-tenant environment is implemented and reviewed, so that CT and VAT resume 
 intended topology. This pause is not an HMRC prerequisite and does not reopen the accepted CT2025,
 RIM 1.994, service-artifact or Phase 5.9 protocol decisions.
 
+**Resumption status (11 November 2026):** the reviewed multi-tenant hosting prerequisite is complete
+and the programme has resumed Corporation Tax. The next action is CT-A in the
+[recognition roadmap](ct-accreditation-roadmap.md): recommission the selected disposable test dataset
+for the approved current accounting period, rebaseline it under Category Tree Change Control,
+refresh the approved validation evidence and return with a send-disabled Phase 5.10 preflight. No
+external HMRC request or production activation is authorised. Concrete tenant, server and database
+identities remain in protected operational records.
+
+**CT-A inventory update (11 November 2026):** the selected integration-test tenant is technically
+ready but contains a historical company period that is not CT2025-eligible. The protected inventory
+and recommissioning instructions are retained outside the public repository. Phase 5.10 remains
+send-disabled while the current-period scenario is commissioned and reviewed.
+
 ## Confirmed official route
 
 HMRC's [basic guide for XML software developers](https://www.gov.uk/guidance/basic-guide-for-xml-software-developers) identifies the External Test Service Transaction Engine endpoints and explains that the service checks the GovTalk header and test credentials before routing the body to the Third Party Validation Service. For CT the local profile is pinned to:

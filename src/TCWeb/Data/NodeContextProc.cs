@@ -2598,7 +2598,7 @@ namespace TradeControl.Web.Data
             }
         }
 
-        public async Task<string> EventLog(NodeEnum.EventType eventType, string eventMessage)
+        public async Task<string> EventLog(NodeEnum.EventType eventType, string eventMessage, string insertedBy = null)
         {
             var _eventMessage = new SqlParameter()
             {
@@ -2626,6 +2626,15 @@ namespace TradeControl.Web.Data
                 Value = null
             };
 
+            var _insertedBy = new SqlParameter()
+            {
+                ParameterName = "@InsertedBy",
+                SqlDbType = System.Data.SqlDbType.NVarChar,
+                Direction = System.Data.ParameterDirection.Input,
+                Size = 50,
+                Value = string.IsNullOrWhiteSpace(insertedBy) ? DBNull.Value : insertedBy
+            };
+
             using (SqlConnection _connection = new (Database.GetConnectionString()))
             {
                 _connection.Open();
@@ -2637,6 +2646,7 @@ namespace TradeControl.Web.Data
                     _command.Parameters.Add(_eventMessage);
                     _command.Parameters.Add(_eventType);
                     _command.Parameters.Add(_logCode);
+                    _command.Parameters.Add(_insertedBy);
                     await _command.ExecuteNonQueryAsync();
                 }
                 _connection.Close();

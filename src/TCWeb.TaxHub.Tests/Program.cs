@@ -1213,6 +1213,72 @@ Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.
     "The disposable VAT alignment guard, historical profile coverage or authoritative calculation/configuration boundary changed.");
 var syntheticBootstrapSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
     "Stored Procedures", "proc_DatasetSyntheticMIS_Bootstrap.sql"));
+Assert(syntheticBootstrapSql.Contains("@ReserveAccount = ra.AccountName", StringComparison.Ordinal)
+    && !syntheticBootstrapSql.Contains("@ReserveAccount = ra.AccountCode", StringComparison.Ordinal),
+    "Synthetic reinitialisation maps the reserve account code into its display-name parameter.");
+var syntheticBootstrapHandler = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "Execution",
+    "SyntheticDatasetExecutionHandler.cs"));
+var eventLogSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Stored Procedures", "proc_EventLog.sql"));
+var eventLogViewSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Views", "vwEventLog.sql"));
+var eventLogCleardownSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Stored Procedures", "proc_EventLogCleardown.sql"));
+var eventViewerPanel = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Admin", "Manager",
+    "Components", "EventViewerPanel.razor"));
+var nodeAdmin = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Data", "NodeAdmin.cs"));
+Assert(syntheticBootstrapHandler.Contains("Synthetic dataset bootstrap completed", StringComparison.Ordinal)
+    && syntheticBootstrapHandler.Contains("execution.ExecutionCode", StringComparison.Ordinal)
+    && syntheticBootstrapHandler.Contains("execution.QueuedBy", StringComparison.Ordinal)
+    && syntheticBootstrapHandler.Contains("execution.QueuedOn", StringComparison.Ordinal)
+    && eventLogSql.Contains("@InsertedBy NVARCHAR(50) = NULL", StringComparison.Ordinal)
+    && eventLogSql.Contains("@EventInsertedBy", StringComparison.Ordinal),
+    "Synthetic bootstrap no longer writes an attributable, timestamped Event Log record.");
+Assert(eventLogViewSql.Contains("COALESCE([user].UserName, eventLog.InsertedBy) AS InsertedBy", StringComparison.Ordinal)
+    && eventLogViewSql.Contains("LEFT JOIN Usr.tbUser", StringComparison.Ordinal),
+    "The Event Viewer exposes internal user IDs instead of resolving available user names.");
+Assert(eventLogCleardownSql.Contains("@CutoffOn DATETIME", StringComparison.Ordinal)
+    && eventLogCleardownSql.Contains("@DeletedCount INT OUTPUT", StringComparison.Ordinal)
+    && eventLogCleardownSql.Contains("LoggedOn <= @CutoffOn", StringComparison.Ordinal)
+    && eventLogCleardownSql.Contains("Event log entries permanently deleted", StringComparison.Ordinal)
+    && !eventLogCleardownSql.Contains("@RetentionDays", StringComparison.Ordinal)
+    && nodeAdmin.Contains("EventLogDeleteThrough", StringComparison.Ordinal)
+    && nodeAdmin.Contains("@DeletedCount OUTPUT", StringComparison.Ordinal)
+    && eventViewerPanel.Contains("Delete selected and older entries", StringComparison.Ordinal)
+    && eventViewerPanel.Contains("This does not create an archive copy.", StringComparison.Ordinal)
+    && eventViewerPanel.Contains("Permanently deleted {deletedCount.Value}", StringComparison.Ordinal)
+    && !eventViewerPanel.Contains("Archive older entries", StringComparison.Ordinal),
+    "Event Log cleanup is ambiguously presented as archival, uses an approximate cutoff or provides no counted completion feedback.");
+var nodeDataInitSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Stored Procedures", "proc_NodeDataInit.sql"));
+var optionsResetAt = nodeDataInitSql.IndexOf("DELETE FROM App.tbOptions", StringComparison.Ordinal);
+var versionNormalisationAt = nodeDataInitSql.IndexOf("UPDATE Cash.tbCategoryVersion", optionsResetAt,
+    StringComparison.Ordinal);
+var rootResetAt = nodeDataInitSql.IndexOf("DELETE FROM Cash.tbCategoryRoot", StringComparison.Ordinal);
+var draftNormalisationAt = nodeDataInitSql.IndexOf("VersionStatusCode = 0", versionNormalisationAt,
+    StringComparison.Ordinal);
+var effectiveFromResetAt = nodeDataInitSql.IndexOf("EffectiveFromOn = NULL", versionNormalisationAt,
+    StringComparison.Ordinal);
+var effectiveToResetAt = nodeDataInitSql.IndexOf("EffectiveToOn = NULL", versionNormalisationAt,
+    StringComparison.Ordinal);
+var lockReferenceResetAt = nodeDataInitSql.IndexOf("SubmissionLockReference = NULL", versionNormalisationAt,
+    StringComparison.Ordinal);
+var lockHashResetAt = nodeDataInitSql.IndexOf("SubmissionLockSha256 = NULL", versionNormalisationAt,
+    StringComparison.Ordinal);
+var lockTimestampResetAt = nodeDataInitSql.IndexOf("SubmissionLockedOn = NULL", versionNormalisationAt,
+    StringComparison.Ordinal);
+Assert(!nodeDataInitSql.Contains("App.tbInstall", StringComparison.Ordinal)
+    && !nodeDataInitSql.Contains("@SQLBuild", StringComparison.Ordinal)
+    && optionsResetAt >= 0
+    && versionNormalisationAt > optionsResetAt
+    && rootResetAt > versionNormalisationAt
+    && draftNormalisationAt > versionNormalisationAt && draftNormalisationAt < rootResetAt
+    && effectiveFromResetAt > versionNormalisationAt && effectiveFromResetAt < rootResetAt
+    && effectiveToResetAt > versionNormalisationAt && effectiveToResetAt < rootResetAt
+    && lockReferenceResetAt > versionNormalisationAt && lockReferenceResetAt < rootResetAt
+    && lockHashResetAt > versionNormalisationAt && lockHashResetAt < rootResetAt
+    && lockTimestampResetAt > versionNormalisationAt && lockTimestampResetAt < rootResetAt,
+    "Full-node reset can issue a schema build or still deletes immutable retained versions without first invalidating their submission locks.");
 var categoryTreeMigrationPath = Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Scripts",
     "DB4 cat change control migration script.sql");
 var categoryTreeMigrationBytes = File.ReadAllBytes(categoryTreeMigrationPath);

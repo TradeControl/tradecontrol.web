@@ -18,7 +18,7 @@
 <div class="d-flex flex-column h-100" style="min-height:0; overflow:hidden;">
     @if (!string.IsNullOrWhiteSpace(_actionMessage))
     {
-        <div class="alert @($"alert-{_actionMessageTone}") py-2 mb-3" role="alert">
+        <div class="alert @($"alert-{_actionMessageTone}") py-2 mb-3" role="status" aria-live="polite">
             @_actionMessage
         </div>
     }
@@ -215,7 +215,8 @@
     private int _totalCount;
     private bool _isLoading;
     private bool _mobileDetailOpen;
-    private bool _showArchiveConfirm;
+    private bool _showDeleteConfirm;
+    private bool _isDeletingEntries;
     private bool _isAdministrator;
     private bool _canSubmitRole;
     private bool _hasSupportTarget;
@@ -229,7 +230,7 @@
 
     private int TotalPages => _totalCount == 0 ? 0 : (int)Math.Ceiling(_totalCount / (double)_pageSize);
 
-    private bool CanArchiveSelected => _isAdministrator && SelectedEntry is not null;
+    private bool CanDeleteSelected => _isAdministrator && SelectedEntry is not null && !_isDeletingEntries;
 
     private bool CanSubmitSelected =>
         _canSubmitRole
@@ -292,7 +293,7 @@
             {
                 _selectedLogCode = null;
                 _mobileDetailOpen = false;
-                _showArchiveConfirm = false;
+                _showDeleteConfirm = false;
                 return;
             }
 
@@ -303,7 +304,7 @@
             _selectedLogCode = keepSelection ? _selectedLogCode : _entries[0].LogCode;
 
             if (!keepSelection)
-                _showArchiveConfirm = false;
+                _showDeleteConfirm = false;
         }
         catch (Exception ex)
         {
@@ -326,7 +327,7 @@
 
         _pageNumber = 1;
         _mobileDetailOpen = false;
-        _showArchiveConfirm = false;
+        _showDeleteConfirm = false;
 
         await LoadEntriesAsync(preserveSelection: false);
     }
@@ -339,7 +340,7 @@
         _pageSize = pageSize;
         _pageNumber = 1;
         _mobileDetailOpen = false;
-        _showArchiveConfirm = false;
+        _showDeleteConfirm = false;
 
         await LoadEntriesAsync(preserveSelection: false);
     }
@@ -361,7 +362,7 @@
 
         _pageNumber = pageNumber;
         _mobileDetailOpen = false;
-        _showArchiveConfirm = false;
+        _showDeleteConfirm = false;
 
         await LoadEntriesAsync(preserveSelection: false);
     }
@@ -369,7 +370,7 @@
     private Task SelectEntryAsync(string logCode, bool openMobileDetail)
     {
         _selectedLogCode = logCode;
-        _showArchiveConfirm = false;
+        _showDeleteConfirm = false;
 
         if (IsMobile)
             _mobileDetailOpen = openMobileDetail;
@@ -380,32 +381,38 @@
     private void ShowMobileList()
     {
         _mobileDetailOpen = false;
-        _showArchiveConfirm = false;
+        _showDeleteConfirm = false;
     }
 
-    private void ToggleArchiveConfirm()
+    private void ToggleDeleteConfirm()
     {
-        _showArchiveConfirm = !_showArchiveConfirm;
+        if (!_isDeletingEntries)
+            _showDeleteConfirm = !_showDeleteConfirm;
     }
 
-    private async Task ArchiveOlderEntriesAsync()
+    private async Task DeleteOlderEntriesAsync()
     {
-        if (!CanArchiveSelected || SelectedEntry is null)
+        if (!CanDeleteSelected || SelectedEntry is null)
             return;
+
+        var cutoffOn = SelectedEntry.LoggedOn;
+        _isDeletingEntries = true;
+        SetActionMessage("Deleting selected and older event log entries…", "info");
+        await InvokeAsync(StateHasChanged);
 
         try
         {
             var nodeAdmin = new NodeAdmin(NodeContext);
-            var archived = await nodeAdmin.EventLogCleardown(SelectedEntry.LogCode);
+            var deletedCount = await nodeAdmin.EventLogDeleteThrough(SelectedEntry.LogCode);
 
-            if (!archived)
+            if (!deletedCount.HasValue)
             {
-                SetActionMessage("Archive older entries failed.", "danger");
+                SetActionMessage("Deleting event log entries failed.", "danger");
                 return;
             }
 
-            SetActionMessage($"Archived entries logged on or before {FormatLoggedOn(SelectedEntry.LoggedOn)}.", "success");
-            _showArchiveConfirm = false;
+            SetActionMessage($"Permanently deleted {deletedCount.Value} event log entries logged on or before {FormatLoggedOn(cutoffOn)}.", "success");
+            _showDeleteConfirm = false;
             _mobileDetailOpen = false;
 
             await LoadEntriesAsync(preserveSelection: false);
@@ -413,7 +420,11 @@
         catch (Exception ex)
         {
             await NodeContext.ErrorLog(ex);
-            SetActionMessage("Archive older entries failed.", "danger");
+            SetActionMessage("Deleting event log entries failed.", "danger");
+        }
+        finally
+        {
+            _isDeletingEntries = false;
         }
     }
 
@@ -583,30 +594,41 @@
                         </button>
                     }
 
-                    @if (CanArchiveSelected)
+                    @if (CanDeleteSelected)
                     {
                         <button type="button"
                                 class="btn btn-outline-danger btn-sm"
-                                @onclick="ToggleArchiveConfirm">
-                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive older entries
+                                disabled="@_isDeletingEntries"
+                                @onclick="ToggleDeleteConfirm">
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete selected and older entries
                         </button>
                     }
                 </div>
 
-                @if (_showArchiveConfirm && CanArchiveSelected)
+                @if (_showDeleteConfirm && SelectedEntry is not null)
                 {
-                    <div class="alert alert-warning mt-3 mb-0">
-                        Entries logged on or before <strong>@FormatLoggedOn(SelectedEntry.LoggedOn)</strong> will be archived.
+                    <div class="alert alert-warning mt-3 mb-0" role="alert">
+                        Entries logged on or before <strong>@FormatLoggedOn(SelectedEntry.LoggedOn)</strong> will be permanently deleted. This does not create an archive copy.
                         <div class="mt-2">
                             <button type="button"
                                     class="btn btn-danger btn-sm me-2"
-                                    @onclick="ArchiveOlderEntriesAsync">
-                                Confirm archive
+                                    disabled="@_isDeletingEntries"
+                                    @onclick="DeleteOlderEntriesAsync">
+                                @if (_isDeletingEntries)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                    <span>Deleting…</span>
+                                }
+                                else
+                                {
+                                    <span>Confirm permanent delete</span>
+                                }
                             </button>
 
                             <button type="button"
                                     class="btn btn-outline-secondary btn-sm"
-                                    @onclick="ToggleArchiveConfirm">
+                                    disabled="@_isDeletingEntries"
+                                    @onclick="ToggleDeleteConfirm">
                                 Cancel
                             </button>
                         </div>

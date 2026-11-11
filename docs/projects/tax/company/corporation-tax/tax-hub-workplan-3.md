@@ -1,5 +1,18 @@
 # Corporation Tax — HMRC_MTD Contract Model Work Plan
 
+## Status and succession
+
+This is the original Objective 3 contract-model plan, not the current Corporation Tax execution
+plan. It was not maintained as a phase-by-phase progress ledger. Its architecture was subsequently
+implemented and narrowed to the approved ordinary micro-company profile through Work Plan 4; the
+authoritative CT2025/RIM service artifact was then completed through Phase 5.8 and Transaction Engine
+fixtures through Phase 5.9.
+
+The current status, phase disposition, evidence boundary and path to HMRC recognition are recorded
+in [the Corporation Tax recognition roadmap](ct-accreditation-roadmap.md). Current implementation
+resumes at Work Plan 5 Phase 5.10. The broad wording below must not be read as a claim that every
+CT600 field, supplementary page or specialist regime is supported.
+
 ## Objective
 
 Add the current HMRC Corporation Tax submission model to the `HMRC_MTD` repository under a new:
