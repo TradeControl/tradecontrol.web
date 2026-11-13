@@ -50,6 +50,7 @@ window.CategoryTree = (function()
         var EXPR_PREFIX = "expr:";
         var isAdmin = !!cfg.isAdmin;
         var canManageCashCodes = !!cfg.canManageCashCodes;
+        var supportsRelevantDistributions = !!cfg.supportsRelevantDistributions;
         var CATEGORYTYPE_CASHTOTAL = 1; // server: (short)NodeEnum.CategoryType.CashTotal
 
         var menuOriginalHtml = null;
@@ -3026,7 +3027,7 @@ window.CategoryTree = (function()
                     "edit", "delete", "toggleEnabled",
                     "addCategory", "createCategory", "newTotal", "createTotal",
                     "addCashCode", "createCashCode",
-                    "move", "moveUp", "moveDown", "setProfitRoot", "setVatRoot", "expand", "collapse"
+                    "move", "moveUp", "moveDown", "setProfitRoot", "setVatRoot", "setDistributionsRoot", "expand", "collapse"
                 ];
                 for (var i = 0; i < known.length; i++)
                 {
@@ -3135,7 +3136,8 @@ window.CategoryTree = (function()
                         showTotalCategory();
                         dv("setProfitRoot", isAdmin);
                         dv("setVatRoot", isAdmin);
-                        order = ["edit", "delete", "toggleEnabled", "addCategory", "createTotal", "createCategory", "move", "setProfitRoot", "setVatRoot"];
+                        dv("setDistributionsRoot", isAdmin && supportsRelevantDistributions);
+                        order = ["edit", "delete", "toggleEnabled", "addCategory", "createTotal", "createCategory", "move", "setProfitRoot", "setVatRoot", "setDistributionsRoot"];
                         arrangeDetailsButtons($pane, order);
                     }
                     else if (isCatCashCode)
@@ -4032,6 +4034,7 @@ window.CategoryTree = (function()
             setBarButtonVisible("makePrimary", false);
             setBarButtonVisible("setProfitRoot", false);
             setBarButtonVisible("setVatRoot", false);
+            setBarButtonVisible("setDistributionsRoot", false);
 
             if (canEditSelectedNode && typeof data.isEnabled !== "undefined")
             {
@@ -4411,8 +4414,13 @@ window.CategoryTree = (function()
                         {
                             menuTemplates.items.setVatRoot = "<div class='dropdown-item' data-action='setVatRoot'>Set VAT Root</div>";
                         }
+                        if (!menuTemplates.items.setDistributionsRoot)
+                        {
+                            menuTemplates.items.setDistributionsRoot = "<div class='dropdown-item' data-action='setDistributionsRoot'>Set Distributions Root</div>";
+                        }
                         pushIf(isAdmin, "setProfitRoot");
                         pushIf(isAdmin, "setVatRoot");
+                        pushIf(isAdmin && supportsRelevantDistributions, "setDistributionsRoot");
                         order.push("expandSelected", "collapseSelected");
                         renderMenuFromTemplates($menu, order, [3, 6, 9, 13]);
                         setToggleEnabledLabel($menu, (kinds.data && kinds.data.isEnabled === 1));
@@ -4499,7 +4507,7 @@ window.CategoryTree = (function()
 
             if (parentKeyNow !== ROOT_KEY)
             {
-                $menu.find("[data-action='setProfitRoot'],[data-action='setVatRoot']").hide();
+                $menu.find("[data-action='setProfitRoot'],[data-action='setVatRoot'],[data-action='setDistributionsRoot']").hide();
             }
 
             if (!isMobile())
@@ -5492,10 +5500,16 @@ window.CategoryTree = (function()
 
                     case "setProfitRoot":
                     case "setVatRoot":
+                    case "setDistributionsRoot":
                     {
                         if (!isAdmin)
                         {
                             alert("Insufficient privileges");
+                            break;
+                        }
+                        if (action === "setDistributionsRoot" && !supportsRelevantDistributions)
+                        {
+                            alert("The Relevant Distributions root is available only to companies with a Corporation Tax profile.");
                             break;
                         }
                         if (!node || !node.folder)
@@ -5503,7 +5517,7 @@ window.CategoryTree = (function()
                             alert("Select a category");
                             break;
                         }
-                        var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
+                        var kind = action === "setProfitRoot" ? "Profit" : action === "setVatRoot" ? "VAT" : "Distributions";
                         var name = plainNodeTitle(node);
                         if (!confirm("Set '" + name + "' as the " + kind + " root?"))
                         {
@@ -6221,10 +6235,16 @@ window.CategoryTree = (function()
 
                     case "setProfitRoot":
                     case "setVatRoot":
+                    case "setDistributionsRoot":
                     {
                         if (!isAdmin)
                         {
                             alert("Insufficient privileges");
+                            break;
+                        }
+                        if (action === "setDistributionsRoot" && !supportsRelevantDistributions)
+                        {
+                            alert("The Relevant Distributions root is available only to companies with a Corporation Tax profile.");
                             break;
                         }
                         if (!node || !node.folder)
@@ -6233,7 +6253,7 @@ window.CategoryTree = (function()
                             break;
                         }
 
-                        var kind = (action === "setProfitRoot") ? "Profit" : "VAT";
+                        var kind = action === "setProfitRoot" ? "Profit" : action === "setVatRoot" ? "VAT" : "Distributions";
                         var name = plainNodeTitle(node);
 
                         if (!confirm("Set '" + name + "' as the " + kind + " root?"))

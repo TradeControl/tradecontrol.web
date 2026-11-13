@@ -13,7 +13,7 @@ RIM 1.994, service-artifact or Phase 5.9 protocol decisions.
 
 **Resumption status (11 November 2026):** the reviewed multi-tenant hosting prerequisite is complete
 and the programme has resumed Corporation Tax. The next action is CT-A in the
-[recognition roadmap](ct-accreditation-roadmap.md): recommission the selected disposable test dataset
+[recognition roadmap](ct-recognition-roadmap.md): recommission the selected disposable test dataset
 for the approved current accounting period, rebaseline it under Category Tree Change Control,
 refresh the approved validation evidence and return with a send-disabled Phase 5.10 preflight. No
 external HMRC request or production activation is authorised. Concrete tenant, server and database

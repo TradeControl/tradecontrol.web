@@ -17,32 +17,25 @@ namespace TradeControl.Web.Data
         public NodeSettings(NodeContext context) => _context = context;
 
         #region web install
-        public bool IsInitialised
+        public bool IsCommissioned
         {
             get
             {
                 try
                 {
-                    if (!_context.App_tbOptions.Any())
-                        return false;
-                    else
-                        return _context.App_tbOptions.First().IsInitialised;
+                    return
+                    (
+                        from options in _context.App_tbOptions
+                        join version in _context.Cash_tbCategoryVersions
+                            on options.CategoryVersionId equals version.VersionId
+                        where version.VersionStatusCode == 1 || version.VersionStatusCode == 2
+                        select options.Identifier
+                    ).Any();
                 }
                 catch (Exception e)
                 {
                     _ = _context.ErrorLog(e);
                     return false;
-                }
-            }
-            set
-            {
-                try
-                {
-                    int result = _context.Database.ExecuteSqlRaw("App.proc_Initialised @p0", parameters: new[] { value });
-                }
-                catch (Exception e)
-                {
-                    _ = _context.ErrorLog(e);
                 }
             }
         }

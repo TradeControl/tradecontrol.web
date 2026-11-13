@@ -14,7 +14,6 @@ namespace TradeControl.Web.Models
         [Key]
         [StringLength(4)]
         public string Identifier { get; set; }
-        public bool IsInitialised { get; set; }
 
         [Required]
         [StringLength(50)]

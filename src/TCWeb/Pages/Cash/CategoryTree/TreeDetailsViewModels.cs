@@ -29,6 +29,9 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public bool IsRootNode { get; set; }      // true when ParentCount == 0
         public bool IsProfitRoot { get; set; }    // true when App.tbOptions.NetProfitCode == CategoryCode
         public bool IsVatRoot { get; set; }       // true when App.tbOptions.VatCategoryCode == CategoryCode
+        public bool IsRelevantDistributionsRoot { get; set; }
+        public bool IsRelevantDistributionsHierarchy { get; set; }
+        public bool SupportsRelevantDistributions { get; set; }
 
         public bool IsRootContext { get; set; }
         public bool IsDisconnectedContext { get; set; }
@@ -113,5 +116,6 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         public int CashCodeCount { get; set; }
         public string ProfitRoot { get; set; } = string.Empty;
         public string VatRoot { get; set; } = string.Empty;
+        public string RelevantDistributionsRoot { get; set; } = string.Empty;
     }
 }

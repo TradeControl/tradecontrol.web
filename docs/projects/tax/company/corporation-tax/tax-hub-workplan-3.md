@@ -9,7 +9,7 @@ authoritative CT2025/RIM service artifact was then completed through Phase 5.8 a
 fixtures through Phase 5.9.
 
 The current status, phase disposition, evidence boundary and path to HMRC recognition are recorded
-in [the Corporation Tax recognition roadmap](ct-accreditation-roadmap.md). Current implementation
+in [the Corporation Tax recognition roadmap](ct-recognition-roadmap.md). Current implementation
 resumes at Work Plan 5 Phase 5.10. The broad wording below must not be read as a claim that every
 CT600 field, supplementary page or specialist regime is supported.
 

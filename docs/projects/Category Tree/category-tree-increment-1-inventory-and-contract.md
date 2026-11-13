@@ -118,7 +118,7 @@ Direct writes that must be commissioned before guards become active, or routed t
 - audit triggers on `Cash.tbCategory`, `Cash.tbCode` and `App.tbOptions` update audit columns; and
 - SQL test fixtures `Tests/TaxTagMapValidator.sql` and `Tests/Phase4D_CumulativeProjection.sql` deliberately mutate category polarity/enabled state or insert a Cash Code and then restore it.
 
-`App.proc_RotateSymmetricKeys`, `proc_Initialised` and unrelated options maintenance update other `App.tbOptions` columns. The options trigger must distinguish ordinary options maintenance from a `CategoryVersionId` change while always enforcing the table's singleton invariant.
+`App.proc_RotateSymmetricKeys` and unrelated options maintenance update other `App.tbOptions` columns. The options trigger must distinguish ordinary options maintenance from a `CategoryVersionId` change while always enforcing the table's singleton invariant. Commissioning readiness is derived from the active Published or Submitted Category Tree pointer; it is not maintained as a second flag.
 
 No database permissions currently restrict direct DML on the existing category/Cash Code tables or the two option root columns, and no trigger checks version status or submission locks.
 

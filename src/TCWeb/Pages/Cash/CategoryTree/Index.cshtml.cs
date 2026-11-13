@@ -21,6 +21,7 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         private string WorkspaceVersionId { get; set; } = string.Empty;
 
         public CategoryTreeWorkspaceContext Workspace { get; private set; }
+        public bool SupportsRelevantDistributions { get; private set; }
 
         [TempData]
         public string CategoryTreeNotice { get; set; }
@@ -38,8 +39,15 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
         {
             Workspace = await CategoryTreeService.GetWorkspaceAsync(versionId, HttpContext.RequestAborted);
             WorkspaceVersionId = Workspace.SelectedVersion.VersionId;
+            SupportsRelevantDistributions = await SupportsRelevantDistributionsAsync();
             await SetViewData();
         }
+
+        private Task<bool> SupportsRelevantDistributionsAsync() =>
+            NodeContext.Cash_tbReportingProfiles
+                .AsNoTracking()
+                .AnyAsync(profile => profile.ReportingTypeCode
+                    == (short)NodeEnum.ReportingType.CompanyTax);
 
         private static bool IsRootKey(string parentKey)
         {

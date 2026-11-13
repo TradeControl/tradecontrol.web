@@ -1,5 +1,15 @@
 # Tax Change Log
 
+## 12 November 2026 — derived node commissioning readiness
+
+- Replaced the unauthoritative `App.tbOptions.IsInitialised` flag with commissioning readiness derived from the active Category Tree pointer and its Published or Submitted status.
+- Removed the obsolete `App.proc_Initialised` transition and the corresponding mutable TCWeb model surface.
+- Kept the pre-publication Tax Tag commissioning fallback explicit: when no active pointer exists, it can resolve only the sole Category Tree version; ordinary runtime selection continues to use the options-selected version.
+- Updated the completed synthetic-horizon regression and TCWeb boundary checks to require an active commissioned Category Tree rather than a manually maintained bit.
+- Deployed the reviewed schema/runtime change to the disposable integration tenant, reinitialised its synthetic dataset and verified the derived commissioned state without changing the installed database build.
+- Corrected the Tax Hub Dashboard's first interactive load after a restored prerender/HMRC-return snapshot; the shell now uses its own one-shot pending-load signal rather than depending on Blazor's `firstRender` transition.
+- No external request or submission capability changed.
+
 ## 28 October 2026 — VAT application preflight and public baseline
 
 - Completed the bounded Compliance Readiness Pass 1 without starting penetration testing, active vulnerability scanning or the data-protection security-control audit reserved for Pass 2.

@@ -265,6 +265,7 @@ public sealed class CategoryTreeChangeControlService : ICategoryTreeChangeContro
     {
         (short)NodeEnum.CategoryRootType.NetProfit => "Net Profit",
         (short)NodeEnum.CategoryRootType.Vat => "VAT",
+        (short)NodeEnum.CategoryRootType.RelevantDistributions => "Relevant Distributions",
         _ => $"Root {code}"
     };
 

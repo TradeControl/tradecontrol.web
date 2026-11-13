@@ -18,7 +18,9 @@ journey must also be integrated into the multi-tenant TCWeb product before apply
 ## Governing and working documents
 
 - [Work Plan 3](tax-hub-workplan-3.md) records the original CT contract-model programme.
-- [Recognition roadmap](ct-accreditation-roadmap.md) is the current status and execution plan.
+- [Recognition roadmap](ct-recognition-roadmap.md) is the current status and execution plan.
+- [Marginal relief and real-time liability plan](ct-marginal-relief.md) governs the CT-A calculation
+  redesign while preserving the MIS Project/Object and What-if statement architecture.
 - [Work Plan 5](../../platform/tax-hub-workplan-5.md), phases 5.7–5.10, governs current service-artifact and transport work.
 - [Phase 5.8 assurance](phase-5.8-corporation-tax-service-artifact-assurance.md)
 - [Phase 5.9 Transaction Engine fixture](phase-5.9-transaction-engine-fixture.md)

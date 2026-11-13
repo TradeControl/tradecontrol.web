@@ -20,15 +20,25 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     return new JsonResult(new { success = false, message = "Missing kind or category code" });
 
                 var normalized = kind.Trim().ToUpperInvariant();
-                if (normalized != "PROFIT" && normalized != "VAT")
-                    return new JsonResult(new { success = false, message = "Unknown kind (expected Profit or VAT)" });
+                if (normalized != "PROFIT" && normalized != "VAT" && normalized != "DISTRIBUTIONS")
+                    return new JsonResult(new { success = false, message = "Unknown kind (expected Profit, VAT or Distributions)" });
+
+                if (normalized == "DISTRIBUTIONS" && !await SupportsRelevantDistributionsAsync())
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        message = "The Relevant Distributions root is available only to companies with a Corporation Tax profile."
+                    });
 
                 if (string.IsNullOrWhiteSpace(versionId))
                     return new JsonResult(new { success = false, message = "Missing Category Tree version context" });
 
-                short rootTypeCode = normalized == "PROFIT"
-                    ? (short)NodeEnum.CategoryRootType.NetProfit
-                    : (short)NodeEnum.CategoryRootType.Vat;
+                short rootTypeCode = normalized switch
+                {
+                    "PROFIT" => (short)NodeEnum.CategoryRootType.NetProfit,
+                    "VAT" => (short)NodeEnum.CategoryRootType.Vat,
+                    _ => (short)NodeEnum.CategoryRootType.RelevantDistributions
+                };
                 var result = await CategoryTreeService.SetRootAsync(versionId, rootTypeCode,
                     categoryCode, $"{kind} root changed to {categoryCode}.",
                     HttpContext.RequestAborted);

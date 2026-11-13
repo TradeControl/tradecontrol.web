@@ -93,8 +93,8 @@ The options table is already operationally a singleton: `App.proc_NodeBusinessIn
 
 Additional rules are:
 
-- `CategoryVersionId` may be null while `IsInitialised = 0`;
-- `IsInitialised = 1` requires a non-null pointer;
+- `CategoryVersionId` is null while node commissioning is incomplete;
+- commissioning readiness is derived from a non-null pointer to a Published or Submitted version;
 - assigning the pointer requires the target to be Published or Submitted;
 - changing a referenced version to Draft or Archived is rejected outside the controlled publication transition;
 - the foreign key prevents deletion of the selected version; and

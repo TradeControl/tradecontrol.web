@@ -75,7 +75,8 @@ public sealed class VatFilingHistoryService(
             throw new UnauthorizedAccessException("VAT filing history requires Administrator or Manager permission.");
         var profile = await nodeContext.Cash_tbReportingProfiles.AsNoTracking()
             .Where(item => item.SubjectCode == identity.ReportingSubjectReference
-                && item.ReportingTypeCode == 0 && item.ValidTo == null)
+                && item.ReportingTypeCode == (short)NodeEnum.ReportingType.IndirectTax
+                && item.ValidTo == null)
             .OrderByDescending(item => item.ValidFrom)
             .Select(item => new { item.AuthorityReference, item.ValidFrom })
             .FirstOrDefaultAsync(cancellationToken);

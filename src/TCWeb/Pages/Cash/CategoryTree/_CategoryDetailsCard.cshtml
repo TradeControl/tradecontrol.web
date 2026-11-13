@@ -32,6 +32,10 @@
                     {
                         <span class="ms-2 text-warning" title="VAT Root"><i class="bi bi-percent"></i></span>
                     }
+                    else if (Model.IsRelevantDistributionsRoot)
+                    {
+                        <span class="ms-2 text-success" title="Relevant Distributions Root"><i class="bi bi-diagram-3"></i></span>
+                    }
                     else if (string.Equals(primaryKind, "Profit", System.StringComparison.OrdinalIgnoreCase))
                     {
                         <span class="ms-2 text-info" title="Profit Hierarchy"><i class="bi bi-graph-up"></i></span>
@@ -39,6 +43,10 @@
                     else if (string.Equals(primaryKind, "VAT", System.StringComparison.OrdinalIgnoreCase))
                     {
                         <span class="ms-2 text-warning" title="VAT Hierarchy"><i class="bi bi-percent"></i></span>
+                    }
+                    else if (Model.IsRelevantDistributionsHierarchy)
+                    {
+                        <span class="ms-2 text-success" title="Relevant Distributions Hierarchy"><i class="bi bi-diagram-3"></i></span>
                     }
                 </h5>
                 <div class="text-muted small">@Model.CategoryCode</div>
@@ -173,6 +181,28 @@
                                 <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
                                 <input type="hidden" name="VersionId" value="@Model.VersionId" />
                                 <button type="submit" class="btn btn-sm btn-outline-secondary">Set VAT Root</button>
+                            </form>
+                        }
+                    }
+                    @if (Model.SupportsRelevantDistributions && !Model.IsRelevantDistributionsRoot)
+                    {
+                        if (isEmbedded)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="setDistributionsRoot">Set Distributions Root</button>
+                        }
+                        else
+                        {
+                            <form method="post"
+                                  asp-page="./Index"
+                                  asp-page-handler="SetPrimaryRoot"
+                                  class="primary-root-form"
+                                  data-kind="Distributions"
+                                  data-category="@Model.CategoryCode">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="Kind" value="Distributions" />
+                                <input type="hidden" name="CategoryCode" value="@Model.CategoryCode" />
+                                <input type="hidden" name="VersionId" value="@Model.VersionId" />
+                                <button type="submit" class="btn btn-sm btn-outline-secondary">Set Distributions Root</button>
                             </form>
                         }
                     }

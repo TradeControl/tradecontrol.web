@@ -73,7 +73,7 @@ namespace TradeControl.Web.Pages
                         await NodeContext.InitializeNode();
                     }
 
-                    if (!nodeSettings.IsInitialised)
+                    if (!nodeSettings.IsCommissioned)
                         return RedirectToPage("/Admin/Manager/Index");
                     else
                         throw new Exception("Initialisation error");

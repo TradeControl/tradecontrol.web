@@ -9,13 +9,13 @@ roadmap uses it for the programme goal sometimes described as accreditation.
 Recognition is not the same as enabling production filing. Test-service execution, recognition,
 listing and production activation retain separate evidence and human gates.
 
-## Current position — 11 November 2026
+## Current position — 12 November 2026
 
 | Layer | Position | Remaining gate |
 |---|---|---|
-| Accounting source and Category Tree | Company statutory sources and mappings are implemented; Category Tree Change Control is now available. CT-A confirmed that the selected test tenant is technically healthy but its retained accounting period is historical. | Recommission the disposable test dataset for the approved current period before preparing a CT2025 artifact; do not relabel historical accounting data. |
-| Objective 3 contracts and population | Complete and signed off for the supported ordinary micro-company profile through Work Plan 4. | Do not reopen the semantic model unless current-period evidence or an official contract change exposes a defect. |
-| Phase 5.8 service artifact | Complete and reviewed. CT2025 computation, FRC 2026 accounts and RIM 1.994 service-root validation are pinned; LTS/TPVS content findings are clear. | Re-run the frozen validation set after the current-period rebaseline and confirm the reviewed service-root golden. |
+| Accounting source and Category Tree | Company statutory sources and mappings are implemented; Category Tree Change Control is available, and CT-A has now prepared a genuine current-period tenant snapshot. | Replace the legacy single-rate Corporation Tax source result with reviewed current-law inputs; do not alter the accounting dataset to avoid a tax scenario. |
+| Objective 3 contracts and population | The approved ordinary micro-company surface remains implemented. Current-period CT-A evidence corrected depreciation polarity and CT600 whole-pound financial-year projection, then exposed that the model does not yet represent post-April-2023 marginal relief. | Add reviewed associated-company and augmented-profit inputs, financial-year rate selection and marginal-relief computation before accepting the current-period artifact. |
+| Phase 5.8 service artifact | CT2025 computation, FRC 2026 accounts and RIM 1.994 assets remain pinned. The refreshed computation passes the official CT2025 taxonomy in Arelle; local LTS reaches its calculator and reports the unsupported marginal-relief result. | Re-freeze and rerun local validation after the statutory tax calculation is implemented. Do not reuse the earlier synthetic 19% liability as filing evidence. |
 | Phase 5.9 Transaction Engine | Complete and reviewed for offline protocol fixtures, IRmark and durable conversation semantics. | Confirm current ETS class, credentials, endpoints and receipt behaviour immediately before the external test. |
 | Phase 5.10 local ETS boundary | Implemented as a Development-only, send-disabled WebHarness preflight. | Replace the obsolete recognition blocker with explicit test-readiness and per-attempt authorisation; add the durable ETS executor without opening production. |
 | Multi-tenant hosting | The shared production-shaped environment prerequisite is complete. | Exercise CT through the same tenant, identity, protected-content and operational boundaries rather than treating the WebHarness as the commercial product. |
@@ -95,12 +95,18 @@ retain its own identity and evidence boundary.
 
 ### CT-A — test-tenant baseline and contract reconciliation
 
-**Progress — 11 November 2026:** the read-only inventory is complete. The selected test tenant has
-reviewed company-tax/accounts profiles, a canonical unlocked active Category Tree and ready
-accounts/CT projections. Its retained company period is historical, so it cannot be used as the
-CT2025 baseline without recommissioning the accounting scenario. The protected inventory and
-execution instructions are retained outside the public repository. No HMRC request or submission
-capability was opened.
+**Progress — 12 November 2026:** a current-period tenant has now been recommissioned and prepared
+through Objective 3. Its accounting sources, statutory mappings and immutable artifact chain are
+healthy. The run corrected a depreciation bridge defect and a CT600 whole-pound financial-year
+projection defect. Official CT2025 taxonomy validation is clear, and local LTS proceeds through
+schema, business-rule and IRmark validation to the tax calculator. The calculator then correctly
+rejects the legacy flat 19% result because the current-period profit lies in the post-April-2023
+marginal-relief band. CT-A therefore remains open while current-law rate and marginal-relief inputs
+are added to the supported semantic model. Protected tenant values and evidence remain outside the
+public repository. No TPVS, ETS or production request was made.
+
+The calculation redesign, MIS/What-if preservation rules and verification programme are governed by
+the [marginal relief and real-time liability work plan](ct-marginal-relief.md).
 
 1. Inventory the selected tenant's company profile, accounts period, CT periods, UTR/test identity, Category Tree
    change-control state and statutory-source readiness without changing accounting data.

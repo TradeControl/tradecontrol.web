@@ -2936,6 +2936,7 @@ namespace TradeControl.Web.Data
             decimal priceRatio = 1.0000000m,
             decimal quantityRatio = 1.0000000m,
             decimal floatRatio = 0.25m,
+            bool enableDividends = true,
             DateTime? asOfDate = null
         )
         {
@@ -3077,10 +3078,16 @@ namespace TradeControl.Web.Data
                     command.Parameters.Add(p18);
 
                     SqlParameter p19 = command.CreateParameter();
-                    p19.DbType = DbType.Date;
-                    p19.ParameterName = "@AsOfDate";
-                    p19.Value = asOfDate.HasValue ? asOfDate.Value.Date : DBNull.Value;
+                    p19.DbType = DbType.Boolean;
+                    p19.ParameterName = "@EnableDividends";
+                    p19.Value = enableDividends;
                     command.Parameters.Add(p19);
+
+                    SqlParameter p20 = command.CreateParameter();
+                    p20.DbType = DbType.Date;
+                    p20.ParameterName = "@AsOfDate";
+                    p20.Value = asOfDate.HasValue ? asOfDate.Value.Date : DBNull.Value;
+                    command.Parameters.Add(p20);
 
                     await command.ExecuteNonQueryAsync();
                 }

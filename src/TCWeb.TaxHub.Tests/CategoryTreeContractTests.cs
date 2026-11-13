@@ -27,8 +27,14 @@ internal static class CategoryTreeContractTests
             && (short)NodeEnum.CategoryVersionEventType.RefreshOrRebase == 6,
             "Category Tree version-event enum values diverged from the SQL contract.");
         Assert((short)NodeEnum.CategoryRootType.NetProfit == 0
-            && (short)NodeEnum.CategoryRootType.Vat == 1,
+            && (short)NodeEnum.CategoryRootType.Vat == 1
+            && (short)NodeEnum.CategoryRootType.RelevantDistributions == 2,
             "Category Tree root-type enum values diverged from the SQL vocabulary.");
+        Assert((short)NodeEnum.ReportingType.IndirectTax == 0
+            && (short)NodeEnum.ReportingType.SelfEmploymentIncome == 1
+            && (short)NodeEnum.ReportingType.CompanyTax == 2
+            && (short)NodeEnum.ReportingType.StatutoryAccounts == 3,
+            "Reporting-type enum values diverged from the SQL vocabulary.");
         var canonical = CategoryTreeCanonicalizer.Create(source);
         Assert(canonical.ByteLength == 585,
             $"The Category Tree canonical byte length changed: {canonical.ByteLength}.");
@@ -49,6 +55,13 @@ internal static class CategoryTreeContractTests
         {
             CodeMap = [new("CC-SALES", "ROOT-1")]
         }).Sha256 != canonical.Sha256, "A Cash Code mapping change did not change the Category Tree digest.");
+        var withDistributions = source with
+        {
+            Roots = source.Roots.Append(new(
+                CategoryTreeCanonicalizer.RelevantDistributionsRoot, "ROOT-1")).ToArray()
+        };
+        Assert(CategoryTreeCanonicalizer.Create(withDistributions).Sha256 != canonical.Sha256,
+            "Adding the Relevant Distributions root did not change the Category Tree digest.");
         Assert(CategoryTreeCanonicalizer.Create(source with
         {
             Categories = source.Categories.Select(x => x.CategoryCode == "CAT-1"

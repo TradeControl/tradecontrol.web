@@ -510,6 +510,7 @@
                 discKey: cfgEl.dataset.disc,
                 isAdmin: cfgEl.dataset.canEditTree === "true",
                 canManageCashCodes: cfgEl.dataset.canManageCashCodes === "true",
+                supportsRelevantDistributions: cfgEl.dataset.supportsRelevantDistributions === "true",
                 versionId: cfgEl.dataset.versionId || "",
                 tenantId: cfgEl.dataset.tenantId || "tenant"
             });

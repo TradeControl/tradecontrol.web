@@ -269,6 +269,51 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                         .ToListAsync();
                     vm.IsProfitRoot = roots.Contains(0);
                     vm.IsVatRoot = roots.Contains(1);
+                    vm.IsRelevantDistributionsRoot = roots.Contains(2);
+                    vm.SupportsRelevantDistributions = await NodeContext.Cash_tbReportingProfiles
+                        .AsNoTracking()
+                        .AnyAsync(profile => profile.ReportingTypeCode
+                            == (short)NodeEnum.ReportingType.CompanyTax);
+
+                    if (vm.SupportsRelevantDistributions && effectiveParentKey != null)
+                    {
+                        var distributionsRoot = await NodeContext.Cash_tbCategoryRoots
+                            .AsNoTracking()
+                            .Where(root => root.VersionId == workspaceVersionId
+                                && root.RootTypeCode == (short)NodeEnum.CategoryRootType.RelevantDistributions)
+                            .Select(root => root.CategoryCode)
+                            .SingleOrDefaultAsync();
+                        if (!string.IsNullOrWhiteSpace(distributionsRoot))
+                        {
+                            var hierarchyEdges = await NodeContext.Cash_tbCategoryTotals
+                                .AsNoTracking()
+                                .Where(edge => edge.VersionId == workspaceVersionId)
+                                .Select(edge => new { edge.ParentCode, edge.ChildCode })
+                                .ToListAsync();
+                            var distributionsHierarchy = new HashSet<string>(StringComparer.Ordinal)
+                            {
+                                distributionsRoot
+                            };
+                            var pending = new Queue<string>();
+                            pending.Enqueue(distributionsRoot);
+                            while (pending.Count > 0)
+                            {
+                                var parent = pending.Dequeue();
+                                foreach (var child in hierarchyEdges
+                                    .Where(edge => edge.ParentCode == parent)
+                                    .Select(edge => edge.ChildCode))
+                                {
+                                    if (distributionsHierarchy.Add(child))
+                                        pending.Enqueue(child);
+                                }
+                            }
+
+                            vm.IsRelevantDistributionsHierarchy =
+                                distributionsHierarchy.Contains(effectiveParentKey)
+                                && hierarchyEdges.Any(edge => edge.ParentCode == effectiveParentKey
+                                    && edge.ChildCode == vm.CategoryCode);
+                        }
+                    }
 
                     var presentOnPrimary = Workspace.SelectedVersion.IsActive
                         && await NodeContext.Cash_vwCategoryPrimaryParents
@@ -405,6 +450,8 @@ namespace TradeControl.Web.Pages.Cash.CategoryTree
                     snapshot.ProfitRoot = root.Name;
                 else if (root.RootTypeCode == (short)NodeEnum.CategoryRootType.Vat)
                     snapshot.VatRoot = root.Name;
+                else if (root.RootTypeCode == (short)NodeEnum.CategoryRootType.RelevantDistributions)
+                    snapshot.RelevantDistributionsRoot = root.Name;
             }
 
             return new CategoryTreeVersionWorkspaceVm

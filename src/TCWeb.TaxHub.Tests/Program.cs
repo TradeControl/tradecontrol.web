@@ -1152,9 +1152,11 @@ Assert(dashboardComponent.Contains("A VAT filing needs confirmation", StringComp
     "The Dashboard no longer restores actionable filing-reconciliation guidance after reconnect or restart.");
 Assert(taxHubShellComponent.Contains("_initialWorkspacePending = true", StringComparison.Ordinal)
     && taxHubShellComponent.Contains("OnAfterRenderAsync", StringComparison.Ordinal)
+     && taxHubShellComponent.Contains("if (!_initialWorkspacePending)", StringComparison.Ordinal)
+     && !taxHubShellComponent.Contains("if (!firstRender || !_initialWorkspacePending)", StringComparison.Ordinal)
     && taxHubShellComponent.Contains("LoadDashboardAssuranceAsync", StringComparison.Ordinal)
     && taxHubShellComponent.Contains("_isWorkspaceLoading = false", StringComparison.Ordinal),
-    "The Tax Hub no longer paints its shell and ordinary Dashboard before loading assurance data.");
+    "The Tax Hub no longer loads a restored pending Dashboard independently of Blazor's first-render transition.");
 Assert(dashboardComponent.Contains("AccountsLoading", StringComparison.Ordinal)
     && dashboardComponent.Contains("Loading Accounts Validation", StringComparison.Ordinal)
     && dashboardComponent.Contains("PayloadAuditLoading", StringComparison.Ordinal)
@@ -1213,9 +1215,28 @@ Assert(alignmentSql.Contains("ValueSourceCode = N'SYNTHETIC'", StringComparison.
     "The disposable VAT alignment guard, historical profile coverage or authoritative calculation/configuration boundary changed.");
 var syntheticBootstrapSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
     "Stored Procedures", "proc_DatasetSyntheticMIS_Bootstrap.sql"));
+var optionsSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
+    "Tables", "tbOptions.sql"));
+var preDeploymentSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4",
+    "Script.PreDeployment.sql"));
+var nodeSettingsSource = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Data", "NodeSettings.cs"));
+var syntheticHorizonSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Tests",
+    "SyntheticDatasetCompletedYearHorizon.sql"));
+var commissioningReadinessSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Tests",
+    "NodeCommissioningReadiness.sql"));
 Assert(syntheticBootstrapSql.Contains("@ReserveAccount = ra.AccountName", StringComparison.Ordinal)
     && !syntheticBootstrapSql.Contains("@ReserveAccount = ra.AccountCode", StringComparison.Ordinal),
     "Synthetic reinitialisation maps the reserve account code into its display-name parameter.");
+Assert(!optionsSql.Contains("IsInitialised", StringComparison.Ordinal)
+    && nodeSettingsSource.Contains("public bool IsCommissioned", StringComparison.Ordinal)
+    && nodeSettingsSource.Contains("options.CategoryVersionId equals version.VersionId", StringComparison.Ordinal)
+    && preDeploymentSql.Contains("DROP PROCEDURE IF EXISTS App.proc_Initialised", StringComparison.Ordinal)
+    && syntheticHorizonSql.Contains("active commissioned Category Tree", StringComparison.Ordinal)
+    && commissioningReadinessSql.Contains("classified as commissioned", StringComparison.Ordinal)
+    && commissioningReadinessSql.Contains("was not classified as commissioned", StringComparison.Ordinal)
+    && commissioningReadinessSql.Contains("ROLLBACK TRANSACTION", StringComparison.Ordinal)
+    && !File.Exists(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App", "Stored Procedures", "proc_Initialised.sql")),
+    "Node commissioning readiness is no longer derived from the active Category Tree.");
 var syntheticBootstrapHandler = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices", "Execution",
     "SyntheticDatasetExecutionHandler.cs"));
 var eventLogSql = File.ReadAllText(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "App",
@@ -1875,6 +1896,26 @@ var createCashCodeModelSource = File.ReadAllText(Path.Combine(categoryTreeHandle
     "CreateCashCode.cshtml.cs"));
 var categoryDetailsCardSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
     "_CategoryDetailsCard.cshtml"));
+var categoryTreePrimaryRootSource = File.ReadAllText(Path.Combine(categoryTreeHandlerDirectory,
+    "CategoryTreeModel.PrimaryRoot.cs"));
+Assert(categoryTreePageSource.Contains("data-supports-relevant-distributions", StringComparison.Ordinal)
+    && categoryDetailsCardSource.Contains(
+        "Model.SupportsRelevantDistributions && !Model.IsRelevantDistributionsRoot",
+        StringComparison.Ordinal)
+    && categoryTreePrimaryRootSource.Contains(
+        "normalized == \"DISTRIBUTIONS\" && !await SupportsRelevantDistributionsAsync()",
+        StringComparison.Ordinal)
+    && categoryTreeScriptSource.Contains(
+        "isAdmin && supportsRelevantDistributions, \"setDistributionsRoot\"",
+        StringComparison.Ordinal),
+    "Sole-trader Category Trees can expose or assign the company-only Relevant Distributions root.");
+Assert(categoryTreeDetailsSource.Contains("distributionsHierarchy.Contains(effectiveParentKey)",
+        StringComparison.Ordinal)
+    && categoryDetailsCardSource.Contains("Model.IsRelevantDistributionsHierarchy",
+        StringComparison.Ordinal)
+    && categoryDetailsCardSource.Contains("Relevant Distributions Hierarchy",
+        StringComparison.Ordinal),
+    "Relevant Distributions hierarchy context does not receive a recursive root marker.");
 Assert(!categoryTreePageSource.Contains("data-active-version-id", StringComparison.Ordinal)
     && !categoryTreeScriptSource.Contains("openCashCodeCreateInActiveTree", StringComparison.Ordinal)
     && categoryTreeScriptSource.Contains("Cash Codes can only be created in the active Published tree",

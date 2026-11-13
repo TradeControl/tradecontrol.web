@@ -93,6 +93,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{9C1957
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "corporation-tax", "corporation-tax", "{7892DFA3-7F51-488E-A17D-A6486D34697F}"
 	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\tax\company\corporation-tax\ct-recognition-roadmap.md = ..\docs\projects\tax\company\corporation-tax\ct-recognition-roadmap.md
+		..\docs\projects\tax\company\corporation-tax\ct-marginal-relief.md = ..\docs\projects\tax\company\corporation-tax\ct-marginal-relief.md
 		..\docs\projects\tax\company\corporation-tax\phase-5.10-ct-external-test-local.md = ..\docs\projects\tax\company\corporation-tax\phase-5.10-ct-external-test-local.md
 		..\docs\projects\tax\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md = ..\docs\projects\tax\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md
 		..\docs\projects\tax\company\corporation-tax\phase-5.9-transaction-engine-fixture.md = ..\docs\projects\tax\company\corporation-tax\phase-5.9-transaction-engine-fixture.md
@@ -191,12 +193,31 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "category tree", "category tree", "{BCDB268F-D62F-4968-9DCE-2EA46805153C}"
 	ProjectSection(SolutionItems) = preProject
 		..\docs\projects\Category Tree\category-tree-change-control-workplan.md = ..\docs\projects\Category Tree\category-tree-change-control-workplan.md
+		..\docs\projects\Category Tree\category-tree-controlled-changeover-test.md = ..\docs\projects\Category Tree\category-tree-controlled-changeover-test.md
+		..\docs\projects\Category Tree\category-tree-hosted-statutory-changeover-test.md = ..\docs\projects\Category Tree\category-tree-hosted-statutory-changeover-test.md
 		..\docs\projects\Category Tree\category-tree-increment-1-inventory-and-contract.md = ..\docs\projects\Category Tree\category-tree-increment-1-inventory-and-contract.md
 		..\docs\projects\Category Tree\category-tree-schema-change-plan.md = ..\docs\projects\Category Tree\category-tree-schema-change-plan.md
 		..\docs\projects\Category Tree\category-tree-ui-change-plan.md = ..\docs\projects\Category Tree\category-tree-ui-change-plan.md
-		..\docs\projects\Category Tree\category-tree-controlled-changeover-test.md = ..\docs\projects\Category Tree\category-tree-controlled-changeover-test.md
-		..\docs\projects\Category Tree\category-tree-hosted-statutory-changeover-test.md = ..\docs\projects\Category Tree\category-tree-hosted-statutory-changeover-test.md
 		..\docs\projects\Category Tree\categorytree_test_script.md = ..\docs\projects\Category Tree\categorytree_test_script.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "approval", "approval", "{C3664377-BF68-4EA1-8766-C31CA93E03AD}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\tax\vat\approval\accessibility-review.md = ..\docs\projects\tax\vat\approval\accessibility-review.md
+		..\docs\projects\tax\vat\approval\customer-data-exit.md = ..\docs\projects\tax\vat\approval\customer-data-exit.md
+		..\docs\projects\tax\vat\approval\data-protection-security-controls-audit.md = ..\docs\projects\tax\vat\approval\data-protection-security-controls-audit.md
+		..\docs\projects\tax\vat\approval\hmrc-recognition-questionnaire-workflow.md = ..\docs\projects\tax\vat\approval\hmrc-recognition-questionnaire-workflow.md
+		..\docs\projects\tax\vat\approval\penetration-test-summary.md = ..\docs\projects\tax\vat\approval\penetration-test-summary.md
+		..\docs\projects\tax\vat\approval\README.md = ..\docs\projects\tax\vat\approval\README.md
+		..\docs\projects\tax\vat\approval\security-incident-response.md = ..\docs\projects\tax\vat\approval\security-incident-response.md
+		..\docs\projects\tax\vat\approval\vat-production-access-evidence.md = ..\docs\projects\tax\vat\approval\vat-production-access-evidence.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "legal", "legal", "{A380BC1C-E1D2-4353-95C4-E2FB2CCB0CA2}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\projects\tax\vat\approval\legal\README.md = ..\docs\projects\tax\vat\approval\legal\README.md
+		..\docs\projects\tax\vat\approval\legal\trade-control-privacy-statement-submission-draft.md = ..\docs\projects\tax\vat\approval\legal\trade-control-privacy-statement-submission-draft.md
+		..\docs\projects\tax\vat\approval\legal\trade-control-terms-and-conditions-submission-draft.md = ..\docs\projects\tax\vat\approval\legal\trade-control-terms-and-conditions-submission-draft.md
 	EndProjectSection
 EndProject
 Global
@@ -407,6 +428,8 @@ Global
 		{71C866CE-C248-47EC-B3B3-02985FC96E19} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
 		{5B65C1FF-73E7-4A46-8B6B-BCAAD510DC86} = {71C866CE-C248-47EC-B3B3-02985FC96E19}
 		{BCDB268F-D62F-4968-9DCE-2EA46805153C} = {BBA9A645-E4FD-4781-A324-76DE3A7E71BA}
+		{C3664377-BF68-4EA1-8766-C31CA93E03AD} = {E001F5DB-9EB5-4F34-B1CB-3F66EFC57005}
+		{A380BC1C-E1D2-4353-95C4-E2FB2CCB0CA2} = {C3664377-BF68-4EA1-8766-C31CA93E03AD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4A1C9EE1-3AEE-45A5-A647-FEFAE41BBA54}

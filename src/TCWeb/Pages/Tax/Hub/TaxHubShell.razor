@@ -370,7 +370,10 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || !_initialWorkspacePending)
+        // A persisted prerender snapshot can be restored after Blazor has already consumed the
+        // component's first-render transition. The pending flag, rather than firstRender, is the
+        // authoritative one-shot signal that the interactive workspace still needs loading.
+        if (!_initialWorkspacePending)
             return;
 
         _initialWorkspacePending = false;

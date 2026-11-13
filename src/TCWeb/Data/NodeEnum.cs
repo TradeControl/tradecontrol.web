@@ -15,7 +15,7 @@ namespace TradeControl.Web.Data
         public enum CategoryType { Nominal, CashTotal, Expression };
         public enum CategoryVersionStatus : short { Draft, Published, Submitted, Archived };
         public enum CategoryVersionEventType : short { Create, Edit, Validate, Publish, Submit, Archive, RefreshOrRebase };
-        public enum CategoryRootType : short { NetProfit, Vat };
+        public enum CategoryRootType : short { NetProfit, Vat, RelevantDistributions };
         public enum CashPolarity { Expense, Income, Neutral };
         public enum CashType { Trade, External, Money };
         public enum CashStatus { Forecast, Current, Closed, Archived };
@@ -25,6 +25,7 @@ namespace TradeControl.Web.Data
         public enum InvoiceType { SalesInvoice, CreditNote, PurchaseInvoice, DebitNote };
         public enum InvoiceStatus { Pending, Invoiced, PartiallyPaid, Paid };
         public enum TaxType { BusinessTax, VAT, NI, General, SoleTrader, QuarterlyReturn };
+        public enum ReportingType : short { IndirectTax, SelfEmploymentIncome, CompanyTax, StatutoryAccounts };
         public enum CashEntryType { Payment, Invoice, Order, Quote, BusinessTax, VAT, Forecast, Transfers };
         public enum EventType { IsError, IsWarning, IsInformation, IsPriceChange, IsReschedule, IsDelivered, IsStatusChange, IsPayment };
         public enum TransmitStatus { IsDisconnected, IsDeploy, IsUpdate, IsProcessed };

@@ -55,6 +55,7 @@ public static class CategoryTreeCanonicalizer
     public const string Profile = "trade-control-category-tree-v1";
     public const string NetProfitRoot = "NET_PROFIT";
     public const string VatRoot = "VAT";
+    public const string RelevantDistributionsRoot = "DISTRIBUTIONS";
 
     public static CategoryTreeCanonicalContent Create(CategoryTreeContentContract content)
     {
@@ -135,9 +136,10 @@ public static class CategoryTreeCanonicalizer
         foreach (var x in content.Categories) _ = Required(x.Category);
         foreach (var x in content.CodeMap) _ = Required(x.CategoryCode);
         foreach (var x in content.Roots) _ = Required(x.CategoryCode);
-        if (!content.Roots.Select(x => x.RootType).ToHashSet(StringComparer.Ordinal)
-                .SetEquals([NetProfitRoot, VatRoot]))
-            throw new ArgumentException("The v1 profile requires exactly NET_PROFIT and VAT roots.");
+        var rootTypes = content.Roots.Select(x => x.RootType).ToHashSet(StringComparer.Ordinal);
+        if (!rootTypes.IsSupersetOf([NetProfitRoot, VatRoot])
+            || !rootTypes.IsSubsetOf([NetProfitRoot, VatRoot, RelevantDistributionsRoot]))
+            throw new ArgumentException("The v1 profile requires NET_PROFIT and VAT roots and permits DISTRIBUTIONS.");
     }
 
     private static void NonEmpty<T>(IReadOnlyCollection<T>? values, string name)
@@ -153,5 +155,11 @@ public static class CategoryTreeCanonicalizer
     private static string Required(string? value) => string.IsNullOrWhiteSpace(value)
         ? throw new ArgumentException("A Category Tree value is required.") : Nfc(value);
     private static string Nfc(string value) => value.Normalize(NormalizationForm.FormC);
-    private static int RootOrder(string value) => value switch { NetProfitRoot => 0, VatRoot => 1, _ => 2 };
+    private static int RootOrder(string value) => value switch
+    {
+        NetProfitRoot => 0,
+        VatRoot => 1,
+        RelevantDistributionsRoot => 2,
+        _ => 3
+    };
 }
