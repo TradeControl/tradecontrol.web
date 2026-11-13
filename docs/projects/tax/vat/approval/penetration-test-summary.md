@@ -2,7 +2,7 @@
 
 [Document status](#document-status)
 
-Trade Control has completed a bounded security assessment of the pre-launch Azure Integration environment used for HMRC VAT accreditation. The environment uses the intended shared multi-tenant application topology, but contains synthetic businesses and HMRC sandbox identities rather than live customers or production filing authority.
+Trade Control has completed a bounded security assessment of the pre-launch Azure Integration environment used for HMRC VAT recognition. The environment uses the intended shared multi-tenant application topology, but contains synthetic businesses and HMRC sandbox identities rather than live customers or production filing authority.
 
 The initial assessment found no critical or high-severity vulnerability, tenant crossover, unauthorised statutory-state change, server HTTP 5xx response or persistent service-health failure. The first bounded remediation cycle corrected and retested the actionable configuration findings. A subsequent authenticated modern-client assessment identified vulnerable jQuery core 3.4.1; its deployed 3.7.1 remediation removed that alert. The remediation retest then identified a separate high-severity legacy validation-library dependency on the login path. That dependency was replaced with self-hosted version 1.22.1, deployed and closed by browser-behaviour verification and a clean affected-path passive retest.
 
@@ -30,7 +30,7 @@ This was a genuine internally managed penetration-testing exercise, not an exter
 
 ## Safety and exclusions
 
-Testing was confined to the named synthetic accreditation tenants and broker. Request rates, concurrency, duration and stop conditions were fixed in advance. No denial-of-service testing, uncontrolled fuzzing, AJAX spidering, HMRC production traffic, production credential use, live customer data, Azure control-plane attack or statutory write was authorised. The Client Spider was browser-based passive analysis, not a state-changing active scan.
+Testing was confined to the named synthetic recognition tenants and broker. Request rates, concurrency, duration and stop conditions were fixed in advance. No denial-of-service testing, uncontrolled fuzzing, AJAX spidering, HMRC production traffic, production credential use, live customer data, Azure control-plane attack or statutory write was authorised. The Client Spider was browser-based passive analysis, not a state-changing active scan.
 
 The assessment was deliberately bounded. It does not claim that every authenticated endpoint received unrestricted session replay or that Microsoft-managed infrastructure was penetration tested.
 
@@ -56,11 +56,11 @@ The validation correction was then tested independently without reopening the st
 
 ## Residual position
 
-The current content policy still permits legacy inline scripts and styles. Removing that permission would require a broader nonce/hash and user-interface refactor. No injection exploit or policy bypass was demonstrated, and the application retains its normal output encoding, request-integrity and source restrictions. Trade Control accepts this as a visible defence-in-depth limitation for the accreditation submission rather than presenting it as fully eliminated.
+The current content policy still permits legacy inline scripts and styles. Removing that permission would require a broader nonce/hash and user-interface refactor. No injection exploit or policy bypass was demonstrated, and the application retains its normal output encoding, request-integrity and source restrictions. Trade Control accepts this as a visible defence-in-depth limitation for the recognition request rather than presenting it as fully eliminated.
 
-The assessment supports the bounded security conclusion needed for pre-launch HMRC application review: no high or critical application finding remains open, and no tenant-isolation or statutory-workflow defect was demonstrated. The accepted inline-content-policy limitation remains visible, and comprehensive Azure diagnostic export remains a live-production monitoring and retention decision rather than a concealed accreditation-environment claim. The assessment is not a guarantee that the software is free from vulnerabilities, and relevant testing must be repeated when material identity, tenant-routing, OAuth or statutory-workflow boundaries change.
+The assessment supports the bounded security conclusion needed for pre-launch HMRC application review: no high or critical application finding remains open, and no tenant-isolation or statutory-workflow defect was demonstrated. The accepted inline-content-policy limitation remains visible, and comprehensive Azure diagnostic export remains a live-production monitoring and retention decision rather than a concealed recognition-environment claim. The assessment is not a guarantee that the software is free from vulnerabilities, and relevant testing must be repeated when material identity, tenant-routing, OAuth or statutory-workflow boundaries change.
 
-Accreditation remains a prerequisite to commercial launch. This assessment does not request production credentials, accept HMRC terms, authorise a production filing or represent the service as available to customers.
+HMRC recognition and production access remain prerequisites to commercial launch. This assessment does not request production credentials, accept HMRC terms, authorise a production filing or represent the service as available to customers.
 
 ## Related public evidence
 

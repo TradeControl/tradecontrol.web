@@ -2,7 +2,7 @@
 
 [Document status](#document-status)
 
-Trade Control has completed an internally managed audit of the technical and organisational security controls supporting the pre-launch HMRC VAT accreditation environment. The audit was informed by ICO security outcomes and was kept distinct from the application penetration test.
+Trade Control has completed an internally managed audit of the technical and organisational security controls supporting the pre-launch HMRC VAT recognition assessment environment. The audit was informed by ICO security outcomes and was kept distinct from the application penetration test.
 
 The reviewed environment uses synthetic tenants and HMRC sandbox identities on the intended shared Azure topology. It is not processing live customer VAT data, and this audit is not represented as legal certification or approval to begin live customer processing.
 
@@ -23,7 +23,7 @@ The reviewed environment uses synthetic tenants and HMRC sandbox identities on t
 
 ## Open operational decision
 
-Application telemetry, health checks, Azure platform metrics and alerts are present. Comprehensive export of every Azure resource diagnostic category has not been enabled for the accreditation environment.
+Application telemetry, health checks, Azure platform metrics and alerts are present. Comprehensive export of every Azure resource diagnostic category has not been enabled for the recognition assessment environment.
 
 That is a live-production design decision rather than evidence of an application exploit. Before live customer processing, Trade Control will select proportionate log categories, destinations, access controls and retention periods, taking account of incident usefulness, personal data, operational responsibility and Azure cost. Until then, the company does not claim complete resource-level log export or indefinite security-log retention.
 
@@ -33,7 +33,7 @@ The application penetration test separately records a legacy content-policy limi
 
 The reviewed controls provide a reasonable security basis for pre-launch HMRC application review. No high or critical application finding or tenant-isolation failure remains open. The accepted content-policy limitation and the production diagnostic-log decision remain explicit; neither is presented as full elimination or complete live-production monitoring.
 
-This conclusion is limited to the reviewed application and accreditation topology. Commercial launch remains prohibited until HMRC grants the necessary accreditation and the separate customer-processing gates are completed, including final contractual documents, verified processor/subprocessor arrangements, implemented retention/deletion procedures, production monitoring decisions and final operational adoption.
+This conclusion is limited to the reviewed application and recognition assessment topology. Commercial launch remains prohibited until HMRC grants recognition and production access and the separate customer-processing gates are completed, including final contractual documents, verified processor/subprocessor arrangements, implemented retention/deletion procedures, production monitoring decisions and final operational adoption.
 
 The audit does not request credentials, accept terms, authorise production filing or certify general UK GDPR compliance.
 

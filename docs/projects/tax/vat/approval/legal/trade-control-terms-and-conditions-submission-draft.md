@@ -121,7 +121,7 @@ The customer data-processing agreement and subprocessor schedule will form part 
 
 ## 10. Security and service operation
 
-The accreditation topology uses a multi-tenant application with a separate database and file namespace for each business. Requests are bound to an approved business hostname before the corresponding database is selected, and identities and roles are held within that business boundary. The intended commercial service will use this reviewed architectural pattern, subject to completion of the remaining accreditation, security and publication gates.
+The recognition assessment topology uses a multi-tenant application with a separate database and file namespace for each business. Requests are bound to an approved business hostname before the corresponding database is selected, and identities and roles are held within that business boundary. The intended commercial service will use this reviewed architectural pattern, subject to completion of the remaining HMRC recognition, security and publication gates.
 
 The underlying security mechanisms are implemented in publicly available open-source software.
 
@@ -131,7 +131,7 @@ Trade Control Ltd will maintain reasonable technical and organisational security
 
 Backups, operational logs and statutory evidence serve different purposes and will have separately published retention and recovery arrangements. Statutory evidence will use an approved immutable-retention policy; ordinary backup or soft-deletion controls will not be represented as immutable filing evidence.
 
-The application-scope tenant-isolation and penetration testing is complete, and the responsible individual has adopted the incident-response procedure for the accreditation process. Before these terms are offered to customers, complete the restore and disaster-recovery exercises, activate and test the final live contact route, complete production authority checks, approve retention and perform the operational access review. Insert final backup, recovery-point and recovery-time commitments only after those exercises establish what can be promised.
+The application-scope tenant-isolation and penetration testing is complete, and the responsible individual has adopted the incident-response procedure for the recognition process. Before these terms are offered to customers, complete the restore and disaster-recovery exercises, activate and test the final live contact route, complete production authority checks, approve retention and perform the operational access review. Insert final backup, recovery-point and recovery-time commitments only after those exercises establish what can be promised.
 
 ## 11. Data export and termination
 
@@ -185,9 +185,9 @@ Company number: 07569044
 
 These are pre-launch Terms and Conditions supplied in support of Trade Control's HMRC production-credentials application. They describe the intended managed hosting service; they are not yet offered customer terms, and the commercial service is not live.
 
-The `tradecontrol.co.uk` deployment is the sandbox and accreditation environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
+The `tradecontrol.co.uk` deployment is the sandbox recognition assessment environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
 
-This submission copy was derived from the corresponding draft in Trade Control's private internal hosting repository and reconciled against the completed public accreditation evidence on 30 October 2026. The public `tradecontrol.web` revision containing this document is the controlling submission source. Private source paths and revisions remain in the internal evidence record and are not presented as material HMRC must access.
+This submission copy was derived from the corresponding draft in Trade Control's private internal hosting repository and reconciled against the completed public recognition evidence on 30 October 2026. The public `tradecontrol.web` revision containing this document is the controlling submission source. Private source paths and revisions remain in the internal evidence record and are not presented as material HMRC must access.
 
 Before these terms are offered to customers, the final production composition and commercial terms must be checked against this document, every publication gate must be resolved and the text must receive legal approval.
 

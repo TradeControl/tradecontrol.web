@@ -56,7 +56,7 @@ Before commercial operation, Trade Control Ltd will document the applicable lega
 
 ## 5. Tenant isolation and security
 
-The submission topology uses a multi-tenant application in which each business has a separate database and a separate tenant file namespace. A request is associated with a business from its approved hostname before the application selects that business's database. User identities and roles are held inside the applicable business database. This is the architecture intended for the accredited commercial service; the current `tradecontrol.co.uk` deployment remains a sandbox and accreditation environment rather than a live customer service.
+The submission topology uses a multi-tenant application in which each business has a separate database and a separate tenant file namespace. A request is associated with a business from its approved hostname before the application selects that business's database. User identities and roles are held inside the applicable business database. This is the architecture intended for the commercial service, subject to HMRC recognition and production access; the current `tradecontrol.co.uk` deployment remains a sandbox recognition assessment environment rather than a live customer service.
 
 **Tenant security is embodied in the open-source code.**
 
@@ -70,11 +70,11 @@ The source code and the hosted configuration are separate security boundaries. P
 
 The corrective B3/B4 VAT discovery cases exercised brokered authorisation, populated reciprocal isolation, approval, sandbox filing boundaries, exact readback, fraud-header validation and restart recovery. B5/B6 then completed the clean repeatability run: independently verified VAT readiness, organisation OAuth, live fail-closed kill-switch refusal, restart recovery, explicit sandbox submission, HTTP `201` acceptance, obligation reconciliation, durable history and exact nine-box readback. B1/B2 remain reserved for the separate Corporation Tax journey. The earlier Business Node bootstrap-seeding correction remains a production-commissioning launch gate and does not invalidate the completed VAT evidence.
 
-The application-scope tenant-isolation review, penetration test and incident-response exercise are complete, and the responsible individual has adopted the incident-response procedure for the accreditation process. Before this becomes an effective customer statement, Trade Control must reconfirm the final production composition, complete the remaining recovery and authority checks, adopt the remaining live operational arrangements and close the contractual and retention gates identified in this draft.
+The application-scope tenant-isolation review, penetration test and incident-response exercise are complete, and the responsible individual has adopted the incident-response procedure for the recognition process. Before this becomes an effective customer statement, Trade Control must reconfirm the final production composition, complete the remaining recovery and authority checks, adopt the remaining live operational arrangements and close the contractual and retention gates identified in this draft.
 
 ## 6. Hosting and third-party services
 
-The accreditation topology uses Microsoft Azure infrastructure in the United Kingdom. The customer-facing web application and the dedicated HMRC credential broker run on Linux-based Azure App Service. The application, protected storage, cryptographic keys and operational monitoring are hosted in the UK West Azure region, with Azure SQL databases in the UK South region. Primary service data moves between those UK regions to provide the service, monitoring and recovery arrangements. Microsoft support, security and telemetry operations may involve processing outside those regions under the applicable contractual terms and international-transfer safeguards. The actual Azure subscription arrangements and final commercial deployment must be reconfirmed before this statement becomes effective.
+The recognition assessment topology uses Microsoft Azure infrastructure in the United Kingdom. The customer-facing web application and the dedicated HMRC credential broker run on Linux-based Azure App Service. The application, protected storage, cryptographic keys and operational monitoring are hosted in the UK West Azure region, with Azure SQL databases in the UK South region. Primary service data moves between those UK regions to provide the service, monitoring and recovery arrangements. Microsoft support, security and telemetry operations may involve processing outside those regions under the applicable contractual terms and international-transfer safeguards. The actual Azure subscription arrangements and final commercial deployment must be reconfirmed before this statement becomes effective.
 
 Microsoft Azure will provide the principal cloud infrastructure. Any transactional email, payment, support, monitoring or other provider that processes customer information will be identified in the final subprocessor schedule before the relevant service is enabled.
 
@@ -90,7 +90,7 @@ Trade Control uses the applicable HMRC authorisation mechanisms for supported se
 
 Customers authenticate with HMRC through HMRC's own authorisation process. Trade Control does not require customers to disclose their HMRC sign-in passwords.
 
-HMRC authorisation is implemented in the accreditation topology through a dedicated credential-broker service using a fixed registered callback address. The broker uses short-lived, single-use state to return each completed authorisation to the originating business and accepts returns only for approved tenant hostnames. Production authority remains disabled until the applicable accreditation and explicit human approval are complete.
+HMRC authorisation is implemented in the recognition assessment topology through a dedicated credential-broker service using a fixed registered callback address. The broker uses short-lived, single-use state to return each completed authorisation to the originating business and accepts returns only for approved tenant hostnames. Production authority remains disabled until HMRC recognition, production access and explicit human approval are complete.
 
 HMRC tokens will be encrypted at rest and separated from the customer-facing application. Access will be limited to the service identities and operations that require it. Disconnecting an HMRC connection will remove Trade Control's stored grant; it does not change the customer's HMRC sign-in credentials.
 
@@ -145,7 +145,7 @@ Trade Control welcomes responsible security research and contributions to its op
 
 Trade Control Ltd maintains a documented incident assessment, containment, recovery and notification procedure. Issues affecting personal or customer data are escalated immediately for HMRC notification through Developer Hub support, with the required details supplied within 72 hours. Personal-data breaches are assessed separately against the UK GDPR notification thresholds, including notification to the applicable customer controller without undue delay where Trade Control acts as processor.
 
-**Publication gate:** The security-assurance exercise and incident-response adoption are complete for the accreditation process. Before this becomes an effective customer statement, retain a working public reporting address, keep the private emergency contact current and link the reviewed vulnerability-disclosure procedure.
+**Publication gate:** The security-assurance exercise and incident-response adoption are complete for the recognition process. Before this becomes an effective customer statement, retain a working public reporting address, keep the private emergency contact current and link the reviewed vulnerability-disclosure procedure.
 
 ## 12. Changes to this statement
 
@@ -157,9 +157,9 @@ This statement will be reviewed as the managed service develops and updated when
 
 This is a pre-launch Privacy Statement supplied in support of Trade Control's HMRC production-credentials application. It describes the intended managed service; it is not yet an effective customer notice, and the commercial service is not live.
 
-The `tradecontrol.co.uk` deployment is the sandbox and accreditation environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
+The `tradecontrol.co.uk` deployment is the sandbox recognition assessment environment used to demonstrate the intended multi-tenant topology. Production filing authority is not enabled. Technical evidence and outstanding approval controls are recorded separately in the [VAT production-access evidence dossier](../vat-production-access-evidence.md).
 
-This submission copy was derived from the corresponding draft in Trade Control's private internal hosting repository and reconciled against the completed public accreditation evidence on 30 October 2026. The public `tradecontrol.web` revision containing this document is the controlling submission source. Private source paths and revisions remain in the internal evidence record and are not presented as material HMRC must access.
+This submission copy was derived from the corresponding draft in Trade Control's private internal hosting repository and reconciled against the completed public recognition evidence on 30 October 2026. The public `tradecontrol.web` revision containing this document is the controlling submission source. Private source paths and revisions remain in the internal evidence record and are not presented as material HMRC must access.
 
 Before publication as an effective customer notice, the final production composition must be checked against this statement, every publication gate must be resolved and the text must receive legal approval.
 
