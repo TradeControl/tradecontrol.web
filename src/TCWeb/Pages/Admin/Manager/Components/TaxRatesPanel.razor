@@ -85,6 +85,13 @@
         public decimal BusinessTaxRate { get; init; }
         public decimal BusinessTaxAdjustment { get; init; }
         public decimal VatAdjustment { get; init; }
+        public decimal? CorporationTaxMainRate { get; init; }
+        public decimal? CorporationTaxSmallProfitsRate { get; init; }
+        public decimal? CorporationTaxMarginalReliefFraction { get; init; }
+        public decimal? CorporationTaxLowerLimit { get; init; }
+        public decimal? CorporationTaxUpperLimit { get; init; }
+        public bool HasUkTaxParameters => CorporationTaxMainRate.HasValue;
+        public bool IsUkTaxParametersEstimated { get; init; }
         public bool IsPast { get; init; }
         public bool IsCurrent { get; init; }
         public bool IsFuture { get; init; }
@@ -123,6 +130,42 @@
         [Display(Name = "Business Tax Rate (%)")]
         public decimal RangeBusinessTaxRatePercent { get; set; }
 
+        public bool HasUkTaxParameters { get; set; }
+
+        [Display(Name = "Main rate (%)")]
+        public decimal CorporationTaxMainRatePercent { get; set; }
+
+        [Display(Name = "Small-profits rate (%)")]
+        public decimal CorporationTaxSmallProfitsRatePercent { get; set; }
+
+        [Display(Name = "Marginal-relief fraction (%)")]
+        public decimal CorporationTaxMarginalReliefFractionPercent { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "Lower limit")]
+        public decimal CorporationTaxLowerLimit { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "Upper limit")]
+        public decimal CorporationTaxUpperLimit { get; set; }
+
+        [Display(Name = "Main rate (%)")]
+        public decimal RangeCorporationTaxMainRatePercent { get; set; }
+
+        [Display(Name = "Small-profits rate (%)")]
+        public decimal RangeCorporationTaxSmallProfitsRatePercent { get; set; }
+
+        [Display(Name = "Marginal-relief fraction (%)")]
+        public decimal RangeCorporationTaxMarginalReliefFractionPercent { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "Lower limit")]
+        public decimal RangeCorporationTaxLowerLimit { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "Upper limit")]
+        public decimal RangeCorporationTaxUpperLimit { get; set; }
+
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             if (VatAdjustment != 0 && string.IsNullOrWhiteSpace(VatAdjustmentNote))
@@ -138,6 +181,51 @@
                     "Please explain the business tax adjustment.",
                     [nameof(BusinessTaxAdjustmentNote)]);
             }
+
+            if (HasUkTaxParameters)
+            {
+                foreach (var result in ValidateUkParameters(
+                    CorporationTaxMainRatePercent,
+                    CorporationTaxSmallProfitsRatePercent,
+                    CorporationTaxMarginalReliefFractionPercent,
+                    CorporationTaxLowerLimit,
+                    CorporationTaxUpperLimit,
+                    string.Empty))
+                    yield return result;
+
+                foreach (var result in ValidateUkParameters(
+                    RangeCorporationTaxMainRatePercent,
+                    RangeCorporationTaxSmallProfitsRatePercent,
+                    RangeCorporationTaxMarginalReliefFractionPercent,
+                    RangeCorporationTaxLowerLimit,
+                    RangeCorporationTaxUpperLimit,
+                    "Range"))
+                    yield return result;
+            }
+        }
+
+        private static IEnumerable<ValidationResult> ValidateUkParameters(
+            decimal mainRate,
+            decimal smallProfitsRate,
+            decimal marginalReliefFraction,
+            decimal lowerLimit,
+            decimal upperLimit,
+            string propertyPrefix)
+        {
+            if (smallProfitsRate < 0 || smallProfitsRate > mainRate || mainRate > 100)
+                yield return new ValidationResult(
+                    "The small-profits rate must be between zero and the main rate, and the main rate cannot exceed 100%.",
+                    [$"{propertyPrefix}CorporationTaxMainRatePercent", $"{propertyPrefix}CorporationTaxSmallProfitsRatePercent"]);
+
+            if (marginalReliefFraction < 0 || marginalReliefFraction > 100)
+                yield return new ValidationResult(
+                    "The marginal-relief fraction must be between 0% and 100%.",
+                    [$"{propertyPrefix}CorporationTaxMarginalReliefFractionPercent"]);
+
+            if (lowerLimit <= 0 || upperLimit <= lowerLimit)
+                yield return new ValidationResult(
+                    "The annual upper limit must be greater than the positive annual lower limit.",
+                    [$"{propertyPrefix}CorporationTaxLowerLimit", $"{propertyPrefix}CorporationTaxUpperLimit"]);
         }
     }
 
@@ -149,6 +237,9 @@
     private short? _yearFilter;
     private bool _isAdministrator;
     private bool _isManager;
+    private bool _hasUkTaxSchema;
+    private bool _requiresUkTaxParameters;
+    private DateTime? _ukTaxPublishedThrough;
     private bool _isLoading;
     private string? _actionMessage;
     private string _actionTone = "info";
@@ -158,6 +249,16 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadAccessStateAsync();
+        _hasUkTaxSchema = await NodeContext.YearPeriodTaxUkAvailable();
+        if (_hasUkTaxSchema)
+        {
+            _ukTaxPublishedThrough = await NodeContext.YearPeriodTaxUkPublishedThrough();
+            var nodeSettings = new NodeSettings(NodeContext);
+            _requiresUkTaxParameters = await nodeSettings.BizTaxType() == NodeEnum.TaxType.BusinessTax
+                && await NodeContext.App_tbOptions
+                    .AsNoTracking()
+                    .AnyAsync(option => option.JurisdictionCode == "UK");
+        }
         await LoadYearsAsync(false);
     }
 
@@ -201,23 +302,60 @@
             if (_yearFilter.HasValue)
                 periodsQuery = periodsQuery.Where(item => item.YearNumber == _yearFilter.Value);
 
-            var periods = await periodsQuery
-                .OrderByDescending(item => item.YearNumber)
-                .ThenBy(item => item.StartOn)
-                .Select(item => new PeriodRow
-                {
-                    YearNumber = item.YearNumber,
-                    MonthNumber = item.MonthNumber,
-                    StartOn = item.StartOn,
-                    CashStatusCode = item.CashStatusCode,
-                    BusinessTaxRate = item.BusinessTaxRate,
-                    BusinessTaxAdjustment = item.BusinessTaxAdjustment,
-                    VatAdjustment = item.VatAdjustment,
-                    IsPast = item.StartOn.Date < today,
-                    IsCurrent = item.StartOn.Month == today.Month && item.StartOn.Year == today.Year,
-                    IsFuture = item.StartOn.Date > today
-                })
-                .ToListAsync();
+            List<PeriodRow> periods;
+
+            if (_hasUkTaxSchema)
+            {
+                periods = await (
+                    from period in periodsQuery
+                    join ukTax in NodeContext.App_tbYearPeriodTaxUks.AsNoTracking()
+                        on new { period.YearNumber, period.StartOn }
+                        equals new { ukTax.YearNumber, ukTax.StartOn }
+                        into ukTaxes
+                    from ukTax in ukTaxes.DefaultIfEmpty()
+                    orderby period.YearNumber descending, period.StartOn
+                    select new PeriodRow
+                    {
+                        YearNumber = period.YearNumber,
+                        MonthNumber = period.MonthNumber,
+                        StartOn = period.StartOn,
+                        CashStatusCode = period.CashStatusCode,
+                        BusinessTaxRate = period.BusinessTaxRate,
+                        BusinessTaxAdjustment = period.BusinessTaxAdjustment,
+                        VatAdjustment = period.VatAdjustment,
+                        CorporationTaxMainRate = ukTax == null ? null : ukTax.CorporationTaxMainRate,
+                        CorporationTaxSmallProfitsRate = ukTax == null ? null : ukTax.CorporationTaxSmallProfitsRate,
+                        CorporationTaxMarginalReliefFraction = ukTax == null ? null : ukTax.CorporationTaxMarginalReliefFraction,
+                        CorporationTaxLowerLimit = ukTax == null ? null : ukTax.CorporationTaxLowerLimit,
+                        CorporationTaxUpperLimit = ukTax == null ? null : ukTax.CorporationTaxUpperLimit,
+                        IsUkTaxParametersEstimated = _ukTaxPublishedThrough.HasValue
+                            && period.StartOn > _ukTaxPublishedThrough.Value,
+                        IsPast = period.StartOn.Date < today,
+                        IsCurrent = period.StartOn.Month == today.Month && period.StartOn.Year == today.Year,
+                        IsFuture = period.StartOn.Date > today
+                    })
+                    .ToListAsync();
+            }
+            else
+            {
+                periods = await periodsQuery
+                    .OrderByDescending(period => period.YearNumber)
+                    .ThenBy(period => period.StartOn)
+                    .Select(period => new PeriodRow
+                    {
+                        YearNumber = period.YearNumber,
+                        MonthNumber = period.MonthNumber,
+                        StartOn = period.StartOn,
+                        CashStatusCode = period.CashStatusCode,
+                        BusinessTaxRate = period.BusinessTaxRate,
+                        BusinessTaxAdjustment = period.BusinessTaxAdjustment,
+                        VatAdjustment = period.VatAdjustment,
+                        IsPast = period.StartOn.Date < today,
+                        IsCurrent = period.StartOn.Month == today.Month && period.StartOn.Year == today.Year,
+                        IsFuture = period.StartOn.Date > today
+                    })
+                    .ToListAsync();
+            }
 
             var byYear = periods
                 .GroupBy(item => item.YearNumber)
@@ -338,6 +476,13 @@
         var monthEnd = new DateTime(startOn.Year, startOn.Month, 1).AddMonths(1).AddDays(-1);
         var vatAdjustment = await NodeContext.TaxAdjustmentGet(startOn, NodeEnum.TaxType.VAT);
         var businessTaxAdjustment = await NodeContext.TaxAdjustmentGet(startOn, bizTaxType);
+        App_tbYearPeriodTaxUk? ukTax = null;
+        if (_hasUkTaxSchema)
+        {
+            ukTax = await NodeContext.App_tbYearPeriodTaxUks
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.YearNumber == yearNumber && item.StartOn == startOn);
+        }
 
         _editor = new PeriodEditorModel
         {
@@ -350,7 +495,18 @@
             MonthlyBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m,
             RangeStartOn = startOn,
             RangeEndOn = monthEnd,
-            RangeBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m
+            RangeBusinessTaxRatePercent = yearPeriod.BusinessTaxRate * 100m,
+            HasUkTaxParameters = ukTax is not null,
+            CorporationTaxMainRatePercent = (ukTax?.CorporationTaxMainRate ?? 0) * 100m,
+            CorporationTaxSmallProfitsRatePercent = (ukTax?.CorporationTaxSmallProfitsRate ?? 0) * 100m,
+            CorporationTaxMarginalReliefFractionPercent = (ukTax?.CorporationTaxMarginalReliefFraction ?? 0) * 100m,
+            CorporationTaxLowerLimit = ukTax?.CorporationTaxLowerLimit ?? 0,
+            CorporationTaxUpperLimit = ukTax?.CorporationTaxUpperLimit ?? 0,
+            RangeCorporationTaxMainRatePercent = (ukTax?.CorporationTaxMainRate ?? 0) * 100m,
+            RangeCorporationTaxSmallProfitsRatePercent = (ukTax?.CorporationTaxSmallProfitsRate ?? 0) * 100m,
+            RangeCorporationTaxMarginalReliefFractionPercent = (ukTax?.CorporationTaxMarginalReliefFraction ?? 0) * 100m,
+            RangeCorporationTaxLowerLimit = ukTax?.CorporationTaxLowerLimit ?? 0,
+            RangeCorporationTaxUpperLimit = ukTax?.CorporationTaxUpperLimit ?? 0
         };
     }
 
@@ -449,6 +605,72 @@
         }
     }
 
+    private async Task SaveMonthlyUkTaxParametersAsync()
+    {
+        try
+        {
+            var saved = await NodeContext.YearPeriodTaxUkSet(
+                _editor.StartOn,
+                _editor.StartOn,
+                _editor.CorporationTaxMainRatePercent / 100m,
+                _editor.CorporationTaxSmallProfitsRatePercent / 100m,
+                _editor.CorporationTaxMarginalReliefFractionPercent / 100m,
+                _editor.CorporationTaxLowerLimit,
+                _editor.CorporationTaxUpperLimit);
+
+            if (!saved)
+            {
+                _errorMessage = "Unable to save the UK Corporation Tax parameters.";
+                return;
+            }
+
+            _actionTone = "success";
+            _actionMessage = "UK Corporation Tax parameters saved for this month.";
+            await LoadYearsAsync(true);
+
+            if (IsMobile)
+                _mobileView = MobileView.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the UK Corporation Tax parameters.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
+    private async Task SaveRangeUkTaxParametersAsync()
+    {
+        try
+        {
+            var saved = await NodeContext.YearPeriodTaxUkSet(
+                _editor.RangeStartOn,
+                _editor.RangeEndOn,
+                _editor.RangeCorporationTaxMainRatePercent / 100m,
+                _editor.RangeCorporationTaxSmallProfitsRatePercent / 100m,
+                _editor.RangeCorporationTaxMarginalReliefFractionPercent / 100m,
+                _editor.RangeCorporationTaxLowerLimit,
+                _editor.RangeCorporationTaxUpperLimit);
+
+            if (!saved)
+            {
+                _errorMessage = "Unable to save the UK Corporation Tax parameter range.";
+                return;
+            }
+
+            _actionTone = "success";
+            _actionMessage = "UK Corporation Tax parameter range saved.";
+            await LoadYearsAsync(true);
+
+            if (IsMobile)
+                _mobileView = MobileView.List;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Unable to save the UK Corporation Tax parameter range.";
+            await NodeContext.ErrorLog(ex);
+        }
+    }
+
     private string GetBadgeClass(PeriodRow period) =>
         period.IsCurrent ? "text-bg-primary" :
         period.IsFuture ? "text-bg-secondary" :
@@ -536,7 +758,18 @@
                                                         <span class="badge @GetBadgeClass(period)">@period.MonthNumber</span>
                                                     </div>
                                                     <div class="small text-muted">
-                                                        CT rate: @period.BusinessTaxRate.ToString("P")
+                                                        @if (period.HasUkTaxParameters)
+                                                        {
+                                                            <span>UK CT@(period.IsUkTaxParametersEstimated ? " accrual" : string.Empty): @period.CorporationTaxSmallProfitsRate!.Value.ToString("P")–@period.CorporationTaxMainRate!.Value.ToString("P")</span>
+                                                        }
+                                                        else if (_requiresUkTaxParameters)
+                                                        {
+                                                            <span class="text-danger">UK CT: parameters not provisioned</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>Business tax: @period.BusinessTaxRate.ToString("P")</span>
+                                                        }
                                                     </div>
                                                     <div class="small text-muted">
                                                         VAT adj: @period.VatAdjustment
@@ -553,6 +786,83 @@
                 }
             </div>
         }
+    </div>;
+
+    private RenderFragment RenderUkParameterFields(bool range) => @<div class="row g-2">
+        <div class="col-12 col-md-4 mb-3">
+            <label class="form-label" for="@(range ? "rangeCtMainRate" : "ctMainRate")">Main rate</label>
+            <div class="input-group">
+                @if (range)
+                {
+                    <InputNumber id="rangeCtMainRate" @bind-Value="_editor.RangeCorporationTaxMainRatePercent" class="form-control" />
+                }
+                else
+                {
+                    <InputNumber id="ctMainRate" @bind-Value="_editor.CorporationTaxMainRatePercent" class="form-control" />
+                }
+                <span class="input-group-text">%</span>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 mb-3">
+            <label class="form-label" for="@(range ? "rangeCtSmallRate" : "ctSmallRate")">Small-profits rate</label>
+            <div class="input-group">
+                @if (range)
+                {
+                    <InputNumber id="rangeCtSmallRate" @bind-Value="_editor.RangeCorporationTaxSmallProfitsRatePercent" class="form-control" />
+                }
+                else
+                {
+                    <InputNumber id="ctSmallRate" @bind-Value="_editor.CorporationTaxSmallProfitsRatePercent" class="form-control" />
+                }
+                <span class="input-group-text">%</span>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 mb-3">
+            <label class="form-label" for="@(range ? "rangeCtFraction" : "ctFraction")">Marginal-relief fraction</label>
+            <div class="input-group">
+                @if (range)
+                {
+                    <InputNumber id="rangeCtFraction" @bind-Value="_editor.RangeCorporationTaxMarginalReliefFractionPercent" class="form-control" />
+                }
+                else
+                {
+                    <InputNumber id="ctFraction" @bind-Value="_editor.CorporationTaxMarginalReliefFractionPercent" class="form-control" />
+                }
+                <span class="input-group-text">%</span>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 mb-3">
+            <label class="form-label" for="@(range ? "rangeCtLowerLimit" : "ctLowerLimit")">Annual lower limit</label>
+            <div class="input-group">
+                <span class="input-group-text">£</span>
+                @if (range)
+                {
+                    <InputNumber id="rangeCtLowerLimit" @bind-Value="_editor.RangeCorporationTaxLowerLimit" class="form-control" />
+                }
+                else
+                {
+                    <InputNumber id="ctLowerLimit" @bind-Value="_editor.CorporationTaxLowerLimit" class="form-control" />
+                }
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 mb-3">
+            <label class="form-label" for="@(range ? "rangeCtUpperLimit" : "ctUpperLimit")">Annual upper limit</label>
+            <div class="input-group">
+                <span class="input-group-text">£</span>
+                @if (range)
+                {
+                    <InputNumber id="rangeCtUpperLimit" @bind-Value="_editor.RangeCorporationTaxUpperLimit" class="form-control" />
+                }
+                else
+                {
+                    <InputNumber id="ctUpperLimit" @bind-Value="_editor.CorporationTaxUpperLimit" class="form-control" />
+                }
+            </div>
+        </div>
     </div>;
 
     private RenderFragment RenderPeriodPane(bool showBackToList) => @<div class="d-flex flex-column flex-grow-1" style="min-height:0; overflow:hidden;">
@@ -581,6 +891,13 @@
             </div>
 
             <div class="flex-grow-1 overflow-auto px-3 py-3 d-flex flex-column gap-3">
+                @if (_selectedPeriod.IsUkTaxParametersEstimated)
+                {
+                    <div class="alert alert-info mb-0" role="alert">
+                        This tax accrual uses the latest published UK Corporation Tax parameters provisionally. It supports forward planning, but statutory filing readiness requires an accepted non-provisional financial-year entry.
+                    </div>
+                }
+
                 @if (_isAdministrator || _isManager)
                 {
                     <div class="border rounded bg-light">
@@ -629,43 +946,82 @@
                         </div>
                     </div>
 
-                    <div class="border rounded bg-light">
-                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Tax Rate (Monthly)</div>
-                        <div class="p-3 bg-white">
-                            <EditForm Model="@_editor" OnValidSubmit="SaveMonthlyRateAsync">
-                                <DataAnnotationsValidator />
-                                <ValidationSummary />
+                    @if (!_requiresUkTaxParameters)
+                    {
+                        <div class="border rounded bg-light">
+                            <div class="px-3 py-2 border-bottom fw-semibold bg-white">Tax Rate (Monthly)</div>
+                            <div class="p-3 bg-white">
+                                <EditForm Model="@_editor" OnValidSubmit="SaveMonthlyRateAsync">
+                                    <DataAnnotationsValidator />
+                                    <ValidationSummary />
 
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-12 col-md-6 mb-3">
-                                        <label class="form-label" for="monthlyBusinessTaxRate">Business Tax Rate (%)</label>
-                                        <div class="input-group">
-                                            <InputNumber id="monthlyBusinessTaxRate"
-                                                         @bind-Value="_editor.MonthlyBusinessTaxRatePercent"
-                                                         class="form-control" />
-                                            <span class="input-group-text">%</span>
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-12 col-md-6 mb-3">
+                                            <label class="form-label" for="monthlyBusinessTaxRate">Business Tax Rate (%)</label>
+                                            <div class="input-group">
+                                                <InputNumber id="monthlyBusinessTaxRate"
+                                                             @bind-Value="_editor.MonthlyBusinessTaxRatePercent"
+                                                             class="form-control" />
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 col-md-6 mb-3">
+                                            <button type="submit" class="btn btn-primary">Save</button>
                                         </div>
                                     </div>
 
-                                    <div class="col-12 col-md-6 mb-3">
-                                        <button type="submit" class="btn btn-primary">Save</button>
+                                    <div class="form-text text-muted mt-2">
+                                        This sets the generic business-tax rate for this month only.
                                     </div>
-                                </div>
-
-                                <div class="form-text text-muted mt-2">
-                                    This sets the rate for this month only.
-                                </div>
-                            </EditForm>
+                                </EditForm>
+                            </div>
                         </div>
-                    </div>
+                    }
+                    else if (_isAdministrator)
+                    {
+                        @if (_editor.HasUkTaxParameters)
+                        {
+                            <div class="border rounded bg-light">
+                                <div class="px-3 py-2 border-bottom fw-semibold bg-white">UK Corporation Tax Parameters (Monthly)</div>
+                                <div class="p-3 bg-white">
+                                    <EditForm Model="@_editor" OnValidSubmit="SaveMonthlyUkTaxParametersAsync">
+                                        <DataAnnotationsValidator />
+                                        <ValidationSummary />
+
+                                        @RenderUkParameterFields(false)
+
+                                        <button type="submit" class="btn btn-primary">Save</button>
+                                        <div class="form-text text-muted mt-2">
+                                            These are the statutory parameters applicable to this period. Limits are annual base limits; the calculation adjusts them for period length and associated companies.
+                                        </div>
+                                    </EditForm>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mb-0" role="alert">
+                                No reviewed UK Corporation Tax parameters cover this period. A build-controlled statutory seed must be supplied before it can be used for CT calculation.
+                            </div>
+                        }
+                    }
                 }
 
                 @if (_isAdministrator)
                 {
-                    <div class="border rounded bg-light">
-                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">Tax Rate (Date Range)</div>
+                    @if (_requiresUkTaxParameters && !_editor.HasUkTaxParameters)
+                    {
+                        <div class="alert alert-warning mb-0" role="alert">
+                            Date-range editing is unavailable because the selected UK period has no reviewed statutory parameter record.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="border rounded bg-light">
+                        <div class="px-3 py-2 border-bottom fw-semibold bg-white">@(_editor.HasUkTaxParameters ? "UK Corporation Tax Parameters (Date Range)" : "Tax Rate (Date Range)")</div>
                         <div class="p-3 bg-white">
-                            <EditForm Model="@_editor" OnValidSubmit="SaveRangeRateAsync">
+                            <EditForm Model="@_editor" OnValidSubmit="@(_editor.HasUkTaxParameters ? SaveRangeUkTaxParametersAsync : SaveRangeRateAsync)">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
 
@@ -684,27 +1040,45 @@
                                                    class="form-control" />
                                     </div>
 
-                                    <div class="col-12 col-md-4 mb-3">
-                                        <label class="form-label" for="rangeBusinessTaxRate">Business Tax Rate (%)</label>
-                                        <div class="input-group">
-                                            <InputNumber id="rangeBusinessTaxRate"
-                                                         @bind-Value="_editor.RangeBusinessTaxRatePercent"
-                                                         class="form-control" />
-                                            <span class="input-group-text">%</span>
+                                </div>
+
+                                @if (_editor.HasUkTaxParameters)
+                                {
+                                    @RenderUkParameterFields(true)
+                                }
+                                else
+                                {
+                                    <div class="row g-2">
+                                        <div class="col-12 col-md-4 mb-3">
+                                            <label class="form-label" for="rangeBusinessTaxRate">Business Tax Rate (%)</label>
+                                            <div class="input-group">
+                                                <InputNumber id="rangeBusinessTaxRate"
+                                                             @bind-Value="_editor.RangeBusinessTaxRatePercent"
+                                                             class="form-control" />
+                                                <span class="input-group-text">%</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                }
 
                                 <div class="d-flex flex-wrap gap-2">
                                     <button type="submit" class="btn btn-primary">Save</button>
                                 </div>
 
                                 <div class="form-text text-muted mt-2">
-                                    Use this to apply a corporation tax rate across multiple months.
+                                    @if (_editor.HasUkTaxParameters)
+                                    {
+                                        <span>This updates existing UK period extensions in the inclusive date range as one operation.</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Use this to apply a generic business-tax rate across multiple months.</span>
+                                    }
                                 </div>
                             </EditForm>
                         </div>
-                    </div>
+                        </div>
+                    }
                 }
             </div>
         }

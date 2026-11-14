@@ -260,10 +260,12 @@ exposed by Azure managed identity and the populated multi-year dataset.
 
 ### MR-2 — add received dividends to the synthetic dataset
 
-**Status:** In progress. Source now provides an independently switchable deterministic positive-D
-generator for companies, while `@EnableDividends = 0` retains the permanent zero-D control. The new
-acceptance fixture reconciles posted non-VAT `CC-DIVRC` receipts to D and proves `A = N + D`. SQL and
-web builds pass; deployment and positive-D execution remain subject to human review.
+**Status:** Complete. The independently switchable generator now produces one deterministic,
+non-VAT `CC-DIVRC` receipt for each closed company year, while `@EnableDividends = 0` retains the
+permanent zero-D control. A fresh retained-company bootstrap produced £4,992 D for 2024-25 and
+£5,350 D for 2025-26. The acceptance fixture reconciles every posted receipt to D, deducts the exempt
+distribution from accounting profit to obtain N, proves `A = N + D`, and verifies that D changes the
+marginal-relief result without entering VAT.
 
 1. Add an external investee/payer and deterministic incoming dividend payments to the synthetic MIS
    dataset using the received-dividend cash code and a non-VAT treatment.
@@ -275,45 +277,111 @@ web builds pass; deployment and positive-D execution remain subject to human rev
    marginal-relief result without corrupting accounting profit or VAT.
 5. Retain a zero-D synthetic case as a permanent regression alongside the positive-D case.
 
-**Gate:** a fresh synthetic bootstrap produces deterministic zero-D and positive-D evidence, with
-accounting profit, N, D and A independently reconcilable.
+**Gate:** passed. Both zero-D and positive-D modes are deterministic and independently reconcilable.
+For 2025-26 the retained test company produced accounting result £216,844.79428, N £211,494.79428,
+D £5,350 and A £216,844.79428; the kernel returned £485.05800 marginal relief and £52,388.64057
+Corporation Tax chargeable. All Category Tree, company-projection and relevant-distributions fixtures
+passed after the positive-D bootstrap.
 
 ### MR-3 — replace the flat-rate actual CT statement calculation
 
-**Status:** Not started. `Cash.vwTaxBizStatement` and its upstream computation still use the legacy
-fixed-rate result.
+**Status:** Complete. MR-2 established the reconciled positive-D input and kernel control. The first
+MR-3 increment introduced
+optional UK statutory parameters per financial period. The second adds
+`Cash.vwTaxCorpLiabilityUK` alongside the live statement: it derives N and D, applies the existing
+loss policy, invokes the marginal-relief kernel and separates tax-accrual readiness from filing
+readiness. The positive-D retained-company fixture reconciles through this view and the rollback-only
+readiness fixture passes. Removing the transitional dependency on the legacy recursive annual view
+reduced the projection from 12,934 to 8,916 logical reads while preserving the legacy two-scan
+accounting pattern. This remains 16.1% above the 7,681-read legacy control because D classification,
+UK period parameters and reviewed profile facts are additional statutory work; the measured 9 ms
+warm server-time difference was accepted for the current scale.
 
-1. Add a set-based UK period-liability projection that resolves the reviewed jurisdiction/profile
-facts once, obtains N and D from the active Category Tree, and invokes the kernel.
-2. Make `Cash.vwTaxBizComputationByYear`, `Cash.fnTaxBizComputation` and
+The third increment has cut the actual annual computation and due-date statement over on the retained
+company. Provider selection is performed once, so SQL Server does not execute both the UK and legacy
+calculations. The complete flat-rate path and `App.tbYearPeriod.BusinessTaxRate` remain as an explicit
+higher-volume control. The selected liabilities, historic payment, running balance, period function
+and unsupported-profile fail-closed behaviour reconcile under the rollback fixture. Fixed-rate
+Project/What-if accruals remain unchanged and belong to MR-4.
+
+1. Add the optional one-to-one `App.tbYearPeriodTaxUk` extension for UK company periods. Store the
+   main rate, small-profits rate, marginal-relief fraction and annual base limits there, expose them
+   through the existing period administration interface, and update a month or range atomically.
+   Other jurisdictions and sole traders must not acquire placeholder UK rows. Keep
+   `App.tbYearPeriod.BusinessTaxRate` as the legacy path until statement cutover. Provision rows only
+   from the explicit, effective-dated `App.vwYearPeriodTaxUkSeed` ledger pinned to the SQL release;
+   routine period generation must contain no anonymous statutory defaults. Published financial years
+   use their explicit ledger entry. Later tax-accrual periods carry the latest published entry forward
+   visibly as a provisional accrual basis. Forward financial years may remain explicitly provisional even when an
+   official planning rate is published; statutory filing readiness must require an accepted,
+   non-provisional financial-year entry.
+2. Carry an explicit statutory-parameter status into the liability result. A provisional rate is a
+   valid basis for a forward tax accrual, but must emit `CT-RATE-PROVISIONAL` and make statutory
+   artifact/submission readiness false. Add regression coverage proving that the accrual remains
+   available while filing cannot proceed; zero, a generic legacy rate or a user adjustment must not
+   bypass the constraint.
+3. Add a set-based UK period-liability projection that resolves the reviewed jurisdiction/profile
+   facts once, obtains N and D from the active Category Tree, and invokes the kernel.
+4. Make `Cash.vwTaxBizComputationByYear`, `Cash.fnTaxBizComputation` and
    `Cash.vwTaxBizStatement` consume the reviewed liability result rather than N ×
-   `App.tbYearPeriod.BusinessTaxRate`.
-3. Preserve existing due dates, business-tax adjustments, payments and running balances while exposing
-   the kernel branch, limits, relief and diagnostic provenance for audit.
-4. Replace fixed-rate accruals with cumulative liability deltas and prove that the sum of deltas equals
-   the final period liability.
-5. Reconcile the synthetic company's tax expense, tax-control balance and Company Statement before and
-   after the change.
+   `App.tbYearPeriod.BusinessTaxRate`. **Implemented for the UK company provider. The legacy field
+   remains available to the embedded non-UK fallback, while the superseded calculation body is
+   materialised only by regression/performance scripts as a scale control; it is not retained as a
+   production view.**
+5. Preserve existing due dates, business-tax adjustments, payments and running balances while exposing
+   the kernel branch, limits, relief and diagnostic provenance for audit. **Implemented: the common
+   liability contract exposes jurisdiction, source/profile identity, calculation identity, primary
+   finding, due date and readiness; UK-only branch components remain on the UK projection. Due dates,
+   adjustments, payments and balances reconcile.**
+6. Prove that the actual annual liability event equals the final period liability. Replace the
+   fixed-rate confirmed-Project and What-if accruals with cumulative liability deltas under MR-4,
+   where those forecast facts are introduced.
+7. Reconcile the synthetic company's tax expense, tax-control balance and Company Statement before and
+   after the change. **The annual computation, tax statement and historic payment reconcile; the
+   existing statutory balance-sheet regression passes and the complete Company Statement executes on
+   the retained company. Higher-volume comparison remains an MR-6 performance control.**
 
-**Gate:** actual-accounting statement tests pass; payments affect the balance but not tax expense; the
-legacy flat-rate result is no longer used for supported UK company periods.
+**Gate:** passed. Actual-accounting statement and existing statutory balance-sheet tests pass. A
+rollback-only settlement/reversal fixture proves payments affect the balance but not tax expense. The
+legacy flat-rate result is no longer used for supported UK company periods, while remaining available
+as the explicit higher-volume control. A provisional rate produces a labelled tax accrual and
+deterministically blocks statutory filing readiness.
 
-### MR-4 — apply the same calculation to Projects and What-if
+### MR-4 — apply the same calculation to order-book tax accruals and What-if
 
-**Status:** Not started. Existing Project and What-if behaviour remains unchanged.
+**Status:** In progress. Existing live Project and What-if tax behaviour remains unchanged. In Accounts
+Mode, the principal user surface is the generated Cash Statement: its **Tax accruals** option requests
+the tax expected to fall due from the selected order book. The underlying CT source is
+`Cash.vwTaxBizAccruals`, consumed by `Cash.proc_FlowCashCodeValues`, the Company Statement and summary
+views. MR-4 must change that shared source rather than introduce an MIS-only forecast result.
+
+The first increment adds `Cash.vwTaxBizOrderBook`, which selects eligible Project cash codes from the
+active Profit root through `App.vwTaxBizCashCodes`, consolidates invoice rows before subtracting them
+from confirmed Projects and returns one row per genuinely uninvoiced Project. A parallel
+`Cash.vwTaxCorpOrderBookLiabilityUK` recomputes the annual loss roll-forward and establishes
+`T(actual + confirmed) - T(actual)` without changing the live accrual view. Both reconciliation
+fixtures pass on the retained populated company. Order-level delta allocation, Cash Statement
+cutover and What-if remain pending.
 
 1. Feed confirmed Project transactions into the same N/D accumulator used by actual accounting and
    calculate `T(actual + confirmed) - T(actual)`.
-2. Feed quotation/scenario Projects into the same kernel and calculate
+2. Replace the flat-rate result in `Cash.vwTaxBizAccruals` while preserving the order-level audit
+   contract consumed by `Cash.vwTaxBizAuditAccruals`, `Cash.vwStatementBase`, `Cash.vwSummary` and
+   `Cash.proc_FlowCashCodeValues`.
+3. Exercise the Accounts Mode Cash Statement with **Order book** and **Tax accruals** independently
+   enabled and disabled. Prove the XLSX and ODS outputs place the incremental CT accrual at its
+   statutory due period and that disabling tax accruals removes it without removing the order book.
+4. Feed quotation/scenario Projects into the same kernel and calculate
    `T(actual + confirmed + scenario) - T(actual + confirmed)`.
-3. Exercise insertion, amendment, cancellation and reversal across the £50,000 and £250,000 limits,
+5. Exercise insertion, amendment, cancellation and reversal across the £50,000 and £250,000 limits,
    including movements caused by D and associated-company limits.
-4. Prove deterministic same-day ordering and verify that Project/Object expansion does not double count
+6. Prove deterministic same-day ordering and verify that Project/Object expansion does not double count
    tax-relevant facts.
-5. Compare execution plans and timings with MR-0 before accepting the statement integration.
+7. Compare execution plans and timings with MR-0 before accepting the statement integration.
 
-**Gate:** the Company Statement changes immediately and reversibly for confirmed and What-if Projects,
-with no month-end calculation or second tax engine.
+**Gate:** the Accounts Mode Cash Statement, Company Statement and What-if Statement all change
+immediately and reversibly for confirmed and scenario Projects. Cash Statement XLSX/ODS option tests
+pass, and no month-end calculation or second tax engine is introduced.
 
 ### MR-5 — carry the reviewed calculation into the CT artifact
 
@@ -324,15 +392,19 @@ and CT submission remains disabled.
    count, rates/limits, marginal relief, calculation branch and provenance from MR-3.
 2. Replace validation that assumes `TaxableTotalProfits * MainRate` with validation of the reviewed
    kernel components.
-3. Remove the CT600 serializer's current inference of associated-company information from a 19% rate
+3. Make Objective 3 preparation reject `CT-RATE-PROVISIONAL` as a filing-readiness finding. It must
+   not freeze, approve or expose a submission-ready CT service artifact for a period containing a
+   provisional financial-year slice, even when its accrual calculation is complete.
+4. Remove the CT600 serializer's current inference of associated-company information from a 19% rate
    and populate the RIM fields from explicit reviewed facts.
-4. Rebuild the same immutable accounts, computation, CT600 and service artifact; do not introduce
+5. Rebuild the same immutable accounts, computation, CT600 and service artifact; do not introduce
    another serializer.
-5. Re-run local contracts, CT2025/Arelle, LTS and genuine TPVS diagnostics as authorised, preserving
+6. Re-run local contracts, CT2025/Arelle, LTS and genuine TPVS diagnostics as authorised, preserving
    exact bytes, responses and SHA-256 evidence.
 
 **Gate:** Company Statement, computation, CT600 and validation evidence agree for both D = 0 and D > 0;
-CT submission remains disabled pending human review.
+confirmed rates permit artifact review; provisional rates produce `CT-RATE-PROVISIONAL` and no
+submission-ready artifact; CT submission remains disabled pending human review.
 
 ### MR-6 — recognition and performance closure
 

@@ -115,9 +115,13 @@ the [marginal relief and real-time liability work plan](ct-marginal-relief.md).
 4. Re-run local schema/rules, Arelle/CT2025 and LTS/TPVS diagnostics as appropriate.
 5. Classify every difference as expected test evidence, an approved version change or a defect. No
    serializer/value change may be made merely to recover an old digest.
+6. Prove the rate-status boundary: provisional rates remain available for tax accruals but produce
+   `CT-RATE-PROVISIONAL`, prevent a submission-ready artifact and cannot pass the CT-B eligibility
+   boundary. Repeat with an accepted non-provisional rate to prove the constraint clears mechanically.
 
 **Gate:** human review accepts the test-tenant statutory values, supported scope, change-control provenance
-and refreshed validation evidence.
+and refreshed validation evidence; no provisional financial-year rate is present in a filing-ready
+artifact.
 
 ### CT-B — Phase 5.10 ETS-ready boundary
 
@@ -127,7 +131,7 @@ and refreshed validation evidence.
    baseline approval, exact-artifact approval, protected-configuration availability and named-attempt
    authorisation.
 3. Introduce a dedicated official-test eligibility boundary. It may send only to the allow-listed ETS
-   endpoints and must not promote or expose the production CT gateway.
+   endpoints, must reject `CT-RATE-PROVISIONAL`, and must not promote or expose the production CT gateway.
 4. Connect the Phase 5.9 durable submit → acknowledgement → poll → terminal → receipt → delete
    coordinator to the one-attempt HTTP gateway.
 5. Retain exact request/response/receipt bytes and digests in protected tenant-scoped storage.

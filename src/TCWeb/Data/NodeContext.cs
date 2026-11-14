@@ -151,6 +151,7 @@ namespace TradeControl.Web.Data
         public virtual DbSet<App_tbYear> App_tbYears { get; set; }
         public virtual DbSet<App_vwYear> App_Years { get; set; }
         public virtual DbSet<App_tbYearPeriod> App_tbYearPeriods { get; set; }
+        public virtual DbSet<App_tbYearPeriodTaxUk> App_tbYearPeriodTaxUks { get; set; }
         public virtual DbSet<Web_tbTemplate> Web_tbTemplates { get; set; }
         public virtual DbSet<Web_tbTemplateStatus> Web_tbTemplateStatuses { get; set; }
         public virtual DbSet<Web_tbTemplateImage> Web_tbTemplateImages { get; set; }
@@ -2742,6 +2743,12 @@ namespace TradeControl.Web.Data
                     .WithMany(p => p.TbYearPeriods)
                     .HasForeignKey(d => d.YearNumber)
                     .HasConstraintName("FK_App_tbYearPeriod_App_tbYear");
+            });
+
+            modelBuilder.Entity<App_tbYearPeriodTaxUk>(entity =>
+            {
+                entity.HasKey(e => new { e.YearNumber, e.StartOn })
+                    .HasName("PK_App_tbYearPeriodTaxUk");
             });
 
             modelBuilder.Entity<Web_tbTemplate>(entity =>

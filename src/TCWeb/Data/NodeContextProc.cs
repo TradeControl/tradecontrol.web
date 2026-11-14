@@ -3291,6 +3291,108 @@ namespace TradeControl.Web.Data
             }
         }
 
+        public async Task<bool> YearPeriodTaxUkSet(
+            DateTime startOn,
+            DateTime endOn,
+            decimal corporationTaxMainRate,
+            decimal corporationTaxSmallProfitsRate,
+            decimal corporationTaxMarginalReliefFraction,
+            decimal corporationTaxLowerLimit,
+            decimal corporationTaxUpperLimit)
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "App.proc_YearPeriodTaxUkSet";
+                command.CommandType = CommandType.StoredProcedure;
+
+                command.Parameters.Add(new SqlParameter("@StartOn", SqlDbType.DateTime) { Value = startOn });
+                command.Parameters.Add(new SqlParameter("@EndOn", SqlDbType.DateTime) { Value = endOn });
+                command.Parameters.Add(new SqlParameter("@CorporationTaxMainRate", SqlDbType.Decimal)
+                {
+                    Precision = 9,
+                    Scale = 6,
+                    Value = corporationTaxMainRate
+                });
+                command.Parameters.Add(new SqlParameter("@CorporationTaxSmallProfitsRate", SqlDbType.Decimal)
+                {
+                    Precision = 9,
+                    Scale = 6,
+                    Value = corporationTaxSmallProfitsRate
+                });
+                command.Parameters.Add(new SqlParameter("@CorporationTaxMarginalReliefFraction", SqlDbType.Decimal)
+                {
+                    Precision = 9,
+                    Scale = 6,
+                    Value = corporationTaxMarginalReliefFraction
+                });
+                command.Parameters.Add(new SqlParameter("@CorporationTaxLowerLimit", SqlDbType.Decimal)
+                {
+                    Precision = 28,
+                    Scale = 5,
+                    Value = corporationTaxLowerLimit
+                });
+                command.Parameters.Add(new SqlParameter("@CorporationTaxUpperLimit", SqlDbType.Decimal)
+                {
+                    Precision = 28,
+                    Scale = 5,
+                    Value = corporationTaxUpperLimit
+                });
+
+                await command.ExecuteNonQueryAsync();
+                return true;
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<bool> YearPeriodTaxUkAvailable()
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "SELECT CONVERT(bit, CASE WHEN OBJECT_ID(N'App.tbYearPeriodTaxUk', N'U') IS NULL THEN 0 ELSE 1 END);";
+                command.CommandType = CommandType.Text;
+
+                return Convert.ToBoolean(await command.ExecuteScalarAsync());
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return false;
+            }
+        }
+
+        public async Task<DateTime?> YearPeriodTaxUkPublishedThrough()
+        {
+            try
+            {
+                using SqlConnection connection = new(Database.GetConnectionString());
+                await connection.OpenAsync();
+
+                using SqlCommand command = connection.CreateCommand();
+                command.CommandText = "SELECT MAX(EffectiveTo) FROM App.vwYearPeriodTaxUkSeed WHERE IsProvisional = 0;";
+                command.CommandType = CommandType.Text;
+
+                var value = await command.ExecuteScalarAsync();
+                return value is null || value == DBNull.Value ? null : Convert.ToDateTime(value);
+            }
+            catch (Exception e)
+            {
+                await ErrorLog(e);
+                return null;
+            }
+        }
+
         public async Task<string> TaxCodeDefault(string taxDescription)
         {
             try
