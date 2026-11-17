@@ -349,8 +349,12 @@ deterministically blocks statutory filing readiness.
 
 ### MR-4 — apply the same calculation to order-book tax accruals and What-if
 
-**Status:** In progress. Existing live Project and What-if tax behaviour remains unchanged. In Accounts
-Mode, the principal user surface is the generated Cash Statement: its **Tax accruals** option requests
+**Status:** Implementation and retained-company acceptance evidence complete; awaiting human review.
+The confirmed-Project and What-if paths are live on the retained company. The independent four-state
+Cash Statement option matrix passes in both XLSX and ODS. Threshold mutation, reversal,
+deterministic-ordering and Project/Object uniqueness acceptance pass through rollback-only fixtures.
+In Accounts Mode, the principal user surface is the generated Cash Statement: its
+**Tax accruals** option requests
 the tax expected to fall due from the selected order book. The underlying CT source is
 `Cash.vwTaxBizAccruals`, consumed by `Cash.proc_FlowCashCodeValues`, the Company Statement and summary
 views. MR-4 must change that shared source rather than introduce an MIS-only forecast result.
@@ -359,34 +363,81 @@ The first increment adds `Cash.vwTaxBizOrderBook`, which selects eligible Projec
 active Profit root through `App.vwTaxBizCashCodes`, consolidates invoice rows before subtracting them
 from confirmed Projects and returns one row per genuinely uninvoiced Project. A parallel
 `Cash.vwTaxCorpOrderBookLiabilityUK` recomputes the annual loss roll-forward and establishes
-`T(actual + confirmed) - T(actual)` without changing the live accrual view. Both reconciliation
-fixtures pass on the retained populated company. Order-level delta allocation, Cash Statement
-cutover and What-if remain pending.
+`T(actual + confirmed) - T(actual)`. Deterministic adjacent Project-prefix kernel deltas, plus an
+explicit later-year loss-carry bridge when required, now feed the unchanged five-column
+`Cash.vwTaxBizAccruals` contract through one selected provider. The audit, Company Statement and Cash
+Statement procedure reconcile exactly on the retained populated company. XLSX/ODS option acceptance
+and the populated What-if scenario now pass.
+
+The retained-company regression originally took roughly two minutes because it expanded and
+compiled the annual projection separately for each assertion. The fixture now materialises the
+canonical order book, actual liability and projected liability once. The projected view also resolves
+its small reporting-profile/tax-source context directly instead of expanding the actual annual view
+only to discover the tax source. The same regression now completes in about 25 seconds; warm projected
+execution is about two seconds. A full Project-prefix × annual-liability-vector prototype exceeded
+the five-minute diagnostic timeout and was removed from both source and the test database. The
+accepted provider computes the annual result once, retains `Cash.vwTaxBizOrderBook` as the direct
+canonical Project source, and invokes only the pure kernel over cumulative Project prefixes. This reduced the
+live provider to 65 rows and an exact £29,006.44365 total on B8 without a second tax engine.
 
 1. Feed confirmed Project transactions into the same N/D accumulator used by actual accounting and
-   calculate `T(actual + confirmed) - T(actual)`.
+   calculate `T(actual + confirmed) - T(actual)`. **Complete for the confirmed UK company path.**
 2. Replace the flat-rate result in `Cash.vwTaxBizAccruals` while preserving the order-level audit
    contract consumed by `Cash.vwTaxBizAuditAccruals`, `Cash.vwStatementBase`, `Cash.vwSummary` and
-   `Cash.proc_FlowCashCodeValues`.
+   `Cash.proc_FlowCashCodeValues`. **Complete on B8; the common five-column contract is unchanged and
+   the non-UK/other-regime branch retains the configured-rate fallback over the canonical order book.**
 3. Exercise the Accounts Mode Cash Statement with **Order book** and **Tax accruals** independently
    enabled and disabled. Prove the XLSX and ODS outputs place the incremental CT accrual at its
    statutory due period and that disabling tax accruals removes it without removing the order book.
+   **Complete on the retained company. The SQL procedure off/on toggle and statutory due placement
+   pass. A protected four-state run generated XLSX and ODS from the same immutable model for neither,
+   Order-book-only, Tax-accruals-only and both. The algebraic comparison found 76 tax-option cells and
+   110 order-book-option cells, proved the two switches independent and measured the exact
+   £29,006.44365 CT delta whether or not Order book was enabled.**
 4. Feed quotation/scenario Projects into the same kernel and calculate
-   `T(actual + confirmed + scenario) - T(actual + confirmed)`.
+   `T(actual + confirmed + scenario) - T(actual + confirmed)`. **The scenario Project source,
+   annual loss roll-forward, provider selection and `Cash.vwStatementWhatIf` cutover are deployed to
+   B8. The empty-cost-set identity passes. For populated acceptance, a finished-good network has
+   been cloned through `Project.proc_Copy`, converted to quotation status and placed in Carol
+   Hughes's owner-scoped `Project.vwCostSet`. **Complete on B8:** moving only the finished-good root
+   from June to July caused `Project.proc_Schedule` to split its automatically moved production and
+   purchase facts between two financial years. The preserved £4,305.56 scenario produced exact CT
+   deltas of −£167.06660 and £937.84000 on their statutory payment dates, while the confirmed order
+   book remained unchanged.**
 5. Exercise insertion, amendment, cancellation and reversal across the £50,000 and £250,000 limits,
-   including movements caused by D and associated-company limits.
+   including movements caused by D and associated-company limits. **Complete on the retained
+   company through a rollback-only confirmed-Project fixture. The live annual projection produced
+   the exact independently specified small-profits, marginal-relief and main-rate amounts immediately
+   after each mutation; cancellation returned to zero, restoration recovered the prior amount,
+   £49,000 N plus £2,000 D produced £9,382.05882, and one associated company changed £30,000 N to
+   £6,075.00000. A fresh-connection post-check found no fixture Project or configuration change.**
 6. Prove deterministic same-day ordering and verify that Project/Object expansion does not double count
-   tax-relevant facts.
+   tax-relevant facts. **Complete on the retained company. Two confirmed Projects on the same day,
+   sharing one Object template, were ordered by stable Project code and received exact £5,700 and
+   £9,100 deltas that telescoped to the £14,800 annual liability. The populated owner-scoped finished-
+   goods cost set contained 9 rows and 9 distinct Project identities through both
+   `Project.vwCostSetProjects` and `Cash.vwTaxBizWhatIfOrderBook`. A fresh-connection post-check found
+   no fixture Project after rollback.**
 7. Compare execution plans and timings with MR-0 before accepting the statement integration.
+   **The first retained-company comparison is complete. The statement result is small but expands a
+   large tax, VAT, invoice, Project and Category Tree calculation graph. Replacing the independent
+   composition unions with `UNION ALL` preserved the economic rows exactly but produced no reliable
+   elapsed-time improvement, so it is not being promoted as a performance change. A temporary
+   higher-service-tier comparison reduced cold statement latency by approximately six to eight times
+   and warm latency further, establishing compute and compilation capacity as the immediate
+   constraint. Correctness remains the acceptance priority. The planned MIS seal boundary may avoid
+   recomputing unchanged Project/Object subtrees; deployment tiers and an honest calculation-progress
+   experience remain operational choices. Representative MIS-volume closure remains MR-6 work.**
 
-**Gate:** the Accounts Mode Cash Statement, Company Statement and What-if Statement all change
-immediately and reversibly for confirmed and scenario Projects. Cash Statement XLSX/ODS option tests
-pass, and no month-end calculation or second tax engine is introduced.
+**Gate accepted:** the Accounts Mode Cash Statement, Company Statement and
+What-if Statement all change immediately and reversibly for confirmed and scenario Projects. Cash
+Statement XLSX/ODS option tests pass, and no month-end calculation or second tax engine is introduced.
 
 ### MR-5 — carry the reviewed calculation into the CT artifact
 
-**Status:** Not started. The Objective 3 preparation and immutable service artifact remain unchanged,
-and CT submission remains disabled.
+**Status:** Complete and accepted on 17 November 2026. The refreshed immutable artifact passes the
+pinned CT2025 package in Arelle, HMRC LTS 8.3 and one separately authorised genuine TPVS validation,
+including IRmark and calculator validation. CT submission remains disabled.
 
 1. Extend the existing Trade Control CT source contract with explicit N, D, A, associated-company
    count, rates/limits, marginal relief, calculation branch and provenance from MR-3.
@@ -402,25 +453,81 @@ and CT submission remains disabled.
 6. Re-run local contracts, CT2025/Arelle, LTS and genuine TPVS diagnostics as authorised, preserving
    exact bytes, responses and SHA-256 evidence.
 
-**Gate:** Company Statement, computation, CT600 and validation evidence agree for both D = 0 and D > 0;
-confirmed rates permit artifact review; provisional rates produce `CT-RATE-PROVISIONAL` and no
-submission-ready artifact; CT submission remains disabled pending human review.
+Implementation checkpoint for review:
+
+- the Trade Control source now reads the exact annual result from `Cash.vwTaxCorpLiabilityUK` and
+  carries N, D, A, associated companies, the complete rate/limit set, adjusted limits, calculation
+  branch, marginal relief, final tax, findings, readiness and a deterministic source digest;
+- relevant distributions are an explicit source-owned deduction in the computation bridge, rather
+  than an operator adjustment or an inferred filing value;
+- the contract validator independently reconciles N, D, A, adjusted limits, branch, tax before
+  relief, marginal relief, kernel tax, final tax and payable tax. A manual accrual adjustment is
+  deliberately rejected because it cannot be represented by the CT600 statutory-rate detail lines;
+- Objective 3 rejects `CT-RATE-PROVISIONAL` before population of a filing artifact. The offline
+  D > 0 source-population test and explicit provisional-rate negative test pass; the refreshed
+  retained-B8 artifact rerun remains part of the official evidence step;
+- the CT600 RIM now emits the reviewed associated-company count and uses the explicit calculation
+  branch. Small-profits and marginal-relief entitlement is no longer inferred from a 19% rate;
+- relevant distributions are emitted in CT600 box 620 as well as the CT2025 computation. This is the
+  input the HMRC calculator uses to derive augmented profits; omitting it caused LTS error `9043`
+  even though the computation attachment carried D correctly;
+- one shared financial-year allocation projects the statutory-rate bands into both CT600 and CT2025
+  computation facts, preventing those artifacts from acquiring separate rounding algorithms;
+- local company contracts pass for D = 0 and a D > 0 marginal-relief example, the full Tax Hub
+  solution builds without warnings, and all local Tax Hub test executables pass in their supported
+  offline modes;
+- the protected retained-company evidence preserves exact accounts, computation, service-root,
+  materialised-wire and LTS response bytes with SHA-256 identities. Arelle reports only successful
+  package activation/load/validation information, and LTS returns a success receipt with no
+  validation findings. This is explicitly classified as local HMRC LTS evidence;
+- one separately authorised TPVS request transmitted the exact materialised wire already accepted by
+  LTS. HMRC returned HTTP 200, response messages `0000` and `077001`, and no application findings.
+  Exact request and response bytes are retained separately and classified as a genuine remote HMRC
+  TPVS response, not a production submission. No retry was made.
+
+**Gate accepted:** Company Statement, computation, CT600, Arelle, LTS and genuine TPVS evidence agree
+for both D = 0 and D > 0; confirmed rates permit artifact review; provisional rates produce
+`CT-RATE-PROVISIONAL` and no submission-ready artifact; CT submission remains disabled.
 
 ### MR-6 — recognition and performance closure
 
-**Status:** Not started.
+**Status:** Complete and accepted on 17 November 2026.
 
-1. Run the full SQL suite on a fresh database and the retained CT test company.
+1. Run the full SQL suite on a fresh database and the retained CT test company. **Complete. A current
+   DACPAC was applied to an independently regenerated standard-company dataset, and every arithmetic,
+   rate-authority, distribution, liability, statement, order-book, What-if, jurisdiction-isolation and
+   performance fixture passed there and on the retained company. A second naturally generated
+   company was calibrated below the £50,000 augmented-profits limit; it selected the small-profits
+   branch with positive relevant distributions, zero marginal relief and exactly 19% of taxable total
+   profits. Its immutable Objective 3 computation also passed the pinned CT2025 taxonomy and HMRC LTS
+   locally without findings. Environment identities and values remain in protected evidence.**
 2. Compare statement execution plans, reads and median timings with MR-0 at representative Account and
-   MIS volumes; investigate regressions above the stated envelope.
+   MIS volumes; investigate regressions above the stated envelope. **Complete for the current Account
+   and prototype-MIS corpus. Earlier plan/read evidence established that compilation and CPU, rather
+   than data IO, dominate the complete statement graph; the rejected `UNION ALL` and extra
+   materialisation experiments produced no reliable improvement. A final three-run diagnostic proved
+   stable rows, totals and balance checksums on both environments. Warm retained-company S0 timings
+   remain materially slower than the temporary S2 comparison, so tier-aware execution and the planned
+   MIS seal remain explicit operational decisions rather than concealed correctness compromises.**
 3. Demonstrate that common statement output contains no UK-only N/D/A or marginal-relief field and
-   that jurisdiction selection occurs once per calculation set.
+   that jurisdiction selection occurs once per calculation set. **Complete. The deterministic
+   `CorporationTaxJurisdictionIsolation.sql` regression fixes the common statement/accrual shapes,
+   rejects UK-only measures on those contracts, checks actual dependency metadata and proves that the
+   annual, confirmed-order and What-if selected providers each resolve the node jurisdiction exactly
+   once. The existing rollback fixture proves an unsupported UK profile fails closed.**
 4. Assemble the calculation narrative, boundary results and official validation evidence required by
-   the CT recognition workstream.
-5. Remove unnecessary abstraction or transitional fixed-rate paths that are no longer used.
+   the CT recognition workstream. **Complete. The narrative now links the statutory kernel, positive-D
+   statement path, transaction-grained accruals, immutable Objective 3 artifact and distinct
+   Arelle/LTS/TPVS evidence. Exact tenant, artifact and response identities remain protected.**
+5. Remove unnecessary abstraction or transitional fixed-rate paths that are no longer used. **Complete.
+   The rejected order-book wrapper and experimental statement composition were already removed. The
+   period `BusinessTaxRate` path remains intentionally reachable only through the selected non-UK or
+   other-regime fallback and as the regression control; it is not used for supported UK companies and
+   is therefore not dead transitional code.**
 
-**Gate:** UK correctness, MIS responsiveness, performance and recognition evidence are accepted;
-portability remains an extension point rather than an implemented second regime.
+**Gate accepted on 17 November 2026:** UK correctness, transaction-grained MIS behaviour, tier-aware
+performance and recognition evidence are accepted; portability remains an extension point rather than
+an implemented second regime. CT submission remains disabled.
 
 ## SQL verification suite
 
@@ -433,9 +540,9 @@ cover the following responsibilities:
 | `CorporationTaxMarginalReliefBoundaries.sql` | Loss, zero, each side of £50,000 and £250,000, an interior marginal-relief case, D greater than zero, short periods and associated-company divisors. |
 | `CorporationTaxMarginalReliefAuthority.sql` | Published HMRC examples and independently calculated expected amounts, including statutory rounding. |
 | `CorporationTaxStatementReconciliation.sql` | Annual liability equals dated liability events; payments affect balance but not tax expense; reversals restore the prior result. |
-| `CorporationTaxProjectForecast.sql` | Confirmed Projects cross both thresholds in both directions and produce `T(actual + confirmed) - T(actual)`. |
-| `CorporationTaxWhatIf.sql` | Scenario insertion, amendment and removal produce the correct reversible delta without changing the baseline. |
-| `CorporationTaxJurisdictionIsolation.sql` | UK selection is explicit; missing or unsupported jurisdiction/profile fails closed; common statement output carries no UK-only assumptions. |
+| `CorporationTaxOrderBook.sql`, `CorporationTaxOrderBookLiabilityUK.sql`, `CorporationTaxOrderBookAccrualUK.sql` and rollback mutation fixtures | Confirmed Projects cross both thresholds in both directions and produce `T(actual + confirmed) - T(actual)`. |
+| `CorporationTaxWhatIfUK.sql` and the retained rescheduling fixture | Scenario insertion, amendment, cross-year rescheduling and removal produce the correct reversible delta without changing the baseline. |
+| `CorporationTaxJurisdictionIsolation.sql` and `CorporationTaxStatementReconciliation.sql` | UK selection is explicit; an unsupported UK profile fails closed; common statement output carries no UK-only assumptions while other regimes retain the selected fallback extension point. |
 | `CorporationTaxPerformance.sql` | Account and MIS-scale statement queries remain set based and within the accepted baseline envelope. |
 
 Every verification script must:
@@ -473,7 +580,12 @@ The new path must remain set based, avoid per-row scalar UDF execution, and show
 the transaction/Project corpus is scaled. A regression greater than 10% in median elapsed time or
 logical reads against a stable baseline requires investigation and explicit review; it is not an
 automatic licence to weaken correctness. Query plans must also be inspected for spills, repeated scans
-of the Category Tree and accidental Cartesian expansion.
+of the Category Tree and accidental Cartesian expansion. Performance acceptance is tier-aware: a
+larger service tier may be an explicit commercial option, but it must not conceal wrong arithmetic or
+unbounded growth. Long, valid calculations should expose a truthful calculating state and a
+calculation-specific timeout rather than a fictional percentage. When MIS sealing is implemented,
+reuse must be keyed to the sealed scenario identity so that any tax-relevant transaction change
+invalidates the result mechanically.
 
 Performance evidence belongs with the protected run evidence when it identifies a tenant or host.
 
@@ -489,6 +601,7 @@ Performance evidence belongs with the protected run evidence when it identifies 
 ## Authoritative references
 
 - [HMRC: Corporation Tax marginal relief](https://www.gov.uk/guidance/corporation-tax-marginal-relief)
+- [HMRC: Completing your Company Tax Return](https://www.gov.uk/guidance/the-company-tax-return-guide)
 - [HMRC: Corporation Tax rates and allowances](https://www.gov.uk/government/publications/rates-and-allowances-corporation-tax/rates-and-allowances-corporation-tax)
 - [Corporation Tax Act 2010, Part 3A](https://www.legislation.gov.uk/ukpga/2010/4/part/3A)
 

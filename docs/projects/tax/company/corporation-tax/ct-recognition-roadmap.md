@@ -9,13 +9,13 @@ roadmap uses it for the programme goal sometimes described as accreditation.
 Recognition is not the same as enabling production filing. Test-service execution, recognition,
 listing and production activation retain separate evidence and human gates.
 
-## Current position — 12 November 2026
+## Current position — 17 November 2026
 
 | Layer | Position | Remaining gate |
 |---|---|---|
-| Accounting source and Category Tree | Company statutory sources and mappings are implemented; Category Tree Change Control is available, and CT-A has now prepared a genuine current-period tenant snapshot. | Replace the legacy single-rate Corporation Tax source result with reviewed current-law inputs; do not alter the accounting dataset to avoid a tax scenario. |
-| Objective 3 contracts and population | The approved ordinary micro-company surface remains implemented. Current-period CT-A evidence corrected depreciation polarity and CT600 whole-pound financial-year projection, then exposed that the model does not yet represent post-April-2023 marginal relief. | Add reviewed associated-company and augmented-profit inputs, financial-year rate selection and marginal-relief computation before accepting the current-period artifact. |
-| Phase 5.8 service artifact | CT2025 computation, FRC 2026 accounts and RIM 1.994 assets remain pinned. The refreshed computation passes the official CT2025 taxonomy in Arelle; local LTS reaches its calculator and reports the unsupported marginal-relief result. | Re-freeze and rerun local validation after the statutory tax calculation is implemented. Do not reuse the earlier synthetic 19% liability as filing evidence. |
+| Accounting source and Category Tree | Company statutory sources and mappings are implemented; Category Tree Change Control is available, and CT-A supplies accepted N, D, A, rates, eligibility facts and marginal relief from the live statement path. | Preserve the accepted current-law baseline; do not alter the accounting dataset to avoid a tax scenario. |
+| Objective 3 contracts and population | The approved ordinary micro-company surface carries the accepted marginal-relief calculation, associated-company facts and provisional-rate filing boundary into the same accounts, computation and CT600 artifact path. | Retain specialist regimes outside the supported scope. |
+| Phase 5.8 service artifact | CT2025 computation, FRC 2026 accounts and RIM 1.994 assets remain pinned. The refreshed positive-D artifact passes the official CT2025 package in Arelle, HMRC LTS 8.3 and one separately authorised genuine TPVS validation, including its IRmark and tax calculator. MR-5 was accepted on 17 November 2026. | Local LTS and genuine remote TPVS evidence must retain their distinct classifications. |
 | Phase 5.9 Transaction Engine | Complete and reviewed for offline protocol fixtures, IRmark and durable conversation semantics. | Confirm current ETS class, credentials, endpoints and receipt behaviour immediately before the external test. |
 | Phase 5.10 local ETS boundary | Implemented as a Development-only, send-disabled WebHarness preflight. | Replace the obsolete recognition blocker with explicit test-readiness and per-attempt authorisation; add the durable ETS executor without opening production. |
 | Multi-tenant hosting | The shared production-shaped environment prerequisite is complete. | Exercise CT through the same tenant, identity, protected-content and operational boundaries rather than treating the WebHarness as the commercial product. |
@@ -95,15 +95,16 @@ retain its own identity and evidence boundary.
 
 ### CT-A — test-tenant baseline and contract reconciliation
 
-**Progress — 12 November 2026:** a current-period tenant has now been recommissioned and prepared
-through Objective 3. Its accounting sources, statutory mappings and immutable artifact chain are
-healthy. The run corrected a depreciation bridge defect and a CT600 whole-pound financial-year
-projection defect. Official CT2025 taxonomy validation is clear, and local LTS proceeds through
-schema, business-rule and IRmark validation to the tax calculator. The calculator then correctly
-rejects the legacy flat 19% result because the current-period profit lies in the post-April-2023
-marginal-relief band. CT-A therefore remains open while current-law rate and marginal-relief inputs
-are added to the supported semantic model. Protected tenant values and evidence remain outside the
-public repository. No TPVS, ETS or production request was made.
+**Progress — 17 November 2026:** the current-period tenant is prepared through Objective 3 using the
+reviewed current-law marginal-relief source. N, D, A, associated-company count, rates, limits,
+eligibility facts, calculation branch and provenance now cross the preparation boundary explicitly.
+The CT600 carries relevant distributions in box 620 as well as the CT2025 computation, allowing HMRC's
+calculator to reproduce augmented profits and marginal relief. The refreshed immutable artifact
+passes the official CT2025 package in Arelle and HMRC LTS 8.3 returns a success receipt after schema,
+business-rule, IRmark and calculator validation. Protected tenant values, artifact identities and
+response evidence remain outside the public repository. One explicitly authorised TPVS validation
+returned HTTP 200 with messages `0000` and `077001` and no application findings. No ETS or production
+request was made, and no retry was attempted.
 
 The calculation redesign, MIS/What-if preservation rules and verification programme are governed by
 the [marginal relief and real-time liability work plan](ct-marginal-relief.md).
@@ -119,9 +120,15 @@ the [marginal relief and real-time liability work plan](ct-marginal-relief.md).
    `CT-RATE-PROVISIONAL`, prevent a submission-ready artifact and cannot pass the CT-B eligibility
    boundary. Repeat with an accepted non-provisional rate to prove the constraint clears mechanically.
 
-**Gate:** human review accepts the test-tenant statutory values, supported scope, change-control provenance
-and refreshed validation evidence; no provisional financial-year rate is present in a filing-ready
-artifact.
+**Gate accepted on 17 November 2026:** the test-tenant statutory values, supported scope,
+change-control provenance and refreshed Arelle/LTS/TPVS evidence are accepted; no provisional
+financial-year rate is present in the accepted artifact.
+
+**MR-6 accepted on 17 November 2026:** the complete SQL suite passes on independently regenerated
+marginal-relief and small-profits company datasets and the retained test company; common statement
+contracts are mechanically jurisdiction-neutral; and retained performance evidence records the
+accepted tier-aware trade-off without weakening the statutory calculation. This completes CT-A but
+does not open CT-B, ETS or production submission.
 
 ### CT-B — Phase 5.10 ETS-ready boundary
 
@@ -213,18 +220,25 @@ Do not apply until all are true:
 
 ## Current verification baseline
 
-Verified on 11 November 2026 without an HMRC request:
+Verified on 17 November 2026 without a remote HMRC request:
 
 - `TaxHub.slnx` Debug build: succeeded, zero warnings/errors;
-- Company Contract Tests: 109 assertions;
+- Company Contract Tests: 115 assertions;
 - Application Tests: 90 assertions;
 - Submission Adapter Tests: 176 assertions;
 - Architecture Tests: 32 assertions;
 - WebHarness Tests: 87 assertions; and
-- Data Provision CO1/CO2/CO6 corporate handoff: passed in supported offline mode.
+- Data Provision CO1/CO2/CO6 corporate handoff: passed in supported offline mode;
+- Trade Control Adapter Tests: 11 assertions;
+- Companies House Simulator Tests: 31 assertions;
+- MTD Income Tax Contract Tests: 91 assertions across 44 endpoint descriptors;
+- VAT Contract Tests: 19 assertions; and
+- HMRC LTS 8.3: accepted the protected materialised CT600 locally with no validation findings; and
+- genuine HMRC TPVS: HTTP 200 with response messages `0000` and `077001` and no application findings.
 
-The reviewed CT service-root SHA-256 remains
-`A3F3729F7236B342FC8C6D10C423104EA9B6F7C86CE86C396D78B2D586A77F2F`.
+The reviewed deterministic contract-test CT service-root SHA-256 is
+`6EAF0C1A0A1A85452FBCA2449498723BB614C508FF99E0E13FEA720043FDFC87`.
+Protected retained-company artifact and response identities remain with the local evidence.
 
 ## Official references
 

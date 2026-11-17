@@ -148,17 +148,45 @@ Final evidence anchors are:
 - LTS response: `0D759B53C48B5094EA5B40D4515CA7B365A09A4ECD28F5B8B84FC0CB8C466B05`; and
 - genuine TPVS response: `BE4FA1D09EDBBB8F1B8CD45467A587CAE84F1946E82330D92239F0EB8FF68624`.
 
+## Marginal-relief artifact revalidation on 17 November 2026
+
+MR-5 replaced the legacy fixed-rate liability with the reviewed positive-D marginal-relief result and
+materialised the Phase 5.9 IRmark without enabling submission. The first calculator run exposed that
+the CT2025 computation carried relevant distributions but CT600 box 620 did not. Mapping the same
+reviewed D value to the RIM's legacy `FrankedInvestmentIncome` element allowed both validators to
+reproduce augmented profits and marginal relief without changing accounting values.
+
+The exact materialised wire was then validated locally and, following separate contemporaneous human
+authorisation, once against genuine TPVS:
+
+| Evidence | Result |
+|---|---|
+| Official CT2025 package in Arelle 2.46.0 | Pass offline; three information entries and no validation findings. |
+| Local HMRC LTS 8.3 | HTTP 200 success response; valid IRmark, messages `0000` and `077001`, and no validation findings. |
+| Genuine HMRC TPVS | HTTP 200 response; messages `0000` and `077001`, and no application findings. No redirect or retry occurred. |
+
+Evidence anchors are:
+
+- materialised request: `048CE2B160102E802E1C3FD256A212B31A35BD1A3969C2D9D6FA7F01AF1F87BD`;
+- Arelle log: `CC4155E31BB034DBA411C195ADDEA399A7DC41370EDEB30FC9099D870EE79633`;
+- local LTS response: `D42C8D22443BD0BE4DFB773BE29D7C2D999B3D08B95B436A7673388BDB4DB93B`; and
+- genuine TPVS response: `57479F9B917C61B203FFFD9F769B5FCC00539C5BD3702F23FDFAC8236FA0CE16`.
+
+Exact bytes and protected tenant metadata remain under the local CT-A evidence boundary. The LTS
+result is classified as local validation and the TPVS result as a genuine remote HMRC validation;
+neither is a production filing.
+
 ## Validation disposition
 
-The authoritative local validation set is complete and genuine TPVS no longer reports an iXBRL-content finding. Its sole remaining finding is the deliberately empty IRmark slot, which belongs to Phase 5.9 transport. This is not approval to dispatch:
+The current MR-5 artifact passes the authoritative local validation set and genuine TPVS with no
+findings and was accepted on 17 November 2026. This is not approval to dispatch through ETS or
+production:
 
-- LTS and TPVS cannot proceed beyond their IRmark handler without the later protocol work;
-- the Objective 3 contract change has not yet received human approval;
-- `HmrcComputationTaxonomy2025.SubmissionReady` remains `false`;
 - every prepared artifact remains `Preview`; and
 - the Phase 5.7 family gate still rejects before outbound I/O.
 
-No External Test Service or production submission request was made. Phase 5.9 IRmark calculation, Transaction Engine submit/poll/delete and receipt handling remain excluded.
+No External Test Service or production submission request was made. Phase 5.9's Transaction Engine
+submit/poll/delete and receipt handling remain excluded from this validation action.
 
 ## Remaining review requirements
 
