@@ -9,7 +9,7 @@ roadmap uses it for the programme goal sometimes described as accreditation.
 Recognition is not the same as enabling production filing. Test-service execution, recognition,
 listing and production activation retain separate evidence and human gates.
 
-## Current position — 17 November 2026
+## Current position — 18 November 2026
 
 | Layer | Position | Remaining gate |
 |---|---|---|
@@ -17,7 +17,7 @@ listing and production activation retain separate evidence and human gates.
 | Objective 3 contracts and population | The approved ordinary micro-company surface carries the accepted marginal-relief calculation, associated-company facts and provisional-rate filing boundary into the same accounts, computation and CT600 artifact path. | Retain specialist regimes outside the supported scope. |
 | Phase 5.8 service artifact | CT2025 computation, FRC 2026 accounts and RIM 1.994 assets remain pinned. The refreshed positive-D artifact passes the official CT2025 package in Arelle, HMRC LTS 8.3 and one separately authorised genuine TPVS validation, including its IRmark and tax calculator. MR-5 was accepted on 17 November 2026. | Local LTS and genuine remote TPVS evidence must retain their distinct classifications. |
 | Phase 5.9 Transaction Engine | Complete and reviewed for offline protocol fixtures, IRmark and durable conversation semantics. | Confirm current ETS class, credentials, endpoints and receipt behaviour immediately before the external test. |
-| Phase 5.10 local ETS boundary | Implemented as a Development-only, send-disabled WebHarness preflight. | Replace the obsolete recognition blocker with explicit test-readiness and per-attempt authorisation; add the durable ETS executor without opening production. |
+| Phase 5.10 local ETS boundary | CT-B is accepted. CT-C exposes a Development-only, authenticated WebHarness diagnostic over the durable one-exchange conversation boundary; production remains disabled. An identity-corrected, separately authorised ETS conversation completed with a genuine HMRC `BusinessResponse`, retained IRmark receipt, zero returned errors and acknowledged delete. | Human-review the retained CT-C evidence and accept or reject its gate. Do not open production submission. |
 | Multi-tenant hosting | The shared production-shaped environment prerequisite is complete. | Exercise CT through the same tenant, identity, protected-content and operational boundaries rather than treating the WebHarness as the commercial product. |
 | TCWeb CT product journey | Only the accepted Companies House accounts-snapshot hand-off exists. There is no complete CT preparation, review, declaration, approval, submit/poll/recovery UI. | Implement and review the production-shaped CT workflow before claiming product maturity. |
 | HMRC recognition | Not applied for and not claimed. | Complete own/ETS testing and the mature product journey, then request and execute HMRC's current new-applicant scenarios. |
@@ -132,10 +132,25 @@ does not open CT-B, ETS or production submission.
 
 ### CT-B — Phase 5.10 ETS-ready boundary
 
+**Implementation update — 18 November 2026:** the obsolete recognition blocker has been removed.
+The preflight now evaluates four independent conditions: a bounded CT-A baseline-approval reference,
+an exact SHA-256 match to the freshly materialised service artifact, availability of the protected
+ETS configuration, and a bounded attempt-authorisation reference tied to the exact transaction ID.
+Missing or mismatched conditions fail closed with distinct diagnostic codes. Even when all four are
+satisfied, the diagnostic still reports `CT-ETS-EXTERNAL-SEND-DISABLED` and
+`CT-PRODUCTION-SUBMISSION-GATE-CLOSED`.
+
+The Phase 5.9 durable coordinator is now composed with the one-attempt HTTP gateway for
+submit, `DATA_REQUEST`, poll and delete transitions. Each operation performs at most one HTTP
+exchange, applies the response through the durable state machine and retains exact response bytes
+and SHA-256 evidence. A Development-only authenticated WebHarness diagnostic exposes the bounded
+operations; external exchange remains independently configuration-disabled and the production
+family gate remains closed.
+
 1. Confirm the current RIM/test-service release, `HMRC-CT-CT600` class, ETS endpoints, supplied test
    credentials, channel values, poll contract and receipt verification.
 2. Remove `CT-RECOGNITION-EVIDENCE-PENDING` as an ETS blocker. Replace it with explicit baseline
-   baseline approval, exact-artifact approval, protected-configuration availability and named-attempt
+   approval, exact-artifact approval, protected-configuration availability and named-attempt
    authorisation.
 3. Introduce a dedicated official-test eligibility boundary. It may send only to the allow-listed ETS
    endpoints, must reject `CT-RATE-PROVISIONAL`, and must not promote or expose the production CT gateway.
@@ -146,7 +161,35 @@ does not open CT-B, ETS or production submission.
 **Gate:** send-disabled preflight reviewed with no credentials or protected XML exposed. A first ETS
 exchange requires separate contemporaneous human authorisation.
 
+**Gate accepted on 18 November 2026:** the explicit baseline, exact-artifact,
+protected-configuration and named-attempt checks are accepted together with the internal durable
+coordinator-to-HTTP composition. The WebHarness remains unable to send, the production family gate
+remains closed and no HMRC request has been made. CT-C may now stage one fresh B8 artifact and
+transaction ID for contemporaneous review and authorisation immediately before its first ETS
+exchange.
+
 ### CT-C — controlled External Test Service evidence
+
+**Execution update — 18 November 2026:** the first separately authorised ETS conversation reached
+HMRC and was deleted successfully after retaining its terminal result. It produced a genuine ChRIS
+5005 business error because the protected test UTR in `GovTalkDetails` did not match the reviewed
+tenant UTR in `IRheader`. The same run also exposed two transport defects: poll must use
+`Qualifier=poll` with `Function=submit`, and delete must use the terminal response's returned
+`ResponseEndPoint`. Both protocol corrections are covered by the adapter tests. Terminal routing is
+now recovered from the exact retained, digest-verified response, so restart recovery does not rely
+on mutable metadata.
+
+The official-test preparation boundary now replaces only the UTR with the protected ETS identity
+before Objective 3 preparation. Materialisation fails closed unless the resulting `IRheader` UTR
+equals the outer Transaction Engine identity. Accounting values and statutory meaning are not
+changed.
+
+Following exact-artifact review and separate authorisation, transaction `20261118B8C00002`
+completed the full acknowledgement → poll → terminal → delete sequence. HMRC returned a terminal
+`BusinessResponse` with no error elements and an `IRmarkReceipt` containing `Signature` and
+`Message`; the exact receipt was retained before delete. HMRC then acknowledged deletion. The
+conversation is durably `Complete`, and production remains disabled. CT-C is ready for human gate
+review; successful execution does not itself constitute recognition or production approval.
 
 1. Execute one authorised test-tenant ETS submission.
 2. Follow the returned polling interval; persist correlation and terminal evidence before deletion.
@@ -155,8 +198,11 @@ exchange requires separate contemporaneous human authorisation.
 5. Correct evidenced defects through the appropriate Objective 3, transport or product boundary and
    repeat only with a fresh explicitly authorised transaction.
 
-**Gate:** complete, durable, reproducible ETS conversation with accepted artifact identities and no
-production capability enabled.
+**Gate:** complete, durable, reproducible successful ETS conversation with accepted artifact
+identities and no production capability enabled.
+
+**Execution evidence ready for review on 18 November 2026:** the corrected conversation satisfies
+the mechanical gate conditions. Formal CT-C acceptance remains a human decision.
 
 ### CT-D — production-shaped TCWeb journey
 

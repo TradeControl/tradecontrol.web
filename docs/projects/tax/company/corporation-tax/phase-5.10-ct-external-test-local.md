@@ -2,7 +2,17 @@
 
 ## Status
 
-Local implementation is ready for human review as at 14 October 2026. It cannot send to HMRC in its current composition. No External Test Service request was made, the Phase 5.7 Corporation Tax family gate remains closed, and all CT artifacts remain `Preview` with `SubmissionReady=false`.
+CT-B was accepted by human review on 18 November 2026. CT-C now provides a Development-only,
+authenticated diagnostic over the durable one-exchange Transaction Engine conversation. The first
+separately authorised ETS conversation completed with retained HMRC evidence and a ChRIS 5005 UTR
+identity mismatch; it did not produce an accepted return. The poll/delete protocol defects exposed
+by that conversation are corrected and covered by tests. After exact-artifact review and separate
+authorisation, the identity-corrected conversation completed with a genuine HMRC
+`BusinessResponse`, retained IRmark receipt, zero response errors and acknowledged delete. CT-C is
+ready for human gate review.
+
+The Phase 5.7 Corporation Tax family gate remains closed, production submission remains disabled,
+and all CT artifacts remain `Preview` with `SubmissionReady=false`.
 
 **Programme status (22 October 2026): paused for the multi-tenant environment.** HMRC has confirmed
 that recognition is optional and that ETS testing precedes any recognition application. The owner
@@ -52,17 +62,22 @@ The authenticated development-only WebHarness route is:
 
 `POST /api/company/corporation-tax/official-test-preflight`
 
-It uses the existing CT payload plus one durable upper-case hexadecimal `officialTest.transactionId`. Its response contains safe evidence only: class, intended endpoint, return period, service/attachment/final-wire digests and a digest of the IRmark. It never returns the credential-bearing XML or any credential value. The response always identifies the evidence as `HMRC ETS MATERIALISED — NOT SENT` and reports:
+It uses the existing CT payload plus one durable upper-case hexadecimal `officialTest.transactionId`.
+The request also carries explicit references for the accepted CT-A baseline, the approved exact
+service-artifact SHA-256 and the named-attempt authorisation bound to that transaction ID. Its
+response contains safe evidence only: class, intended endpoint, return period,
+service/attachment/final-wire digests, a digest of the IRmark and Boolean gate results. It never
+returns the credential-bearing XML, a credential value or protected source location. The response
+always identifies the evidence as `HMRC ETS MATERIALISED — NOT SENT` and reports:
 
 - `ExternalSendEnabled=false`;
-- `CT-ETS-EXTERNAL-SEND-DISABLED`;
-- `CT-RECOGNITION-EVIDENCE-PENDING`; and
+- `CT-ETS-EXTERNAL-SEND-DISABLED`; and
 - `CT-PRODUCTION-SUBMISSION-GATE-CLOSED`.
 
-HMRC's later sequencing clarification means `CT-RECOGNITION-EVIDENCE-PENDING` is not a valid reason
-to block an ETS test. It remains in the current send-disabled implementation only as historical
-local evidence and must be replaced with the reviewed environment/readiness and explicit-attempt
-authorisation gates when Phase 5.10 resumes. It must not simply be removed to expose a send path.
+Until their corresponding evidence is present, the preflight additionally reports a distinct
+blocker for missing baseline approval, missing or mismatched exact-artifact approval, unavailable
+protected configuration, or missing/mismatched named-attempt authorisation. Recognition is not an
+ETS prerequisite and `CT-RECOGNITION-EVIDENCE-PENDING` is no longer emitted.
 
 ### Statutory-accounts identity boundary
 
@@ -88,7 +103,15 @@ returns a separately typed hand-off only when the matching Companies House conve
 terminal `Accepted`; prepared, acknowledged, pending, parked, rejected, missing and legacy
 conversations cannot cross that gate.
 
-The dedicated `TransactionEngineHttpGateway` provides the later one-attempt transport primitive. It validates the outbound digest and endpoint, sends one `application/xml; charset=utf-8` POST, applies a bounded timeout and response size, disables redirects, cookies and automatic decompression, and preserves exact response bytes plus SHA-256. It does not retry or decide whether another request is safe. It is internal and unregistered; the durable Phase 5.9 coordinator remains responsible for uncertain submission, `DATA_REQUEST`, polling, terminal persistence, receipt retention and deletion.
+The dedicated `TransactionEngineHttpGateway` provides the one-attempt transport primitive. It
+validates the outbound digest and endpoint, sends one `application/xml; charset=utf-8` POST, applies
+a bounded timeout and response size, disables redirects, cookies and automatic decompression, and
+preserves exact response bytes plus SHA-256. It does not retry or decide whether another request is
+safe. An internal `TransactionEngineExchangeCoordinator` now composes that primitive with the
+durable Phase 5.9 state machine for one submit, `DATA_REQUEST`, poll or delete exchange at a time.
+It applies each exact response through the durable conversation before returning. Neither class is
+registered in WebHarness or another host, and the architecture suite forbids this coordinator from
+being introduced into WebHarness.
 
 ## Offline evidence
 
@@ -104,12 +127,12 @@ The expanded adapter tests prove:
 
 Current verification:
 
-- Submission Adapter Tests: 169 assertions;
-- WebHarness hardening: 87 assertions;
-- Architecture Tests: 26 assertions;
-- Company Contract Tests: 109 assertions;
-- Trade Control Adapter: 10 assertions;
-- Application: 75 assertions;
+- Submission Adapter Tests: 178 assertions;
+- WebHarness hardening: 91 assertions;
+- Architecture Tests: 32 assertions;
+- Company Contract Tests: 115 assertions;
+- Trade Control Adapter: 11 assertions;
+- Application: 90 assertions;
 - Companies House simulator: 31 assertions;
 - VAT contracts: 19 assertions;
 - MTD Income Tax contracts: 91 assertions and 44 endpoint descriptors;
@@ -123,12 +146,11 @@ Current verification:
 
 ## Remaining review and execution gate
 
-After the multi-tenant environment is implemented and independently reviewed, human review should
-reconfirm this protected configuration and send-disabled preflight before any credentialed
-external-test attempt. A separately authorised test execution must register the one-attempt
-transport, retain the exact request/response evidence and observe submit → acknowledgement → poll →
-terminal → receipt → delete. That authorisation applies only to the named ETS attempt; it does not
-enable live filing, relax the production family gate or constitute a recognition application.
+Human review should now inspect the retained identity-corrected conversation and accept or reject
+the CT-C gate. The completed run retained exact request/response evidence and observed
+submit → acknowledgement → poll → terminal → receipt → delete. Its authorisation applied only to
+that named ETS attempt; it does not enable live filing, relax the production family gate or
+constitute a recognition application.
 
 The new-applicant-pack request was sent to HMRC Software Developers Support Team on 14 October 2026
 with the issued Vendor ID. HMRC replied on 21 October that recognition is optional and must follow
@@ -167,3 +189,37 @@ HMRC supplied no April 2027 RIM, XSD, Schematron, calculator or effective contra
 instruction with this draft. Accordingly it is consultation/change-watch evidence only. RIM 1.994,
 the immutable Objective 3 artifact and all Phase 5.10 submission/recognition gates remain unchanged;
 no schema fields or validation rules may be inferred from these documents.
+
+### Draft v0.2 update received 18 November 2026
+
+HMRC subsequently supplied v0.2 forms and expanded change schedules. The material is still draft
+consultation evidence: it contains no RIM, XSD, Schematron, calculator, taxonomy package or
+instruction changing the executable contract selected by ETS. The retained source identities are:
+
+| Evidence | SHA-256 |
+| --- | --- |
+| accompanying email export | `93F8E46FC224FE9B47F11B452D6CE40E2F23C8EAF7E4E5B110E344F2C865F0C0` |
+| `CT600 04-27 v0.2.pdf` | `783D046BB88A91D5FB10982BCAAEDC9C52D7CF00E3EE1D274495E4DA527091D5` |
+| CT600A guidance changes | `46250126BE347E3A15C53432BE4AA90A428CB822E7757820011647BB43591229` |
+| CT600E guidance changes | `C32B7A214857F5202C7FBBB7904A2024A42003E6C254D4B3FAEC55E651E37B67` |
+| `CT600L 04-27 v0.2.pdf` | `9F411450A29334ECF2DD4E73C2F36BE8FDC02CBFE01C9AD877DDB0C939C6DEAD` |
+| CT600L guidance changes | `B5132E885093DCECDF22588F58C14D0AB964F83429CC1C71650142409586AEF0` |
+| CT600 guidance changes | `9C98B8E30A74E01B1D523CEC4C9D7EF51E6FED7C48F9A053938D80C6DB2FBC86` |
+
+The v0.2 review records the following impact:
+
+- CT600 boxes 696 and 739 are renamed for the Main Rate first-year allowance: 40% for qualifying
+  expenditure in 2026 and 50% from 1 January 2027. This does not alter the approved target-period
+  artifact, but final executable assets must be reviewed before supporting the later allowance.
+- CT600A guidance changes the section 455 rate to 35.75% from 6 April 2026. A return period ending
+  30 June 2026 can overlap that commencement date. The current supported CT600A boundary accepts a
+  separately reviewed tax-charge input; a future calculation source must split/apply the lawful rate
+  and fail closed where the applicable result has not been reviewed. No rate is inferred into the
+  current serializer from draft guidance.
+- CT600E and CT600L clarify specialist/legacy aggregation, RDEC carry-forward and surrender wording.
+  They remain outside the initial supported filing profile.
+- Comparison of the v0.1 and v0.2 main/CT600L form surfaces found no new supported box requirement;
+  the visible changes are guidance or layout rather than an executable contract migration.
+
+Therefore CT-B continues against CT2025 and RIM 1.994. The draft does not change the immutable
+service artifact, validation baseline, ETS endpoint selection or send-disabled decision.
