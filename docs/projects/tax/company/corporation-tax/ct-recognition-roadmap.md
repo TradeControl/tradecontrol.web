@@ -17,7 +17,7 @@ listing and production activation retain separate evidence and human gates.
 | Objective 3 contracts and population | The approved ordinary micro-company surface carries the accepted marginal-relief calculation, associated-company facts and provisional-rate filing boundary into the same accounts, computation and CT600 artifact path. | Retain specialist regimes outside the supported scope. |
 | Phase 5.8 service artifact | CT2025 computation, FRC 2026 accounts and RIM 1.994 assets remain pinned. The refreshed positive-D artifact passes the official CT2025 package in Arelle, HMRC LTS 8.3 and one separately authorised genuine TPVS validation, including its IRmark and tax calculator. MR-5 was accepted on 17 November 2026. | Local LTS and genuine remote TPVS evidence must retain their distinct classifications. |
 | Phase 5.9 Transaction Engine | Complete and reviewed for offline protocol fixtures, IRmark and durable conversation semantics. | Confirm current ETS class, credentials, endpoints and receipt behaviour immediately before the external test. |
-| Phase 5.10 local ETS boundary | CT-B is accepted. CT-C exposes a Development-only, authenticated WebHarness diagnostic over the durable one-exchange conversation boundary; production remains disabled. An identity-corrected, separately authorised ETS conversation completed with a genuine HMRC `BusinessResponse`, retained IRmark receipt, zero returned errors and acknowledged delete. | Human-review the retained CT-C evidence and accept or reject its gate. Do not open production submission. |
+| Phase 5.10 local ETS boundary | CT-B and CT-C are accepted. The Development-only, authenticated diagnostic completed an identity-corrected ETS conversation with a genuine HMRC `BusinessResponse`, retained IRmark receipt, zero returned errors and acknowledged delete. Production remains disabled. | Implement CT-D as the coherent production-shaped filing journey. Do not open production submission before its gate is accepted. |
 | Multi-tenant hosting | The shared production-shaped environment prerequisite is complete. | Exercise CT through the same tenant, identity, protected-content and operational boundaries rather than treating the WebHarness as the commercial product. |
 | TCWeb CT product journey | Only the accepted Companies House accounts-snapshot hand-off exists. There is no complete CT preparation, review, declaration, approval, submit/poll/recovery UI. | Implement and review the production-shaped CT workflow before claiming product maturity. |
 | HMRC recognition | Not applied for and not claimed. | Complete own/ETS testing and the mature product journey, then request and execute HMRC's current new-applicant scenarios. |
@@ -201,8 +201,9 @@ review; successful execution does not itself constitute recognition or productio
 **Gate:** complete, durable, reproducible successful ETS conversation with accepted artifact
 identities and no production capability enabled.
 
-**Execution evidence ready for review on 18 November 2026:** the corrected conversation satisfies
-the mechanical gate conditions. Formal CT-C acceptance remains a human decision.
+**Gate accepted on 18 November 2026:** the corrected conversation satisfied the mechanical gate
+conditions and its retained evidence was accepted by human review. This acceptance opens CT-D only;
+it does not enable production submission.
 
 ### CT-D — production-shaped TCWeb journey
 

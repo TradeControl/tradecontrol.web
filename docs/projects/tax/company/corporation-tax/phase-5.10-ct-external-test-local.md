@@ -8,8 +8,8 @@ separately authorised ETS conversation completed with retained HMRC evidence and
 identity mismatch; it did not produce an accepted return. The poll/delete protocol defects exposed
 by that conversation are corrected and covered by tests. After exact-artifact review and separate
 authorisation, the identity-corrected conversation completed with a genuine HMRC
-`BusinessResponse`, retained IRmark receipt, zero response errors and acknowledged delete. CT-C is
-ready for human gate review.
+`BusinessResponse`, retained IRmark receipt, zero response errors and acknowledged delete. CT-C was
+accepted by human review on 18 November 2026.
 
 The Phase 5.7 Corporation Tax family gate remains closed, production submission remains disabled,
 and all CT artifacts remain `Preview` with `SubmissionReady=false`.
@@ -146,11 +146,10 @@ Current verification:
 
 ## Remaining review and execution gate
 
-Human review should now inspect the retained identity-corrected conversation and accept or reject
-the CT-C gate. The completed run retained exact request/response evidence and observed
-submit → acknowledgement → poll → terminal → receipt → delete. Its authorisation applied only to
-that named ETS attempt; it does not enable live filing, relax the production family gate or
-constitute a recognition application.
+The completed run retained exact request/response evidence and observed submit → acknowledgement →
+poll → terminal → receipt → delete. Its authorisation applied only to that named ETS attempt; its
+acceptance opens CT-D product-journey work but does not enable live filing, relax the production
+family gate or constitute a recognition application.
 
 The new-applicant-pack request was sent to HMRC Software Developers Support Team on 14 October 2026
 with the issued Vendor ID. HMRC replied on 21 October that recognition is optional and must follow
