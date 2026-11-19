@@ -374,13 +374,16 @@ behind one final integration test.
    - introduce the immutable CT filing-plan identity and continuation lookup;
    - keep privileged Diagnostics available without making it the default experience.
 2. **CT-D2 — Companies House continuation**
-   **Status: deployed to B8 and awaiting human review.** Review package
-   `ct-d2-20261118-r1` has SHA-256
-   `C2D23E553101BAF953013E9354D01AD1B0528BE2356C76B3E9950845F1E5962B`. The File return workspace rediscovers a
+   **Status: deployed to B8 and under human review.** The 19 November 2026 review exercised official-test
+   submission `S00002`, recorded an explicitly simulated Companies House acceptance and opened the single
+   1 July 2025 to 30 June 2026 CT development scope. The File return workspace rediscovers a
    genuine accepted filing after reload, re-reads and verifies the protected full-accounts artifact,
    and derives one or two immutable CT-period identities. Multiple accepted filings require an
-   explicit choice. Missing, pending, simulated, legacy and mismatched evidence fails closed. The
-   surface remains locked and contains no preparation, approval or submission action. The readiness
+   explicit choice. Missing, pending, legacy and mismatched evidence fails closed. A simulated
+   acceptance may open a visibly marked preparation/validation scope only when the host is pinned to
+   the Companies House official-test environment and simulation facility; the same evidence is rejected
+   by the production host and cannot qualify a genuine HMRC submission. The surface contains no CT
+   approval or submission action. The readiness
    review also exposed and closed the remaining MR-3 Equity Bridge cutover defect: reconciliation now
    consumes the same Category-Tree-version-explicit jurisdiction-selected CT provider as the statement,
    with active parity, rollback-only Archived-predecessor reconstruction and tolerance tests preventing
@@ -394,6 +397,8 @@ behind one final integration test.
      product policy;
    - cover the one-accounts-period/two-CT-return case.
 3. **CT-D3 — calculation and reviewed inputs**
+   **Status: next implementation slice.** CT-D2 now supplies the fixed accounts snapshot and CT-period
+   identity required by this work; no calculation review has yet been approved through the product UI.
    - rebuild a non-filing comparison projection from current Trade Control transactions and require
      it to reconcile to the accepted accounts snapshot; never substitute those comparison bytes for
      the accepted full-accounts attachment;

@@ -51,6 +51,10 @@ public sealed record CompaniesHousePreparedReview(
     string DownloadPath,
     string PdfPath);
 
+public sealed record CompaniesHouseResumablePreparation(
+    CompaniesHousePreparedReview Preparation,
+    CompaniesHousePreparationInput Input);
+
 public sealed record CompaniesHouseReviewDocument(string MediaType, byte[] Bytes, string Sha256);
 public sealed record CompaniesHouseOfficialTestSubmittedDocument(byte[] Bytes, string Sha256,
     string SubmissionNumber, DateTimeOffset SubmittedAtUtc);
@@ -87,6 +91,10 @@ public interface ICompaniesHousePreparationReviewService
 {
     Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default);
+    Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
+        CancellationToken cancellationToken = default);
+    Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default);
     Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default);
     Task<CompaniesHouseOfficialTestSubmittedDocument> ReadOfficialTestSubmittedDocumentAsync(
@@ -306,6 +314,85 @@ internal sealed class CompaniesHousePreparationReviewService(
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Document",
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Download",
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Draft.pdf");
+    }
+
+    public async Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
+        CancellationToken cancellationToken = default)
+    {
+        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var preparation = await workflowStore.GetLatestUnapprovedPreparationAsync(
+            identity.TenantReference, identity.ReportingSubjectReference, periodEnd,
+            cancellationToken);
+        if (preparation is null)
+            return null;
+        if (!string.Equals(preparation.PrincipalReference, identity.ReportingSubjectReference,
+                StringComparison.Ordinal))
+            throw new UnauthorizedAccessException(
+                "The Companies House preparation belongs to another reporting subject.");
+        if (preparation.InvalidatedAtUtc.HasValue)
+            return null;
+        if (string.IsNullOrWhiteSpace(preparation.ReviewedInputSha256)
+            || string.IsNullOrWhiteSpace(preparation.ProtectedInputReference)
+            || preparation.CategoryTree is null)
+            throw new InvalidOperationException(
+                "The retained Companies House draft predates resumable preparation and must be discarded by support.");
+
+        var retainedInput = await contentStore.ReadAsync(identity.TenantReference,
+            preparation.ProtectedInputReference, preparation.ReviewedInputSha256,
+            cancellationToken);
+        var input = JsonSerializer.Deserialize<CompaniesHousePreparationInput>(retainedInput.Bytes,
+                ReviewJson)
+            ?? throw new InvalidOperationException(
+                "The retained Companies House filing inputs are invalid.");
+        if (input.PeriodEnd != preparation.PeriodEnd)
+            throw new InvalidOperationException(
+                "The retained Companies House draft does not match its accounting period.");
+
+        return new(ToPreparedReview(preparation), input);
+    }
+
+    public async Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(preparationReference) || preparationReference.Length > 64)
+            throw new ArgumentException("A valid preparation reference is required.",
+                nameof(preparationReference));
+
+        var principal = httpContextAccessor.HttpContext?.User
+            ?? throw new UnauthorizedAccessException(
+                "An authenticated Trade Control session is required.");
+        if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
+            throw new UnauthorizedAccessException(
+                "Discarding a Companies House draft requires Administrator or Manager permission.");
+
+        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var preparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
+            preparationReference, cancellationToken)
+            ?? throw new KeyNotFoundException("The Companies House preparation was not found.");
+        if (!string.Equals(preparation.PrincipalReference, identity.ReportingSubjectReference,
+                StringComparison.Ordinal))
+            throw new UnauthorizedAccessException(
+                "The Companies House preparation belongs to another reporting subject.");
+        if (preparation.InvalidatedAtUtc.HasValue)
+            return;
+        if (await workflowStore.GetApprovalForPreparationAsync(identity.TenantReference,
+                preparation.Reference, cancellationToken) is not null)
+            throw new InvalidOperationException(
+                "Approved Companies House accounts cannot be discarded.");
+
+        await InvalidatePreparationAsync(preparation,
+            $"Unapproved draft discarded by {identity.ActorReference}.", cancellationToken);
+        try
+        {
+            await submissionLocks.ReleaseAsync(CompaniesHouseCategoryTreeLock.From(preparation),
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new InvalidOperationException(
+                "The draft was invalidated, but its Category Tree reservation could not be released. Recovery review is required.",
+                exception);
+        }
     }
 
     public async Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
@@ -598,6 +685,19 @@ internal sealed class CompaniesHousePreparationReviewService(
         approval.ActorReference,
         approval.ApprovedAtUtc);
 
+    private static CompaniesHousePreparedReview ToPreparedReview(
+        CompaniesHousePreparationRecord preparation) => new(
+        preparation.Reference,
+        preparation.DocumentSha256,
+        preparation.PackageSha256,
+        preparation.CategoryTree
+            ?? throw new InvalidOperationException(
+                "The Companies House preparation has no Category Tree statutory evidence."),
+        preparation.ExpiresAtUtc,
+        $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Document",
+        $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Download",
+        $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Draft.pdf");
+
     private async Task<(ReportingWindow Current, ReportingWindow? Comparative, DateOnly LastPeriodStart)>
         ResolvePeriodAsync(short yearNumber, CancellationToken cancellationToken)
     {
@@ -678,6 +778,14 @@ internal sealed class DisabledCompaniesHousePreparationReviewService
     public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House exact-document preparation is unavailable in this host.");
+
+    public Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House draft resumption is unavailable in this host.");
+
+    public Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House draft discard is unavailable in this host.");
 
     public Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default) =>

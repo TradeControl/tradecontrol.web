@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
 @using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
@@ -10,6 +11,7 @@
 @inject ICompaniesHousePreparationReviewService PreparationService
 @inject IServiceProvider Services
 @inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
+@inject ILogger<TaxHubCompaniesHouseFilingInputs> Logger
 
 @if (!Readiness.IsEligible)
 {
@@ -186,24 +188,71 @@ else if (_draft is not null && _editContext is not null)
 
                         @if (_approval is null)
                         {
-                            <section class="card border-primary" aria-labelledby="ch-approval-title">
-                                <div class="card-body">
-                                    <h4 id="ch-approval-title" class="h6">Approve these exact accounts</h4>
-                                    <p class="small mb-2">@CompaniesHouseApprovalDeclaration.Text</p>
-                                    <div class="form-check mb-3">
-                                        <input id="ch-approval-confirmed" type="checkbox" class="form-check-input"
-                                               @bind="_approvalConfirmed" />
-                                        <label class="form-check-label" for="ch-approval-confirmed">
-                                            I confirm the declaration above for this exact document and package.
-                                        </label>
-                                    </div>
-                                    <button type="button" class="btn btn-primary"
-                                            disabled="@(!_approvalConfirmed || _approving)"
-                                            @onclick="ApproveExactDocument">
-                                        @(_approving ? "Recording approval…" : "Approve accounts — does not file")
-                                    </button>
+                            @if (_preparedInputsChanged)
+                            {
+                                <div class="alert alert-warning mb-0" role="status">
+                                    The reviewed filing inputs changed after this draft was prepared. This exact draft cannot
+                                    be approved. Discard it to release the Category Tree reservation, review the corrected inputs,
+                                    and prepare a replacement.
                                 </div>
-                            </section>
+                            }
+
+                            @if (!_discardConfirmationRequested)
+                            {
+                                <div>
+                                    <button type="button" class="btn btn-outline-danger"
+                                            disabled="@_discarding"
+                                            @onclick="() => _discardConfirmationRequested = true">
+                                        Discard prepared draft
+                                    </button>
+                                    <div class="small text-muted mt-2">
+                                        Available only before approval. The audit record is retained as invalidated and the
+                                        Category Tree reservation is released.
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning mb-0" role="alert">
+                                    <strong>Discard this unapproved draft?</strong>
+                                    The document will remain in the audit history as invalidated and cannot be approved or filed.
+                                    Its Category Tree reservation will be released.
+                                    <div class="d-flex flex-wrap gap-2 mt-3">
+                                        <button type="button" class="btn btn-danger"
+                                                disabled="@_discarding"
+                                                @onclick="DiscardPreparedDraft">
+                                            @(_discarding ? "Discarding…" : "Discard draft and release reservation")
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                disabled="@_discarding"
+                                                @onclick="() => _discardConfirmationRequested = false">
+                                            Keep draft
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!_preparedInputsChanged)
+                            {
+                                <section class="card border-primary" aria-labelledby="ch-approval-title">
+                                    <div class="card-body">
+                                        <h4 id="ch-approval-title" class="h6">Approve these exact accounts</h4>
+                                        <p class="small mb-2">@CompaniesHouseApprovalDeclaration.Text</p>
+                                        <div class="form-check mb-3">
+                                            <input id="ch-approval-confirmed" type="checkbox" class="form-check-input"
+                                                   @bind="_approvalConfirmed" />
+                                            <label class="form-check-label" for="ch-approval-confirmed">
+                                                I confirm the declaration above for this exact document and package.
+                                            </label>
+                                        </div>
+                                        <button type="button" class="btn btn-primary"
+                                                disabled="@(!_approvalConfirmed || _approving)"
+                                                @onclick="ApproveExactDocument">
+                                            @(_approving ? "Recording approval…" : "Approve accounts — does not file")
+                                        </button>
+                                    </div>
+                                </section>
+                            }
                         }
                         else
                         {
@@ -330,6 +379,9 @@ else if (_draft is not null && _editContext is not null)
     private bool _preparing;
     private bool _approvalConfirmed;
     private bool _approving;
+    private bool _preparedInputsChanged;
+    private bool _discardConfirmationRequested;
+    private bool _discarding;
     private CompaniesHousePreparedReview? _prepared;
     private CompaniesHouseApprovalReview? _approval;
     private CompaniesHouseFilingStatus? _filingStatus;
@@ -353,15 +405,12 @@ else if (_draft is not null && _editContext is not null)
         _ => "Official-test submission recorded."
     };
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        var key = $"{Readiness.FilingInputs.PeriodEnd:yyyy-MM-dd}:{Readiness.FilingInputs.IsFirstAccountsPeriod}";
+        var key = $"{Readiness.FilingInputs.PeriodEnd:yyyy-MM-dd}:{Readiness.FilingInputs.IsFirstAccountsPeriod}:{Readiness.IsEligible}";
         if (_draftKey == key) return;
-        if (_editContext is not null) _editContext.OnFieldChanged -= InvalidateReview;
         _draftKey = key;
-        _draft = Clone(Readiness.FilingInputs);
-        _editContext = new EditContext(_draft);
-        _editContext.OnFieldChanged += InvalidateReview;
+        SetDraft(Clone(Readiness.FilingInputs));
         _errors = Array.Empty<string>();
         _reviewed = false;
         _prepared = null;
@@ -369,6 +418,32 @@ else if (_draft is not null && _editContext is not null)
         _approvalConfirmed = false;
         _filingStatus = null;
         _testSubmissionConfirmed = false;
+        _preparedInputsChanged = false;
+        _discardConfirmationRequested = false;
+        _discarding = false;
+
+        if (!Readiness.IsEligible || Readiness.FilingInputs.PeriodEnd == default)
+            return;
+        try
+        {
+            var resumed = await PreparationService.ResumeAsync(Readiness.FilingInputs.PeriodEnd);
+            if (resumed is null)
+                return;
+            SetDraft(ToDraft(resumed.Input, Readiness.FilingInputs.IsFirstAccountsPeriod));
+            _prepared = resumed.Preparation;
+            _reviewed = true;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _errors = [exception.Message];
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(new EventId(6751, "CompaniesHouseDraftResumeUnavailable"), exception,
+                "The retained Companies House draft could not be resumed.");
+            _errors = ["The retained accounts draft could not be loaded. Nothing has been changed; reload the filing journey and try again."];
+        }
     }
 
     private void ReviewInputs()
@@ -400,6 +475,7 @@ else if (_draft is not null && _editContext is not null)
                         item.ClosingBalance, item.Terms)).ToArray()));
             _approval = null;
             _approvalConfirmed = false;
+            _preparedInputsChanged = false;
         }
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or UnauthorizedAccessException)
@@ -437,6 +513,38 @@ else if (_draft is not null && _editContext is not null)
         finally
         {
             _approving = false;
+        }
+    }
+
+    private async Task DiscardPreparedDraft()
+    {
+        if (_prepared is null || _approval is not null || _discarding)
+            return;
+        _discarding = true;
+        _errors = Array.Empty<string>();
+        try
+        {
+            await PreparationService.DiscardAsync(_prepared.Reference);
+            _prepared = null;
+            _reviewed = false;
+            _approvalConfirmed = false;
+            _preparedInputsChanged = false;
+            _discardConfirmationRequested = false;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _errors = [exception.Message];
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogWarning(new EventId(6752, "CompaniesHouseDraftDiscardUnavailable"), exception,
+                "The retained Companies House draft could not be discarded.");
+            _errors = ["The draft discard did not complete. Reload the filing journey to check the retained draft before trying again."];
+        }
+        finally
+        {
+            _discarding = false;
         }
     }
 
@@ -478,13 +586,52 @@ else if (_draft is not null && _editContext is not null)
     private void InvalidateReview(object? sender = null, FieldChangedEventArgs? args = null)
     {
         _reviewed = false;
-        _prepared = null;
         _approval = null;
         _approvalConfirmed = false;
         _filingStatus = null;
         _testSubmissionConfirmed = false;
+        _discardConfirmationRequested = false;
+        if (_prepared is not null)
+        {
+            _preparedInputsChanged = true;
+            _errors = ["The filing inputs changed after preparation. Discard the retained draft before preparing a replacement."];
+            return;
+        }
+        _preparedInputsChanged = false;
         _errors = Array.Empty<string>();
     }
+
+    private void SetDraft(TaxHubCompaniesHouseFilingInputDraft draft)
+    {
+        if (_editContext is not null)
+            _editContext.OnFieldChanged -= InvalidateReview;
+        _draft = draft;
+        _editContext = new EditContext(_draft);
+        _editContext.OnFieldChanged += InvalidateReview;
+    }
+
+    private static TaxHubCompaniesHouseFilingInputDraft ToDraft(
+        CompaniesHousePreparationInput input, bool isFirstAccountsPeriod) => new()
+    {
+        PeriodEnd = input.PeriodEnd,
+        IsFirstAccountsPeriod = isFirstAccountsPeriod,
+        ApprovedOn = input.ApprovedOn.ToDateTime(TimeOnly.MinValue),
+        SigningDirectorName = input.SigningDirectorName,
+        PrincipalActivity = input.PrincipalActivity,
+        AccountingPolicies = input.AccountingPolicies,
+        AverageEmployees = input.AverageEmployees,
+        ConfirmsNoMaterialCommitmentsOrContingencies = input.ConfirmsNoMaterialCommitmentsOrContingencies,
+        DirectorAdvances = input.DirectorAdvances.Select(item =>
+            new TaxHubCompaniesHouseDirectorAdvanceInput
+            {
+                DirectorName = item.DirectorName,
+                OpeningBalance = item.OpeningBalance,
+                Advances = item.Advances,
+                Repayments = item.Repayments,
+                ClosingBalance = item.ClosingBalance,
+                Terms = item.Terms
+            }).ToList()
+    };
 
     private static TaxHubCompaniesHouseFilingInputDraft Clone(TaxHubCompaniesHouseFilingInputDraft value) => new()
     {

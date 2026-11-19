@@ -194,10 +194,36 @@ else
                                     }
                                     else if (_acceptedAccounts.Count == 0)
                                     {
-                                        <div class="alert alert-info mb-0 small" role="status">
-                                            No genuine accepted Companies House accounts are available for Corporation Tax.
-                                            Complete or check the accounts filing in the Accounts workspace first.
-                                        </div>
+                                        @if (LatestCompaniesHouseFiling is null)
+                                        {
+                                            <div class="alert alert-info mb-0 small" role="status">
+                                                No Companies House filing has been started for this company and accounting period.
+                                                Open <strong>Accounts → File Your Accounts</strong> to prepare and submit the accounts first.
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-warning mb-0 small" role="status">
+                                                <div class="fw-semibold mb-2">@CompaniesHouseGateTitle(LatestCompaniesHouseFiling)</div>
+                                                <dl class="row mb-2">
+                                                    <dt class="col-sm-4">Submission number</dt>
+                                                    <dd class="col-sm-8 mb-1">@(LatestCompaniesHouseFiling.SubmissionNumber ?? "Not allocated")</dd>
+                                                    <dt class="col-sm-4">Companies House state</dt>
+                                                    <dd class="col-sm-8 mb-1">@LatestCompaniesHouseFiling.State</dd>
+                                                    <dt class="col-sm-4">Accounts period</dt>
+                                                    <dd class="col-sm-8 mb-1">
+                                                        @LatestCompaniesHouseFiling.AccountsPeriodStart.ToString("d MMM yyyy") to @LatestCompaniesHouseFiling.AccountsPeriodEnd.ToString("d MMM yyyy")
+                                                    </dd>
+                                                    <dt class="col-sm-4">Last updated</dt>
+                                                    <dd class="col-sm-8 mb-1">@LatestCompaniesHouseFiling.UpdatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                                                </dl>
+                                                <div>@CompaniesHouseGateExplanation(LatestCompaniesHouseFiling)</div>
+                                                <div class="mt-2">
+                                                    Open <strong>Accounts → File Your Accounts</strong> to check the existing filing.
+                                                    Do not submit another set of accounts.
+                                                </div>
+                                            </div>
+                                        }
                                     }
                                     else
                                     {
@@ -213,10 +239,18 @@ else
                                                         <div class="small text-muted">
                                                             Accepted @accepted.UpdatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")
                                                         </div>
+                                                        @if (accepted.AcceptanceSimulated)
+                                                        {
+                                                            <div class="small text-warning fw-semibold mt-1">
+                                                                Development simulation — not Companies House acceptance
+                                                            </div>
+                                                        }
                                                     </div>
                                                     <button type="button" class="btn btn-sm btn-primary"
                                                             @onclick="() => SelectAcceptedAccountsAsync(accepted)">
-                                                        Use these accounts
+                                                        @(accepted.AcceptanceSimulated
+                                                            ? "Continue with CT development"
+                                                            : "Use these accounts")
                                                     </button>
                                                 </div>
                                             }
@@ -225,6 +259,13 @@ else
                                 }
                                 else
                                 {
+                                    @if (Continuation.AcceptanceSimulated)
+                                    {
+                                        <div class="alert alert-warning mb-0" role="status">
+                                            <strong>Development CT journey — Companies House acceptance was simulated.</strong>
+                                            This scope may be used to exercise preparation and validation, but it cannot qualify a genuine HMRC submission.
+                                        </div>
+                                    }
                                     <dl class="row small mb-0">
                                         <dt class="col-sm-4">Accounts period</dt>
                                         <dd class="col-sm-8">@Continuation.AccountsPeriodStart.ToString("d MMM yyyy") to @Continuation.AccountsPeriodEnd.ToString("d MMM yyyy")</dd>
@@ -284,7 +325,11 @@ else
     private bool _continuationLoading;
     private string? _continuationError;
     private string? _continuationLookupKey;
+    private IReadOnlyList<CompaniesHouseFilingContinuation> _companiesHouseFilings = [];
     private IReadOnlyList<CompaniesHouseFilingContinuation> _acceptedAccounts = [];
+
+    private CompaniesHouseFilingContinuation? LatestCompaniesHouseFiling =>
+        _companiesHouseFilings.FirstOrDefault();
 
     private string PlanningContext => Workspace switch
     {
@@ -312,18 +357,20 @@ else
         _continuationLookupKey = lookupKey;
         _continuationLoading = true;
         _continuationError = null;
+        _companiesHouseFilings = [];
         _acceptedAccounts = [];
         try
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var service = scope.ServiceProvider
                 .GetRequiredService<ICompaniesHouseFilingContinuationService>();
-            _acceptedAccounts = (await service.ListAsync(Workspace.CorporationTaxIdentityAsOf))
+            _companiesHouseFilings = await service.ListAsync(Workspace.CorporationTaxIdentityAsOf);
+            _acceptedAccounts = _companiesHouseFilings
                 .Where(value => value.State == CompaniesHouseConversationState.Accepted
-                    && !value.AcceptanceSimulated)
+                    && MatchesSelectedFinancialYear(value))
                 .ToList();
 
-            if (_acceptedAccounts.Count == 1)
+            if (_acceptedAccounts.Count == 1 && !_acceptedAccounts[0].AcceptanceSimulated)
                 await SelectAcceptedAccountsAsync(_acceptedAccounts[0]);
         }
         catch (Exception exception) when (exception is InvalidOperationException
@@ -352,7 +399,8 @@ else
                 accepted.ConversationReference,
                 accepted.AccountsPeriodStart,
                 accepted.AccountsPeriodEnd,
-                accepted.AccountsSnapshotSha256));
+                accepted.AccountsSnapshotSha256,
+                accepted.AcceptanceSimulated));
         }
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
@@ -369,4 +417,39 @@ else
     }
 
     private void ToggleDiagnostics() => _showDiagnostics = !_showDiagnostics;
+
+    private bool MatchesSelectedFinancialYear(CompaniesHouseFilingContinuation filing) =>
+        Workspace?.SelectedFinancialYearStart is { } selectedStart
+        && Workspace.SelectedFinancialYearEnd is { } selectedEnd
+        && filing.AccountsPeriodStart == selectedStart
+        && filing.AccountsPeriodEnd == selectedEnd;
+
+    private static string CompaniesHouseGateTitle(CompaniesHouseFilingContinuation filing) => filing switch
+    {
+        { AcceptanceSimulated: true } => "Companies House acceptance is simulated — CT remains locked",
+        { State: CompaniesHouseConversationState.Acknowledged } =>
+            "Companies House has acknowledged the accounts — acceptance is still pending",
+        { State: CompaniesHouseConversationState.Pending or CompaniesHouseConversationState.Parked } =>
+            "Companies House is still processing the accounts",
+        { State: CompaniesHouseConversationState.Rejected or CompaniesHouseConversationState.GatewayRejected } =>
+            "Companies House did not accept the accounts",
+        { State: CompaniesHouseConversationState.Accepted } =>
+            "Companies House accepted these accounts — select their financial year to continue",
+        _ => "No genuine accepted Companies House accounts are available for Corporation Tax"
+    };
+
+    private static string CompaniesHouseGateExplanation(CompaniesHouseFilingContinuation filing) => filing switch
+    {
+        { AcceptanceSimulated: true } =>
+            "A simulated outcome proves the workflow mechanics but is not authoritative Companies House acceptance and cannot unlock Corporation Tax filing.",
+        { State: CompaniesHouseConversationState.Acknowledged } =>
+            "Acknowledgement confirms receipt only. Corporation Tax filing unlocks after a genuine terminal Accepted outcome.",
+        { State: CompaniesHouseConversationState.Pending or CompaniesHouseConversationState.Parked } =>
+            "Corporation Tax filing remains locked until Companies House returns a genuine terminal Accepted outcome.",
+        { State: CompaniesHouseConversationState.Rejected or CompaniesHouseConversationState.GatewayRejected } =>
+            "Resolve the Companies House findings and complete the accounts filing before starting Corporation Tax.",
+        { State: CompaniesHouseConversationState.Accepted } =>
+            "These accounts are accepted, but they do not match the selected financial year. Select the financial year matching the accounts period to begin the Corporation Tax filing journey.",
+        _ => "Corporation Tax filing requires a genuine terminal Accepted Companies House outcome."
+    };
 }

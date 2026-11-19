@@ -240,6 +240,9 @@ internal interface ICompaniesHouseWorkflowStore
         CancellationToken cancellationToken = default);
     Task<CompaniesHousePreparationRecord?> GetPreparationAsync(string tenantReference, string reference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHousePreparationRecord?> GetLatestUnapprovedPreparationAsync(
+        string tenantReference, string principalReference, DateOnly periodEnd,
+        CancellationToken cancellationToken = default);
     Task AddApprovalAsync(CompaniesHouseApprovalRecord approval,
         CancellationToken cancellationToken = default);
     Task<CompaniesHouseApprovalRecord?> GetApprovalAsync(string tenantReference, string reference,

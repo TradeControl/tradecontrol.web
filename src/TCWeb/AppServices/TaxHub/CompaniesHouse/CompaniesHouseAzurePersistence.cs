@@ -65,6 +65,36 @@ internal sealed class AzureCompaniesHousePersistence(
         string reference, CancellationToken cancellationToken = default) => ReadPayloadAsync<CompaniesHousePreparationRecord>(
         "Tax.CompaniesHousePreparation", tenantReference, reference, cancellationToken);
 
+    public async Task<CompaniesHousePreparationRecord?> GetLatestUnapprovedPreparationAsync(
+        string tenantReference, string principalReference, DateOnly periodEnd,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("""
+            SELECT TOP (1) preparation.PayloadJson
+              FROM Tax.CompaniesHousePreparation AS preparation
+             WHERE preparation.TenantReference = @tenant
+               AND preparation.PeriodEnd = @periodEnd
+               AND JSON_VALUE(preparation.PayloadJson, '$.principalReference') = @principal
+               AND JSON_VALUE(preparation.PayloadJson, '$.invalidatedAtUtc') IS NULL
+               AND NOT EXISTS
+               (
+                   SELECT 1
+                     FROM Tax.CompaniesHouseApproval AS approval
+                    WHERE approval.TenantReference = preparation.TenantReference
+                      AND approval.PreparationReference = preparation.Reference
+               )
+             ORDER BY preparation.CreatedAtUtc DESC;
+            """, connection);
+        Add(command, "tenant", Guid.Parse(tenantReference));
+        Add(command, "periodEnd", periodEnd.ToDateTime(TimeOnly.MinValue));
+        Add(command, "principal", principalReference);
+        var payload = await command.ExecuteScalarAsync(cancellationToken) as string;
+        return string.IsNullOrWhiteSpace(payload)
+            ? null
+            : JsonSerializer.Deserialize<CompaniesHousePreparationRecord>(payload, Json);
+    }
+
     public async Task<bool> TryInvalidatePreparationAsync(CompaniesHousePreparationRecord preparation,
         CancellationToken cancellationToken = default)
     {

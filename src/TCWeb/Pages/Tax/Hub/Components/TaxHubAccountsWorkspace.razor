@@ -275,15 +275,14 @@ else
                                         <strong>Category Tree @_existingFiling.CategoryVersionId is now Submitted and read-only.</strong>
                                         To change the classification, create and publish a successor Draft.
                                     </div>
-                                    @if (!_existingFiling.AcceptanceSimulated)
-                                    {
-                                        <div>
-                                            <button type="button" class="btn btn-primary"
-                                                    @onclick="ContinueToCorporationTaxAsync">
-                                                Continue to Corporation Tax
-                                            </button>
-                                        </div>
-                                    }
+                                    <div>
+                                        <button type="button" class="btn btn-primary"
+                                                @onclick="ContinueToCorporationTaxAsync">
+                                            @(_existingFiling.AcceptanceSimulated
+                                                ? "Continue with CT development"
+                                                : "Continue to Corporation Tax")
+                                        </button>
+                                    </div>
                                 }
                                 else if (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
                                          or CompaniesHouseConversationState.Pending
@@ -543,8 +542,7 @@ else
     {
         if (_existingFiling is not
             {
-                State: CompaniesHouseConversationState.Accepted,
-                AcceptanceSimulated: false
+                State: CompaniesHouseConversationState.Accepted
             } accepted)
             return;
         if (OnContinueToCorporationTax.HasDelegate)
@@ -554,7 +552,8 @@ else
                 accepted.ConversationReference,
                 accepted.AccountsPeriodStart,
                 accepted.AccountsPeriodEnd,
-                accepted.AccountsSnapshotSha256));
+                accepted.AccountsSnapshotSha256,
+                accepted.AcceptanceSimulated));
         }
     }
 

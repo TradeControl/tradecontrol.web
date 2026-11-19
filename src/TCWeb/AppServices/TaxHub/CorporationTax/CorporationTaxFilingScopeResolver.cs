@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 using TradeControl.Web.Pages.Tax.Hub.Models;
 
@@ -21,21 +22,25 @@ internal interface ICorporationTaxFilingScopeResolver
 /// </summary>
 internal sealed class CorporationTaxFilingScopeResolver(
     ICompaniesHouseAccountsSnapshotService accountsSnapshots,
-    ICompaniesHouseWorkflowIdentityAccessor identityAccessor) : ICorporationTaxFilingScopeResolver
+    ICompaniesHouseWorkflowIdentityAccessor identityAccessor,
+    IOptions<CompaniesHouseProductHostOptions> hostOptions) : ICorporationTaxFilingScopeResolver
 {
     public async Task<TaxHubCorporationTaxContinuation> ResolveAsync(
         TaxHubCorporationTaxContinuation request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var allowOfficialTestSimulation = request.AcceptanceSimulated
+            && hostOptions.Value.CanSimulateOfficialTestAcceptance;
         var accepted = await accountsSnapshots.ReadAcceptedForCorporationTaxAsync(
-            request.AccountsApprovalReference, cancellationToken);
+            request.AccountsApprovalReference, allowOfficialTestSimulation, cancellationToken);
         var accounts = accepted.Accounts;
 
         if (!string.Equals(accepted.ConversationReference,
                 request.AccountsConversationReference, StringComparison.Ordinal)
             || accounts.PeriodStart != request.AccountsPeriodStart
             || accounts.PeriodEnd != request.AccountsPeriodEnd
+            || accepted.AcceptanceSimulated != request.AcceptanceSimulated
             || !string.Equals(accounts.AccountsSnapshotSha256,
                 request.AccountsSnapshotSha256, StringComparison.Ordinal))
             throw new InvalidOperationException(

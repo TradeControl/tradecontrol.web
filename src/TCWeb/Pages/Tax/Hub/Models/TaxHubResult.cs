@@ -163,6 +163,8 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public string? SelectedYearDescription { get; init; }
         public DateTime? SelectedPeriodStartOn { get; init; }
         public string? SelectedPeriodDescription { get; init; }
+        public DateOnly? SelectedFinancialYearStart { get; init; }
+        public DateOnly? SelectedFinancialYearEnd { get; init; }
         public DateOnly CorporationTaxIdentityAsOf { get; init; }
         public bool IsAllYears { get; init; }
         public bool IsAllPeriodsInYear { get; init; }
@@ -178,6 +180,7 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         DateOnly AccountsPeriodStart,
         DateOnly AccountsPeriodEnd,
         string AccountsSnapshotSha256,
+        bool AcceptanceSimulated = false,
         string CompanyIdentitySha256 = "",
         string FullAccountsSha256 = "",
         DateTimeOffset? AcceptedAtUtc = null,

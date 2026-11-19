@@ -27,7 +27,8 @@ internal sealed record CompaniesHouseApprovedAccountsSnapshot(
 internal sealed record CompaniesHouseAcceptedAccountsSnapshot(
     CompaniesHouseApprovedAccountsSnapshot Accounts,
     string ConversationReference,
-    DateTimeOffset AcceptedAtUtc);
+    DateTimeOffset AcceptedAtUtc,
+    bool AcceptanceSimulated);
 
 /// <summary>
 /// Supplies the exact full statutory-accounts artifact that is cryptographically paired with an
@@ -39,7 +40,8 @@ internal interface ICompaniesHouseAccountsSnapshotService
     Task<CompaniesHouseApprovedAccountsSnapshot> ReadApprovedAsync(string approvalReference,
         CancellationToken cancellationToken = default);
     Task<CompaniesHouseAcceptedAccountsSnapshot> ReadAcceptedForCorporationTaxAsync(
-        string approvalReference, CancellationToken cancellationToken = default);
+        string approvalReference, bool allowOfficialTestSimulation = false,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseAccountsSnapshotService(
@@ -52,15 +54,24 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
         await ReadAsync(approvalReference, false, cancellationToken);
 
     public async Task<CompaniesHouseAcceptedAccountsSnapshot> ReadAcceptedForCorporationTaxAsync(
-        string approvalReference, CancellationToken cancellationToken = default)
+        string approvalReference, bool allowOfficialTestSimulation = false,
+        CancellationToken cancellationToken = default)
     {
-        var accounts = await ReadAsync(approvalReference, true, cancellationToken);
-        return new(accounts, accounts.ConversationReference!, accounts.AcceptedAtUtc!.Value);
+        var accounts = await ReadAsync(approvalReference, true, cancellationToken,
+            allowOfficialTestSimulation);
+        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var conversation = (await workflowStore.ListConversationsAsync(identity.TenantReference,
+                accounts.CompanyIdentitySha256, cancellationToken))
+            .Single(value => string.Equals(value.Reference, accounts.ConversationReference,
+                StringComparison.Ordinal));
+        return new(accounts, accounts.ConversationReference!, accounts.AcceptedAtUtc!.Value,
+            conversation.AcceptanceSimulated);
     }
 
     private async Task<CompaniesHouseApprovedAccountsSnapshot> ReadAsync(string approvalReference,
         bool requireAcceptedConversation,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool allowOfficialTestSimulation = false)
     {
         if (string.IsNullOrWhiteSpace(approvalReference) || approvalReference.Length > 64)
             throw new ArgumentException("A valid Companies House approval reference is required.",
@@ -124,7 +135,7 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
                 "The Companies House filing conversation does not match the approved accounts snapshot.");
         if (requireAcceptedConversation
             && (conversation?.State != CompaniesHouseConversationState.Accepted
-                || conversation.AcceptanceSimulated))
+                || (conversation.AcceptanceSimulated && !allowOfficialTestSimulation)))
             throw new InvalidOperationException(
                 "Corporation Tax remains locked until Companies House has genuinely accepted the linked accounts.");
 

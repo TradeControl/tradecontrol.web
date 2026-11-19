@@ -20,6 +20,7 @@ using TradeControl.Web.Controllers;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
 using TradeControl.Web.Tenancy;
+using TradeControl.Web.Pages.Tax.Hub.Models;
 using TradeControl.Tax.UK.Hmrc.Vat.v1_0.Returns;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Tax.UK.Application.Preparation;
@@ -442,6 +443,32 @@ var simulatedAcceptanceSnapshotService = new CompaniesHouseAccountsSnapshotServi
 await AssertThrowsAsync<InvalidOperationException>(
     () => simulatedAcceptanceSnapshotService.ReadAcceptedForCorporationTaxAsync(stagingApproval.Reference),
     "A simulated Companies House acceptance released the Corporation Tax accounts hand-off.");
+var simulatedDevelopmentSnapshot = await simulatedAcceptanceSnapshotService
+    .ReadAcceptedForCorporationTaxAsync(stagingApproval.Reference, allowOfficialTestSimulation: true);
+var simulatedContinuationRequest = new TaxHubCorporationTaxContinuation(
+    stagingApproval.Reference, stagingStore.ActiveConversation!.Reference,
+    stagingApproval.PeriodStart, stagingApproval.PeriodEnd,
+    stagingApproval.AccountsSnapshotSha256!, AcceptanceSimulated: true);
+var simulatedResolver = new CorporationTaxFilingScopeResolver(
+    simulatedAcceptanceSnapshotService,
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.OfficialTest,
+        DispatchMode = CompaniesHouseDispatchMode.OfficialTestSingleSend
+    }));
+var simulatedContinuation = await simulatedResolver.ResolveAsync(simulatedContinuationRequest);
+var productionResolver = new CorporationTaxFilingScopeResolver(
+    simulatedAcceptanceSnapshotService,
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    Options.Create(new CompaniesHouseProductHostOptions
+    {
+        AuthorityEnvironment = CompaniesHouseAuthorityEnvironment.Production,
+        DispatchMode = CompaniesHouseDispatchMode.SendDisabled
+    }));
+await AssertThrowsAsync<InvalidOperationException>(
+    () => productionResolver.ResolveAsync(simulatedContinuationRequest),
+    "A simulated Companies House acceptance opened a Corporation Tax scope outside the official-test host.");
 var stagedAfterTerminal = await stagingService.StageApprovedAsync(stagingApproval.Reference);
 Assert(stagedFirst.State == CompaniesHouseConversationState.Prepared
        && stagedFirst.ConversationReference == stagedAgain.ConversationReference
@@ -450,12 +477,16 @@ Assert(stagedFirst.State == CompaniesHouseConversationState.Prepared
        && dispatched.SubmissionNumber == "R00001"
        && acceptedAccountsSnapshot.ConversationReference == stagedFirst.ConversationReference
        && acceptedAccountsSnapshot.Accounts.AccountsSnapshotSha256 == stagingAccountsSnapshotSha
+       && simulatedDevelopmentSnapshot.AcceptanceSimulated
+       && simulatedDevelopmentSnapshot.Accounts.AccountsSnapshotSha256 == stagingAccountsSnapshotSha
+       && simulatedContinuation.AcceptanceSimulated
+       && simulatedContinuation.Periods?.Count == 1
        && recordingExchange.ExchangeCount == 1
        && stagedAfterTerminal.State == CompaniesHouseConversationState.Accepted
        && stagedAfterTerminal.ConversationReference == stagedFirst.ConversationReference
        && stagingStore.UpsertCount == 2
        && stagingStore.TryBeginDispatchCount == 1
-       && stagingContent.ReadCount == 6
+       && stagingContent.ReadCount == 8
        && stagingContent.WriteCount == 2
        && stagingStore.ActiveConversation?.AuthorityTransactionId == "RECORDED0001",
     "The recording lifecycle did not retain exact evidence, claim once, separate acknowledgement, or prevent replay.");
@@ -653,6 +684,18 @@ Assert(filingInputComponent.Contains("CompaniesHousePreparationInvalidatedExcept
     "A conclusively invalidated Companies House preparation does not return the UI to a safe re-preparation state.");
 Assert(typeof(ICompaniesHouseWorkflowStore).GetMethod("TryInvalidatePreparationAsync") is not null,
     "The Companies House workflow store cannot durably record a conclusive pre-dispatch invalidation.");
+Assert(typeof(ICompaniesHouseWorkflowStore).GetMethod("GetLatestUnapprovedPreparationAsync") is not null
+       && typeof(ICompaniesHousePreparationReviewService).GetMethod("ResumeAsync") is not null
+       && typeof(ICompaniesHousePreparationReviewService).GetMethod("DiscardAsync") is not null,
+    "An unfinished Companies House preparation cannot be resumed and explicitly discarded after reload.");
+Assert(filingInputComponent.Contains("Discard prepared draft", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Discard draft and release reservation", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Available only before approval", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Readiness.IsEligible}", StringComparison.Ordinal)
+       && filingInputComponent.Contains("CompaniesHouseDraftDiscardUnavailable", StringComparison.Ordinal)
+       && filingInputComponent.Contains("Reload the filing journey to check the retained draft", StringComparison.Ordinal)
+       && filingInputComponent.Contains("_preparedInputsChanged", StringComparison.Ordinal),
+    "The filing journey does not expose a safe pre-approval draft-discard and Category Tree release path.");
 Assert(CompaniesHouseFilingInputReview.Validate(validFilingInputs, new DateOnly(2026, 10, 8)).Count == 0,
     "A valid reviewed Companies House filing-input draft was rejected.");
 validFilingInputs.DirectorAdvances.Add(new()
@@ -1187,13 +1230,30 @@ Assert(businessTaxWorkspaceComponent.Contains("No submission action is available
     && businessTaxWorkspaceComponent.Contains("Use these accounts", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Continuation.FullAccountsSha256", StringComparison.Ordinal),
     "The CT-D1 filing surface no longer states its fail-closed accepted-accounts boundary.");
+Assert(businessTaxWorkspaceComponent.Contains("Companies House has acknowledged the accounts — acceptance is still pending",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Submission number", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Accounts period", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Acknowledgement confirms receipt only", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Companies House acceptance is simulated — CT remains locked",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Do not submit another set of accounts", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_companiesHouseFilings", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("MatchesSelectedFinancialYear(value)", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("they do not match the selected financial year", StringComparison.Ordinal)
+    && taxHubService.Contains("SelectedFinancialYearStart = selectedFinancialYearStart", StringComparison.Ordinal)
+    && taxHubService.Contains("SelectedFinancialYearEnd = selectedFinancialYearEnd", StringComparison.Ordinal),
+    "The CT filing gate no longer explains the actual Companies House filing state and next action.");
 Assert(accountsWorkspaceComponent.Contains("Continue to Corporation Tax", StringComparison.Ordinal)
-    && accountsWorkspaceComponent.Contains("AcceptanceSimulated: false", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("Continue with CT development", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("accepted.AcceptanceSimulated", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("AccountsSnapshotSha256", StringComparison.Ordinal)
     && taxHubShell.Contains("ContinueToCorporationTaxAsync", StringComparison.Ordinal)
     && taxHubShell.Contains("CorporationTaxFilingScopeResolver.ResolveAsync", StringComparison.Ordinal)
-    && businessTaxWorkspaceComponent.Contains("Accepted company accounts selected", StringComparison.Ordinal),
-    "A genuine accepted Companies House snapshot no longer continues safely into Corporation Tax.");
+    && businessTaxWorkspaceComponent.Contains("Accepted company accounts selected", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Development CT journey — Companies House acceptance was simulated",
+        StringComparison.Ordinal),
+    "Accepted Companies House evidence no longer continues safely into the appropriately labelled Corporation Tax journey.");
 Assert(accountsWorkspaceComponent.Contains("ActivePanelIndexChanged=\"LoadSectionAsync\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("_loadedSections.Contains(section)", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("TaxHubAccountsWorkspaceSection.Filing", StringComparison.Ordinal)
@@ -2448,6 +2508,13 @@ file sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
 file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
     : ICompaniesHousePreparationReviewService
 {
+    public Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<CompaniesHouseResumablePreparation?>(null);
+
+    public Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default) => Task.CompletedTask;
+
     public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
@@ -2541,6 +2608,15 @@ file sealed class StubCompaniesHouseWorkflowStore(
         string reference, CancellationToken cancellationToken = default) =>
         Task.FromResult<CompaniesHousePreparationRecord?>(
             tenantReference == preparation.TenantReference && reference == preparation.Reference
+                ? preparation : null);
+
+    public Task<CompaniesHousePreparationRecord?> GetLatestUnapprovedPreparationAsync(
+        string tenantReference, string principalReference, DateOnly periodEnd,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<CompaniesHousePreparationRecord?>(
+            tenantReference == preparation.TenantReference
+            && principalReference == preparation.PrincipalReference
+            && periodEnd == preparation.PeriodEnd
                 ? preparation : null);
 
     public Task AddApprovalAsync(CompaniesHouseApprovalRecord value,

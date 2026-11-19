@@ -467,6 +467,12 @@ namespace TradeControl.Web.AppServices.TaxHub
                 yearPeriodStartDates.Count > 0
                     ? yearPeriodStartDates[^1].AddMonths(1).AddDays(-1)
                     : _businessClock.TodayDateTime);
+            var selectedFinancialYearStart = yearPeriodStartDates.Count > 0
+                ? DateOnly.FromDateTime(yearPeriodStartDates[0])
+                : (DateOnly?)null;
+            var selectedFinancialYearEnd = yearPeriodStartDates.Count > 0
+                ? corporationTaxIdentityAsOf
+                : (DateOnly?)null;
 
             // Statement StartOn is the Corporation Tax liability payment date or an actual
             // payment date. It is deliberately not an App.tbYearPeriod start and cannot be
@@ -636,6 +642,8 @@ namespace TradeControl.Web.AppServices.TaxHub
                 SelectedYearDescription = selectedYearDescription,
                 SelectedPeriodStartOn = periodStartOn,
                 SelectedPeriodDescription = selectedPeriodDescription,
+                SelectedFinancialYearStart = selectedFinancialYearStart,
+                SelectedFinancialYearEnd = selectedFinancialYearEnd,
                 CorporationTaxIdentityAsOf = corporationTaxIdentityAsOf,
                 IsAllYears = !yearNumber.HasValue,
                 IsAllPeriodsInYear = isAllPeriodsInYear,
