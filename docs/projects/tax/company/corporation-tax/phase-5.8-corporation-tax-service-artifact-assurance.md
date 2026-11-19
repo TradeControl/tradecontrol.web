@@ -31,7 +31,7 @@ Receipt resolved the external acquisition blocker but did not itself promote any
 - FRC 2026 taxonomy suite 1.0.0 is accepted for the target period and its official package is available.
 - LTS 8.3 is the current downloadable Local Test Service. Its current CT update entry is RIM 1.994.
 
-## Acquired-asset ledger
+## Acquired-asset register
 
 The authoritative archives remain in the ignored local evidence area. Required provenance, versions, entry points and checksums are pinned in source; the RIM XSD required for deterministic product validation is embedded as a build resource.
 

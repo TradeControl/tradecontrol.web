@@ -15,7 +15,8 @@ namespace TradeControl.Web.AppServices.TaxHub
         Task<IReadOnlyList<TaxHubPeriodOption>> GetPeriodsAsync(short yearNumber);
         Task<TaxHubPeriodOption?> GetDefaultPeriodAsync();
         Task<TaxHubVatWorkspaceModel> GetVatWorkspaceAsync(short? yearNumber, DateTime? periodStartOn);
-        Task<TaxHubBusinessTaxWorkspaceModel> GetBusinessTaxWorkspaceAsync(short? yearNumber, DateTime? periodStartOn);
+        Task<TaxHubBusinessTaxWorkspaceModel> GetBusinessTaxWorkspaceAsync(short? yearNumber,
+            DateTime? periodStartOn, bool includeTechnicalDetails = false);
         Task<TaxHubAccountsWorkspaceModel> GetAccountsWorkspaceAsync(short? yearNumber, DateTime? periodStartOn,
             TaxHubAccountsWorkspaceSection section = TaxHubAccountsWorkspaceSection.Annual);
     }

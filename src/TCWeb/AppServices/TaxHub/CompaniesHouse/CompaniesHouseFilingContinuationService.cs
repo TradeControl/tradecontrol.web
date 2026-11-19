@@ -16,6 +16,7 @@ namespace TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
 
 public sealed record CompaniesHouseFilingContinuation(
     string ConversationReference,
+    string ApprovalReference,
     string PreparationReference,
     string CategoryVersionId,
     string? SubmissionNumber,
@@ -39,11 +40,16 @@ public sealed record CompaniesHouseFilingContinuation(
     IReadOnlyList<CompaniesHouseError> StatusCheckErrors,
     bool AcceptanceSimulated,
     DateTimeOffset? AcceptanceSimulatedAtUtc,
-    string? AcceptanceSimulatedBy);
+    string? AcceptanceSimulatedBy,
+    DateOnly AccountsPeriodStart,
+    DateOnly AccountsPeriodEnd,
+    string AccountsSnapshotSha256);
 
 public interface ICompaniesHouseFilingContinuationService
 {
     Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(DateOnly identityAsOf,
         CancellationToken cancellationToken = default);
 }
 
@@ -54,6 +60,12 @@ internal sealed class CompaniesHouseFilingContinuationService(
 {
     public async Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
         CancellationToken cancellationToken = default)
+        => (await ListAsync(periodEnd, cancellationToken))
+            .FirstOrDefault(value => value.AccountsPeriodStart == periodStart
+                && value.AccountsPeriodEnd == periodEnd);
+
+    public async Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(DateOnly identityAsOf,
+        CancellationToken cancellationToken = default)
     {
         var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
         var connectionString = nodeContext.Database.GetConnectionString();
@@ -61,7 +73,7 @@ internal sealed class CompaniesHouseFilingContinuationService(
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
 
         var context = await new TcStatutoryContextReader(new ConnectionFactory(), connectionString)
-            .ReadAsync(periodEnd, cancellationToken);
+            .ReadAsync(identityAsOf, cancellationToken);
         var companyNumber = CompaniesHouseReadinessService.NormalizeCompanyNumber(
             context.Identity.CompanyNumber);
         if (companyNumber.Length != 8 || !companyNumber.All(char.IsAsciiLetterOrDigit))
@@ -69,13 +81,13 @@ internal sealed class CompaniesHouseFilingContinuationService(
 
         var companyIdentity = CompaniesHouseFilingIdentity.Company(identity.TenantReference,
             companyNumber);
+        var result = new List<CompaniesHouseFilingContinuation>();
         foreach (var conversation in await workflowStore.ListConversationsAsync(
                      identity.TenantReference, companyIdentity, cancellationToken))
         {
             var approval = await workflowStore.GetApprovalAsync(identity.TenantReference,
                 conversation.ApprovalReference, cancellationToken);
-            if (approval is null || approval.PeriodStart != periodStart || approval.PeriodEnd != periodEnd
-                || !string.Equals(approval.FilingProfile,
+            if (approval is null || !string.Equals(approval.FilingProfile,
                     CompaniesHouseProductPolicy.SupportedFilingProfile, StringComparison.Ordinal))
                 continue;
             var preparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
@@ -90,9 +102,14 @@ internal sealed class CompaniesHouseFilingContinuationService(
                     conversation.PackageSha256, StringComparison.Ordinal))
                 throw new InvalidOperationException(
                     "The existing Companies House filing does not match its retained evidence.");
+            if (string.IsNullOrWhiteSpace(approval.AccountsSnapshotSha256)
+                || !string.Equals(approval.AccountsSnapshotSha256,
+                    preparation.AccountsSnapshotSha256, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "The existing Companies House filing has no valid CT accounts snapshot proof.");
 
             var statusCheck = conversation.StatusChecks?.LastOrDefault();
-            return new(conversation.Reference, preparation.Reference,
+            result.Add(new(conversation.Reference, approval.Reference, preparation.Reference,
                 preparation.CategoryTree?.VersionId
                     ?? throw new InvalidOperationException(
                         "The existing Companies House filing has no Category Tree statutory evidence."),
@@ -107,10 +124,14 @@ internal sealed class CompaniesHouseFilingContinuationService(
                 statusCheck?.RequestSha256, statusCheck?.ResponseSha256,
                 statusCheck?.ExaminerComment, statusCheck?.SupportReference,
                 statusCheck?.Errors ?? [], conversation.AcceptanceSimulated,
-                conversation.AcceptanceSimulatedAtUtc, conversation.AcceptanceSimulatedBy);
+                conversation.AcceptanceSimulatedAtUtc, conversation.AcceptanceSimulatedBy,
+                approval.PeriodStart, approval.PeriodEnd, approval.AccountsSnapshotSha256));
         }
 
-        return null;
+        return result
+            .OrderByDescending(value => value.AccountsPeriodEnd)
+            .ThenByDescending(value => value.UpdatedAtUtc)
+            .ToList();
     }
 }
 
@@ -119,4 +140,7 @@ internal sealed class DisabledCompaniesHouseFilingContinuationService
 {
     public Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
         CancellationToken cancellationToken = default) => Task.FromResult<CompaniesHouseFilingContinuation?>(null);
+    public Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(DateOnly identityAsOf,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<CompaniesHouseFilingContinuation>>([]);
 }

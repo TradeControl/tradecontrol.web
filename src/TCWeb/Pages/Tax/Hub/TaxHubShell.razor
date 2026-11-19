@@ -1,4 +1,5 @@
 @using TradeControl.Web.AppServices.TaxHub
+@using TradeControl.Web.AppServices.TaxHub.CorporationTax
 @using TradeControl.Web.Pages.Tax.Hub.Components
 @using TradeControl.Web.Pages.Tax.Hub.Models
 @using TradeControl.Web.Authorization
@@ -7,6 +8,7 @@
 @using System.Threading
 @using Wangkanai.Detection.Models
 @inject ITaxHubService TaxHubService
+@inject ICorporationTaxFilingScopeResolver CorporationTaxFilingScopeResolver
 @inject Wangkanai.Detection.Services.IDetectionService Detection
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject PersistentComponentState PersistentState
@@ -107,11 +109,13 @@
                                             VatWorkspace="@_vatWorkspace"
                                             BusinessTaxWorkspace="@_businessTaxWorkspace"
                                             AccountsWorkspace="@_accountsWorkspace"
+                                            CorporationTaxContinuation="@_corporationTaxContinuation"
                                             VatFilingEnabled="@ShowHmrcConnection"
                                             IsMobile="@_isMobile"
                                             IsLoading="@_isWorkspaceLoading"
                                             Error="@_workspaceError"
-                                            OnAccountsWorkspaceRefreshRequested="RefreshWorkspaceAsync" />
+                                            OnAccountsWorkspaceRefreshRequested="RefreshWorkspaceAsync"
+                                            OnContinueToCorporationTax="ContinueToCorporationTaxAsync" />
                             </div>
                         </div>
                     </div>
@@ -211,11 +215,13 @@ else
                                         VatWorkspace="@_vatWorkspace"
                                         BusinessTaxWorkspace="@_businessTaxWorkspace"
                                         AccountsWorkspace="@_accountsWorkspace"
+                                        CorporationTaxContinuation="@_corporationTaxContinuation"
                                         VatFilingEnabled="@ShowHmrcConnection"
                                         IsMobile="@_isMobile"
                                         IsLoading="@_isWorkspaceLoading"
                                     Error="@_workspaceError"
-                                    OnAccountsWorkspaceRefreshRequested="RefreshWorkspaceAsync" />
+                                    OnAccountsWorkspaceRefreshRequested="RefreshWorkspaceAsync"
+                                    OnContinueToCorporationTax="ContinueToCorporationTaxAsync" />
                         </div>
                     </section>
                 </div>
@@ -235,6 +241,7 @@ else
     private bool _isWorkspaceLoading;
     private bool _isMobile;
     private bool _isAdministrator;
+    private bool _canViewTaxTechnicalDetails;
     private bool _isSidebarCollapsed;
     private bool _initialWorkspacePending;
     private string? _error;
@@ -253,6 +260,7 @@ else
     private TaxHubVatWorkspaceModel? _vatWorkspace;
     private TaxHubBusinessTaxWorkspaceModel? _businessTaxWorkspace;
     private TaxHubAccountsWorkspaceModel? _accountsWorkspace;
+    private TaxHubCorporationTaxContinuation? _corporationTaxContinuation;
     private TaxHubMobileView _mobileView = TaxHubMobileView.Navigation;
     private IReadOnlyList<TaxHubYearOption> _years = Array.Empty<TaxHubYearOption>();
     private IReadOnlyList<TaxHubPeriodOption> _periods = Array.Empty<TaxHubPeriodOption>();
@@ -335,8 +343,10 @@ else
         try
         {
             _isMobile = Detection.Device.Type == Device.Mobile;
-            _isAdministrator = (await AuthenticationStateProvider.GetAuthenticationStateAsync())
-                .User.IsInRole(Constants.AdministratorsRole);
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _isAdministrator = principal.IsInRole(Constants.AdministratorsRole);
+            _canViewTaxTechnicalDetails = _isAdministrator
+                || principal.IsInRole(Constants.ManagersRole);
 
             var result = await TaxHubService.GetShellStateAsync();
 
@@ -489,6 +499,19 @@ else
             _mobileView = TaxHubMobileView.Workspace;
     }
 
+    private async Task ContinueToCorporationTaxAsync(TaxHubCorporationTaxContinuation continuation)
+    {
+        ArgumentNullException.ThrowIfNull(continuation);
+        if (continuation.AccountsSnapshotSha256.Length != 64
+            || !continuation.AccountsSnapshotSha256.All(Uri.IsHexDigit))
+            throw new InvalidOperationException(
+                "The accepted Companies House continuation has no valid accounts snapshot proof.");
+        _corporationTaxContinuation = await CorporationTaxFilingScopeResolver.ResolveAsync(continuation);
+        await HandleWorkspaceSelectedAsync(TaxHubWorkspace.BusinessTax);
+        if (_isMobile)
+            _mobileView = TaxHubMobileView.Workspace;
+    }
+
     private async Task HandleYearSelectedAsync(short yearNumber)
     {
         var requestVersion = BeginWorkspaceOperation();
@@ -574,9 +597,24 @@ else
                             _vatWorkspace = vat;
                         break;
                     case TaxHubWorkspace.BusinessTax:
-                        var businessTax = await TaxHubService.GetBusinessTaxWorkspaceAsync(yearNumber, periodStartOn);
+                        var businessTax = await TaxHubService.GetBusinessTaxWorkspaceAsync(
+                            yearNumber, periodStartOn, _canViewTaxTechnicalDetails);
                         if (requestVersion == _requestVersion)
+                        {
                             _businessTaxWorkspace = businessTax;
+                            if (_state is not null)
+                            {
+                                _state = _state with
+                                {
+                                    Title = businessTax.SupportsCorporationTax
+                                        ? "Corporation Tax"
+                                        : "Business Tax",
+                                    Subtitle = businessTax.SupportsCorporationTax
+                                        ? "Understand, prepare and file your Company Tax Return"
+                                        : "Business tax reporting workspace"
+                                };
+                            }
+                        }
                         break;
                     case TaxHubWorkspace.Accounts:
                         var accounts = await TaxHubService.GetAccountsWorkspaceAsync(yearNumber, periodStartOn);
@@ -693,19 +731,23 @@ else
     }
 
     private TaxHubShellSnapshot CreateSnapshot() => new(
-        _isMobile, _isAdministrator, _state, _dashboard, _vatWorkspace, _businessTaxWorkspace,
-        _accountsWorkspace, _years, _periods, _selectedYearNumber, _selectedPeriodStartOn,
+        _isMobile, _isAdministrator, _canViewTaxTechnicalDetails, _state, _dashboard,
+        _vatWorkspace, _businessTaxWorkspace,
+        _accountsWorkspace, _corporationTaxContinuation, _years, _periods,
+        _selectedYearNumber, _selectedPeriodStartOn,
         _defaultYearNumber, _defaultPeriodStartOn);
 
     private void RestoreSnapshot(TaxHubShellSnapshot snapshot)
     {
         _isMobile = snapshot.IsMobile;
         _isAdministrator = snapshot.IsAdministrator;
+        _canViewTaxTechnicalDetails = snapshot.CanViewTaxTechnicalDetails;
         _state = snapshot.State;
         _dashboard = snapshot.Dashboard;
         _vatWorkspace = snapshot.VatWorkspace;
         _businessTaxWorkspace = snapshot.BusinessTaxWorkspace;
         _accountsWorkspace = snapshot.AccountsWorkspace;
+        _corporationTaxContinuation = snapshot.CorporationTaxContinuation;
         _years = snapshot.Years;
         _periods = snapshot.Periods;
         _selectedYearNumber = snapshot.SelectedYearNumber;
@@ -722,11 +764,13 @@ else
     public sealed record TaxHubShellSnapshot(
         bool IsMobile,
         bool IsAdministrator,
+        bool CanViewTaxTechnicalDetails,
         TaxHubWorkflowState State,
         TaxHubDashboardModel? Dashboard,
         TaxHubVatWorkspaceModel? VatWorkspace,
         TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace,
         TaxHubAccountsWorkspaceModel? AccountsWorkspace,
+        TaxHubCorporationTaxContinuation? CorporationTaxContinuation,
         IReadOnlyList<TaxHubYearOption> Years,
         IReadOnlyList<TaxHubPeriodOption> Periods,
         short? SelectedYearNumber,

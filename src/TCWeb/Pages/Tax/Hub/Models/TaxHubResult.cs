@@ -158,10 +158,12 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
 
     public sealed class TaxHubBusinessTaxWorkspaceModel
     {
+        public bool SupportsCorporationTax { get; init; }
         public short? SelectedYearNumber { get; init; }
         public string? SelectedYearDescription { get; init; }
         public DateTime? SelectedPeriodStartOn { get; init; }
         public string? SelectedPeriodDescription { get; init; }
+        public DateOnly CorporationTaxIdentityAsOf { get; init; }
         public bool IsAllYears { get; init; }
         public bool IsAllPeriodsInYear { get; init; }
         public IReadOnlyList<TaxHubBusinessTaxTotalRow> Totals { get; init; } = Array.Empty<TaxHubBusinessTaxTotalRow>();
@@ -169,6 +171,22 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public IReadOnlyList<TaxHubBusinessTaxLossesRow> LossesCarriedForward { get; init; } = Array.Empty<TaxHubBusinessTaxLossesRow>();
         public IReadOnlyList<TaxHubBusinessTaxSourceWorkspace> Sources { get; init; } = Array.Empty<TaxHubBusinessTaxSourceWorkspace>();
     }
+
+    public sealed record TaxHubCorporationTaxContinuation(
+        string AccountsApprovalReference,
+        string AccountsConversationReference,
+        DateOnly AccountsPeriodStart,
+        DateOnly AccountsPeriodEnd,
+        string AccountsSnapshotSha256,
+        string CompanyIdentitySha256 = "",
+        string FullAccountsSha256 = "",
+        DateTimeOffset? AcceptedAtUtc = null,
+        IReadOnlyList<TaxHubCorporationTaxPeriod>? Periods = null);
+
+    public sealed record TaxHubCorporationTaxPeriod(
+        DateOnly PeriodStart,
+        DateOnly PeriodEnd,
+        string LogicalIdentity);
 
     public sealed class TaxHubBusinessTaxSourceWorkspace
     {

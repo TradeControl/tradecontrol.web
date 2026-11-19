@@ -91,10 +91,12 @@ bytes.
 
 The approved-accounts snapshot reader verifies that manifest, the preparation and approval records,
 the full-accounts content digest and any existing Companies House conversation before returning the
-full iXBRL bytes to future CT orchestration. It never re-reads the ledger. Subsequent accounting-data
-changes therefore cannot alter either filing lineage. Preparations created before this manifest was
-introduced fail closed for CT use; the implementation does not reconstruct or infer a historical
-cryptographic link.
+full iXBRL bytes to future CT orchestration. That reader deliberately returns the frozen filing artifact;
+it is not the current transaction-data validator. CT orchestration must separately rebuild a non-filing
+comparison projection from Trade Control transactions and fail closed unless it reconciles to the
+accepted accounts. Subsequent accounting-data changes therefore cannot alter either filing lineage or
+pass silently into CT. Preparations created before this manifest was introduced fail closed for CT use;
+the implementation does not reconstruct or infer a historical cryptographic link.
 
 The boundary deliberately distinguishes advance review from submission eligibility. The approved
 reader may supply the frozen full accounts while Companies House processing continues, allowing the

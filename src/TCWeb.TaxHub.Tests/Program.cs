@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
+using TradeControl.Web.AppServices.TaxHub.CorporationTax;
 using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 using TradeControl.Web.AppServices.CategoryTree;
@@ -47,7 +48,48 @@ async Task AssertThrowsAsync<TException>(Func<Task> action, string message)
     throw new InvalidOperationException(message);
 }
 
+void AssertThrows<TException>(Action action, string message)
+    where TException : Exception
+{
+    assertions++;
+    try
+    {
+        action();
+    }
+    catch (TException)
+    {
+        return;
+    }
+    throw new InvalidOperationException(message);
+}
+
 var root = FindRoot(AppContext.BaseDirectory);
+var ctPlan = new CorporationTaxFilingPlanIdentity("tenant-a", new string('A', 64),
+    new string('B', 64), new DateOnly(2025, 7, 1), new DateOnly(2026, 6, 30));
+var sameCtPlan = new CorporationTaxFilingPlanIdentity("tenant-a", new string('A', 64),
+    new string('B', 64), new DateOnly(2025, 7, 1), new DateOnly(2026, 6, 30));
+var secondCtPeriod = new CorporationTaxFilingPlanIdentity("tenant-a", new string('A', 64),
+    new string('B', 64), new DateOnly(2026, 7, 1), new DateOnly(2027, 6, 30));
+Assert(ctPlan.LogicalIdentity == sameCtPlan.LogicalIdentity
+    && ctPlan.LogicalIdentity != secondCtPeriod.LogicalIdentity,
+    "Corporation Tax filing-plan identity is not deterministic or does not distinguish CT periods.");
+AssertThrows<ArgumentException>(() => new CorporationTaxFilingPlanIdentity("tenant-a",
+        new string('A', 64), new string('B', 64), new DateOnly(2025, 7, 1), new DateOnly(2026, 7, 1)),
+    "A Corporation Tax filing plan accepted a period longer than twelve months.");
+var longAccountsPeriods = CorporationTaxFilingScopeResolver.CreatePeriods("tenant-a",
+    new string('A', 64), new string('B', 64),
+    new DateOnly(2025, 1, 1), new DateOnly(2026, 6, 30));
+Assert(longAccountsPeriods.Count == 2
+    && longAccountsPeriods[0].PeriodStart == new DateOnly(2025, 1, 1)
+    && longAccountsPeriods[0].PeriodEnd == new DateOnly(2025, 12, 31)
+    && longAccountsPeriods[1].PeriodStart == new DateOnly(2026, 1, 1)
+    && longAccountsPeriods[1].PeriodEnd == new DateOnly(2026, 6, 30)
+    && longAccountsPeriods[0].LogicalIdentity != longAccountsPeriods[1].LogicalIdentity,
+    "A long accepted accounts period does not produce two distinct contiguous CT filing identities.");
+AssertThrows<InvalidOperationException>(() => CorporationTaxFilingScopeResolver.CreatePeriods(
+        "tenant-a", new string('A', 64), new string('B', 64),
+        new DateOnly(2024, 1, 1), new DateOnly(2026, 1, 1)),
+    "An accounts period requiring more than two Corporation Tax returns entered the supported filing scope.");
 var tenantAmbient = new TenantAmbientContext();
 using (var tenantContext = new TenantContext(tenantAmbient))
 {
@@ -387,6 +429,19 @@ var dispatchedAgain = await dispatchService.DispatchAsync(stagedFirst.Conversati
 stagingStore.SetState(CompaniesHouseConversationState.Accepted);
 var acceptedAccountsSnapshot = await accountsSnapshotService
     .ReadAcceptedForCorporationTaxAsync(stagingApproval.Reference);
+var simulatedAcceptanceStore = new StubCompaniesHouseWorkflowStore(stagingPreparation, stagingApproval);
+await simulatedAcceptanceStore.UpsertConversationAsync(stagingStore.ActiveConversation! with
+{
+    AcceptanceSimulated = true,
+    AcceptanceSimulatedAtUtc = DateTimeOffset.UtcNow,
+    AcceptanceSimulatedBy = "test-operator"
+});
+var simulatedAcceptanceSnapshotService = new CompaniesHouseAccountsSnapshotService(
+    new StubCompaniesHouseWorkflowIdentityAccessor(new(stagingTenant, "subject", "SA", "HOME")),
+    simulatedAcceptanceStore, stagingContent);
+await AssertThrowsAsync<InvalidOperationException>(
+    () => simulatedAcceptanceSnapshotService.ReadAcceptedForCorporationTaxAsync(stagingApproval.Reference),
+    "A simulated Companies House acceptance released the Corporation Tax accounts hand-off.");
 var stagedAfterTerminal = await stagingService.StageApprovedAsync(stagingApproval.Reference);
 Assert(stagedFirst.State == CompaniesHouseConversationState.Prepared
        && stagedFirst.ConversationReference == stagedAgain.ConversationReference
@@ -789,11 +844,12 @@ Assert(companiesHouseReviewService.Contains("Continue that filing instead of pre
            StringComparison.Ordinal)
        && companiesHouseContinuationService.Contains("ListConversationsAsync", StringComparison.Ordinal)
        && companiesHouseContinuationService.Contains("conversation.DocumentSha256", StringComparison.Ordinal)
-       && companiesHouseContinuationService.Contains("conversation.PackageSha256", StringComparison.Ordinal),
+       && companiesHouseContinuationService.Contains("conversation.PackageSha256", StringComparison.Ordinal)
+       && companiesHouseContinuationService.Contains("approval.AccountsSnapshotSha256", StringComparison.Ordinal),
     "Companies House preparation no longer blocks duplicate period filings or rehydrates digest-bound continuation state.");
 Assert(companiesHouseReadinessService.Contains("var contextAsOfDate = periodEnd;", StringComparison.Ordinal)
        && companiesHouseReviewService.Contains("var asOfDate = period.Current.End;", StringComparison.Ordinal)
-       && companiesHouseContinuationService.Contains(".ReadAsync(periodEnd, cancellationToken)",
+       && companiesHouseContinuationService.Contains(".ReadAsync(identityAsOf, cancellationToken)",
            StringComparison.Ordinal),
     "Companies House statutory context is not anchored to the accounting period under review.");
 Assert(taxHubService.Contains("selectedEquityVariance", StringComparison.Ordinal)
@@ -1097,11 +1153,47 @@ var accountsWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCW
     "Components", "TaxHubAccountsWorkspace.razor"));
 var profitAndLossGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubProfitAndLossGrid.razor"));
-Assert(businessTaxWorkspaceComponent.Contains("IsMobile ? \"Totals\"", StringComparison.Ordinal)
-    && businessTaxWorkspaceComponent.Contains("IsMobile ? \"HMRC\"", StringComparison.Ordinal)
+Assert(businessTaxWorkspaceComponent.Contains("Text=\"Overview\"", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Text=\"Calculation\"", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("IsMobile ? \"Losses\" : \"Losses and adjustments\"", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("IsMobile ? \"File\" : \"File return\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
-    "Business Tax or Accounts no longer provides compact mobile tab labels.");
+    "Corporation Tax or Accounts no longer provides the intended information architecture and compact mobile labels.");
+Assert(businessTaxWorkspaceComponent.Contains("_canViewTechnicalDetails", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Constants.ManagersRole", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Constants.AdministratorsRole", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Close diagnostics", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("aria-expanded=\"@_showDiagnostics\"", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_showDiagnostics && _canViewTechnicalDetails", StringComparison.Ordinal)
+    && !businessTaxWorkspaceComponent.Contains("Technical details", StringComparison.Ordinal),
+    "Raw Corporation Tax mapping data is no longer a closed-by-default privileged Diagnostics surface.");
+Assert(taxHubService.Contains("bool includeTechnicalDetails = false", StringComparison.Ordinal)
+    && taxHubService.Contains("if (includeTechnicalDetails)", StringComparison.Ordinal)
+    && taxHubShell.Contains("_canViewTaxTechnicalDetails", StringComparison.Ordinal),
+    "Ordinary users can still receive raw Corporation Tax mapping data in component state.");
+Assert(taxHubService.Contains("totalsQuery = totalsQuery.Where(t => t.StartOn == periodStartOn.Value)",
+        StringComparison.Ordinal)
+    && !taxHubService.Contains("statementQuery = statementQuery.Where", StringComparison.Ordinal)
+    && taxHubService.Contains("Statement StartOn is the Corporation Tax liability payment date",
+        StringComparison.Ordinal),
+    "Tax Hub filters no longer preserve the distinct VAT-period and Corporation Tax cash-statement semantics.");
+Assert(businessTaxWorkspaceComponent.Contains("No submission action is available from this screen", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("exact full accounts accepted by Companies House", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("recalculated from Trade Control transactions", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("any later mismatch will stop the filing for review", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("ListAsync(Workspace.CorporationTaxIdentityAsOf)", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_acceptedAccounts.Count == 1", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Use these accounts", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Continuation.FullAccountsSha256", StringComparison.Ordinal),
+    "The CT-D1 filing surface no longer states its fail-closed accepted-accounts boundary.");
+Assert(accountsWorkspaceComponent.Contains("Continue to Corporation Tax", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("AcceptanceSimulated: false", StringComparison.Ordinal)
+    && accountsWorkspaceComponent.Contains("AccountsSnapshotSha256", StringComparison.Ordinal)
+    && taxHubShell.Contains("ContinueToCorporationTaxAsync", StringComparison.Ordinal)
+    && taxHubShell.Contains("CorporationTaxFilingScopeResolver.ResolveAsync", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Accepted company accounts selected", StringComparison.Ordinal),
+    "A genuine accepted Companies House snapshot no longer continues safely into Corporation Tax.");
 Assert(accountsWorkspaceComponent.Contains("ActivePanelIndexChanged=\"LoadSectionAsync\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("_loadedSections.Contains(section)", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("TaxHubAccountsWorkspaceSection.Filing", StringComparison.Ordinal)

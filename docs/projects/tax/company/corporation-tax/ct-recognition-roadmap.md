@@ -207,19 +207,237 @@ it does not enable production submission.
 
 ### CT-D — production-shaped TCWeb journey
 
-1. Add the CT continuation after a cryptographically linked Companies House terminal `Accepted`
-   outcome. Legacy `S00018` cannot provide that link.
-2. Read the retained full-accounts iXBRL through the approved accounts-snapshot boundary; never
-   regenerate it from the mutable ledger.
-3. Present computation, CT600, attachments, validation and declaration for attributable human review.
-4. Persist immutable approval, exact artifact identities, one-send claim, conversation state,
-   polling/recovery, terminal outcome, receipt and safe downloadable evidence.
-5. Enforce tenant/principal isolation, role policy, protected credentials/content, duplicate refusal,
-   kill switch, rate/size limits, monitoring and operational recovery in the shared host.
-6. Provide a truthful pending experience rather than a browser-bound polling spinner.
+CT-D turns the accepted calculation, artifact and Transaction Engine plumbing into a filing product.
+It is not a cosmetic wrapper around the current **HMRC View**. The existing Business Tax workspace
+mixes live tax forecasting, transaction-mapping diagnostics and filing artifacts in nested tabs; users cannot
+readily tell what is a projection, what requires action, or what has actually been filed.
 
-**Gate:** the supported CT product journey is mature, accessible and independently tested on the
-production-shaped multi-tenant topology.
+#### Product and navigation contract
+
+For a company with a Corporation Tax reporting profile, the sidebar may retain the jurisdiction-
+neutral **Business Tax** workspace label, but the workspace heading and filing language must say
+**Corporation Tax**. Sole traders and partnerships must not see CT filing controls or CT-only cash
+codes.
+
+The company workspace will have four primary destinations:
+
+1. **Overview** — current tax position, payment balance, filing status and next action;
+2. **Calculation** — an understandable bridge from accounting profit to taxable profit and tax due;
+3. **Losses and adjustments** — reviewable inputs and their effect on the computation; and
+4. **File return** — one guided statutory journey, not another collection of technical tabs.
+
+The current **HMRC View**, tag codes, cash-code mappings, raw payload rows and artifact digests are
+valuable diagnostic evidence. They move behind a right-aligned, closed-by-default **Diagnostics**
+link available only to Managers and Administrators. They are not the ordinary filing journey.
+
+The global financial-year and month filters continue to control planning views. They must not
+silently change a filing already in progress. **File return** selects a durable Companies House
+accounts snapshot and its associated CT accounting period or periods; that filing scope remains
+fixed until the draft is deliberately abandoned.
+
+#### Continuous Companies House → Corporation Tax journey
+
+The normal route is:
+
+1. File accounts and obtain a terminal Companies House `Accepted` outcome.
+2. On the accepted filing card, offer **Continue to Corporation Tax**. The action carries only the
+   safe Companies House approval/conversation reference; it does not pass mutable transaction-derived values.
+3. Resolve the accepted `ICompaniesHouseAccountsSnapshotService` record and verify the company,
+   period, full-accounts SHA-256, accounts-snapshot SHA-256 and Category Tree seal.
+4. Create or resume exactly one CT filing plan for that company and accounts snapshot. A long
+   accounts period may require two CT returns; show both explicitly, share the same accepted accounts
+   artifact, and give each return its own preparation, approval and HMRC conversation.
+5. If Companies House is still pending, show **Check Companies House status** and explain that CT
+   preparation may be previewed but submission remains locked. Never ask the user to guess whether
+   acceptance has happened.
+6. If the user enters through Business Tax instead, find and resume the same filing plan. Do not
+   create a parallel journey or permit duplicate preparation.
+
+The accepted accounts bytes are read through the cryptographic snapshot boundary and attached to
+the CT service artifact unchanged. They are not substituted with a newly generated accounts document.
+Before CT preparation, the system independently recalculates the accounting and tax projections from
+Trade Control transactions using the bound statutory context and requires the accounting projection
+to reconcile to the accepted accounts. A transaction, reviewed-input or Category Tree mismatch stops
+the journey for review; it never silently changes the attachment. Later changes may affect planning,
+but cannot mutate an approved or submitted return.
+
+#### Overview and deadline experience
+
+The overview answers five ordinary questions without requiring knowledge of CT600 tags:
+
+- Which accounting period is this?
+- How much Corporation Tax is currently expected, paid and outstanding?
+- When is payment due and when is the return due?
+- Are the accounts accepted and is the return ready to file?
+- What should I do next?
+
+Payment and filing are distinct. For the currently supported ordinary-company scope, display the
+usual payment date of nine months and one day after the CT accounting period and the filing date of
+twelve months after it, while preserving any more specific statutory schedule supplied by the
+source. The product does not imply that filing pays the tax. These dates and the distinction between
+them follow GOV.UK's [Company Tax Return overview](https://www.gov.uk/company-tax-returns/overview).
+
+Show separate, plainly named cards for **Estimated tax**, **Paid**, **Outstanding**, **Pay by** and
+**File by**. Label figures from the open order book **Forecast tax accruals**. Label the closed,
+reviewed return figure **Return tax payable**. Never call tax accruals “forecast adjustments”.
+
+#### Guided File return journey
+
+Use a single vertical stepper with durable completion state. Reloading, signing out or changing
+device must resume at the same safe step.
+
+1. **Scope**
+   - company name, company number and UTR;
+   - accepted Companies House accounts period and snapshot identity;
+   - one or two CT accounting periods and their payment/filing deadlines;
+   - supported filing profile and explicit unsupported-regime findings.
+2. **Accounts**
+   - identify the accepted full-accounts iXBRL attachment;
+   - show key accounts totals and reconciliation status;
+   - allow safe preview/download of the exact retained accounts artifact;
+   - provide a link back to the accepted Companies House evidence.
+3. **Tax calculation**
+   - accounting profit;
+   - add-backs, including depreciation exactly once;
+   - deductions, capital allowances, chargeable gains, losses and other reliefs;
+   - taxable total profits `N`, relevant distributions `D`, augmented profits `A` and associated-
+     company threshold facts;
+   - small-profits, marginal-relief or main-rate branch and final tax charge;
+   - reconciliation to `Cash.vwTaxBizStatement` and the accounts tax charge.
+4. **Return details**
+   - present CT600 answers in business language, grouped by topic;
+   - collect only reviewed inputs that cannot be derived safely, including declaration details and
+     supported conditional schedules;
+   - show blocking explanations for unsupported supplementary pages or specialist regimes rather
+     than silently omitting them.
+5. **Documents and checks**
+   - accounts iXBRL, computation iXBRL and CT600/service artifact listed by friendly name;
+   - local contract validation, taxonomy validation and preparation findings;
+   - exact SHA-256 identities under a technical disclosure;
+   - no “ready” state while rates are provisional or any artifact is `Preview`, stale or invalid.
+6. **Declaration and approval**
+   - reproduce HMRC's correctness-and-completeness declaration in approved wording;
+   - require an attributable authorised user and an explicit confirmation action;
+   - bind the declaration, reviewer, timestamp, filing scope, accounts snapshot, Category Tree seal,
+     source/review inputs and every artifact digest into one immutable approval digest.
+7. **Submit and track**
+   - show the exact company, period and tax payable immediately before the one-send action;
+   - claim the durable transaction before network I/O and refuse duplicate submission;
+   - after acknowledgement, return immediately to a calm status page rather than holding a browser
+     spinner open;
+   - server-side work observes HMRC's poll interval and durable recovery rules;
+   - **Check status** remains available as a safe fallback and never creates a new submission.
+8. **Outcome and evidence**
+   - accepted: receipt, submitted document identities, submission time and downloadable safe evidence;
+   - rejected: bounded HMRC errors translated into actionable language while retaining exact evidence;
+   - recovery required: support reference and an explicit statement that resubmission is blocked;
+   - deletion failure: preserve the terminal outcome and retry only the protocol cleanup;
+   - source changes after acceptance do not rewrite history or imply that the filed return changed.
+
+#### Durable workflow and authority boundaries
+
+The TCWeb product workflow needs a persistent record distinct from the Development WebHarness. Its
+minimum identity is tenant + company identity + accounts-snapshot SHA-256 + CT period. It records:
+
+- `Draft`, `ReviewRequired`, `ReadyForApproval`, `Approved`, `Dispatching`, `SubmissionUncertain`,
+  `AwaitingPoll`, `Accepted`, `Rejected` and `RecoveryRequired` product states;
+- preparation, approval and conversation references;
+- the accepted Companies House approval/conversation references and accounts proof;
+- reviewed-input/source digest, Category Tree seal and exact artifact digests;
+- transaction ID, correlation ID, poll eligibility and one-send claim;
+- response evidence, receipt, deletion state and bounded support-safe errors; and
+- actor and timestamp for every state-changing action.
+
+Only `Approved` may cross the production CT submission gate. `Dispatching` is persisted before the
+first HTTP byte is sent. `SubmissionUncertain` requires authenticated `DATA_REQUEST` recovery by
+transaction ID; it never permits “try submit again”. `Accepted` and pending states prevent a second
+filing for the same immutable identity. A rejected filing may be corrected only by creating a new
+preparation and approval while retaining the rejected attempt.
+
+Tenant/principal isolation, filing-role policy, protected credentials/content, anti-forgery,
+duplicate refusal, a CT dispatch kill switch, request/response size limits, rate limits, audit,
+monitoring and operational recovery are mandatory in the shared host. No raw authority URL,
+credential, password, UTR or protected XML is written to ordinary logs or browser state.
+
+#### CT-D delivery slices
+
+Each slice must leave a reviewable UI and automated evidence; avoid building the entire journey
+behind one final integration test.
+
+1. **CT-D1 — information architecture and filing plan**
+   **Status: accepted in the deployed B8 review UI; implementation remains uncommitted.** The new
+   workspace and immutable identity contract are present, Diagnostics is closed by default, and no
+   filing-plan persistence or submission action has been introduced.
+   - replace the nested Business Tax/HMRC tab hierarchy with Overview, Calculation, Losses and
+     adjustments, and File return;
+   - add dynamic company language and hide CT controls for non-company profiles;
+   - introduce the immutable CT filing-plan identity and continuation lookup;
+   - keep privileged Diagnostics available without making it the default experience.
+2. **CT-D2 — Companies House continuation**
+   **Status: deployed to B8 and awaiting human review.** Review package
+   `ct-d2-20261118-r1` has SHA-256
+   `C2D23E553101BAF953013E9354D01AD1B0528BE2356C76B3E9950845F1E5962B`. The File return workspace rediscovers a
+   genuine accepted filing after reload, re-reads and verifies the protected full-accounts artifact,
+   and derives one or two immutable CT-period identities. Multiple accepted filings require an
+   explicit choice. Missing, pending, simulated, legacy and mismatched evidence fails closed. The
+   surface remains locked and contains no preparation, approval or submission action. The readiness
+   review also exposed and closed the remaining MR-3 Equity Bridge cutover defect: reconciliation now
+   consumes the same Category-Tree-version-explicit jurisdiction-selected CT provider as the statement,
+   with active parity, rollback-only Archived-predecessor reconstruction and tolerance tests preventing
+   a return to the legacy flat-rate expense. The fresh-synthetic-business readiness path also now
+   re-anchors its generated CT and Companies House profiles/settings to the complete accounting
+   history without overlapping effective rows; B8 resolves the reviewed Companies House profile at
+   the target period end.
+   - add **Continue to Corporation Tax** to terminal accepted accounts;
+   - resolve and display the cryptographically linked accounts snapshot;
+   - block missing, pending, simulated, legacy or mismatched acceptance according to the approved
+     product policy;
+   - cover the one-accounts-period/two-CT-return case.
+3. **CT-D3 — calculation and reviewed inputs**
+   - rebuild a non-filing comparison projection from current Trade Control transactions and require
+     it to reconcile to the accepted accounts snapshot; never substitute those comparison bytes for
+     the accepted full-accounts attachment;
+   - build the readable profit-to-tax bridge from accepted CT-A sources;
+   - add attributable review/edit surfaces for supported adjustments, allowances, losses, reliefs,
+     associated companies and conditional CT600 inputs;
+   - invalidate only the draft when its reviewed source changes.
+4. **CT-D4 — immutable preparation and document review**
+   - compose the accepted accounts snapshot with computation and CT600 through Objective 3;
+   - promote artifacts from `Preview` only through a new reviewed production-preparation boundary;
+   - expose previews, findings, provenance and stale-artifact refusal.
+5. **CT-D5 — declaration and approval**
+   - implement role-controlled declaration, immutable approval digest and approval evidence;
+   - re-read and compare all bound identities immediately before approval and dispatch;
+   - make approved records immutable and require a new preparation after any correction.
+6. **CT-D6 — production Transaction Engine orchestration**
+   - reuse the accepted Phase 5.9/CT-C serializer and state machine;
+   - add the live credential provider and production endpoint only behind the closed family gate;
+   - persist the one-send claim, background poll scheduling, recovery and delete cleanup;
+   - keep official-test and production evidence unmistakably distinct.
+7. **CT-D7 — status, outcome and support experience**
+   - implement pending, accepted, rejected and recovery-required pages;
+   - add safe status refresh, receipt/evidence download and support references;
+   - integrate Tax Hub dashboard next-action cards and notifications without browser-bound polling.
+8. **CT-D8 — accessibility, security and operational review**
+   - keyboard/screen-reader and responsive review of the complete journey;
+   - cross-tenant, privilege, replay, stale-source, duplicate-send and protected-content tests;
+   - restart/scale-out exercises against the shared persistence and background worker;
+   - operator runbook and customer-facing supported-scope/help content.
+
+#### Deliberate launch boundaries
+
+The first recognised product journey supports the frozen ordinary UK company profile already
+represented by Objective 3. Specialist regimes, unsupported supplementary pages, group relief,
+quarterly instalment payment companies and amendments must fail with a useful scope explanation;
+they are not approximated. An accepted return remains visible and immutable. If amendments are not
+yet supported, the UI says so and directs the user to support rather than presenting another Submit
+button.
+
+**Gate:** an authorised user can move from an accepted, cryptographically linked Companies House
+filing through understandable calculation review, immutable approval, exactly-once submission and
+durable HMRC outcome evidence on the production-shaped multi-tenant topology. The journey is
+accessible, independently tested and usable without exposing raw payload tables. Production remains
+closed until this gate is explicitly accepted.
 
 ### CT-E — comprehensive product testing
 

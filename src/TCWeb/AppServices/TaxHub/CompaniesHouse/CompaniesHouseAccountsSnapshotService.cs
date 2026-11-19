@@ -123,9 +123,10 @@ internal sealed class CompaniesHouseAccountsSnapshotService(
             throw new InvalidOperationException(
                 "The Companies House filing conversation does not match the approved accounts snapshot.");
         if (requireAcceptedConversation
-            && conversation?.State != CompaniesHouseConversationState.Accepted)
+            && (conversation?.State != CompaniesHouseConversationState.Accepted
+                || conversation.AcceptanceSimulated))
             throw new InvalidOperationException(
-                "Corporation Tax submission remains locked until Companies House has accepted the linked accounts.");
+                "Corporation Tax remains locked until Companies House has genuinely accepted the linked accounts.");
 
         var fullAccounts = await contentStore.ReadAsync(identity.TenantReference,
             preparation.ProtectedFullAccountsReference, preparation.FullAccountsSha256,

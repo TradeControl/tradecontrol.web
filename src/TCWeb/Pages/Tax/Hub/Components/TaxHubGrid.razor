@@ -34,12 +34,16 @@
                 break;
 
             case TaxHubWorkspace.BusinessTax:
-                <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace" IsMobile="@IsMobile" />
+                <TaxHubBusinessTaxWorkspace Workspace="@BusinessTaxWorkspace"
+                                                Continuation="@CorporationTaxContinuation"
+                                                OnContinueToCorporationTax="OnContinueToCorporationTax"
+                                                IsMobile="@IsMobile" />
                 break;
 
             case TaxHubWorkspace.Accounts:
                 <TaxHubAccountsWorkspace Workspace="@AccountsWorkspace"
                                         IsMobile="@IsMobile"
+                                        OnContinueToCorporationTax="OnContinueToCorporationTax"
                                         OnWorkspaceRefreshRequested="OnAccountsWorkspaceRefreshRequested" />
                 break;
 
@@ -62,11 +66,13 @@
     [Parameter] public TaxHubVatWorkspaceModel? VatWorkspace { get; set; }
     [Parameter] public TaxHubBusinessTaxWorkspaceModel? BusinessTaxWorkspace { get; set; }
     [Parameter] public TaxHubAccountsWorkspaceModel? AccountsWorkspace { get; set; }
+    [Parameter] public TaxHubCorporationTaxContinuation? CorporationTaxContinuation { get; set; }
     [Parameter] public bool VatFilingEnabled { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public string? Error { get; set; }
     [Parameter] public EventCallback OnAccountsWorkspaceRefreshRequested { get; set; }
+    [Parameter] public EventCallback<TaxHubCorporationTaxContinuation> OnContinueToCorporationTax { get; set; }
 
     private string LoadingText => Workspace switch
     {

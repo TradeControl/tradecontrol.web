@@ -275,6 +275,15 @@ else
                                         <strong>Category Tree @_existingFiling.CategoryVersionId is now Submitted and read-only.</strong>
                                         To change the classification, create and publish a successor Draft.
                                     </div>
+                                    @if (!_existingFiling.AcceptanceSimulated)
+                                    {
+                                        <div>
+                                            <button type="button" class="btn btn-primary"
+                                                    @onclick="ContinueToCorporationTaxAsync">
+                                                Continue to Corporation Tax
+                                            </button>
+                                        </div>
+                                    }
                                 }
                                 else if (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
                                          or CompaniesHouseConversationState.Pending
@@ -426,6 +435,7 @@ else
     [Parameter] public TaxHubAccountsWorkspaceModel? Workspace { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public EventCallback OnWorkspaceRefreshRequested { get; set; }
+    [Parameter] public EventCallback<TaxHubCorporationTaxContinuation> OnContinueToCorporationTax { get; set; }
 
     private bool _evidenceReviewComplete;
     private bool _filingJourneyStarted;
@@ -526,6 +536,25 @@ else
         finally
         {
             _filingContinuationLoading = false;
+        }
+    }
+
+    private async Task ContinueToCorporationTaxAsync()
+    {
+        if (_existingFiling is not
+            {
+                State: CompaniesHouseConversationState.Accepted,
+                AcceptanceSimulated: false
+            } accepted)
+            return;
+        if (OnContinueToCorporationTax.HasDelegate)
+        {
+            await OnContinueToCorporationTax.InvokeAsync(new(
+                accepted.ApprovalReference,
+                accepted.ConversationReference,
+                accepted.AccountsPeriodStart,
+                accepted.AccountsPeriodEnd,
+                accepted.AccountsSnapshotSha256));
         }
     }
 

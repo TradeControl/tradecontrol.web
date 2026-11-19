@@ -1,5 +1,14 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
 @using MudBlazor
+@using TradeControl.Tax.UK.Application.Preparation
+@using TradeControl.Web.Authorization
+@using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
 @using TradeControl.Web.Pages.Tax.Hub.Models
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ServiceScopeFactory
+@inject ILogger<TaxHubBusinessTaxWorkspace> Logger
 
 @if (Workspace is null)
 {
@@ -8,68 +17,43 @@
 else
 {
     <div class="tc-tax-hub-business-tax d-flex flex-column gap-4">
-        <MudTabs Rounded="true">
-            <MudTabPanel Text="@(IsMobile ? "Totals" : "Business Tax Totals")" Class="pt-3">
-                <section class="tc-tax-hub-single-grid-panel">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                        <div>
-                            <div class="text-muted small">
-                                @if (Workspace.IsAllYears)
-                                {
-                                    <span>All financial years</span>
-                                }
-                                else if (Workspace.IsAllPeriodsInYear)
-                                {
-                                    <span>@Workspace.SelectedYearDescription</span>
-                                }
-                                else
-                                {
-                                    <span>@Workspace.SelectedYearDescription • @Workspace.SelectedPeriodDescription</span>
-                                }
-                            </div>
-                        </div>
-
-                        <a href="/Admin/Manager/Index?node=TaxRates"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           class="btn btn-sm btn-outline-warning">
-                            Adjust tax rates
-                        </a>
+        @if (Workspace.SupportsCorporationTax)
+        {
+            <div class="alert alert-light border mb-0 d-flex align-items-start justify-content-between gap-3" role="status">
+                <div>
+                    <div class="fw-semibold">Corporation Tax</div>
+                    <div class="small text-muted">
+                        Planning figures respond to the financial-year filters. A Company Tax Return uses a fixed,
+                        reviewed accounting period and will not change when these filters change.
                     </div>
+                </div>
+                @if (_canViewTechnicalDetails)
+                {
+                    <button type="button"
+                            class="btn btn-link btn-sm flex-shrink-0 p-0"
+                            aria-expanded="@_showDiagnostics"
+                            @onclick="ToggleDiagnostics">
+                        @(_showDiagnostics ? "Close diagnostics" : "Diagnostics")
+                    </button>
+                }
+            </div>
+        }
 
-                    <TaxHubBusinessTaxTotalsGrid Items="@Workspace.Totals" />
-                </section>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@(IsMobile ? "Statement" : "Business Tax Statement")" Class="pt-3">
-                <section class="tc-tax-hub-single-grid-panel">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                        <div>
-                            <div class="text-muted small">Tax due, paid and running balance</div>
-                        </div>
+        @if (_showDiagnostics && _canViewTechnicalDetails)
+        {
+            <section class="d-flex flex-column gap-3" aria-label="Corporation Tax diagnostics">
+                <div>
+                    <h2 class="h5 mb-1">Diagnostics</h2>
+                    <div class="text-muted small">
+                        Authorised mapping evidence for investigating a calculation or filing support case.
+                        These rows are not the filing review or an HMRC outcome.
                     </div>
+                </div>
 
-                    <TaxHubBusinessTaxStatementGrid Items="@Workspace.Statement" />
-                </section>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@(IsMobile ? "Losses" : "Losses Carried Forward")" Class="pt-3">
-                <section class="tc-tax-hub-single-grid-panel">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                        <div>
-                            <div class="text-muted small">Losses carried forward by year end</div>
-                        </div>
-                    </div>
-
-                    <TaxHubBusinessTaxLossesGrid Items="@Workspace.LossesCarriedForward" />
-                </section>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@(IsMobile ? "HMRC" : "HMRC View")" Class="pt-3">
                 @if (Workspace.Sources.Count == 0)
                 {
                     <div class="alert alert-secondary mb-0">
-                        No Business Tax HMRC payload or submission data is available for the current filter.
+                        No tax mapping data is available for the current planning filter.
                     </div>
                 }
                 else
@@ -79,29 +63,25 @@ else
                         {
                             <MudTabPanel Text="@source.SourceName" Class="pt-3">
                                 <section class="d-flex flex-column gap-3">
-                                    <div>
-                                        <div class="text-muted small">@source.TaxSourceCode</div>
-                                    </div>
+                                    <div class="text-muted small">@source.TaxSourceCode</div>
 
                                     <MudTabs Rounded="true">
-                                        <MudTabPanel Text="Submission Totals" Class="pt-3">
+                                        <MudTabPanel Text="Submission totals" Class="pt-3">
                                             <section class="tc-tax-hub-single-grid-panel">
                                                 <div class="mb-2">
-                                                    <h2 class="h5 mb-1">Submission Totals</h2>
-                                                    <div class="text-muted small">HMRC submission totals for the selected source and period context</div>
+                                                    <h3 class="h5 mb-1">Mapped totals</h3>
+                                                    <div class="text-muted small">Technical totals grouped by tag and submission period</div>
                                                 </div>
-
                                                 <TaxHubBusinessTaxSubmissionGrid Items="@source.Submissions" />
                                             </section>
                                         </MudTabPanel>
 
-                                        <MudTabPanel Text="Payload Detail" Class="pt-3">
+                                        <MudTabPanel Text="Payload rows" Class="pt-3">
                                             <section class="tc-tax-hub-single-grid-panel">
                                                 <div class="mb-2">
-                                                    <h2 class="h5 mb-1">Payload Detail</h2>
-                                                    <div class="text-muted small">Detailed ledger values mapped into the selected submission context</div>
+                                                    <h3 class="h5 mb-1">Mapped accounting rows</h3>
+                                                    <div class="text-muted small">Technical transaction, cash-code and Category Tree mapping evidence</div>
                                                 </div>
-
                                                 <TaxHubBusinessTaxPayloadGrid Items="@source.Payload" />
                                             </section>
                                         </MudTabPanel>
@@ -111,12 +91,282 @@ else
                         }
                     </MudTabs>
                 }
+            </section>
+        }
+        else
+        {
+            <MudTabs Rounded="true">
+            <MudTabPanel Text="Overview" Class="pt-3">
+                <section class="d-flex flex-column gap-3">
+                    <div>
+                        <h2 class="h5 mb-1">@(Workspace.SupportsCorporationTax ? "Corporation Tax position" : "Business Tax position")</h2>
+                        <div class="text-muted small">Tax due, paid and running balance from the live cash statement</div>
+                    </div>
+
+                    <div class="alert alert-info py-2 mb-0 small" role="status">
+                        These are live planning values. They are not a filed return and filing does not pay the tax.
+                    </div>
+
+                    <TaxHubBusinessTaxStatementGrid Items="@Workspace.Statement" />
+                </section>
             </MudTabPanel>
-        </MudTabs>
+
+            <MudTabPanel Text="Calculation" Class="pt-3">
+                <section class="tc-tax-hub-single-grid-panel d-flex flex-column gap-3">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                        <div>
+                            <h2 class="h5 mb-1">Tax calculation</h2>
+                            <div class="text-muted small">Period profit and tax accruals for the selected planning context</div>
+                        </div>
+
+                        @if (_canViewTechnicalDetails)
+                        {
+                            <a href="/Admin/Manager/Index?node=TaxRates"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="btn btn-sm btn-outline-warning">
+                                Review tax rates
+                            </a>
+                        }
+                    </div>
+
+                    <div class="text-muted small">@PlanningContext</div>
+                    <TaxHubBusinessTaxTotalsGrid Items="@Workspace.Totals" />
+                </section>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@(IsMobile ? "Losses" : "Losses and adjustments")" Class="pt-3">
+                <section class="tc-tax-hub-single-grid-panel d-flex flex-column gap-3">
+                    <div>
+                        <h2 class="h5 mb-1">Losses carried forward</h2>
+                        <div class="text-muted small">Losses available at each year end</div>
+                    </div>
+
+                    <TaxHubBusinessTaxLossesGrid Items="@Workspace.LossesCarriedForward" />
+
+                    @if (Workspace.SupportsCorporationTax)
+                    {
+                        <div class="alert alert-light border mb-0 small" role="status">
+                            Filing-specific adjustments, allowances and reliefs will be reviewed in the Company Tax Return
+                            journey before approval. They will not be hidden in the raw HMRC mapping tables.
+                        </div>
+                    }
+                </section>
+            </MudTabPanel>
+
+            @if (Workspace.SupportsCorporationTax)
+            {
+                <MudTabPanel Text="@(IsMobile ? "File" : "File return")" Class="pt-3">
+                    <section class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                            <div>
+                                <h2 class="h5 mb-1">File your Company Tax Return</h2>
+                                <div class="text-muted small">Continue from accepted accounts into one reviewed filing journey</div>
+                            </div>
+                            <span class="badge @(Continuation is null ? "bg-secondary" : "bg-success")">
+                                @(Continuation is null ? "Not started" : "Accounts accepted")
+                            </span>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body d-flex flex-column gap-3">
+                                <div>
+                                    <h3 class="h6 mb-1">@(Continuation is null ? "Start with accepted company accounts" : "Accepted company accounts selected")</h3>
+                                    <div class="text-muted small">
+                                        The return will attach the exact full accounts accepted by Companies House.
+                                        Corporation Tax will be recalculated from Trade Control transactions and must reconcile
+                                        to those accounts; any later mismatch will stop the filing for review.
+                                    </div>
+                                </div>
+
+                                @if (Continuation is null)
+                                {
+                                    @if (_continuationLoading)
+                                    {
+                                        <div class="d-flex align-items-center gap-2 small text-muted" role="status">
+                                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                            Checking retained Companies House filings…
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(_continuationError))
+                                    {
+                                        <div class="alert alert-danger mb-0" role="alert">@_continuationError</div>
+                                    }
+                                    else if (_acceptedAccounts.Count == 0)
+                                    {
+                                        <div class="alert alert-info mb-0 small" role="status">
+                                            No genuine accepted Companies House accounts are available for Corporation Tax.
+                                            Complete or check the accounts filing in the Accounts workspace first.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-column gap-2">
+                                            <div class="small fw-semibold">Choose accepted accounts</div>
+                                            @foreach (var accepted in _acceptedAccounts)
+                                            {
+                                                <div class="border rounded p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                                    <div>
+                                                        <div class="fw-semibold">
+                                                            @accepted.AccountsPeriodStart.ToString("d MMM yyyy") to @accepted.AccountsPeriodEnd.ToString("d MMM yyyy")
+                                                        </div>
+                                                        <div class="small text-muted">
+                                                            Accepted @accepted.UpdatedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-primary"
+                                                            @onclick="() => SelectAcceptedAccountsAsync(accepted)">
+                                                        Use these accounts
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <dl class="row small mb-0">
+                                        <dt class="col-sm-4">Accounts period</dt>
+                                        <dd class="col-sm-8">@Continuation.AccountsPeriodStart.ToString("d MMM yyyy") to @Continuation.AccountsPeriodEnd.ToString("d MMM yyyy")</dd>
+                                        <dt class="col-sm-4">Accepted</dt>
+                                        <dd class="col-sm-8">@Continuation.AcceptedAtUtc?.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                                        <dt class="col-sm-4">Full accounts SHA-256</dt>
+                                        <dd class="col-sm-8 font-monospace text-break">@Continuation.FullAccountsSha256</dd>
+                                        <dt class="col-sm-4">Snapshot SHA-256</dt>
+                                        <dd class="col-sm-8 font-monospace text-break">@Continuation.AccountsSnapshotSha256</dd>
+                                    </dl>
+
+                                    <div>
+                                        <h4 class="h6 mb-2">Corporation Tax returns</h4>
+                                        <div class="d-flex flex-column gap-2">
+                                            @foreach (var period in Continuation.Periods ?? [])
+                                            {
+                                                <div class="border rounded px-3 py-2 d-flex justify-content-between gap-3">
+                                                    <span>@period.PeriodStart.ToString("d MMM yyyy") to @period.PeriodEnd.ToString("d MMM yyyy")</span>
+                                                    <span class="badge bg-secondary">Draft</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                <ol class="mb-0 ps-3 small">
+                                    <li>Confirm the company and Corporation Tax accounting period.</li>
+                                    <li>Recalculate the accounting and Corporation Tax figures from Trade Control transactions and reconcile them to the accepted accounts.</li>
+                                    <li>Review return details, documents and validation findings.</li>
+                                    <li>Make the declaration, approve and submit once.</li>
+                                    <li>Return here to track HMRC's outcome and retrieve the receipt.</li>
+                                </ol>
+
+                                <div class="alert alert-warning mb-0" role="status">
+                                    Filing remains locked while the production Corporation Tax journey is being introduced.
+                                    No submission action is available from this screen.
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </MudTabPanel>
+            }
+
+            </MudTabs>
+        }
     </div>
 }
 
 @code {
     [Parameter] public TaxHubBusinessTaxWorkspaceModel? Workspace { get; set; }
+    [Parameter] public TaxHubCorporationTaxContinuation? Continuation { get; set; }
+    [Parameter] public EventCallback<TaxHubCorporationTaxContinuation> OnContinueToCorporationTax { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+
+    private bool _canViewTechnicalDetails;
+    private bool _showDiagnostics;
+    private bool _continuationLoading;
+    private string? _continuationError;
+    private string? _continuationLookupKey;
+    private IReadOnlyList<CompaniesHouseFilingContinuation> _acceptedAccounts = [];
+
+    private string PlanningContext => Workspace switch
+    {
+        null => string.Empty,
+        { IsAllYears: true } => "All financial years",
+        { IsAllPeriodsInYear: true } => Workspace.SelectedYearDescription ?? "Selected financial year",
+        _ => $"{Workspace.SelectedYearDescription} • {Workspace.SelectedPeriodDescription}"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        _canViewTechnicalDetails = principal.IsInRole(Constants.ManagersRole)
+            || principal.IsInRole(Constants.AdministratorsRole);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Workspace is null || !Workspace.SupportsCorporationTax || Continuation is not null)
+            return;
+
+        var lookupKey = Workspace.CorporationTaxIdentityAsOf.ToString("yyyy-MM-dd");
+        if (string.Equals(lookupKey, _continuationLookupKey, StringComparison.Ordinal))
+            return;
+        _continuationLookupKey = lookupKey;
+        _continuationLoading = true;
+        _continuationError = null;
+        _acceptedAccounts = [];
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider
+                .GetRequiredService<ICompaniesHouseFilingContinuationService>();
+            _acceptedAccounts = (await service.ListAsync(Workspace.CorporationTaxIdentityAsOf))
+                .Where(value => value.State == CompaniesHouseConversationState.Accepted
+                    && !value.AcceptanceSimulated)
+                .ToList();
+
+            if (_acceptedAccounts.Count == 1)
+                await SelectAcceptedAccountsAsync(_acceptedAccounts[0]);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            Logger.LogWarning(exception,
+                "Accepted Companies House accounts could not be resolved for Corporation Tax.");
+            _continuationError = exception.Message;
+        }
+        finally
+        {
+            _continuationLoading = false;
+        }
+    }
+
+    private async Task SelectAcceptedAccountsAsync(CompaniesHouseFilingContinuation accepted)
+    {
+        if (!OnContinueToCorporationTax.HasDelegate)
+            return;
+        _continuationLoading = true;
+        _continuationError = null;
+        try
+        {
+            await OnContinueToCorporationTax.InvokeAsync(new(
+                accepted.ApprovalReference,
+                accepted.ConversationReference,
+                accepted.AccountsPeriodStart,
+                accepted.AccountsPeriodEnd,
+                accepted.AccountsSnapshotSha256));
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            Logger.LogWarning(exception,
+                "Accepted Companies House accounts {ApprovalReference} could not continue to Corporation Tax.",
+                accepted.ApprovalReference);
+            _continuationError = exception.Message;
+        }
+        finally
+        {
+            _continuationLoading = false;
+        }
+    }
+
+    private void ToggleDiagnostics() => _showDiagnostics = !_showDiagnostics;
 }

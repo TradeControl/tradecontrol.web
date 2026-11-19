@@ -301,6 +301,8 @@ namespace TradeControl.Web.AppServices.TaxHub
 
             if (yearNumber.HasValue)
                 totalsQuery = totalsQuery.Where(t => t.YearNumber == yearNumber.Value);
+            if (periodStartOn.HasValue)
+                totalsQuery = totalsQuery.Where(t => t.StartOn == periodStartOn.Value);
 
             var totals = await totalsQuery
                 .OrderByDescending(t => t.StartOn)
@@ -418,8 +420,18 @@ namespace TradeControl.Web.AppServices.TaxHub
             };
         }
 
-        public async Task<TaxHubBusinessTaxWorkspaceModel> GetBusinessTaxWorkspaceAsync(short? yearNumber, DateTime? periodStartOn)
+        public async Task<TaxHubBusinessTaxWorkspaceModel> GetBusinessTaxWorkspaceAsync(short? yearNumber,
+            DateTime? periodStartOn, bool includeTechnicalDetails = false)
         {
+            var subjectCode = await _nodeContext.App_tbOptions
+                .AsNoTracking()
+                .Select(item => item.SubjectCode)
+                .SingleAsync();
+            var supportsCorporationTax = await _nodeContext.Cash_tbReportingProfiles
+                .AsNoTracking()
+                .AnyAsync(profile => profile.SubjectCode == subjectCode
+                    && profile.ReportingTypeCode == (short)NodeEnum.ReportingType.CompanyTax);
+
             var totalsQuery = _nodeContext.Cash_TaxBizTotals
                 .AsNoTracking()
                 .Where(t => t.StartOn <= _businessClock.TodayDateTime)
@@ -443,6 +455,23 @@ namespace TradeControl.Web.AppServices.TaxHub
                 })
                 .ToListAsync();
 
+            var yearPeriodStartDates = yearNumber.HasValue
+                ? await _nodeContext.App_tbYearPeriods
+                    .AsNoTracking()
+                    .Where(t => t.YearNumber == yearNumber.Value)
+                    .OrderBy(t => t.StartOn)
+                    .Select(t => t.StartOn)
+                    .ToListAsync()
+                : new List<DateTime>();
+            var corporationTaxIdentityAsOf = DateOnly.FromDateTime(
+                yearPeriodStartDates.Count > 0
+                    ? yearPeriodStartDates[^1].AddMonths(1).AddDays(-1)
+                    : _businessClock.TodayDateTime);
+
+            // Statement StartOn is the Corporation Tax liability payment date or an actual
+            // payment date. It is deliberately not an App.tbYearPeriod start and cannot be
+            // filtered by the Tax Hub accounting-period selector without losing valid rows and
+            // corrupting the meaning of its running balance.
             var statement = await _nodeContext.Cash_TaxBizStatement
                 .AsNoTracking()
                 .OrderBy(t => t.StartOn)
@@ -490,18 +519,12 @@ namespace TradeControl.Web.AppServices.TaxHub
                     .FirstOrDefaultAsync();
             }
 
+            var sources = new List<TaxHubBusinessTaxSourceWorkspace>();
+            if (includeTechnicalDetails)
+            {
             var sourceNames = await _nodeContext.Cash_tbTaxTagSources
                 .AsNoTracking()
                 .ToDictionaryAsync(t => t.TaxSourceCode, t => t.SourceName);
-
-            var yearPeriodStartDates = yearNumber.HasValue
-                ? await _nodeContext.App_tbYearPeriods
-                    .AsNoTracking()
-                    .Where(t => t.YearNumber == yearNumber.Value)
-                    .OrderBy(t => t.StartOn)
-                    .Select(t => t.StartOn)
-                    .ToListAsync()
-                : new List<DateTime>();
 
             DateTime? yearStart = yearPeriodStartDates.Count > 0 ? yearPeriodStartDates.First() : null;
             DateTime? yearLastPeriodStart = yearPeriodStartDates.Count > 0 ? yearPeriodStartDates.Last() : null;
@@ -591,7 +614,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .OrderBy(t => t)
                 .ToList();
 
-            var sources = taxSourceCodes
+            sources = taxSourceCodes
                 .Select(taxSourceCode => new TaxHubBusinessTaxSourceWorkspace
                 {
                     TaxSourceCode = taxSourceCode,
@@ -604,13 +627,16 @@ namespace TradeControl.Web.AppServices.TaxHub
                         .ToList()
                 })
                 .ToList();
+            }
 
             return new TaxHubBusinessTaxWorkspaceModel
             {
+                SupportsCorporationTax = supportsCorporationTax,
                 SelectedYearNumber = yearNumber,
                 SelectedYearDescription = selectedYearDescription,
                 SelectedPeriodStartOn = periodStartOn,
                 SelectedPeriodDescription = selectedPeriodDescription,
+                CorporationTaxIdentityAsOf = corporationTaxIdentityAsOf,
                 IsAllYears = !yearNumber.HasValue,
                 IsAllPeriodsInYear = isAllPeriodsInYear,
                 Totals = totals,

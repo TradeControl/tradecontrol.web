@@ -10,6 +10,7 @@ using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.AppServices.InvoiceRegister;
 using TradeControl.Web.AppServices.TaxHub;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
+using TradeControl.Web.AppServices.TaxHub.CorporationTax;
 using TradeControl.Web.AppServices.TaxHub.Vat;
 using TradeControl.Web.Tenancy;
 using TradeControl.Web.Mail;
@@ -78,6 +79,8 @@ namespace TradeControl.Web.AppServices
                     CompaniesHouseSubmissionStagingService>();
                 services.AddScoped<ICompaniesHouseFilingContinuationService,
                     CompaniesHouseFilingContinuationService>();
+                services.AddScoped<ICorporationTaxFilingScopeResolver,
+                    CorporationTaxFilingScopeResolver>();
                 if (configuration.GetValue<CompaniesHouseDispatchMode>(
                         $"{CompaniesHouseProductHostOptions.SectionName}:DispatchMode")
                     == CompaniesHouseDispatchMode.OfficialTestSingleSend)
@@ -111,6 +114,8 @@ namespace TradeControl.Web.AppServices
                     DisabledCompaniesHousePreparationReviewService>();
                 services.AddScoped<ICompaniesHouseFilingContinuationService,
                     DisabledCompaniesHouseFilingContinuationService>();
+                services.AddScoped<ICorporationTaxFilingScopeResolver,
+                    DisabledCorporationTaxFilingScopeResolver>();
                 services.AddScoped<ICompaniesHouseSubmissionStatusService,
                     DisabledCompaniesHouseSubmissionStatusService>();
             }

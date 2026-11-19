@@ -3,7 +3,7 @@
 ## Status and succession
 
 This is the original Objective 3 contract-model plan, not the current Corporation Tax execution
-plan. It was not maintained as a phase-by-phase progress ledger. Its architecture was subsequently
+plan. It was not maintained as a phase-by-phase progress record. Its architecture was subsequently
 implemented and narrowed to the approved ordinary micro-company profile through Work Plan 4; the
 authoritative CT2025/RIM service artifact was then completed through Phase 5.8 and Transaction Engine
 fixtures through Phase 5.9.
@@ -122,7 +122,7 @@ These include:
 
 Preserve authoritative identifiers such as CT600 box numbers and RIM element identities in documentation/metadata where useful.
 
-Do not map ledger values or Tax Tags during this phase.
+Do not map transaction-derived accounting values or Tax Tags during this phase.
 
 ### Acceptance criteria
 

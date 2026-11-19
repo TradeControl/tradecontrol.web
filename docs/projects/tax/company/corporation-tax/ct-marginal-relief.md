@@ -33,7 +33,7 @@ rates and instalment rules without changing the Company Statement.
 1. **Preserve MIS Mode.** `Cash.vwStatement`, `Cash.vwStatementBase`,
    `Cash.vwStatementWhatIf`, `Project.tbProject`, Project cost views and the Object/BOM foundation are
    executable product architecture, not disposable prototype debris.
-2. **Account Mode is a surface, not a separate ledger.** The launch UI may hide Projects and Objects,
+2. **Account Mode is a surface, not a separate accounting engine.** The launch UI may hide Projects and Objects,
    but its Corporation Tax calculation must use a path that can consume them when MIS Mode is exposed.
 3. **Transaction-grained means transaction-responsive.** Posting, changing or removing an actual,
    confirmed-order or scenario event must immediately change the projected liability and Company
@@ -309,9 +309,9 @@ Project/What-if accruals remain unchanged and belong to MR-4.
    through the existing period administration interface, and update a month or range atomically.
    Other jurisdictions and sole traders must not acquire placeholder UK rows. Keep
    `App.tbYearPeriod.BusinessTaxRate` as the legacy path until statement cutover. Provision rows only
-   from the explicit, effective-dated `App.vwYearPeriodTaxUkSeed` ledger pinned to the SQL release;
+   from the explicit, effective-dated `App.vwYearPeriodTaxUkSeed` statutory-rate schedule pinned to the SQL release;
    routine period generation must contain no anonymous statutory defaults. Published financial years
-   use their explicit ledger entry. Later tax-accrual periods carry the latest published entry forward
+   use their explicit schedule entry. Later tax-accrual periods carry the latest published entry forward
    visibly as a provisional accrual basis. Forward financial years may remain explicitly provisional even when an
    official planning rate is published; statutory filing readiness must require an accepted,
    non-provisional financial-year entry.
@@ -346,6 +346,16 @@ rollback-only settlement/reversal fixture proves payments affect the balance but
 legacy flat-rate result is no longer used for supported UK company periods, while remaining available
 as the explicit higher-volume control. A provisional rate produces a labelled tax accrual and
 deterministically blocks statutory filing readiness.
+
+**Equity Bridge cutover correction:** the first filing-journey readiness review exposed one remaining
+consumer of the flat-rate comparison path: the version-explicit Equity Bridge. The UK liability and
+jurisdiction-selection boundaries are now Category-Tree-version-explicit, while their ordinary views
+remain active-version wrappers. The Equity Bridge consumes that same selected provider, including for
+historical reconstruction, rather than mixing current capital with legacy tax expense. Active-wrapper
+parity, selected-provider parity, rounded tax-expense identity and the reporting tolerance are enforced
+by the versioned reconciliation fixture. A rollback-only lifecycle test also published a real successor,
+reconstructed its Archived predecessor through the same provider and restored the database unchanged.
+The correction does not remove the legacy comparison provider for non-UK/other-regime operation.
 
 ### MR-4 — apply the same calculation to order-book tax accruals and What-if
 
