@@ -227,7 +227,7 @@ else
                             <div class="small mt-1">A new filing journey is disabled until this check succeeds.</div>
                         </div>
                     }
-                    else if (_existingFiling is not null)
+                    else if (_existingFiling is not null && !_amendmentJourneyStarted)
                     {
                         <div class="card border-primary shadow-sm">
                             <div class="card-body d-flex flex-column gap-3">
@@ -276,12 +276,29 @@ else
                                         To change the classification, create and publish a successor Draft.
                                     </div>
                                     <div>
-                                        <button type="button" class="btn btn-primary"
-                                                @onclick="ContinueToCorporationTaxAsync">
-                                            @(_existingFiling.AcceptanceSimulated
-                                                ? "Continue with CT development"
-                                                : "Continue to Corporation Tax")
-                                        </button>
+                                        @if (_existingFiling.HasOpenAmendment)
+                                        {
+                                            <button type="button" class="btn btn-warning"
+                                                    @onclick="StartAmendmentJourney">
+                                                Continue accounts correction
+                                            </button>
+                                            <div class="small text-muted mt-2">
+                                                Corporation Tax preparation is paused until the revised accounts reach a terminal accepted outcome or this unapproved correction is discarded.
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-primary"
+                                                    @onclick="ContinueToCorporationTaxAsync">
+                                                @(_existingFiling.AcceptanceSimulated
+                                                    ? "Continue with CT development"
+                                                    : "Continue to Corporation Tax")
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning ms-2"
+                                                    @onclick="StartAmendmentJourney">
+                                                Correct accepted accounts
+                                            </button>
+                                        }
                                     </div>
                                 }
                                 else if (_existingFiling.State is CompaniesHouseConversationState.Acknowledged
@@ -395,6 +412,16 @@ else
                             </button>
                         </div>
 
+                        @if (_amendmentJourneyStarted)
+                        {
+                            <div class="alert alert-warning mb-0" role="status">
+                                <strong>Preparing revised accounts.</strong>
+                                This creates a linked successor for the same accounting period. The accepted filing
+                                @(_existingFiling?.SubmissionNumber is null ? string.Empty : $" {_existingFiling.SubmissionNumber}")
+                                remains immutable evidence and will stay on the register.
+                            </div>
+                        }
+
                         <TaxHubCompaniesHouseEvidenceReview Evidence="Workspace.SubjectBalanceEvidence"
                                                              BankCashEvidence="Workspace.BankCashEvidence"
                                                              FixedAssetEvidence="Workspace.FixedAssetEvidence"
@@ -407,7 +434,8 @@ else
                             <TaxHubCompaniesHouseFilingInputs Readiness="Workspace.CompaniesHouse"
                                                                 YearNumber="Workspace.SelectedYearNumber"
                                                                 SelectedPeriodStart="Workspace.SelectedPeriodStartOn"
-                                                                EvidenceReviewSatisfied="true" />
+                                                                EvidenceReviewSatisfied="true"
+                                                                AmendsConversationReference="@(_amendmentJourneyStarted ? _existingFiling?.ConversationReference : null)" />
                         }
                     }
 
@@ -438,6 +466,7 @@ else
 
     private bool _evidenceReviewComplete;
     private bool _filingJourneyStarted;
+    private bool _amendmentJourneyStarted;
     private string? _filingJourneyKey;
     private CompaniesHouseFilingContinuation? _existingFiling;
     private bool _filingContinuationLoading;
@@ -501,6 +530,7 @@ else
 
         _filingJourneyKey = key;
         _filingJourneyStarted = false;
+        _amendmentJourneyStarted = false;
         _evidenceReviewComplete = false;
         _existingFiling = null;
         _filingContinuationError = null;
@@ -635,9 +665,19 @@ else
         _evidenceReviewComplete = false;
     }
 
+    private void StartAmendmentJourney()
+    {
+        if (_existingFiling?.State != CompaniesHouseConversationState.Accepted)
+            return;
+        _amendmentJourneyStarted = true;
+        _filingJourneyStarted = true;
+        _evidenceReviewComplete = false;
+    }
+
     private void ReturnToFilingOverview()
     {
         _filingJourneyStarted = false;
+        _amendmentJourneyStarted = false;
         _evidenceReviewComplete = false;
     }
 

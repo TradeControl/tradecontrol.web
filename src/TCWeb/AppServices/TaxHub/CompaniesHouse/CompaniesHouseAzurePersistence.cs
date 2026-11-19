@@ -183,6 +183,25 @@ internal sealed class AzureCompaniesHousePersistence(
         string reference, CancellationToken cancellationToken = default) =>
         ReadConversationAsync(tenantReference, reference, cancellationToken);
 
+    public async Task<bool> HasOpenAmendmentAsync(string tenantReference,
+        string acceptedConversationReference, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("""
+            SELECT CASE WHEN EXISTS
+            (
+                SELECT 1
+                  FROM Tax.CompaniesHousePreparation
+                 WHERE TenantReference = @tenant
+                   AND JSON_VALUE(PayloadJson, '$.amendsConversationReference') = @conversation
+                   AND JSON_VALUE(PayloadJson, '$.invalidatedAtUtc') IS NULL
+            ) THEN 1 ELSE 0 END;
+            """, connection);
+        Add(command, "tenant", Guid.Parse(tenantReference));
+        Add(command, "conversation", acceptedConversationReference);
+        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) == 1;
+    }
+
     public async Task<bool> TryBeginDispatchAsync(CompaniesHouseConversationRecord conversation,
         CancellationToken cancellationToken = default)
     {

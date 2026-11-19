@@ -27,6 +27,34 @@ else if (_draft is not null && _editContext is not null)
 {
     <EditForm EditContext="_editContext" OnValidSubmit="ReviewInputs">
         <section class="d-flex flex-column gap-3">
+            @if (!string.IsNullOrWhiteSpace(AmendsConversationReference))
+            {
+                <div class="card border-warning">
+                    <div class="card-header"><strong>Revised accounts</strong></div>
+                    <div class="card-body d-flex flex-column gap-3">
+                        <p class="small mb-0">
+                            These accounts will be a new statutory filing for the same period. The accepted original remains
+                            on the Companies House register and in Trade Control evidence; it will not be altered or deleted.
+                        </p>
+                        <div>
+                            <label class="form-label" for="ch-revision-noncompliance">Why did the previously filed accounts not comply?</label>
+                            <InputTextArea id="ch-revision-noncompliance" class="form-control" rows="3"
+                                           @bind-Value="_revisionNonCompliance"
+                                           @bind-Value:after="InvalidateRevisionReview" />
+                        </div>
+                        <div>
+                            <label class="form-label" for="ch-revision-amendments">What significant amendments have been made?</label>
+                            <InputTextArea id="ch-revision-amendments" class="form-control" rows="3"
+                                           @bind-Value="_revisionSignificantAmendments"
+                                           @bind-Value:after="InvalidateRevisionReview" />
+                        </div>
+                        <div class="small text-muted">
+                            The exact FRC revised-report marker, replacement statements and revision approval date will be
+                            embedded in the iXBRL document for review before approval.
+                        </div>
+                    </div>
+                </div>
+            }
             <div>
                 <h3 class="h6 mb-1">Reviewed filing inputs</h3>
                 <div class="text-muted small">
@@ -171,6 +199,41 @@ else if (_draft is not null && _editContext is not null)
                             <dt class="col-md-3">Review expires</dt>
                             <dd class="col-md-9 mb-0">@_prepared.ExpiresAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm")</dd>
                         </dl>
+                        @if (_prepared.RevisionComparison is { } comparison)
+                        {
+                            <section class="card border-warning" aria-labelledby="ch-revision-comparison-title">
+                                <div class="card-body">
+                                    <h4 id="ch-revision-comparison-title" class="h6">Original and revised accounts</h4>
+                                    <p class="small text-muted">
+                                        Review the statutory changes before approving the revised document. The original remains immutable evidence.
+                                    </p>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-3">
+                                            <thead><tr><th>Value</th><th class="text-end">Accepted original</th><th class="text-end">Proposed revision</th><th class="text-end">Change</th></tr></thead>
+                                            <tbody>
+                                                @foreach (var difference in comparison.Differences)
+                                                {
+                                                    <tr>
+                                                        <th scope="row">@difference.Label</th>
+                                                        <td class="text-end">@difference.Original.ToString("C")</td>
+                                                        <td class="text-end">@difference.Revised.ToString("C")</td>
+                                                        <td class="text-end">@((difference.Revised - difference.Original).ToString("C"))</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <dl class="row small mb-0">
+                                        <dt class="col-md-3">Original full accounts</dt>
+                                        <dd class="col-md-9 text-break font-monospace">@comparison.OriginalFullAccountsSha256</dd>
+                                        <dt class="col-md-3">Revised full accounts</dt>
+                                        <dd class="col-md-9 text-break font-monospace">@comparison.RevisedFullAccountsSha256</dd>
+                                        <dt class="col-md-3">Replaces conversation</dt>
+                                        <dd class="col-md-9 mb-0 font-monospace">@comparison.OriginalConversationReference</dd>
+                                    </dl>
+                                </div>
+                            </section>
+                        }
                         <div>
                             <a class="btn btn-primary" href="@_prepared.PdfPath">
                                 Download draft PDF
@@ -370,6 +433,7 @@ else if (_draft is not null && _editContext is not null)
     [Parameter] public short? YearNumber { get; set; }
     [Parameter] public DateTime? SelectedPeriodStart { get; set; }
     [Parameter] public bool EvidenceReviewSatisfied { get; set; }
+    [Parameter] public string? AmendsConversationReference { get; set; }
 
     private TaxHubCompaniesHouseFilingInputDraft? _draft;
     private EditContext? _editContext;
@@ -387,6 +451,8 @@ else if (_draft is not null && _editContext is not null)
     private CompaniesHouseFilingStatus? _filingStatus;
     private bool _testSubmissionConfirmed;
     private bool _submitting;
+    private string _revisionNonCompliance = string.Empty;
+    private string _revisionSignificantAmendments = string.Empty;
 
     private string FilingStatusClass => _filingStatus?.State switch
     {
@@ -407,7 +473,7 @@ else if (_draft is not null && _editContext is not null)
 
     protected override async Task OnParametersSetAsync()
     {
-        var key = $"{Readiness.FilingInputs.PeriodEnd:yyyy-MM-dd}:{Readiness.FilingInputs.IsFirstAccountsPeriod}:{Readiness.IsEligible}";
+        var key = $"{Readiness.FilingInputs.PeriodEnd:yyyy-MM-dd}:{Readiness.FilingInputs.IsFirstAccountsPeriod}:{Readiness.IsEligible}:{AmendsConversationReference}";
         if (_draftKey == key) return;
         _draftKey = key;
         SetDraft(Clone(Readiness.FilingInputs));
@@ -421,6 +487,8 @@ else if (_draft is not null && _editContext is not null)
         _preparedInputsChanged = false;
         _discardConfirmationRequested = false;
         _discarding = false;
+        _revisionNonCompliance = string.Empty;
+        _revisionSignificantAmendments = string.Empty;
 
         if (!Readiness.IsEligible || Readiness.FilingInputs.PeriodEnd == default)
             return;
@@ -430,6 +498,8 @@ else if (_draft is not null && _editContext is not null)
             if (resumed is null)
                 return;
             SetDraft(ToDraft(resumed.Input, Readiness.FilingInputs.IsFirstAccountsPeriod));
+            _revisionNonCompliance = resumed.Input.Revision?.NonComplianceStatement ?? string.Empty;
+            _revisionSignificantAmendments = resumed.Input.Revision?.SignificantAmendmentsStatement ?? string.Empty;
             _prepared = resumed.Preparation;
             _reviewed = true;
         }
@@ -448,7 +518,15 @@ else if (_draft is not null && _editContext is not null)
 
     private void ReviewInputs()
     {
-        _errors = CompaniesHouseFilingInputReview.Validate(_draft!, BusinessClock.Today);
+        var errors = CompaniesHouseFilingInputReview.Validate(_draft!, BusinessClock.Today).ToList();
+        if (!string.IsNullOrWhiteSpace(AmendsConversationReference))
+        {
+            if (string.IsNullOrWhiteSpace(_revisionNonCompliance))
+                errors.Add("Explain how the previously filed accounts did not comply.");
+            if (string.IsNullOrWhiteSpace(_revisionSignificantAmendments))
+                errors.Add("Describe the significant amendments made in the revised accounts.");
+        }
+        _errors = errors;
         _reviewed = _errors.Count == 0;
     }
 
@@ -461,8 +539,7 @@ else if (_draft is not null && _editContext is not null)
         _errors = Array.Empty<string>();
         try
         {
-            _prepared = await PreparationService.PrepareAsync(YearNumber.Value,
-                SelectedPeriodStart.Value, new(
+            var input = new CompaniesHousePreparationInput(
                     _draft.PeriodEnd,
                     DateOnly.FromDateTime(_draft.ApprovedOn.Value),
                     _draft.SigningDirectorName,
@@ -472,7 +549,17 @@ else if (_draft is not null && _editContext is not null)
                     _draft.ConfirmsNoMaterialCommitmentsOrContingencies.Value,
                     _draft.DirectorAdvances.Select(item => new CompaniesHouseDirectorAdvanceReview(
                         item.DirectorName, item.OpeningBalance, item.Advances, item.Repayments,
-                        item.ClosingBalance, item.Terms)).ToArray()));
+                        item.ClosingBalance, item.Terms)).ToArray(),
+                    string.IsNullOrWhiteSpace(AmendsConversationReference)
+                        ? null
+                        : new(AmendsConversationReference,
+                            _revisionNonCompliance,
+                            _revisionSignificantAmendments));
+            _prepared = string.IsNullOrWhiteSpace(AmendsConversationReference)
+                ? await PreparationService.PrepareAsync(YearNumber.Value,
+                    SelectedPeriodStart.Value, input)
+                : await PreparationService.PrepareAmendedAsync(YearNumber.Value,
+                    SelectedPeriodStart.Value, input);
             _approval = null;
             _approvalConfirmed = false;
             _preparedInputsChanged = false;
@@ -600,6 +687,8 @@ else if (_draft is not null && _editContext is not null)
         _preparedInputsChanged = false;
         _errors = Array.Empty<string>();
     }
+
+    private void InvalidateRevisionReview() => InvalidateReview();
 
     private void SetDraft(TaxHubCompaniesHouseFilingInputDraft draft)
     {

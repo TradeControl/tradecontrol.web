@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +17,7 @@ using TradeControl.Tax.UK.Adapters.TradeControl.Readers;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Tax.UK.Application.Preparation;
 using TradeControl.Tax.UK.Application.StatutoryEvidence;
+using TradeControl.Tax.UK.Company.Statutory;
 using TradeControl.Tax.UK.CompaniesHouse.Accounts.Tis6_0;
 using TradeControl.Web.Data;
 using TradeControl.Web.Models;
@@ -31,6 +34,11 @@ public sealed record CompaniesHouseDirectorAdvanceReview(
     decimal ClosingBalance,
     string Terms);
 
+public sealed record CompaniesHouseAccountsRevisionReview(
+    string AcceptedConversationReference,
+    string NonComplianceStatement,
+    string SignificantAmendmentsStatement);
+
 public sealed record CompaniesHousePreparationInput(
     DateOnly PeriodEnd,
     DateOnly ApprovedOn,
@@ -39,7 +47,8 @@ public sealed record CompaniesHousePreparationInput(
     string AccountingPolicies,
     int AverageEmployees,
     bool ConfirmsNoMaterialCommitmentsOrContingencies,
-    IReadOnlyList<CompaniesHouseDirectorAdvanceReview> DirectorAdvances);
+    IReadOnlyList<CompaniesHouseDirectorAdvanceReview> DirectorAdvances,
+    CompaniesHouseAccountsRevisionReview? Revision = null);
 
 public sealed record CompaniesHousePreparedReview(
     string Reference,
@@ -49,7 +58,17 @@ public sealed record CompaniesHousePreparedReview(
     DateTimeOffset ExpiresAtUtc,
     string DocumentPath,
     string DownloadPath,
-    string PdfPath);
+    string PdfPath,
+    CompaniesHouseRevisionComparison? RevisionComparison = null);
+
+public sealed record CompaniesHouseRevisionValueDifference(
+    string Label, decimal Original, decimal Revised);
+
+public sealed record CompaniesHouseRevisionComparison(
+    string OriginalConversationReference,
+    string OriginalFullAccountsSha256,
+    string RevisedFullAccountsSha256,
+    IReadOnlyList<CompaniesHouseRevisionValueDifference> Differences);
 
 public sealed record CompaniesHouseResumablePreparation(
     CompaniesHousePreparedReview Preparation,
@@ -91,6 +110,9 @@ public interface ICompaniesHousePreparationReviewService
 {
     Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default);
+    Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
+        DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default);
     Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
         CancellationToken cancellationToken = default);
     Task DiscardAsync(string preparationReference,
@@ -122,9 +144,35 @@ internal sealed class CompaniesHousePreparationReviewService(
     private const string ReviewSubmissionNumber = "000000";
     private static readonly JsonSerializerOptions ReviewJson = new(JsonSerializerDefaults.Web);
 
-    public async Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber,
+    public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber,
         DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
         CancellationToken cancellationToken = default)
+    {
+        if (input?.Revision is not null)
+            throw new InvalidOperationException(
+                "Revised accounts must be prepared through the explicit amendment journey.");
+        return PrepareCoreAsync(yearNumber, selectedPeriodStart, input!, false, cancellationToken);
+    }
+
+    public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
+        DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default)
+    {
+        if (input?.Revision is null)
+            throw new InvalidOperationException(
+                "The amendment journey requires an accepted predecessor and correction statements.");
+        var principal = httpContextAccessor.HttpContext?.User
+            ?? throw new UnauthorizedAccessException(
+                "An authenticated Trade Control session is required.");
+        if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
+            throw new UnauthorizedAccessException(
+                "Preparing revised Companies House accounts requires Administrator or Manager permission.");
+        return PrepareCoreAsync(yearNumber, selectedPeriodStart, input, true, cancellationToken);
+    }
+
+    private async Task<CompaniesHousePreparedReview> PrepareCoreAsync(short yearNumber,
+        DateTime selectedPeriodStart, CompaniesHousePreparationInput input, bool amendmentExpected,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (!hostOptions.Value.Enabled)
@@ -140,6 +188,8 @@ internal sealed class CompaniesHousePreparationReviewService(
             businessClock.Today);
         if (errors.Count != 0)
             throw new InvalidOperationException(string.Join(" ", errors));
+        if (amendmentExpected)
+            ValidateRevision(input.Revision!);
 
         var period = await ResolvePeriodAsync(yearNumber, cancellationToken);
         if (period.Current.End != input.PeriodEnd
@@ -162,9 +212,36 @@ internal sealed class CompaniesHousePreparationReviewService(
 
         var companyIdentitySha256 = CompaniesHouseFilingIdentity.Company(
             identity.TenantReference, companyNumber);
-        var logicalFilingIdentity = CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
+        var originalLogicalFilingIdentity = CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
             companyIdentitySha256, period.Current.Start, period.Current.End,
             CompaniesHouseProductPolicy.SupportedFilingProfile);
+        var logicalFilingIdentity = originalLogicalFilingIdentity;
+        CompaniesHouseConversationRecord? amendedConversation = null;
+        if (input.Revision is { } revision)
+        {
+            amendedConversation = await workflowStore.GetConversationAsync(identity.TenantReference,
+                revision.AcceptedConversationReference, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    "The accepted Companies House filing selected for correction was not found.");
+            if (amendedConversation.State != CompaniesHouseConversationState.Accepted
+                || amendedConversation.RecoveryRequired
+                || !string.Equals(amendedConversation.CompanyIdentitySha256,
+                    companyIdentitySha256, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "Only an accepted filing for this company can be corrected.");
+            var amendedApproval = await workflowStore.GetApprovalAsync(identity.TenantReference,
+                amendedConversation.ApprovalReference, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    "The accepted filing selected for correction has no retained approval.");
+            if (amendedApproval.PeriodStart != period.Current.Start
+                || amendedApproval.PeriodEnd != period.Current.End
+                || !string.Equals(amendedApproval.FilingProfile,
+                    CompaniesHouseProductPolicy.SupportedFilingProfile, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "The accepted filing selected for correction does not match this accounting period and profile.");
+            logicalFilingIdentity = CompaniesHouseFilingIdentity.Amendment(
+                originalLogicalFilingIdentity, amendedConversation.Reference);
+        }
         var existingConversation = await workflowStore.GetActiveConversationAsync(
             identity.TenantReference, logicalFilingIdentity, cancellationToken);
         var priorConversation = existingConversation ??
@@ -176,12 +253,19 @@ internal sealed class CompaniesHousePreparationReviewService(
             throw new InvalidOperationException(
                 "A Companies House filing conversation already exists for this company and accounting period. Continue that filing instead of preparing another submission.");
 
+        var taxReader = new TcBusinessTaxReader(new ConnectionFactory());
+        var taxOnProfit = await ReadTaxOnProfitAsync(taxReader, connectionString,
+            period.Current, cancellationToken);
+        decimal? comparativeTaxOnProfit = period.Comparative is null
+            ? null
+            : await ReadTaxOnProfitAsync(taxReader, connectionString, period.Comparative,
+                cancellationToken);
         var request = new CompanyProjectionRequest(
             asOfDate,
             period.Current,
             period.Comparative,
             period.Comparative is null,
-            new(companyNumber, true, true, 0m, period.Comparative is null ? null : 0m,
+            new(companyNumber, true, true, taxOnProfit, comparativeTaxOnProfit,
                 input.PrincipalActivity, input.AccountingPolicies, input.AverageEmployees,
                 input.DirectorAdvances.Select(item => new DirectorAdvanceDraft(
                     item.DirectorName, item.OpeningBalance, item.Advances, item.Repayments,
@@ -191,6 +275,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         var source = await new TcCompanyStatutorySourceReader(new ConnectionFactory(), connectionString)
             .ReadAsync(request, cancellationToken);
         var accounts = new CompanyAccountsPopulator().Populate(source, new(true, true));
+        accounts = ApplyRevision(accounts, input, period.Current);
         var accountsPreparer = new CompanyAccountsPreparer();
         var preparedAccounts = accountsPreparer.Prepare(accounts, true,
             $"{source.Identity.SubjectName} statutory accounts",
@@ -238,6 +323,28 @@ internal sealed class CompaniesHousePreparationReviewService(
                 Convert.ToHexString(SHA256.HashData(reviewedInputBytes)), StringComparison.Ordinal))
             throw new InvalidOperationException("Protected Companies House evidence changed during retention.");
 
+        CompaniesHouseRevisionComparison? revisionComparison = null;
+        if (amendedConversation is not null)
+        {
+            var originalApproval = await workflowStore.GetApprovalAsync(identity.TenantReference,
+                amendedConversation.ApprovalReference, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    "The accepted filing selected for correction has no retained approval.");
+            var originalPreparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
+                originalApproval.PreparationReference, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    "The accepted filing selected for correction has no retained preparation.");
+            if (string.IsNullOrWhiteSpace(originalPreparation.FullAccountsSha256)
+                || string.IsNullOrWhiteSpace(originalPreparation.ProtectedFullAccountsReference))
+                throw new InvalidOperationException(
+                    "The accepted filing selected for correction has no retained full-accounts evidence.");
+            var originalFullAccounts = await contentStore.ReadAsync(identity.TenantReference,
+                originalPreparation.ProtectedFullAccountsReference,
+                originalPreparation.FullAccountsSha256, cancellationToken);
+            revisionComparison = CompareRevision(amendedConversation.Reference,
+                originalFullAccounts, retainedFullAccounts, period.Current.End);
+        }
+
         var now = timeProvider.GetUtcNow();
         var reference = $"chp1-{Guid.NewGuid():N}";
         var snapshot = Snapshot(source.Versions);
@@ -272,7 +379,9 @@ internal sealed class CompaniesHousePreparationReviewService(
             fullAccounts.Artifact.Sha256,
             retainedFullAccounts.Reference,
             accountsSnapshotSha256,
-            categoryTreeAfter);
+            categoryTreeAfter,
+            AmendsConversationReference: amendedConversation?.Reference,
+            RevisionComparison: revisionComparison);
         await workflowStore.AddPreparationAsync(preparation, cancellationToken);
         var submissionLock = CompaniesHouseCategoryTreeLock.From(preparation);
         try
@@ -313,7 +422,8 @@ internal sealed class CompaniesHousePreparationReviewService(
             now.Add(CompaniesHouseProductPolicy.PreparationLifetime),
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Document",
             $"/TaxHub/CompaniesHouse/Preparation/{reference}/Download",
-            $"/TaxHub/CompaniesHouse/Preparation/{reference}/Draft.pdf");
+            $"/TaxHub/CompaniesHouse/Preparation/{reference}/Draft.pdf",
+            revisionComparison);
     }
 
     public async Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
@@ -500,6 +610,8 @@ internal sealed class CompaniesHousePreparationReviewService(
                     StringComparison.Ordinal)
                 || !string.Equals(existing.AccountsSnapshotSha256, preparation.AccountsSnapshotSha256,
                     StringComparison.Ordinal)
+                || !string.Equals(existing.AmendsConversationReference,
+                    preparation.AmendsConversationReference, StringComparison.Ordinal)
                 || existing.CategoryTree != preparation.CategoryTree)
                 throw new InvalidOperationException(
                     "The existing approval does not match the current declaration or retained evidence.");
@@ -553,9 +665,15 @@ internal sealed class CompaniesHousePreparationReviewService(
             identity.TenantReference,
             identity.AspNetSubjectReference,
             identity.ActorReference,
-            CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
-                preparation.CompanyIdentitySha256, preparation.PeriodStart,
-                preparation.PeriodEnd, preparation.FilingProfile),
+            preparation.AmendsConversationReference is null
+                ? CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
+                    preparation.CompanyIdentitySha256, preparation.PeriodStart,
+                    preparation.PeriodEnd, preparation.FilingProfile)
+                : CompaniesHouseFilingIdentity.Amendment(
+                    CompaniesHouseFilingIdentity.Logical(identity.TenantReference,
+                        preparation.CompanyIdentitySha256, preparation.PeriodStart,
+                        preparation.PeriodEnd, preparation.FilingProfile),
+                    preparation.AmendsConversationReference),
             preparation.CompanyIdentitySha256,
             preparation.PeriodStart,
             preparation.PeriodEnd,
@@ -571,7 +689,8 @@ internal sealed class CompaniesHousePreparationReviewService(
             now,
             preparation.FullAccountsSha256,
             preparation.AccountsSnapshotSha256,
-            preparation.CategoryTree);
+            preparation.CategoryTree,
+            preparation.AmendsConversationReference);
         await workflowStore.AddApprovalAsync(approval, cancellationToken);
         return ToApprovalReview(approval);
     }
@@ -585,6 +704,23 @@ internal sealed class CompaniesHousePreparationReviewService(
         if (errors.Count != 0)
             throw new CompaniesHousePreparationStaleException(
                 "The reviewed filing inputs are no longer valid. Prepare the accounts again.");
+        if (input.Revision is not null)
+            ValidateRevision(input.Revision);
+        if (!string.Equals(input.Revision?.AcceptedConversationReference,
+                preparation.AmendsConversationReference, StringComparison.Ordinal))
+            throw new CompaniesHousePreparationStaleException(
+                "The accepted filing selected for correction changed after preparation.");
+        if (preparation.AmendsConversationReference is not null)
+        {
+            var predecessor = await workflowStore.GetConversationAsync(identity.TenantReference,
+                preparation.AmendsConversationReference, cancellationToken);
+            if (predecessor is null || predecessor.State != CompaniesHouseConversationState.Accepted
+                || predecessor.RecoveryRequired
+                || !string.Equals(predecessor.CompanyIdentitySha256,
+                    preparation.CompanyIdentitySha256, StringComparison.Ordinal))
+                throw new CompaniesHousePreparationStaleException(
+                    "The accepted filing selected for correction is no longer a valid predecessor.");
+        }
 
         var period = await ResolvePeriodAsync(preparation.YearNumber!.Value, cancellationToken);
         if (period.Current.Start != preparation.PeriodStart
@@ -607,12 +743,19 @@ internal sealed class CompaniesHousePreparationReviewService(
             throw new CompaniesHousePreparationStaleException(
                 "The Companies House identity changed after preparation.");
 
+        var taxReader = new TcBusinessTaxReader(new ConnectionFactory());
+        var taxOnProfit = await ReadTaxOnProfitAsync(taxReader, connectionString,
+            period.Current, cancellationToken);
+        decimal? comparativeTaxOnProfit = period.Comparative is null
+            ? null
+            : await ReadTaxOnProfitAsync(taxReader, connectionString, period.Comparative,
+                cancellationToken);
         var request = new CompanyProjectionRequest(
             asOfDate,
             period.Current,
             period.Comparative,
             period.Comparative is null,
-            new(companyNumber, true, true, 0m, period.Comparative is null ? null : 0m,
+            new(companyNumber, true, true, taxOnProfit, comparativeTaxOnProfit,
                 input.PrincipalActivity, input.AccountingPolicies, input.AverageEmployees,
                 input.DirectorAdvances.Select(item => new DirectorAdvanceDraft(
                     item.DirectorName, item.OpeningBalance, item.Advances, item.Repayments,
@@ -621,6 +764,7 @@ internal sealed class CompaniesHousePreparationReviewService(
         var source = await new TcCompanyStatutorySourceReader(new ConnectionFactory(), connectionString)
             .ReadAsync(request, cancellationToken);
         var accounts = new CompanyAccountsPopulator().Populate(source, new(true, true));
+        accounts = ApplyRevision(accounts, input, period.Current);
         var accountsPreparer = new CompanyAccountsPreparer();
         var currentDocument = accountsPreparer.Prepare(accounts, true,
             $"{source.Identity.SubjectName} statutory accounts",
@@ -696,7 +840,8 @@ internal sealed class CompaniesHousePreparationReviewService(
         preparation.ExpiresAtUtc,
         $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Document",
         $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Download",
-        $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Draft.pdf");
+        $"/TaxHub/CompaniesHouse/Preparation/{preparation.Reference}/Draft.pdf",
+        preparation.RevisionComparison);
 
     private async Task<(ReportingWindow Current, ReportingWindow? Comparative, DateOnly LastPeriodStart)>
         ResolvePeriodAsync(short yearNumber, CancellationToken cancellationToken)
@@ -735,6 +880,31 @@ internal sealed class CompaniesHousePreparationReviewService(
             comparative, DateOnly.FromDateTime(currentBounds.LastPeriodStart));
     }
 
+    private static async Task<decimal> ReadTaxOnProfitAsync(TcBusinessTaxReader taxReader,
+        string connectionString, ReportingWindow accountsPeriod,
+        CancellationToken cancellationToken)
+    {
+        var allocation = CorporationTaxPeriodAllocation.Split(
+            new ReportingPeriod(accountsPeriod.Start, accountsPeriod.End));
+        decimal taxOnProfit = 0m;
+        foreach (var period in allocation.CorporationTaxPeriods)
+        {
+            var liability = await taxReader.ReadCorporationTaxLiabilityAsync(connectionString,
+                period.Start.ToDateTime(TimeOnly.MinValue),
+                period.End.ToDateTime(TimeOnly.MinValue), cancellationToken);
+            var finding = liability.RateFindingCode
+                ?? liability.ProfileFindingCode
+                ?? liability.KernelFindingCode;
+            if (finding is not null || !liability.IsFilingReady)
+                throw new InvalidOperationException(
+                    $"The Corporation Tax charge for {period.Start:d MMM yyyy} to {period.End:d MMM yyyy} is not filing-ready"
+                    + (finding is null ? "." : $" ({finding})."));
+            taxOnProfit += liability.TaxDue;
+        }
+
+        return taxOnProfit;
+    }
+
     private static TaxHubCompaniesHouseFilingInputDraft ToDraft(CompaniesHousePreparationInput input) => new()
     {
         PeriodEnd = input.PeriodEnd,
@@ -754,6 +924,86 @@ internal sealed class CompaniesHousePreparationReviewService(
             Terms = item.Terms
         }).ToList()
     };
+
+    private static StatutoryAccounts ApplyRevision(StatutoryAccounts accounts,
+        CompaniesHousePreparationInput input, ReportingWindow period)
+    {
+        if (input.Revision is not { } revision)
+            return accounts;
+        return accounts with
+        {
+            Revision = new(
+                $"These revised accounts replace the accounts previously filed for the period ending {period.End:dd MMMM yyyy}.",
+                $"These revised accounts are now the statutory accounts for the period ending {period.End:dd MMMM yyyy}.",
+                $"These revised accounts have been prepared as at the date of the accounts previously filed for the period ending {period.End:dd MMMM yyyy}.",
+                revision.NonComplianceStatement.Trim(),
+                revision.SignificantAmendmentsStatement.Trim(),
+                input.ApprovedOn)
+        };
+    }
+
+    private static void ValidateRevision(CompaniesHouseAccountsRevisionReview revision)
+    {
+        if (string.IsNullOrWhiteSpace(revision.AcceptedConversationReference)
+            || revision.AcceptedConversationReference.Length > 64)
+            throw new InvalidOperationException(
+                "Select the accepted Companies House filing that these revised accounts replace.");
+        if (string.IsNullOrWhiteSpace(revision.NonComplianceStatement)
+            || revision.NonComplianceStatement.Trim().Length > 1000)
+            throw new InvalidOperationException(
+                "Explain, in no more than 1,000 characters, how the previously filed accounts did not comply.");
+        if (string.IsNullOrWhiteSpace(revision.SignificantAmendmentsStatement)
+            || revision.SignificantAmendmentsStatement.Trim().Length > 1000)
+            throw new InvalidOperationException(
+                "Describe the significant amendments in no more than 1,000 characters.");
+    }
+
+    private static CompaniesHouseRevisionComparison CompareRevision(
+        string originalConversationReference, CompaniesHouseProtectedContent original,
+        CompaniesHouseProtectedContent revised, DateOnly periodEnd)
+    {
+        var originalValues = ReadRevisionValues(original.Bytes, periodEnd);
+        var revisedValues = ReadRevisionValues(revised.Bytes, periodEnd);
+        return new(originalConversationReference, original.Sha256, revised.Sha256,
+        [
+            new("Tax on profit", originalValues.TaxOnProfit, revisedValues.TaxOnProfit),
+            new("Profit after tax", originalValues.ProfitLoss, revisedValues.ProfitLoss),
+            new("Capital and reserves", originalValues.CapitalAndReserves,
+                revisedValues.CapitalAndReserves)
+        ]);
+    }
+
+    private static (decimal TaxOnProfit, decimal ProfitLoss, decimal CapitalAndReserves)
+        ReadRevisionValues(byte[] ixbrl, DateOnly periodEnd)
+    {
+        var document = XDocument.Parse(Encoding.UTF8.GetString(ixbrl), LoadOptions.None);
+        XNamespace ix = "http://www.xbrl.org/2013/inlineXBRL";
+        XNamespace xbrli = "http://www.xbrl.org/2003/instance";
+        var date = periodEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var contexts = document.Descendants(xbrli + "context")
+            .Where(context => context.Descendants(xbrli + "instant").Any(value => value.Value == date)
+                || context.Descendants(xbrli + "endDate").Any(value => value.Value == date))
+            .Select(context => context.Attribute("id")?.Value)
+            .Where(value => value is not null)
+            .ToHashSet(StringComparer.Ordinal);
+
+        decimal Value(string localName)
+        {
+            var fact = document.Descendants(ix + "nonFraction").SingleOrDefault(element =>
+                contexts.Contains(element.Attribute("contextRef")?.Value)
+                && element.Attribute("name")?.Value.Split(':').Last() == localName)
+                ?? throw new InvalidOperationException(
+                    $"The retained full accounts do not contain the current-period {localName} fact.");
+            if (!decimal.TryParse(fact.Value, NumberStyles.Number | NumberStyles.AllowLeadingSign,
+                    CultureInfo.InvariantCulture, out var value))
+                throw new InvalidOperationException(
+                    $"The retained full-accounts {localName} value is invalid.");
+            return value;
+        }
+
+        return (Value("TaxTaxCreditOnProfitOrLossOnOrdinaryActivities"),
+            Value("ProfitLoss"), Value("Equity"));
+    }
 
     private static string Snapshot(IEnumerable<SourceVersion> versions) => Sha256(string.Join("\n",
         versions.OrderBy(item => item.SourceCode, StringComparer.Ordinal)
@@ -778,6 +1028,11 @@ internal sealed class DisabledCompaniesHousePreparationReviewService
     public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House exact-document preparation is unavailable in this host.");
+
+    public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
+        DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House amended-accounts preparation is unavailable in this host.");
 
     public Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
         CancellationToken cancellationToken = default) =>

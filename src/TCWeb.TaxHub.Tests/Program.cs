@@ -269,13 +269,18 @@ var companyIdentity = CompaniesHouseFilingIdentity.Company("tenant-a", " 0123456
 var logicalFilingIdentity = CompaniesHouseFilingIdentity.Logical("tenant-a", companyIdentity,
     new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
     CompaniesHouseProductPolicy.SupportedFilingProfile);
+var amendmentIdentity = CompaniesHouseFilingIdentity.Amendment(
+    logicalFilingIdentity, "chc1-accepted-original");
 Assert(companyIdentity == CompaniesHouseFilingIdentity.Company("tenant-a", "01234567")
        && logicalFilingIdentity == CompaniesHouseFilingIdentity.Logical("tenant-a", companyIdentity,
            new DateOnly(2025, 10, 1), new DateOnly(2026, 9, 30),
            CompaniesHouseProductPolicy.SupportedFilingProfile)
        && logicalFilingIdentity != CompaniesHouseFilingIdentity.Logical("tenant-a", companyIdentity,
            new DateOnly(2026, 10, 1), new DateOnly(2027, 9, 30),
-           CompaniesHouseProductPolicy.SupportedFilingProfile),
+           CompaniesHouseProductPolicy.SupportedFilingProfile)
+       && amendmentIdentity == CompaniesHouseFilingIdentity.Amendment(
+           logicalFilingIdentity, "chc1-accepted-original")
+       && amendmentIdentity != logicalFilingIdentity,
     "Companies House company/period filing identities are not deterministic and period-specific.");
 var stagingTenant = Guid.NewGuid().ToString();
 var stagingDocumentSha = new string('A', 64);
@@ -1192,6 +1197,8 @@ foreach (var responsiveGridFile in new[]
 }
 var businessTaxWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubBusinessTaxWorkspace.razor"));
+var corporationTaxCalculationReviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxCalculationReviewService.cs"));
 var accountsWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubAccountsWorkspace.razor"));
 var profitAndLossGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
@@ -1254,6 +1261,34 @@ Assert(accountsWorkspaceComponent.Contains("Continue to Corporation Tax", String
     && businessTaxWorkspaceComponent.Contains("Development CT journey — Companies House acceptance was simulated",
         StringComparison.Ordinal),
     "Accepted Companies House evidence no longer continues safely into the appropriately labelled Corporation Tax journey.");
+Assert(corporationTaxCalculationReviewService.Contains("ReadAcceptedForCorporationTaxAsync", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("TcCorporationTaxSourceReader", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("ReadCorporationTaxLiabilityAsync", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("AcceptedAccountsTotals.Read", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("ReconciliationTolerance", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("accepted.AcceptanceSimulated != continuation.AcceptanceSimulated",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Current transactions compared with the exact accepted accounts snapshot",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Accounting profit before tax", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Corporation Tax charge", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Calculation evidence", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Corporation Tax preparation is blocked", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("do not change the tax calculation merely to reproduce them",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("A new valid accounts snapshot is required",
+        StringComparison.Ordinal),
+    "CT-D3 no longer compares the fixed accounts evidence with the Objective 3 transaction-derived calculation.");
+Assert(companiesHouseReviewService.Contains("ReadTaxOnProfitAsync", StringComparison.Ordinal)
+    && companiesHouseReviewService.Contains("CorporationTaxPeriodAllocation.Split", StringComparison.Ordinal)
+    && companiesHouseReviewService.Contains("ReadCorporationTaxLiabilityAsync", StringComparison.Ordinal)
+    && companiesHouseReviewService.Contains("liability.IsFilingReady", StringComparison.Ordinal)
+    && companiesHouseReviewService.Contains("taxOnProfit += liability.TaxDue", StringComparison.Ordinal)
+    && companiesHouseReviewService.Contains("new(companyNumber, true, true, taxOnProfit, comparativeTaxOnProfit",
+        StringComparison.Ordinal)
+    && !companiesHouseReviewService.Contains("new(companyNumber, true, true, 0m, period.Comparative is null ? null : 0m",
+        StringComparison.Ordinal),
+    "Companies House preparation no longer derives its current and comparative tax-on-profit facts from the filing-ready CT liability.");
 Assert(accountsWorkspaceComponent.Contains("ActivePanelIndexChanged=\"LoadSectionAsync\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("_loadedSections.Contains(section)", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("TaxHubAccountsWorkspaceSection.Filing", StringComparison.Ordinal)
@@ -2519,6 +2554,11 @@ file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
+        DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default) =>
         Task.FromResult(new CompaniesHouseReviewDocument("text/html; charset=utf-8", bytes, "TEST-DIGEST"));
@@ -2587,6 +2627,9 @@ file sealed class StubCompaniesHouseWorkflowStore(
     CompaniesHousePreparationRecord preparation,
     CompaniesHouseApprovalRecord approval) : ICompaniesHouseWorkflowStore
 {
+    public Task<bool> HasOpenAmendmentAsync(string tenantReference,
+        string acceptedConversationReference, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
     public CompaniesHouseConversationRecord? ActiveConversation { get; private set; }
     public int UpsertCount { get; private set; }
     public int TryBeginDispatchCount { get; private set; }

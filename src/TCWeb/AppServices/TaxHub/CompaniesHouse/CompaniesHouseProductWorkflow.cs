@@ -74,6 +74,10 @@ internal static class CompaniesHouseFilingIdentity
         Sha256($"{tenantReference}|{companyIdentitySha256}|{periodStart:yyyy-MM-dd}|" +
                $"{periodEnd:yyyy-MM-dd}|{filingProfile}");
 
+    internal static string Amendment(string originalLogicalFilingIdentity,
+        string acceptedConversationReference) =>
+        Sha256($"AMENDMENT|{originalLogicalFilingIdentity}|{acceptedConversationReference}");
+
     private static string Sha256(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }
@@ -134,7 +138,9 @@ internal sealed record CompaniesHousePreparationRecord(
     string? AccountsSnapshotSha256 = null,
     CategoryTreeSealEvidence? CategoryTree = null,
     DateTimeOffset? InvalidatedAtUtc = null,
-    string? InvalidationReason = null);
+    string? InvalidationReason = null,
+    string? AmendsConversationReference = null,
+    CompaniesHouseRevisionComparison? RevisionComparison = null);
 
 internal sealed record CompaniesHouseApprovalRecord(
     string Reference,
@@ -158,7 +164,8 @@ internal sealed record CompaniesHouseApprovalRecord(
     DateTimeOffset ApprovedAtUtc,
     string? FullAccountsSha256 = null,
     string? AccountsSnapshotSha256 = null,
-    CategoryTreeSealEvidence? CategoryTree = null);
+    CategoryTreeSealEvidence? CategoryTree = null,
+    string? AmendsConversationReference = null);
 
 internal static class CompaniesHouseCategoryTreeLock
 {
@@ -253,6 +260,8 @@ internal interface ICompaniesHouseWorkflowStore
         string logicalFilingIdentity, CancellationToken cancellationToken = default);
     Task<CompaniesHouseConversationRecord?> GetConversationAsync(string tenantReference,
         string reference, CancellationToken cancellationToken = default);
+    Task<bool> HasOpenAmendmentAsync(string tenantReference,
+        string acceptedConversationReference, CancellationToken cancellationToken = default);
     Task<bool> TryBeginDispatchAsync(CompaniesHouseConversationRecord conversation,
         CancellationToken cancellationToken = default);
     Task<bool> TryBeginStatusCheckAsync(CompaniesHouseConversationRecord conversation,

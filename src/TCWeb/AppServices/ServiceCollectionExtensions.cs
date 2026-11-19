@@ -81,6 +81,8 @@ namespace TradeControl.Web.AppServices
                     CompaniesHouseFilingContinuationService>();
                 services.AddScoped<ICorporationTaxFilingScopeResolver,
                     CorporationTaxFilingScopeResolver>();
+                services.AddScoped<ICorporationTaxCalculationReviewService,
+                    CorporationTaxCalculationReviewService>();
                 if (configuration.GetValue<CompaniesHouseDispatchMode>(
                         $"{CompaniesHouseProductHostOptions.SectionName}:DispatchMode")
                     == CompaniesHouseDispatchMode.OfficialTestSingleSend)
@@ -116,6 +118,8 @@ namespace TradeControl.Web.AppServices
                     DisabledCompaniesHouseFilingContinuationService>();
                 services.AddScoped<ICorporationTaxFilingScopeResolver,
                     DisabledCorporationTaxFilingScopeResolver>();
+                services.AddScoped<ICorporationTaxCalculationReviewService,
+                    DisabledCorporationTaxCalculationReviewService>();
                 services.AddScoped<ICompaniesHouseSubmissionStatusService,
                     DisabledCompaniesHouseSubmissionStatusService>();
             }

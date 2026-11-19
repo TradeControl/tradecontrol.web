@@ -5,6 +5,7 @@
 @using TradeControl.Tax.UK.Application.Preparation
 @using TradeControl.Web.Authorization
 @using TradeControl.Web.AppServices.TaxHub.CompaniesHouse
+@using TradeControl.Web.AppServices.TaxHub.CorporationTax
 @using TradeControl.Web.Pages.Tax.Hub.Models
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IServiceScopeFactory ServiceScopeFactory
@@ -289,6 +290,127 @@ else
                                             }
                                         </div>
                                     </div>
+
+                                    <div class="border rounded p-3 d-flex flex-column gap-3">
+                                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                                            <div>
+                                                <h4 class="h6 mb-1">Calculation review</h4>
+                                                <div class="small text-muted">
+                                                    Current transactions compared with the exact accepted accounts snapshot
+                                                </div>
+                                            </div>
+                                            @if (_calculationReview is not null)
+                                            {
+                                                <span class="badge @(_calculationReview.IsReady ? "bg-success" : "bg-warning text-dark")">
+                                                    @(_calculationReview.IsReady ? "Reconciled" : "Review required")
+                                                </span>
+                                            }
+                                        </div>
+
+                                        @if (_calculationReviewLoading)
+                                        {
+                                            <div class="d-flex align-items-center gap-2 small text-muted" role="status">
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                Recalculating from Trade Control transactions…
+                                            </div>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(_calculationReviewError))
+                                        {
+                                            <div class="alert alert-danger mb-0" role="alert">
+                                                <strong>Calculation review could not be completed.</strong>
+                                                @_calculationReviewError
+                                            </div>
+                                        }
+                                        else if (_calculationReview is not null)
+                                        {
+                                            var reconciliation = _calculationReview.Reconciliation;
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col">Reconciliation</th>
+                                                            <th scope="col" class="text-end">Accepted accounts</th>
+                                                            <th scope="col" class="text-end">Current calculation</th>
+                                                            <th scope="col" class="text-end">Difference</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row">Accounting profit before tax</th>
+                                                            <td class="text-end">@reconciliation.AcceptedAccountingProfit.ToString("N2")</td>
+                                                            <td class="text-end">@reconciliation.CurrentAccountingProfit.ToString("N2")</td>
+                                                            <td class="text-end">@reconciliation.AccountingProfitDifference.ToString("N2")</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Corporation Tax charge</th>
+                                                            <td class="text-end">@reconciliation.AcceptedTaxCharge.ToString("N2")</td>
+                                                            <td class="text-end">@reconciliation.CurrentTaxCharge.ToString("N2")</td>
+                                                            <td class="text-end">@reconciliation.TaxChargeDifference.ToString("N2")</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            @if (!reconciliation.IsReconciled)
+                                            {
+                                                <div class="alert alert-danger mb-0" role="alert">
+                                                    <div class="fw-semibold">Corporation Tax preparation is blocked.</div>
+                                                    <div>
+                                                        The current transaction-derived calculation does not reconcile to the
+                                                        accepted accounts. The accepted accounts are immutable filing evidence;
+                                                        do not change the tax calculation merely to reproduce them.
+                                                    </div>
+                                                    @if (Math.Abs(reconciliation.AccountingProfitDifference) <= reconciliation.Tolerance
+                                                        && Math.Abs(reconciliation.TaxChargeDifference) > reconciliation.Tolerance)
+                                                    {
+                                                        <div class="mt-2">
+                                                            Accounting profit agrees, but the accepted accounts record a Corporation
+                                                            Tax charge of @reconciliation.AcceptedTaxCharge.ToString("N2") while the
+                                                            current calculation is @reconciliation.CurrentTaxCharge.ToString("N2").
+                                                            A new valid accounts snapshot is required before this return can proceed.
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+
+                                            @foreach (var calculation in _calculationReview.Periods)
+                                            {
+                                                <div class="border rounded p-3">
+                                                    <div class="fw-semibold mb-2">
+                                                        @calculation.PeriodStart.ToString("d MMM yyyy") to @calculation.PeriodEnd.ToString("d MMM yyyy")
+                                                    </div>
+                                                    <dl class="row small mb-0">
+                                                        <dt class="col-sm-7">Accounting profit before tax</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@calculation.AccountingProfit.ToString("N2")</dd>
+                                                        <dt class="col-sm-7">Depreciation add-back</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@calculation.DepreciationAddBack.ToString("N2")</dd>
+                                                        <dt class="col-sm-7">Relevant distributions</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@calculation.RelevantDistributions.ToString("N2")</dd>
+                                                        <dt class="col-sm-7">Taxable total profits</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@calculation.TaxableTotalProfits.ToString("N2")</dd>
+                                                        <dt class="col-sm-7">Augmented profits</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@calculation.AugmentedProfits.ToString("N2")</dd>
+                                                        <dt class="col-sm-7">Calculation</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@CalculationDescription(calculation.CalculationCode)</dd>
+                                                        <dt class="col-sm-7">Marginal relief</dt>
+                                                        <dd class="col-sm-5 text-sm-end">@calculation.MarginalRelief.ToString("N2")</dd>
+                                                        <dt class="col-sm-7">Corporation Tax payable</dt>
+                                                        <dd class="col-sm-5 text-sm-end fw-semibold">@calculation.TaxPayable.ToString("N2")</dd>
+                                                    </dl>
+                                                </div>
+                                            }
+
+                                            <details class="small">
+                                                <summary>Calculation evidence</summary>
+                                                <dl class="row mt-2 mb-0">
+                                                    <dt class="col-sm-4">Source SHA-256</dt>
+                                                    <dd class="col-sm-8 font-monospace text-break">@_calculationReview.SourceSha256</dd>
+                                                    <dt class="col-sm-4">Tolerance</dt>
+                                                    <dd class="col-sm-8">@reconciliation.Tolerance.ToString("N2")</dd>
+                                                </dl>
+                                            </details>
+                                        }
+                                    </div>
                                 }
 
                                 <ol class="mb-0 ps-3 small">
@@ -325,6 +447,10 @@ else
     private bool _continuationLoading;
     private string? _continuationError;
     private string? _continuationLookupKey;
+    private bool _calculationReviewLoading;
+    private string? _calculationReviewError;
+    private string? _calculationReviewLookupKey;
+    private CorporationTaxCalculationReview? _calculationReview;
     private IReadOnlyList<CompaniesHouseFilingContinuation> _companiesHouseFilings = [];
     private IReadOnlyList<CompaniesHouseFilingContinuation> _acceptedAccounts = [];
 
@@ -348,8 +474,14 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Workspace is null || !Workspace.SupportsCorporationTax || Continuation is not null)
+        if (Workspace is null || !Workspace.SupportsCorporationTax)
             return;
+
+        if (Continuation is not null)
+        {
+            await LoadCalculationReviewAsync(Continuation);
+            return;
+        }
 
         var lookupKey = Workspace.CorporationTaxIdentityAsOf.ToString("yyyy-MM-dd");
         if (string.Equals(lookupKey, _continuationLookupKey, StringComparison.Ordinal))
@@ -367,6 +499,7 @@ else
             _companiesHouseFilings = await service.ListAsync(Workspace.CorporationTaxIdentityAsOf);
             _acceptedAccounts = _companiesHouseFilings
                 .Where(value => value.State == CompaniesHouseConversationState.Accepted
+                    && !value.HasOpenAmendment
                     && MatchesSelectedFinancialYear(value))
                 .ToList();
 
@@ -416,6 +549,37 @@ else
         }
     }
 
+    private async Task LoadCalculationReviewAsync(TaxHubCorporationTaxContinuation continuation)
+    {
+        var lookupKey = $"{continuation.AccountsSnapshotSha256}|{continuation.AcceptanceSimulated}";
+        if (string.Equals(lookupKey, _calculationReviewLookupKey, StringComparison.Ordinal))
+            return;
+        _calculationReviewLookupKey = lookupKey;
+        _calculationReviewLoading = true;
+        _calculationReviewError = null;
+        _calculationReview = null;
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider
+                .GetRequiredService<ICorporationTaxCalculationReviewService>();
+            _calculationReview = await service.BuildAsync(continuation);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
+            or FormatException)
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax calculation review could not be built for accounts snapshot {AccountsSnapshotSha256}.",
+                continuation.AccountsSnapshotSha256);
+            _calculationReviewError = exception.Message;
+        }
+        finally
+        {
+            _calculationReviewLoading = false;
+        }
+    }
+
     private void ToggleDiagnostics() => _showDiagnostics = !_showDiagnostics;
 
     private bool MatchesSelectedFinancialYear(CompaniesHouseFilingContinuation filing) =>
@@ -451,5 +615,14 @@ else
         { State: CompaniesHouseConversationState.Accepted } =>
             "These accounts are accepted, but they do not match the selected financial year. Select the financial year matching the accounts period to begin the Corporation Tax filing journey.",
         _ => "Corporation Tax filing requires a genuine terminal Accepted Companies House outcome."
+    };
+
+    private static string CalculationDescription(string calculationCode) => calculationCode switch
+    {
+        "SMALL-PROFITS" => "Small profits rate",
+        "MARGINAL-RELIEF" => "Marginal relief",
+        "MAIN-RATE" => "Main rate",
+        "NO-TAX" => "No tax due",
+        _ => calculationCode
     };
 }

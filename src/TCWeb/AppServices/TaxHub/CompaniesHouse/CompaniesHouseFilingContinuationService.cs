@@ -43,7 +43,9 @@ public sealed record CompaniesHouseFilingContinuation(
     string? AcceptanceSimulatedBy,
     DateOnly AccountsPeriodStart,
     DateOnly AccountsPeriodEnd,
-    string AccountsSnapshotSha256);
+    string AccountsSnapshotSha256,
+    string? AmendsConversationReference,
+    bool HasOpenAmendment = false);
 
 public interface ICompaniesHouseFilingContinuationService
 {
@@ -125,10 +127,26 @@ internal sealed class CompaniesHouseFilingContinuationService(
                 statusCheck?.ExaminerComment, statusCheck?.SupportReference,
                 statusCheck?.Errors ?? [], conversation.AcceptanceSimulated,
                 conversation.AcceptanceSimulatedAtUtc, conversation.AcceptanceSimulatedBy,
-                approval.PeriodStart, approval.PeriodEnd, approval.AccountsSnapshotSha256));
+                approval.PeriodStart, approval.PeriodEnd, approval.AccountsSnapshotSha256,
+                approval.AmendsConversationReference, false));
         }
 
+        var predecessorsWithSuccessors = result
+            .Where(value => value.AmendsConversationReference is not null)
+            .Select(value => value.AmendsConversationReference!)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var accepted in result.Where(value =>
+                     value.State == CompaniesHouseConversationState.Accepted))
+        {
+            if (await workflowStore.HasOpenAmendmentAsync(identity.TenantReference,
+                    accepted.ConversationReference, cancellationToken))
+                predecessorsWithSuccessors.Add(accepted.ConversationReference);
+        }
         return result
+            .Select(value => value with
+            {
+                HasOpenAmendment = predecessorsWithSuccessors.Contains(value.ConversationReference)
+            })
             .OrderByDescending(value => value.AccountsPeriodEnd)
             .ThenByDescending(value => value.UpdatedAtUtc)
             .ToList();

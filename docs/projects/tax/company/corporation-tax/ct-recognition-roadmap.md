@@ -396,9 +396,27 @@ behind one final integration test.
    - block missing, pending, simulated, legacy or mismatched acceptance according to the approved
      product policy;
    - cover the one-accounts-period/two-CT-return case.
+2A. **Companies House amended-accounts dependency**
+   **Status: blocking CT continuation for S00002.** The detailed correction lifecycle belongs to
+   Companies House [Phase 7.7A](../companies-house/phase-7.7a-amended-accounts.md). CT retains only the
+   fail-closed consumption rule: while a correction exists, the known-wrong predecessor snapshot is
+   unavailable; CT may resume only from the latest accepted revised snapshot after accounting profit
+   and the accounts Corporation Tax charge reconcile to current transactions.
 3. **CT-D3 — calculation and reviewed inputs**
-   **Status: next implementation slice.** CT-D2 now supplies the fixed accounts snapshot and CT-period
-   identity required by this work; no calculation review has yet been approved through the product UI.
+   **Status: first read-only reconciliation slice deployed to B8 for review.** The product now re-reads
+   the immutable accepted full-accounts artifact, rebuilds the Objective 3 calculation from current
+   Trade Control transactions and presents the accounting-profit and profit-to-tax bridge without
+   creating a filing artifact or submission action. The 19 November 2026 S00002 test reconciled its
+   accounting profit but correctly failed closed because the accepted accounts contained a zero tax
+   charge while the current marginal-relief calculation produced a non-zero charge. Investigation
+   found that Companies House preparation had hard-coded both current and comparative tax-on-profit
+   facts to zero. Future accounts preparations now derive both facts from the same filing-ready
+   `Cash.vwTaxCorpLiabilityUK` boundary used by Objective 3, including the shared one/two CT-period
+   allocation and the pre-approval stale check. S00002 remains immutable and unsuitable for CT; the
+   UI requires a new valid accounts snapshot rather than altering CT merely to fit the old artifact.
+   The corrected CT-D3 r2 build was deployed on 19 November 2026; B8 liveness and tenant-aware
+   readiness both returned HTTP 200 after deployment. Reviewed adjustment/input editing and durable
+   draft invalidation remain to be implemented.
    - rebuild a non-filing comparison projection from current Trade Control transactions and require
      it to reconcile to the accepted accounts snapshot; never substitute those comparison bytes for
      the accepted full-accounts attachment;
@@ -432,10 +450,12 @@ behind one final integration test.
 #### Deliberate launch boundaries
 
 The first recognised product journey supports the frozen ordinary UK company profile already
-represented by Objective 3. Specialist regimes, unsupported supplementary pages, group relief,
-quarterly instalment payment companies and amendments must fail with a useful scope explanation;
-they are not approximated. An accepted return remains visible and immutable. If amendments are not
-yet supported, the UI says so and directs the user to support rather than presenting another Submit
+represented by Objective 3. Specialist regimes, unsupported supplementary pages, group relief and
+quarterly instalment payment companies must fail with a useful scope explanation; they are not
+approximated. Companies House Phase 7.7A supports replacement-method revised accounts for the frozen
+ordinary-company profile only. HMRC CT600 amendments remain outside the first filing journey until
+their own immutable correction workflow is implemented. An accepted return remains visible and
+immutable; the UI directs the user to support rather than presenting an ordinary second Submit
 button.
 
 **Gate:** an authorised user can move from an accepted, cryptographically linked Companies House
@@ -517,3 +537,5 @@ Protected retained-company artifact and response identities remain with the loca
 - [Taxonomies accepted by HMRC](https://www.gov.uk/government/publications/taxonomies-accepted-by-hm-revenue-and-customs/taxonomies-accepted-by-hmrc)
 - [Basic guide for XML software developers](https://www.gov.uk/guidance/basic-guide-for-xml-software-developers)
 - [Recognised Corporation Tax commercial software suppliers](https://www.gov.uk/government/publications/corporation-tax-commercial-software-suppliers)
+- [Correcting and amending company accounts](https://www.gov.uk/annual-accounts/corrections-and-amendments)
+- [Companies House technical interface specifications](https://www.gov.uk/government/publications/technical-interface-specifications-for-companies-house-software)
