@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -51,8 +52,12 @@ public interface ICompaniesHouseFilingContinuationService
 {
     Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseFilingContinuation?> FindAsync(ClaimsPrincipal principal,
+        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(DateOnly identityAsOf,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(ClaimsPrincipal principal,
+        DateOnly identityAsOf, CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseFilingContinuationService(
@@ -66,10 +71,31 @@ internal sealed class CompaniesHouseFilingContinuationService(
             .FirstOrDefault(value => value.AccountsPeriodStart == periodStart
                 && value.AccountsPeriodEnd == periodEnd);
 
+    public async Task<CompaniesHouseFilingContinuation?> FindAsync(ClaimsPrincipal principal,
+        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken = default)
+        => (await ListAsync(principal, periodEnd, cancellationToken))
+            .FirstOrDefault(value => value.AccountsPeriodStart == periodStart
+                && value.AccountsPeriodEnd == periodEnd);
+
     public async Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(DateOnly identityAsOf,
         CancellationToken cancellationToken = default)
     {
         var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        return await ListAsync(identity, identityAsOf, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(
+        ClaimsPrincipal principal, DateOnly identityAsOf,
+        CancellationToken cancellationToken = default)
+    {
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
+        return await ListAsync(identity, identityAsOf, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(
+        CompaniesHouseWorkflowIdentity identity, DateOnly identityAsOf,
+        CancellationToken cancellationToken)
+    {
         var connectionString = nodeContext.Database.GetConnectionString();
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("The statutory accounting source is unavailable.");
@@ -158,7 +184,13 @@ internal sealed class DisabledCompaniesHouseFilingContinuationService
 {
     public Task<CompaniesHouseFilingContinuation?> FindAsync(DateOnly periodStart, DateOnly periodEnd,
         CancellationToken cancellationToken = default) => Task.FromResult<CompaniesHouseFilingContinuation?>(null);
+    public Task<CompaniesHouseFilingContinuation?> FindAsync(ClaimsPrincipal principal,
+        DateOnly periodStart, DateOnly periodEnd, CancellationToken cancellationToken = default)
+        => Task.FromResult<CompaniesHouseFilingContinuation?>(null);
     public Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(DateOnly identityAsOf,
         CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<CompaniesHouseFilingContinuation>>([]);
+    public Task<IReadOnlyList<CompaniesHouseFilingContinuation>> ListAsync(ClaimsPrincipal principal,
+        DateOnly identityAsOf, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<CompaniesHouseFilingContinuation>>([]);
 }

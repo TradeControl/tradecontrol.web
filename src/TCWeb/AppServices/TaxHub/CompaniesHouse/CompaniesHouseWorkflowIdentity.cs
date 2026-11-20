@@ -20,6 +20,8 @@ internal sealed record CompaniesHouseWorkflowIdentity(
 internal interface ICompaniesHouseWorkflowIdentityAccessor
 {
     Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(CancellationToken cancellationToken = default);
+    Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseWorkflowIdentityAccessor(
@@ -32,6 +34,13 @@ internal sealed class CompaniesHouseWorkflowIdentityAccessor(
     {
         var principal = httpContextAccessor.HttpContext?.User
             ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        return await GetRequiredAsync(principal, cancellationToken);
+    }
+
+    public async Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
         var aspNetSubject = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (principal.Identity?.IsAuthenticated != true || string.IsNullOrWhiteSpace(aspNetSubject))
             throw new UnauthorizedAccessException("An authenticated Trade Control subject is required.");

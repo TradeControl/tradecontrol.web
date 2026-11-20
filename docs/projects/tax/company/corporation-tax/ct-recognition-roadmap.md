@@ -374,8 +374,10 @@ behind one final integration test.
    - introduce the immutable CT filing-plan identity and continuation lookup;
    - keep privileged Diagnostics available without making it the default experience.
 2. **CT-D2 — Companies House continuation**
-   **Status: deployed to B8 and under human review.** The 19 November 2026 review exercised official-test
-   submission `S00002`, recorded an explicitly simulated Companies House acceptance and opened the single
+   **Status: accepted in the development product journey.** The original 19 November 2026 review exercised
+   an official-test submission and exposed an accounts tax defect. The corrected successor was subsequently
+   acknowledged by the official-test gateway, accepted only through the explicitly labelled development
+   simulation, and opened the single
    1 July 2025 to 30 June 2026 CT development scope. The File return workspace rediscovers a
    genuine accepted filing after reload, re-reads and verifies the protected full-accounts artifact,
    and derives one or two immutable CT-period identities. Multiple accepted filings require an
@@ -397,13 +399,16 @@ behind one final integration test.
      product policy;
    - cover the one-accounts-period/two-CT-return case.
 2A. **Companies House amended-accounts dependency**
-   **Status: blocking CT continuation for S00002.** The detailed correction lifecycle belongs to
+   **Status: satisfied for the development journey.** The detailed correction lifecycle belongs to
    Companies House [Phase 7.7A](../companies-house/phase-7.7a-amended-accounts.md). CT retains only the
    fail-closed consumption rule: while a correction exists, the known-wrong predecessor snapshot is
    unavailable; CT may resume only from the latest accepted revised snapshot after accounting profit
-   and the accounts Corporation Tax charge reconcile to current transactions.
+   and the accounts Corporation Tax charge reconcile to current transactions. The corrected successor
+   now reconciles both accounting profit and Corporation Tax charge to current transactions with zero
+   difference. Its simulated acceptance remains development evidence and cannot qualify a genuine HMRC
+   submission.
 3. **CT-D3 — calculation and reviewed inputs**
-   **Status: first read-only reconciliation slice deployed to B8 for review.** The product now re-reads
+   **Status: read-only reconciliation accepted; durable reviewed-input slice implemented locally and awaiting product/deployment review.** The product now re-reads
    the immutable accepted full-accounts artifact, rebuilds the Objective 3 calculation from current
    Trade Control transactions and presents the accounting-profit and profit-to-tax bridge without
    creating a filing artifact or submission action. The 19 November 2026 S00002 test reconciled its
@@ -414,9 +419,15 @@ behind one final integration test.
    `Cash.vwTaxCorpLiabilityUK` boundary used by Objective 3, including the shared one/two CT-period
    allocation and the pre-approval stale check. S00002 remains immutable and unsuitable for CT; the
    UI requires a new valid accounts snapshot rather than altering CT merely to fit the old artifact.
-   The corrected CT-D3 r2 build was deployed on 19 November 2026; B8 liveness and tenant-aware
-   readiness both returned HTTP 200 after deployment. Reviewed adjustment/input editing and durable
-   draft invalidation remain to be implemented.
+   The corrected successor now proves the intended positive path: accepted accounting profit and tax
+   charge both equal the current transaction-derived calculation, with zero difference. The local
+   successor slice adds one durable review per CT accounting period for other add-backs, deductions,
+   capital allowances, losses used, chargeable gains, other reliefs and conditional loans-to-
+   participators inputs. Each review records the authenticated reviewer, timestamp, revision, input
+   digest and source digest. A later source-version change retains the entered values but marks the
+   review stale and closes readiness until an authorised Administrator or Manager reviews it again.
+   Associated-company facts remain effective-dated reporting-profile inputs rather than being copied
+   into the filing draft. The workflow schema and product UI are not yet deployed.
    - rebuild a non-filing comparison projection from current Trade Control transactions and require
      it to reconcile to the accepted accounts snapshot; never substitute those comparison bytes for
      the accepted full-accounts attachment;

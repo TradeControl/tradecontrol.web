@@ -81,6 +81,8 @@ namespace TradeControl.Web.AppServices
                     CompaniesHouseFilingContinuationService>();
                 services.AddScoped<ICorporationTaxFilingScopeResolver,
                     CorporationTaxFilingScopeResolver>();
+                services.AddScoped<ICorporationTaxReviewStore,
+                    AzureCorporationTaxReviewStore>();
                 services.AddScoped<ICorporationTaxCalculationReviewService,
                     CorporationTaxCalculationReviewService>();
                 if (configuration.GetValue<CompaniesHouseDispatchMode>(

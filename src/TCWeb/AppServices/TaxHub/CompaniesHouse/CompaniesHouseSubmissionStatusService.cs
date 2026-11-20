@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -40,8 +41,12 @@ public interface ICompaniesHouseSubmissionStatusService
 {
     Task<CompaniesHouseFilingStatus> CheckAsync(string conversationReference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseFilingStatus> CheckAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default);
     Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(string conversationReference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseSubmissionStatusService(
@@ -58,18 +63,21 @@ internal sealed class CompaniesHouseSubmissionStatusService(
     TimeProvider timeProvider) : ICompaniesHouseSubmissionStatusService
 {
     public async Task<CompaniesHouseFilingStatus> CheckAsync(string conversationReference,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        await CheckAsync(RequiredPrincipal(), conversationReference, cancellationToken);
+
+    public async Task<CompaniesHouseFilingStatus> CheckAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(conversationReference) || conversationReference.Length > 64)
             throw new ArgumentException("A valid conversation reference is required.", nameof(conversationReference));
 
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Checking Companies House filing status requires Administrator or Manager permission.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var conversation = await workflowStore.GetConversationAsync(identity.TenantReference,
             conversationReference, cancellationToken)
             ?? throw new KeyNotFoundException("The Companies House filing conversation was not found.");
@@ -214,7 +222,13 @@ internal sealed class CompaniesHouseSubmissionStatusService(
     }
 
     public async Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(
-        string conversationReference, CancellationToken cancellationToken = default)
+        string conversationReference, CancellationToken cancellationToken = default) =>
+        await SimulateAcceptanceAsync(RequiredPrincipal(), conversationReference,
+            cancellationToken);
+
+    public async Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(
+        ClaimsPrincipal principal, string conversationReference,
+        CancellationToken cancellationToken = default)
     {
         if (!hostOptions.Value.CanSimulateOfficialTestAcceptance)
             throw new InvalidOperationException(
@@ -223,13 +237,12 @@ internal sealed class CompaniesHouseSubmissionStatusService(
             throw new ArgumentException("A valid conversation reference is required.",
                 nameof(conversationReference));
 
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Simulating Companies House acceptance requires Administrator or Manager permission.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var conversation = await workflowStore.GetConversationAsync(identity.TenantReference,
             conversationReference, cancellationToken)
             ?? throw new KeyNotFoundException("The Companies House filing conversation was not found.");
@@ -383,6 +396,10 @@ internal sealed class CompaniesHouseSubmissionStatusService(
         _ => throw new InvalidOperationException("The Companies House status is unsupported.")
     };
 
+    private ClaimsPrincipal RequiredPrincipal() => httpContextAccessor.HttpContext?.User
+        ?? throw new UnauthorizedAccessException(
+            "An authenticated Trade Control session is required.");
+
     private static CompaniesHouseFilingStatus ToStatus(CompaniesHouseConversationRecord value) =>
         new(value.Reference, value.SubmissionNumber, value.State, value.RecoveryRequired,
             value.UpdatedAtUtc, value.SupportReference, value.Errors);
@@ -415,7 +432,15 @@ internal sealed class DisabledCompaniesHouseSubmissionStatusService : ICompanies
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House status enquiries are disabled in this environment.");
 
+    public Task<CompaniesHouseFilingStatus> CheckAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House status enquiries are disabled in this environment.");
+
     public Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(string conversationReference,
         CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House acceptance simulation is disabled in this environment.");
+
+    public Task<CompaniesHouseFilingStatus> SimulateAcceptanceAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House acceptance simulation is disabled in this environment.");
 }

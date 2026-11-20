@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using TradeControl.Tax.UK.Adapters.TradeControl.Data;
 using TradeControl.Tax.UK.Adapters.TradeControl.Readers;
 using TradeControl.Tax.UK.Application.DataProvision;
 using TradeControl.Web.AppServices.TaxHub.CompaniesHouse;
+using TradeControl.Web.Authorization;
 using TradeControl.Web.Data;
 using TradeControl.Web.Pages.Tax.Hub.Models;
 
@@ -28,7 +30,7 @@ internal sealed record CorporationTaxAccountsReconciliation(
     decimal Tolerance,
     bool IsReconciled);
 
-internal sealed record CorporationTaxPeriodCalculationReview(
+public sealed record CorporationTaxPeriodCalculationReview(
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
     decimal AccountingProfit,
@@ -48,7 +50,22 @@ internal sealed record CorporationTaxPeriodCalculationReview(
     decimal CorporationTaxChargeable,
     decimal OtherReliefs,
     decimal TaxPayable,
-    bool IsFilingReady);
+    bool IsFilingReady,
+    CorporationTaxPeriodReviewState Review);
+
+public sealed record CorporationTaxPeriodReviewState(
+    CorporationTaxPeriodReviewedInput Input,
+    int Revision,
+    string InputSha256,
+    string? ReviewedBy,
+    DateTimeOffset? ReviewedAtUtc,
+    bool IsReviewed,
+    bool IsStale);
+
+public sealed record CorporationTaxPeriodReviewSaveRequest(
+    string LogicalFilingIdentity,
+    CorporationTaxPeriodReviewedInput Input,
+    int ExpectedRevision);
 
 internal sealed record CorporationTaxCalculationReview(
     string AccountsSnapshotSha256,
@@ -63,6 +80,14 @@ internal interface ICorporationTaxCalculationReviewService
     Task<CorporationTaxCalculationReview> BuildAsync(
         TaxHubCorporationTaxContinuation continuation,
         CancellationToken cancellationToken = default);
+
+    Task<CorporationTaxCalculationReview> SavePeriodAsync(
+        ClaimsPrincipal principal,
+        TaxHubCorporationTaxContinuation continuation,
+        string logicalFilingIdentity,
+        CorporationTaxPeriodReviewedInput input,
+        int expectedRevision,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -72,7 +97,10 @@ internal interface ICorporationTaxCalculationReviewService
 internal sealed class CorporationTaxCalculationReviewService(
     NodeContext nodeContext,
     ICompaniesHouseAccountsSnapshotService accountsSnapshots,
-    IOptions<CompaniesHouseProductHostOptions> hostOptions) : ICorporationTaxCalculationReviewService
+    ICorporationTaxReviewStore reviewStore,
+    ICompaniesHouseWorkflowIdentityAccessor identityAccessor,
+    IOptions<CompaniesHouseProductHostOptions> hostOptions,
+    TimeProvider timeProvider) : ICorporationTaxCalculationReviewService
 {
     private const decimal ReconciliationTolerance = 0.10m;
 
@@ -109,14 +137,32 @@ internal sealed class CorporationTaxCalculationReviewService(
         var factory = new ConnectionFactory();
         var taxReader = new TcBusinessTaxReader(factory);
         var reviewedPeriods = new List<CorporationTaxPeriodReviewedInput>(filingPeriods.Length);
+        var storedReviews = new Dictionary<ReportingWindow, CorporationTaxReviewedPeriodRecord?>();
+        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
         foreach (var period in filingPeriods)
         {
             var liability = await taxReader.ReadCorporationTaxLiabilityAsync(connectionString,
                 period.PeriodStart.ToDateTime(TimeOnly.MinValue),
                 period.PeriodEnd.ToDateTime(TimeOnly.MinValue), cancellationToken);
-            reviewedPeriods.Add(new(
-                new(period.PeriodStart, period.PeriodEnd),
-                [], [], new(0m, 0m, 0m), liability.LossUsed, 0m, 0m, null));
+            var window = new ReportingWindow(period.PeriodStart, period.PeriodEnd);
+            var stored = await reviewStore.GetAsync(identity.TenantReference,
+                period.LogicalIdentity, cancellationToken);
+            if (stored is not null
+                && (!string.Equals(stored.TenantReference,
+                        identity.TenantReference, StringComparison.Ordinal)
+                    || !string.Equals(stored.AccountsSnapshotSha256,
+                        continuation.AccountsSnapshotSha256, StringComparison.Ordinal)
+                    || stored.PeriodStart != period.PeriodStart
+                    || stored.PeriodEnd != period.PeriodEnd
+                    || !string.Equals(stored.LogicalFilingIdentity,
+                        period.LogicalIdentity, StringComparison.Ordinal)))
+                throw new InvalidOperationException(
+                    "The saved Corporation Tax review does not match its filing scope.");
+            var reviewed = stored?.Input ?? new CorporationTaxPeriodReviewedInput(
+                window, [], [], new(0m, 0m, 0m), liability.LossUsed, 0m, 0m, null);
+            Validate(reviewed);
+            reviewedPeriods.Add(reviewed);
+            storedReviews.Add(window, stored);
         }
 
         var source = await new TcCorporationTaxSourceReader(factory, connectionString).ReadAsync(new(
@@ -126,9 +172,26 @@ internal sealed class CorporationTaxCalculationReviewService(
             new(null, string.Empty, reviewedPeriods, string.Empty,
                 continuation.AccountsPeriodEnd)), cancellationToken);
 
+        var sourceSha256 = SourceSha256(source.Versions);
         var periods = source.CorporationTaxPeriods.Select(period =>
         {
             var liability = period.Liability.Value;
+            var stored = storedReviews[period.Period];
+            var input = stored?.Input ?? reviewedPeriods.Single(value => value.Period == period.Period);
+            var inputSha256 = InputSha256(input);
+            if (stored is not null
+                && !string.Equals(stored.InputSha256, inputSha256, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "The saved Corporation Tax review failed its input integrity check.");
+            var review = new CorporationTaxPeriodReviewState(
+                input,
+                stored?.Revision ?? 0,
+                inputSha256,
+                stored?.ReviewedBy,
+                stored?.ReviewedAtUtc,
+                stored is not null,
+                stored is not null
+                    && !string.Equals(stored.SourceSha256, sourceSha256, StringComparison.Ordinal));
             return new CorporationTaxPeriodCalculationReview(
                 period.Period.Start,
                 period.Period.End,
@@ -153,7 +216,8 @@ internal sealed class CorporationTaxCalculationReviewService(
                 period.CorporationTaxChargeable.Value,
                 period.OtherReliefs.Value,
                 period.TaxPayable.Value,
-                liability.IsFilingReady);
+                liability.IsFilingReady,
+                review);
         }).ToArray();
 
         var acceptedTotals = AcceptedAccountsTotals.Read(accounts.FullAccountsBytes,
@@ -169,15 +233,122 @@ internal sealed class CorporationTaxCalculationReviewService(
             acceptedTotals.TaxCharge, currentTaxCharge, taxDifference,
             ReconciliationTolerance, reconciled);
 
-        var sourceCanonical = string.Join("\n", source.Versions
+        return new(accounts.AccountsSnapshotSha256, sourceSha256, reconciliation, periods,
+            accepted.AcceptanceSimulated,
+            reconciled && periods.All(value => value.IsFilingReady
+                && value.Review is { IsReviewed: true, IsStale: false }));
+    }
+
+    public async Task<CorporationTaxCalculationReview> SavePeriodAsync(
+        ClaimsPrincipal principal,
+        TaxHubCorporationTaxContinuation continuation,
+        string logicalFilingIdentity,
+        CorporationTaxPeriodReviewedInput input,
+        int expectedRevision,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(principal);
+        ArgumentNullException.ThrowIfNull(continuation);
+        ArgumentNullException.ThrowIfNull(input);
+        if (principal.Identity?.IsAuthenticated != true
+            || !(principal.IsInRole(Constants.AdministratorsRole)
+                || principal.IsInRole(Constants.ManagersRole)))
+            throw new UnauthorizedAccessException(
+                "Corporation Tax review requires Administrator or Manager permission.");
+        if (expectedRevision < 0)
+            throw new ArgumentOutOfRangeException(nameof(expectedRevision));
+        var period = continuation.Periods?.SingleOrDefault(value =>
+            string.Equals(value.LogicalIdentity, logicalFilingIdentity, StringComparison.Ordinal))
+            ?? throw new InvalidOperationException(
+                "The Corporation Tax review period is outside the accepted filing scope.");
+        if (input.Period.Start != period.PeriodStart || input.Period.End != period.PeriodEnd)
+            throw new InvalidOperationException(
+                "The Corporation Tax reviewed input does not match its filing period.");
+        Validate(input);
+
+        var current = await BuildAsync(continuation, cancellationToken);
+        var currentPeriod = current.Periods.Single(value => value.PeriodStart == period.PeriodStart
+            && value.PeriodEnd == period.PeriodEnd);
+        if (currentPeriod.Review.Revision != expectedRevision)
+            throw new InvalidOperationException(
+                "The Corporation Tax review changed in another session. Reload it before saving.");
+
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
+        var inputSha256 = InputSha256(input);
+        var saved = new CorporationTaxReviewedPeriodRecord(
+            identity.TenantReference,
+            logicalFilingIdentity,
+            continuation.AccountsSnapshotSha256,
+            period.PeriodStart,
+            period.PeriodEnd,
+            input,
+            current.SourceSha256,
+            inputSha256,
+            expectedRevision + 1,
+            identity.ActorReference,
+            timeProvider.GetUtcNow());
+        if (!await reviewStore.TrySaveAsync(saved, expectedRevision, cancellationToken))
+            throw new InvalidOperationException(
+                "The Corporation Tax review changed in another session. Reload it before saving.");
+        return await BuildAsync(continuation, cancellationToken);
+    }
+
+    private static string SourceSha256(IEnumerable<SourceVersion> versions)
+    {
+        var canonical = string.Join("\n", versions
             .OrderBy(value => value.SourceCode, StringComparer.Ordinal)
             .ThenBy(value => value.RowVersion, StringComparer.Ordinal)
             .Select(value => $"{value.SourceCode}|{value.RowVersion}|{value.UpdatedOn:O}"));
-        var sourceSha256 = Convert.ToHexString(SHA256.HashData(
-            Encoding.UTF8.GetBytes(sourceCanonical)));
-        return new(accounts.AccountsSnapshotSha256, sourceSha256, reconciliation, periods,
-            accepted.AcceptanceSimulated,
-            reconciled && periods.All(value => value.IsFilingReady));
+        return Hash(canonical);
+    }
+
+    private static string InputSha256(CorporationTaxPeriodReviewedInput input)
+    {
+        static string Adjustment(TaxAdjustmentDraft value) =>
+            $"{value.Description.Length}:{value.Description}|{value.Amount.ToString(CultureInfo.InvariantCulture)}";
+        var loans = input.LoansToParticipators is null
+            ? "-"
+            : string.Join('|',
+                input.LoansToParticipators.LoansOutstandingAtPeriodEnd.ToString(CultureInfo.InvariantCulture),
+                input.LoansToParticipators.TaxChargeable.ToString(CultureInfo.InvariantCulture),
+                input.LoansToParticipators.TaxPaid.ToString(CultureInfo.InvariantCulture));
+        var canonical = string.Join("\n",
+            input.Period.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            input.Period.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            string.Join(";", input.OtherAddBacks.Select(Adjustment)),
+            string.Join(";", input.Deductions.Select(Adjustment)),
+            input.CapitalAllowances.WritingDownAllowance.ToString(CultureInfo.InvariantCulture),
+            input.CapitalAllowances.AnnualInvestmentAllowance.ToString(CultureInfo.InvariantCulture),
+            input.CapitalAllowances.OtherAllowances.ToString(CultureInfo.InvariantCulture),
+            input.LossesUsed.ToString(CultureInfo.InvariantCulture),
+            input.ChargeableGains.ToString(CultureInfo.InvariantCulture),
+            input.OtherReliefs.ToString(CultureInfo.InvariantCulture),
+            loans);
+        return Hash(canonical);
+    }
+
+    private static string Hash(string value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
+    private static void Validate(CorporationTaxPeriodReviewedInput input)
+    {
+        if (input.OtherAddBacks.Any(value => string.IsNullOrWhiteSpace(value.Description)
+                || value.Description.Length > 200 || value.Amount < 0m)
+            || input.Deductions.Any(value => string.IsNullOrWhiteSpace(value.Description)
+                || value.Description.Length > 200 || value.Amount < 0m))
+            throw new InvalidOperationException(
+                "Each Corporation Tax adjustment requires a description and a non-negative amount.");
+        if (input.CapitalAllowances.WritingDownAllowance < 0m
+            || input.CapitalAllowances.AnnualInvestmentAllowance < 0m
+            || input.CapitalAllowances.OtherAllowances < 0m
+            || input.LossesUsed < 0m
+            || input.OtherReliefs < 0m
+            || input.LoansToParticipators is { } loans
+                && (loans.LoansOutstandingAtPeriodEnd < 0m
+                    || loans.TaxChargeable < 0m
+                    || loans.TaxPaid < 0m))
+            throw new InvalidOperationException(
+                "Corporation Tax allowances, losses and reliefs cannot be negative.");
     }
 
     private sealed record AcceptedAccountsTotals(decimal AccountingProfit, decimal TaxCharge)
@@ -245,6 +416,16 @@ internal sealed class DisabledCorporationTaxCalculationReviewService
 {
     public Task<CorporationTaxCalculationReview> BuildAsync(
         TaxHubCorporationTaxContinuation continuation,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException(
+            "Corporation Tax calculation review is unavailable on this host.");
+
+    public Task<CorporationTaxCalculationReview> SavePeriodAsync(
+        ClaimsPrincipal principal,
+        TaxHubCorporationTaxContinuation continuation,
+        string logicalFilingIdentity,
+        CorporationTaxPeriodReviewedInput input,
+        int expectedRevision,
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException(
             "Corporation Tax calculation review is unavailable on this host.");

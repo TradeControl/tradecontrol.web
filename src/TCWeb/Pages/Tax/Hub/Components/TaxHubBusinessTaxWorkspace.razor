@@ -386,6 +386,8 @@ else
                                                         <dd class="col-sm-5 text-sm-end">@calculation.DepreciationAddBack.ToString("N2")</dd>
                                                         <dt class="col-sm-7">Relevant distributions</dt>
                                                         <dd class="col-sm-5 text-sm-end">@calculation.RelevantDistributions.ToString("N2")</dd>
+                                                         <dt class="col-sm-7">Other associated companies</dt>
+                                                         <dd class="col-sm-5 text-sm-end">@calculation.AssociatedCompanyCount</dd>
                                                         <dt class="col-sm-7">Taxable total profits</dt>
                                                         <dd class="col-sm-5 text-sm-end">@calculation.TaxableTotalProfits.ToString("N2")</dd>
                                                         <dt class="col-sm-7">Augmented profits</dt>
@@ -397,6 +399,13 @@ else
                                                         <dt class="col-sm-7">Corporation Tax payable</dt>
                                                         <dd class="col-sm-5 text-sm-end fw-semibold">@calculation.TaxPayable.ToString("N2")</dd>
                                                     </dl>
+                                                     <TaxHubCorporationTaxPeriodReview
+                                                         Calculation="@calculation"
+                                                         LogicalFilingIdentity="@PeriodIdentity(calculation)"
+                                                         CanEdit="@_canViewTechnicalDetails"
+                                                         Saving="@(_calculationReviewSavingIdentity == PeriodIdentity(calculation))"
+                                                         Error="@(string.Equals(_calculationReviewSaveErrorIdentity, PeriodIdentity(calculation), StringComparison.Ordinal) ? _calculationReviewSaveError : null)"
+                                                         OnSave="SavePeriodReviewAsync" />
                                                 </div>
                                             }
 
@@ -451,6 +460,9 @@ else
     private string? _calculationReviewError;
     private string? _calculationReviewLookupKey;
     private CorporationTaxCalculationReview? _calculationReview;
+     private string? _calculationReviewSavingIdentity;
+     private string? _calculationReviewSaveErrorIdentity;
+     private string? _calculationReviewSaveError;
     private IReadOnlyList<CompaniesHouseFilingContinuation> _companiesHouseFilings = [];
     private IReadOnlyList<CompaniesHouseFilingContinuation> _acceptedAccounts = [];
 
@@ -496,7 +508,9 @@ else
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var service = scope.ServiceProvider
                 .GetRequiredService<ICompaniesHouseFilingContinuationService>();
-            _companiesHouseFilings = await service.ListAsync(Workspace.CorporationTaxIdentityAsOf);
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _companiesHouseFilings = await service.ListAsync(principal,
+                Workspace.CorporationTaxIdentityAsOf);
             _acceptedAccounts = _companiesHouseFilings
                 .Where(value => value.State == CompaniesHouseConversationState.Accepted
                     && !value.HasOpenAmendment
@@ -565,6 +579,7 @@ else
                 .GetRequiredService<ICorporationTaxCalculationReviewService>();
             _calculationReview = await service.BuildAsync(continuation);
         }
+
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
             or FormatException)
@@ -580,7 +595,46 @@ else
         }
     }
 
+    private async Task SavePeriodReviewAsync(CorporationTaxPeriodReviewSaveRequest request)
+    {
+        if (Continuation is null || !_canViewTechnicalDetails
+            || !string.IsNullOrWhiteSpace(_calculationReviewSavingIdentity))
+            return;
+        _calculationReviewSavingIdentity = request.LogicalFilingIdentity;
+        _calculationReviewSaveErrorIdentity = null;
+        _calculationReviewSaveError = null;
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider
+                .GetRequiredService<ICorporationTaxCalculationReviewService>();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _calculationReview = await service.SavePeriodAsync(principal, Continuation,
+                request.LogicalFilingIdentity, request.Input, request.ExpectedRevision);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
+            or FormatException)
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax reviewed inputs could not be saved for filing identity {LogicalFilingIdentity}.",
+                request.LogicalFilingIdentity);
+            _calculationReviewSaveErrorIdentity = request.LogicalFilingIdentity;
+            _calculationReviewSaveError = exception.Message;
+        }
+        finally
+        {
+            _calculationReviewSavingIdentity = null;
+        }
+    }
+
     private void ToggleDiagnostics() => _showDiagnostics = !_showDiagnostics;
+
+     private string PeriodIdentity(CorporationTaxPeriodCalculationReview calculation) =>
+         Continuation?.Periods?.Single(value => value.PeriodStart == calculation.PeriodStart
+             && value.PeriodEnd == calculation.PeriodEnd).LogicalIdentity
+         ?? throw new InvalidOperationException(
+             "The Corporation Tax calculation period has no filing identity.");
 
     private bool MatchesSelectedFinancialYear(CompaniesHouseFilingContinuation filing) =>
         Workspace?.SelectedFinancialYearStart is { } selectedStart

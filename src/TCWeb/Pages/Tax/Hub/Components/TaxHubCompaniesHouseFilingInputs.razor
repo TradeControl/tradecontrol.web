@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
@@ -9,6 +10,7 @@
 @implements IDisposable
 @inject IBusinessClock BusinessClock
 @inject ICompaniesHousePreparationReviewService PreparationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IServiceProvider Services
 @inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
 @inject ILogger<TaxHubCompaniesHouseFilingInputs> Logger
@@ -434,6 +436,7 @@ else if (_draft is not null && _editContext is not null)
     [Parameter] public DateTime? SelectedPeriodStart { get; set; }
     [Parameter] public bool EvidenceReviewSatisfied { get; set; }
     [Parameter] public string? AmendsConversationReference { get; set; }
+    [Parameter] public EventCallback<CompaniesHouseFilingStatus> FilingStatusChanged { get; set; }
 
     private TaxHubCompaniesHouseFilingInputDraft? _draft;
     private EditContext? _editContext;
@@ -494,7 +497,9 @@ else if (_draft is not null && _editContext is not null)
             return;
         try
         {
-            var resumed = await PreparationService.ResumeAsync(Readiness.FilingInputs.PeriodEnd);
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            var resumed = await PreparationService.ResumeAsync(principal,
+                Readiness.FilingInputs.PeriodEnd);
             if (resumed is null)
                 return;
             SetDraft(ToDraft(resumed.Input, Readiness.FilingInputs.IsFirstAccountsPeriod));
@@ -539,6 +544,7 @@ else if (_draft is not null && _editContext is not null)
         _errors = Array.Empty<string>();
         try
         {
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
             var input = new CompaniesHousePreparationInput(
                     _draft.PeriodEnd,
                     DateOnly.FromDateTime(_draft.ApprovedOn.Value),
@@ -556,9 +562,9 @@ else if (_draft is not null && _editContext is not null)
                             _revisionNonCompliance,
                             _revisionSignificantAmendments));
             _prepared = string.IsNullOrWhiteSpace(AmendsConversationReference)
-                ? await PreparationService.PrepareAsync(YearNumber.Value,
+                ? await PreparationService.PrepareAsync(principal, YearNumber.Value,
                     SelectedPeriodStart.Value, input)
-                : await PreparationService.PrepareAmendedAsync(YearNumber.Value,
+                : await PreparationService.PrepareAmendedAsync(principal, YearNumber.Value,
                     SelectedPeriodStart.Value, input);
             _approval = null;
             _approvalConfirmed = false;
@@ -582,7 +588,8 @@ else if (_draft is not null && _editContext is not null)
         _errors = Array.Empty<string>();
         try
         {
-            _approval = await PreparationService.ApproveAsync(_prepared.Reference,
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _approval = await PreparationService.ApproveAsync(principal, _prepared.Reference,
                 CompaniesHouseApprovalDeclaration.Version, true);
         }
         catch (CompaniesHousePreparationInvalidatedException exception)
@@ -611,7 +618,8 @@ else if (_draft is not null && _editContext is not null)
         _errors = Array.Empty<string>();
         try
         {
-            await PreparationService.DiscardAsync(_prepared.Reference);
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            await PreparationService.DiscardAsync(principal, _prepared.Reference);
             _prepared = null;
             _reviewed = false;
             _approvalConfirmed = false;
@@ -642,10 +650,13 @@ else if (_draft is not null && _editContext is not null)
         _errors = Array.Empty<string>();
         try
         {
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
             var staging = Services.GetRequiredService<ICompaniesHouseSubmissionStagingService>();
             var dispatch = Services.GetRequiredService<ICompaniesHouseSubmissionDispatchService>();
-            var staged = await staging.StageApprovedAsync(_approval.Reference);
-            _filingStatus = await dispatch.DispatchAsync(staged.ConversationReference);
+            var staged = await staging.StageApprovedAsync(principal, _approval.Reference);
+            _filingStatus = await dispatch.DispatchAsync(principal, staged.ConversationReference);
+            if (FilingStatusChanged.HasDelegate)
+                await FilingStatusChanged.InvokeAsync(_filingStatus);
         }
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)

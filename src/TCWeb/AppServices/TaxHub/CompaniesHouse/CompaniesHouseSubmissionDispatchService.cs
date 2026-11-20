@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -42,6 +43,8 @@ public interface ICompaniesHouseSubmissionDispatchService
 {
     Task<CompaniesHouseFilingStatus> DispatchAsync(string conversationReference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseFilingStatus> DispatchAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseSubmissionDispatchService(
@@ -58,18 +61,21 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
     TimeProvider timeProvider) : ICompaniesHouseSubmissionDispatchService
 {
     public async Task<CompaniesHouseFilingStatus> DispatchAsync(string conversationReference,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        await DispatchAsync(RequiredPrincipal(), conversationReference, cancellationToken);
+
+    public async Task<CompaniesHouseFilingStatus> DispatchAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(conversationReference) || conversationReference.Length > 64)
             throw new ArgumentException("A valid conversation reference is required.", nameof(conversationReference));
 
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Companies House submission requires Administrator or Manager permission.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var conversation = await workflowStore.GetConversationAsync(identity.TenantReference,
             conversationReference, cancellationToken)
             ?? throw new KeyNotFoundException("The Companies House filing conversation was not found.");
@@ -203,6 +209,10 @@ internal sealed class CompaniesHouseSubmissionDispatchService(
         await workflowStore.UpsertConversationAsync(recovery, cancellationToken);
         return ToStatus(recovery);
     }
+
+    private ClaimsPrincipal RequiredPrincipal() => httpContextAccessor.HttpContext?.User
+        ?? throw new UnauthorizedAccessException(
+            "An authenticated Trade Control session is required.");
 
     private static CompaniesHouseFilingStatus ToStatus(CompaniesHouseConversationRecord value) =>
         new(value.Reference, value.SubmissionNumber, value.State, value.RecoveryRequired,

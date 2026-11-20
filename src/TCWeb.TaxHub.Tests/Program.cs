@@ -681,6 +681,15 @@ Assert(accountsWorkflowComponent.Contains("Simulate Acceptance", StringCompariso
        && accountsWorkflowComponent.Contains("remains Published but is temporarily read-only", StringComparison.Ordinal)
        && accountsWorkflowComponent.Contains("Companies House did not return this acceptance", StringComparison.Ordinal),
     "The official-test filing UI does not disclose the pending Category Tree lock and simulated acceptance boundary.");
+Assert(accountsWorkflowComponent.Contains("FindAsync(principal,", StringComparison.Ordinal)
+       && accountsWorkflowComponent.Contains("CheckAsync(principal,", StringComparison.Ordinal)
+       && accountsWorkflowComponent.Contains("SimulateAcceptanceAsync(principal,", StringComparison.Ordinal)
+       && filingInputComponent.Contains("ResumeAsync(principal,", StringComparison.Ordinal)
+       && filingInputComponent.Contains("PrepareAmendedAsync(principal,", StringComparison.Ordinal)
+       && filingInputComponent.Contains("ApproveAsync(principal,", StringComparison.Ordinal)
+       && filingInputComponent.Contains("StageApprovedAsync(principal,", StringComparison.Ordinal)
+       && filingInputComponent.Contains("DispatchAsync(principal,", StringComparison.Ordinal),
+    "Interactive Companies House operations do not carry the authenticated Blazor principal explicitly.");
 Assert(new[] { "Opening balance", "Advances or credits", "Repayments", "Closing balance", "Add director" }
         .All(filingInputComponent.Contains),
     "The director movement schedule does not explain its four period-summary values.");
@@ -690,8 +699,10 @@ Assert(filingInputComponent.Contains("CompaniesHousePreparationInvalidatedExcept
 Assert(typeof(ICompaniesHouseWorkflowStore).GetMethod("TryInvalidatePreparationAsync") is not null,
     "The Companies House workflow store cannot durably record a conclusive pre-dispatch invalidation.");
 Assert(typeof(ICompaniesHouseWorkflowStore).GetMethod("GetLatestUnapprovedPreparationAsync") is not null
-       && typeof(ICompaniesHousePreparationReviewService).GetMethod("ResumeAsync") is not null
-       && typeof(ICompaniesHousePreparationReviewService).GetMethod("DiscardAsync") is not null,
+       && typeof(ICompaniesHousePreparationReviewService).GetMethods()
+           .Any(method => method.Name == "ResumeAsync")
+       && typeof(ICompaniesHousePreparationReviewService).GetMethods()
+           .Any(method => method.Name == "DiscardAsync"),
     "An unfinished Companies House preparation cannot be resumed and explicitly discarded after reload.");
 Assert(filingInputComponent.Contains("Discard prepared draft", StringComparison.Ordinal)
        && filingInputComponent.Contains("Discard draft and release reservation", StringComparison.Ordinal)
@@ -1199,6 +1210,12 @@ var businessTaxWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "
     "Components", "TaxHubBusinessTaxWorkspace.razor"));
 var corporationTaxCalculationReviewService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CorporationTax", "CorporationTaxCalculationReviewService.cs"));
+var corporationTaxReviewPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxReviewPersistence.cs"));
+var corporationTaxPeriodReviewComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCorporationTaxPeriodReview.razor"));
+var corporationTaxReviewSchema = File.ReadAllText(Path.Combine(root, "src", "tax-hub", "src", "Database", "Tax",
+    "CorporationTaxReview.sql"));
 var accountsWorkspaceComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubAccountsWorkspace.razor"));
 var profitAndLossGridComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
@@ -1232,7 +1249,7 @@ Assert(businessTaxWorkspaceComponent.Contains("No submission action is available
     && businessTaxWorkspaceComponent.Contains("exact full accounts accepted by Companies House", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("recalculated from Trade Control transactions", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("any later mismatch will stop the filing for review", StringComparison.Ordinal)
-    && businessTaxWorkspaceComponent.Contains("ListAsync(Workspace.CorporationTaxIdentityAsOf)", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("ListAsync(principal,", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("_acceptedAccounts.Count == 1", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Use these accounts", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Continuation.FullAccountsSha256", StringComparison.Ordinal),
@@ -1279,6 +1296,22 @@ Assert(corporationTaxCalculationReviewService.Contains("ReadAcceptedForCorporati
     && businessTaxWorkspaceComponent.Contains("A new valid accounts snapshot is required",
         StringComparison.Ordinal),
     "CT-D3 no longer compares the fixed accounts evidence with the Objective 3 transaction-derived calculation.");
+Assert(corporationTaxCalculationReviewService.Contains("SavePeriodAsync", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("SourceSha256", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("InputSha256", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("IsReviewed: true, IsStale: false", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("AdministratorsRole", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("ManagersRole", StringComparison.Ordinal)
+    && corporationTaxReviewPersistence.Contains("IsolationLevel.Serializable", StringComparison.Ordinal)
+    && corporationTaxReviewPersistence.Contains("expectedRevision", StringComparison.Ordinal)
+    && corporationTaxReviewSchema.Contains("Tax.CorporationTaxReview", StringComparison.Ordinal)
+    && corporationTaxReviewSchema.Contains("ReviewedBy", StringComparison.Ordinal)
+    && corporationTaxReviewSchema.Contains("SourceSha256", StringComparison.Ordinal)
+    && corporationTaxPeriodReviewComponent.Contains("Reviewed filing inputs", StringComparison.Ordinal)
+    && corporationTaxPeriodReviewComponent.Contains("Review and save", StringComparison.Ordinal)
+    && corporationTaxPeriodReviewComponent.Contains("Company loans to participators apply (CT600A)", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("SavePeriodReviewAsync", StringComparison.Ordinal),
+    "CT-D3 no longer preserves attributable reviewed inputs or fails closed when their source becomes stale.");
 Assert(companiesHouseReviewService.Contains("ReadTaxOnProfitAsync", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("CorporationTaxPeriodAllocation.Split", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("ReadCorporationTaxLiabilityAsync", StringComparison.Ordinal)
@@ -2324,6 +2357,12 @@ Assert(accountsWorkspaceView.Contains("File Your Accounts", StringComparison.Ord
     && filingInputsView.Contains("EvidenceReviewSatisfied", StringComparison.Ordinal)
     && filingInputsView.Contains("Complete the guided year-end evidence review", StringComparison.Ordinal),
     "The Companies House journey is not continuous, duplicates Subject detail, or does not fail closed before filing preparation.");
+Assert(accountsWorkspaceView.Contains("FilingStatusChanged=\"HandleFilingStatusChanged\"",
+        StringComparison.Ordinal)
+    && accountsWorkspaceView.Contains("_filingJourneyKey = null;", StringComparison.Ordinal)
+    && filingInputsView.Contains("FilingStatusChanged.InvokeAsync(_filingStatus)",
+        StringComparison.Ordinal),
+    "An acknowledged filing can remain trapped inside the completed preparation journey instead of resuming status polling.");
 Assert(cashAssetsServiceSource.Contains("PostScheduledWriteOffAsync", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("PaymentStatus.Unposted", StringComparison.Ordinal)
     && cashAssetsServiceSource.Contains("PaidInValue != 0m", StringComparison.Ordinal)
@@ -2546,18 +2585,32 @@ file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
     public Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
         CancellationToken cancellationToken = default) =>
         Task.FromResult<CompaniesHouseResumablePreparation?>(null);
+    public Task<CompaniesHouseResumablePreparation?> ResumeAsync(ClaimsPrincipal principal,
+        DateOnly periodEnd, CancellationToken cancellationToken = default) =>
+        ResumeAsync(periodEnd, cancellationToken);
 
     public Task DiscardAsync(string preparationReference,
         CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task DiscardAsync(ClaimsPrincipal principal, string preparationReference,
+        CancellationToken cancellationToken = default) =>
+        DiscardAsync(preparationReference, cancellationToken);
 
     public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
+    public Task<CompaniesHousePreparedReview> PrepareAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        PrepareAsync(yearNumber, selectedPeriodStart, input, cancellationToken);
 
     public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
         DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
+    public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        PrepareAmendedAsync(yearNumber, selectedPeriodStart, input, cancellationToken);
 
     public Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default) =>
@@ -2572,6 +2625,11 @@ file sealed class StubCompaniesHousePreparationReviewService(byte[] bytes)
         string declarationVersion, bool declarationsConfirmed,
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
+    public Task<CompaniesHouseApprovalReview> ApproveAsync(ClaimsPrincipal principal,
+        string preparationReference, string declarationVersion, bool declarationsConfirmed,
+        CancellationToken cancellationToken = default) =>
+        ApproveAsync(preparationReference, declarationVersion, declarationsConfirmed,
+            cancellationToken);
 }
 
 file sealed class StubCompaniesHouseDraftPdfRenderer(byte[] bytes) : ICompaniesHouseDraftPdfRenderer
@@ -2620,6 +2678,8 @@ file sealed class StubCompaniesHouseWorkflowIdentityAccessor(CompaniesHouseWorkf
     : ICompaniesHouseWorkflowIdentityAccessor
 {
     public Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(
+        CancellationToken cancellationToken = default) => Task.FromResult(identity);
+    public Task<CompaniesHouseWorkflowIdentity> GetRequiredAsync(ClaimsPrincipal principal,
         CancellationToken cancellationToken = default) => Task.FromResult(identity);
 }
 

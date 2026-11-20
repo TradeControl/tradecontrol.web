@@ -1,4 +1,5 @@
 @using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
@@ -8,6 +9,7 @@
 @using TradeControl.Web.Pages.Tax.Hub.Models
 @inject IOptions<CompaniesHouseProductHostOptions> CompaniesHouseHost
 @inject IServiceScopeFactory ServiceScopeFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ILogger<TaxHubAccountsWorkspace> Logger
 
 @if (Workspace is null)
@@ -435,6 +437,7 @@ else
                                                                 YearNumber="Workspace.SelectedYearNumber"
                                                                 SelectedPeriodStart="Workspace.SelectedPeriodStartOn"
                                                                 EvidenceReviewSatisfied="true"
+                                                                FilingStatusChanged="HandleFilingStatusChanged"
                                                                 AmendsConversationReference="@(_amendmentJourneyStarted ? _existingFiling?.ConversationReference : null)" />
                         }
                     }
@@ -546,7 +549,8 @@ else
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var continuation = scope.ServiceProvider
                 .GetRequiredService<ICompaniesHouseFilingContinuationService>();
-            _existingFiling = await continuation.FindAsync(
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _existingFiling = await continuation.FindAsync(principal,
                 Workspace.CompaniesHouse.FilingInputs.PeriodStart,
                 Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
         }
@@ -683,6 +687,12 @@ else
 
     private void HandleEvidenceReviewCompletion(bool isComplete) => _evidenceReviewComplete = isComplete;
 
+    private async Task HandleFilingStatusChanged(CompaniesHouseFilingStatus _)
+    {
+        _filingJourneyKey = null;
+        await InitializeFilingJourneyAsync();
+    }
+
     private async Task CheckFilingStatus()
     {
         if (_existingFiling is null || _checkingFilingStatus || _existingFiling.StatusCheckInProgress)
@@ -695,8 +705,9 @@ else
             var status = scope.ServiceProvider.GetRequiredService<ICompaniesHouseSubmissionStatusService>();
             var continuation = scope.ServiceProvider
                 .GetRequiredService<ICompaniesHouseFilingContinuationService>();
-            await status.CheckAsync(_existingFiling.ConversationReference);
-            _existingFiling = await continuation.FindAsync(
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            await status.CheckAsync(principal, _existingFiling.ConversationReference);
+            _existingFiling = await continuation.FindAsync(principal,
                 Workspace!.CompaniesHouse.FilingInputs.PeriodStart,
                 Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
         }
@@ -727,8 +738,9 @@ else
             var status = scope.ServiceProvider.GetRequiredService<ICompaniesHouseSubmissionStatusService>();
             var continuation = scope.ServiceProvider
                 .GetRequiredService<ICompaniesHouseFilingContinuationService>();
-            await status.SimulateAcceptanceAsync(_existingFiling.ConversationReference);
-            _existingFiling = await continuation.FindAsync(
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            await status.SimulateAcceptanceAsync(principal, _existingFiling.ConversationReference);
+            _existingFiling = await continuation.FindAsync(principal,
                 Workspace!.CompaniesHouse.FilingInputs.PeriodStart,
                 Workspace.CompaniesHouse.FilingInputs.PeriodEnd);
         }

@@ -93,8 +93,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{9C1957
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "corporation-tax", "corporation-tax", "{7892DFA3-7F51-488E-A17D-A6486D34697F}"
 	ProjectSection(SolutionItems) = preProject
-		..\docs\projects\tax\company\corporation-tax\ct-recognition-roadmap.md = ..\docs\projects\tax\company\corporation-tax\ct-recognition-roadmap.md
 		..\docs\projects\tax\company\corporation-tax\ct-marginal-relief.md = ..\docs\projects\tax\company\corporation-tax\ct-marginal-relief.md
+		..\docs\projects\tax\company\corporation-tax\ct-recognition-roadmap.md = ..\docs\projects\tax\company\corporation-tax\ct-recognition-roadmap.md
 		..\docs\projects\tax\company\corporation-tax\phase-5.10-ct-external-test-local.md = ..\docs\projects\tax\company\corporation-tax\phase-5.10-ct-external-test-local.md
 		..\docs\projects\tax\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md = ..\docs\projects\tax\company\corporation-tax\phase-5.8-corporation-tax-service-artifact-assurance.md
 		..\docs\projects\tax\company\corporation-tax\phase-5.9-transaction-engine-fixture.md = ..\docs\projects\tax\company\corporation-tax\phase-5.9-transaction-engine-fixture.md
@@ -107,6 +107,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "companies-house", "companie
 		..\docs\projects\tax\company\companies-house\companies-house-development-simulator-workplan.md = ..\docs\projects\tax\company\companies-house\companies-house-development-simulator-workplan.md
 		..\docs\projects\tax\company\companies-house\phase-5.11-companies-house-prerequisite-assurance.md = ..\docs\projects\tax\company\companies-house\phase-5.11-companies-house-prerequisite-assurance.md
 		..\docs\projects\tax\company\companies-house\phase-7.0-companies-house-integration-boundary.md = ..\docs\projects\tax\company\companies-house\phase-7.0-companies-house-integration-boundary.md
+		..\docs\projects\tax\company\companies-house\phase-7.7a-amended-accounts.md = ..\docs\projects\tax\company\companies-house\phase-7.7a-amended-accounts.md
 		..\docs\projects\tax\company\companies-house\README.md = ..\docs\projects\tax\company\companies-house\README.md
 		..\docs\projects\tax\company\companies-house\tax-hub-workplan-7.md = ..\docs\projects\tax\company\companies-house\tax-hub-workplan-7.md
 	EndProjectSection

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -110,12 +111,22 @@ public interface ICompaniesHousePreparationReviewService
 {
     Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber, DateTime selectedPeriodStart,
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default);
+    Task<CompaniesHousePreparedReview> PrepareAsync(ClaimsPrincipal principal, short yearNumber,
+        DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default);
     Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
         DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHousePreparedReview> PrepareAmendedAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default);
     Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseResumablePreparation?> ResumeAsync(ClaimsPrincipal principal,
+        DateOnly periodEnd, CancellationToken cancellationToken = default);
     Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default);
+    Task DiscardAsync(ClaimsPrincipal principal, string preparationReference,
         CancellationToken cancellationToken = default);
     Task<CompaniesHouseReviewDocument> ReadDocumentAsync(string preparationReference,
         CancellationToken cancellationToken = default);
@@ -123,6 +134,9 @@ public interface ICompaniesHousePreparationReviewService
         string preparationReference, CancellationToken cancellationToken = default);
     Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
         string declarationVersion, bool declarationsConfirmed,
+        CancellationToken cancellationToken = default);
+    Task<CompaniesHouseApprovalReview> ApproveAsync(ClaimsPrincipal principal,
+        string preparationReference, string declarationVersion, bool declarationsConfirmed,
         CancellationToken cancellationToken = default);
 }
 
@@ -146,39 +160,50 @@ internal sealed class CompaniesHousePreparationReviewService(
 
     public Task<CompaniesHousePreparedReview> PrepareAsync(short yearNumber,
         DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        PrepareAsync(RequiredPrincipal(), yearNumber, selectedPeriodStart, input, cancellationToken);
+
+    public Task<CompaniesHousePreparedReview> PrepareAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
         CancellationToken cancellationToken = default)
     {
         if (input?.Revision is not null)
             throw new InvalidOperationException(
                 "Revised accounts must be prepared through the explicit amendment journey.");
-        return PrepareCoreAsync(yearNumber, selectedPeriodStart, input!, false, cancellationToken);
+        return PrepareCoreAsync(principal, yearNumber, selectedPeriodStart, input!, false,
+            cancellationToken);
     }
 
     public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
         DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        PrepareAmendedAsync(RequiredPrincipal(), yearNumber, selectedPeriodStart, input,
+            cancellationToken);
+
+    public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
         CancellationToken cancellationToken = default)
     {
         if (input?.Revision is null)
             throw new InvalidOperationException(
                 "The amendment journey requires an accepted predecessor and correction statements.");
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException(
-                "An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Preparing revised Companies House accounts requires Administrator or Manager permission.");
-        return PrepareCoreAsync(yearNumber, selectedPeriodStart, input, true, cancellationToken);
+        return PrepareCoreAsync(principal, yearNumber, selectedPeriodStart, input, true,
+            cancellationToken);
     }
 
-    private async Task<CompaniesHousePreparedReview> PrepareCoreAsync(short yearNumber,
-        DateTime selectedPeriodStart, CompaniesHousePreparationInput input, bool amendmentExpected,
-        CancellationToken cancellationToken)
+    private async Task<CompaniesHousePreparedReview> PrepareCoreAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        bool amendmentExpected, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (!hostOptions.Value.Enabled)
             throw new InvalidOperationException("Companies House exact-document preparation is unavailable.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var readiness = await readinessService.AssessAsync(yearNumber, selectedPeriodStart, cancellationToken);
         if (!readiness.IsEligible)
             throw new InvalidOperationException("The selected accounting year no longer passes Companies House readiness.");
@@ -427,9 +452,14 @@ internal sealed class CompaniesHousePreparationReviewService(
     }
 
     public async Task<CompaniesHouseResumablePreparation?> ResumeAsync(DateOnly periodEnd,
+        CancellationToken cancellationToken = default) =>
+        await ResumeAsync(RequiredPrincipal(), periodEnd, cancellationToken);
+
+    public async Task<CompaniesHouseResumablePreparation?> ResumeAsync(
+        ClaimsPrincipal principal, DateOnly periodEnd,
         CancellationToken cancellationToken = default)
     {
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var preparation = await workflowStore.GetLatestUnapprovedPreparationAsync(
             identity.TenantReference, identity.ReportingSubjectReference, periodEnd,
             cancellationToken);
@@ -462,20 +492,22 @@ internal sealed class CompaniesHousePreparationReviewService(
     }
 
     public async Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default) =>
+        await DiscardAsync(RequiredPrincipal(), preparationReference, cancellationToken);
+
+    public async Task DiscardAsync(ClaimsPrincipal principal, string preparationReference,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(preparationReference) || preparationReference.Length > 64)
             throw new ArgumentException("A valid preparation reference is required.",
                 nameof(preparationReference));
 
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException(
-                "An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Discarding a Companies House draft requires Administrator or Manager permission.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var preparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
             preparationReference, cancellationToken)
             ?? throw new KeyNotFoundException("The Companies House preparation was not found.");
@@ -572,6 +604,12 @@ internal sealed class CompaniesHousePreparationReviewService(
 
     public async Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
         string declarationVersion, bool declarationsConfirmed,
+        CancellationToken cancellationToken = default) =>
+        await ApproveAsync(RequiredPrincipal(), preparationReference, declarationVersion,
+            declarationsConfirmed, cancellationToken);
+
+    public async Task<CompaniesHouseApprovalReview> ApproveAsync(ClaimsPrincipal principal,
+        string preparationReference, string declarationVersion, bool declarationsConfirmed,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(preparationReference) || preparationReference.Length > 64)
@@ -582,13 +620,12 @@ internal sealed class CompaniesHousePreparationReviewService(
         if (!declarationsConfirmed)
             throw new InvalidOperationException("Confirm the approval declaration before continuing.");
 
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Companies House accounts approval requires Administrator or Manager permission.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var preparation = await workflowStore.GetPreparationAsync(identity.TenantReference,
             preparationReference, cancellationToken)
             ?? throw new KeyNotFoundException("The Companies House preparation was not found.");
@@ -1005,6 +1042,10 @@ internal sealed class CompaniesHousePreparationReviewService(
             Value("ProfitLoss"), Value("Equity"));
     }
 
+    private ClaimsPrincipal RequiredPrincipal() => httpContextAccessor.HttpContext?.User
+        ?? throw new UnauthorizedAccessException(
+            "An authenticated Trade Control session is required.");
+
     private static string Snapshot(IEnumerable<SourceVersion> versions) => Sha256(string.Join("\n",
         versions.OrderBy(item => item.SourceCode, StringComparer.Ordinal)
             .ThenBy(item => item.RowVersion, StringComparer.Ordinal)
@@ -1029,8 +1070,18 @@ internal sealed class DisabledCompaniesHousePreparationReviewService
         CompaniesHousePreparationInput input, CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House exact-document preparation is unavailable in this host.");
 
+    public Task<CompaniesHousePreparedReview> PrepareAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House exact-document preparation is unavailable in this host.");
+
     public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(short yearNumber,
         DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House amended-accounts preparation is unavailable in this host.");
+
+    public Task<CompaniesHousePreparedReview> PrepareAmendedAsync(ClaimsPrincipal principal,
+        short yearNumber, DateTime selectedPeriodStart, CompaniesHousePreparationInput input,
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House amended-accounts preparation is unavailable in this host.");
 
@@ -1038,7 +1089,15 @@ internal sealed class DisabledCompaniesHousePreparationReviewService
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House draft resumption is unavailable in this host.");
 
+    public Task<CompaniesHouseResumablePreparation?> ResumeAsync(ClaimsPrincipal principal,
+        DateOnly periodEnd, CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House draft resumption is unavailable in this host.");
+
     public Task DiscardAsync(string preparationReference,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House draft discard is unavailable in this host.");
+
+    public Task DiscardAsync(ClaimsPrincipal principal, string preparationReference,
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House draft discard is unavailable in this host.");
 
@@ -1052,6 +1111,11 @@ internal sealed class DisabledCompaniesHousePreparationReviewService
 
     public Task<CompaniesHouseApprovalReview> ApproveAsync(string preparationReference,
         string declarationVersion, bool declarationsConfirmed,
+        CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("Companies House accounts approval is unavailable in this host.");
+
+    public Task<CompaniesHouseApprovalReview> ApproveAsync(ClaimsPrincipal principal,
+        string preparationReference, string declarationVersion, bool declarationsConfirmed,
         CancellationToken cancellationToken = default) =>
         throw new InvalidOperationException("Companies House accounts approval is unavailable in this host.");
 }

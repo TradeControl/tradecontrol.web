@@ -7,9 +7,9 @@ accounts are later found to be wrong. The cause may be a software defect, an acc
 or another non-software event. The correction is a Companies House filing lifecycle; Corporation Tax
 is only a downstream consumer of the latest effective accepted accounts snapshot.
 
-This phase was opened on 19 November 2026 after Corporation Tax reconciliation correctly found that
-official-test filing `S00002` contained a zero Corporation Tax charge while the current filing-ready
-calculation produced a non-zero charge. `S00002` remains immutable evidence. It must not be edited,
+This phase was opened after downstream Corporation Tax reconciliation correctly found that accepted
+accounts contained a zero Corporation Tax charge while the current filing-ready calculation produced
+a non-zero charge. The accepted predecessor remains immutable evidence. It must not be edited,
 deleted or made to agree by changing the tax calculation.
 
 ## Official mechanism
@@ -76,7 +76,7 @@ Official references:
 
 ### Increment 1 — statutory contract and successor boundary
 
-**Status: implemented locally; awaiting deployed product review.**
+**Status: implemented and deployed; product preparation review passed.**
 
 - Added the FRC 2026 revised-report marker and six replacement-method facts to the statutory accounts
   contract, projection, validator and human-readable iXBRL.
@@ -86,29 +86,47 @@ Official references:
 - Added an Accounts workspace correction entry point and reviewed correction narratives.
 - Quarantined an accepted predecessor from Corporation Tax as soon as an uninvalidated amendment
   preparation exists.
+- Made the authenticated principal explicit at every interactive Companies House workflow boundary.
+  This preserves fail-closed tenant and role checks when a server-side UI event is no longer running
+  inside an ordinary HTTP request.
 
-### Increment 2 — comparison and B8 acceptance exercise
+### Increment 2 — comparison and development acceptance exercise
 
-**Status: comparison implemented locally; B8 acceptance exercise next.**
+**Status: controlled official-test amendment exercise passed; Corporation Tax reconciliation passed.**
 
 - present an exact business-level old/new comparison, including tax on profit, profit after tax,
   capital and reserves, retained document SHA-256 values and predecessor identity — implemented;
-- exercise prepare, preview, discard and fresh approval on B8;
+- exercise prepare, preview, discard and fresh approval in the controlled development environment;
 - stage only through the official-test composition and simulate acceptance only through the existing
   visibly labelled development control;
-- prove that the revised accepted snapshot replaces `S00002` for CT continuation while both filings
-  remain available as Companies House history; and
+- prove that the revised accepted snapshot replaces its accepted predecessor for CT continuation
+  while both filings remain available as Companies House history; and
 - rerun the CT reconciliation and require accounting profit and tax charge to agree before CT filing
   work recommences.
 
+The amended-accounts journey is deployed in the development environment and has passed its controlled
+acceptance exercise. The controlled preparation review proved a non-zero Corporation Tax correction,
+an equal reduction in profit after tax and no change to capital and reserves. That distinction was
+used to invalidate an inaccurate unapproved draft and prepare a replacement whose statutory revision
+statements match the retained old/new comparison. Review then exposed a presentation defect: the
+machine-readable revised-report Boolean was visible before the human-readable statement. The renderer
+now places that fact in the Inline XBRL hidden header while retaining clean visible prose. The affected
+unapproved artifact was invalidated and a fresh artifact passed both checks. The predecessor remains
+immutable. The corrected successor was approved, acknowledged by the Companies House official-test
+gateway and then accepted only through the visibly labelled development simulation. The resulting
+accepted full-accounts snapshot reconciles to the current transaction-derived accounting profit and
+Corporation Tax charge with zero difference.
+
 ## Acceptance gate
 
-An authorised B8 user can start from `S00002`, review the old/new statutory difference, prepare and
-approve replacement-method revised accounts, observe a distinct successor conversation, and obtain a
-new explicitly simulated accepted snapshot. The original evidence remains immutable. Corporation Tax
-cannot consume `S00002` while the correction is open and can consume only the accepted successor once
-its accounting profit and Corporation Tax charge reconcile to current transactions.
+An authorised development user can start from an accepted predecessor, review the old/new statutory
+difference, prepare and approve replacement-method revised accounts, observe a distinct successor
+conversation, and obtain a new explicitly simulated accepted snapshot. The original evidence remains
+immutable. Corporation Tax cannot consume the predecessor while the correction is open and can
+consume only the accepted successor once its accounting profit and Corporation Tax charge reconcile
+to current transactions.
 
-No genuine Companies House request is authorised by this phase document. Production dispatch remains
-disabled and the CT submission gate remains closed until the revised snapshot passes the existing CT
-reconciliation review.
+Production Companies House dispatch remains disabled. The official-test amendment exercise does not
+constitute a live filing, and its acceptance was simulated rather than returned by Companies House.
+The amended-accounts CT reconciliation gate is satisfied; later Corporation Tax transport and
+submission gates remain subject to the Corporation Tax roadmap.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -25,6 +26,8 @@ public interface ICompaniesHouseSubmissionStagingService
 {
     Task<CompaniesHouseStagedSubmission> StageApprovedAsync(string approvalReference,
         CancellationToken cancellationToken = default);
+    Task<CompaniesHouseStagedSubmission> StageApprovedAsync(ClaimsPrincipal principal,
+        string approvalReference, CancellationToken cancellationToken = default);
 }
 
 internal sealed class CompaniesHouseSubmissionStagingService(
@@ -39,6 +42,11 @@ internal sealed class CompaniesHouseSubmissionStagingService(
     TimeProvider timeProvider) : ICompaniesHouseSubmissionStagingService
 {
     public async Task<CompaniesHouseStagedSubmission> StageApprovedAsync(string approvalReference,
+        CancellationToken cancellationToken = default) =>
+        await StageApprovedAsync(RequiredPrincipal(), approvalReference, cancellationToken);
+
+    public async Task<CompaniesHouseStagedSubmission> StageApprovedAsync(
+        ClaimsPrincipal principal, string approvalReference,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(approvalReference) || approvalReference.Length > 64)
@@ -46,13 +54,12 @@ internal sealed class CompaniesHouseSubmissionStagingService(
         if (!hostOptions.Value.Enabled)
             throw new InvalidOperationException("Companies House submission staging is unavailable.");
 
-        var principal = httpContextAccessor.HttpContext?.User
-            ?? throw new UnauthorizedAccessException("An authenticated Trade Control session is required.");
+        ArgumentNullException.ThrowIfNull(principal);
         if (!filingAuthorisationPolicy.CanApproveAccounts(principal))
             throw new UnauthorizedAccessException(
                 "Companies House submission staging requires Administrator or Manager permission.");
 
-        var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
+        var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
         var approval = await workflowStore.GetApprovalAsync(identity.TenantReference,
             approvalReference, cancellationToken)
             ?? throw new KeyNotFoundException("The Companies House approval was not found.");
@@ -117,6 +124,10 @@ internal sealed class CompaniesHouseSubmissionStagingService(
 
         return ToResult(conversation);
     }
+
+    private ClaimsPrincipal RequiredPrincipal() => httpContextAccessor.HttpContext?.User
+        ?? throw new UnauthorizedAccessException(
+            "An authenticated Trade Control session is required.");
 
     private static CompaniesHouseStagedSubmission EnsureSameApproval(
         CompaniesHouseConversationRecord conversation, CompaniesHouseApprovalRecord approval)

@@ -1,0 +1,262 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using TradeControl.Tax.UK.Application.DataProvision
+@using TradeControl.Web.AppServices.TaxHub.CorporationTax
+
+<div class="border-top mt-3 pt-3 d-flex flex-column gap-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <h5 class="h6 mb-1">Reviewed filing inputs</h5>
+            <div class="small text-muted">
+                Confirm values that cannot be derived safely from transactions.
+            </div>
+            @if (CanEdit)
+            {
+                <a href="/Admin/Manager/Index?node=ReportingProfiles"
+                   target="_blank" rel="noopener noreferrer" class="small">
+                    Review company tax profile and associated companies
+                </a>
+            }
+        </div>
+        @if (Calculation.Review.IsStale)
+        {
+            <span class="badge bg-warning text-dark">Review again</span>
+        }
+        else if (Calculation.Review.IsReviewed)
+        {
+            <span class="badge bg-success">Reviewed</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">Not reviewed</span>
+        }
+    </div>
+
+    @if (Calculation.Review.IsReviewed)
+    {
+        <div class="small text-muted">
+            Revision @Calculation.Review.Revision reviewed by @Calculation.Review.ReviewedBy
+            on @Calculation.Review.ReviewedAtUtc?.ToLocalTime().ToString("d MMM yyyy, HH:mm").
+            @if (Calculation.Review.IsStale)
+            {
+                <span class="text-warning fw-semibold">
+                    The transaction or statutory source has changed since that review.
+                </span>
+            }
+        </div>
+    }
+
+    <EditForm Model="@_editor" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="fw-semibold small mb-2">Other add-backs</div>
+                @foreach (var adjustment in _editor.OtherAddBacks)
+                {
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-8">
+                            <InputText @bind-Value="adjustment.Description" class="form-control form-control-sm"
+                                       placeholder="Reason for add-back" disabled="@(!CanEdit || Saving)" />
+                        </div>
+                        <div class="col-md-3">
+                            <InputNumber @bind-Value="adjustment.Amount" class="form-control form-control-sm"
+                                         disabled="@(!CanEdit || Saving)" />
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    disabled="@(!CanEdit || Saving)" @onclick="() => RemoveAddBack(adjustment)">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                }
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        disabled="@(!CanEdit || Saving)" @onclick="AddAddBack">Add add-back</button>
+            </div>
+
+            <div class="col-12">
+                <div class="fw-semibold small mb-2">Deductions</div>
+                @foreach (var adjustment in _editor.Deductions)
+                {
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-8">
+                            <InputText @bind-Value="adjustment.Description" class="form-control form-control-sm"
+                                       placeholder="Reason for deduction" disabled="@(!CanEdit || Saving)" />
+                        </div>
+                        <div class="col-md-3">
+                            <InputNumber @bind-Value="adjustment.Amount" class="form-control form-control-sm"
+                                         disabled="@(!CanEdit || Saving)" />
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    disabled="@(!CanEdit || Saving)" @onclick="() => RemoveDeduction(adjustment)">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                }
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        disabled="@(!CanEdit || Saving)" @onclick="AddDeduction">Add deduction</button>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small">Writing-down allowance</label>
+                <InputNumber @bind-Value="_editor.WritingDownAllowance" class="form-control form-control-sm"
+                             disabled="@(!CanEdit || Saving)" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Annual investment allowance</label>
+                <InputNumber @bind-Value="_editor.AnnualInvestmentAllowance" class="form-control form-control-sm"
+                             disabled="@(!CanEdit || Saving)" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Other capital allowances</label>
+                <InputNumber @bind-Value="_editor.OtherAllowances" class="form-control form-control-sm"
+                             disabled="@(!CanEdit || Saving)" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Losses used</label>
+                <InputNumber @bind-Value="_editor.LossesUsed" class="form-control form-control-sm"
+                             disabled="@(!CanEdit || Saving)" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Chargeable gains</label>
+                <InputNumber @bind-Value="_editor.ChargeableGains" class="form-control form-control-sm"
+                             disabled="@(!CanEdit || Saving)" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Other reliefs</label>
+                <InputNumber @bind-Value="_editor.OtherReliefs" class="form-control form-control-sm"
+                             disabled="@(!CanEdit || Saving)" />
+            </div>
+
+            <div class="col-12">
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="_editor.HasLoansToParticipators" class="form-check-input"
+                                   disabled="@(!CanEdit || Saving)" />
+                    <label class="form-check-label small">Company loans to participators apply (CT600A)</label>
+                </div>
+            </div>
+            @if (_editor.HasLoansToParticipators)
+            {
+                <div class="col-md-4">
+                    <label class="form-label small">Loans outstanding at period end</label>
+                    <InputNumber @bind-Value="_editor.LoansOutstandingAtPeriodEnd" class="form-control form-control-sm"
+                                 disabled="@(!CanEdit || Saving)" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Tax chargeable</label>
+                    <InputNumber @bind-Value="_editor.LoansTaxChargeable" class="form-control form-control-sm"
+                                 disabled="@(!CanEdit || Saving)" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Tax paid</label>
+                    <InputNumber @bind-Value="_editor.LoansTaxPaid" class="form-control form-control-sm"
+                                 disabled="@(!CanEdit || Saving)" />
+                </div>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Error))
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert">@Error</div>
+        }
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+            <details class="small">
+                <summary>Review evidence</summary>
+                <div class="font-monospace text-break mt-1">Input SHA-256: @Calculation.Review.InputSha256</div>
+            </details>
+            @if (CanEdit)
+            {
+                <button type="submit" class="btn btn-sm btn-primary" disabled="@Saving">
+                    @(Saving ? "Saving review…" : Calculation.Review.IsReviewed ? "Review and save again" : "Review and save")
+                </button>
+            }
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CorporationTaxPeriodCalculationReview Calculation { get; set; } = default!;
+    [Parameter, EditorRequired] public string LogicalFilingIdentity { get; set; } = string.Empty;
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Saving { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback<CorporationTaxPeriodReviewSaveRequest> OnSave { get; set; }
+
+    private PeriodEditor _editor = new();
+    private string? _loadedInputSha256;
+
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_loadedInputSha256, Calculation.Review.InputSha256, StringComparison.Ordinal))
+            return;
+        _loadedInputSha256 = Calculation.Review.InputSha256;
+        _editor = PeriodEditor.From(Calculation.Review.Input);
+    }
+
+    private void AddAddBack() => _editor.OtherAddBacks.Add(new());
+    private void RemoveAddBack(AdjustmentEditor value) => _editor.OtherAddBacks.Remove(value);
+    private void AddDeduction() => _editor.Deductions.Add(new());
+    private void RemoveDeduction(AdjustmentEditor value) => _editor.Deductions.Remove(value);
+
+    private async Task SaveAsync()
+    {
+        if (!CanEdit || Saving || !OnSave.HasDelegate)
+            return;
+        await OnSave.InvokeAsync(new(LogicalFilingIdentity, _editor.ToInput(
+            Calculation.PeriodStart, Calculation.PeriodEnd), Calculation.Review.Revision));
+    }
+
+    private sealed class PeriodEditor
+    {
+        public List<AdjustmentEditor> OtherAddBacks { get; set; } = [];
+        public List<AdjustmentEditor> Deductions { get; set; } = [];
+        public decimal WritingDownAllowance { get; set; }
+        public decimal AnnualInvestmentAllowance { get; set; }
+        public decimal OtherAllowances { get; set; }
+        public decimal LossesUsed { get; set; }
+        public decimal ChargeableGains { get; set; }
+        public decimal OtherReliefs { get; set; }
+        public bool HasLoansToParticipators { get; set; }
+        public decimal LoansOutstandingAtPeriodEnd { get; set; }
+        public decimal LoansTaxChargeable { get; set; }
+        public decimal LoansTaxPaid { get; set; }
+
+        public static PeriodEditor From(CorporationTaxPeriodReviewedInput input) => new()
+        {
+            OtherAddBacks = input.OtherAddBacks.Select(value =>
+                new AdjustmentEditor { Description = value.Description, Amount = value.Amount }).ToList(),
+            Deductions = input.Deductions.Select(value =>
+                new AdjustmentEditor { Description = value.Description, Amount = value.Amount }).ToList(),
+            WritingDownAllowance = input.CapitalAllowances.WritingDownAllowance,
+            AnnualInvestmentAllowance = input.CapitalAllowances.AnnualInvestmentAllowance,
+            OtherAllowances = input.CapitalAllowances.OtherAllowances,
+            LossesUsed = input.LossesUsed,
+            ChargeableGains = input.ChargeableGains,
+            OtherReliefs = input.OtherReliefs,
+            HasLoansToParticipators = input.LoansToParticipators is not null,
+            LoansOutstandingAtPeriodEnd = input.LoansToParticipators?.LoansOutstandingAtPeriodEnd ?? 0m,
+            LoansTaxChargeable = input.LoansToParticipators?.TaxChargeable ?? 0m,
+            LoansTaxPaid = input.LoansToParticipators?.TaxPaid ?? 0m
+        };
+
+        public CorporationTaxPeriodReviewedInput ToInput(DateOnly start, DateOnly end) => new(
+            new(start, end),
+            OtherAddBacks.Select(value => new TaxAdjustmentDraft(value.Description.Trim(), value.Amount)).ToArray(),
+            Deductions.Select(value => new TaxAdjustmentDraft(value.Description.Trim(), value.Amount)).ToArray(),
+            new(WritingDownAllowance, AnnualInvestmentAllowance, OtherAllowances),
+            LossesUsed,
+            ChargeableGains,
+            OtherReliefs,
+            HasLoansToParticipators
+                ? new(LoansOutstandingAtPeriodEnd, LoansTaxChargeable, LoansTaxPaid)
+                : null);
+    }
+
+    private sealed class AdjustmentEditor
+    {
+        public string Description { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+}
