@@ -1,0 +1,263 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@using TradeControl.Tax.UK.Application.Preparation
+@using TradeControl.Web.AppServices.TaxHub.CorporationTax
+@using TradeControl.Web.Pages.Tax.Hub.Models
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ServiceScopeFactory
+@inject ILogger<TaxHubCorporationTaxPreparation> Logger
+
+<div class="border rounded p-3 d-flex flex-column gap-3">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <h4 class="h6 mb-1">Return documents</h4>
+            <div class="small text-muted">
+                Prepare an immutable preview of the exact accounts, computation and CT600 service document.
+            </div>
+        </div>
+        @if (_preparation is not null)
+        {
+            <span class="badge @(_preparation.IsCurrent ? "bg-info text-dark" : "bg-warning text-dark")">
+                @(_preparation.IsCurrent ? "Preview ready" : "Preview stale")
+            </span>
+        }
+    </div>
+
+    @if (_loading)
+    {
+        <div class="d-flex align-items-center gap-2 small text-muted" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Checking prepared documents…
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger mb-0" role="alert">@_error</div>
+        }
+
+        @if (_preparation is { } view)
+        {
+            @if (!view.IsCurrent)
+            {
+                <div class="alert alert-warning mb-0" role="status">
+                    <div class="fw-semibold">Prepare a new preview before approval.</div>
+                    <div>@view.StaleReason</div>
+                    <div class="mt-1 small">The retained preview remains immutable evidence and has not been altered.</div>
+                </div>
+            }
+
+            <dl class="row small mb-0">
+                <dt class="col-sm-4">Prepared</dt>
+                <dd class="col-sm-8">@view.Preparation.PreparedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                <dt class="col-sm-4">Prepared by</dt>
+                <dd class="col-sm-8">@view.Preparation.PreparedBy</dd>
+                <dt class="col-sm-4">Declarant</dt>
+                <dd class="col-sm-8">@view.Preparation.DeclarantName</dd>
+                <dt class="col-sm-4">Declaration date</dt>
+                <dd class="col-sm-8">@view.Preparation.DeclarationDate.ToString("d MMM yyyy")</dd>
+                <dt class="col-sm-4">Source SHA-256</dt>
+                <dd class="col-sm-8 font-monospace text-break">@view.Preparation.SourceSha256</dd>
+            </dl>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Document</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">SHA-256</th>
+                            <th scope="col" class="text-end">Open</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Accepted full accounts</td>
+                            <td>@view.Preparation.Accounts.Status</td>
+                            <td class="font-monospace text-break small">@view.Preparation.Accounts.Sha256</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   target="_blank" rel="noopener noreferrer"
+                                   href="@ArtifactUrl(view.Preparation, view.Preparation.Periods[0].LogicalFilingIdentity, "accounts")">View</a>
+                            </td>
+                        </tr>
+                        @foreach (var period in view.Preparation.Periods)
+                        {
+                            <tr>
+                                <td>
+                                    Computation<br />
+                                    <span class="small text-muted">@period.PeriodStart.ToString("d MMM yyyy") to @period.PeriodEnd.ToString("d MMM yyyy")</span>
+                                </td>
+                                <td>@period.Computation.Status</td>
+                                <td class="font-monospace text-break small">@period.Computation.Sha256</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       target="_blank" rel="noopener noreferrer"
+                                       href="@ArtifactUrl(view.Preparation, period.LogicalFilingIdentity, "computation")">View</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    CT600 service document<br />
+                                    <span class="small text-muted">@period.PeriodStart.ToString("d MMM yyyy") to @period.PeriodEnd.ToString("d MMM yyyy")</span>
+                                </td>
+                                <td>@period.ServiceRoot.Status</td>
+                                <td class="font-monospace text-break small">@period.ServiceRoot.Sha256</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       target="_blank" rel="noopener noreferrer"
+                                       href="@ArtifactUrl(view.Preparation, period.LogicalFilingIdentity, "service-root")">View</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Findings(view.Preparation).Count > 0)
+            {
+                <details class="small">
+                    <summary>Validation findings (@Findings(view.Preparation).Count)</summary>
+                    <ul class="mb-0 mt-2">
+                        @foreach (var finding in Findings(view.Preparation))
+                        {
+                            <li>
+                                <strong>@finding.Severity</strong> — @finding.Code: @finding.Message
+                                @if (!string.IsNullOrWhiteSpace(finding.Path))
+                                {
+                                    <span class="font-monospace"> (@finding.Path)</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+        }
+
+        <div class="row g-3">
+            <div class="col-md-7">
+                <label class="form-label" for="ct-declarant-name">Declarant name for the CT600</label>
+                <input id="ct-declarant-name" class="form-control" maxlength="160"
+                       autocomplete="name" @bind="_declarantName" />
+                <div class="form-text">This name is written into the CT600 preview; legal confirmation comes at approval.</div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label" for="ct-declaration-date">Declaration date</label>
+                <input id="ct-declaration-date" type="date" class="form-control"
+                       @bind="_declarationDate" />
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-primary"
+                    disabled="@(!CanPrepare || _preparing)"
+                    @onclick="PrepareAsync">
+                @if (_preparing)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                    <span>Preparing…</span>
+                }
+                else
+                {
+                    <span>@(_preparation is null ? "Prepare document preview" : "Prepare new preview")</span>
+                }
+            </button>
+            @if (!CanPrepare)
+            {
+                <span class="small text-muted">Complete the calculation review first.</span>
+            }
+        </div>
+
+        <div class="alert alert-light border mb-0 small" role="status">
+            This creates review copies only. It does not approve, submit or contact HMRC.
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TaxHubCorporationTaxContinuation Continuation { get; set; } = default!;
+    [Parameter] public bool CanPrepare { get; set; }
+
+    private CorporationTaxPreparationView? _preparation;
+    private string? _lookupKey;
+    private string? _error;
+    private bool _loading;
+    private bool _preparing;
+    private string _declarantName = string.Empty;
+    private DateOnly _declarationDate = DateOnly.FromDateTime(DateTime.Today);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = $"{Continuation.AccountsSnapshotSha256}|{Continuation.AcceptanceSimulated}";
+        if (string.Equals(key, _lookupKey, StringComparison.Ordinal)) return;
+        _lookupKey = key;
+        _loading = true;
+        _error = null;
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<ICorporationTaxPreparationService>();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _preparation = await service.GetLatestAsync(principal, Continuation);
+            if (_preparation is not null)
+            {
+                _declarantName = _preparation.Preparation.DeclarantName;
+                _declarationDate = _preparation.Preparation.DeclarationDate;
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
+            or FormatException)
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax document preparation could not be loaded for accounts snapshot {AccountsSnapshotSha256}.",
+                Continuation.AccountsSnapshotSha256);
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrepareAsync()
+    {
+        if (!CanPrepare || _preparing) return;
+        _preparing = true;
+        _error = null;
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<ICorporationTaxPreparationService>();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _preparation = await service.PrepareAsync(principal, Continuation,
+                new(_declarantName, _declarationDate));
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
+            or FormatException)
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax documents could not be prepared for accounts snapshot {AccountsSnapshotSha256}.",
+                Continuation.AccountsSnapshotSha256);
+            _error = exception.Message;
+        }
+        finally
+        {
+            _preparing = false;
+        }
+    }
+
+    private static string ArtifactUrl(CorporationTaxPreparationRecord preparation,
+        string logicalFilingIdentity, string kind) =>
+        $"/TaxHub/CorporationTax/Preparation/{Uri.EscapeDataString(preparation.Reference)}/{Uri.EscapeDataString(logicalFilingIdentity)}/{kind}";
+
+    private static IReadOnlyList<PreparedArtifactFinding> Findings(
+        CorporationTaxPreparationRecord preparation) =>
+        preparation.Periods.SelectMany(period =>
+                period.ServiceRoot.Findings.Concat(period.Computation.Findings))
+            .Concat(preparation.Accounts.Findings)
+            .ToArray();
+}

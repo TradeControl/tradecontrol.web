@@ -4,6 +4,8 @@ This directory contains architecture and work that spans more than one statutory
 
 ## Governing and working documents
 
+- [Platform-neutral statutory workflow foundation](platform-neutral-workflow-foundation.md) — agreed
+  portability objective and design gates for local and hosted statutory workflow persistence
 - [Repository and assembly architecture](tax-hub-repo-structure.md)
 - [Implementation Guide 3](tax-hub-implementation-3.md)
 - [Work Plan 4 — statutory data provision and request preparation](tax-hub-workplan-4.md), completed and accepted

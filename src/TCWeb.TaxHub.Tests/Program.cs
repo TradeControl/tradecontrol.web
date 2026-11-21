@@ -109,6 +109,10 @@ using (var tenantContext = new TenantContext(tenantAmbient))
 }
 var webProject = Path.Combine(root, "src", "TCWeb", "TCWeb.csproj");
 var webReferences = ProjectReferences(webProject);
+var errorPage = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Error.cshtml"));
+Assert(errorPage.Contains("/Admin/Manager/Index?node=EventViewer", StringComparison.Ordinal)
+    && !errorPage.Contains("/Admin/EventLog/Index", StringComparison.Ordinal),
+    "The application error page does not link to the current Event Viewer route.");
 Assert(TradeControl.Web.Pages.Cash.Manager.Components.CashManagerPostedPaymentSearchResult
         .CalculateCapitalValue(40000m, 0.20m, 2) == 33333.33m,
     "VAT-inclusive source payments are not capitalised at their net-of-tax value.");
@@ -1212,6 +1216,14 @@ var corporationTaxCalculationReviewService = File.ReadAllText(Path.Combine(root,
     "TaxHub", "CorporationTax", "CorporationTaxCalculationReviewService.cs"));
 var corporationTaxReviewPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CorporationTax", "CorporationTaxReviewPersistence.cs"));
+var corporationTaxPreparationService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxPreparationService.cs"));
+var corporationTaxPreparationPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxPreparationPersistence.cs"));
+var corporationTaxPreparationComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCorporationTaxPreparation.razor"));
+var corporationTaxPreparationController = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Controllers",
+    "TaxHubCorporationTaxController.cs"));
 var corporationTaxPeriodReviewComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubCorporationTaxPeriodReview.razor"));
 var corporationTaxReviewSchema = File.ReadAllText(Path.Combine(root, "src", "tax-hub", "src", "Database", "Tax",
@@ -1312,6 +1324,24 @@ Assert(corporationTaxCalculationReviewService.Contains("SavePeriodAsync", String
     && corporationTaxPeriodReviewComponent.Contains("Company loans to participators apply (CT600A)", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("SavePeriodReviewAsync", StringComparison.Ordinal),
     "CT-D3 no longer preserves attributable reviewed inputs or fails closed when their source becomes stale.");
+Assert(corporationTaxPreparationService.Contains("CorporationTaxPreparer", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("CorporationTaxPopulator", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("TcCorporationTaxSourceReader", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("PreparedArtifactStatus.Preview", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("ReadAcceptedForCorporationTaxAsync", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("ReadReviewedUtrAsync", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("registration.IsReviewed", StringComparison.Ordinal)
+    && corporationTaxPreparationService.Contains("ReturnDetailsSha256", StringComparison.Ordinal)
+    && !corporationTaxPreparationPersistence.Contains("UPDATE Tax.CorporationTaxPreparation",
+        StringComparison.OrdinalIgnoreCase)
+    && corporationTaxPreparationController.Contains("no-store, max-age=0", StringComparison.Ordinal)
+    && corporationTaxPreparationController.Contains("Managers,Administrators", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("Preview ready", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("This creates review copies only", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("It does not approve, submit or contact HMRC",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("TaxHubCorporationTaxPreparation", StringComparison.Ordinal),
+    "CT-D4 no longer freezes Objective 3 preview bytes behind the reviewed, privileged and fail-closed boundary.");
 Assert(companiesHouseReviewService.Contains("ReadTaxOnProfitAsync", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("CorporationTaxPeriodAllocation.Split", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("ReadCorporationTaxLiabilityAsync", StringComparison.Ordinal)

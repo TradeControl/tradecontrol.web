@@ -172,7 +172,7 @@ internal sealed class CorporationTaxCalculationReviewService(
             new(null, string.Empty, reviewedPeriods, string.Empty,
                 continuation.AccountsPeriodEnd)), cancellationToken);
 
-        var sourceSha256 = SourceSha256(source.Versions);
+        var sourceSha256 = CorporationTaxEvidenceDigests.SourceSha256(source.Versions);
         var periods = source.CorporationTaxPeriods.Select(period =>
         {
             var liability = period.Liability.Value;
@@ -293,15 +293,6 @@ internal sealed class CorporationTaxCalculationReviewService(
         return await BuildAsync(continuation, cancellationToken);
     }
 
-    private static string SourceSha256(IEnumerable<SourceVersion> versions)
-    {
-        var canonical = string.Join("\n", versions
-            .OrderBy(value => value.SourceCode, StringComparer.Ordinal)
-            .ThenBy(value => value.RowVersion, StringComparer.Ordinal)
-            .Select(value => $"{value.SourceCode}|{value.RowVersion}|{value.UpdatedOn:O}"));
-        return Hash(canonical);
-    }
-
     private static string InputSha256(CorporationTaxPeriodReviewedInput input)
     {
         static string Adjustment(TaxAdjustmentDraft value) =>
@@ -324,11 +315,8 @@ internal sealed class CorporationTaxCalculationReviewService(
             input.ChargeableGains.ToString(CultureInfo.InvariantCulture),
             input.OtherReliefs.ToString(CultureInfo.InvariantCulture),
             loans);
-        return Hash(canonical);
+        return CorporationTaxEvidenceDigests.Hash(canonical);
     }
-
-    private static string Hash(string value) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private static void Validate(CorporationTaxPeriodReviewedInput input)
     {

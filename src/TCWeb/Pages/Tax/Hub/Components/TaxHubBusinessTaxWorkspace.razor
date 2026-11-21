@@ -420,6 +420,13 @@ else
                                             </details>
                                         }
                                     </div>
+
+                                    @if (_calculationReview is not null && _canViewTechnicalDetails)
+                                    {
+                                        <TaxHubCorporationTaxPreparation
+                                            Continuation="@Continuation"
+                                            CanPrepare="@_calculationReview.IsReady" />
+                                    }
                                 }
 
                                 <ol class="mb-0 ps-3 small">

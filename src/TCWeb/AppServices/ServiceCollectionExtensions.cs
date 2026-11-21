@@ -85,6 +85,10 @@ namespace TradeControl.Web.AppServices
                     AzureCorporationTaxReviewStore>();
                 services.AddScoped<ICorporationTaxCalculationReviewService,
                     CorporationTaxCalculationReviewService>();
+                services.AddScoped<ICorporationTaxPreparationStore,
+                    AzureCorporationTaxPreparationStore>();
+                services.AddScoped<ICorporationTaxPreparationService,
+                    CorporationTaxPreparationService>();
                 if (configuration.GetValue<CompaniesHouseDispatchMode>(
                         $"{CompaniesHouseProductHostOptions.SectionName}:DispatchMode")
                     == CompaniesHouseDispatchMode.OfficialTestSingleSend)

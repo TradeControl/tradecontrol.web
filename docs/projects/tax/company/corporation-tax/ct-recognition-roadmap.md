@@ -408,7 +408,7 @@ behind one final integration test.
    difference. Its simulated acceptance remains development evidence and cannot qualify a genuine HMRC
    submission.
 3. **CT-D3 — calculation and reviewed inputs**
-   **Status: read-only reconciliation accepted; durable reviewed-input slice implemented locally and awaiting product/deployment review.** The product now re-reads
+   **Status: accepted in the deployed B8 product journey on 21 November 2026.** The product now re-reads
    the immutable accepted full-accounts artifact, rebuilds the Objective 3 calculation from current
    Trade Control transactions and presents the accounting-profit and profit-to-tax bridge without
    creating a filing artifact or submission action. The 19 November 2026 S00002 test reconciled its
@@ -427,7 +427,11 @@ behind one final integration test.
    digest and source digest. A later source-version change retains the entered values but marks the
    review stale and closes readiness until an authorised Administrator or Manager reviews it again.
    Associated-company facts remain effective-dated reporting-profile inputs rather than being copied
-   into the filing draft. The workflow schema and product UI are not yet deployed.
+   into the filing draft. The deployed B8 commissioning pass on 21 November 2026 saved neutral
+   reviewed inputs as revision 1, retained the authenticated reviewer and timestamp after a full page
+   reload, failed closed when a controlled source snapshot changed, and restored readiness only after
+   an explicit re-review created revision 2. The source probe rolled back completely and changed no
+   accounting values. The production Corporation Tax submission gate remained closed throughout.
    - rebuild a non-filing comparison projection from current Trade Control transactions and require
      it to reconcile to the accepted accounts snapshot; never substitute those comparison bytes for
      the accepted full-accounts attachment;
@@ -436,9 +440,32 @@ behind one final integration test.
      associated companies and conditional CT600 inputs;
    - invalidate only the draft when its reviewed source changes.
 4. **CT-D4 — immutable preparation and document review**
+   **Status: in progress.** CT600 contains the declarant name and declaration date, so D4 collects
+   those document facts before composing the immutable preview. CT-D5 remains a separate legal
+   declaration and approval over the exact reviewed bytes; it must not regenerate the return.
    - compose the accepted accounts snapshot with computation and CT600 through Objective 3;
    - promote artifacts from `Preview` only through a new reviewed production-preparation boundary;
    - expose previews, findings, provenance and stale-artifact refusal.
+
+   Practical delivery slices:
+
+   1. **CT-D4.1 — preparation prerequisites:** resolve the reviewed Corporation Tax UTR from the
+      statutory registration source without displaying or persisting it in clear text; collect the
+      declarant name and declaration date needed in the CT600 document.
+   2. **CT-D4.2 — immutable preview:** require reconciled accepted accounts and current CT-D3 reviews,
+      compose each CT-period service root through `CorporationTaxPreparer`, retain the exact accounts,
+      computation and CT600 service bytes, and record their SHA-256 digests and provenance centrally.
+   3. **CT-D4.3 — document review:** show period, status, findings and digests; provide safe no-store
+      previews/downloads of the retained accounts, computation and service document.
+   4. **CT-D4.4 — staleness acceptance:** prove a later transaction, statutory identity, UTR or reviewed
+      input change refuses the frozen preview and requires a new preparation. Never mutate an old one.
+
+   **Local implementation status:** D4.1-D4.3 are implemented for review. The application reuses the
+   Objective 3 source reader, populator and preparer; resolves one active reviewed UTR without exposing
+   or retaining it in workflow metadata; stores append-only preparation metadata and exact protected
+   preview bytes; and presents no-store document views, findings and SHA-256 digests to authorised
+   Managers and Administrators. Every retained artifact remains explicitly `Preview`; there is no
+   approval or submission action. D4.4 deployment and stale-source acceptance evidence remain pending.
 5. **CT-D5 — declaration and approval**
    - implement role-controlled declaration, immutable approval digest and approval evidence;
    - re-read and compare all bound identities immediately before approval and dispatch;
