@@ -13,6 +13,7 @@ using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.Authorization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -1220,8 +1221,24 @@ var corporationTaxPreparationService = File.ReadAllText(Path.Combine(root, "src"
     "TaxHub", "CorporationTax", "CorporationTaxPreparationService.cs"));
 var corporationTaxPreparationPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CorporationTax", "CorporationTaxPreparationPersistence.cs"));
+var corporationTaxApprovalService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxApprovalService.cs"));
+var corporationTaxApprovalPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxApprovalPersistence.cs"));
+var corporationTaxTransactionService = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxTransactionEngineService.cs"));
+var corporationTaxTransactionPersistence = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxTransactionEnginePersistence.cs"));
+var corporationTaxTransactionContent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxTransactionEngineContentStore.cs"));
+var corporationTaxTransactionWorker = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxTransactionEngineWorker.cs"));
+var corporationTaxFakeAuthority = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxFakeAuthority.cs"));
 var corporationTaxPreparationComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubCorporationTaxPreparation.razor"));
+var corporationTaxSubmissionComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCorporationTaxSubmission.razor"));
 var corporationTaxPreparationController = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Controllers",
     "TaxHubCorporationTaxController.cs"));
 var corporationTaxPeriodReviewComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
@@ -1262,6 +1279,12 @@ Assert(businessTaxWorkspaceComponent.Contains("No submission action is available
     && businessTaxWorkspaceComponent.Contains("recalculated from Trade Control transactions", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("any later mismatch will stop the filing for review", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("ListAsync(principal,", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("CancellationTokenSource(TimeSpan.FromSeconds(45))",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("The accepted-accounts check is temporarily unavailable",
+        StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("RetryContinuationAsync", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Try again", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("_acceptedAccounts.Count == 1", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Use these accounts", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Continuation.FullAccountsSha256", StringComparison.Ordinal),
@@ -1309,6 +1332,11 @@ Assert(corporationTaxCalculationReviewService.Contains("ReadAcceptedForCorporati
         StringComparison.Ordinal),
     "CT-D3 no longer compares the fixed accounts evidence with the Objective 3 transaction-derived calculation.");
 Assert(corporationTaxCalculationReviewService.Contains("SavePeriodAsync", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("proposedReview", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("var proposed = await BuildAsync", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.Contains("The Corporation Tax review was not saved because the proposed values do not reconcile", StringComparison.Ordinal)
+    && corporationTaxCalculationReviewService.IndexOf("var proposed = await BuildAsync", StringComparison.Ordinal)
+        < corporationTaxCalculationReviewService.IndexOf("TrySaveAsync(saved", StringComparison.Ordinal)
     && corporationTaxCalculationReviewService.Contains("SourceSha256", StringComparison.Ordinal)
     && corporationTaxCalculationReviewService.Contains("InputSha256", StringComparison.Ordinal)
     && corporationTaxCalculationReviewService.Contains("IsReviewed: true, IsStale: false", StringComparison.Ordinal)
@@ -1342,6 +1370,59 @@ Assert(corporationTaxPreparationService.Contains("CorporationTaxPreparer", Strin
         StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("TaxHubCorporationTaxPreparation", StringComparison.Ordinal),
     "CT-D4 no longer freezes Objective 3 preview bytes behind the reviewed, privileged and fail-closed boundary.");
+Assert(corporationTaxApprovalService.Contains("CT600-RETURN-APPROVAL-1", StringComparison.Ordinal)
+    && corporationTaxApprovalService.Contains("DocumentManifestSha256", StringComparison.Ordinal)
+    && corporationTaxApprovalService.Contains("ApprovalSha256", StringComparison.Ordinal)
+    && corporationTaxApprovalService.Contains("VerifyRetainedContentAsync", StringComparison.Ordinal)
+    && corporationTaxApprovalService.Contains("await RequireCurrentAsync", StringComparison.Ordinal)
+    && corporationTaxApprovalService.Contains("PreparedArtifactStatus.Preview", StringComparison.Ordinal)
+    && corporationTaxApprovalService.Contains("Corporation Tax approval requires Administrator or Manager permission",
+        StringComparison.Ordinal)
+    && corporationTaxApprovalPersistence.Contains("IsolationLevel.Serializable", StringComparison.Ordinal)
+    && corporationTaxApprovalPersistence.Contains("AddOrGetAsync", StringComparison.Ordinal)
+    && !corporationTaxApprovalPersistence.Contains("UPDATE Tax.CorporationTaxApproval",
+        StringComparison.OrdinalIgnoreCase)
+    && corporationTaxPreparationComponent.Contains("Declaration and approval", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("Approve exact return — does not submit", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("Approved and retained — not submitted to HMRC", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("Next: submit the approved return to HMRC", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("OnApprovalStateChanged", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Approval complete — submission is next", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_ when _hasApprovedReturn => \"Approved\"", StringComparison.Ordinal),
+    "CT-D5 no longer binds a privileged legal declaration to the exact current retained documents without dispatch.");
+Assert(corporationTaxTransactionService.Contains("FamilyGateEnabled", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("CorporationTaxTransactionEngineMode.Disabled", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("PreparedArtifactStatus.SubmissionReady", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("approvals.GetAsync", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("current.IsCurrent", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains(
+        "Guid.NewGuid().ToString(\"N\").ToUpperInvariant()", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("SubmissionUncertain before the first HTTP byte", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("CorporationTaxProduction", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("CorporationTaxGatewayCredentials", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("public override string ToString()", StringComparison.Ordinal)
+    && corporationTaxTransactionPersistence.Contains("IsolationLevel.Serializable", StringComparison.Ordinal)
+    && corporationTaxTransactionPersistence.Contains("GetForLogicalSubmissionAsync", StringComparison.Ordinal)
+    && corporationTaxTransactionPersistence.Contains(
+        "LogicalSubmissionReference = @logical;", StringComparison.Ordinal)
+    && corporationTaxTransactionPersistence.Contains("PollNotBeforeUtc <= @now", StringComparison.Ordinal)
+    && corporationTaxTransactionContent.Contains("ICompaniesHouseProtectedContentStore", StringComparison.Ordinal)
+    && corporationTaxTransactionContent.Contains("IDataProtectionProvider", StringComparison.Ordinal)
+    && corporationTaxTransactionContent.Contains(".Protect(", StringComparison.Ordinal)
+    && corporationTaxTransactionContent.Contains(".Unprotect(", StringComparison.Ordinal)
+    && corporationTaxTransactionContent.Contains("ct-transaction-payload", StringComparison.Ordinal)
+    && corporationTaxTransactionWorker.Contains("BackgroundService", StringComparison.Ordinal)
+    && corporationTaxTransactionWorker.Contains("PollOnceAsync", StringComparison.Ordinal)
+    && corporationTaxTransactionWorker.Contains("DeleteOnceAsync", StringComparison.Ordinal)
+    && !corporationTaxTransactionWorker.Contains("RecoverOnceAsync", StringComparison.Ordinal)
+    && corporationTaxFakeAuthority.Contains("Development-only in-process Transaction Engine double", StringComparison.Ordinal)
+    && corporationTaxFakeAuthority.Contains("X-TradeControl-Fake-Authority", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains("Development simulation", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains(
+        "Received — awaiting fake-authority outcome", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains("autocomplete=\"current-password\"", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains("_password = string.Empty", StringComparison.Ordinal),
+    "CT-D6 no longer preserves the closed production gate, one-send claim, protected evidence or browser-independent polling boundary.");
 Assert(companiesHouseReviewService.Contains("ReadTaxOnProfitAsync", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("CorporationTaxPeriodAllocation.Split", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("ReadCorporationTaxLiabilityAsync", StringComparison.Ordinal)
@@ -2555,6 +2636,62 @@ Assert(oauthProgramSource.Contains("AddRateLimiter", StringComparison.Ordinal)
     && oauthEndpointsSource.Contains("RequireRateLimiting(RateLimitPolicy)", StringComparison.Ordinal),
     "The OAuth broker exact-host or bounded anonymous-entry control is missing.");
 
+var fakeCredentials = new CorporationTaxGatewayCredentials("development-user", "do-not-retain");
+Assert(fakeCredentials.ToString() == nameof(CorporationTaxGatewayCredentials)
+    && !fakeCredentials.ToString().Contains("do-not-retain", StringComparison.Ordinal),
+    "Request-scoped Corporation Tax credentials can disclose their password when formatted.");
+var fakeAuthorityState = new CorporationTaxFakeAuthorityState();
+using var fakeAuthorityClient = new HttpClient(new CorporationTaxFakeAuthorityHandler(fakeAuthorityState));
+const string fakeEndpoint = "https://transaction-engine.tax.service.gov.uk/submission";
+var fakeSubmit = """
+    <?xml version="1.0" encoding="utf-8"?><GovTalkMessage xmlns="http://www.govtalk.gov.uk/CM/envelope"><EnvelopeVersion>2.0</EnvelopeVersion><Header><MessageDetails><Class>HMRC-CT-CT600</Class><Qualifier>request</Qualifier><Function>submit</Function><TransactionID>FAKE0000000000000000000000000001</TransactionID></MessageDetails></Header><GovTalkDetails/><Body/></GovTalkMessage>
+    """;
+using var fakeSubmitResponse = await fakeAuthorityClient.PostAsync(fakeEndpoint,
+    new StringContent(fakeSubmit, Encoding.UTF8, "application/xml"));
+var fakeSubmitXml = XDocument.Parse(await fakeSubmitResponse.Content.ReadAsStringAsync());
+XNamespace fakeGov = "http://www.govtalk.gov.uk/CM/envelope";
+var fakeCorrelation = fakeSubmitXml.Descendants(fakeGov + "CorrelationID").Single().Value;
+Assert(fakeSubmitResponse.IsSuccessStatusCode && fakeCorrelation.Length == 32
+    && fakeSubmitResponse.Headers.Contains("X-TradeControl-Fake-Authority"),
+    "The development authority did not return an unmistakable bounded acknowledgement.");
+var fakePoll = $"""
+    <?xml version="1.0" encoding="utf-8"?><GovTalkMessage xmlns="http://www.govtalk.gov.uk/CM/envelope"><EnvelopeVersion>2.0</EnvelopeVersion><Header><MessageDetails><Class>HMRC-CT-CT600</Class><Qualifier>poll</Qualifier><Function>submit</Function><CorrelationID>{fakeCorrelation}</CorrelationID></MessageDetails></Header><GovTalkDetails/><Body/></GovTalkMessage>
+    """;
+using var fakePollResponse = await fakeAuthorityClient.PostAsync(fakeEndpoint,
+    new StringContent(fakePoll, Encoding.UTF8, "application/xml"));
+var fakePollText = await fakePollResponse.Content.ReadAsStringAsync();
+Assert(fakePollResponse.IsSuccessStatusCode
+    && fakePollText.Contains("IRmarkReceipt", StringComparison.Ordinal)
+    && fakePollText.Contains("urn:tradecontrol:ct:fake-authority", StringComparison.Ordinal),
+    "The development authority terminal result is not receipt-shaped or clearly labelled fake.");
+var fakeDelete = $"""
+    <?xml version="1.0" encoding="utf-8"?><GovTalkMessage xmlns="http://www.govtalk.gov.uk/CM/envelope"><EnvelopeVersion>2.0</EnvelopeVersion><Header><MessageDetails><Class>HMRC-CT-CT600</Class><Qualifier>request</Qualifier><Function>delete</Function><CorrelationID>{fakeCorrelation}</CorrelationID></MessageDetails></Header><GovTalkDetails/><Body/></GovTalkMessage>
+    """;
+using var fakeDeleteResponse = await fakeAuthorityClient.PostAsync(fakeEndpoint,
+    new StringContent(fakeDelete, Encoding.UTF8, "application/xml"));
+Assert(fakeDeleteResponse.IsSuccessStatusCode
+    && (await fakeDeleteResponse.Content.ReadAsStringAsync()).Contains(
+        "FakeAuthorityResponse", StringComparison.Ordinal),
+    "The development authority did not complete the simulated delete conversation.");
+var transactionBackingStore = new StubCompaniesHouseProtectedContentStore(
+    new Dictionary<string, byte[]>());
+var transactionContentStore = new CorporationTaxTransactionEngineContentStore(
+    transactionBackingStore, new EphemeralDataProtectionProvider());
+var sensitiveWire = Encoding.UTF8.GetBytes("<Value>development-password</Value>");
+var sensitiveReference = await transactionContentStore.StoreAsync(
+    "tenant-a", "principal-a", TradeControl.Tax.UK.Adapters.Submission.Audit.SubmissionContentKind.Payload,
+    sensitiveWire);
+var restoredSensitiveWire = await transactionContentStore.ReadAsync(
+    "tenant-a", "principal-a", sensitiveReference);
+Assert(transactionBackingStore.LastWrittenBytes is not null
+    && !transactionBackingStore.LastWrittenBytes.AsSpan().SequenceEqual(sensitiveWire)
+    && restoredSensitiveWire is not null
+    && restoredSensitiveWire.AsSpan().SequenceEqual(sensitiveWire),
+    "Corporation Tax exact wire evidence was not encrypted and owner-bound at the application boundary.");
+await AssertThrowsAsync<InvalidDataException>(() => transactionContentStore.ReadAsync(
+        "tenant-a", "principal-b", sensitiveReference),
+    "A different filing owner could decrypt Corporation Tax exact wire evidence.");
+
 Console.WriteLine($"TCWeb Tax Hub boundary tests passed ({assertions} assertions).");
 
 static VatProductHostOptions ValidDevelopmentOptions() => new()
@@ -2830,6 +2967,7 @@ file sealed class StubCompaniesHouseProtectedContentStore(IReadOnlyDictionary<st
     private readonly Dictionary<string, byte[]> _content = new(content);
     public int ReadCount { get; private set; }
     public int WriteCount { get; private set; }
+    public byte[]? LastWrittenBytes { get; private set; }
 
     public Task<CompaniesHouseProtectedContent> WriteAsync(string tenantReference, string contentKind,
         ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken = default)
@@ -2837,6 +2975,7 @@ file sealed class StubCompaniesHouseProtectedContentStore(IReadOnlyDictionary<st
         WriteCount++;
         var reference = $"written-{WriteCount}";
         var value = bytes.ToArray();
+        LastWrittenBytes = value;
         _content[reference] = value;
         return Task.FromResult(new CompaniesHouseProtectedContent(reference,
             Convert.ToHexString(SHA256.HashData(value)), value.LongLength, value));

@@ -1,0 +1,257 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Options
+@using System.IO
+@using TradeControl.Web.AppServices.TaxHub.CorporationTax
+@using TradeControl.Web.Pages.Tax.Hub.Models
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ServiceScopeFactory
+@inject IOptions<CorporationTaxTransactionEngineOptions> TransactionOptions
+@inject ILogger<TaxHubCorporationTaxSubmission> Logger
+
+<section class="border rounded p-3 d-flex flex-column gap-3" aria-labelledby="ct-submit-heading">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+            <h5 id="ct-submit-heading" class="h6 mb-1">Submit approved return</h5>
+            <div class="small text-muted">
+                Uses the exact approved documents and creates one durable submission conversation per accounting period.
+            </div>
+        </div>
+        <span class="badge @(IsFake ? "bg-warning text-dark" : "bg-secondary")">@ModeLabel</span>
+    </div>
+
+    @if (IsFake)
+    {
+        <div class="alert alert-warning mb-0" role="status">
+            <strong>Development simulation.</strong> The production-shaped request is handled inside this application.
+            It cannot reach HMRC and its response is retained as fake-authority evidence.
+        </div>
+    }
+    else if (!IsEnabled)
+    {
+        <div class="alert alert-info mb-0" role="status">
+            Submission remains disabled by the Corporation Tax family gate. The approved return is safely retained.
+        </div>
+    }
+
+    @if (_loading)
+    {
+        <div class="d-flex align-items-center gap-2 small text-muted" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Checking submission status…
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <div class="alert alert-danger mb-0" role="alert">@_error</div>
+        }
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Accounting period</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Transaction</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var period in _preparation?.Periods ?? [])
+                    {
+                        var status = Status(period.LogicalFilingIdentity);
+                        <tr>
+                            <td>@period.PeriodStart.ToString("d MMM yyyy") to @period.PeriodEnd.ToString("d MMM yyyy")</td>
+                            <td>@StatusLabel(status)</td>
+                            <td class="font-monospace small text-break">@(status?.TransactionId ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (IsEnabled && HasActionablePeriod)
+        {
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="ct-gateway-user">@(IsFake ? "Test user ID" : "Government Gateway user ID")</label>
+                    <input id="ct-gateway-user" class="form-control" maxlength="128"
+                           autocomplete="username" @bind="_senderId" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="ct-gateway-password">@(IsFake ? "Test password" : "Government Gateway password")</label>
+                    <input id="ct-gateway-password" type="password" class="form-control" maxlength="256"
+                           autocomplete="current-password" @bind="_password" />
+                </div>
+            </div>
+            <div class="form-text">
+                The password is not written to workflow metadata or logs. It is necessarily present in the exact
+                request evidence, which is application-encrypted and restricted to this business and filing owner.
+            </div>
+            <div class="form-check">
+                <input id="ct-submit-confirmation" class="form-check-input" type="checkbox"
+                       @bind="_submissionConfirmed" />
+                <label class="form-check-label" for="ct-submit-confirmation">
+                    @ConfirmationText
+                </label>
+            </div>
+            <div>
+                <button type="button" class="btn btn-danger"
+                        disabled="@(!CanSubmit)" @onclick="SubmitAsync">
+                    @(_submitting ? "Sending once…" : SubmitLabel)
+                </button>
+            </div>
+        }
+
+        @if (IsEnabled && _statuses.Count > 0)
+        {
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        disabled="@_loading" @onclick="RefreshAsync">Refresh status</button>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public TaxHubCorporationTaxContinuation Continuation { get; set; } = default!;
+    [Parameter, EditorRequired] public string PreparationReference { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ApprovalReference { get; set; } = string.Empty;
+
+    private readonly Dictionary<string, CorporationTaxTransactionStatus> _statuses =
+        new(StringComparer.Ordinal);
+    private CorporationTaxPreparationRecord? _preparation;
+    private string? _lookupKey;
+    private string? _error;
+    private string _senderId = string.Empty;
+    private string _password = string.Empty;
+    private bool _loading;
+    private bool _submitting;
+    private bool _submissionConfirmed;
+
+    private CorporationTaxTransactionEngineOptions Options => TransactionOptions.Value;
+    private bool IsFake => Options.IsDevelopmentFake;
+    private bool IsEnabled => Options.IsEnabled;
+    private string ModeLabel => IsFake ? "Fake authority" : Options.IsProductionEnabled ? "HMRC production" : "Disabled";
+    private string SubmitLabel => IsFake ? "Send once to fake authority" : "Submit once to HMRC";
+    private string ConfirmationText => IsFake
+        ? "I understand this is a development simulation and will create durable fake-authority evidence."
+        : "I confirm that the exact approved return should be submitted to HMRC once.";
+    private bool CanSubmit => !_submitting && _submissionConfirmed
+        && !string.IsNullOrWhiteSpace(_senderId) && !string.IsNullOrEmpty(_password);
+    private bool HasActionablePeriod => _preparation?.Periods.Any(period =>
+        Status(period.LogicalFilingIdentity)?.Stage is null or "Prepared" or "SubmissionUncertain") == true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(_lookupKey, ApprovalReference, StringComparison.Ordinal)) return;
+        _lookupKey = ApprovalReference;
+        await LoadAsync();
+    }
+
+    private Task RefreshAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _statuses.Clear();
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            var preparations = scope.ServiceProvider.GetRequiredService<ICorporationTaxPreparationService>();
+            var view = await preparations.GetLatestAsync(principal, Continuation);
+            if (view is null || view.Preparation.Reference != PreparationReference)
+                throw new InvalidOperationException(
+                    "The approved Corporation Tax preparation is no longer current.");
+            _preparation = view.Preparation;
+            if (!IsEnabled) return;
+            var service = scope.ServiceProvider.GetRequiredService<ICorporationTaxTransactionEngineService>();
+            foreach (var period in _preparation.Periods)
+            {
+                var status = await service.GetAsync(principal, ApprovalReference,
+                    period.LogicalFilingIdentity);
+                if (status is not null)
+                    _statuses[period.LogicalFilingIdentity] = status;
+            }
+        }
+        catch (Exception exception) when (IsExpected(exception))
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax submission status could not be loaded for approval {ApprovalReference}.",
+                ApprovalReference);
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!CanSubmit) return;
+        if (_preparation is null) return;
+        _submitting = true;
+        _error = null;
+        var credentials = new CorporationTaxGatewayCredentials(_senderId, _password);
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<ICorporationTaxTransactionEngineService>();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            foreach (var period in _preparation.Periods)
+            {
+                var current = Status(period.LogicalFilingIdentity);
+                CorporationTaxTransactionStatus status;
+                if (current?.Stage == "SubmissionUncertain")
+                    status = await service.RecoverOnceAsync(principal,
+                        current.ConversationReference, credentials);
+                else if (current is null || current.Stage == "Prepared")
+                    status = await service.SubmitApprovedOnceAsync(principal, Continuation,
+                        _preparation.Reference, period.LogicalFilingIdentity, credentials);
+                else
+                    continue;
+                _statuses[period.LogicalFilingIdentity] = status;
+            }
+            _submissionConfirmed = false;
+        }
+        catch (Exception exception) when (IsExpected(exception))
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax submission action failed for approval {ApprovalReference} at the durable protocol boundary.",
+                ApprovalReference);
+            _error = exception.Message;
+        }
+        finally
+        {
+            _password = string.Empty;
+            _submitting = false;
+        }
+    }
+
+    private CorporationTaxTransactionStatus? Status(string logicalFilingIdentity) =>
+        _statuses.GetValueOrDefault(logicalFilingIdentity);
+
+    private string StatusLabel(CorporationTaxTransactionStatus? status) => status?.Stage switch
+    {
+        null => "Approved — not submitted",
+        "Prepared" => "Prepared — not sent",
+        "SubmissionUncertain" => "Send outcome uncertain — recovery required",
+        "AwaitingPoll" => IsFake
+            ? "Received — awaiting fake-authority outcome"
+            : "Received — awaiting HMRC outcome",
+        "TerminalPersisted" => "Outcome received — completing conversation",
+        "DeletePending" => "Outcome retained — completing conversation",
+        "Complete" => status.Outcome == "BusinessResponse" ? "Accepted" : "Outcome received",
+        "RecoveryRequired" => "Support required",
+        _ => status.Stage
+    };
+
+    private static bool IsExpected(Exception exception) => exception is InvalidOperationException
+        or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
+        or FormatException or IOException or HttpRequestException or TimeoutException;
+}

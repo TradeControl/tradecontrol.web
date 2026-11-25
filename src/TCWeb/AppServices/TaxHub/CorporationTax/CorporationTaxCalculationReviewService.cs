@@ -106,7 +106,13 @@ internal sealed class CorporationTaxCalculationReviewService(
 
     public async Task<CorporationTaxCalculationReview> BuildAsync(
         TaxHubCorporationTaxContinuation continuation,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        await BuildAsync(continuation, null, cancellationToken);
+
+    private async Task<CorporationTaxCalculationReview> BuildAsync(
+        TaxHubCorporationTaxContinuation continuation,
+        CorporationTaxPeriodReviewSaveRequest? proposedReview,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(continuation);
         var allowSimulation = continuation.AcceptanceSimulated
@@ -138,6 +144,7 @@ internal sealed class CorporationTaxCalculationReviewService(
         var taxReader = new TcBusinessTaxReader(factory);
         var reviewedPeriods = new List<CorporationTaxPeriodReviewedInput>(filingPeriods.Length);
         var storedReviews = new Dictionary<ReportingWindow, CorporationTaxReviewedPeriodRecord?>();
+        var proposedWindows = new HashSet<ReportingWindow>();
         var identity = await identityAccessor.GetRequiredAsync(cancellationToken);
         foreach (var period in filingPeriods)
         {
@@ -158,11 +165,17 @@ internal sealed class CorporationTaxCalculationReviewService(
                         period.LogicalIdentity, StringComparison.Ordinal)))
                 throw new InvalidOperationException(
                     "The saved Corporation Tax review does not match its filing scope.");
-            var reviewed = stored?.Input ?? new CorporationTaxPeriodReviewedInput(
-                window, [], [], new(0m, 0m, 0m), liability.LossUsed, 0m, 0m, null);
+            var isProposed = proposedReview is not null
+                && string.Equals(proposedReview.LogicalFilingIdentity,
+                    period.LogicalIdentity, StringComparison.Ordinal);
+            var reviewed = isProposed
+                ? proposedReview!.Input
+                : stored?.Input ?? new CorporationTaxPeriodReviewedInput(
+                    window, [], [], new(0m, 0m, 0m), liability.LossUsed, 0m, 0m, null);
             Validate(reviewed);
             reviewedPeriods.Add(reviewed);
             storedReviews.Add(window, stored);
+            if (isProposed) proposedWindows.Add(window);
         }
 
         var source = await new TcCorporationTaxSourceReader(factory, connectionString).ReadAsync(new(
@@ -177,20 +190,23 @@ internal sealed class CorporationTaxCalculationReviewService(
         {
             var liability = period.Liability.Value;
             var stored = storedReviews[period.Period];
-            var input = stored?.Input ?? reviewedPeriods.Single(value => value.Period == period.Period);
+            var isProposed = proposedWindows.Contains(period.Period);
+            var input = isProposed
+                ? reviewedPeriods.Single(value => value.Period == period.Period)
+                : stored?.Input ?? reviewedPeriods.Single(value => value.Period == period.Period);
             var inputSha256 = InputSha256(input);
-            if (stored is not null
+            if (!isProposed && stored is not null
                 && !string.Equals(stored.InputSha256, inputSha256, StringComparison.Ordinal))
                 throw new InvalidOperationException(
                     "The saved Corporation Tax review failed its input integrity check.");
             var review = new CorporationTaxPeriodReviewState(
                 input,
-                stored?.Revision ?? 0,
+                isProposed ? proposedReview!.ExpectedRevision + 1 : stored?.Revision ?? 0,
                 inputSha256,
-                stored?.ReviewedBy,
-                stored?.ReviewedAtUtc,
-                stored is not null,
-                stored is not null
+                isProposed ? null : stored?.ReviewedBy,
+                isProposed ? null : stored?.ReviewedAtUtc,
+                isProposed || stored is not null,
+                !isProposed && stored is not null
                     && !string.Equals(stored.SourceSha256, sourceSha256, StringComparison.Ordinal));
             return new CorporationTaxPeriodCalculationReview(
                 period.Period.Start,
@@ -273,8 +289,24 @@ internal sealed class CorporationTaxCalculationReviewService(
             throw new InvalidOperationException(
                 "The Corporation Tax review changed in another session. Reload it before saving.");
 
+        // Prove the proposed values against the accepted accounts before making the attributable
+        // review durable. A failed post-save rebuild would otherwise strand the correction UI behind
+        // an invalid persisted review.
+        var proposed = await BuildAsync(continuation,
+            new(logicalFilingIdentity, input, expectedRevision), cancellationToken);
+        var proposedPeriod = proposed.Periods.Single(value =>
+            value.PeriodStart == period.PeriodStart && value.PeriodEnd == period.PeriodEnd);
+        var proposedInputSha256 = InputSha256(input);
+        if (proposedPeriod.Review.Revision != expectedRevision + 1
+            || !string.Equals(proposedPeriod.Review.InputSha256, proposedInputSha256,
+                StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "The Corporation Tax review was not saved because the proposed input could not be verified.");
+        if (!proposed.IsReady)
+            throw new InvalidOperationException(
+                "The Corporation Tax review was not saved because the proposed values do not reconcile to the accepted accounts or are not filing-ready.");
+
         var identity = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
-        var inputSha256 = InputSha256(input);
         var saved = new CorporationTaxReviewedPeriodRecord(
             identity.TenantReference,
             logicalFilingIdentity,
@@ -282,8 +314,8 @@ internal sealed class CorporationTaxCalculationReviewService(
             period.PeriodStart,
             period.PeriodEnd,
             input,
-            current.SourceSha256,
-            inputSha256,
+            proposed.SourceSha256,
+            proposedInputSha256,
             expectedRevision + 1,
             identity.ActorReference,
             timeProvider.GetUtcNow());

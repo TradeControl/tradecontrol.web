@@ -134,25 +134,94 @@
                     </ul>
                 </details>
             }
+
+            @if (view.IsCurrent)
+            {
+                <section class="border rounded p-3 d-flex flex-column gap-3" aria-labelledby="ct-approval-heading">
+                    <div>
+                        <h5 id="ct-approval-heading" class="h6 mb-1">Declaration and approval</h5>
+                        <div class="small text-muted">
+                            Approval binds the exact retained documents above. It does not submit them to HMRC.
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_approvalError))
+                    {
+                        <div class="alert alert-danger mb-0" role="alert">@_approvalError</div>
+                    }
+
+                    @if (_approval is { } approval)
+                    {
+                        <div class="alert alert-success mb-0" role="status">
+                            <strong>Approved and retained — not submitted to HMRC.</strong>
+                            The exact preparation is now immutable approval evidence.
+                        </div>
+                        <dl class="row small mb-0">
+                            <dt class="col-sm-4">Approved</dt>
+                            <dd class="col-sm-8">@approval.Approval.ApprovedAtUtc.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                            <dt class="col-sm-4">Approved by</dt>
+                            <dd class="col-sm-8">@approval.Approval.ApprovedBy</dd>
+                            <dt class="col-sm-4">Approval reference</dt>
+                            <dd class="col-sm-8 font-monospace text-break">@approval.Approval.Reference</dd>
+                            <dt class="col-sm-4">Document manifest SHA-256</dt>
+                            <dd class="col-sm-8 font-monospace text-break">@approval.Approval.DocumentManifestSha256</dd>
+                            <dt class="col-sm-4">Declaration SHA-256</dt>
+                            <dd class="col-sm-8 font-monospace text-break">@approval.Approval.DeclarationSha256</dd>
+                            <dt class="col-sm-4">Approval SHA-256</dt>
+                            <dd class="col-sm-8 font-monospace text-break">@approval.Approval.ApprovalSha256</dd>
+                        </dl>
+                        <div class="alert alert-info mb-0" role="status">
+                            <div class="fw-semibold">Next: submit the approved return to HMRC</div>
+                            <div>The exact approved return is safely retained. Continue with the controlled submission journey below.</div>
+                        </div>
+                        <TaxHubCorporationTaxSubmission Continuation="@Continuation"
+                            PreparationReference="@view.Preparation.Reference"
+                            ApprovalReference="@approval.Approval.Reference" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-light border mb-0">
+                            <div class="small text-muted mb-2">
+                                Declaration @CorporationTaxApprovalDeclaration.Version
+                            </div>
+                            <p class="mb-0">@CorporationTaxApprovalDeclaration.Text</p>
+                        </div>
+                        <div class="form-check">
+                            <input id="ct-approval-confirmation" class="form-check-input" type="checkbox"
+                                   @bind="_declarationConfirmed" />
+                            <label class="form-check-label" for="ct-approval-confirmation">
+                                I confirm this declaration for the exact retained documents and SHA-256 values shown above.
+                            </label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-success"
+                                    disabled="@(!_declarationConfirmed || _approving)"
+                                    @onclick="ApproveAsync">
+                                @(_approving ? "Recording approval…" : "Approve exact return — does not submit")
+                            </button>
+                        </div>
+                    }
+                </section>
+            }
         }
 
         <div class="row g-3">
             <div class="col-md-7">
                 <label class="form-label" for="ct-declarant-name">Declarant name for the CT600</label>
                 <input id="ct-declarant-name" class="form-control" maxlength="160"
-                       autocomplete="name" @bind="_declarantName" />
+                       autocomplete="name" disabled="@PreparationLocked" @bind="_declarantName" />
                 <div class="form-text">This name is written into the CT600 preview; legal confirmation comes at approval.</div>
             </div>
             <div class="col-md-5">
                 <label class="form-label" for="ct-declaration-date">Declaration date</label>
                 <input id="ct-declaration-date" type="date" class="form-control"
-                       @bind="_declarationDate" />
+                       disabled="@PreparationLocked" @bind="_declarationDate" />
             </div>
         </div>
 
         <div class="d-flex flex-wrap align-items-center gap-2">
             <button type="button" class="btn btn-primary"
-                    disabled="@(!CanPrepare || _preparing)"
+                    disabled="@(!CanPrepareDocuments)"
                     @onclick="PrepareAsync">
                 @if (_preparing)
                 {
@@ -179,12 +248,17 @@
 @code {
     [Parameter, EditorRequired] public TaxHubCorporationTaxContinuation Continuation { get; set; } = default!;
     [Parameter] public bool CanPrepare { get; set; }
+    [Parameter] public EventCallback<bool> OnApprovalStateChanged { get; set; }
 
     private CorporationTaxPreparationView? _preparation;
+    private CorporationTaxApprovalView? _approval;
     private string? _lookupKey;
     private string? _error;
     private bool _loading;
     private bool _preparing;
+    private bool _approving;
+    private bool _declarationConfirmed;
+    private string? _approvalError;
     private string _declarantName = string.Empty;
     private DateOnly _declarationDate = DateOnly.FromDateTime(DateTime.Today);
 
@@ -195,6 +269,9 @@
         _lookupKey = key;
         _loading = true;
         _error = null;
+        _approval = null;
+        _approvalError = null;
+        _declarationConfirmed = false;
         try
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
@@ -205,7 +282,12 @@
             {
                 _declarantName = _preparation.Preparation.DeclarantName;
                 _declarationDate = _preparation.Preparation.DeclarationDate;
+                var approvals = scope.ServiceProvider
+                    .GetRequiredService<ICorporationTaxApprovalService>();
+                _approval = await approvals.GetAsync(principal,
+                    _preparation.Preparation.Reference);
             }
+            await NotifyApprovalStateChangedAsync();
         }
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
@@ -234,6 +316,12 @@
             var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
             _preparation = await service.PrepareAsync(principal, Continuation,
                 new(_declarantName, _declarationDate));
+            var approvals = scope.ServiceProvider
+                .GetRequiredService<ICorporationTaxApprovalService>();
+            _approval = await approvals.GetAsync(principal,
+                _preparation.Preparation.Reference);
+            _declarationConfirmed = false;
+            _approvalError = null;
         }
         catch (Exception exception) when (exception is InvalidOperationException
             or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
@@ -249,6 +337,50 @@
             _preparing = false;
         }
     }
+
+    private async Task ApproveAsync()
+    {
+        if (_preparation is not { IsCurrent: true } preparation
+            || _approval is not null || !_declarationConfirmed || _approving)
+            return;
+        _approving = true;
+        _approvalError = null;
+        try
+        {
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider
+                .GetRequiredService<ICorporationTaxApprovalService>();
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            _approval = await service.ApproveAsync(principal, Continuation,
+                preparation.Preparation.Reference,
+                CorporationTaxApprovalDeclaration.Version,
+                _declarationConfirmed);
+            await NotifyApprovalStateChangedAsync();
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+            or ArgumentException or KeyNotFoundException or UnauthorizedAccessException
+            or FormatException)
+        {
+            Logger.LogWarning(exception,
+                "Corporation Tax preparation {PreparationReference} could not be approved.",
+                preparation.Preparation.Reference);
+            _approvalError = exception.Message;
+        }
+        finally
+        {
+            _approving = false;
+        }
+    }
+
+    private bool PreparationLocked => _approval is not null && _preparation?.IsCurrent == true;
+
+    private bool CanPrepareDocuments => CanPrepare && !_preparing
+        && (_approval is null || _preparation?.IsCurrent == false);
+
+    private Task NotifyApprovalStateChangedAsync() =>
+        OnApprovalStateChanged.HasDelegate
+            ? OnApprovalStateChanged.InvokeAsync(_approval is not null)
+            : Task.CompletedTask;
 
     private static string ArtifactUrl(CorporationTaxPreparationRecord preparation,
         string logicalFilingIdentity, string kind) =>

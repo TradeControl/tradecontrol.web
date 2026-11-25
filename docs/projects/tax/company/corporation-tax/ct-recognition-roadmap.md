@@ -440,7 +440,7 @@ behind one final integration test.
      associated companies and conditional CT600 inputs;
    - invalidate only the draft when its reviewed source changes.
 4. **CT-D4 — immutable preparation and document review**
-   **Status: in progress.** CT600 contains the declarant name and declaration date, so D4 collects
+   **Status: complete.** CT600 contains the declarant name and declaration date, so D4 collects
    those document facts before composing the immutable preview. CT-D5 remains a separate legal
    declaration and approval over the exact reviewed bytes; it must not regenerate the return.
    - compose the accepted accounts snapshot with computation and CT600 through Objective 3;
@@ -460,17 +460,71 @@ behind one final integration test.
    4. **CT-D4.4 — staleness acceptance:** prove a later transaction, statutory identity, UTR or reviewed
       input change refuses the frozen preview and requires a new preparation. Never mutate an old one.
 
-   **Local implementation status:** D4.1-D4.3 are implemented for review. The application reuses the
+   **Acceptance result:** D4.1-D4.4 are implemented and accepted. The application reuses the
    Objective 3 source reader, populator and preparer; resolves one active reviewed UTR without exposing
    or retaining it in workflow metadata; stores append-only preparation metadata and exact protected
    preview bytes; and presents no-store document views, findings and SHA-256 digests to authorised
-   Managers and Administrators. Every retained artifact remains explicitly `Preview`; there is no
-   approval or submission action. D4.4 deployment and stale-source acceptance evidence remain pending.
+   Managers and Administrators. A later attributable review revision was proven to mark the existing
+   preparation stale without altering its retained bytes or digests. A successor preparation received
+   a new identity while reproducing the same document digests from the restored unchanged accounting
+   inputs. Proposed reviewed inputs are now evaluated before persistence, so a value that breaks the
+   accepted-accounts reconciliation is rejected without stranding the durable review. Every retained
+   artifact remains explicitly `Preview`; there is no approval or submission action.
 5. **CT-D5 — declaration and approval**
+   **Status: complete.** The implementation adds an
+   authorised Manager/Administrator declaration over the exact D4 preparation, an immutable approval
+   manifest and digest binding the retained accounts, computation and service-document identities,
+   and append-only approval evidence. Approval re-reads the current preparation, statutory identity,
+   transaction source and protected document bytes immediately before recording the decision; any
+   mismatch fails closed and requires a new preparation. The workflow schema migration is applied.
+   Build, Tax Hub boundary and architecture tests pass. Deployed human acceptance on 22 November 2026
+   proved the declaration, exact retained accounts, computation and CT600 service-document identities,
+   immutable approval evidence and the separation of approval from submission. No submission was made.
+   A transient workflow-database login failure had previously left the File return lookup waiting
+   indefinitely; the UI now bounds that lookup, reports a safe retryable failure and cannot approve or
+   submit while the accepted-accounts dependency is unavailable. The post-approval experience now
+   identifies submission as the next step while explaining that it is not yet enabled. The production
+   submission gate remains closed.
    - implement role-controlled declaration, immutable approval digest and approval evidence;
    - re-read and compare all bound identities immediately before approval and dispatch;
    - make approved records immutable and require a new preparation after any correction.
 6. **CT-D6 — production Transaction Engine orchestration**
+   **Status: in progress; local orchestration foundation implemented, production family gate closed.**
+   HMRC's current [XML developer guide](https://www.gov.uk/guidance/basic-guide-for-xml-software-developers)
+   and [Document Submission Protocol](https://www.gov.uk/government/publications/transaction-engine-document-submission-protocol)
+   continue to identify `https://transaction-engine.tax.service.gov.uk/submission` as the live
+   endpoint and distinguish end-user live credentials from SDST test credentials. The implementation
+   pins that host in a production-only protocol profile; ETS is not trusted by that profile.
+
+   The proven Phase 5.9 coordinator now depends on a persistence contract rather than its development
+   file store. TCWeb supplies a serializable, tenant-partitioned shared workflow store with an immutable
+   one-conversation-per-approved-period identity and keeps exact wire/response bytes behind the existing protected-
+   content boundary. Only the exact current D5-approved preparation can be reconstructed as
+   `SubmissionReady`; reconstruction re-reads and digest-verifies the retained accounts, computation
+   and service-root bytes and does not invoke another serializer. The one-send transition persists
+   `SubmissionUncertain` before network I/O. A server worker can perform due poll and delete exchanges
+   independently of a browser circuit, while uncertain-send `DATA_REQUEST` recovery remains an
+   explicit credentialled operation rather than an automatic resubmit.
+
+   Both `Mode=Production` and `FamilyGateEnabled=true` are required to register the live orchestrator
+   and worker. Defaults register a disabled service and no UI action calls the orchestrator. Live
+   Government Gateway credentials cross the orchestration boundary only for the initial send or an
+   explicit uncertain-send recovery; they are not retained in workflow metadata or logs. Because the
+   password is necessarily part of the exact GovTalk request, retained wire evidence is application-
+   encrypted with tenant-and-owner-bound persistent keys. Polling and deletion do not require fresh
+   credentials, and automatic recovery is deliberately forbidden.
+   Completed conversations remain bound to their approved-period identity, so cleanup cannot reopen a
+   second-send path. The local fake-authority suite now proves one-send, lost-reply recovery, restart,
+   poll, terminal evidence, delete retry and completion without contacting HMRC. No HMRC request has
+   been made. A server-selected `DevelopmentFake` mode now surfaces the request-scoped credential and
+   explicit one-send journey while replacing the network handler with an in-process authority double;
+   the UI and retained response identify that evidence as simulated. The shared-store migration has
+   been exercised without changing existing workflow evidence. Human exercise on 25 November 2026
+   exposed and corrected a lower-case transaction-ID defect before any conversation was created. The
+   safely retried journey then retained exactly one conversation, progressed through browser-independent
+   poll and delete processing, and reached the terminal accepted fake-authority outcome. The boundary
+   and Cash Statement suites pass after the correction. No HMRC request was made; the production family
+   gate remains closed pending D6 acceptance and any separately authorised official interaction.
    - reuse the accepted Phase 5.9/CT-C serializer and state machine;
    - add the live credential provider and production endpoint only behind the closed family gate;
    - persist the one-send claim, background poll scheduling, recovery and delete cleanup;

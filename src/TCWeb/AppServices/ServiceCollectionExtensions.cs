@@ -1,10 +1,12 @@
 using System;
+using System.Net.Http;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using TradeControl.Tax.UK.Adapters.Submission.TransactionEngine;
 using TradeControl.Web.AppServices.Execution;
 using TradeControl.Web.AppServices.CategoryTree;
 using TradeControl.Web.AppServices.InvoiceRegister;
@@ -26,6 +28,30 @@ namespace TradeControl.Web.AppServices
         public static IServiceCollection AddAppServices(this IServiceCollection services,
             IConfiguration configuration)
         {
+            services.AddOptions<CorporationTaxTransactionEngineOptions>()
+                .Bind(configuration.GetSection(CorporationTaxTransactionEngineOptions.SectionName))
+                .Validate(options => options.TimeoutSeconds is >= 1 and <= 600,
+                    "Corporation Tax Transaction Engine timeout must be between 1 and 600 seconds.")
+                .Validate(options => !options.IsEnabled
+                    || (!string.IsNullOrWhiteSpace(options.Product)
+                        && !string.IsNullOrWhiteSpace(options.ProductVersion)
+                        && !string.IsNullOrWhiteSpace(options.VendorId)),
+                    "Enabled Corporation Tax submission requires a bounded product identity.")
+                .ValidateOnStart();
+            services.AddSingleton<CorporationTaxFakeAuthorityState>();
+            services.AddTransient<CorporationTaxFakeAuthorityHandler>();
+            services.AddHttpClient(CorporationTaxTransactionEngineService.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(provider =>
+                    configuration.GetValue<CorporationTaxTransactionEngineMode>(
+                        $"{CorporationTaxTransactionEngineOptions.SectionName}:Mode")
+                        == CorporationTaxTransactionEngineMode.DevelopmentFake
+                        ? provider.GetRequiredService<CorporationTaxFakeAuthorityHandler>()
+                        : new SocketsHttpHandler
+                        {
+                            AllowAutoRedirect = false,
+                            AutomaticDecompression = System.Net.DecompressionMethods.None,
+                            UseCookies = false
+                        });
             services.Configure<TenantHostingOptions>(configuration.GetSection(TenantHostingOptions.SectionName));
             services.AddOptions<PlatformEmailOptions>()
                 .Bind(configuration.GetSection(PlatformEmailOptions.SectionName))
@@ -89,6 +115,28 @@ namespace TradeControl.Web.AppServices
                     AzureCorporationTaxPreparationStore>();
                 services.AddScoped<ICorporationTaxPreparationService,
                     CorporationTaxPreparationService>();
+                services.AddScoped<ICorporationTaxApprovalStore,
+                    AzureCorporationTaxApprovalStore>();
+                services.AddScoped<ICorporationTaxApprovalService,
+                    CorporationTaxApprovalService>();
+                services.AddScoped<ITransactionEngineConversationStore,
+                    AzureCorporationTaxTransactionStore>();
+                services.AddScoped<TradeControl.Tax.UK.Adapters.Submission.Audit.ISubmissionContentStore,
+                    CorporationTaxTransactionEngineContentStore>();
+                var transactionEngineMode = configuration.GetValue<CorporationTaxTransactionEngineMode>(
+                    $"{CorporationTaxTransactionEngineOptions.SectionName}:Mode");
+                if (transactionEngineMode == CorporationTaxTransactionEngineMode.DevelopmentFake
+                    || transactionEngineMode == CorporationTaxTransactionEngineMode.Production
+                        && configuration.GetValue<bool>(
+                            $"{CorporationTaxTransactionEngineOptions.SectionName}:FamilyGateEnabled"))
+                {
+                    services.AddScoped<ICorporationTaxTransactionEngineService,
+                        CorporationTaxTransactionEngineService>();
+                    services.AddHostedService<CorporationTaxTransactionEngineWorker>();
+                }
+                else
+                    services.AddScoped<ICorporationTaxTransactionEngineService,
+                        DisabledCorporationTaxTransactionEngineService>();
                 if (configuration.GetValue<CompaniesHouseDispatchMode>(
                         $"{CompaniesHouseProductHostOptions.SectionName}:DispatchMode")
                     == CompaniesHouseDispatchMode.OfficialTestSingleSend)
