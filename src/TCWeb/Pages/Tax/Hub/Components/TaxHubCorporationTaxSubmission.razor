@@ -49,27 +49,62 @@
             <div class="alert alert-danger mb-0" role="alert">@_error</div>
         }
 
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th scope="col">Accounting period</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Transaction</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var period in _preparation?.Periods ?? [])
+        <div class="d-flex flex-column gap-3">
+            @foreach (var period in _preparation?.Periods ?? [])
+            {
+                var status = Status(period.LogicalFilingIdentity);
+                var presentation = Presentation(status);
+                var headingId = $"ct-outcome-{period.LogicalFilingIdentity}";
+                <article class="border rounded p-3 d-flex flex-column gap-3" aria-labelledby="@headingId">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                        <div>
+                            <h6 id="@headingId" class="mb-1">@presentation.Heading</h6>
+                            <div class="small text-muted">
+                                @period.PeriodStart.ToString("d MMM yyyy") to @period.PeriodEnd.ToString("d MMM yyyy")
+                            </div>
+                        </div>
+                        <span class="badge @presentation.BadgeClass">@presentation.StatusLabel</span>
+                    </div>
+
+                    <div class="alert @presentation.AlertClass mb-0" role="@presentation.AlertRole">
+                        @presentation.Message
+                    </div>
+
+                    @if (status?.OutcomeAvailable == true)
                     {
-                        var status = Status(period.LogicalFilingIdentity);
-                        <tr>
-                            <td>@period.PeriodStart.ToString("d MMM yyyy") to @period.PeriodEnd.ToString("d MMM yyyy")</td>
-                            <td>@StatusLabel(status)</td>
-                            <td class="font-monospace small text-break">@(status?.TransactionId ?? "—")</td>
-                        </tr>
+                        <div>
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="@OutcomeUrl(status)">
+                                @presentation.DownloadLabel
+                            </a>
+                        </div>
                     }
-                </tbody>
-            </table>
+
+                    @if (status is not null)
+                    {
+                        <details>
+                            <summary class="small fw-semibold">Submission details</summary>
+                            <dl class="row small mt-3 mb-0">
+                                <dt class="col-sm-4">Transaction ID</dt>
+                                <dd class="col-sm-8 font-monospace text-break">@status.TransactionId</dd>
+                                <dt class="col-sm-4">Last updated</dt>
+                                <dd class="col-sm-8">@status.UpdatedAtUtc.UtcDateTime.ToString("d MMM yyyy, HH:mm 'UTC'")</dd>
+                                <dt class="col-sm-4">Support reference</dt>
+                                <dd class="col-sm-8 font-monospace">@status.SupportReference</dd>
+                                <dt class="col-sm-4">Approved return SHA-256</dt>
+                                <dd class="col-sm-8 font-monospace text-break">@status.ServiceArtifactSha256</dd>
+                                <dt class="col-sm-4">Submitted request SHA-256</dt>
+                                <dd class="col-sm-8 font-monospace text-break">@status.WireSha256</dd>
+                                @if (status.OutcomeSha256 is not null)
+                                {
+                                    <dt class="col-sm-4">Authority response SHA-256</dt>
+                                    <dd class="col-sm-8 font-monospace text-break">@status.OutcomeSha256</dd>
+                                }
+                            </dl>
+                        </details>
+                    }
+                </article>
+            }
         </div>
 
         @if (IsEnabled && HasActionablePeriod)
@@ -135,10 +170,16 @@
     private bool IsFake => Options.IsDevelopmentFake;
     private bool IsEnabled => Options.IsEnabled;
     private string ModeLabel => IsFake ? "Fake authority" : Options.IsProductionEnabled ? "HMRC production" : "Disabled";
-    private string SubmitLabel => IsFake ? "Send once to fake authority" : "Submit once to HMRC";
-    private string ConfirmationText => IsFake
-        ? "I understand this is a development simulation and will create durable fake-authority evidence."
-        : "I confirm that the exact approved return should be submitted to HMRC once.";
+    private bool HasUncertainPeriod => _preparation?.Periods.Any(period =>
+        Status(period.LogicalFilingIdentity)?.Stage == "SubmissionUncertain") == true;
+    private string SubmitLabel => HasUncertainPeriod
+        ? "Recover submission status"
+        : IsFake ? "Send once to fake authority" : "Submit once to HMRC";
+    private string ConfirmationText => HasUncertainPeriod
+        ? "I understand this checks the existing transaction and will not submit the return again."
+        : IsFake
+            ? "I understand this is a development simulation and will create durable fake-authority evidence."
+            : "I confirm that the exact approved return should be submitted to HMRC once.";
     private bool CanSubmit => !_submitting && _submissionConfirmed
         && !string.IsNullOrWhiteSpace(_senderId) && !string.IsNullOrEmpty(_password);
     private bool HasActionablePeriod => _preparation?.Periods.Any(period =>
@@ -168,7 +209,6 @@
                 throw new InvalidOperationException(
                     "The approved Corporation Tax preparation is no longer current.");
             _preparation = view.Preparation;
-            if (!IsEnabled) return;
             var service = scope.ServiceProvider.GetRequiredService<ICorporationTaxTransactionEngineService>();
             foreach (var period in _preparation.Periods)
             {
@@ -236,20 +276,11 @@
     private CorporationTaxTransactionStatus? Status(string logicalFilingIdentity) =>
         _statuses.GetValueOrDefault(logicalFilingIdentity);
 
-    private string StatusLabel(CorporationTaxTransactionStatus? status) => status?.Stage switch
-    {
-        null => "Approved — not submitted",
-        "Prepared" => "Prepared — not sent",
-        "SubmissionUncertain" => "Send outcome uncertain — recovery required",
-        "AwaitingPoll" => IsFake
-            ? "Received — awaiting fake-authority outcome"
-            : "Received — awaiting HMRC outcome",
-        "TerminalPersisted" => "Outcome received — completing conversation",
-        "DeletePending" => "Outcome retained — completing conversation",
-        "Complete" => status.Outcome == "BusinessResponse" ? "Accepted" : "Outcome received",
-        "RecoveryRequired" => "Support required",
-        _ => status.Stage
-    };
+    private CorporationTaxSubmissionView Presentation(CorporationTaxTransactionStatus? status) =>
+        CorporationTaxSubmissionPresentation.For(status, IsFake);
+
+    private static string OutcomeUrl(CorporationTaxTransactionStatus status) =>
+        $"/TaxHub/CorporationTax/Conversation/{Uri.EscapeDataString(status.ConversationReference)}/outcome";
 
     private static bool IsExpected(Exception exception) => exception is InvalidOperationException
         or ArgumentException or KeyNotFoundException or UnauthorizedAccessException

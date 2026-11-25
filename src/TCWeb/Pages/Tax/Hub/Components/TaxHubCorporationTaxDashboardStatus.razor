@@ -1,0 +1,99 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
+@using TradeControl.Web.AppServices.TaxHub.CorporationTax
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ServiceScopeFactory
+
+@if (_status is not null)
+{
+    <section class="alert @AlertClass mb-0" role="@AlertRole" aria-labelledby="ct-dashboard-status-heading">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+            <div>
+                <h2 id="ct-dashboard-status-heading" class="h6 mb-1">@Heading</h2>
+                <div>@Message</div>
+                <div class="small mt-1">
+                    Open <strong>Business Tax</strong>, select <strong>File return</strong>, to review the
+                    submission details@(HasOutcome ? " and download the retained authority response" : string.Empty).
+                </div>
+            </div>
+            <span class="badge @BadgeClass">@StatusLabel</span>
+        </div>
+        @if (NeedsSupport)
+        {
+            <div class="small mt-2">
+                Support reference: <span class="font-monospace">@_status.SupportReference</span>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private CorporationTaxTransactionStatus? _status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var principal = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider
+                .GetRequiredService<ICorporationTaxTransactionEngineService>();
+            _status = await service.GetLatestAsync(principal);
+        }
+        catch
+        {
+            // The File return journey owns detailed diagnostics. A dashboard notification
+            // must never prevent the Tax Hub from loading for an unauthorised or unavailable host.
+            _status = null;
+        }
+    }
+
+    private bool IsAccepted => _status?.Stage == "Complete"
+        && _status.Outcome == "BusinessResponse";
+    private bool IsRejected => _status?.Stage == "Complete" && !IsAccepted;
+    private bool NeedsSupport => _status?.Stage is "SubmissionUncertain" or "RecoveryRequired";
+    private bool HasOutcome => _status?.OutcomeAvailable == true;
+
+    private string Heading => _status?.Stage switch
+    {
+        "AwaitingPoll" => "Corporation Tax return received",
+        "TerminalPersisted" or "DeletePending" => "Corporation Tax outcome received",
+        "Complete" when IsAccepted => "Corporation Tax return accepted",
+        "Complete" => "Corporation Tax return rejected",
+        "SubmissionUncertain" => "Corporation Tax submission needs confirmation",
+        "RecoveryRequired" => "Corporation Tax submission needs support",
+        _ => "Corporation Tax submission in progress"
+    };
+
+    private string Message => _status?.Stage switch
+    {
+        "AwaitingPoll" => "Trade Control is continuing to check the authority outcome in the background.",
+        "TerminalPersisted" or "DeletePending" => "The outcome is safely retained while the authority conversation is closed.",
+        "Complete" when IsAccepted => "The accepted outcome and receipt are safely retained.",
+        "Complete" => "Review the authority response before preparing any correction.",
+        "SubmissionUncertain" => "Do not submit the return again. Recover the existing transaction from File return.",
+        "RecoveryRequired" => "Do not submit another return. Contact support with the reference below.",
+        _ => "Review the latest status in File return."
+    };
+
+    private string StatusLabel => _status?.Stage switch
+    {
+        "AwaitingPoll" => "Pending",
+        "TerminalPersisted" or "DeletePending" => "Completing",
+        "Complete" when IsAccepted => "Accepted",
+        "Complete" => "Rejected",
+        "SubmissionUncertain" => "Confirm",
+        "RecoveryRequired" => "Support",
+        _ => "In progress"
+    };
+
+    private string AlertClass => IsAccepted ? "alert-success"
+        : IsRejected || _status?.Stage == "RecoveryRequired" ? "alert-danger"
+        : _status?.Stage == "SubmissionUncertain" ? "alert-warning"
+        : "alert-info";
+    private string BadgeClass => IsAccepted ? "text-bg-success"
+        : IsRejected || _status?.Stage == "RecoveryRequired" ? "text-bg-danger"
+        : _status?.Stage == "SubmissionUncertain" ? "text-bg-warning"
+        : "text-bg-info";
+    private string AlertRole => IsAccepted || IsRejected || NeedsSupport ? "alert" : "status";
+}

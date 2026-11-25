@@ -1233,12 +1233,16 @@ var corporationTaxTransactionContent = File.ReadAllText(Path.Combine(root, "src"
     "TaxHub", "CorporationTax", "CorporationTaxTransactionEngineContentStore.cs"));
 var corporationTaxTransactionWorker = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CorporationTax", "CorporationTaxTransactionEngineWorker.cs"));
+var corporationTaxPresentation = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
+    "TaxHub", "CorporationTax", "CorporationTaxSubmissionPresentation.cs"));
 var corporationTaxFakeAuthority = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "AppServices",
     "TaxHub", "CorporationTax", "CorporationTaxFakeAuthority.cs"));
 var corporationTaxPreparationComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubCorporationTaxPreparation.razor"));
 var corporationTaxSubmissionComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
     "Components", "TaxHubCorporationTaxSubmission.razor"));
+var corporationTaxDashboardComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCorporationTaxDashboardStatus.razor"));
 var corporationTaxPreparationController = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Controllers",
     "TaxHubCorporationTaxController.cs"));
 var corporationTaxPeriodReviewComponent = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
@@ -1418,11 +1422,28 @@ Assert(corporationTaxTransactionService.Contains("FamilyGateEnabled", StringComp
     && corporationTaxFakeAuthority.Contains("Development-only in-process Transaction Engine double", StringComparison.Ordinal)
     && corporationTaxFakeAuthority.Contains("X-TradeControl-Fake-Authority", StringComparison.Ordinal)
     && corporationTaxSubmissionComponent.Contains("Development simulation", StringComparison.Ordinal)
-    && corporationTaxSubmissionComponent.Contains(
+    && corporationTaxPresentation.Contains(
         "Received — awaiting fake-authority outcome", StringComparison.Ordinal)
     && corporationTaxSubmissionComponent.Contains("autocomplete=\"current-password\"", StringComparison.Ordinal)
     && corporationTaxSubmissionComponent.Contains("_password = string.Empty", StringComparison.Ordinal),
     "CT-D6 no longer preserves the closed production gate, one-send claim, protected evidence or browser-independent polling boundary.");
+Assert(corporationTaxTransactionService.Contains("ReadOutcomeAsync", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("SHA256.HashData(content)", StringComparison.Ordinal)
+    && corporationTaxTransactionService.Contains("SupportReference", StringComparison.Ordinal)
+    && corporationTaxTransactionPersistence.Contains("ListForOwnerAsync", StringComparison.Ordinal)
+    && corporationTaxTransactionPersistence.Contains("ORDER BY UpdatedAtUtc DESC", StringComparison.Ordinal)
+    && corporationTaxPreparationController.Contains("Conversation/{reference}/outcome", StringComparison.Ordinal)
+    && corporationTaxPreparationController.Contains("X-Corporation-Tax-Outcome-SHA256", StringComparison.Ordinal)
+    && corporationTaxPreparationController.Contains("no-store, max-age=0", StringComparison.Ordinal)
+    && corporationTaxPresentation.Contains("Return accepted", StringComparison.Ordinal)
+    && corporationTaxPresentation.Contains("Return rejected", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains("Recover submission status", StringComparison.Ordinal)
+    && corporationTaxPresentation.Contains("Download receipt", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains("Support reference", StringComparison.Ordinal)
+    && corporationTaxDashboardComponent.Contains("GetLatestAsync", StringComparison.Ordinal)
+    && corporationTaxDashboardComponent.Contains("Do not submit the return again", StringComparison.Ordinal)
+    && corporationTaxDashboardComponent.Contains("Corporation Tax return accepted", StringComparison.Ordinal),
+    "CT-D7 no longer provides safe outcome readback, receipt access, support references or dashboard next actions.");
 Assert(companiesHouseReviewService.Contains("ReadTaxOnProfitAsync", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("CorporationTaxPeriodAllocation.Split", StringComparison.Ordinal)
     && companiesHouseReviewService.Contains("ReadCorporationTaxLiabilityAsync", StringComparison.Ordinal)
@@ -2640,6 +2661,36 @@ var fakeCredentials = new CorporationTaxGatewayCredentials("development-user", "
 Assert(fakeCredentials.ToString() == nameof(CorporationTaxGatewayCredentials)
     && !fakeCredentials.ToString().Contains("do-not-retain", StringComparison.Ordinal),
     "Request-scoped Corporation Tax credentials can disclose their password when formatted.");
+var presentationBase = new CorporationTaxTransactionStatus(
+    "0123456789abcdef", "ABCDEF0123456789ABCDEF0123456789", new string('A', 64),
+    new string('B', 64), "Prepared", new DateTimeOffset(2026, 11, 25, 18, 0, 0, TimeSpan.Zero),
+    null, null, false, false, null, "CT-0123456789AB", "DevelopmentFake", false);
+var uncertainPresentation = CorporationTaxSubmissionPresentation.For(
+    presentationBase with { Stage = "SubmissionUncertain" }, true);
+var rejectedPresentation = CorporationTaxSubmissionPresentation.For(
+    presentationBase with
+    {
+        Stage = "Complete", Outcome = "BusinessError", OutcomeAvailable = true,
+        OutcomeSha256 = new string('C', 64)
+    }, false);
+var supportPresentation = CorporationTaxSubmissionPresentation.For(
+    presentationBase with { Stage = "RecoveryRequired" }, false);
+var acceptedPresentation = CorporationTaxSubmissionPresentation.For(
+    presentationBase with
+    {
+        Stage = "Complete", Outcome = "BusinessResponse", OutcomeAvailable = true,
+        ReceiptAvailable = true, OutcomeSha256 = new string('D', 64)
+    }, true);
+Assert(uncertainPresentation.AlertRole == "alert"
+    && uncertainPresentation.Message.Contains("Do not submit it again", StringComparison.Ordinal)
+    && rejectedPresentation.StatusLabel == "Rejected"
+    && rejectedPresentation.DownloadLabel == "Download authority response"
+    && rejectedPresentation.AlertClass == "alert-danger"
+    && supportPresentation.Message.Contains("CT-0123456789AB", StringComparison.Ordinal)
+    && acceptedPresentation.StatusLabel == "Accepted"
+    && acceptedPresentation.DownloadLabel == "Download receipt"
+    && acceptedPresentation.Message.Contains("fake authority", StringComparison.Ordinal),
+    "The CT-D8 negative, recovery or accepted submission presentation became ambiguous or unsafe.");
 var fakeAuthorityState = new CorporationTaxFakeAuthorityState();
 using var fakeAuthorityClient = new HttpClient(new CorporationTaxFakeAuthorityHandler(fakeAuthorityState));
 const string fakeEndpoint = "https://transaction-engine.tax.service.gov.uk/submission";

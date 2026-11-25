@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Xml;
 using System.Xml.Linq;
 using System.Threading;
@@ -67,14 +68,30 @@ internal sealed record CorporationTaxTransactionStatus(
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? PollNotBeforeUtc,
     string? Outcome,
+    bool OutcomeAvailable,
+    bool ReceiptAvailable,
+    string? OutcomeSha256,
+    string SupportReference,
     string AuthorityMode,
     bool ProductionEnabled);
+
+internal sealed record CorporationTaxTransactionOutcome(
+    byte[] Content,
+    string Sha256,
+    string FileName,
+    bool ContainsReceipt);
 
 internal interface ICorporationTaxTransactionEngineService
 {
     Task<CorporationTaxTransactionStatus?> GetAsync(ClaimsPrincipal principal,
         string approvalReference, string logicalFilingIdentity,
         CancellationToken cancellationToken = default);
+
+    Task<CorporationTaxTransactionStatus?> GetLatestAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default);
+
+    Task<CorporationTaxTransactionOutcome> ReadOutcomeAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default);
 
     Task<CorporationTaxTransactionStatus> SubmitApprovedOnceAsync(ClaimsPrincipal principal,
         TaxHubCorporationTaxContinuation continuation, string preparationReference,
@@ -119,6 +136,41 @@ internal sealed class CorporationTaxTransactionEngineService(
         var record = await conversationStore.GetForLogicalSubmissionAsync(owner.TenantReference,
             LogicalSubmission(approvalReference, logicalFilingIdentity), cancellationToken);
         return record is null ? null : Safe(record);
+    }
+
+    public async Task<CorporationTaxTransactionStatus?> GetLatestAsync(
+        ClaimsPrincipal principal, CancellationToken cancellationToken = default)
+    {
+        Authorize(principal);
+        var owner = await identityAccessor.GetRequiredAsync(principal, cancellationToken);
+        var records = await conversationStore.ListForOwnerAsync(owner.TenantReference,
+            owner.ReportingSubjectReference, 1, cancellationToken);
+        return records.Count == 0 ? null : Safe(records[0]);
+    }
+
+    public async Task<CorporationTaxTransactionOutcome> ReadOutcomeAsync(
+        ClaimsPrincipal principal, string conversationReference,
+        CancellationToken cancellationToken = default)
+    {
+        Authorize(principal);
+        var (owner, record) = await OwnedAsync(principal, conversationReference,
+            cancellationToken);
+        if (record.TerminalResponseReference is null
+            || record.TerminalResponseSha256 is null)
+            throw new InvalidOperationException(
+                "The Corporation Tax authority outcome is not yet available.");
+        var content = await transactionContent.ReadAsync(owner.TenantReference,
+            owner.ReportingSubjectReference, record.TerminalResponseReference,
+            cancellationToken) ?? throw new InvalidDataException(
+                "The Corporation Tax authority outcome could not be read.");
+        var digest = Convert.ToHexString(SHA256.HashData(content));
+        if (!string.Equals(digest, record.TerminalResponseSha256,
+                StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(
+                "The Corporation Tax authority outcome failed its integrity check.");
+        return new(content, digest,
+            $"corporation-tax-outcome-{record.TransactionId}.xml",
+            record.ReceiptReference is not null);
     }
 
     public async Task<CorporationTaxTransactionStatus> SubmitApprovedOnceAsync(
@@ -368,7 +420,12 @@ internal sealed class CorporationTaxTransactionEngineService(
     private CorporationTaxTransactionStatus Safe(TransactionEngineConversationRecord record) =>
         new(record.ConversationReference, record.TransactionId, record.ServiceRootSha256,
             record.WireSha256, record.Stage.ToString(), record.UpdatedAt,
-            record.PollNotBefore, record.Outcome, _options.Mode.ToString(),
+            record.PollNotBefore, record.Outcome,
+            record.TerminalResponseReference is not null,
+            record.ReceiptReference is not null,
+            record.TerminalResponseSha256,
+            $"CT-{record.ConversationReference[..Math.Min(12, record.ConversationReference.Length)].ToUpperInvariant()}",
+            _options.Mode.ToString(),
             _options.IsProductionEnabled);
 
     private void RequireEnabled(ClaimsPrincipal principal)
@@ -402,6 +459,10 @@ internal sealed class DisabledCorporationTaxTransactionEngineService
     public Task<CorporationTaxTransactionStatus?> GetAsync(ClaimsPrincipal principal,
         string approvalReference, string logicalFilingIdentity,
         CancellationToken cancellationToken = default) => Task.FromResult<CorporationTaxTransactionStatus?>(null);
+    public Task<CorporationTaxTransactionStatus?> GetLatestAsync(ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default) => Task.FromResult<CorporationTaxTransactionStatus?>(null);
+    public Task<CorporationTaxTransactionOutcome> ReadOutcomeAsync(ClaimsPrincipal principal,
+        string conversationReference, CancellationToken cancellationToken = default) => Disabled<CorporationTaxTransactionOutcome>();
 
     public Task<CorporationTaxTransactionStatus> SubmitApprovedOnceAsync(ClaimsPrincipal principal,
         TaxHubCorporationTaxContinuation continuation, string preparationReference,
@@ -416,6 +477,9 @@ internal sealed class DisabledCorporationTaxTransactionEngineService
         string conversationReference, CancellationToken cancellationToken = default) => Disabled();
 
     private static Task<CorporationTaxTransactionStatus> Disabled() =>
+        throw new InvalidOperationException(
+            "Corporation Tax production submission remains disabled by the family gate.");
+    private static Task<T> Disabled<T>() =>
         throw new InvalidOperationException(
             "Corporation Tax production submission remains disabled by the family gate.");
 }

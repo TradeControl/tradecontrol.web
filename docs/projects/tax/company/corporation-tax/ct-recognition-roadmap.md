@@ -530,10 +530,38 @@ behind one final integration test.
    - persist the one-send claim, background poll scheduling, recovery and delete cleanup;
    - keep official-test and production evidence unmistakably distinct.
 7. **CT-D7 — status, outcome and support experience**
+   **Status: implementation ready for deployed review.** File return now presents the filing lifecycle
+   in business language rather than exposing protocol stages: approved, received, completing,
+   accepted, rejected, uncertain-send and support-required each have distinct guidance. An uncertain
+   send offers recovery of the existing transaction and explicitly forbids another submission. The
+   latest durable result also appears on the Tax Hub dashboard; the background worker remains
+   responsible for polling, so leaving the browser or dashboard open is not required.
+
+   Managers and Administrators can download the retained terminal authority response from the owning
+   business only. The download re-verifies its SHA-256 digest after application-level decryption,
+   returns with no-store headers and is labelled as a receipt when the authority supplied an IRmark
+   receipt. A collapsed Submission details section supplies the transaction ID, update time, safe
+   support reference and request/response digests. Completed outcomes remain readable when the
+   production submission gate is closed. The deployed accepted-path review on 25 November 2026 proved
+   the dashboard notification, dedicated File return result card and authenticated receipt download;
+   the downloaded bytes matched the retained authority-response digest. Negative and recovery-state
+   presentation remains part of D8 rather than being inferred from the successful case.
    - implement pending, accepted, rejected and recovery-required pages;
    - add safe status refresh, receipt/evidence download and support references;
    - integrate Tax Hub dashboard next-action cards and notifications without browser-bound polling.
 8. **CT-D8 — accessibility, security and operational review**
+   **Status: in progress.** Automated coverage now includes owner-scoped conversation lookup,
+   application-encrypted exact evidence, rejection of a different filing owner, duplicate-send
+   prevention, immutable approval/source checks, role-gated outcome access and integrity-checked
+   response download. Release build, Transaction Engine, architecture, Cash Statement and Tax Hub
+   boundary suites pass. Direct presentation fixtures now exercise accepted, rejected, uncertain-send
+   and recovery-required wording, alert roles and download labels without manufacturing authority
+   evidence. The first deployed keyboard check passed: the receipt link and native Submission details
+   disclosure were reachable in sequence, `Enter` expanded the disclosure, and its transaction,
+   support-reference and digest terms were present in the accessibility tree. The remaining acceptance
+   work is the complete screen-reader and responsive review; explicit restart/scale-out and worker-recovery exercises; review of safe
+   customer wording for rejected and uncertain outcomes; and the final operator/customer support
+   record. No production dispatch is enabled by D8 testing.
    - keyboard/screen-reader and responsive review of the complete journey;
    - cross-tenant, privilege, replay, stale-source, duplicate-send and protected-content tests;
    - restart/scale-out exercises against the shared persistence and background worker;

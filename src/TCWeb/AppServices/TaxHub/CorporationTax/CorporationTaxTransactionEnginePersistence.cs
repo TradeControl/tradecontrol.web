@@ -114,6 +114,32 @@ internal sealed class AzureCorporationTaxTransactionStore(
         return Deserialize(await command.ExecuteScalarAsync(cancellationToken));
     }
 
+    public async Task<IReadOnlyList<TransactionEngineConversationRecord>> ListForOwnerAsync(
+        string tenantReference, string principalReference, int maximumRecords,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateReference(tenantReference, nameof(tenantReference));
+        ValidateReference(principalReference, nameof(principalReference));
+        if (maximumRecords is < 1 or > 1000)
+            throw new ArgumentOutOfRangeException(nameof(maximumRecords));
+        await using var connection = await OpenAsync(cancellationToken);
+        await using var command = new SqlCommand("""
+            SELECT TOP (@maximum) PayloadJson
+              FROM Tax.CorporationTaxConversation
+             WHERE TenantReference = @tenant
+               AND PrincipalReference = @principal
+             ORDER BY UpdatedAtUtc DESC, Reference DESC;
+            """, connection);
+        Add(command, "maximum", maximumRecords);
+        Add(command, "tenant", Guid.Parse(tenantReference));
+        Add(command, "principal", principalReference);
+        var records = new List<TransactionEngineConversationRecord>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            records.Add(Deserialize(reader.GetString(0))!);
+        return records;
+    }
+
     public async Task<IReadOnlyList<TransactionEngineConversationRecord>> ListActionableAsync(
         DateTimeOffset now, int maximumRecords,
         CancellationToken cancellationToken = default)

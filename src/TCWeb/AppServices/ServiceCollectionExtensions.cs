@@ -123,20 +123,15 @@ namespace TradeControl.Web.AppServices
                     AzureCorporationTaxTransactionStore>();
                 services.AddScoped<TradeControl.Tax.UK.Adapters.Submission.Audit.ISubmissionContentStore,
                     CorporationTaxTransactionEngineContentStore>();
+                services.AddScoped<ICorporationTaxTransactionEngineService,
+                    CorporationTaxTransactionEngineService>();
                 var transactionEngineMode = configuration.GetValue<CorporationTaxTransactionEngineMode>(
                     $"{CorporationTaxTransactionEngineOptions.SectionName}:Mode");
                 if (transactionEngineMode == CorporationTaxTransactionEngineMode.DevelopmentFake
                     || transactionEngineMode == CorporationTaxTransactionEngineMode.Production
                         && configuration.GetValue<bool>(
                             $"{CorporationTaxTransactionEngineOptions.SectionName}:FamilyGateEnabled"))
-                {
-                    services.AddScoped<ICorporationTaxTransactionEngineService,
-                        CorporationTaxTransactionEngineService>();
                     services.AddHostedService<CorporationTaxTransactionEngineWorker>();
-                }
-                else
-                    services.AddScoped<ICorporationTaxTransactionEngineService,
-                        DisabledCorporationTaxTransactionEngineService>();
                 if (configuration.GetValue<CompaniesHouseDispatchMode>(
                         $"{CompaniesHouseProductHostOptions.SectionName}:DispatchMode")
                     == CompaniesHouseDispatchMode.OfficialTestSingleSend)
