@@ -59,7 +59,23 @@ namespace TradeControl.Web.AppServices
                     "Enabled platform email requires an authenticated SMTP host, credentials, sender and mandatory TLS mode.")
                 .ValidateOnStart();
             services.AddSingleton<IPlatformEmailSender, PlatformSmtpEmailSender>();
-            services.AddSingleton<ITenantDirectory, ConfiguredTenantDirectory>();
+            services.AddSingleton<ICatalogueTenantSource, SqlCatalogueTenantSource>();
+            services.AddSingleton<ITenantDirectory>(provider =>
+            {
+                var options = provider.GetRequiredService<IOptions<TenantHostingOptions>>().Value;
+                if (options.SharedHostEnabled)
+                {
+                    if (options.DirectorySource != TenantDirectorySource.Catalogue)
+                        throw new InvalidOperationException(
+                            "Shared-host mode requires the catalogue tenant directory.");
+                    return ActivatorUtilities.CreateInstance<CatalogueTenantDirectory>(provider);
+                }
+
+                if (options.DirectorySource != TenantDirectorySource.Configuration)
+                    throw new InvalidOperationException(
+                        "Single-tenant mode requires the configured tenant directory.");
+                return ActivatorUtilities.CreateInstance<ConfiguredTenantDirectory>(provider);
+            });
             services.AddSingleton<TenantAmbientContext>();
             services.AddScoped<ITenantContext, TenantContext>();
             services.AddScoped<IDbContextFactory<Data.NodeContext>, TenantNodeContextFactory>();

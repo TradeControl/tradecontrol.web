@@ -22,6 +22,7 @@ namespace TradeControl.Web
             var host = CreateHostBuilder(args).Build();
 
             var tenantOptions = host.Services.GetRequiredService<IOptions<TenantHostingOptions>>().Value;
+            _ = host.Services.GetRequiredService<ITenantDirectory>().ListEnabled();
             if (tenantOptions.SeedOnStartup)
             {
                 if (tenantOptions.SharedHostEnabled)

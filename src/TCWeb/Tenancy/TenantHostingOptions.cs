@@ -8,10 +8,22 @@ public sealed class TenantHostingOptions
     public const string SectionName = "Tenancy";
     public bool SharedHostEnabled { get; set; }
     public bool SeedOnStartup { get; set; } = true;
+    public TenantDirectorySource DirectorySource { get; set; } = TenantDirectorySource.Configuration;
+    public string CatalogueConnectionStringName { get; set; } = "TenantCatalogue";
+    public string TenantConnectionStringTemplateName { get; set; } = "TenantDatabaseTemplate";
+    public string CatalogueEnvironmentName { get; set; } = string.Empty;
+    public int CatalogueSchemaVersion { get; set; } = 2;
+    public List<string> SupportedTenantSchemaVersions { get; set; } = [];
     public string? DefaultTenantReference { get; set; }
     public string DefaultConnectionStringName { get; set; } = "TCNodeContext";
     public string DefaultBusinessTimeZoneId { get; set; } = "Europe/London";
     public List<TenantRegistration> Tenants { get; set; } = [];
+}
+
+public enum TenantDirectorySource
+{
+    Configuration = 0,
+    Catalogue = 1
 }
 
 public sealed class TenantRegistration

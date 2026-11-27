@@ -150,9 +150,59 @@ internal static class TenantIsolationTests
         Assert(invalidTimeZoneRejected,
             "A platform-specific time-zone identifier was accepted instead of an IANA identifier.");
 
+        var catalogueTenant = Guid.NewGuid();
+        var catalogueConfiguration = new ConfigurationBuilder().AddInMemoryCollection(
+            new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:TenantDatabaseTemplate"] =
+                    "Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False"
+            }).Build();
+        var catalogueOptions = Options.Create(new TenantHostingOptions
+        {
+            SharedHostEnabled = true,
+            DirectorySource = TenantDirectorySource.Catalogue,
+            SupportedTenantSchemaVersions = ["4.1.23"]
+        });
+        var catalogueDirectory = new CatalogueTenantDirectory(
+            new StubCatalogueTenantSource(
+            [
+                new CatalogueTenantRecord(catalogueTenant, "catalogue.example.test",
+                    "sql.example.test", "tenant-database", Guid.NewGuid(),
+                    "Europe/London", true, "4.1.23")
+            ]), catalogueOptions, catalogueConfiguration);
+        var catalogueDescriptor = catalogueDirectory.ResolveHost("CATALOGUE.EXAMPLE.TEST");
+        Assert(catalogueDescriptor?.TenantId == catalogueTenant
+            && catalogueDescriptor.VatSubmissionEnabled
+            && catalogueDescriptor.ConnectionString.Contains("tenant-database", StringComparison.Ordinal)
+            && catalogueDescriptor.ConnectionStringName == "catalogue:tenant-database",
+            "The catalogue directory did not derive the active tenant and protected connection correctly.");
+
+        var unsupportedSchemaRejected = false;
+        try
+        {
+            _ = new CatalogueTenantDirectory(new StubCatalogueTenantSource(
+            [
+                new CatalogueTenantRecord(Guid.NewGuid(), "old.example.test",
+                    "sql.example.test", "old-database", Guid.NewGuid(),
+                    "Europe/London", false, "4.1.22")
+            ]), catalogueOptions, catalogueConfiguration);
+        }
+        catch (InvalidOperationException)
+        {
+            unsupportedSchemaRejected = true;
+        }
+        Assert(unsupportedSchemaRejected,
+            "An active catalogue tenant with an unsupported database schema was accepted.");
+
         return assertions;
     }
 
     private static ClaimsPrincipal Principal(Guid tenantId) => new(new ClaimsIdentity(
         [new Claim(TenantIdentity.TenantClaimType, tenantId.ToString("D"))], "test"));
+
+    private sealed class StubCatalogueTenantSource(IReadOnlyList<CatalogueTenantRecord> records)
+        : ICatalogueTenantSource
+    {
+        public IReadOnlyList<CatalogueTenantRecord> LoadActive() => records;
+    }
 }
