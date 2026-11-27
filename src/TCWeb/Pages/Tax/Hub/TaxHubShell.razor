@@ -449,7 +449,7 @@ else
             {
                 SelectedWorkspace = TaxHubWorkspace.BusinessTax,
                 Title = "Business Tax",
-                Subtitle = "Business tax reporting workspace"
+                Subtitle = string.Empty
             },
             TaxHubWorkspace.Accounts => _state with
             {
@@ -609,9 +609,7 @@ else
                                     Title = businessTax.SupportsCorporationTax
                                         ? "Corporation Tax"
                                         : "Business Tax",
-                                    Subtitle = businessTax.SupportsCorporationTax
-                                        ? "Understand, prepare and file your Company Tax Return"
-                                        : "Business tax reporting workspace"
+                                    Subtitle = string.Empty
                                 };
                             }
                         }

@@ -313,7 +313,6 @@ namespace TradeControl.Web.Data
         public virtual DbSet<Cash_vwTaxBizAuditAccrual> Cash_TaxBizAuditAccruals { get; set; }
         public virtual DbSet<Cash_vwTaxBizStatement> Cash_TaxBizStatement { get; set; }
         public virtual DbSet<Cash_vwTaxLossesCarriedForward> Cash_TaxLossesCarriedForward { get; set; }
-        public virtual DbSet<Cash_vwTaxBizTotal> Cash_TaxBizTotals { get; set; }
         public virtual DbSet<Invoice_vwTaxSummary> Invoice_TaxSummary { get; set; }
         public virtual DbSet<Cash_vwTaxVatAuditAccrual> Cash_TaxVatAuditAccruals { get; set; }
         public virtual DbSet<Cash_vwTaxVatAuditInvoice> Cash_TaxVatAuditInvoices { get; set; }
@@ -3639,11 +3638,6 @@ namespace TradeControl.Web.Data
             modelBuilder.Entity<Cash_vwTaxBizStatement>(entity =>
             {
                 entity.ToView("vwTaxBizStatement", "Cash");
-            });
-
-            modelBuilder.Entity<Cash_vwTaxBizTotal>(entity =>
-            {
-                entity.ToView("vwTaxBizTotals", "Cash");
             });
 
             modelBuilder.Entity<Cash_vwTaxLossesCarriedForward>(entity =>

@@ -92,10 +92,11 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .OrderByDescending(t => t.StartOn)
                 .FirstOrDefaultAsync();
 
-            var businessTaxTotals = await _nodeContext.Cash_TaxBizTotals
+            var businessTaxPeriod = await _nodeContext.App_Periods
                 .AsNoTracking()
                 .Where(t => t.StartOn <= _businessClock.TodayDateTime)
                 .OrderByDescending(t => t.StartOn)
+                .Select(t => t.Description)
                 .FirstOrDefaultAsync();
 
             var projectedDue = await _nodeContext.GetProjectedTaxDueAsync(_businessClock.TodayDateTime);
@@ -106,7 +107,7 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .Select(t => t.TaxTypeCode == 0 ? "Limited Company" : "Sole Trader")
                 .FirstOrDefaultAsync() ?? string.Empty;
 
-            var businessTaxCard = await BuildBusinessTaxCard(businessTaxTotals, obligations, projectedDue);
+            var businessTaxCard = await BuildBusinessTaxCard(businessTaxPeriod, obligations, projectedDue);
             var reportingReadiness = await GetReportingReadinessAsync();
 
             return new TaxHubDashboardModel
@@ -432,28 +433,12 @@ namespace TradeControl.Web.AppServices.TaxHub
                 .AnyAsync(profile => profile.SubjectCode == subjectCode
                     && profile.ReportingTypeCode == (short)NodeEnum.ReportingType.CompanyTax);
 
-            var totalsQuery = _nodeContext.Cash_TaxBizTotals
-                .AsNoTracking()
-                .Where(t => t.StartOn <= _businessClock.TodayDateTime)
-                .AsQueryable();
-
-            if (yearNumber.HasValue)
-                totalsQuery = totalsQuery.Where(t => t.YearNumber == yearNumber.Value);
-
-            var totals = await totalsQuery
-                .OrderByDescending(t => t.StartOn)
-                .Select(t => new TaxHubBusinessTaxTotalRow
-                {
-                    YearNumber = t.YearNumber,
-                    StartOn = t.StartOn,
-                    Description = t.Description,
-                    Period = t.Period,
-                    BusinessTaxRate = t.BusinessTaxRate,
-                    BusinessTaxAdjustment = t.BusinessTaxAdjustment,
-                    NetProfit = t.NetProfit,
-                    BusinessTax = t.BusinessTax
-                })
-                .ToListAsync();
+            var corporationTaxCalculations = supportsCorporationTax
+                ? await GetCorporationTaxAnnualCalculationsAsync(yearNumber)
+                : Array.Empty<TaxHubCorporationTaxAnnualRow>();
+            var soleTraderTaxCalculations = supportsCorporationTax
+                ? Array.Empty<TaxHubSoleTraderTaxAnnualRow>()
+                : await GetSoleTraderTaxAnnualCalculationsAsync(yearNumber);
 
             var yearPeriodStartDates = yearNumber.HasValue
                 ? await _nodeContext.App_tbYearPeriods
@@ -647,7 +632,8 @@ namespace TradeControl.Web.AppServices.TaxHub
                 CorporationTaxIdentityAsOf = corporationTaxIdentityAsOf,
                 IsAllYears = !yearNumber.HasValue,
                 IsAllPeriodsInYear = isAllPeriodsInYear,
-                Totals = totals,
+                CorporationTaxCalculations = corporationTaxCalculations,
+                SoleTraderTaxCalculations = soleTraderTaxCalculations,
                 Statement = statement,
                 LossesCarriedForward = lossesCarriedForward,
                 Sources = sources
@@ -1558,8 +1544,141 @@ namespace TradeControl.Web.AppServices.TaxHub
             };
         }
 
+        private async Task<IReadOnlyList<TaxHubCorporationTaxAnnualRow>> GetCorporationTaxAnnualCalculationsAsync(
+            short? yearNumber)
+        {
+            var rows = new List<TaxHubCorporationTaxAnnualRow>();
+            var connection = _nodeContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+                await connection.OpenAsync();
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = """
+                    SELECT liability.YearNumber, liability.Description, liability.PeriodStart, liability.PeriodEnd,
+                           liability.AccountingResult,
+                           DepreciationAddBack = COALESCE(depreciation.StatutoryAmount, 0),
+                           liability.RelevantDistributions, liability.LossUsed, liability.TaxableTotalProfits,
+                           AugmentedProfits, CalculationCode, TaxBeforeMarginalRelief,
+                           MarginalRelief, BusinessTaxAdjustment, TaxDue,
+                           IsProvisional, IsAccrualReady, IsFilingReady
+                    FROM Cash.vwTaxCorpLiabilityUK liability
+                    OUTER APPLY
+                    (
+                        SELECT projection.StatutoryAmount
+                        FROM Cash.fnTaxBizCumulative
+                        (
+                            liability.TaxSourceCode,
+                            liability.PeriodStart,
+                            DATEADD(day, 1, liability.PeriodEnd)
+                        ) projection
+                        WHERE projection.TagCode = N'AddBacks.AccountingDepreciation'
+                          AND projection.SupportStatus = N'Supported'
+                    ) depreciation
+                    WHERE (@YearNumber IS NULL OR liability.YearNumber = @YearNumber)
+                    ORDER BY liability.PeriodStart DESC;
+                    """;
+                command.Parameters.Add(new SqlParameter("@YearNumber", SqlDbType.SmallInt)
+                {
+                    Value = yearNumber.HasValue ? yearNumber.Value : DBNull.Value
+                });
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    rows.Add(new TaxHubCorporationTaxAnnualRow
+                    {
+                        YearNumber = reader.GetInt16(0),
+                        Description = reader.GetString(1),
+                        PeriodStart = DateOnly.FromDateTime(reader.GetDateTime(2)),
+                        PeriodEnd = DateOnly.FromDateTime(reader.GetDateTime(3)),
+                        AccountingResult = reader.GetDecimal(4),
+                        DepreciationAddBack = reader.GetDecimal(5),
+                        RelevantDistributions = reader.GetDecimal(6),
+                        LossUsed = reader.GetDecimal(7),
+                        TaxableTotalProfits = reader.GetDecimal(8),
+                        AugmentedProfits = reader.GetDecimal(9),
+                        CalculationCode = reader.GetString(10),
+                        TaxBeforeMarginalRelief = reader.GetDecimal(11),
+                        MarginalRelief = reader.GetDecimal(12),
+                        BusinessTaxAdjustment = reader.GetDecimal(13),
+                        TaxDue = reader.GetDecimal(14),
+                        IsProvisional = reader.GetBoolean(15),
+                        IsAccrualReady = reader.GetBoolean(16),
+                        IsFilingReady = reader.GetBoolean(17)
+                    });
+                }
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            return rows;
+        }
+
+        private async Task<IReadOnlyList<TaxHubSoleTraderTaxAnnualRow>> GetSoleTraderTaxAnnualCalculationsAsync(
+            short? yearNumber)
+        {
+            var rows = new List<TaxHubSoleTraderTaxAnnualRow>();
+            var connection = _nodeContext.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+                await connection.OpenAsync();
+
+            try
+            {
+                await using var command = connection.CreateCommand();
+                command.CommandText = """
+                    SELECT YearNumber, Description, PeriodStart, PeriodEnd,
+                           TaxableResult, LossUsed, TaxableProfitAfterRelief,
+                           EffectiveTaxRate, TaxBeforeRelief, TaxReliefApplied,
+                           BusinessTaxAdjustment, TaxDue
+                    FROM Cash.vwTaxBizComputationByYear
+                    WHERE (@YearNumber IS NULL OR YearNumber = @YearNumber)
+                    ORDER BY PeriodStart DESC;
+                    """;
+                command.Parameters.Add(new SqlParameter("@YearNumber", SqlDbType.SmallInt)
+                {
+                    Value = yearNumber.HasValue ? yearNumber.Value : DBNull.Value
+                });
+
+                await using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    rows.Add(new TaxHubSoleTraderTaxAnnualRow
+                    {
+                        YearNumber = reader.GetInt16(0),
+                        Description = reader.GetString(1),
+                        PeriodStart = DateOnly.FromDateTime(reader.GetDateTime(2)),
+                        PeriodEnd = DateOnly.FromDateTime(reader.GetDateTime(3)),
+                        TaxableResult = reader.GetDecimal(4),
+                        LossUsed = reader.GetDecimal(5),
+                        TaxableProfitAfterRelief = reader.GetDecimal(6),
+                        EffectiveTaxRate = reader.GetDecimal(7),
+                        TaxBeforeRelief = reader.GetDecimal(8),
+                        TaxReliefApplied = reader.GetDecimal(9),
+                        BusinessTaxAdjustment = reader.GetDecimal(10),
+                        TaxDue = reader.GetDecimal(11)
+                    });
+                }
+            }
+            finally
+            {
+                if (shouldClose)
+                    await connection.CloseAsync();
+            }
+
+            return rows;
+        }
+
         private async Task<TaxHubDashboardCard> BuildBusinessTaxCard(
-            Cash_vwTaxBizTotal? businessTaxTotals,
+            string? businessTaxPeriod,
             IReadOnlyCollection<TaxHubObligationSummary> obligations,
             TaxHubProjectedTaxDue projectedDue)
         {
@@ -1571,8 +1690,8 @@ namespace TradeControl.Web.AppServices.TaxHub
             {
                 Workspace = TaxHubWorkspace.BusinessTax,
                 Title = "Business Tax",
-                Subtitle = businessTaxTotals?.Period ?? "No Business Tax totals available",
-                Status = businessTaxTotals is null ? "Not available" : "Active",
+                Subtitle = businessTaxPeriod ?? "No Business Tax period available",
+                Status = businessTaxPeriod is null ? "Not available" : "Active",
                 PrimaryValue = projectedDue.BusinessTaxDue == 0m ? "—" : projectedDue.BusinessTaxDue.ToString("C"),
                 SecondaryValue = businessTaxObligation?.NextPaymentDueOn?.ToString("dd MMM yyyy") ?? "No payment due date",
                 Detail = businessTaxObligation?.NextFilingDueOn is null

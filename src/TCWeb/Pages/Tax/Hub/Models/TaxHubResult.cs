@@ -168,7 +168,10 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public DateOnly CorporationTaxIdentityAsOf { get; init; }
         public bool IsAllYears { get; init; }
         public bool IsAllPeriodsInYear { get; init; }
-        public IReadOnlyList<TaxHubBusinessTaxTotalRow> Totals { get; init; } = Array.Empty<TaxHubBusinessTaxTotalRow>();
+        public IReadOnlyList<TaxHubCorporationTaxAnnualRow> CorporationTaxCalculations { get; init; } =
+            Array.Empty<TaxHubCorporationTaxAnnualRow>();
+        public IReadOnlyList<TaxHubSoleTraderTaxAnnualRow> SoleTraderTaxCalculations { get; init; } =
+            Array.Empty<TaxHubSoleTraderTaxAnnualRow>();
         public IReadOnlyList<TaxHubBusinessTaxStatementRow> Statement { get; init; } = Array.Empty<TaxHubBusinessTaxStatementRow>();
         public IReadOnlyList<TaxHubBusinessTaxLossesRow> LossesCarriedForward { get; init; } = Array.Empty<TaxHubBusinessTaxLossesRow>();
         public IReadOnlyList<TaxHubBusinessTaxSourceWorkspace> Sources { get; init; } = Array.Empty<TaxHubBusinessTaxSourceWorkspace>();
@@ -199,16 +202,46 @@ namespace TradeControl.Web.Pages.Tax.Hub.Models
         public IReadOnlyList<TaxHubBusinessTaxPayloadRow> Payload { get; init; } = Array.Empty<TaxHubBusinessTaxPayloadRow>();
     }
 
-    public sealed class TaxHubBusinessTaxTotalRow
+    public sealed class TaxHubCorporationTaxAnnualRow
     {
         public short YearNumber { get; init; }
-        public DateTime StartOn { get; init; }
         public string Description { get; init; } = string.Empty;
-        public string Period { get; init; } = string.Empty;
-        public decimal BusinessTaxRate { get; init; }
+        public DateOnly PeriodStart { get; init; }
+        public DateOnly PeriodEnd { get; init; }
+        public decimal AccountingResult { get; init; }
+        public decimal DepreciationAddBack { get; init; }
+        public decimal RelevantDistributions { get; init; }
+        public decimal LossUsed { get; init; }
+        public decimal TaxableTotalProfits { get; init; }
+        public decimal AugmentedProfits { get; init; }
+        public string CalculationCode { get; init; } = string.Empty;
+        public decimal TaxBeforeMarginalRelief { get; init; }
+        public decimal MarginalRelief { get; init; }
         public decimal BusinessTaxAdjustment { get; init; }
-        public decimal NetProfit { get; init; }
-        public decimal BusinessTax { get; init; }
+        public decimal TaxDue { get; init; }
+        public bool IsProvisional { get; init; }
+        public bool IsAccrualReady { get; init; }
+        public bool IsFilingReady { get; init; }
+
+        public decimal AccountingProfitBeforeTax => AccountingResult - DepreciationAddBack;
+        public decimal MarginalReliefDeduction => -Math.Abs(MarginalRelief);
+        public decimal EffectiveTaxRate => TaxableTotalProfits == 0m ? 0m : TaxDue / TaxableTotalProfits;
+    }
+
+    public sealed class TaxHubSoleTraderTaxAnnualRow
+    {
+        public short YearNumber { get; init; }
+        public string Description { get; init; } = string.Empty;
+        public DateOnly PeriodStart { get; init; }
+        public DateOnly PeriodEnd { get; init; }
+        public decimal TaxableResult { get; init; }
+        public decimal LossUsed { get; init; }
+        public decimal TaxableProfitAfterRelief { get; init; }
+        public decimal EffectiveTaxRate { get; init; }
+        public decimal TaxBeforeRelief { get; init; }
+        public decimal TaxReliefApplied { get; init; }
+        public decimal BusinessTaxAdjustment { get; init; }
+        public decimal TaxDue { get; init; }
     }
 
     public sealed class TaxHubBusinessTaxStatementRow

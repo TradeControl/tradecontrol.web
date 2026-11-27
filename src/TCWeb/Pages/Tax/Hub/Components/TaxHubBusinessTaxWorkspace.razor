@@ -18,26 +18,16 @@
 }
 else
 {
-    <div class="tc-tax-hub-business-tax d-flex flex-column gap-4">
-        @if (Workspace.SupportsCorporationTax)
+    <div class="tc-tax-hub-business-tax d-flex flex-column gap-2">
+        @if (Workspace.SupportsCorporationTax && _canViewTechnicalDetails)
         {
-            <div class="alert alert-light border mb-0 d-flex align-items-start justify-content-between gap-3" role="status">
-                <div>
-                    <div class="fw-semibold">Corporation Tax</div>
-                    <div class="small text-muted">
-                        Planning figures respond to the financial-year filters. A Company Tax Return uses a fixed,
-                        reviewed accounting period and will not change when these filters change.
-                    </div>
-                </div>
-                @if (_canViewTechnicalDetails)
-                {
-                    <button type="button"
-                            class="btn btn-link btn-sm flex-shrink-0 p-0"
-                            aria-expanded="@_showDiagnostics"
-                            @onclick="ToggleDiagnostics">
-                        @(_showDiagnostics ? "Close diagnostics" : "Diagnostics")
-                    </button>
-                }
+            <div class="d-flex justify-content-end">
+                <button type="button"
+                        class="btn btn-link btn-sm p-0"
+                        aria-expanded="@_showDiagnostics"
+                        @onclick="ToggleDiagnostics">
+                    @(_showDiagnostics ? "Close diagnostics" : "Diagnostics")
+                </button>
             </div>
         }
 
@@ -99,14 +89,9 @@ else
         {
             <MudTabs Rounded="true">
             <MudTabPanel Text="Overview" Class="pt-3">
-                <section class="d-flex flex-column gap-3">
-                    <div>
-                        <h2 class="h5 mb-1">@(Workspace.SupportsCorporationTax ? "Corporation Tax position" : "Business Tax position")</h2>
-                        <div class="text-muted small">Tax due, paid and running balance from the live cash statement</div>
-                    </div>
-
+                <section class="d-flex flex-column gap-2">
                     <div class="alert alert-info py-2 mb-0 small" role="status">
-                        These are live planning values. They are not a filed return and filing does not pay the tax.
+                        Live planning values from the Cash Statement. They are not a filed return and filing does not pay the tax.
                     </div>
 
                     <TaxHubBusinessTaxStatementGrid Items="@Workspace.Statement" />
@@ -114,36 +99,61 @@ else
             </MudTabPanel>
 
             <MudTabPanel Text="Calculation" Class="pt-3">
-                <section class="tc-tax-hub-single-grid-panel d-flex flex-column gap-3">
-                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
-                        <div>
-                            <h2 class="h5 mb-1">Tax calculation</h2>
-                            <div class="text-muted small">Period profit and tax accruals for the selected planning context</div>
-                        </div>
+                <section class="tc-tax-hub-single-grid-panel d-flex flex-column gap-2">
+                    <div class="d-flex flex-wrap justify-content-end gap-2">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    aria-expanded="@_showCalculationNotes"
+                                    @onclick="ToggleCalculationNotes">
+                                @(_showCalculationNotes ? "Close notes" : "Calculation notes")
+                            </button>
 
-                        @if (_canViewTechnicalDetails)
-                        {
-                            <a href="/Admin/Manager/Index?node=TaxRates"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               class="btn btn-sm btn-outline-warning">
-                                Review tax rates
-                            </a>
-                        }
+                            @if (_canViewTechnicalDetails)
+                            {
+                                <a href="/Admin/Manager/Index?node=TaxRates"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="btn btn-sm btn-outline-warning">
+                                    Review tax rates
+                                </a>
+                            }
                     </div>
 
-                    <div class="text-muted small">@PlanningContext</div>
-                    <TaxHubBusinessTaxTotalsGrid Items="@Workspace.Totals" />
+                    @if (_showCalculationNotes)
+                    {
+                        <div class="alert alert-info py-2 mb-0 small" role="status">
+                            <div>
+                                The financial-year selector controls this calculation. The monthly period selector does not
+                                change an annual tax calculation; monthly profit and cash timing remain available in the Cash Statement.
+                            </div>
+                            @if (Workspace.SupportsCorporationTax)
+                            {
+                                <div class="mt-1">
+                                    Relevant distributions are excluded from taxable profits but included in augmented profits
+                                    when determining the Corporation Tax rate. Marginal relief is shown as a deduction so the
+                                    calculation adds up.
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (Workspace.SupportsCorporationTax)
+                    {
+                        <TaxHubCorporationTaxAnnualGrid Items="@Workspace.CorporationTaxCalculations" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning py-2 mb-0 small" role="status">
+                            Sole-trader tax planning is in development. This view shows the current configured annual estimate;
+                            it is not a filing calculation.
+                        </div>
+                        <TaxHubSoleTraderTaxAnnualGrid Items="@Workspace.SoleTraderTaxCalculations" />
+                    }
                 </section>
             </MudTabPanel>
 
             <MudTabPanel Text="@(IsMobile ? "Losses" : "Losses and adjustments")" Class="pt-3">
-                <section class="tc-tax-hub-single-grid-panel d-flex flex-column gap-3">
-                    <div>
-                        <h2 class="h5 mb-1">Losses carried forward</h2>
-                        <div class="text-muted small">Losses available at each year end</div>
-                    </div>
-
+                <section class="tc-tax-hub-single-grid-panel d-flex flex-column gap-2">
                     <TaxHubBusinessTaxLossesGrid Items="@Workspace.LossesCarriedForward" />
 
                     @if (Workspace.SupportsCorporationTax)
@@ -160,11 +170,7 @@ else
             {
                 <MudTabPanel Text="@(IsMobile ? "File" : "File return")" Class="pt-3">
                     <section class="d-flex flex-column gap-3">
-                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
-                            <div>
-                                <h2 class="h5 mb-1">File your Company Tax Return</h2>
-                                <div class="text-muted small">Continue from accepted accounts into one reviewed filing journey</div>
-                            </div>
+                        <div class="d-flex justify-content-end">
                             <span class="badge @FilingJourneyStatusClass">
                                 @FilingJourneyStatus
                             </span>
@@ -433,7 +439,8 @@ else
                                         <TaxHubCorporationTaxPreparation
                                             Continuation="@Continuation"
                                             CanPrepare="@_calculationReview.IsReady"
-                                            OnApprovalStateChanged="SetApprovalState" />
+                                            OnApprovalStateChanged="SetApprovalState"
+                                            OnSubmissionStatusChanged="SetSubmissionStatus" />
                                     }
                                 }
 
@@ -446,7 +453,15 @@ else
                                     <li>Track HMRC's outcome and retrieve the receipt.</li>
                                 </ol>
 
-                                @if (_hasApprovedReturn)
+                                @if (_submissionSummary is not null)
+                                {
+                                    <div class="alert @_submissionSummary.AlertClass mb-0"
+                                         role="@_submissionSummary.AlertRole">
+                                        <div class="fw-semibold">@_submissionSummary.Heading</div>
+                                        <div>@_submissionSummary.Message</div>
+                                    </div>
+                                }
+                                else if (_hasApprovedReturn)
                                 {
                                     <div class="alert alert-info mb-0" role="status">
                                         <div class="fw-semibold">Approval complete — submission is next</div>
@@ -481,6 +496,7 @@ else
 
     private bool _canViewTechnicalDetails;
     private bool _showDiagnostics;
+    private bool _showCalculationNotes;
     private bool _continuationLoading;
     private string? _continuationError;
     private string? _continuationLookupKey;
@@ -489,6 +505,7 @@ else
     private string? _calculationReviewLookupKey;
     private CorporationTaxCalculationReview? _calculationReview;
     private bool _hasApprovedReturn;
+    private CorporationTaxSubmissionSummary? _submissionSummary;
      private string? _calculationReviewSavingIdentity;
      private string? _calculationReviewSaveErrorIdentity;
      private string? _calculationReviewSaveError;
@@ -497,14 +514,6 @@ else
 
     private CompaniesHouseFilingContinuation? LatestCompaniesHouseFiling =>
         _companiesHouseFilings.FirstOrDefault();
-
-    private string PlanningContext => Workspace switch
-    {
-        null => string.Empty,
-        { IsAllYears: true } => "All financial years",
-        { IsAllPeriodsInYear: true } => Workspace.SelectedYearDescription ?? "Selected financial year",
-        _ => $"{Workspace.SelectedYearDescription} • {Workspace.SelectedPeriodDescription}"
-    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -628,6 +637,7 @@ else
         if (string.Equals(lookupKey, _calculationReviewLookupKey, StringComparison.Ordinal))
             return;
         _hasApprovedReturn = false;
+        _submissionSummary = null;
         _calculationReviewLookupKey = lookupKey;
         _calculationReviewLoading = true;
         _calculationReviewError = null;
@@ -690,11 +700,17 @@ else
 
     private void ToggleDiagnostics() => _showDiagnostics = !_showDiagnostics;
 
+    private void ToggleCalculationNotes() => _showCalculationNotes = !_showCalculationNotes;
+
     private void SetApprovalState(bool approved) => _hasApprovedReturn = approved;
+
+    private void SetSubmissionStatus(CorporationTaxSubmissionSummary summary) =>
+        _submissionSummary = summary;
 
     private string FilingJourneyStatus => Continuation switch
     {
         null => "Not started",
+        _ when _submissionSummary is not null => _submissionSummary.StatusLabel,
         _ when _hasApprovedReturn => "Approved",
         _ => "Accounts accepted"
     };
@@ -702,6 +718,7 @@ else
     private string FilingJourneyStatusClass => Continuation switch
     {
         null => "bg-secondary",
+        _ when _submissionSummary is not null => _submissionSummary.BadgeClass,
         _ when _hasApprovedReturn => "bg-primary",
         _ => "bg-success"
     };

@@ -154,6 +154,7 @@
     [Parameter, EditorRequired] public TaxHubCorporationTaxContinuation Continuation { get; set; } = default!;
     [Parameter, EditorRequired] public string PreparationReference { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string ApprovalReference { get; set; } = string.Empty;
+    [Parameter] public EventCallback<CorporationTaxSubmissionSummary> OnStatusChanged { get; set; }
 
     private readonly Dictionary<string, CorporationTaxTransactionStatus> _statuses =
         new(StringComparer.Ordinal);
@@ -217,6 +218,7 @@
                 if (status is not null)
                     _statuses[period.LogicalFilingIdentity] = status;
             }
+            await NotifyStatusChangedAsync();
         }
         catch (Exception exception) when (IsExpected(exception))
         {
@@ -257,6 +259,7 @@
                     continue;
                 _statuses[period.LogicalFilingIdentity] = status;
             }
+            await NotifyStatusChangedAsync();
             _submissionConfirmed = false;
         }
         catch (Exception exception) when (IsExpected(exception))
@@ -278,6 +281,11 @@
 
     private CorporationTaxSubmissionView Presentation(CorporationTaxTransactionStatus? status) =>
         CorporationTaxSubmissionPresentation.For(status, IsFake);
+
+    private Task NotifyStatusChangedAsync() => OnStatusChanged.HasDelegate && _preparation is not null
+        ? OnStatusChanged.InvokeAsync(CorporationTaxSubmissionPresentation.Summarize(
+            _statuses.Values, _preparation.Periods.Count, IsFake))
+        : Task.CompletedTask;
 
     private static string OutcomeUrl(CorporationTaxTransactionStatus status) =>
         $"/TaxHub/CorporationTax/Conversation/{Uri.EscapeDataString(status.ConversationReference)}/outcome";

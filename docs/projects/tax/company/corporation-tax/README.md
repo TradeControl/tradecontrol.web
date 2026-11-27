@@ -2,18 +2,16 @@
 
 ## Current position
 
-Corporation Tax resumes at Phase 5.10. The earlier multi-tenant hosting pause is cleared, but the CT
-family gate remains closed, all artifacts remain preview-only and production submission is disabled.
-The authoritative contract, Objective 3 population, validated service artifact and offline
-Transaction Engine conversation already exist. CT-A has confirmed that the selected integration-test
-tenant is technically healthy but its retained accounting period is not a truthful CT2025 scenario.
-The immediate work is to recommission that disposable test dataset for the approved current period,
-complete the artifact rebaseline, then return to the send-disabled ETS preflight and one separately
-authorised test conversation.
+CT-A through CT-C and CT-D1 through CT-D7 are complete. The product now carries an authorised user
+from accepted Companies House accounts through calculation review, immutable document preparation,
+declaration, approval, exactly-once submission orchestration and durable outcome evidence. The
+development fake-authority journey has proved the accepted path without contacting HMRC, while the
+earlier External Test Service run proved the genuine HMRC Transaction Engine protocol separately.
 
-HMRC recognition is the programme goal, not the current implementation state. Phase 5.10 ETS is
-necessary but insufficient: the CT preparation, review, declaration, approval and durable status
-journey must also be integrated into the multi-tenant TCWeb product before applying.
+CT-D8 is the current phase. It completes accessibility, responsive, security and operational recovery
+assurance and publishes the supported customer/support boundary. Production submission remains
+closed by the Corporation Tax family gate. CT-E comprehensive product testing and the CT-F HMRC
+recognition application have not begun.
 
 ## Governing and working documents
 

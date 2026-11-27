@@ -326,6 +326,23 @@
     flex: 0 0 auto;
 }
 
+.tc-tax-hub-corporation-tax-annual-grid .mud-table-cell,
+.tc-tax-hub-sole-trader-tax-annual-grid .mud-table-cell {
+    padding-inline: 0.4rem;
+}
+
+.tc-tax-hub:not(.tc-tax-hub-mobile) .tc-tax-hub-corporation-tax-annual-grid .mud-table-root {
+    width: 91rem;
+    min-width: 91rem;
+    table-layout: fixed;
+}
+
+.tc-tax-hub:not(.tc-tax-hub-mobile) .tc-tax-hub-sole-trader-tax-annual-grid .mud-table-root {
+    width: 73rem;
+    min-width: 73rem;
+    table-layout: fixed;
+}
+
 /* Profit and loss is a compact master/detail register. The collapsed master
    must size to all of its rows and keep its pager directly beneath them; only
    the one deliberately expanded cash-code detail is added inline. */

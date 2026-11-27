@@ -1,0 +1,61 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-sole-trader-tax-annual-grid">
+    @if (Items.Count == 0)
+    {
+        <div class="alert alert-secondary mb-0">No annual sole-trader tax estimate is available for this selection.</div>
+    }
+    else
+    {
+        <div class="tc-grid-host">
+            <MudDataGrid T="TaxHubSoleTraderTaxAnnualRow"
+                         Class="tc-register-datagrid tc-tax-hub-datagrid"
+                         Items="Items"
+                         Breakpoint="Breakpoint.Md"
+                         FixedHeader="true"
+                         Hover="true"
+                         Dense="true"
+                         Bordered="true"
+                         Striped="true"
+                         ReadOnly="true"
+                         RowsPerPage="10">
+                <Columns>
+                    <PropertyColumn Property="x => x.Description" Title="Financial year"
+                                    HeaderStyle="width: 6rem; min-width: 6rem;" CellStyle="white-space: nowrap;" />
+                    <TemplateColumn Title="Accounting period"
+                                    HeaderStyle="width: 11rem; min-width: 11rem;"
+                                    CellStyle="white-space: nowrap;">
+                        <CellTemplate Context="context">
+                            @context.Item.PeriodStart.ToString("d MMM yyyy") – @context.Item.PeriodEnd.ToString("d MMM yyyy")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.TaxableResult" Title="Business result" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 8rem; min-width: 8rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.LossUsed" Title="Losses used" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.TaxableProfitAfterRelief" Title="Taxable profit" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 8rem; min-width: 8rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.EffectiveTaxRate" Title="Configured rate" Format="P2"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.TaxBeforeRelief" Title="Tax before relief" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 8rem; min-width: 8rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.TaxReliefApplied" Title="Loss relief" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.BusinessTaxAdjustment" Title="Adjustments" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.TaxDue" Title="Estimated tax" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 8rem; min-width: 8rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right; font-weight: 600;" />
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager />
+                </PagerContent>
+            </MudDataGrid>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<TaxHubSoleTraderTaxAnnualRow> Items { get; set; } =
+        Array.Empty<TaxHubSoleTraderTaxAnnualRow>();
+}

@@ -1196,7 +1196,8 @@ foreach (var vatGridFile in new[]
 foreach (var responsiveGridFile in new[]
 {
     "TaxHubObligationsGrid.razor",
-    "TaxHubBusinessTaxTotalsGrid.razor",
+    "TaxHubCorporationTaxAnnualGrid.razor",
+    "TaxHubSoleTraderTaxAnnualGrid.razor",
     "TaxHubBusinessTaxStatementGrid.razor",
     "TaxHubBusinessTaxLossesGrid.razor",
     "TaxHubBusinessTaxSubmissionGrid.razor",
@@ -1260,12 +1261,38 @@ Assert(businessTaxWorkspaceComponent.Contains("Text=\"Overview\"", StringCompari
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Annual\"", StringComparison.Ordinal)
     && accountsWorkspaceComponent.Contains("IsMobile ? \"Balance\"", StringComparison.Ordinal),
     "Corporation Tax or Accounts no longer provides the intended information architecture and compact mobile labels.");
+Assert(businessTaxWorkspaceComponent.Contains("Calculation notes", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_showCalculationNotes", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("monthly period selector does not", StringComparison.Ordinal)
+    && !businessTaxWorkspaceComponent.Contains("Annual tax calculation", StringComparison.Ordinal)
+    && !businessTaxWorkspaceComponent.Contains("Losses carried forward", StringComparison.Ordinal)
+    && !businessTaxWorkspaceComponent.Contains("File your Company Tax Return", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("TaxHubCorporationTaxAnnualGrid", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("TaxHubSoleTraderTaxAnnualGrid", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("Sole-trader tax planning is in development", StringComparison.Ordinal)
+    && taxHubService.Contains("Cash.vwTaxCorpLiabilityUK", StringComparison.Ordinal)
+    && taxHubService.Contains("Cash.vwTaxBizComputationByYear", StringComparison.Ordinal)
+    && !taxHubService.Contains("Cash_TaxBizTotals", StringComparison.Ordinal)
+    && !File.Exists(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub", "Components",
+        "TaxHubBusinessTaxTotalsGrid.razor"))
+    && !File.Exists(Path.Combine(root, "src", "sqlnode", "src", "tcNodeDb4", "Cash", "Views",
+        "vwTaxBizTotals.sql")),
+    "The Calculation tab no longer presents the annual company and sole-trader contracts or has restored the obsolete monthly wrapper.");
+var corporationTaxAnnualGrid = File.ReadAllText(Path.Combine(root, "src", "TCWeb", "Pages", "Tax", "Hub",
+    "Components", "TaxHubCorporationTaxAnnualGrid.razor"));
+Assert(corporationTaxAnnualGrid.Contains("AccountingProfitBeforeTax", StringComparison.Ordinal)
+    && corporationTaxAnnualGrid.Contains("Accounting profit before tax", StringComparison.Ordinal)
+    && corporationTaxAnnualGrid.Contains("DepreciationAddBack", StringComparison.Ordinal)
+    && corporationTaxAnnualGrid.Contains("Depreciation add-back", StringComparison.Ordinal)
+    && taxHubService.Contains("AddBacks.AccountingDepreciation", StringComparison.Ordinal),
+    "The annual Corporation Tax presentation no longer separates accounting profit before tax from its depreciation add-back.");
 Assert(businessTaxWorkspaceComponent.Contains("_canViewTechnicalDetails", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Constants.ManagersRole", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Constants.AdministratorsRole", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("Close diagnostics", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("aria-expanded=\"@_showDiagnostics\"", StringComparison.Ordinal)
     && businessTaxWorkspaceComponent.Contains("_showDiagnostics && _canViewTechnicalDetails", StringComparison.Ordinal)
+    && !businessTaxWorkspaceComponent.Contains("Planning figures respond", StringComparison.Ordinal)
     && !businessTaxWorkspaceComponent.Contains("Technical details", StringComparison.Ordinal),
     "Raw Corporation Tax mapping data is no longer a closed-by-default privileged Diagnostics surface.");
 Assert(taxHubService.Contains("bool includeTechnicalDetails = false", StringComparison.Ordinal)
@@ -1440,6 +1467,10 @@ Assert(corporationTaxTransactionService.Contains("ReadOutcomeAsync", StringCompa
     && corporationTaxSubmissionComponent.Contains("Recover submission status", StringComparison.Ordinal)
     && corporationTaxPresentation.Contains("Download receipt", StringComparison.Ordinal)
     && corporationTaxSubmissionComponent.Contains("Support reference", StringComparison.Ordinal)
+    && corporationTaxSubmissionComponent.Contains("OnStatusChanged", StringComparison.Ordinal)
+    && corporationTaxPreparationComponent.Contains("OnSubmissionStatusChanged", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_submissionSummary.StatusLabel", StringComparison.Ordinal)
+    && businessTaxWorkspaceComponent.Contains("_submissionSummary.Message", StringComparison.Ordinal)
     && corporationTaxDashboardComponent.Contains("GetLatestAsync", StringComparison.Ordinal)
     && corporationTaxDashboardComponent.Contains("Do not submit the return again", StringComparison.Ordinal)
     && corporationTaxDashboardComponent.Contains("Corporation Tax return accepted", StringComparison.Ordinal),
@@ -2681,6 +2712,16 @@ var acceptedPresentation = CorporationTaxSubmissionPresentation.For(
         Stage = "Complete", Outcome = "BusinessResponse", OutcomeAvailable = true,
         ReceiptAvailable = true, OutcomeSha256 = new string('D', 64)
     }, true);
+var acceptedSummary = CorporationTaxSubmissionPresentation.Summarize(
+    [presentationBase with
+    {
+        Stage = "Complete", Outcome = "BusinessResponse", OutcomeAvailable = true,
+        ReceiptAvailable = true, OutcomeSha256 = new string('D', 64)
+    }], 1, true);
+var uncertainSummary = CorporationTaxSubmissionPresentation.Summarize(
+    [presentationBase with { Stage = "SubmissionUncertain" }], 1, false);
+var rejectedSummary = CorporationTaxSubmissionPresentation.Summarize(
+    [presentationBase with { Stage = "Complete", Outcome = "BusinessError" }], 1, false);
 Assert(uncertainPresentation.AlertRole == "alert"
     && uncertainPresentation.Message.Contains("Do not submit it again", StringComparison.Ordinal)
     && rejectedPresentation.StatusLabel == "Rejected"
@@ -2689,7 +2730,11 @@ Assert(uncertainPresentation.AlertRole == "alert"
     && supportPresentation.Message.Contains("CT-0123456789AB", StringComparison.Ordinal)
     && acceptedPresentation.StatusLabel == "Accepted"
     && acceptedPresentation.DownloadLabel == "Download receipt"
-    && acceptedPresentation.Message.Contains("fake authority", StringComparison.Ordinal),
+    && acceptedPresentation.Message.Contains("fake authority", StringComparison.Ordinal)
+    && acceptedSummary.StatusLabel == "Accepted"
+    && acceptedSummary.Heading == "Return accepted"
+    && uncertainSummary.Message.Contains("Do not submit it again", StringComparison.Ordinal)
+    && rejectedSummary.StatusLabel == "Rejected",
     "The CT-D8 negative, recovery or accepted submission presentation became ambiguous or unsafe.");
 var fakeAuthorityState = new CorporationTaxFakeAuthorityState();
 using var fakeAuthorityClient = new HttpClient(new CorporationTaxFakeAuthorityHandler(fakeAuthorityState));

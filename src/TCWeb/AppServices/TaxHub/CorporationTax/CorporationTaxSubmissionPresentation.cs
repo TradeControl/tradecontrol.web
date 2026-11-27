@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace TradeControl.Web.AppServices.TaxHub.CorporationTax;
 
 internal sealed record CorporationTaxSubmissionView(
@@ -9,8 +13,80 @@ internal sealed record CorporationTaxSubmissionView(
     string AlertRole,
     string? DownloadLabel);
 
+public sealed record CorporationTaxSubmissionSummary(
+    string StatusLabel,
+    string BadgeClass,
+    string Heading,
+    string Message,
+    string AlertClass,
+    string AlertRole);
+
 internal static class CorporationTaxSubmissionPresentation
 {
+    internal static CorporationTaxSubmissionSummary Summarize(
+        IReadOnlyCollection<CorporationTaxTransactionStatus> statuses,
+        int expectedPeriods,
+        bool isFake)
+    {
+        ArgumentNullException.ThrowIfNull(statuses);
+        if (expectedPeriods < 1)
+            throw new ArgumentOutOfRangeException(nameof(expectedPeriods));
+
+        if (statuses.Count == 0)
+            return new("Approved", "bg-primary", "Approval complete — submission is next",
+                "The approved return is safely retained. Continue in the controlled submission panel.",
+                "alert-info", "status");
+
+        var recovery = statuses.FirstOrDefault(status => status.Stage == "RecoveryRequired");
+        if (recovery is not null)
+            return new("Support required", "bg-danger", "Submission needs support",
+                $"Automatic processing stopped safely. Do not submit another return. Contact support and quote {recovery.SupportReference}.",
+                "alert-danger", "alert");
+
+        if (statuses.Any(status => status.Stage == "SubmissionUncertain"))
+            return new("Confirmation required", "bg-warning text-dark",
+                "Submission confirmation required",
+                "HMRC may already have the return. Do not submit it again; recover the existing submission status.",
+                "alert-warning", "alert");
+
+        if (statuses.Any(status => status.Stage == "Complete"
+                && status.Outcome != "BusinessResponse"))
+            return new("Rejected", "bg-danger", "Return rejected",
+                "Review the retained authority response and resolve the reported findings. The approved return cannot simply be submitted again.",
+                "alert-danger", "alert");
+
+        if (statuses.Count == expectedPeriods
+            && statuses.All(status => status.Stage == "Complete"
+                && status.Outcome == "BusinessResponse"))
+            return new("Accepted", "bg-success", "Return accepted",
+                isFake
+                    ? "The fake authority accepted every return in this approved filing. The retained response evidence is available above."
+                    : "HMRC accepted every return in this approved filing. Retain the receipts with the company records.",
+                "alert-success", "alert");
+
+        if (statuses.Any(status => status.Stage == "Complete"))
+            return new("Action required", "bg-warning text-dark",
+                "Continue the existing filing",
+                "One return is complete and another has not finished. Continue this approved journey; do not repeat a completed return.",
+                "alert-warning", "alert");
+
+        if (statuses.Any(status => status.Stage is "TerminalPersisted" or "DeletePending"))
+            return new("Outcome received", "bg-info text-dark", "Outcome received",
+                "The authority outcome is safely retained while the conversation is closed in the background.",
+                "alert-info", "status");
+
+        if (statuses.Any(status => status.Stage == "AwaitingPoll"))
+            return new("Received", "bg-info text-dark", "Return received",
+                isFake
+                    ? "The fake authority received the return. Trade Control is continuing in the background."
+                    : "HMRC received the return. Trade Control is continuing to check the outcome in the background.",
+                "alert-info", "status");
+
+        return new("Prepared", "bg-secondary", "Return prepared",
+            "The exact approved request is retained and has not yet completed submission.",
+            "alert-secondary", "status");
+    }
+
     internal static CorporationTaxSubmissionView For(
         CorporationTaxTransactionStatus? status, bool isFake)
     {

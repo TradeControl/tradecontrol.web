@@ -9,7 +9,7 @@ roadmap uses it for the programme goal sometimes described as accreditation.
 Recognition is not the same as enabling production filing. Test-service execution, recognition,
 listing and production activation retain separate evidence and human gates.
 
-## Current position — 18 November 2026
+## Current position — 26 November 2026
 
 | Layer | Position | Remaining gate |
 |---|---|---|
@@ -17,9 +17,9 @@ listing and production activation retain separate evidence and human gates.
 | Objective 3 contracts and population | The approved ordinary micro-company surface carries the accepted marginal-relief calculation, associated-company facts and provisional-rate filing boundary into the same accounts, computation and CT600 artifact path. | Retain specialist regimes outside the supported scope. |
 | Phase 5.8 service artifact | CT2025 computation, FRC 2026 accounts and RIM 1.994 assets remain pinned. The refreshed positive-D artifact passes the official CT2025 package in Arelle, HMRC LTS 8.3 and one separately authorised genuine TPVS validation, including its IRmark and tax calculator. MR-5 was accepted on 17 November 2026. | Local LTS and genuine remote TPVS evidence must retain their distinct classifications. |
 | Phase 5.9 Transaction Engine | Complete and reviewed for offline protocol fixtures, IRmark and durable conversation semantics. | Confirm current ETS class, credentials, endpoints and receipt behaviour immediately before the external test. |
-| Phase 5.10 local ETS boundary | CT-B and CT-C are accepted. The Development-only, authenticated diagnostic completed an identity-corrected ETS conversation with a genuine HMRC `BusinessResponse`, retained IRmark receipt, zero returned errors and acknowledged delete. Production remains disabled. | Implement CT-D as the coherent production-shaped filing journey. Do not open production submission before its gate is accepted. |
+| Phase 5.10 local ETS boundary | CT-B and CT-C are accepted. The Development-only, authenticated diagnostic completed an identity-corrected ETS conversation with a genuine HMRC `BusinessResponse`, retained IRmark receipt, zero returned errors and acknowledged delete. Production remains disabled. | Preserve this as official-test evidence distinct from the product simulation and production journey. |
 | Multi-tenant hosting | The shared production-shaped environment prerequisite is complete. | Exercise CT through the same tenant, identity, protected-content and operational boundaries rather than treating the WebHarness as the commercial product. |
-| TCWeb CT product journey | Only the accepted Companies House accounts-snapshot hand-off exists. There is no complete CT preparation, review, declaration, approval, submit/poll/recovery UI. | Implement and review the production-shaped CT workflow before claiming product maturity. |
+| TCWeb CT product journey | CT-D1 through CT-D7 are complete. The product provides calculation review, immutable preparation, declaration, approval, exactly-once orchestration, background progression, durable outcomes, receipt retrieval and dashboard readback. | Complete CT-D8 accessibility, responsive, recovery and support assurance before opening CT-E. |
 | HMRC recognition | Not applied for and not claimed. | Complete own/ETS testing and the mature product journey, then request and execute HMRC's current new-applicant scenarios. |
 
 The earlier pause for the multi-tenant environment is cleared. Corporation Tax may resume locally.
@@ -560,12 +560,26 @@ behind one final integration test.
    disclosure were reachable in sequence, `Enter` expanded the disclosure, and its transaction,
    support-reference and digest terms were present in the accessibility tree. The remaining acceptance
    work is the complete screen-reader and responsive review; explicit restart/scale-out and worker-recovery exercises; review of safe
-   customer wording for rejected and uncertain outcomes; and the final operator/customer support
-   record. No production dispatch is enabled by D8 testing.
+   customer wording for rejected and uncertain outcomes; the final operator/customer support
+   record; and a public Corporation Tax User Guide illustrated from a second complete product
+   journey. The guide run is functional evidence as well as documentation: every screenshot must be
+   captured from the reviewed interface in journey order and its text checked against the durable
+   state actually displayed. The guide walkthrough exposed an obsolete monthly flat-rate Calculation
+   table which could not explain marginal relief. That presentation has been replaced for review by
+   annual, business-type-specific calculations: the company view shows the bridge from accounting
+   profit through distributions, losses, augmented profits, marginal relief and adjustments to tax
+   due; the separately labelled sole-trader view remains developmental. The obsolete monthly wrapper
+   is removed while the transaction-grained period computation beneath it is retained. Deployment
+   requires the corresponding database build on every tenant before the web release. No production
+   dispatch is enabled by D8 testing.
    - keyboard/screen-reader and responsive review of the complete journey;
    - cross-tenant, privilege, replay, stale-source, duplicate-send and protected-content tests;
    - restart/scale-out exercises against the shared persistence and background worker;
-   - operator runbook and customer-facing supported-scope/help content.
+   - operator runbook and customer-facing supported-scope/help content;
+   - repeat the complete supported journey and publish the corresponding User Guide using
+     informative screenshots, following the established Companies House and VAT guide format; and
+   - treat any discrepancy found while authoring the guide as a product defect to resolve before D8
+     acceptance, rather than documenting around it.
 
 #### Deliberate launch boundaries
 

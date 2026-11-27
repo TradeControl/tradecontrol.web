@@ -1,0 +1,93 @@
+@using MudBlazor
+@using TradeControl.Web.Pages.Tax.Hub.Models
+
+<div class="tc-register-grid tc-tax-hub-corporation-tax-annual-grid">
+    @if (Items.Count == 0)
+    {
+        <div class="alert alert-secondary mb-0">No annual Corporation Tax calculation is available for this selection.</div>
+    }
+    else
+    {
+        <div class="tc-grid-host">
+            <MudDataGrid T="TaxHubCorporationTaxAnnualRow"
+                         Class="tc-register-datagrid tc-tax-hub-datagrid"
+                         Items="Items"
+                         Breakpoint="Breakpoint.Md"
+                         FixedHeader="true"
+                         Hover="true"
+                         Dense="true"
+                         Bordered="true"
+                         Striped="true"
+                         ReadOnly="true"
+                         RowsPerPage="10">
+                <Columns>
+                    <TemplateColumn Title="Financial year"
+                                    HeaderStyle="width: 6rem; min-width: 6rem;"
+                                    CellStyle="white-space: nowrap;">
+                        <CellTemplate Context="context">
+                            <div>@context.Item.Description</div>
+                            @if (context.Item.IsProvisional)
+                            {
+                                <span class="badge text-bg-warning mt-1">Provisional</span>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Accounting period"
+                                    HeaderStyle="width: 11rem; min-width: 11rem;"
+                                    CellStyle="white-space: nowrap;">
+                        <CellTemplate Context="context">
+                            @context.Item.PeriodStart.ToString("d MMM yyyy") – @context.Item.PeriodEnd.ToString("d MMM yyyy")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.AccountingProfitBeforeTax" Title="Accounting profit before tax" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.DepreciationAddBack" Title="Depreciation add-back" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.RelevantDistributions" Title="Relevant distributions" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7.5rem; min-width: 7.5rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.LossUsed" Title="Losses used" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 5.5rem; min-width: 5.5rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.TaxableTotalProfits" Title="Taxable profits" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.AugmentedProfits" Title="Augmented profits" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <TemplateColumn Title="Basis"
+                                    HeaderStyle="width: 7rem; min-width: 7rem;"
+                                    CellStyle="white-space: nowrap;">
+                        <CellTemplate Context="context">
+                            @CalculationBasis(context.Item.CalculationCode)
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.TaxBeforeMarginalRelief" Title="Tax before relief" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.MarginalReliefDeduction" Title="Marginal relief" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.BusinessTaxAdjustment" Title="Adjustments" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 6rem; min-width: 6rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                    <PropertyColumn Property="x => x.TaxDue" Title="Tax due" Format="#,##0.00;(#,##0.00);-"
+                                    HeaderStyle="width: 7rem; min-width: 7rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right; font-weight: 600;" />
+                    <PropertyColumn Property="x => x.EffectiveTaxRate" Title="Effective rate" Format="P2"
+                                    HeaderStyle="width: 6rem; min-width: 6rem; text-align: right;" CellStyle="white-space: nowrap; text-align: right;" />
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager />
+                </PagerContent>
+            </MudDataGrid>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<TaxHubCorporationTaxAnnualRow> Items { get; set; } =
+        Array.Empty<TaxHubCorporationTaxAnnualRow>();
+
+    private static string CalculationBasis(string calculationCode) => calculationCode switch
+    {
+        "NO-TAX" => "No taxable profit",
+        "SMALL-PROFITS" => "Small profits",
+        "MARGINAL-RELIEF" => "Marginal relief",
+        "MAIN-RATE" => "Main rate",
+        "INVALID" => "Review required",
+        _ => calculationCode
+    };
+}
