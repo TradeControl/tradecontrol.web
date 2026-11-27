@@ -559,12 +559,13 @@ behind one final integration test.
    evidence. The first deployed keyboard check passed: the receipt link and native Submission details
    disclosure were reachable in sequence, `Enter` expanded the disclosure, and its transaction,
    support-reference and digest terms were present in the accessibility tree. The remaining acceptance
-   work is the complete screen-reader and responsive review; explicit restart/scale-out and worker-recovery exercises; review of safe
-   customer wording for rejected and uncertain outcomes; the final operator/customer support
-   record; and a public Corporation Tax User Guide illustrated from a second complete product
-   journey. The guide run is functional evidence as well as documentation: every screenshot must be
-   captured from the reviewed interface in journey order and its text checked against the durable
-   state actually displayed. The guide walkthrough exposed an obsolete monthly flat-rate Calculation
+   work is the complete screen-reader and responsive review; explicit restart/scale-out and
+   worker-recovery exercises; review of safe customer wording for rejected and uncertain outcomes;
+   and the final operator/customer support record. The public Corporation Tax User Guide was completed
+   from a second full product journey on 27 November 2026 and published as **Application Pending**.
+   The guide run is functional evidence as well as documentation: every screenshot was captured from
+   the reviewed interface in journey order and its text checked against the durable state actually
+   displayed. The guide walkthrough exposed an obsolete monthly flat-rate Calculation
    table which could not explain marginal relief. That presentation has been replaced for review by
    annual, business-type-specific calculations: the company view shows the bridge from accounting
    profit through distributions, losses, augmented profits, marginal relief and adjustments to tax
@@ -575,11 +576,7 @@ behind one final integration test.
    - keyboard/screen-reader and responsive review of the complete journey;
    - cross-tenant, privilege, replay, stale-source, duplicate-send and protected-content tests;
    - restart/scale-out exercises against the shared persistence and background worker;
-   - operator runbook and customer-facing supported-scope/help content;
-   - repeat the complete supported journey and publish the corresponding User Guide using
-     informative screenshots, following the established Companies House and VAT guide format; and
-   - treat any discrepancy found while authoring the guide as a product defect to resolve before D8
-     acceptance, rather than documenting around it.
+   - operator runbook and customer-facing supported-scope/help content.
 
 #### Deliberate launch boundaries
 
@@ -614,9 +611,22 @@ Build an evidence matrix covering at least:
 
 Use the selected disposable tenant for the first end-to-end case. Add tenants only when the matrix demonstrates a real need.
 
+**Implementation update — 27 November 2026:** the formal loss-creation and recovery scenario is
+implemented in `CorporationTaxLossCarryForwardRecovery.sql`. The synthetic generator retains its
+existing behaviour by default and exposes an opt-in first-financial-year selling-price multiplier.
+The accepted calibration creates a genuine accounting loss in the first completed year, carries the
+resulting tax loss forward, fully uses it against profit in the following year and leaves a positive
+residual Corporation Tax charge. The scenario also asserts agreement with the active annual
+calculation and the penny-rounded Equity Bridge. Product walkthrough and acceptance remain part of
+CT-E; this implementation result does not by itself complete the phase.
+
 ### CT-F — HMRC recognition application
 
 When CT-A through CT-E are complete:
+
+The public, non-secret application material is assembled under the
+[Corporation Tax recognition evidence folder](approval/README.md). Exact credentialed evidence and
+HMRC correspondence remain protected.
 
 1. confirm to SDST that the product has completed its own testing and ETS testing and is ready for
    release within the frozen supported scope;

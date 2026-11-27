@@ -17,6 +17,8 @@ recognition application have not begun.
 
 - [Work Plan 3](tax-hub-workplan-3.md) records the original CT contract-model programme.
 - [Recognition roadmap](ct-recognition-roadmap.md) is the current status and execution plan.
+- [Recognition approval evidence](approval/README.md) indexes the public, non-secret application
+  package now being assembled.
 - [Marginal relief and real-time liability plan](ct-marginal-relief.md) governs the CT-A calculation
   redesign while preserving the MIS Project/Object and What-if statement architecture.
 - [Work Plan 5](../../platform/tax-hub-workplan-5.md), phases 5.7–5.10, governs current service-artifact and transport work.
